@@ -38,6 +38,10 @@ export const DashboardTour = {
   },
 
   destroyed() {
+    if (this.anchorInterval) {
+      clearInterval(this.anchorInterval);
+      this.anchorInterval = null;
+    }
     if (this.onReposition) {
       window.removeEventListener("resize", this.onReposition);
       window.removeEventListener("scroll", this.onReposition, { capture: true });
@@ -45,6 +49,11 @@ export const DashboardTour = {
   },
 
   position() {
+    if (this.anchorInterval) {
+      clearInterval(this.anchorInterval);
+      this.anchorInterval = null;
+    }
+
     const anchor = this.el.dataset.anchor;
     const placement = this.el.dataset.placement || "bottom";
 
@@ -68,13 +77,15 @@ export const DashboardTour = {
       }
 
       const start = Date.now();
-      const interval = setInterval(() => {
+      this.anchorInterval = setInterval(() => {
         const el = document.querySelector(selector);
         if (el) {
-          clearInterval(interval);
+          clearInterval(this.anchorInterval);
+          this.anchorInterval = null;
           resolve(el);
         } else if (Date.now() - start > ANCHOR_RETRY_TIMEOUT_MS) {
-          clearInterval(interval);
+          clearInterval(this.anchorInterval);
+          this.anchorInterval = null;
           reject(new Error(`anchor "${anchorName}" not found`));
         }
       }, ANCHOR_RETRY_MS);
@@ -101,7 +112,7 @@ export const DashboardTour = {
 
     target.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
 
-    // Use a microtask so the scroll has at least begun before measuring.
+    // Use an animation frame so the scroll has at least begun before measuring.
     requestAnimationFrame(() => {
       const rect = target.getBoundingClientRect();
 
