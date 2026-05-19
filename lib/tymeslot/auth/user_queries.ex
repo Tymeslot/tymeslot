@@ -362,6 +362,20 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
+  Marks the post-onboarding dashboard tour as seen for `user`. Idempotent —
+  callers may invoke this regardless of the current value.
+  """
+  @spec mark_dashboard_tour_seen(UserSchema.t()) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def mark_dashboard_tour_seen(%UserSchema{} = user) do
+    user
+    |> Changeset.change(%{
+      dashboard_tour_seen_at: DateTime.utc_now(:second)
+    })
+    |> Repo.update()
+  end
+
+  @doc """
   Sets or clears a user's marketing unsubscribe timestamp.
 
   Pass a `DateTime` to mark the user as unsubscribed, or `nil` to resubscribe.
