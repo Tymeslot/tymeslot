@@ -55,13 +55,15 @@ defmodule TymeslotWeb.Components.DashboardLayout do
       <%!-- Main Layout Area --%>
       <div class={["flex lg:gap-8", if(@full_width, do: "flex-1 overflow-hidden")]}>
         <%= if mode(@current_action) == :scheduling do %>
-          <DashboardSidebar.sidebar
-            current_action={@current_action}
-            integration_status={@integration_status}
-            profile={@profile}
-            automations_allowed={@automations_allowed}
-            sidebar_extensions={@sidebar_extensions}
-          />
+          <div data-tour="sidebar-nav" class="contents">
+            <DashboardSidebar.sidebar
+              current_action={@current_action}
+              integration_status={@integration_status}
+              profile={@profile}
+              automations_allowed={@automations_allowed}
+              sidebar_extensions={@sidebar_extensions}
+            />
+          </div>
         <% end %>
 
         <%!-- Main Content Area --%>
@@ -137,7 +139,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
             </div>
 
     <%!-- Right side: User dropdown --%>
-            <div class="relative flex-shrink-0">
+            <div class="relative flex-shrink-0" data-tour="user-menu">
               <.live_component
                 module={UserDropdownComponent}
                 id="user-dropdown"
@@ -157,7 +159,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   @spec mode_tabs(map()) :: Phoenix.LiveView.Rendered.t()
   defp mode_tabs(assigns) do
     ~H"""
-    <div class="mode-tab-bar" data-testid="mode-tab-bar">
+    <div class="mode-tab-bar" data-testid="mode-tab-bar" data-tour="mode-tabs">
       <div class="flex items-stretch w-full gap-2">
         <.link
           patch={~p"/dashboard"}
