@@ -2,7 +2,7 @@ defmodule Tymeslot.Onboarding.DashboardTourTest do
   @moduledoc false
   use ExUnit.Case, async: true
 
-  @moduletag :auth
+  @moduletag :onboarding
   @moduletag :unit
 
   alias Tymeslot.Onboarding.DashboardTour
