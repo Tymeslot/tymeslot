@@ -13,12 +13,10 @@ defmodule Tymeslot.Slack.OAuthTest do
   setup :verify_on_exit!
 
   setup do
-    Application.put_env(:tymeslot, :http_client_module, Tymeslot.HTTPClientMock)
     Application.put_env(:tymeslot, :slack_client_id, "slack-test-client-id")
     Application.put_env(:tymeslot, :slack_client_secret, "slack-test-client-secret")
 
     on_exit(fn ->
-      Application.delete_env(:tymeslot, :http_client_module)
       Application.delete_env(:tymeslot, :slack_client_id)
       Application.delete_env(:tymeslot, :slack_client_secret)
     end)

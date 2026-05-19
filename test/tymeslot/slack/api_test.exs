@@ -10,12 +10,6 @@ defmodule Tymeslot.Slack.APITest do
 
   setup :verify_on_exit!
 
-  setup do
-    Application.put_env(:tymeslot, :http_client_module, Tymeslot.HTTPClientMock)
-    on_exit(fn -> Application.delete_env(:tymeslot, :http_client_module) end)
-    :ok
-  end
-
   describe "post_message_via_token/3" do
     test "returns {:ok, body} on successful Slack response" do
       expect(Tymeslot.HTTPClientMock, :post, fn url, body, headers, _opts ->
