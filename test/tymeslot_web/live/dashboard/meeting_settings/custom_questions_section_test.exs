@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
   @moduledoc """
   Integration tests for the custom questions builder inside the meeting type
-  form. Covers the host-facing CRUD actions: add, edit, and delete. Drag-and-
-  drop reorder requires JS execution and is not exercised here.
+  form. Covers the host-facing CRUD actions: add, edit, delete, reorder, and
+  editor cancel.
   """
   use TymeslotWeb.LiveCase, async: false
 
@@ -364,6 +364,142 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       |> render_change()
 
       refute render(view) =~ "Changing the type will clear the configuration"
+    end
+  end
+
+  describe "reordering custom questions" do
+    test "reversed IDs reorder the questions in the rendered list", %{conn: conn, user: user} do
+      id1 = UUID.generate()
+      id2 = UUID.generate()
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          custom_fields: [
+            %{id: id1, type: "short_text", label: "First question", required: false, position: 0},
+            %{id: id2, type: "short_text", label: "Second question", required: false, position: 1}
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      html = render(view)
+      assert html =~ "First question"
+      assert html =~ "Second question"
+
+      # Confirm original ordering: First question appears before Second question
+      assert String.contains?(html, "First question") and
+               :binary.match(html, "First question") < :binary.match(html, "Second question")
+
+      list_id = "custom-questions-list-meeting-type-form-edit-#{meeting_type.id}"
+
+      view
+      |> element("##{list_id}")
+      |> render_hook("reorder", %{"ids" => [id2, id1]})
+
+      html = render(view)
+      # After reversing, Second question now appears before First question
+      assert :binary.match(html, "Second question") < :binary.match(html, "First question")
+    end
+
+    test "position values are updated after reorder", %{conn: conn, user: user} do
+      id1 = UUID.generate()
+      id2 = UUID.generate()
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          custom_fields: [
+            %{id: id1, type: "short_text", label: "Alpha", required: false, position: 0},
+            %{id: id2, type: "short_text", label: "Beta", required: false, position: 1}
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      list_id = "custom-questions-list-meeting-type-form-edit-#{meeting_type.id}"
+
+      view
+      |> element("##{list_id}")
+      |> render_hook("reorder", %{"ids" => [id2, id1]})
+
+      html = render(view)
+
+      # The hidden position inputs reflect the new order: id2 is now at index 0
+      # and id1 at index 1, so data-index on the rendered <li> items reflects
+      # the new positions. We assert via the data-index attribute on each <li>.
+      assert html =~ ~s(data-id="#{id2}" data-index="0")
+      assert html =~ ~s(data-id="#{id1}" data-index="1")
+    end
+  end
+
+  describe "cancelling the question editor" do
+    test "cancel closes the editor without modifying custom_fields", %{conn: conn, user: user} do
+      question_id = UUID.generate()
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          custom_fields: [
+            %{
+              id: question_id,
+              type: "short_text",
+              label: "Existing question",
+              required: false,
+              position: 0
+            }
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      assert render(view) =~ "Existing question"
+      refute render(view) =~ "Edit question"
+
+      view
+      |> element("button[phx-click='edit_question'][phx-value-id='#{question_id}']")
+      |> render_click()
+
+      assert render(view) =~ "Edit question"
+
+      view
+      |> element("button[phx-click='cancel']")
+      |> render_click()
+
+      html = render(view)
+      # Editor is gone
+      refute html =~ "Edit question"
+      # The original field is unchanged
+      assert html =~ "Existing question"
+    end
+
+    test "cancel from add-question editor leaves the list unchanged", %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      assert render(view) =~ "No custom questions yet"
+
+      view |> element("button", "Add question") |> render_click()
+      assert render(view) =~ "Add question"
+
+      view
+      |> element("button[phx-click='cancel']")
+      |> render_click()
+
+      html = render(view)
+      # Editor is gone
+      refute html =~ "Save question"
+      # No new question was added
+      assert html =~ "No custom questions yet"
     end
   end
 

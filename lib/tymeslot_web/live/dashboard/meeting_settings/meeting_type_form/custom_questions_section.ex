@@ -4,14 +4,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
   meeting type form. Displays the list of existing questions with
   add/edit/delete actions and drag handles for reordering.
 
-  All mutating actions are forwarded to the parent LiveView via
-  `send(self(), {:custom_questions, …})` so the parent owns the
-  authoritative list in its socket assigns.
+  Mutating actions push assigns directly into the parent `MeetingTypeForm`
+  LiveComponent via `send_update/2`. This keeps the round-trip a single
+  hop so test helpers like `render_click/1` observe the updated state on
+  the very next `render(view)` call.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Ecto.UUID
+  alias Phoenix.LiveView
+  alias Tymeslot.CustomFields.FieldDefinition
   alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -88,6 +93,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
         <ul
           id={"custom-questions-list-#{@form_id}"}
           phx-hook="QuestionsSortable"
+          phx-target={@myself}
           data-target={@myself}
           class="space-y-2"
         >
@@ -158,9 +164,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
 
   @impl Phoenix.LiveComponent
   def handle_event("add_question", _params, socket) do
-    send(
-      self(),
-      {:custom_questions, :open_add, socket.assigns.form_id, socket.assigns.custom_fields}
+    empty = %FieldDefinition{
+      id: UUID.generate(),
+      type: "short_text",
+      position: length(socket.assigns.custom_fields)
+    }
+
+    LiveView.send_update(MeetingTypeForm,
+      id: socket.assigns.form_id,
+      editing_question: empty,
+      editing_question_mode: :add
     )
 
     {:noreply, socket}
@@ -169,14 +182,26 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
   @impl Phoenix.LiveComponent
   def handle_event("edit_question", %{"id" => id}, socket) do
     question = Enum.find(socket.assigns.custom_fields, &(&1.id == id))
-    send(self(), {:custom_questions, :open_edit, question, socket.assigns.form_id})
+
+    LiveView.send_update(MeetingTypeForm,
+      id: socket.assigns.form_id,
+      editing_question: question,
+      editing_question_mode: :edit
+    )
+
     {:noreply, socket}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("delete_question", %{"id" => id}, socket) do
     updated = Enum.reject(socket.assigns.custom_fields, &(&1.id == id))
-    send(self(), {:custom_questions, :fields_updated, updated, socket.assigns.form_id})
+
+    LiveView.send_update(MeetingTypeForm,
+      id: socket.assigns.form_id,
+      custom_fields: updated,
+      editing_question: nil
+    )
+
     {:noreply, socket}
   end
 
@@ -194,7 +219,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
         end
       end)
 
-    send(self(), {:custom_questions, :fields_updated, updated, socket.assigns.form_id})
+    LiveView.send_update(MeetingTypeForm,
+      id: socket.assigns.form_id,
+      custom_fields: updated,
+      editing_question: nil
+    )
+
     {:noreply, socket}
   end
 

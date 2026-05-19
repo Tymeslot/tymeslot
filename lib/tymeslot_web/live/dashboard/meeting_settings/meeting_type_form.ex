@@ -52,6 +52,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:reminder_confirmation, nil)
      |> assign(:custom_fields, [])
      |> assign(:editing_question, nil)
+     |> assign(:editing_question_mode, :add)
      |> assign(:custom_questions_allowed, true)
      |> assign(:__initialized__, false)}
   end
@@ -307,6 +308,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         definition={@editing_question}
         existing_fields={@custom_fields}
         form_id={@id}
+        mode={@editing_question_mode}
       />
     <% end %>
     </div>

@@ -2,67 +2,25 @@ defmodule TymeslotWeb.Dashboard.MeetingFormMessages do
   @moduledoc """
   Routes form-related `handle_info/2` messages back into `MeetingTypeForm`.
 
-  Child LiveComponents (`CustomQuestionsSection`, `QuestionEditorComponent`,
-  the reminder editor, the calendar picker) use `send(self(), …)` to bubble
-  intent up to `DashboardLive`, which owns the LiveView process. The functions
-  in this module take the parsed payload and push new assigns back to the
-  correct `MeetingTypeForm` instance via `send_update/2`.
+  Child LiveComponents that need asynchronous work (the reminder editor's
+  confirmation timeout, the calendar picker's refresh task) use
+  `send(self(), …)` to bubble the completed result up to `DashboardLive`,
+  which owns the LiveView process. The functions in this module take that
+  payload and push new assigns back to the correct `MeetingTypeForm`
+  instance via `send_update/2`.
 
-  Children compute derived state locally (e.g. the new ordered list after a
-  delete) and send the completed result — not the raw intent — so this module
-  never needs to read component assigns.
+  Synchronous interactions (the custom-questions builder) call
+  `Phoenix.LiveView.send_update/2` directly from their LiveComponent
+  instead, so the parent form re-renders on the next tick without an
+  intermediate `handle_info` hop — important for keeping LiveViewTest
+  helpers like `render_click/1` deterministic.
   """
 
   import Phoenix.LiveView, only: [send_update: 2]
 
-  alias Ecto.UUID
-  alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Selection
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
-
-  @doc "Opens the question editor for a new custom question."
-  @spec handle_open_add(String.t(), list(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_open_add(form_id, current_fields, socket) do
-    empty = %FieldDefinition{
-      id: UUID.generate(),
-      type: "short_text",
-      position: length(current_fields)
-    }
-
-    send_update(MeetingTypeForm, id: form_id, editing_question: empty)
-    {:noreply, socket}
-  end
-
-  @doc "Opens the question editor populated with an existing question."
-  @spec handle_open_edit(FieldDefinition.t(), String.t(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_open_edit(question, form_id, socket) do
-    send_update(MeetingTypeForm, id: form_id, editing_question: question)
-    {:noreply, socket}
-  end
-
-  @doc "Closes the question editor without saving."
-  @spec handle_cancel(String.t(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_cancel(form_id, socket) do
-    send_update(MeetingTypeForm, id: form_id, editing_question: nil)
-    {:noreply, socket}
-  end
-
-  @doc "Replaces the custom-fields list on the form after an add/edit/delete/reorder."
-  @spec handle_fields_updated(list(), String.t(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_fields_updated(updated_fields, form_id, socket) do
-    send_update(MeetingTypeForm,
-      id: form_id,
-      custom_fields: updated_fields,
-      editing_question: nil
-    )
-
-    {:noreply, socket}
-  end
 
   @doc "Dismisses a reminder confirmation prompt on the form."
   @spec handle_clear_reminder_confirmation(String.t(), Phoenix.LiveView.Socket.t()) ::
