@@ -290,6 +290,20 @@
   --mode-tab-active-to: #0891b2;
   --mode-tab-inactive-text: #64748b;
   --mode-tab-hover-bg: rgba(204, 251, 241, 0.5);
+
+  /* Dropdown Component */
+  --dropdown-bg: var(--color-bg-primary);
+  --dropdown-border: var(--color-border-default);
+  --dropdown-shadow: var(--shadow-md);
+  --dropdown-radius: var(--radius-xl);
+  --dropdown-item-px: var(--spacing-4);
+  --dropdown-item-py: var(--spacing-2-5);
+  --dropdown-item-radius: var(--radius-md);
+  --dropdown-item-hover-bg: var(--color-bg-tertiary);
+  --dropdown-item-hover-text: var(--color-text-primary);
+  --dropdown-item-danger-text: var(--color-error);
+  --dropdown-item-danger-hover-bg: #fef2f2;
+  --dropdown-divider: var(--color-border-light);
 }
 
 /* Dark Mode Overrides */

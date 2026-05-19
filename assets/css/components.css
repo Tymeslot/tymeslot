@@ -1,3 +1,59 @@
+/* ===================================
+   DROPDOWN COMPONENT
+   =================================== */
+
+/* Standard clickable row inside a dropdown panel */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  width: 100%;
+  text-align: left;
+  padding: var(--dropdown-item-py) var(--dropdown-item-px);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border-radius: var(--dropdown-item-radius);
+  transition: background-color 0.15s ease, color 0.15s ease;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background-color: var(--dropdown-item-hover-bg);
+  color: var(--dropdown-item-hover-text);
+}
+
+.dropdown-item--danger {
+  color: var(--dropdown-item-danger-text);
+}
+
+.dropdown-item--danger:hover {
+  background-color: var(--dropdown-item-danger-hover-bg);
+  color: var(--dropdown-item-danger-text);
+}
+
+/* Icon inside a dropdown item */
+.dropdown-item__icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+}
+
+.dropdown-item--danger .dropdown-item__icon {
+  color: var(--dropdown-item-danger-text);
+  opacity: 0.7;
+}
+
+/* Thin horizontal separator inside a dropdown panel */
+.dropdown-divider {
+  border: none;
+  border-top: 1px solid var(--dropdown-divider);
+  margin: var(--spacing-1) 0;
+}
+
 /* Brand Card */
 .brand-card {
   @apply bg-white border-2 border-tymeslot-100 rounded-token-3xl p-6 shadow-xl shadow-tymeslot-200/50 transition-glass;
