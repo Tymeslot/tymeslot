@@ -132,6 +132,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
     end
   end
 
+  describe "user dropdown" do
+    test "opens via toggle and click-away is always wired",
+         %{conn: conn} do
+      {:ok, lv, html_initial} = live(conn, ~p"/dashboard/calendar")
+
+      assert html_initial =~ ~s(phx-click-away="hide_user_dropdown")
+      refute has_element?(lv, "#user-menu-panel")
+
+      lv |> element("button[phx-click='toggle_user_dropdown']") |> render_click()
+      assert has_element?(lv, "#user-menu-panel")
+      assert render(lv) =~ "Account Settings"
+      assert render(lv) =~ ~s(phx-click-away="hide_user_dropdown")
+
+      lv |> element("button[phx-click='toggle_user_dropdown']") |> render_click()
+      refute has_element?(lv, "#user-menu-panel")
+      assert render(lv) =~ ~s(phx-click-away="hide_user_dropdown")
+    end
+  end
+
   describe "month view" do
     test "renders month grid", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
