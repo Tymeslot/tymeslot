@@ -1,0 +1,120 @@
+/* ==========================================================================
+   Dashboard Tour — Overlay, spotlight, and tooltip
+   ==========================================================================
+
+   Post-onboarding guided tour. The dim effect is produced entirely by the
+   spotlight's massive box-shadow — the `__backdrop` element is unused in v1
+   but kept in the markup for future styling. Positioning of the spotlight
+   and tooltip is driven by the `DashboardTour` JS hook.
+   ========================================================================== */
+
+.dashboard-tour {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.dashboard-tour__backdrop {
+  /* Unused in v1 — the spotlight box-shadow provides the dim. */
+  display: none;
+}
+
+.dashboard-tour__spotlight {
+  position: fixed;
+  display: none;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 0 0 9999px rgba(20, 20, 40, 0.55);
+  pointer-events: none;
+  transition:
+    top var(--duration-200) ease,
+    left var(--duration-200) ease,
+    width var(--duration-200) ease,
+    height var(--duration-200) ease;
+}
+
+.dashboard-tour__tooltip {
+  pointer-events: auto;
+  max-width: 22rem;
+  padding: var(--spacing-5) var(--spacing-6);
+  background-color: var(--color-bg-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  font-family: var(--font-family-sans);
+}
+
+.dashboard-tour__progress {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+  color: var(--color-neutral-500);
+  margin: 0 0 var(--spacing-2);
+}
+
+.dashboard-tour__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--spacing-2);
+  color: var(--color-neutral-900);
+  line-height: var(--line-height-snug);
+}
+
+.dashboard-tour__body {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-neutral-700);
+  margin: 0 0 var(--spacing-5);
+}
+
+.dashboard-tour__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.dashboard-tour__spacer {
+  flex: 1;
+}
+
+.dashboard-tour__btn {
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: var(--transition-colors);
+}
+
+.dashboard-tour__btn--ghost {
+  color: var(--color-neutral-500);
+}
+
+.dashboard-tour__btn--ghost:hover {
+  color: var(--color-neutral-700);
+  background-color: var(--color-neutral-100);
+}
+
+.dashboard-tour__btn--secondary {
+  background-color: var(--color-neutral-100);
+  color: var(--color-neutral-700);
+}
+
+.dashboard-tour__btn--secondary:hover {
+  background-color: var(--color-neutral-200);
+}
+
+.dashboard-tour__btn--primary {
+  background-color: var(--color-primary-500);
+  color: var(--color-text-inverse);
+}
+
+.dashboard-tour__btn--primary:hover {
+  background-color: var(--color-primary-600);
+}
+
+.dashboard-tour__btn:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
