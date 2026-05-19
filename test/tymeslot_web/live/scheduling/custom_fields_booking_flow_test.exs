@@ -436,46 +436,10 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
   # Helpers
   # ---------------------------------------------------------------------------
 
-  # Like `navigate_to_booking_form/3` but expects a :questions step in
-  # between :schedule and :booking, so it stops after picking the time slot
-  # and clicking next_step (which routes to :questions when custom fields
-  # are present).
+  # When custom fields are present, the same booking-flow navigation that
+  # lands on :booking instead routes to :questions — so the shared helper
+  # leaves us on the questions step.
   defp navigate_to_booking_form_with_questions(conn, profile) do
-    timezone = profile.timezone
-    {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{timezone}")
-
-    view |> element("button[data-testid='duration-option']") |> render_click()
-    view |> element("button[data-testid='next-step']") |> render_click()
-
-    today = timezone |> DateTime.now!() |> DateTime.to_date()
-    target_date = Date.add(today, 1)
-    date_str = Date.to_string(target_date)
-
-    if target_date.month != today.month || target_date.year != today.year do
-      view |> element("button[phx-click='next_month']") |> render_click()
-    end
-
-    wait_until(fn ->
-      has_element?(view, "button.calendar-day[phx-value-date='#{date_str}']:not([disabled])")
-    end)
-
-    view |> element("button.calendar-day[phx-value-date='#{date_str}']") |> render_click()
-
-    wait_until(fn -> has_element?(view, "button.time-slot-button") end)
-
-    slot =
-      view
-      |> render()
-      |> Floki.parse_document!()
-      |> Floki.attribute("button.time-slot-button", "phx-value-time")
-      |> List.first() ||
-        flunk("Expected at least one available time slot button after selecting a date")
-
-    view |> element("button.time-slot-button[phx-value-time='#{slot}']") |> render_click()
-
-    # Next step routes to :questions when custom fields are present.
-    view |> element("button[phx-click='next_step']") |> render_click()
-
-    view
+    navigate_to_booking_form(conn, profile, nil)
   end
 end
