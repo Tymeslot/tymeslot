@@ -236,7 +236,7 @@ defmodule TymeslotWeb.DashboardLive do
         :if={@tour_active}
         module={TourOverlay}
         id="dashboard-tour-overlay"
-        step={Enum.at(DashboardTour.steps(), @tour_step_index)}
+        step={DashboardTour.step_at(@tour_step_index)}
         step_index={@tour_step_index}
         total_steps={@tour_total_steps}
       />
@@ -471,16 +471,7 @@ defmodule TymeslotWeb.DashboardLive do
   end
 
   def handle_event("tour:next", _params, socket) do
-    next = socket.assigns.tour_step_index + 1
-
-    socket =
-      if next >= socket.assigns.tour_total_steps do
-        assign(socket, :tour_active, false)
-      else
-        assign(socket, :tour_step_index, next)
-      end
-
-    {:noreply, socket}
+    {:noreply, advance_tour(socket)}
   end
 
   def handle_event("tour:back", _params, socket) do
@@ -489,28 +480,18 @@ defmodule TymeslotWeb.DashboardLive do
   end
 
   def handle_event("tour:skip", _params, socket) do
-    {:noreply, assign(socket, :tour_active, false)}
+    {:noreply, socket |> mark_tour_seen_once() |> assign(:tour_active, false)}
   end
 
   def handle_event("tour:finish", _params, socket) do
-    {:noreply, assign(socket, :tour_active, false)}
+    {:noreply, socket |> mark_tour_seen_once() |> assign(:tour_active, false)}
   end
 
   def handle_event("tour:skip-step", _params, socket) do
-    next = socket.assigns.tour_step_index + 1
-
-    socket =
-      if next >= socket.assigns.tour_total_steps do
-        assign(socket, :tour_active, false)
-      else
-        assign(socket, :tour_step_index, next)
-      end
-
-    {:noreply, socket}
+    {:noreply, advance_tour(socket)}
   end
 
   def handle_event("tour:viewport-too-small", _params, socket) do
-    socket = mark_tour_seen_once(socket)
     {:noreply, assign(socket, :tour_active, false)}
   end
 
@@ -630,6 +611,17 @@ defmodule TymeslotWeb.DashboardLive do
       assign(socket, dashboard_data)
     else
       socket
+    end
+  end
+
+  @spec advance_tour(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  defp advance_tour(socket) do
+    next = socket.assigns.tour_step_index + 1
+
+    if next >= socket.assigns.tour_total_steps do
+      assign(socket, :tour_active, false)
+    else
+      assign(socket, :tour_step_index, next)
     end
   end
 
