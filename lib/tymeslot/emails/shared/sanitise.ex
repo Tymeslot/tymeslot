@@ -11,6 +11,7 @@ defmodule Tymeslot.Emails.Shared.Sanitise do
   """
 
   alias Phoenix.HTML
+  alias Tymeslot.Security.UrlValidation
 
   @doc """
   Sanitizes text for email display.
@@ -42,5 +43,17 @@ defmodule Tymeslot.Emails.Shared.Sanitise do
     |> String.replace(~r/[\x00-\x1F\x7F]/, " ")
     |> String.replace(~r/\s+/, " ")
     |> String.trim()
+  end
+
+  @doc """
+  Validates and sanitises a URL for use in an email `href`. Returns `"#"` for
+  anything that doesn't parse as an http(s) URL.
+  """
+  @spec sanitize_url(String.t() | nil) :: String.t()
+  def sanitize_url(url) do
+    case UrlValidation.validate_http_url(url) do
+      :ok -> sanitize_for_email(url)
+      _other -> "#"
+    end
   end
 end

@@ -1,19 +1,19 @@
-defmodule Tymeslot.Emails.Shared.CustomAnswersSectionTest do
+defmodule Tymeslot.Emails.Shared.Meeting.CustomAnswersTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
   alias Ecto.UUID
-  alias Tymeslot.Emails.Shared.MeetingComponents
+  alias Tymeslot.Emails.Shared.Meeting.CustomAnswers
 
   describe "custom_answers_section/1" do
     test "returns empty string when snapshot is nil" do
-      html = MeetingComponents.custom_answers_section(%{})
+      html = CustomAnswers.custom_answers_section(%{})
       assert html == ""
     end
 
     test "returns empty string when snapshot is empty list" do
       html =
-        MeetingComponents.custom_answers_section(%{
+        CustomAnswers.custom_answers_section(%{
           custom_fields_snapshot: [],
           custom_field_answers: %{}
         })
@@ -25,7 +25,7 @@ defmodule Tymeslot.Emails.Shared.CustomAnswersSectionTest do
       field_id = UUID.generate()
 
       html =
-        MeetingComponents.custom_answers_section(%{
+        CustomAnswers.custom_answers_section(%{
           custom_fields_snapshot: [
             %{"id" => field_id, "type" => "short_text", "label" => "Company"}
           ],
@@ -39,7 +39,7 @@ defmodule Tymeslot.Emails.Shared.CustomAnswersSectionTest do
       field_id = UUID.generate()
 
       html =
-        MeetingComponents.custom_answers_section(%{
+        CustomAnswers.custom_answers_section(%{
           custom_fields_snapshot: [
             %{"id" => field_id, "type" => "short_text", "label" => "Company"}
           ],
@@ -54,7 +54,7 @@ defmodule Tymeslot.Emails.Shared.CustomAnswersSectionTest do
       field_id = UUID.generate()
 
       html =
-        MeetingComponents.custom_answers_section(%{
+        CustomAnswers.custom_answers_section(%{
           custom_fields_snapshot: [
             %{"id" => field_id, "type" => "yes_no", "label" => "Attending?"}
           ],
@@ -69,7 +69,7 @@ defmodule Tymeslot.Emails.Shared.CustomAnswersSectionTest do
       field_id = UUID.generate()
 
       html =
-        MeetingComponents.custom_answers_section(%{
+        CustomAnswers.custom_answers_section(%{
           custom_fields_snapshot: [
             %{
               "id" => field_id,
@@ -90,7 +90,7 @@ defmodule Tymeslot.Emails.Shared.CustomAnswersSectionTest do
       id_b = UUID.generate()
 
       html =
-        MeetingComponents.custom_answers_section(%{
+        CustomAnswers.custom_answers_section(%{
           custom_fields_snapshot: [
             %{"id" => id_a, "type" => "short_text", "label" => "Alpha"},
             %{"id" => id_b, "type" => "short_text", "label" => "Beta"}
@@ -109,7 +109,7 @@ defmodule Tymeslot.Emails.Shared.CustomAnswersSectionTest do
       field_id = UUID.generate()
 
       html =
-        MeetingComponents.custom_answers_section(%{
+        CustomAnswers.custom_answers_section(%{
           custom_fields_snapshot: [
             %{
               "id" => field_id,
@@ -128,7 +128,7 @@ defmodule Tymeslot.Emails.Shared.CustomAnswersSectionTest do
       field_id = UUID.generate()
 
       html =
-        MeetingComponents.custom_answers_section(%{
+        CustomAnswers.custom_answers_section(%{
           custom_fields_snapshot: [
             %{"id" => field_id, "type" => "short_text", "label" => "Notes"}
           ],
@@ -143,7 +143,7 @@ defmodule Tymeslot.Emails.Shared.CustomAnswersSectionTest do
       field_id = UUID.generate()
 
       html =
-        MeetingComponents.custom_answers_section(%{
+        CustomAnswers.custom_answers_section(%{
           custom_fields_snapshot: [
             %{"id" => field_id, "type" => "short_text", "label" => "Skipped"}
           ],
