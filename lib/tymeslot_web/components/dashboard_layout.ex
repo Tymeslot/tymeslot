@@ -55,15 +55,13 @@ defmodule TymeslotWeb.Components.DashboardLayout do
       <%!-- Main Layout Area --%>
       <div class={["flex lg:gap-8", if(@full_width, do: "flex-1 overflow-hidden")]}>
         <%= if mode(@current_action) == :scheduling do %>
-          <div data-tour="sidebar-nav" class="contents">
-            <DashboardSidebar.sidebar
-              current_action={@current_action}
-              integration_status={@integration_status}
-              profile={@profile}
-              automations_allowed={@automations_allowed}
-              sidebar_extensions={@sidebar_extensions}
-            />
-          </div>
+          <DashboardSidebar.sidebar
+            current_action={@current_action}
+            integration_status={@integration_status}
+            profile={@profile}
+            automations_allowed={@automations_allowed}
+            sidebar_extensions={@sidebar_extensions}
+          />
         <% end %>
 
         <%!-- Main Content Area --%>

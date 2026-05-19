@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
 
     <aside
       id="dashboard-sidebar"
+      data-tour="sidebar-nav"
       class="dashboard-sidebar lg:w-64 w-80 h-screen lg:h-full overflow-y-auto lg:flex-shrink-0 lg:relative fixed top-0 left-0 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
     >
       <div class="p-6">
