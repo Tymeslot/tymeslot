@@ -28,6 +28,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
      |> assign(:show_calendar_list, false)}
   end
 
+  @spec handle_close_calendar_list(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_close_calendar_list(_params, socket) do
+    {:noreply, assign(socket, :show_calendar_list, false)}
+  end
+
+  @spec handle_close_view_menu(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_close_view_menu(_params, socket) do
+    {:noreply, assign(socket, :show_view_menu, false)}
+  end
+
   @spec handle_toggle_integration_visibility(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_toggle_integration_visibility(%{"integration-id" => id_str}, socket) do

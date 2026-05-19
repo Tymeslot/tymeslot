@@ -132,6 +132,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
     end
   end
 
+  describe "header dropdowns" do
+    test "calendar list opens via toggle and click-away is always wired",
+         %{conn: conn} do
+      {:ok, lv, html_initial} = live(conn, ~p"/dashboard/calendar")
+
+      assert html_initial =~ ~s(phx-click-away="close_calendar_list")
+      refute has_element?(lv, "#calendar-list-dropdown-panel")
+
+      lv |> element("button[aria-label='Toggle calendars']") |> render_click()
+      assert has_element?(lv, "#calendar-list-dropdown-panel")
+      assert render(lv) =~ ~s(phx-click-away="close_calendar_list")
+
+      lv |> element("button[aria-label='Toggle calendars']") |> render_click()
+      refute has_element?(lv, "#calendar-list-dropdown-panel")
+      assert render(lv) =~ ~s(phx-click-away="close_calendar_list")
+    end
+
+    test "mobile view switcher opens via toggle and click-away is always wired",
+         %{conn: conn} do
+      {:ok, lv, html_initial} = live(conn, ~p"/dashboard/calendar")
+
+      assert html_initial =~ ~s(phx-click-away="close_view_menu")
+      refute has_element?(lv, "#view-switcher-dropdown-panel")
+
+      lv |> element("button[aria-label='Switch view']") |> render_click()
+      assert has_element?(lv, "#view-switcher-dropdown-panel")
+      assert render(lv) =~ ~s(phx-click-away="close_view_menu")
+
+      lv |> element("button[aria-label='Switch view']") |> render_click()
+      refute has_element?(lv, "#view-switcher-dropdown-panel")
+      assert render(lv) =~ ~s(phx-click-away="close_view_menu")
+    end
+  end
+
   describe "user dropdown" do
     test "opens via toggle and click-away is always wired",
          %{conn: conn} do
