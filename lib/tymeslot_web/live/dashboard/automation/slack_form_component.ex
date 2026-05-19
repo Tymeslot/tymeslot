@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Slack
+  alias Tymeslot.Slack.SlackIntegrationSchema
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -81,7 +82,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
     %{
       "name" => integration.name,
       "events" => integration.events,
-      "webhook_url" => Tymeslot.Slack.SlackIntegrationSchema.webhook_url(integration) || "",
+      "webhook_url" => SlackIntegrationSchema.webhook_url(integration) || "",
       "webhook_channel_hint" => integration.webhook_channel_hint || ""
     }
   end
