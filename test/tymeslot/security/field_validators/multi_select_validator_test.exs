@@ -19,15 +19,15 @@ defmodule Tymeslot.Security.FieldValidators.MultiSelectValidatorTest do
     end
 
     test "rejects an unknown key in the list" do
-      assert {:error, _} = MultiSelectValidator.validate(["a", "z"], @def)
+      assert {:error, _msg} = MultiSelectValidator.validate(["a", "z"], @def)
     end
 
     test "rejects non-list" do
-      assert {:error, _} = MultiSelectValidator.validate("a", @def)
+      assert {:error, _msg} = MultiSelectValidator.validate("a", @def)
     end
 
     test "empty list required is invalid" do
-      assert {:error, _} = MultiSelectValidator.validate([], @def, required: true)
+      assert {:error, _msg} = MultiSelectValidator.validate([], @def, required: true)
     end
 
     test "empty list optional is ok" do
@@ -35,21 +35,21 @@ defmodule Tymeslot.Security.FieldValidators.MultiSelectValidatorTest do
     end
 
     test "min_selections enforced" do
-      assert {:error, _} = MultiSelectValidator.validate(["a"], @def, min_selections: 2)
+      assert {:error, _msg} = MultiSelectValidator.validate(["a"], @def, min_selections: 2)
       assert :ok = MultiSelectValidator.validate(["a", "b"], @def, min_selections: 2)
     end
 
     test "max_selections enforced" do
-      assert {:error, _} = MultiSelectValidator.validate(["a", "b", "c"], @def, max_selections: 2)
+      assert {:error, _msg} = MultiSelectValidator.validate(["a", "b", "c"], @def, max_selections: 2)
       assert :ok = MultiSelectValidator.validate(["a", "b"], @def, max_selections: 2)
     end
 
     test "rejects non-string elements" do
-      assert {:error, _} = MultiSelectValidator.validate([1, 2], @def)
+      assert {:error, _msg} = MultiSelectValidator.validate([1, 2], @def)
     end
 
     test "nil treated as empty required" do
-      assert {:error, _} = MultiSelectValidator.validate(nil, @def, required: true)
+      assert {:error, _msg} = MultiSelectValidator.validate(nil, @def, required: true)
     end
 
     test "nil treated as empty optional" do
@@ -61,7 +61,7 @@ defmodule Tymeslot.Security.FieldValidators.MultiSelectValidatorTest do
     end
 
     test "duplicate values do not satisfy min_selections" do
-      assert {:error, _} = MultiSelectValidator.validate(["a", "a"], @def, min_selections: 2)
+      assert {:error, _msg} = MultiSelectValidator.validate(["a", "a"], @def, min_selections: 2)
     end
   end
 end

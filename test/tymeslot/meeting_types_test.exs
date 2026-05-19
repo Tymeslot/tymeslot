@@ -429,7 +429,7 @@ defmodule Tymeslot.MeetingTypesTest do
   describe "custom_questions feature gating" do
     defmodule DenyAccessChecker do
       @behaviour Tymeslot.Features.CheckerBehaviour
-      @impl true
+      @impl Tymeslot.Features.CheckerBehaviour
       def check_access(_user_id, :custom_questions_allowed), do: {:error, :insufficient_plan}
       def check_access(_user_id, _feature), do: :ok
     end

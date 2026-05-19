@@ -18,15 +18,15 @@ defmodule Tymeslot.Security.FieldValidators.TimeValidator do
           else: trimmed
 
       case Time.from_iso8601(padded) do
-        {:ok, _} -> :ok
-        _ -> {:error, "Time must be in HH:MM format"}
+        {:ok, _time} -> :ok
+        _err -> {:error, "Time must be in HH:MM format"}
       end
     else
       {:error, "Time must be in HH:MM format"}
     end
   end
 
-  def validate(_, _), do: {:error, "Time must be text"}
+  def validate(_value, _opts), do: {:error, "Time must be text"}
 
   defp blank(opts) do
     if Keyword.get(opts, :required, true), do: {:error, "Time is required"}, else: :ok

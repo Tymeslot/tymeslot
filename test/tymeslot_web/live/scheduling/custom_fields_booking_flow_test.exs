@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
   import Tymeslot.Factory
   import Tymeslot.BookingTestHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.MeetingTypes
@@ -384,7 +385,7 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
       # test would need a theme-agnostic navigation helper, which is out of
       # scope here — the engine itself is covered end-to-end on Quill.)
       profile
-      |> Ecto.Changeset.change(booking_theme: "2")
+      |> Changeset.change(booking_theme: "2")
       |> Repo.update!()
 
       {:ok, view, _html} =

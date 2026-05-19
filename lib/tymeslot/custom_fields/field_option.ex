@@ -32,7 +32,7 @@ defmodule Tymeslot.CustomFields.FieldOption do
   defp maybe_derive_key(cs) do
     case get_field(cs, :key) do
       key when is_binary(key) and key != "" -> cs
-      _ -> put_change(cs, :key, derive_key(get_field(cs, :label)))
+      _other -> put_change(cs, :key, derive_key(get_field(cs, :label)))
     end
   end
 

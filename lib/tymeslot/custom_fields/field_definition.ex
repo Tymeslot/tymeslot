@@ -57,7 +57,7 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
   defp maybe_set_id(cs) do
     case get_field(cs, :id) do
       id when is_binary(id) and id != "" -> cs
-      _ -> put_change(cs, :id, UUID.generate())
+      _other -> put_change(cs, :id, UUID.generate())
     end
   end
 
@@ -86,14 +86,14 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
   end
 
   defp maybe_clear_options(cs, new_type) when new_type in @select_types, do: cs
-  defp maybe_clear_options(cs, _), do: put_change(cs, :options, [])
+  defp maybe_clear_options(cs, _new_type), do: put_change(cs, :options, [])
 
   defp maybe_clear_body(cs, "note"), do: cs
-  defp maybe_clear_body(cs, _), do: put_change(cs, :body, nil)
+  defp maybe_clear_body(cs, _new_type), do: put_change(cs, :body, nil)
 
   defp maybe_clear_min_max(cs, new_type) when new_type in ~w(number date), do: cs
 
-  defp maybe_clear_min_max(cs, _),
+  defp maybe_clear_min_max(cs, _new_type),
     do: cs |> put_change(:min, nil) |> put_change(:max, nil)
 
   defp validate_type_specific(cs) do
@@ -103,7 +103,7 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
       "note" -> validate_required(cs, [:body])
       "number" -> validate_min_le_max(cs)
       "date" -> validate_min_le_max(cs)
-      _ -> cs
+      _type -> cs
     end
   end
 
@@ -119,10 +119,10 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
 
   defp validate_min_le_max(cs) do
     case {get_field(cs, :min), get_field(cs, :max)} do
-      {nil, _} -> cs
-      {_, nil} -> cs
+      {nil, _max} -> cs
+      {_min, nil} -> cs
       {a, b} when a <= b -> cs
-      _ -> add_error(cs, :max, "must be greater than or equal to min")
+      _other -> add_error(cs, :max, "must be greater than or equal to min")
     end
   end
 end

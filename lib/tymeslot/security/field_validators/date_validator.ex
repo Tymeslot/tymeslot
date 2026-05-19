@@ -15,17 +15,17 @@ defmodule Tymeslot.Security.FieldValidators.DateValidator do
     else
       {:error, :invalid_format} -> {:error, "Date must be in YYYY-MM-DD format"}
       {:error, msg} when is_binary(msg) -> {:error, msg}
-      _ -> {:error, "Date is invalid"}
+      _other -> {:error, "Date is invalid"}
     end
   end
 
-  def validate(_, _), do: {:error, "Date must be text"}
+  def validate(_value, _opts), do: {:error, "Date must be text"}
 
   defp blank(opts) do
     if Keyword.get(opts, :required, true), do: {:error, "Date is required"}, else: :ok
   end
 
-  defp check_bound(_, nil, _), do: :ok
+  defp check_bound(_date, nil, _dir), do: :ok
 
   defp check_bound(date, bound, :min) when is_binary(bound) do
     case Date.from_iso8601(bound) do
@@ -34,7 +34,7 @@ defmodule Tymeslot.Security.FieldValidators.DateValidator do
           do: :ok,
           else: {:error, "Date is before the earliest allowed date"}
 
-      _ ->
+      _err ->
         {:error, "Date range configuration is invalid"}
     end
   end
@@ -46,7 +46,7 @@ defmodule Tymeslot.Security.FieldValidators.DateValidator do
           do: :ok,
           else: {:error, "Date is after the latest allowed date"}
 
-      _ ->
+      _err ->
         {:error, "Date range configuration is invalid"}
     end
   end

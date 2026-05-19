@@ -9,7 +9,7 @@ defmodule Tymeslot.CustomFields.ValidatorTest do
     test "short_text accepts any non-blank text" do
       d = %{"type" => "short_text", "required" => true, "label" => "Company"}
       assert {:ok, "Acme"} = Validator.validate("Acme", d)
-      assert {:error, _} = Validator.validate("", d)
+      assert {:error, _msg} = Validator.validate("", d)
     end
 
     test "short_text accepts a single-character answer" do
@@ -31,7 +31,7 @@ defmodule Tymeslot.CustomFields.ValidatorTest do
       d = %{"type" => "yes_no", "required" => true, "label" => "Attending?"}
       assert {:ok, true} = Validator.validate(true, d)
       assert {:ok, false} = Validator.validate(false, d)
-      assert {:error, _} = Validator.validate(nil, d)
+      assert {:error, _msg} = Validator.validate(nil, d)
     end
 
     test "single_select must be a known key" do
@@ -43,7 +43,7 @@ defmodule Tymeslot.CustomFields.ValidatorTest do
       }
 
       assert {:ok, "a"} = Validator.validate("a", d)
-      assert {:error, _} = Validator.validate("c", d)
+      assert {:error, _msg} = Validator.validate("c", d)
     end
 
     test "note returns confirmed_at as a UTC ISO string when ok" do
@@ -55,7 +55,7 @@ defmodule Tymeslot.CustomFields.ValidatorTest do
 
     test "unknown type returns error" do
       d = %{"type" => "rich_text", "required" => true, "label" => "Bad"}
-      assert {:error, _} = Validator.validate("anything", d)
+      assert {:error, _msg} = Validator.validate("anything", d)
     end
   end
 end

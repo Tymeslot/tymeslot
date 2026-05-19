@@ -7,10 +7,10 @@ defmodule Tymeslot.Security.FieldValidators.SelectValidator do
   @spec validate(any(), map(), keyword()) :: :ok | {:error, String.t()}
   def validate(value, definition, opts \\ [])
 
-  def validate(nil, _, opts), do: blank_result(opts)
-  def validate("", _, opts), do: blank_result(opts)
+  def validate(nil, _definition, opts), do: blank_result(opts)
+  def validate("", _definition, opts), do: blank_result(opts)
 
-  def validate(value, definition, _) when is_binary(value) do
+  def validate(value, definition, _opts) when is_binary(value) do
     if value in allowed_keys(definition) do
       :ok
     else
@@ -18,7 +18,7 @@ defmodule Tymeslot.Security.FieldValidators.SelectValidator do
     end
   end
 
-  def validate(_, _, _), do: {:error, "Selection must be a single option"}
+  def validate(_value, _definition, _opts), do: {:error, "Selection must be a single option"}
 
   defp blank_result(opts) do
     if Keyword.get(opts, :required, true), do: {:error, "Please choose an option"}, else: :ok
@@ -28,9 +28,9 @@ defmodule Tymeslot.Security.FieldValidators.SelectValidator do
     Enum.map(options, fn
       %{"key" => k} -> k
       %{key: k} -> k
-      _ -> nil
+      _opt -> nil
     end)
   end
 
-  defp allowed_keys(_), do: []
+  defp allowed_keys(_definition), do: []
 end
