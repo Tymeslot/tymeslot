@@ -178,6 +178,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
   slot :inner_block
   slot :leading_icon
   slot :trailing_icon
+  slot :description
   @spec input(map()) :: Phoenix.LiveView.Rendered.t()
   def input(assigns), do: Forms.input(assigns)
 

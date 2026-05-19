@@ -72,6 +72,12 @@ defmodule TymeslotWeb.Hooks.ModalHook do
   defp resolve_keys(:telegram_deliveries),
     do: {:show_telegram_deliveries_modal, :telegram_deliveries_modal_data}
 
+  defp resolve_keys(:slack_delete),
+    do: {:show_slack_delete_modal, :slack_delete_modal_data}
+
+  defp resolve_keys(:slack_deliveries),
+    do: {:show_slack_deliveries_modal, :slack_deliveries_modal_data}
+
   defp resolve_keys("delete_break"), do: {:show_delete_break_modal, :delete_break_modal_data}
   defp resolve_keys("clear_day"), do: {:show_clear_day_modal, :clear_day_modal_data}
 
@@ -98,6 +104,12 @@ defmodule TymeslotWeb.Hooks.ModalHook do
 
   defp resolve_keys("telegram_deliveries"),
     do: {:show_telegram_deliveries_modal, :telegram_deliveries_modal_data}
+
+  defp resolve_keys("slack_delete"),
+    do: {:show_slack_delete_modal, :slack_delete_modal_data}
+
+  defp resolve_keys("slack_deliveries"),
+    do: {:show_slack_deliveries_modal, :slack_deliveries_modal_data}
 
   defp resolve_keys(other), do: raise(ArgumentError, "Unknown modal name: #{inspect(other)}")
 end
