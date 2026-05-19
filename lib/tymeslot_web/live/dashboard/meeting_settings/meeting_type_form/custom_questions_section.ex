@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
               <div class="flex items-center gap-1 flex-shrink-0">
                 <CoreComponents.action_button
                   type="button"
-                  variant={:outline}
+                  variant={:secondary}
                   phx-click="edit_question"
                   phx-value-id={q.id}
                   phx-target={@myself}
