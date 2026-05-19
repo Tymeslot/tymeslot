@@ -45,6 +45,7 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :meetings,
       :meeting_types,
       :notifications,
+      :onboarding,
       :payments,
       :profiles,
       :scheduling,
