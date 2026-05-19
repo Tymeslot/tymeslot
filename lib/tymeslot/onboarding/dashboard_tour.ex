@@ -1,6 +1,6 @@
 defmodule Tymeslot.Onboarding.DashboardTour do
   @moduledoc """
-  Step catalog for the post-onboarding dashboard tour.
+  Step catalog for the post-onboarding dashboard tour shown on first dashboard visit.
 
   Each step is a map of:
 
