@@ -5,6 +5,8 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
   with flags and language names displayed for each option.
   """
   use Phoenix.Component
+
+  import TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Components.FlagHelpers
 
   attr :locale, :string, required: true
@@ -15,27 +17,28 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
   @spec language_switcher(map()) :: Phoenix.LiveView.Rendered.t()
   def language_switcher(assigns) do
     ~H"""
-    <div class="language-switcher relative" phx-click-away="close_language_dropdown">
-      <button
-        type="button"
-        phx-click="toggle_language_dropdown"
-        class={switcher_button_class(@theme)}
+    <div class="language-switcher">
+      <.dropdown
+        id="language-switcher-dropdown"
+        open={@dropdown_open}
+        on_toggle="toggle_language_dropdown"
+        on_close="close_language_dropdown"
+        trigger_class={switcher_button_class(@theme)}
+        class={dropdown_panel_class(@theme)}
         aria-label="Change language"
-        aria-expanded={to_string(@dropdown_open)}
       >
-        <.locale_flag locale={@locale} class="w-5 h-4" />
-        <span class="ml-2 hidden sm:inline">{current_locale_name(@locale, @locales)}</span>
-        <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fill-rule="evenodd"
-            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-            clip-rule="evenodd"
-          />
-        </svg>
-      </button>
-
-      <%= if @dropdown_open do %>
-        <div class={dropdown_class(@theme)} role="menu">
+        <:trigger>
+          <.locale_flag locale={@locale} class="w-5 h-4" />
+          <span class="ml-2 hidden sm:inline">{current_locale_name(@locale, @locales)}</span>
+          <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </:trigger>
+        <:panel>
           <%= for locale_data <- @locales do %>
             <button
               type="button"
@@ -57,8 +60,8 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
               <% end %>
             </button>
           <% end %>
-        </div>
-      <% end %>
+        </:panel>
+      </.dropdown>
     </div>
     """
   end
@@ -80,15 +83,15 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
 
   defp switcher_button_class(_arg), do: switcher_button_class("quill")
 
-  defp dropdown_class("quill") do
-    "absolute right-0 mt-2 w-48 rounded-lg shadow-xl z-50 language-dropdown-quill"
+  defp dropdown_panel_class("quill") do
+    "mt-2 w-48 rounded-lg shadow-xl language-dropdown-quill"
   end
 
-  defp dropdown_class("rhythm") do
-    "absolute right-0 mt-2 w-48 rounded-lg shadow-xl z-50 language-dropdown-rhythm"
+  defp dropdown_panel_class("rhythm") do
+    "mt-2 w-48 rounded-lg shadow-xl language-dropdown-rhythm"
   end
 
-  defp dropdown_class(_arg), do: dropdown_class("quill")
+  defp dropdown_panel_class(_arg), do: dropdown_panel_class("quill")
 
   defp dropdown_item_class("rhythm", active) do
     base = "flex items-center w-full px-4 py-3 text-left text-sm transition-colors"
