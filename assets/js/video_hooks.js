@@ -4,7 +4,7 @@
 const getConnectionInfo = () =>
   navigator.connection || navigator.mozConnection || navigator.webkitConnection;
 
-const isSlowConnection = (connection) => {
+export const isSlowConnection = (connection) => {
   if (!connection) return false;
 
   if (connection.saveData) return true;

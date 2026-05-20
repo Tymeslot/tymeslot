@@ -215,11 +215,11 @@ export const CustomColourPicker = {
 
 // --- Colour math -----------------------------------------------------------
 
-function clamp(n, lo, hi) {
+export function clamp(n, lo, hi) {
   return Math.min(hi, Math.max(lo, n));
 }
 
-function hexToRgb(hex) {
+export function hexToRgb(hex) {
   let h = hex.replace("#", "").trim();
   if (h.length === 3) h = h.split("").map((c) => c + c).join("");
   if (!/^[0-9a-fA-F]{6}$/.test(h)) return null;
@@ -230,7 +230,7 @@ function hexToRgb(hex) {
   };
 }
 
-function rgbToHsv({ r, g, b }) {
+export function rgbToHsv({ r, g, b }) {
   const rn = r / 255;
   const gn = g / 255;
   const bn = b / 255;
@@ -252,7 +252,7 @@ function rgbToHsv({ r, g, b }) {
   return { h, s, v };
 }
 
-function hsvToHex({ h, s, v }) {
+export function hsvToHex({ h, s, v }) {
   const c = v * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = v - c;
