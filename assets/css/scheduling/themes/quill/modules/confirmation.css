@@ -288,3 +288,48 @@ html.quill-theme[data-embedded] .confirmation-badge-dot svg {
   width: 10px;
   height: 10px;
 }
+
+/* ============================================================================
+   CUSTOM FIELD ANSWERS — "Your answers" section on the confirmation step
+   ============================================================================ */
+
+.custom-answers-section {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-medium);
+}
+
+.custom-answers-heading {
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--theme-text-secondary, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  margin: 0 0 var(--space-xs);
+}
+
+.custom-answers-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+}
+
+.custom-answer-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--space-sm);
+}
+
+.custom-answer-label {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--theme-text-secondary, #94a3b8);
+}
+
+.custom-answer-value {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--theme-text, #e2e8f0);
+  margin: 0;
+}

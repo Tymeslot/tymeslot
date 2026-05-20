@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       _integration = insert(:calendar_integration, user: user, is_active: true)
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       html = lv |> element("button", "Calendars") |> render_click()
-      assert html =~ "calendar-list-panel"
+      assert html =~ "calendar-list-dropdown-panel"
     end
 
     test "hides events when integration is toggled off", %{conn: conn, user: user} do

@@ -49,6 +49,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
+      #{MeetingComponents.custom_answers_section(appointment_details)}
+
       #{Text.centered_text(dgettext("emails", "Would you like to schedule a new appointment?"), padding: "24px 0 10px 0")}
       #{Buttons.action_button(:confirmed, dgettext("emails", "Schedule New Appointment"), Urls.get_app_url(), full_width: true)}
 
@@ -90,6 +92,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
 
       #{MeetingComponents.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time_owner_tz, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type}, organizer_locale(appointment_details))}
 
+      #{MeetingComponents.custom_answers_section(appointment_details)}
+
       #{Text.system_footer_note(dgettext("emails", "The attendee has been notified of the cancellation."))}
       """
 
@@ -123,6 +127,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
 
   defp text_body_attendee(appointment_details, locale) do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
+    custom_answers = TextBodyHelper.format_custom_answers(appointment_details, locale)
 
     """
     #{dgettext("emails", "Meeting Cancelled")}
@@ -133,7 +138,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
 
     #{dgettext("emails", "CANCELLED APPOINTMENT DETAILS:")}
     #{dgettext("emails", "Meeting with:")} #{appointment_details.organizer_name}
-    #{meeting_details}
+    #{meeting_details}#{custom_answers}
 
     #{dgettext("emails", "This time slot is now available for booking again.")}
 
@@ -176,13 +181,19 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
         organizer_locale(appointment_details)
       )
 
+    custom_answers =
+      TextBodyHelper.format_custom_answers(
+        appointment_details,
+        organizer_locale(appointment_details)
+      )
+
     """
     #{dgettext("emails", "Meeting Cancelled")}
 
     #{dgettext("emails", "The appointment with %{name} has been cancelled.", name: appointment_details.attendee_name)}
 
     #{dgettext("emails", "CANCELLED APPOINTMENT DETAILS:")}
-    #{meeting_details}#{attendee_info}
+    #{meeting_details}#{attendee_info}#{custom_answers}
 
     #{dgettext("emails", "The attendee has been notified of the cancellation.")}
     """

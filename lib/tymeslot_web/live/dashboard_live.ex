@@ -143,29 +143,18 @@ defmodule TymeslotWeb.DashboardLive do
 
   use TymeslotWeb, :live_view
 
-  alias Phoenix.Naming
   alias Tymeslot.Dashboard.DashboardContext
-  alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Integrations.Calendar.Selection
-  alias Tymeslot.Profiles
+  alias Tymeslot.Onboarding.DashboardTour
   alias TymeslotWeb.Components.DashboardLayout
+  alias TymeslotWeb.Components.TourOverlay
+  alias TymeslotWeb.Dashboard.AutomationSettingsComponent
+  alias TymeslotWeb.Dashboard.CalendarEventHandlers
+  alias TymeslotWeb.Dashboard.ComponentDispatch
+  alias TymeslotWeb.Dashboard.MeetingFormMessages
+  alias TymeslotWeb.Dashboard.ScheduleSettingsComponent
+  alias TymeslotWeb.Dashboard.ServiceSettingsComponent
+  alias TymeslotWeb.Dashboard.TourEventHandlers
   alias TymeslotWeb.Helpers.PageTitles
-
-  alias TymeslotWeb.Dashboard.{
-    AutomationSettingsComponent,
-    BookingsManagementComponent,
-    CalendarEventHandlers,
-    CalendarGridComponent,
-    CalendarSettingsComponent,
-    DashboardOverviewComponent,
-    ProfileSettingsComponent,
-    ScheduleSettingsComponent,
-    ServiceSettingsComponent,
-    ThemeSettingsComponent,
-    VideoSettingsComponent
-  }
-
-  alias TymeslotWeb.Live.Dashboard.EmbedSettingsComponent
 
   require Logger
 
@@ -199,6 +188,7 @@ defmodule TymeslotWeb.DashboardLive do
       socket
       |> assign(:page_title, PageTitles.dashboard_title(action))
       |> assign(:params, params)
+      |> TourEventHandlers.assign_tour_state(action)
 
     socket = if connected?(socket), do: load_dashboard_data(socket), else: socket
 
@@ -212,10 +202,16 @@ defmodule TymeslotWeb.DashboardLive do
       assigns
       |> assign(
         :component_module,
-        component_for_action(assigns.live_action, assigns[:dashboard_action_components])
+        ComponentDispatch.component_for_action(
+          assigns.live_action,
+          assigns[:dashboard_action_components]
+        )
       )
-      |> assign(:component_props, props_for_action(assigns))
-      |> assign(:should_render_feature, should_render_feature?(assigns.live_action, assigns))
+      |> assign(:component_props, ComponentDispatch.props_for_action(assigns))
+      |> assign(
+        :should_render_feature,
+        ComponentDispatch.should_render_feature?(assigns.live_action, assigns)
+      )
 
     ~H"""
     <DashboardLayout.dashboard_layout
@@ -228,6 +224,14 @@ defmodule TymeslotWeb.DashboardLive do
       sidebar_extensions={@sidebar_extensions}
       unseen_announcements={@unseen_announcements}
     >
+      <.live_component
+        :if={@tour_active}
+        module={TourOverlay}
+        id="dashboard-tour-overlay"
+        step={DashboardTour.step_at(@tour_step_index)}
+        step_index={@tour_step_index}
+        total_steps={@tour_total_steps}
+      />
       <.flash_group flash={@flash} id="dashboard-flash-group" />
 
       <%!-- Content --%>
@@ -235,7 +239,7 @@ defmodule TymeslotWeb.DashboardLive do
         <%= if @should_render_feature do %>
           <.live_component
             module={@component_module}
-            id={component_id(@live_action)}
+            id={ComponentDispatch.component_id(@live_action)}
             current_user={@current_user}
             profile={Map.get(@component_props, :profile, @profile)}
             shared_data={Map.get(@component_props, :shared_data, %{})}
@@ -245,9 +249,10 @@ defmodule TymeslotWeb.DashboardLive do
             user_agent={@user_agent}
             live_action={@live_action}
             params={@params}
+            custom_questions_allowed={@custom_questions_allowed}
           />
         <% else %>
-          <.render_feature_placeholder
+          <ComponentDispatch.feature_placeholder
             section={@live_action}
             current_user={@current_user}
             feature_placeholder_components={@feature_placeholder_components}
@@ -286,7 +291,7 @@ defmodule TymeslotWeb.DashboardLive do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:meeting_type_changed}, socket) do
     if socket.assigns.live_action == :meeting_settings do
-      send_update(ServiceSettingsComponent, id: component_id(:meeting_settings))
+      send_update(ServiceSettingsComponent, id: ComponentDispatch.component_id(:meeting_settings))
     end
 
     {:noreply,
@@ -312,33 +317,18 @@ defmodule TymeslotWeb.DashboardLive do
     end
   end
 
-  @impl Phoenix.LiveView
-  def handle_info({:clear_reminder_confirmation, form_id}, socket) do
-    send_update(TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm,
-      id: form_id,
-      reminder_confirmation: nil
-    )
-
-    {:noreply, socket}
-  end
+  # Form-related messages forwarded from MeetingTypeForm and its child components
+  # are delegated to TymeslotWeb.Dashboard.MeetingFormMessages.
 
   @impl Phoenix.LiveView
-  def handle_info({:refresh_calendar_list, form_id, integration_id}, socket) do
-    user_id = socket.assigns.current_user.id
-    Calendar.refresh_calendar_list_async(integration_id, user_id, form_id)
-    {:noreply, socket}
-  end
+  def handle_info({:clear_reminder_confirmation, form_id}, socket),
+    do: MeetingFormMessages.handle_clear_reminder_confirmation(form_id, socket)
 
-  @impl Phoenix.LiveView
-  def handle_info({:calendar_list_refreshed, form_id, _integration_id, calendars}, socket) do
-    send_update(TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm,
-      id: form_id,
-      refreshing_calendars: false,
-      available_calendars: Selection.selected_calendars(calendars)
-    )
+  def handle_info({:refresh_calendar_list, form_id, integration_id}, socket),
+    do: MeetingFormMessages.handle_refresh_calendar_list(form_id, integration_id, socket)
 
-    {:noreply, socket}
-  end
+  def handle_info({:calendar_list_refreshed, form_id, _integration_id, calendars}, socket),
+    do: MeetingFormMessages.handle_calendar_list_refreshed(form_id, calendars, socket)
 
   # Generic external redirect message from components.
   # Only HTTPS URLs are allowed to prevent open-redirect attacks from
@@ -371,7 +361,7 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_info({:reload_schedule}, socket) do
     # Refresh the availability component after mutations from child components
     send_update(ScheduleSettingsComponent,
-      id: component_id(:availability),
+      id: ComponentDispatch.component_id(:availability),
       profile: socket.assigns.profile
     )
 
@@ -382,7 +372,7 @@ defmodule TymeslotWeb.DashboardLive do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:telegram_linked, integration_id, _chat_id}, socket) do
     send_update(AutomationSettingsComponent,
-      id: component_id(:automation),
+      id: ComponentDispatch.component_id(:automation),
       telegram_linked_integration_id: integration_id
     )
 
@@ -393,7 +383,7 @@ defmodule TymeslotWeb.DashboardLive do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:telegram_link_expired, integration_id}, socket) do
     send_update(AutomationSettingsComponent,
-      id: component_id(:automation),
+      id: ComponentDispatch.component_id(:automation),
       telegram_link_expired_id: integration_id
     )
 
@@ -451,51 +441,13 @@ defmodule TymeslotWeb.DashboardLive do
     {:noreply, socket}
   end
 
+  @impl Phoenix.LiveView
+  @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_event("tour:" <> action, params, socket),
+    do: TourEventHandlers.handle_event(action, params, socket)
+
   # Private functions
-
-  # Returns a stable string id for a component rendered for the given action.
-  # All send_update/2 calls must use this function to ensure the id matches
-  # the id assigned in render/1.
-  @spec component_id(atom()) :: String.t()
-  defp component_id(action), do: to_string(action)
-
-  @spec should_render_feature?(atom(), map()) :: boolean()
-  defp should_render_feature?(action, assigns) do
-    gates = assigns[:dashboard_feature_gates] || %{}
-
-    case Map.get(gates, action) do
-      nil -> true
-      assign_key -> Map.get(assigns, assign_key, true)
-    end
-  end
-
-  attr :section, :atom, required: true
-  attr :current_user, :any, required: true
-  attr :feature_placeholder_components, :map, required: true
-
-  @spec render_feature_placeholder(map()) :: Phoenix.LiveView.Rendered.t()
-  defp render_feature_placeholder(assigns) do
-    assigns =
-      assigns
-      |> assign(:placeholder_component, assigns.feature_placeholder_components[assigns.section])
-      |> assign(:feature_name, Naming.humanize(assigns.section))
-
-    ~H"""
-    <%= if @placeholder_component do %>
-      <.live_component
-        module={@placeholder_component}
-        id={"#{@section}_placeholder"}
-        current_user={@current_user}
-        feature={@section}
-      />
-    <% else %>
-      <%!-- Core fallback: just show a simple message --%>
-      <div class="p-8 text-center text-tymeslot-500">
-        <p>This feature ({@feature_name}) is not available on your current plan.</p>
-      </div>
-    <% end %>
-    """
-  end
 
   @spec handle_saving_animation(Phoenix.LiveView.Socket.t(), non_neg_integer()) ::
           Phoenix.LiveView.Socket.t()
@@ -508,39 +460,6 @@ defmodule TymeslotWeb.DashboardLive do
     ref = Process.send_after(self(), {:hide_saving, gen}, duration)
     assign(socket, saving: true, saving_timer_ref: ref, saving_gen: gen)
   end
-
-  @spec component_for_action(atom(), map() | nil) :: module()
-  defp component_for_action(:overview, _components), do: DashboardOverviewComponent
-  defp component_for_action(:settings, _components), do: ProfileSettingsComponent
-  defp component_for_action(:availability, _components), do: ScheduleSettingsComponent
-  defp component_for_action(:meeting_settings, _components), do: ServiceSettingsComponent
-  defp component_for_action(:calendar, _components), do: CalendarGridComponent
-  defp component_for_action(:calendar_integration, _components), do: CalendarSettingsComponent
-  defp component_for_action(:video_integration, _components), do: VideoSettingsComponent
-  defp component_for_action(:automation, _components), do: AutomationSettingsComponent
-  defp component_for_action(:theme, _components), do: ThemeSettingsComponent
-  defp component_for_action(:theme_customization, _components), do: ThemeSettingsComponent
-  defp component_for_action(:meetings, _components), do: BookingsManagementComponent
-  defp component_for_action(:embed, _components), do: EmbedSettingsComponent
-
-  defp component_for_action(action, components) do
-    Map.get(components || %{}, action, DashboardOverviewComponent)
-  end
-
-  # Returns a map of assign overrides for the given action.
-  # Only actions that need to transform assigns before passing them to the component
-  # are listed here; all other actions receive the socket assigns directly.
-  @spec props_for_action(map()) :: map()
-  defp props_for_action(%{live_action: :overview} = assigns) do
-    %{shared_data: %{upcoming_meetings: assigns[:upcoming_meetings] || []}}
-  end
-
-  defp props_for_action(%{live_action: action} = assigns)
-       when action in [:settings, :availability] do
-    %{profile: Profiles.prefill_timezone(assigns.profile, assigns[:detected_timezone])}
-  end
-
-  defp props_for_action(_assigns), do: %{}
 
   # Refreshes integration status only — used after integration events.
   # Action-specific data (e.g. upcoming meetings) is loaded exclusively by

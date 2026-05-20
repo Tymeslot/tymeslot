@@ -98,25 +98,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
 
   defp calendar_list_dropdown(assigns) do
     ~H"""
-    <div class="relative">
-      <button
-        phx-click="toggle_calendar_list"
-        phx-target={@myself}
-        class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-turquoise-400"
-        aria-label="Toggle calendars"
-        aria-expanded={to_string(@show_calendar_list)}
-      >
+    <.dropdown
+      id="calendar-list-dropdown"
+      open={@show_calendar_list}
+      on_toggle="toggle_calendar_list"
+      on_close="close_calendar_list"
+      target={@myself}
+      role="dialog"
+      trigger_class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-turquoise-400"
+      class="z-30 bg-white border border-tymeslot-200 rounded-xl shadow-lg p-3 w-60"
+      aria-label="Toggle calendars"
+    >
+      <:trigger>
         <IconComponents.icon name={:menu} class="w-4 h-4" />
         <span class="hidden md:inline">Calendars</span>
-      </button>
-      <div
-        :if={@show_calendar_list}
-        id="calendar-list-panel"
-        class="absolute right-0 top-full mt-1 z-30 bg-white border border-tymeslot-200 rounded-xl shadow-lg p-3 w-60"
-        aria-labelledby="calendar-list-panel-heading"
-      >
-        <h4 id="calendar-list-panel-heading" class="text-token-xs font-semibold text-tymeslot-500 uppercase tracking-wide mb-2">My Calendars</h4>
-        <label :for={integration <- @integrations} class="flex items-center gap-2 py-1.5 cursor-pointer hover:bg-tymeslot-50 rounded px-1">
+      </:trigger>
+      <:panel>
+        <h4 class="text-token-xs font-semibold text-tymeslot-500 uppercase tracking-wide mb-2">
+          My Calendars
+        </h4>
+        <label
+          :for={integration <- @integrations}
+          class="flex items-center gap-2 py-1.5 cursor-pointer hover:bg-tymeslot-50 rounded px-1"
+        >
           <input
             type="checkbox"
             checked={integration.id not in @hidden_integration_ids}
@@ -125,12 +129,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             phx-target={@myself}
             class="rounded"
           />
-          <div class={"w-3 h-3 rounded-full flex-shrink-0 #{Helpers.color_class_for_integration(@integration_colors, integration.id)}"} aria-hidden="true"></div>
-          <span class="text-token-sm text-tymeslot-700 truncate"><%= integration.name %></span>
+          <div
+            class={"w-3 h-3 rounded-full flex-shrink-0 #{Helpers.color_class_for_integration(@integration_colors, integration.id)}"}
+            aria-hidden="true"
+          >
+          </div>
+          <span class="text-token-sm text-tymeslot-700 truncate">{integration.name}</span>
         </label>
-        <p :if={@integrations == []} class="text-token-sm text-tymeslot-400">No calendars connected</p>
-      </div>
-    </div>
+        <p :if={@integrations == []} class="text-token-sm text-tymeslot-400">
+          No calendars connected
+        </p>
+      </:panel>
+    </.dropdown>
     """
   end
 
@@ -141,27 +151,32 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   defp view_switcher(assigns) do
     ~H"""
     <%!-- Dropdown on mobile --%>
-    <div class="relative md:hidden">
-      <button
-        phx-click="toggle_view_menu"
-        phx-target={@myself}
-        class="min-w-[40px] min-h-[40px] px-2 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-turquoise-400"
+    <div class="md:hidden">
+      <.dropdown
+        id="view-switcher-dropdown"
+        open={@show_view_menu}
+        on_toggle="toggle_view_menu"
+        on_close="close_view_menu"
+        target={@myself}
+        trigger_class="min-w-[40px] min-h-[40px] px-2 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-turquoise-400"
+        class="z-30 bg-white border border-tymeslot-200 rounded-xl shadow-lg py-1 w-36"
         aria-label="Switch view"
-        aria-expanded={to_string(@show_view_menu)}
       >
-        <IconComponents.icon name={:calendar} class="w-4 h-4" />
-        <span class="text-token-xs font-medium"><%= Helpers.view_label(@view) %></span>
-        <IconComponents.icon name={:chevron_down} class="w-3 h-3" />
-      </button>
-      <div :if={@show_view_menu} class="absolute right-0 top-full mt-1 z-30 bg-white border border-tymeslot-200 rounded-xl shadow-lg py-1 w-36">
-        <button
-          :for={{value, label} <- view_options()}
-          phx-click="set_view"
-          phx-value-view={Atom.to_string(value)}
-          phx-target={@myself}
-          class={"w-full text-left px-3 py-2 text-token-sm #{if @view == value, do: "bg-turquoise-50 text-turquoise-700 font-semibold", else: "text-tymeslot-600 hover:bg-tymeslot-50"}"}
-        ><%= label %></button>
-      </div>
+        <:trigger>
+          <IconComponents.icon name={:calendar} class="w-4 h-4" />
+          <span class="text-token-xs font-medium">{Helpers.view_label(@view)}</span>
+          <IconComponents.icon name={:chevron_down} class="w-3 h-3" />
+        </:trigger>
+        <:panel>
+          <button
+            :for={{value, label} <- view_options()}
+            phx-click="set_view"
+            phx-value-view={Atom.to_string(value)}
+            phx-target={@myself}
+            class={"w-full text-left px-3 py-2 text-token-sm #{if @view == value, do: "bg-turquoise-50 text-turquoise-700 font-semibold", else: "text-tymeslot-600 hover:bg-tymeslot-50"}"}
+          >{label}</button>
+        </:panel>
+      </.dropdown>
     </div>
     <%!-- Button group on desktop (pushed to the far right of the action row) --%>
     <div class="hidden md:flex md:order-last rounded-md border border-tymeslot-200 overflow-hidden text-token-sm">
@@ -171,7 +186,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         phx-value-view={Atom.to_string(value)}
         phx-target={@myself}
         class={"px-3 py-1.5 focus:outline-none focus:z-10 focus:ring-2 focus:ring-turquoise-400 #{if idx > 0, do: "border-l border-tymeslot-200"} #{if @view == value, do: "bg-turquoise-600 text-white", else: "bg-white text-tymeslot-600 hover:bg-tymeslot-50"}"}
-      ><%= label %></button>
+      >{label}</button>
     </div>
     """
   end

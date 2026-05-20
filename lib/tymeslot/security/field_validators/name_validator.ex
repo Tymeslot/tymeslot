@@ -30,8 +30,8 @@ defmodule Tymeslot.Security.FieldValidators.NameValidator do
   @spec validate(any(), keyword()) :: :ok | {:error, String.t()}
   def validate(name, opts \\ [])
 
-  def validate(nil, _opts), do: {:error, "Name is required"}
-  def validate("", _opts), do: {:error, "Name is required"}
+  def validate(nil, opts), do: blank_result(opts)
+  def validate("", opts), do: blank_result(opts)
 
   def validate(name, opts) when is_binary(name) do
     min_length = Keyword.get(opts, :min_length, @name_min_length)
@@ -76,5 +76,13 @@ defmodule Tymeslot.Security.FieldValidators.NameValidator do
   defp excessive_whitespace?(name) do
     # Check for more than 2 consecutive spaces
     Regex.match?(~r/\s{3,}/, name)
+  end
+
+  defp blank_result(opts) do
+    if Keyword.get(opts, :required, true) do
+      {:error, "Name is required"}
+    else
+      :ok
+    end
   end
 end

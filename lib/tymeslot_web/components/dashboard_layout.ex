@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
             </div>
 
     <%!-- Right side: User dropdown --%>
-            <div class="relative flex-shrink-0">
+            <div class="relative flex-shrink-0" data-tour="user-menu">
               <.live_component
                 module={UserDropdownComponent}
                 id="user-dropdown"
@@ -157,7 +157,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   @spec mode_tabs(map()) :: Phoenix.LiveView.Rendered.t()
   defp mode_tabs(assigns) do
     ~H"""
-    <div class="mode-tab-bar" data-testid="mode-tab-bar">
+    <div class="mode-tab-bar" data-testid="mode-tab-bar" data-tour="mode-tabs">
       <div class="flex items-stretch w-full gap-2">
         <.link
           patch={~p"/dashboard"}

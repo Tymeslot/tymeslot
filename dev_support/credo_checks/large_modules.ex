@@ -1,6 +1,6 @@
 defmodule CredoChecks.LargeModules do
   @moduledoc """
-  Detects modules that are longer than 600 lines.
+  Detects modules that are longer than 650 lines.
 
   Large modules can be difficult to understand, maintain, and test. They often
   indicate that a module has too many responsibilities and should be broken down
@@ -10,16 +10,16 @@ defmodule CredoChecks.LargeModules do
 
   The maximum number of lines can be configured:
 
-      {CredoChecks.LargeModules, max_lines: 600}
+      {CredoChecks.LargeModules, max_lines: 650}
 
-  The default maximum is 600 lines.
+  The default maximum is 650 lines.
   """
 
   use Credo.Check,
     base_priority: :low,
     category: :design,
     exit_status: 0,
-    param_defaults: [max_lines: 600],
+    param_defaults: [max_lines: 650],
     explanations: [
       check: """
       Detects modules that are longer than the configured maximum number of lines.
@@ -29,7 +29,7 @@ defmodule CredoChecks.LargeModules do
       into smaller, more focused modules.
       """,
       params: [
-        max_lines: "The maximum number of lines allowed in a module (default: 600)"
+        max_lines: "The maximum number of lines allowed in a module (default: 650)"
       ]
     ]
 

@@ -6,6 +6,8 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
 
   use Phoenix.Component
 
+  import TymeslotWeb.Components.CoreComponents
+
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.TimezoneHelpers
 
@@ -33,30 +35,29 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
               stroke-linejoin="round"
               stroke-width="2"
               d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            >
-            </path>
+            />
           </svg>
           Your Timezone
         </div>
       </label>
-      
-    <%!-- Timezone selector container with click-away --%>
-      <div
-        class="relative"
-        phx-click-away={if @timezone_dropdown_open, do: "close_timezone_dropdown", else: nil}
-        {if @target && @timezone_dropdown_open, do: [{"phx-target", @target}], else: []}
+
+      <.dropdown
+        id="timezone-dropdown"
+        open={@timezone_dropdown_open}
+        on_toggle="toggle_timezone_dropdown"
+        on_close="close_timezone_dropdown"
+        target={@target}
+        position={:top_start}
+        role="dialog"
+        trigger_class="group relative cursor-pointer z-50 w-full text-left"
+        class="right-0 max-h-64 brand-card rounded-xl shadow-lg border border-white/30 overflow-hidden"
+        aria-label="Select timezone"
       >
-        <%!-- Current timezone display --%>
-        <button
-          class="group relative cursor-pointer z-50 w-full text-left"
-          phx-click="toggle_timezone_dropdown"
-          {if @target, do: [{"phx-target", @target}], else: []}
-          type="button"
-        >
+        <:trigger>
           <div class="input p-4 hover:bg-white transition-all duration-200">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3 flex-1 min-w-0">
-                <%= if country_code = Timezones.country_code(@profile && @profile.timezone || "UTC") do %>
+                <%= if country_code = Timezones.country_code((@profile && @profile.timezone) || "UTC") do %>
                   <.timezone_flag
                     country_code={country_code}
                     safe_mode={@safe_flags}
@@ -87,88 +88,74 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                     stroke-linejoin="round"
                     stroke-width="2"
                     d="M19 9l-7 7-7-7"
-                  >
-                  </path>
+                  />
                 </svg>
               </div>
             </div>
           </div>
-        </button>
-        
-    <%!-- Dropdown with search - opens upward --%>
-        <%= if @timezone_dropdown_open do %>
-          <div
-            class="absolute bottom-full left-0 right-0 mb-2 max-h-64 z-40 brand-card rounded-xl shadow-lg border border-white/30 overflow-hidden"
-            style="position: absolute; bottom: 100%; margin-bottom: 8px;"
-          >
-            <%!-- Search input --%>
-            <div class="p-3 border-b border-white/20">
-              <div class="relative">
-                <input
-                  id="timezone-search"
-                  type="text"
-                  phx-keyup="search_timezone"
-                  {if @target, do: [{"phx-target", @target}], else: []}
-                  name="value"
-                  value={@timezone_search || ""}
-                  placeholder="Search cities, countries, or timezones..."
-                  class="w-full px-4 py-2 rounded-lg text-sm border-0 pr-10 focus:outline-none focus:ring-2 focus:ring-teal-400/30 bg-white/90 text-tymeslot-800"
-                  autocomplete="off"
-                  phx-hook="AutoFocus"
-                />
-                <div class="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                  <svg
-                    class="w-4 h-4 text-tymeslot-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    >
-                    </path>
-                  </svg>
-                </div>
-              </div>
-            </div>
-            
-    <%!-- Scrollable timezone options --%>
-            <div class="max-h-48 overflow-y-auto">
-              <div class="p-1">
-                <%= for {label, value, offset} <- Timezones.search(@timezone_search || "") do %>
-                  <div
-                    phx-click="change_timezone"
-                    phx-value-timezone={value}
-                    {if @target, do: [{"phx-target", @target}], else: []}
-                    class="w-full text-left px-3 py-2.5 text-sm rounded-lg cursor-pointer transition-all duration-200 hover:bg-cyan-50 hover:shadow-sm border border-transparent hover:border-cyan-200"
-                  >
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-3 flex-1 min-w-0">
-                        <%= if country_code = Timezones.country_code(value) do %>
-                          <.timezone_flag
-                            country_code={country_code}
-                            safe_mode={@safe_flags}
-                            class="w-5 h-3 flex-shrink-0 rounded-sm shadow-sm"
-                          />
-                        <% end %>
-                        <div class="flex-1 min-w-0">
-                          <div class="font-medium truncate text-tymeslot-800">{label}</div>
-                          <div class="text-xs mt-0.5 text-tymeslot-600">
-                            {TimezoneHelpers.format_local_time(value)} local time • {offset}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                <% end %>
+        </:trigger>
+        <:panel>
+          <div class="p-3 border-b border-white/20">
+            <div class="relative">
+              <input
+                id="timezone-search"
+                type="text"
+                phx-keyup="search_timezone"
+                phx-target={@target}
+                name="value"
+                value={@timezone_search || ""}
+                placeholder="Search cities, countries, or timezones..."
+                class="w-full px-4 py-2 rounded-lg text-sm border-0 pr-10 focus:outline-none focus:ring-2 focus:ring-teal-400/30 bg-white/90 text-tymeslot-800"
+                autocomplete="off"
+                phx-hook="AutoFocus"
+              />
+              <div class="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <svg
+                  class="w-4 h-4 text-tymeslot-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
               </div>
             </div>
           </div>
-        <% end %>
-      </div>
+          <div class="max-h-48 overflow-y-auto">
+            <div class="p-1">
+              <%= for {label, value, offset} <- Timezones.search(@timezone_search || "") do %>
+                <div
+                  phx-click="change_timezone"
+                  phx-value-timezone={value}
+                  phx-target={@target}
+                  class="w-full text-left px-3 py-2.5 text-sm rounded-lg cursor-pointer transition-all duration-200 hover:bg-cyan-50 hover:shadow-sm border border-transparent hover:border-cyan-200"
+                >
+                  <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <%= if country_code = Timezones.country_code(value) do %>
+                      <.timezone_flag
+                        country_code={country_code}
+                        safe_mode={@safe_flags}
+                        class="w-5 h-3 flex-shrink-0 rounded-sm shadow-sm"
+                      />
+                    <% end %>
+                    <div class="flex-1 min-w-0">
+                      <div class="font-medium truncate text-tymeslot-800">{label}</div>
+                      <div class="text-xs mt-0.5 text-tymeslot-600">
+                        {TimezoneHelpers.format_local_time(value)} local time • {offset}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </:panel>
+      </.dropdown>
 
       <p class="mt-2 text-sm text-tymeslot-600">
         This timezone will be used for your availability and scheduling.

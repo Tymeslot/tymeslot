@@ -51,7 +51,10 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
       alias TymeslotWeb.Themes.Shared.StateMachineHelpers, as: StateMachine
 
+      alias Tymeslot.CustomFields
+
       alias TymeslotWeb.Themes.Shared.Components.ErrorComponent
+      alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
 
       @theme_id unquote(theme_id)
 
@@ -89,6 +92,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
         case step do
           :overview -> handle_overview_events(socket, event, data)
           :schedule -> handle_schedule_events(socket, event, data)
+          :questions -> handle_questions_events(socket, event, data)
           :booking -> handle_booking_events(socket, event, data)
           :confirmation -> handle_confirmation_events(socket, event, data)
           _other -> {:noreply, socket}
@@ -221,8 +225,14 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
       defp handle_schedule_navigation_events(socket, event) do
         case event do
-          :back_step -> handle_state_transition(socket, :schedule, :overview)
-          :next_step -> handle_state_transition(socket, :schedule, :booking)
+          :back_step ->
+            handle_state_transition(socket, :schedule, :overview)
+
+          :next_step ->
+            # Route to :questions when the meeting type has custom fields, else :booking.
+            states = StateMachine.states_for(socket.assigns[:meeting_type] || %{})
+            next = get_in(states, [:schedule, :next]) || :booking
+            handle_state_transition(socket, :schedule, next)
         end
       end
 
@@ -238,10 +248,81 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
             BookingFlow.submit_booking(socket, data, &transition_to/3)
 
           :back_step ->
-            handle_state_transition(socket, :booking, :schedule)
+            # Route back to :questions when the meeting type has custom fields, else :schedule.
+            states = StateMachine.states_for(socket.assigns[:meeting_type] || %{})
+            prev = get_in(states, [:booking, :prev]) || :schedule
+            handle_state_transition(socket, :booking, prev)
 
           _other ->
             {:noreply, socket}
+        end
+      end
+
+      defp handle_questions_events(socket, event, data) do
+        case event do
+          :answer ->
+            {id, value} = data
+            engine = QEngine.answer(socket.assigns.engine, id, value)
+            {:noreply, assign(socket, :engine, engine)}
+
+          :next ->
+            handle_questions_next(socket)
+
+          :back ->
+            handle_questions_back(socket)
+
+          _other ->
+            {:noreply, socket}
+        end
+      end
+
+      # Advance within the questions wizard, or proceed to :booking when all
+      # questions have been answered and validated.
+      #
+      # Transitions to :booking only when the booker is already on the last
+      # question and presses Next — this ensures a single optional question is
+      # always shown before the wizard exits, even when it validates as empty.
+      defp handle_questions_next(socket) do
+        engine = socket.assigns.engine
+
+        if QEngine.skipped?(engine) do
+          {:noreply, transition_to(socket, :booking, %{})}
+        else
+          last_index = QEngine.total(engine) - 1
+
+          cond do
+            engine.current_index < last_index ->
+              case QEngine.next(engine) do
+                {:ok, engine} -> {:noreply, assign(socket, :engine, engine)}
+                {:error, engine} -> {:noreply, assign(socket, :engine, engine)}
+              end
+
+            engine.current_index == last_index ->
+              case QEngine.validate_all(engine) do
+                {:ok, _answers} ->
+                  {:noreply, transition_to(socket, :booking, %{})}
+
+                {:error, _errors} ->
+                  case QEngine.next(engine) do
+                    {:ok, engine} -> {:noreply, assign(socket, :engine, engine)}
+                    {:error, engine} -> {:noreply, assign(socket, :engine, engine)}
+                  end
+              end
+
+            true ->
+              {:noreply, socket}
+          end
+        end
+      end
+
+      # Move backwards within the wizard, or return to :schedule from the first question.
+      defp handle_questions_back(socket) do
+        engine = socket.assigns.engine
+
+        if engine.current_index == 0 do
+          {:noreply, transition_to(socket, :schedule, %{})}
+        else
+          {:noreply, assign(socket, :engine, QEngine.prev(engine))}
         end
       end
 
@@ -270,6 +351,21 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
       defp handle_state_entry(socket, :schedule, params) do
         LiveHelpers.handle_schedule_entry(socket, params)
+      end
+
+      defp handle_state_entry(socket, :questions, _params) do
+        # Re-sync the engine snapshot on entry so that forward/back navigation always
+        # reflects the latest custom field definitions for this meeting type. Only
+        # re-init when definitions actually changed so back-navigation preserves answers.
+        meeting_type = socket.assigns[:meeting_type] || %{}
+        defs = CustomFields.snapshot_for(meeting_type)
+
+        engine =
+          if defs != socket.assigns.engine.definitions,
+            do: QEngine.init(defs),
+            else: socket.assigns.engine
+
+        assign(socket, :engine, engine)
       end
 
       defp handle_state_entry(socket, :booking, params) do
@@ -310,19 +406,26 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
         {:noreply, socket}
       end
 
-      # Step navigation — shared across all themes
+      # Step navigation — shared across all themes.
+      # Uses states_for/1 so that the step numbers match the active state map
+      # (4 steps without custom fields, 5 steps with).
       defp handle_theme_event("navigate_to_step", %{"step" => step}, socket) do
-        target_state =
+        states = StateMachine.states_for(socket.assigns[:meeting_type] || %{})
+
+        target_step =
           case Integer.parse(step) do
-            {1, ""} -> :overview
-            {2, ""} -> :schedule
-            {3, ""} -> :booking
-            {4, ""} -> :confirmation
-            _other -> socket.assigns[:current_state]
+            {n, _rest} -> n
+            :error -> nil
+          end
+
+        target_state =
+          case Enum.find(states, fn {_state, %{step: n}} -> n == target_step end) do
+            {state, _meta} -> state
+            nil -> socket.assigns[:current_state]
           end
 
         if target_state != socket.assigns[:current_state] and
-             StateMachine.can_navigate_to_step?(socket, target_state) do
+             StateMachine.can_navigate_to_step?(socket, target_state, states) do
           {:noreply, transition_to(socket, target_state, %{})}
         else
           {:noreply, socket}

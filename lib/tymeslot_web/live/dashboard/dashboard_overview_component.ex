@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
         </div>
 
     <%!-- Quick Actions --%>
-        <div class="card-glass h-full min-w-0">
+        <div class="card-glass h-full min-w-0" data-tour="quick-actions">
           <.section_header
             level={2}
             title="Quick Actions"

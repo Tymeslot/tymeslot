@@ -6,6 +6,14 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.MeetingTypes
 
+  @states_with_questions %{
+    overview: %{step: 1, next: :schedule, prev: nil},
+    schedule: %{step: 2, next: :questions, prev: :overview},
+    questions: %{step: 3, next: :booking, prev: :schedule},
+    booking: %{step: 4, next: :confirmation, prev: :questions},
+    confirmation: %{step: 5, prev: :booking}
+  }
+
   @default_states %{
     overview: %{step: 1, next: :schedule, prev: nil},
     schedule: %{step: 2, next: :booking, prev: :overview},
@@ -18,6 +26,16 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
   """
   @spec default_states() :: map()
   def default_states, do: @default_states
+
+  @doc """
+  Returns the state map appropriate for a meeting type — 5 states when
+  the meeting type has at least one custom field, the default 4 otherwise.
+  """
+  @spec states_for(map()) :: map()
+  def states_for(%{custom_fields: defs}) when is_list(defs) and defs != [],
+    do: @states_with_questions
+
+  def states_for(_meeting_type), do: @default_states
 
   @doc """
   Checks if navigation to a target state is allowed based on the current state's step.
@@ -53,6 +71,12 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
       {:overview, :schedule} ->
         validate_step_requirements(socket, :schedule)
 
+      {:schedule, :questions} ->
+        validate_step_requirements(socket, :questions)
+
+      {:questions, :booking} ->
+        :ok
+
       {:schedule, :booking} ->
         validate_step_requirements(socket, :booking)
 
@@ -69,6 +93,10 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
       socket.assigns[:meeting_types]
     )
   end
+
+  # Same precondition as :booking — booker must have selected a date and time.
+  def validate_step_requirements(socket, :questions),
+    do: validate_step_requirements(socket, :booking)
 
   def validate_step_requirements(socket, :booking) do
     Calculate.validate_time_selection(

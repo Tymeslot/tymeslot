@@ -185,4 +185,21 @@ defmodule Tymeslot.Auth.UserQueriesTest do
       refute unsubscribed.id in ids
     end
   end
+
+  describe "mark_dashboard_tour_seen/1" do
+    test "sets dashboard_tour_seen_at to now for a user that hasn't seen the tour" do
+      user = insert(:user, dashboard_tour_seen_at: nil)
+
+      assert {:ok, updated} = UserQueries.mark_dashboard_tour_seen(user)
+      assert %DateTime{} = updated.dashboard_tour_seen_at
+    end
+
+    test "is idempotent — calling twice does not error" do
+      user = insert(:user, dashboard_tour_seen_at: nil)
+
+      assert {:ok, first} = UserQueries.mark_dashboard_tour_seen(user)
+      assert {:ok, second} = UserQueries.mark_dashboard_tour_seen(first)
+      assert second.dashboard_tour_seen_at
+    end
+  end
 end

@@ -1,5 +1,16 @@
 defmodule TymeslotWeb.Components.CoreComponents.Forms do
-  @moduledoc "Unified form components for the entire application."
+  @moduledoc """
+  Unified form components for the entire application.
+
+  For forms that need "clear-on-type, validate-on-blur" error UX — where an
+  error disappears as soon as the user starts typing and reappears only on
+  blur or save — pair these components with
+  `TymeslotWeb.Live.Shared.FormValidationHelpers` and pass each input an
+  explicit `errors={FormValidationHelpers.field_errors(...)}` attribute.
+  Do not use the `field=` shortcut for that UX, because `field.errors` will
+  re-add errors from the live changeset and defeat the clear-on-type
+  behaviour.
+  """
   use Phoenix.Component
 
   # ========== UNIFIED INPUT ==========

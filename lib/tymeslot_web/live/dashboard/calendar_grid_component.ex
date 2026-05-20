@@ -203,6 +203,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: Visibility.handle_toggle_view_menu(params, socket)
 
   @impl Phoenix.LiveComponent
+  def handle_event("close_calendar_list", params, socket),
+    do: Visibility.handle_close_calendar_list(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("close_view_menu", params, socket),
+    do: Visibility.handle_close_view_menu(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("toggle_integration_visibility", params, socket),
     do: Visibility.handle_toggle_integration_visibility(params, socket)
 

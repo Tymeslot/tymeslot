@@ -84,7 +84,9 @@ config :tymeslot, :announcement_catalogs, [Tymeslot.Announcements.Catalog]
 
 # Feature Assigns - Default to allowing all features
 # SaaS can override these via on_mount hooks based on subscription status
-config :tymeslot, :feature_assigns, automations_allowed: true
+config :tymeslot, :feature_assigns,
+  automations_allowed: true,
+  custom_questions_allowed: true
 
 # Dashboard Feature Gates - Maps live_action atoms to feature flag assign keys.
 # When an action is listed here, the corresponding assign must be true for the

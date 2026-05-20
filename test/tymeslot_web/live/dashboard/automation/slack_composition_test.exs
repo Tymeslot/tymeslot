@@ -57,14 +57,14 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCompositionTest do
       assert html =~ "No Slack Integrations"
       assert html =~ "Add to Slack"
       assert html =~ ~s(href="/api/slack/oauth/start")
-      assert html =~ "Use webhook URL instead"
+      assert html =~ "Add via webhook URL"
     end
 
-    test "clicking 'Use webhook URL instead' opens the webhook URL form",
+    test "clicking 'Add via webhook URL' opens the webhook URL form",
          %{conn: conn} do
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       view |> element("button", "Slack") |> render_click()
-      view |> element("button", "Use webhook URL instead") |> render_click()
+      view |> element("button", "Add via webhook URL") |> render_click()
       html = render(view)
 
       assert html =~ "Slack Webhook URL"
