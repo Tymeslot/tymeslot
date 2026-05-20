@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
   @moduledoc """
   Renders the embed options grid for the dashboard.
   """
-  use Phoenix.Component
+  use TymeslotWeb, :html
 
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers
 
@@ -13,11 +13,23 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
   attr :username, :string, required: true
   attr :base_url, :string, required: true
   attr :booking_url, :string, required: true
+  attr :embed_layout, :string, default: "default"
+  attr :initial_height, :any, default: nil
+  attr :max_width, :any, default: nil
   attr :myself, :any, required: true
 
   @spec options_grid(map()) :: Phoenix.LiveView.Rendered.t()
   def options_grid(assigns) do
+    assigns = assign(assigns, :snippet_options, Helpers.snippet_options(assigns))
+
     ~H"""
+    <.customise_panel
+      embed_layout={@embed_layout}
+      initial_height={@initial_height}
+      max_width={@max_width}
+      myself={@myself}
+    />
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <.embed_option_card
         type="inline"
@@ -51,7 +63,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           </div>
         </:preview>
         <:code>
-          {Helpers.embed_code("inline", %{username: @username, base_url: @base_url})}
+          {Helpers.embed_code("inline", @snippet_options)}
         </:code>
         <:footer_info>
           Shows the booking calendar right on your page. Copy the code and paste it into your website's HTML.
@@ -88,7 +100,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           </div>
         </:preview>
         <:code>
-          {Helpers.embed_code("popup", %{username: @username, base_url: @base_url})}
+          {Helpers.embed_code("popup", @snippet_options)}
         </:code>
         <:footer_info>
           Visitors click a button on your page and the booking calendar opens in an overlay.
@@ -124,7 +136,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           </div>
         </:preview>
         <:code>
-          {Helpers.embed_code("link", %{booking_url: @booking_url})}
+          {Helpers.embed_code("link", @snippet_options)}
         </:code>
         <:footer_info>
           Share this link in emails, social media bios, or messages. No code needed.
@@ -165,7 +177,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           </div>
         </:preview>
         <:code>
-          {Helpers.embed_code("floating", %{username: @username, base_url: @base_url})}
+          {Helpers.embed_code("floating", @snippet_options)}
         </:code>
         <:footer_info>
           A floating button stays visible as visitors scroll — like a chat widget, but for booking.
@@ -186,6 +198,86 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
       </a>
       for step-by-step instructions, platform tips, and customization options.
     </p>
+    """
+  end
+
+  # Customisation panel — controls that drive every card's generated snippet.
+  # Three knobs:
+  #   - layout: "default" or "column" (column = wide canvas for narrow embeds)
+  #   - initial-height: placeholder height (px) shown before the iframe auto-resizes
+  #   - max-width: container max-width (px) for inline + popup + floating
+  attr :embed_layout, :string, required: true
+  attr :initial_height, :any, required: true
+  attr :max_width, :any, required: true
+  attr :myself, :any, required: true
+
+  defp customise_panel(assigns) do
+    ~H"""
+    <div class="mb-6 bg-white border-2 border-tymeslot-200 rounded-token-lg p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-token-lg font-bold text-tymeslot-900">Customise</h3>
+          <p class="text-token-sm text-tymeslot-600 mt-1">
+            Updates every snippet below. Defaults work for most embeds — adjust when your site needs them.
+          </p>
+        </div>
+      </div>
+
+      <.form
+        for={%{}}
+        as={:customise}
+        phx-change="update_customisation"
+        phx-target={@myself}
+        class="grid grid-cols-1 md:grid-cols-3 gap-4"
+      >
+        <%!-- Layout --%>
+        <.input
+          type="select"
+          id="embed-layout"
+          name="customise[layout]"
+          label="Layout"
+          options={[
+            {"Default — centred, max ~640px", "default"},
+            {"Column — wide canvas for narrow containers", "column"}
+          ]}
+          value={@embed_layout}
+        >
+          <:description>Choose Column for WordPress and other narrow content areas.</:description>
+        </.input>
+
+        <%!-- Initial height --%>
+        <.input
+          type="number"
+          id="embed-initial-height"
+          name="customise[initial_height]"
+          label="Initial height (px)"
+          min="200"
+          max="2000"
+          step="50"
+          placeholder="400"
+          value={@initial_height}
+          phx-debounce="blur"
+        >
+          <:description>Placeholder shown before the iframe auto-resizes. Inline only.</:description>
+        </.input>
+
+        <%!-- Max width --%>
+        <.input
+          type="number"
+          id="embed-max-width"
+          name="customise[max_width]"
+          label="Max width (px)"
+          min="200"
+          max="2000"
+          step="50"
+          placeholder="1000"
+          value={@max_width}
+          phx-debounce="blur"
+        >
+          <:description>Container max-width. Modal popup defaults to 1000px.</:description>
+        </.input>
+      </.form>
+    </div>
     """
   end
 

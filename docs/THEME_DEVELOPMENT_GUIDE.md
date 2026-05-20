@@ -216,8 +216,7 @@ defmodule TymeslotWeb.Themes.Aurora.Theme do
       flow_steps: 4,
       design_system: :northern_lights,
       supports_duration_selection: true,
-      supports_inline_booking: false,
-      preferred_embed_height: 400
+      supports_inline_booking: false
     }
   end
 
@@ -437,15 +436,11 @@ Each theme needs a small `iframe.css` (~30 lines) for iframe-specific shell rule
 
 Size-driven compaction (compact calendar, smaller badges, form re-layout) is handled by container queries in each component file — the same queries that handle narrow viewports.
 
-### Preferred Embed Height
+### Iframe Auto-Resize
 
-Each theme declares a `preferred_embed_height` (in pixels) in its `theme_config()` map. When the scheduling page loads inside an iframe, `iframe_embed.js` reads this value from `data-preferred-embed-height` on `<html>` and posts it to the parent so `embed.js` can size the inline iframe appropriately — instead of using the generic 400px default.
+When the scheduling page loads inside an iframe, `iframe_embed.js` continuously measures the page's content height and posts it to the parent on a 50ms loop. The parent iframe element grows AND shrinks to match — so themes should let the body flow to its natural content height in embedded mode (`height: max-content`, no `height: 100%` chains). See `themes/<theme>/modules/iframe.css` for the per-theme overrides.
 
-Set this to the minimum height at which the theme's first step (overview) looks comfortable without scrolling. Current values:
-- **Quill**: 400 (compact glassmorphism layout)
-- **Rhythm**: 450 (video background + slide padding need more room)
-
-The embedder can always override this with `data-min-height` on the container element.
+The embedder can supply `data-initial-height` (px) on the container as a placeholder height shown before the first measurement lands; `data-min-height` is still accepted as a legacy alias. After the first message, the iframe always matches reported content height.
 
 ### Creating Theme CSS
 
@@ -1326,5 +1321,4 @@ Before considering your theme complete:
 - [ ] Localization works for all supported languages
 - [ ] Video/image backgrounds work (if supported)
 - [ ] Theme customization renders correctly
-- [ ] `preferred_embed_height` set in `theme_config()` (minimum comfortable height for inline embeds)
-- [ ] Embedded mode tested at constrained and unconstrained heights
+- [ ] Embedded mode tested — iframe grows and shrinks with content; no internal scrollbar in unconstrained inline embeds

@@ -13,6 +13,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview do
   attr :username, :string, required: true
   attr :base_url, :string, required: true
   attr :embed_script_url, :string, required: true
+  attr :embed_layout, :string, default: "default"
+  attr :initial_height, :any, default: nil
+  attr :max_width, :any, default: nil
   attr :is_ready, :boolean, required: true
   attr :error_reason, :any, required: true
   attr :myself, :any, required: true
@@ -56,6 +59,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview do
           data-embed-script-url={@embed_script_url}
           data-embed-type={@selected_embed_type}
           data-is-ready={to_string(@is_ready)}
+          data-layout={@embed_layout}
+          data-initial-height={@initial_height}
+          data-max-width={@max_width}
           class="min-h-[400px] border-2 border-dashed border-tymeslot-200 rounded-token-lg flex items-center justify-center bg-tymeslot-50 overflow-hidden"
         >
         </div>

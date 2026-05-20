@@ -62,24 +62,29 @@
 
   const BASE_URL = CONFIG.getBaseUrl();
 
-  function viewportMaxHeight() {
-    return Math.floor(Math.min(window.innerHeight * 0.9, window.innerHeight - 40));
+  function modalContentMaxHeight() {
+    // 50px headroom top/bottom — matches cal.com's getMaxHeightForModal()
+    // and gives the close button breathing room above the iframe content.
+    return Math.max(window.innerHeight - 100, 200);
   }
 
   /**
    * Global message listener for iframe resizing.
    *
-   * When the embedded page reports its content height, resize the iframe
-   * to fit — but only up to the container's own constraints. If the
-   * container has a max-height, the iframe stays within it and the
-   * embedded page scrolls internally (handled by iframe_embed.js CSS).
+   * The embedded page posts {type: 'tymeslot-resize', height, isFirstTime}
+   * on a 50ms loop (see iframe_embed.js). We apply the posted height to
+   * the iframe's wrapper verbatim so the iframe grows AND shrinks with
+   * content — that's what eliminates dead space at the bottom when the
+   * booking page transitions between long and short steps.
+   *
+   * If the wrapper is constrained (modal, or an inline container with an
+   * explicit max-height set by the embedder), the posted height is
+   * capped at the constraint and the browser scrolls inside the iframe.
    */
   window.addEventListener('message', function(e) {
     if (e.origin !== BASE_URL) return;
     if (!e.data || typeof e.data !== 'object') return;
-
-    var type = e.data.type;
-    if (type !== 'tymeslot-resize' && type !== 'tymeslot-preferred-height') return;
+    if (e.data.type !== 'tymeslot-resize') return;
 
     var h = Number(e.data.height);
     if (!Number.isFinite(h) || h <= 0) return;
@@ -90,21 +95,14 @@
       var wrapper = iframe.parentNode;
       if (!wrapper) return;
 
-      if (type === 'tymeslot-preferred-height') {
-        // Theme-preferred height for inline embeds.
-        // Only apply when the embedder didn't set a custom data-min-height
-        // (wrapper.dataset.customHeight is set when the embedder provides one).
-        if (wrapper.dataset.constrained || wrapper.dataset.customHeight) return;
-        h = Math.max(h, 200);
-        wrapper.style.height = h + 'px';
-        wrapper.style.minHeight = h + 'px';
-        wrapper.dataset.minHeight = String(h);
-      } else if (wrapper.dataset.constrained) {
-        // tymeslot-resize — constrained (modal): shrink to content
-        // but never exceed the constraint.
+      if (wrapper.dataset.constrained) {
         var cap = parseInt(wrapper.dataset.constraintHeight, 10);
         if (!cap || cap <= 0) return;
         wrapper.style.height = Math.min(h, cap) + 'px';
+      } else {
+        // Unconstrained inline embed — match content height exactly.
+        wrapper.style.height = h + 'px';
+        wrapper.style.minHeight = '0';
       }
     });
   });
@@ -118,7 +116,7 @@
     const url = new URL(`${base}/${encodeURIComponent(username)}`);
     
     // Build URL with customization params - STRICT ALLOWLIST
-    const ALLOWED_PARAMS = ['theme', 'primaryColor', 'locale'];
+    const ALLOWED_PARAMS = ['theme', 'primaryColor', 'locale', 'layout'];
 
     ALLOWED_PARAMS.forEach(key => {
       const val = options[key];
@@ -130,6 +128,8 @@
         url.searchParams.append('primary-color', val);
       } else if (key === 'locale' && /^[a-z]{2}(-[a-zA-Z0-9]+)?$/.test(val)) {
         url.searchParams.append('locale', val);
+      } else if (key === 'layout' && /^(default|column)$/.test(val)) {
+        url.searchParams.append('layout', val);
       }
     });
 
@@ -160,22 +160,21 @@
     iframe.setAttribute('scrolling', 'auto');
     iframe.setAttribute('title', 'Booking Widget');
 
-    // Create wrapper for loading state.
-    // Uses min-height as default for unconstrained containers;
-    // constrained containers clip the wrapper and the iframe scrolls internally.
-    const hasCustomHeight = !!(options.minHeight && parseInt(options.minHeight, 10) > 0);
-    const minHeight = Math.max(parseInt(options.minHeight, 10) || 400, 200);
-    const maxWidth = Math.min(Math.max(parseInt(options.maxWidth, 10) || 640, 200), 2000);
+    // Create wrapper. The wrapper starts at `initialHeight` as a
+    // placeholder shown before iframe_embed.js posts its first
+    // measurement; thereafter the resize handler grows/shrinks the
+    // wrapper to match content. `data-min-height` is still accepted
+    // as a legacy alias for `data-initial-height`.
+    const rawInitial = options.initialHeight || options.minHeight;
+    const initialHeight = Math.min(Math.max(parseInt(rawInitial, 10) || 400, 200), 2000);
+    const maxWidth = Math.min(Math.max(parseInt(options.maxWidth, 10) || 1000, 200), 2000);
     const wrapper = document.createElement('div');
     wrapper.style.position = 'relative';
     wrapper.style.width = '100%';
     wrapper.style.maxWidth = maxWidth + 'px';
     wrapper.style.marginLeft = 'auto';
     wrapper.style.marginRight = 'auto';
-    wrapper.style.height = minHeight + 'px';
-    wrapper.style.minHeight = minHeight + 'px';
-    wrapper.dataset.minHeight = String(minHeight);
-    if (hasCustomHeight) wrapper.dataset.customHeight = 'true';
+    wrapper.style.height = initialHeight + 'px';
 
     const loader = document.createElement('div');
     loader.className = 'tymeslot-loader';
@@ -267,9 +266,38 @@
   }
 
   /**
-   * Create modal overlay
+   * Inject the one-time stylesheet that gives the modal an edge-to-edge
+   * full-screen layout below 768px. Inline modal styles can't carry
+   * media queries, so we use a small stylesheet keyed on the modal's id.
    */
-  function createModal(contentMaxWidth = 640) {
+  function ensureModalStyles() {
+    if (document.getElementById('tymeslot-modal-styles')) return;
+    const styleEl = document.createElement('style');
+    styleEl.id = 'tymeslot-modal-styles';
+    styleEl.textContent = '@media (max-width: 768px) {' +
+      '#tymeslot-modal { padding: 0 !important; }' +
+      '#tymeslot-modal [data-tymeslot-container] {' +
+        'max-width: 100% !important;' +
+        'max-height: 100% !important;' +
+        'height: 100% !important;' +
+        'width: 100% !important;' +
+        'border-radius: 0 !important;' +
+      '}' +
+    '}';
+    document.head.appendChild(styleEl);
+  }
+
+  /**
+   * Create modal overlay
+   *
+   * Default content width is 1000px — wide enough to comfortably show
+   * theme hero sections (Rhythm's video background, etc.) instead of
+   * cramming them into a narrow column. On viewports <= 768px the
+   * media-query stylesheet collapses the modal to full-screen.
+   */
+  function createModal(contentMaxWidth = 1000) {
+    ensureModalStyles();
+
     const modal = document.createElement('div');
     modal.id = 'tymeslot-modal';
     modal.setAttribute('role', 'dialog');
@@ -290,15 +318,14 @@
       opacity: 0;
       transition: opacity 0.3s ease;
     `;
-    
+
     const container = document.createElement('div');
     container.setAttribute('data-tymeslot-container', '');
-    var maxH = viewportMaxHeight();
     container.style.cssText = `
       position: relative;
       width: 100%;
       max-width: min(${contentMaxWidth}px, calc(100vw - 32px));
-      max-height: ${maxH}px;
+      max-height: calc(100vh - 100px);
       background: transparent;
       border-radius: 16px;
       overflow: hidden;
@@ -432,7 +459,10 @@
         theme: container.getAttribute('data-theme'),
         primaryColor: container.getAttribute('data-primary-color'),
         locale: container.getAttribute('data-locale'),
-        minHeight: container.getAttribute('data-min-height'),
+        layout: container.getAttribute('data-layout'),
+        initialHeight:
+          container.getAttribute('data-initial-height') ||
+          container.getAttribute('data-min-height'),
         maxWidth: container.getAttribute('data-max-width')
       };
       
@@ -463,9 +493,8 @@
       requestAnimationFrame(function() {
         var actualHeight = container.clientHeight;
         if (wrapper) {
-          var floor = parseInt(wrapper.dataset.minHeight || '0', 10);
           wrapper.style.height = actualHeight + 'px';
-          wrapper.style.minHeight = floor > 0 ? floor + 'px' : '0';
+          wrapper.style.minHeight = '0';
           wrapper.dataset.constrained = 'true';
           wrapper.dataset.constraintHeight = String(actualHeight);
         }
@@ -506,7 +535,21 @@
       this.close();
       if (!validateUsername('open', username)) return;
 
-      const contentMaxWidth = Math.min(Math.max(parseInt(options.maxWidth, 10) || 640, 200), 2000);
+      // If the page has an inline container with data-max-width, treat it as
+      // the default for the popup too — so embedders who configure a single
+      // div get matching popup sizing without repeating the value in JS.
+      if (!options.maxWidth) {
+        const inlineDiv = document.querySelector(
+          '#tymeslot-booking[data-max-width], [data-tymeslot-inline][data-max-width]'
+        );
+        if (inlineDiv) {
+          options = Object.assign({}, options, {
+            maxWidth: inlineDiv.getAttribute('data-max-width')
+          });
+        }
+      }
+
+      const contentMaxWidth = Math.min(Math.max(parseInt(options.maxWidth, 10) || 1000, 200), 2000);
       const { modal, container, closeButton } = createModal(contentMaxWidth);
       const wrapper = createBookingIframe(username, Object.assign({}, options, { _mode: 'modal' }));
       const iframe = wrapper.querySelector('iframe');
@@ -519,7 +562,7 @@
         // Cap at viewport height so the iframe scrolls if content exceeds it.
         // Don't pre-set the wrapper height — let it shrink-wrap to actual
         // content once the iframe reports its size via postMessage.
-        var maxH = viewportMaxHeight();
+        var maxH = modalContentMaxHeight();
         wrapper.style.minHeight = '0';
         wrapper.dataset.constrained = 'true';
         wrapper.dataset.constraintHeight = String(maxH);
@@ -541,8 +584,7 @@
           resizeRafPending = true;
           requestAnimationFrame(() => {
             resizeRafPending = false;
-            var newMax = viewportMaxHeight();
-            container.style.maxHeight = newMax + 'px';
+            var newMax = modalContentMaxHeight();
             if (wrapper.dataset.constrained) {
               wrapper.dataset.constraintHeight = String(newMax);
             }
@@ -633,9 +675,14 @@
         return;
       }
 
-      // Inherit min-height and max-width from container data attributes if not set in options
-      if (!options.minHeight && container.getAttribute('data-min-height')) {
-        options.minHeight = container.getAttribute('data-min-height');
+      // Inherit initial-height and max-width from container data attributes
+      // if not already passed in options. `data-min-height` is still accepted
+      // as a legacy alias for `data-initial-height`.
+      if (!options.initialHeight) {
+        const attr =
+          container.getAttribute('data-initial-height') ||
+          container.getAttribute('data-min-height');
+        if (attr) options.initialHeight = attr;
       }
       if (!options.maxWidth && container.getAttribute('data-max-width')) {
         options.maxWidth = container.getAttribute('data-max-width');
