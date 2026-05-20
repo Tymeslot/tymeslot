@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       |> assign_new(:selected_embed_type, fn -> "inline" end)
       |> assign_new(:embed_script_url, fn -> ~p"/embed.js" end)
       |> assign_new(:active_tab, fn -> "options" end)
-      |> assign_new(:embed_layout, fn -> "default" end)
+      |> assign_new(:embed_layout, fn -> "column" end)
       |> assign_new(:initial_height, fn -> nil end)
       |> assign_new(:max_width, fn -> nil end)
 
@@ -161,7 +161,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   def handle_event("update_customisation", %{"customise" => params}, socket) do
     layout =
       case params["layout"] do
-        v when is_binary(v) -> if v in Helpers.valid_layouts(), do: v, else: "default"
+        v when is_binary(v) -> if v in Helpers.valid_layouts(), do: v, else: "column"
         _other -> socket.assigns.embed_layout
       end
 

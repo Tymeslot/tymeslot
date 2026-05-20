@@ -36,8 +36,11 @@ defmodule TymeslotWeb.Themes.Core.Context do
   @doc """
   Returns the list of allowed layout values for embed snippets and URL params.
 
-  This is the single authoritative source — both the dashboard helpers and the
-  server-side layout application derive from this list.
+  This is the authoritative list for the dashboard helpers — it drives input
+  validation and snippet emission. The server-side resolver (`apply_layout/2`)
+  currently only recognises `"column"` as a non-default layout; all other
+  values (including `"default"`) leave the struct's zero value (`:default`)
+  unchanged.
   """
   @spec valid_layouts() :: [String.t()]
   def valid_layouts, do: ~w(default column)
@@ -103,21 +106,20 @@ defmodule TymeslotWeb.Themes.Core.Context do
     end
   end
 
-  # Layout is a strict allowlist derived from valid_layouts/0 — anything
-  # outside it falls back to the default and is silently ignored. Both
-  # standalone and embedded pages can switch layout; column is designed for
-  # wide-canvas placements like WordPress narrow-column embeds.
-  defp apply_layout(context, %{"layout" => value}) do
-    # valid_layouts/0 is the single authoritative list; strip "default" because
-    # it maps to the struct's zero value and needs no assignment.
-    non_default = valid_layouts() -- ["default"]
+  # An explicit `?layout=` param takes priority over everything else — including
+  # `?embed=1`. "column" forces the wide-canvas layout; any other value
+  # (including "default") keeps the struct's zero value `:default`. This is
+  # the opt-out path for embed users who want the standalone-style centred
+  # layout despite being rendered inside an iframe.
+  defp apply_layout(context, %{"layout" => "column"}), do: %{context | layout: :column}
+  defp apply_layout(context, %{"layout" => _explicit}), do: context
 
-    if value in non_default do
-      %{context | layout: String.to_existing_atom(value)}
-    else
-      context
-    end
-  end
+  # No explicit layout, but `?embed=1` is present — embed.js sets this on
+  # every iframe URL it generates. Embedded contexts default to :column because
+  # the wide-canvas variant adapts to any container size, whereas the centred
+  # :default looks cramped in narrow WordPress columns and sidebars.
+  # Only the literal value "1" activates embed mode, matching EmbedTokenPlug.
+  defp apply_layout(context, %{"embed" => "1"}), do: %{context | layout: :column}
 
   defp apply_layout(context, _params), do: context
 

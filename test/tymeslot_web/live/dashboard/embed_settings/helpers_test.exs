@@ -110,7 +110,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
   end
 
   describe "embed_code/2 — customisation knobs" do
-    test "inline snippet emits data-layout, data-initial-height, data-max-width" do
+    test "inline snippet omits data-layout for column (the new embed default)" do
+      # embed.js puts ?embed=1 on every iframe URL, and the server defaults
+      # embedded contexts to :column. The snippet doesn't need to repeat
+      # that intent — clean output is the goal for the common case.
       assigns = %{
         username: "testuser",
         base_url: "https://tymeslot.com",
@@ -121,7 +124,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
 
       code = Helpers.embed_code("inline", assigns)
 
-      assert code =~ ~s(data-layout="column")
+      refute code =~ "data-layout"
       assert code =~ ~s(data-initial-height="500")
       assert code =~ ~s(data-max-width="1200")
     end
@@ -136,7 +139,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
       refute code =~ "data-max-width"
     end
 
-    test "inline snippet omits data-layout when layout is the default" do
+    test "inline snippet emits data-layout=default when user opts back into centred" do
+      # "Default" is the explicit opt-out from the new embed column default.
+      # The snippet must carry that override or the embed renders as column.
       assigns = %{
         username: "testuser",
         base_url: "https://tymeslot.com",
@@ -145,7 +150,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
 
       code = Helpers.embed_code("inline", assigns)
 
-      refute code =~ "data-layout"
+      assert code =~ ~s(data-layout="default")
     end
 
     test "inline snippet rejects out-of-range initial-height and max-width" do
@@ -176,7 +181,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
       refute code =~ "data-max-width"
     end
 
-    test "popup snippet includes layout and maxWidth in the JS options object" do
+    test "popup snippet omits layout for column and includes maxWidth" do
+      # Same reasoning as inline: column matches the server-side embed
+      # default, so the JS options stay lean.
       assigns = %{
         username: "testuser",
         base_url: "https://tymeslot.com",
@@ -186,8 +193,20 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
 
       code = Helpers.embed_code("popup", assigns)
 
-      assert code =~ "layout: 'column'"
+      refute code =~ "layout:"
       assert code =~ "maxWidth: 1200"
+    end
+
+    test "popup snippet includes layout: 'default' when user opts into centred" do
+      assigns = %{
+        username: "testuser",
+        base_url: "https://tymeslot.com",
+        layout: "default"
+      }
+
+      code = Helpers.embed_code("popup", assigns)
+
+      assert code =~ "layout: 'default'"
     end
 
     test "popup snippet emits maxWidth as a bare number, not a string" do
@@ -203,7 +222,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
       refute code =~ "maxWidth: '900'"
     end
 
-    test "floating snippet includes layout and maxWidth" do
+    test "floating snippet omits layout for column and includes maxWidth" do
       assigns = %{
         username: "testuser",
         base_url: "https://tymeslot.com",
@@ -213,8 +232,20 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
 
       code = Helpers.embed_code("floating", assigns)
 
-      assert code =~ "layout: 'column'"
+      refute code =~ "layout:"
       assert code =~ "maxWidth: 1100"
+    end
+
+    test "floating snippet includes layout: 'default' when user opts into centred" do
+      assigns = %{
+        username: "testuser",
+        base_url: "https://tymeslot.com",
+        layout: "default"
+      }
+
+      code = Helpers.embed_code("floating", assigns)
+
+      assert code =~ "layout: 'default'"
     end
 
     test "link snippet appends ?layout=column when column layout is selected" do

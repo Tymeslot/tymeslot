@@ -233,8 +233,14 @@ export const EmbedPreview = {
     url.searchParams.set('preview', 'true');
     // Cache buster to force reload when settings change
     url.searchParams.set('v', String(Date.now()));
+    // Mirror embed.js — the server defaults to :column whenever ?embed=1
+    // is present, so the preview matches what a real embed will render.
+    url.searchParams.set('embed', '1');
 
-    if (options.layout && options.layout !== 'default') {
+    // When the picker says "default" we still emit ?layout=default so the
+    // server overrides its embed-mode column default with the centred view.
+    // Skip the param when no layout option is set at all.
+    if (options.layout) {
       url.searchParams.set('layout', options.layout);
     }
 

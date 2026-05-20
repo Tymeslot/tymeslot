@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
   attr :username, :string, required: true
   attr :base_url, :string, required: true
   attr :booking_url, :string, required: true
-  attr :embed_layout, :string, default: "default"
+  attr :embed_layout, :string, default: "column"
   attr :initial_height, :any, default: nil
   attr :max_width, :any, default: nil
   attr :myself, :any, required: true
@@ -203,7 +203,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
 
   # Customisation panel — controls that drive every card's generated snippet.
   # Three knobs:
-  #   - layout: "default" or "column" (column = wide canvas for narrow embeds)
+  #   - layout: "column" (default — wide canvas, adapts to any container) or
+  #     "default" (centred-with-cap, for standalone-style placements)
   #   - initial-height: placeholder height (px) shown before the iframe auto-resizes
   #   - max-width: container max-width (px) for inline + popup + floating
   attr :embed_layout, :string, required: true
@@ -237,12 +238,12 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           name="customise[layout]"
           label="Layout"
           options={[
-            {"Default — centred, max ~640px", "default"},
-            {"Column — wide canvas for narrow containers", "column"}
+            {"Column — wide canvas, fills the container (recommended)", "column"},
+            {"Default — centred with a ~640px cap (standalone-style)", "default"}
           ]}
           value={@embed_layout}
         >
-          <:description>Choose Column for WordPress and other narrow content areas.</:description>
+          <:description>Column adapts to any container width. Default centres the booker — useful when you want a self-contained card inside a wide page.</:description>
         </.input>
 
         <%!-- Initial height --%>

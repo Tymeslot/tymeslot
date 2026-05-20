@@ -147,11 +147,41 @@
   font-size: var(--theme-font-size-xs);
 }
 
+/* ============================================================================
+   OUTER WRAPPERS — viewport-driven
+   .confirmation-outer and .confirmation-container sit OUTSIDE the
+   .glass-morphism-card, so they cannot be queried by @container scheduling.
+   Their padding/width remains a function of the iframe/page width.
+   ============================================================================ */
 @media (min-width: 640px) {
   .confirmation-outer {
     padding: var(--space-xs) var(--space-md);
   }
+}
 
+@media (min-width: 768px) {
+  .confirmation-outer {
+    padding: var(--space-md) var(--space-md);
+  }
+}
+
+@media (min-width: 1024px) {
+  .confirmation-container {
+    max-width: 72rem;
+  }
+
+  .confirmation-outer {
+    padding: var(--space-2xl) var(--space-md);
+  }
+}
+
+/* ============================================================================
+   CARD INTERIOR — container-driven
+   Everything from .confirmation-content inward lives inside the card and
+   scales with the card's own width, so the confirmation step adapts the
+   same way whether it's a wide standalone page or a narrow embed.
+   ============================================================================ */
+@container scheduling (min-width: 640px) {
   .confirmation-heading-row {
     gap: var(--space-md);
     margin-bottom: var(--space-md);
@@ -192,11 +222,7 @@
   }
 }
 
-@media (min-width: 768px) {
-  .confirmation-outer {
-    padding: var(--space-md) var(--space-md);
-  }
-
+@container scheduling (min-width: 768px) {
   .confirmation-content {
     padding: var(--space-lg);
   }
@@ -225,15 +251,7 @@
   }
 }
 
-@media (min-width: 1024px) {
-  .confirmation-container {
-    max-width: 72rem;
-  }
-
-  .confirmation-outer {
-    padding: var(--space-2xl) var(--space-md);
-  }
-
+@container scheduling (min-width: 1024px) {
   .confirmation-content {
     padding: var(--space-2xl);
   }

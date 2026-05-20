@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
         data_attr("locale", sanitize_locale(options[:locale])),
         data_attr("theme", sanitize_theme(options[:theme])),
         data_attr("primary-color", sanitize_primary_color(options[:primary_color])),
-        data_attr("layout", sanitize_layout(options[:layout])),
+        data_attr("layout", layout_override_for_embed(options[:layout])),
         data_attr("initial-height", sanitize_int_in_range(options[:initial_height], 200, 2000)),
         data_attr("max-width", sanitize_int_in_range(options[:max_width], 200, 2000))
       ])
@@ -122,7 +122,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
         locale: sanitize_locale(options[:locale]),
         theme: sanitize_theme(options[:theme]),
         primaryColor: sanitize_primary_color(options[:primary_color]),
-        layout: sanitize_layout(options[:layout]),
+        layout: layout_override_for_embed(options[:layout]),
         maxWidth: sanitize_int_in_range(options[:max_width], 200, 2000)
       }
       |> Enum.reject(fn {_k, v} -> v == nil || v == "" end)
@@ -137,13 +137,27 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
     end
   end
 
-  # Appends ?layout=column (or &layout=column when other params exist)
-  # to the link snippet. Default layout produces no query string at all.
+  # Appends ?layout=column to the standalone-link snippet. Links open the
+  # booking page in a new tab/window where the standalone default is :default
+  # (centred). A user who picked "Column" in the dashboard wants the link to
+  # also render wide, so emit the override; "Default" matches the standalone
+  # default and produces no query string.
   defp layout_query(options) do
     case sanitize_layout(options[:layout]) do
-      nil -> ""
-      "default" -> ""
-      value -> "?layout=#{value}"
+      "column" -> "?layout=column"
+      _other -> ""
+    end
+  end
+
+  # For embed snippets (inline + popup + floating), :column is the new server
+  # default whenever ?embed=1 is present in the iframe URL — embed.js adds
+  # that automatically. So the snippet only needs to emit a layout override
+  # when the user explicitly picked "Default" (centred-with-cap). "Column"
+  # produces clean snippets that rely on the embed default.
+  defp layout_override_for_embed(value) do
+    case sanitize_layout(value) do
+      "default" -> "default"
+      _other -> nil
     end
   end
 
@@ -190,15 +204,16 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
       else: ""
   end
 
-  # Layout is a strict allowlist matching the server-side context. The
-  # "default" string is preserved for the dashboard's radio state but
-  # omitted from the generated snippet — the server treats absent and
-  # "default" identically and we want clean snippets for the common case.
+  # Layout is a strict allowlist matching the server-side context. Returns
+  # the canonical string for any valid value (including "default"), or nil
+  # for unknown values. The call site decides whether the result should
+  # actually be emitted — see `layout_override_for_embed/1` and
+  # `layout_query/1` for the context-specific emission rules.
   defp sanitize_layout(nil), do: nil
 
   defp sanitize_layout(value) do
     value = to_string(value)
-    if value in valid_layouts() and value != "default", do: value, else: nil
+    if value in valid_layouts(), do: value, else: nil
   end
 
   # Integer in inclusive range. Anything outside the range or non-numeric

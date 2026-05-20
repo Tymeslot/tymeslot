@@ -354,7 +354,10 @@
   margin-top: var(--space-sm);
 }
 
-@media (min-width: 768px) {
+/* Booking card typography & spacing scale with the card's own width,
+   not the viewport — so the heading shrinks correctly in narrow embeds
+   even when the host page is wide. */
+@container scheduling (min-width: 768px) {
   .booking-card-body {
     padding: var(--space-lg);
   }
@@ -378,7 +381,7 @@
   }
 }
 
-@media (min-width: 1024px) {
+@container scheduling (min-width: 1024px) {
   .booking-card-body {
     padding: var(--space-2xl);
   }

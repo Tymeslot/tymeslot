@@ -256,8 +256,10 @@
    RESPONSIVE TYPOGRAPHY ADJUSTMENTS
    ============================================ */
 
-/* Slightly larger text on mobile for better readability */
-@media (max-width: 767px) {
+/* Slightly larger text on narrow cards for better readability.
+   Container-driven so calendar typography matches the card's own width
+   regardless of the surrounding viewport. */
+@container scheduling (max-width: 767px) {
   .day-number {
     font-size: var(--theme-font-size-md);
   }
