@@ -518,6 +518,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
               on_reenable={JS.push("slack_reenable", value: %{"id" => integration.id}, target: @myself)}
               on_pick_channel={JS.push("slack_show_channel_picker", value: %{"id" => integration.id}, target: @myself)}
               on_disconnect={JS.push("slack_disconnect", value: %{"id" => integration.id}, target: @myself)}
+              on_reconnect={JS.push("slack_reconnect", value: %{"id" => integration.id}, target: @myself)}
             />
           <% end %>
         </div>

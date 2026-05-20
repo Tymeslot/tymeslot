@@ -163,6 +163,49 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
   end
 
   # ---------------------------------------------------------------------------
+  # Reconnect
+  # ---------------------------------------------------------------------------
+
+  describe "Reconnect (pending_oauth)" do
+    test "shows Reconnect button on pending OAuth integrations", %{conn: conn, user: user} do
+      _integration = oauth_integration(user, %{channel_id: nil, channel_name: nil})
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      html = open_slack_tab(view)
+
+      assert html =~ "Reconnect"
+    end
+
+    test "Reconnect redirects to the OAuth start endpoint", %{conn: conn, user: user} do
+      _integration = oauth_integration(user, %{channel_id: nil, channel_name: nil})
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      open_slack_tab(view)
+
+      assert {:error, {:redirect, %{to: "/api/slack/oauth/start"}}} =
+               view |> element("button", "Reconnect") |> render_click()
+    end
+
+    test "does not show Reconnect on active OAuth integrations", %{conn: conn, user: user} do
+      _integration = oauth_integration(user)
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      html = open_slack_tab(view)
+
+      refute html =~ "Reconnect"
+    end
+
+    test "does not show Reconnect on webhook URL integrations", %{conn: conn, user: user} do
+      _integration = webhook_integration(user)
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      html = open_slack_tab(view)
+
+      refute html =~ "Reconnect"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Re-enable
   # ---------------------------------------------------------------------------
 
