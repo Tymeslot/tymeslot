@@ -133,35 +133,33 @@ defmodule Tymeslot.Bookings.Reschedule do
        do: :ok
 
   defp sync_provider_video_room(meeting) do
-    try do
-      case Video.update_meeting_room(meeting.organizer_user_id,
-             integration_id: meeting.video_integration_id,
-             room_id: meeting.video_room_id,
-             topic: meeting.title,
-             start_time: meeting.start_time,
-             end_time: meeting.end_time
-           ) do
-        :ok ->
-          :ok
+    case Video.update_meeting_room(meeting.organizer_user_id,
+           integration_id: meeting.video_integration_id,
+           room_id: meeting.video_room_id,
+           topic: meeting.title,
+           start_time: meeting.start_time,
+           end_time: meeting.end_time
+         ) do
+      :ok ->
+        :ok
 
-        {:error, reason} ->
-          Logger.warning("Failed to update provider video meeting on reschedule",
-            meeting_id: meeting.id,
-            reason: inspect(reason)
-          )
-
-          :ok
-      end
-    rescue
-      exception ->
-        Logger.warning("Exception while updating provider video meeting on reschedule",
+      {:error, reason} ->
+        Logger.warning("Failed to update provider video meeting on reschedule",
           meeting_id: meeting.id,
-          exception_class: exception.__struct__,
-          exception_message: Exception.message(exception)
+          reason: inspect(reason)
         )
 
         :ok
     end
+  rescue
+    exception ->
+      Logger.warning("Exception while updating provider video meeting on reschedule",
+        meeting_id: meeting.id,
+        exception_class: exception.__struct__,
+        exception_message: Exception.message(exception)
+      )
+
+      :ok
   end
 
   defp send_reschedule_notifications(updated_meeting, original_meeting) do

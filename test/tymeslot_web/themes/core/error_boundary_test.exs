@@ -17,43 +17,43 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundaryTest do
 
   defmodule HappyTheme do
     @moduledoc false
-    @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
+    alias Phoenix.LiveView.Socket
+    @spec mount(map(), map(), Socket.t()) :: {:ok, Socket.t()}
     def mount(_params, _session, socket), do: {:ok, Phoenix.Component.assign(socket, :ok, true)}
 
-    @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
-            {:noreply, Phoenix.LiveView.Socket.t()}
+    @spec handle_params(map(), String.t(), Socket.t()) :: {:noreply, Socket.t()}
     def handle_params(_params, _url, socket), do: {:noreply, socket}
 
-    @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
-            {:noreply, Phoenix.LiveView.Socket.t()}
+    @spec handle_event(String.t(), map(), Socket.t()) :: {:noreply, Socket.t()}
     def handle_event(_event, _params, socket), do: {:noreply, socket}
 
-    @spec handle_info(term(), Phoenix.LiveView.Socket.t()) ::
-            {:noreply, Phoenix.LiveView.Socket.t()}
+    @spec handle_info(term(), Socket.t()) :: {:noreply, Socket.t()}
     def handle_info(_msg, socket), do: {:noreply, socket}
   end
 
   defmodule RaisingTheme do
     @moduledoc false
-    @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: no_return()
+    alias Phoenix.LiveView.Socket
+    @spec mount(map(), map(), Socket.t()) :: no_return()
     def mount(_params, _session, _socket), do: raise("boom mount")
 
-    @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) :: no_return()
+    @spec handle_params(map(), String.t(), Socket.t()) :: no_return()
     def handle_params(_params, _url, _socket), do: raise("boom params")
 
-    @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) :: no_return()
+    @spec handle_event(String.t(), map(), Socket.t()) :: no_return()
     def handle_event(_event, _params, _socket), do: raise("boom event")
 
-    @spec handle_info(term(), Phoenix.LiveView.Socket.t()) :: no_return()
+    @spec handle_info(term(), Socket.t()) :: no_return()
     def handle_info(_msg, _socket), do: raise("boom info")
   end
 
   defmodule ThrowingTheme do
     @moduledoc false
-    @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) :: no_return()
+    alias Phoenix.LiveView.Socket
+    @spec mount(map(), map(), Socket.t()) :: no_return()
     def mount(_params, _session, _socket), do: throw(:thrown_mount)
 
-    @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) :: no_return()
+    @spec handle_event(String.t(), map(), Socket.t()) :: no_return()
     def handle_event(_event, _params, _socket), do: throw(:thrown_event)
   end
 
