@@ -500,8 +500,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   # Flags the integration as needing reauthentication after a 401 that survived
   # a forced token refresh — this indicates server-side revocation at zoom.us.
-  # TODO: once needs_reauth is wired to a user-visible reconnect prompt for video
-  # integrations (tracking issue: zoom reauth UX), surface this in the dashboard.
+  # The dashboard surfaces this via the "Reconnect required" badge on the video row.
   defp flag_revoked_token(config) do
     integration_id = Map.get(config, :integration_id)
     user_id = Map.get(config, :user_id)
