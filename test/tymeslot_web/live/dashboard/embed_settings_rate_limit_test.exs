@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsRateLimitTest do
 
     # The next UI update must be rejected by the rate limiter
     view
-    |> form("form", %{allowed_domains: "ratelimit-domain.com"})
+    |> form("#embed-domains-form", %{allowed_domains: "ratelimit-domain.com"})
     |> render_submit()
 
     assert render(view) =~ "Too many updates"
