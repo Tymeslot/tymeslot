@@ -108,4 +108,148 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
       assert Helpers.embed_code("unknown", %{}) == ""
     end
   end
+
+  describe "embed_code/2 — customisation knobs" do
+    test "inline snippet emits data-layout, data-initial-height, data-max-width" do
+      assigns = %{
+        username: "testuser",
+        base_url: "https://tymeslot.com",
+        layout: "column",
+        initial_height: "500",
+        max_width: "1200"
+      }
+
+      code = Helpers.embed_code("inline", assigns)
+
+      assert code =~ ~s(data-layout="column")
+      assert code =~ ~s(data-initial-height="500")
+      assert code =~ ~s(data-max-width="1200")
+    end
+
+    test "inline snippet omits layout/initial-height/max-width when not provided" do
+      assigns = %{username: "testuser", base_url: "https://tymeslot.com"}
+
+      code = Helpers.embed_code("inline", assigns)
+
+      refute code =~ "data-layout"
+      refute code =~ "data-initial-height"
+      refute code =~ "data-max-width"
+    end
+
+    test "inline snippet omits data-layout when layout is the default" do
+      assigns = %{
+        username: "testuser",
+        base_url: "https://tymeslot.com",
+        layout: "default"
+      }
+
+      code = Helpers.embed_code("inline", assigns)
+
+      refute code =~ "data-layout"
+    end
+
+    test "inline snippet rejects out-of-range initial-height and max-width" do
+      assigns = %{
+        username: "testuser",
+        base_url: "https://tymeslot.com",
+        initial_height: "50",
+        max_width: "9999"
+      }
+
+      code = Helpers.embed_code("inline", assigns)
+
+      refute code =~ "data-initial-height"
+      refute code =~ "data-max-width"
+    end
+
+    test "inline snippet rejects non-numeric initial-height and max-width" do
+      assigns = %{
+        username: "testuser",
+        base_url: "https://tymeslot.com",
+        initial_height: "tall",
+        max_width: "wide"
+      }
+
+      code = Helpers.embed_code("inline", assigns)
+
+      refute code =~ "data-initial-height"
+      refute code =~ "data-max-width"
+    end
+
+    test "popup snippet includes layout and maxWidth in the JS options object" do
+      assigns = %{
+        username: "testuser",
+        base_url: "https://tymeslot.com",
+        layout: "column",
+        max_width: "1200"
+      }
+
+      code = Helpers.embed_code("popup", assigns)
+
+      assert code =~ "layout: 'column'"
+      assert code =~ "maxWidth: 1200"
+    end
+
+    test "popup snippet emits maxWidth as a bare number, not a string" do
+      assigns = %{
+        username: "testuser",
+        base_url: "https://tymeslot.com",
+        max_width: "900"
+      }
+
+      code = Helpers.embed_code("popup", assigns)
+
+      assert code =~ "maxWidth: 900"
+      refute code =~ "maxWidth: '900'"
+    end
+
+    test "floating snippet includes layout and maxWidth" do
+      assigns = %{
+        username: "testuser",
+        base_url: "https://tymeslot.com",
+        layout: "column",
+        max_width: "1100"
+      }
+
+      code = Helpers.embed_code("floating", assigns)
+
+      assert code =~ "layout: 'column'"
+      assert code =~ "maxWidth: 1100"
+    end
+
+    test "link snippet appends ?layout=column when column layout is selected" do
+      assigns = %{
+        booking_url: "https://tymeslot.com/testuser",
+        layout: "column"
+      }
+
+      code = Helpers.embed_code("link", assigns)
+
+      assert code =~ ~s(href="https://tymeslot.com/testuser?layout=column")
+    end
+
+    test "link snippet adds no query string for the default layout" do
+      assigns = %{
+        booking_url: "https://tymeslot.com/testuser",
+        layout: "default"
+      }
+
+      code = Helpers.embed_code("link", assigns)
+
+      assert code =~ ~s(href="https://tymeslot.com/testuser")
+      refute code =~ "?layout"
+    end
+
+    test "invalid layout values are silently dropped" do
+      assigns = %{
+        username: "testuser",
+        base_url: "https://tymeslot.com",
+        layout: "mosaic"
+      }
+
+      code = Helpers.embed_code("inline", assigns)
+
+      refute code =~ "data-layout"
+    end
+  end
 end

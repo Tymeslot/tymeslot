@@ -11,6 +11,8 @@ defmodule TymeslotWeb.Themes.Core.Context do
 
   require Logger
 
+  @type layout :: :default | :column
+
   @type t :: %__MODULE__{
           theme_id: String.t(),
           theme_key: atom(),
@@ -18,7 +20,8 @@ defmodule TymeslotWeb.Themes.Core.Context do
           customizations: map() | nil,
           capabilities: map(),
           metadata: map(),
-          preview_mode: boolean()
+          preview_mode: boolean(),
+          layout: layout()
         }
 
   defstruct theme_id: nil,
@@ -27,7 +30,17 @@ defmodule TymeslotWeb.Themes.Core.Context do
             customizations: nil,
             capabilities: %{},
             metadata: %{},
-            preview_mode: false
+            preview_mode: false,
+            layout: :default
+
+  @doc """
+  Returns the list of allowed layout values for embed snippets and URL params.
+
+  This is the single authoritative source — both the dashboard helpers and the
+  server-side layout application derive from this list.
+  """
+  @spec valid_layouts() :: [String.t()]
+  def valid_layouts, do: ~w(default column)
 
   @doc """
   Creates a new theme context from a theme ID and optional profile.
@@ -71,22 +84,42 @@ defmodule TymeslotWeb.Themes.Core.Context do
     context = new(theme_id, profile, preview: preview_mode)
 
     if context do
-      # Handle primary-color override
-      if primary_color = params["primary-color"] do
-        # Validate hex color format to prevent CSS injection
-        if Regex.match?(~r/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, primary_color) do
-          customizations = Map.put(context.customizations || %{}, "primary_color", primary_color)
-          %{context | customizations: customizations}
-        else
-          context
-        end
-      else
-        context
-      end
+      context
+      |> apply_primary_color(params)
+      |> apply_layout(params)
     else
       nil
     end
   end
+
+  # Validate hex color format to prevent CSS injection.
+  defp apply_primary_color(context, params) do
+    with primary_color when is_binary(primary_color) <- params["primary-color"],
+         true <- Regex.match?(~r/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, primary_color) do
+      customizations = Map.put(context.customizations || %{}, "primary_color", primary_color)
+      %{context | customizations: customizations}
+    else
+      _invalid -> context
+    end
+  end
+
+  # Layout is a strict allowlist derived from valid_layouts/0 — anything
+  # outside it falls back to the default and is silently ignored. Both
+  # standalone and embedded pages can switch layout; column is designed for
+  # wide-canvas placements like WordPress narrow-column embeds.
+  defp apply_layout(context, %{"layout" => value}) do
+    # valid_layouts/0 is the single authoritative list; strip "default" because
+    # it maps to the struct's zero value and needs no assignment.
+    non_default = valid_layouts() -- ["default"]
+
+    if value in non_default do
+      %{context | layout: String.to_existing_atom(value)}
+    else
+      context
+    end
+  end
+
+  defp apply_layout(context, _params), do: context
 
   @doc """
   Updates the context with new customizations.
@@ -131,7 +164,8 @@ defmodule TymeslotWeb.Themes.Core.Context do
       theme_key: context.theme_key,
       theme_module: context.module,
       theme_customization: context.customizations,
-      theme_preview: context.preview_mode
+      theme_preview: context.preview_mode,
+      embed_layout: context.layout
     }
   end
 

@@ -200,6 +200,12 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
       |> assign(:loading, false)
       |> assign(:has_theme, true)
 
+    socket =
+      case Context.from_params(params, profile) do
+        %Context{} = context -> Context.assign_to_socket(socket, context)
+        nil -> socket
+      end
+
     socket = MeetingManagement.assign_action_specific_data(socket, action, meeting, params)
     ThemeCustomizationHelpers.assign_theme_customization(socket, profile, theme_id)
   end

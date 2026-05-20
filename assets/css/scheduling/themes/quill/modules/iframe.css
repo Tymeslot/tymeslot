@@ -1,19 +1,16 @@
 /* iframe.css — Context-driven overrides for iframe embeds.
-   These rules handle concerns that differ structurally when the page runs
-   inside an iframe: removing host-page chrome, switching background
-   positioning, and enabling content-height measurement for modal embeds.
 
-   Layout compaction for small viewports belongs in base.css and the
-   individual module CSS files — they fire identically whether the
-   viewport is a browser window or an iframe.
+   When the scheduling page is loaded inside an iframe (data-embedded on
+   <html>), the page lets its body grow to natural content height and
+   iframe_embed.js posts that height to the parent on a 50ms loop. The
+   parent iframe element grows AND shrinks to match — so we never set
+   `height: 100%` chains here. Doing so would lock the body to the
+   parent-supplied viewport and defeat the auto-resize.
 
    Triggered by the [data-embedded] attribute set by iframe_embed.js. */
 
 /* ---------------------------------------------------------------------------
-   1. Base Reset (both modes)
-   The standalone page uses min-height: 100% on html/body to fill the
-   browser window.  Inside an iframe the viewport is fixed, so we reset
-   to auto and let the content dictate height.
+   1. Base Reset
    --------------------------------------------------------------------------- */
 html.quill-theme[data-embedded] {
   min-height: auto;
@@ -23,48 +20,50 @@ html.quill-theme[data-embedded] {
 html.quill-theme[data-embedded] body.quill-theme {
   margin: 0;
   display: flow-root;
+  height: max-content;
+  min-height: 0;
 }
 
 /* ---------------------------------------------------------------------------
-   2. Modal Mode — size to content for measurement
-   Modal embeds report their content height to the parent via postMessage
-   so embed.js can size the modal wrapper.  The page must grow to fit its
-   content (max-content) but never be shorter than the iframe viewport
-   (min-height: 100%) to avoid a gap at the bottom.
+   2. Layout containers — size to content, not viewport
    --------------------------------------------------------------------------- */
-html.quill-theme[data-embedded][data-embed-mode="modal"] body.quill-theme {
-  height: max-content;
-  min-height: 100%;
-}
-
-html.quill-theme[data-embedded][data-embed-mode="modal"] .main-gradient.theme-grid {
+html.quill-theme[data-embedded] .main-gradient.theme-grid {
   min-height: auto;
   grid-template-rows: auto;
 }
 
-html.quill-theme[data-embedded][data-embed-mode="modal"] .quill-theme-wrapper > div {
+html.quill-theme[data-embedded] .quill-theme-wrapper > div {
   flex: initial;
+}
+
+html.quill-theme[data-embedded] .glass-morphism-card {
+  min-height: auto;
+}
+
+/* Hug the top — no wasted padding when the iframe sizes to content. */
+html.quill-theme[data-embedded] .main-gradient.theme-grid .content-area .container {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+html.quill-theme[data-embedded] .main-gradient.theme-grid .content-area {
+  padding-bottom: 0;
 }
 
 /* ---------------------------------------------------------------------------
    3. Hide Host-Page Chrome
-   Remove decorative elements that exist for the standalone page but are
-   invisible or wasteful inside an iframe.
    --------------------------------------------------------------------------- */
-
-/* Hide footer/branding */
 html.quill-theme[data-embedded] .footer-gradient {
   display: none;
 }
 
-/* Hide video/gradient background — reduces load time */
+/* Hide video/gradient background — reduces load time inside the iframe. */
 html.quill-theme[data-embedded] .video-background {
   display: none;
 }
 
 /* Language switcher — override position:fixed from language-switcher.css ≤640px
-   breakpoint and pull tighter to the corner. position:absolute is relative to
-   the nearest positioned ancestor (.glass-morphism-card). */
+   breakpoint and pull tighter to the corner. */
 html.quill-theme[data-embedded] .language-switcher {
   position: absolute;
   top: var(--space-xs);
@@ -72,34 +71,28 @@ html.quill-theme[data-embedded] .language-switcher {
 }
 
 /* ---------------------------------------------------------------------------
-   4. Layout Adjustments (both modes)
-   --------------------------------------------------------------------------- */
-html.quill-theme[data-embedded] .glass-morphism-card {
-  min-height: auto;
-}
-
-/* Modal mode: hug the top — no wasted space when the modal sizes to content. */
-html.quill-theme[data-embedded][data-embed-mode="modal"] .main-gradient.theme-grid .content-area .container {
-  margin-top: 0;
-  margin-bottom: 0;
-}
-
-/* Remove the optical-centering bottom padding — every pixel counts. */
-html.quill-theme[data-embedded] .main-gradient.theme-grid .content-area {
-  padding-bottom: 0;
-}
-
-/* ---------------------------------------------------------------------------
-   5. Embedded: single scroll point for time slots
-   The height @media queries in time-slots.css cap .slots-box with a
-   max-height + overflow-y: auto based on the *iframe* viewport, but that
-   viewport doesn't reflect the embedding page's available space.  This
-   creates a double scrollbar: the slots scroll internally AND the page
-   (or outer container) scrolls.  Fix: let the slots flow to their
-   natural height so only the page body scrolls.
+   4. Time slots — single page-level scroll
    --------------------------------------------------------------------------- */
 html.quill-theme[data-embedded] .slots-box {
   max-height: none;
   overflow-y: visible;
   height: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   5. Column layout — wide-canvas variant for narrow embed containers
+   ---------------------------------------------------------------------------
+   Designed for WordPress columns and other constrained-width contexts.
+   The default glassmorphism card caps at 640px on tablets and 1024-1536px
+   on larger screens — for column layout we drop the cap entirely so the
+   booker fills the available container width. */
+html.quill-theme[data-embed-layout="column"] .glass-morphism-card,
+html.quill-theme[data-embed-layout="column"] .glass-morphism-card > div {
+  max-width: 100%;
+  width: 100%;
+}
+
+html.quill-theme[data-embed-layout="column"] .main-gradient.theme-grid .content-area {
+  padding-left: 0;
+  padding-right: 0;
 }

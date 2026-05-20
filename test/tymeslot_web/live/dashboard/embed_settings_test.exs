@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       # Submit domains
       view
-      |> form("form", %{allowed_domains: "example.com, test.org"})
+      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: "example.com, test.org"})
       |> render_submit()
 
       # Check for success message
@@ -132,7 +132,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       view |> element("button#tab-security") |> render_click()
 
       view
-      |> form("form", %{allowed_domains: "user@example.com"})
+      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: "user@example.com"})
       |> render_submit()
 
       assert render(view) =~ "Invalid domain format"
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       domains_str = Enum.join(many_domains, ", ")
 
       view
-      |> form("form", %{allowed_domains: domains_str})
+      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: domains_str})
       |> render_submit()
 
       assert render(view) =~ "cannot have more than 20"
@@ -163,7 +163,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       long_domain = String.duplicate("a", 252) <> ".com"
 
       view
-      |> form("form", %{allowed_domains: long_domain})
+      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: long_domain})
       |> render_submit()
 
       assert render(view) =~ "exceed maximum length"
@@ -180,7 +180,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       # Try to add a domain that is already whitelisted
       view
-      |> form("form", %{allowed_domains: "existing.com"})
+      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: "existing.com"})
       |> render_submit()
 
       assert render(view) =~ "Already whitelisted"
@@ -198,7 +198,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       # Submit the same domain with different casing
       view
-      |> form("form", %{allowed_domains: "Example.COM, example.com"})
+      |> form("form[phx-submit='save_embed_domains']", %{
+        allowed_domains: "Example.COM, example.com"
+      })
       |> render_submit()
 
       assert render(view) =~ "Security settings saved successfully"
@@ -219,7 +221,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       view |> element("button#tab-security") |> render_click()
 
       view
-      |> form("form", %{allowed_domains: "new-site.com"})
+      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: "new-site.com"})
       |> render_submit()
 
       assert render(view) =~ "Security settings saved successfully"
@@ -256,12 +258,33 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
     test "copies embed code to clipboard", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
-      # Click copy button for inline embed
+      # Click copy button for inline embed (default state — no customisations)
       view
       |> element("button[phx-click='copy_code'][phx-value-type='inline']")
       |> render_click()
 
       assert render(view) =~ "Code copied to clipboard"
+    end
+
+    test "copies embed code with customisations applied", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+
+      # Apply all three customisations in one form-change roundtrip
+      view
+      |> form("form[phx-change='update_customisation']", %{
+        "customise" => %{"layout" => "column", "initial_height" => "500", "max_width" => "900"}
+      })
+      |> render_change()
+
+      # Click copy for inline — should include all three customisations
+      view
+      |> element("button[phx-click='copy_code'][phx-value-type='inline']")
+      |> render_click()
+
+      assert_push_event(view, "copy-to-clipboard", %{text: text})
+      assert text =~ ~s(data-layout="column")
+      assert text =~ ~s(data-initial-height="500")
+      assert text =~ ~s(data-max-width="900")
     end
 
     test "switches between embed types", %{conn: conn} do
@@ -311,7 +334,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       view |> element("button#tab-security") |> render_click()
 
       view
-      |> form("form", %{allowed_domains: ""})
+      |> form("form[phx-submit='save_embed_domains']", %{allowed_domains: ""})
       |> render_submit()
 
       # Should not show success message because we reject empty input in handle_event
@@ -332,7 +355,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       # Submitting 2 new domains would bring total to 21 → should error
       view
-      |> form("form", %{allowed_domains: "new1.example.com, new2.example.com"})
+      |> form("form[phx-submit='save_embed_domains']", %{
+        allowed_domains: "new1.example.com, new2.example.com"
+      })
       |> render_submit()
 
       # Error should appear
@@ -340,6 +365,129 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       # DB should be unchanged (19 domains, not 21)
       assert length(Repo.reload(profile).allowed_embed_domains) == 19
+    end
+  end
+
+  describe "customisation controls" do
+    setup do
+      user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+      profile = insert(:profile, user: user, username: "customuser")
+      conn = log_in_user(build_conn(), user)
+
+      {:ok, conn: conn, profile: profile}
+    end
+
+    test "renders the customise panel with three controls", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+
+      assert has_element?(view, "select#embed-layout")
+      assert has_element?(view, "input#embed-initial-height")
+      assert has_element?(view, "input#embed-max-width")
+    end
+
+    test "customise controls are wrapped in a phx-change form", %{conn: conn} do
+      # Regression guard: LiveView throws when phx-change fires on an input
+      # outside a <form>, so the dropdown silently breaks if the form
+      # wrapper is removed.
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+
+      assert has_element?(view, "form[phx-change='update_customisation'] select#embed-layout")
+
+      assert has_element?(
+               view,
+               "form[phx-change='update_customisation'] input#embed-initial-height"
+             )
+
+      assert has_element?(view, "form[phx-change='update_customisation'] input#embed-max-width")
+    end
+
+    test "changing layout to column updates every snippet that supports it", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+
+      # Default — no data-layout="column" attribute on any snippet
+      html = render(view)
+      refute html =~ ~s(data-layout="column")
+      refute html =~ "?layout=column"
+
+      # Switch to column via the customise form
+      view
+      |> form("form[phx-change='update_customisation']", %{
+        "customise" => %{"layout" => "column"}
+      })
+      |> render_change()
+
+      html = render(view)
+      # Inline snippet picks up data-layout
+      assert html =~ ~s(data-layout="column")
+      # Link snippet appends the query string
+      assert html =~ "?layout=column"
+      # Popup/floating JS snippets emit `layout: 'column'`, which renders with
+      # HTML-escaped apostrophes inside the <pre><code> code block.
+      assert html =~ "layout: &#39;column&#39;"
+    end
+
+    test "rejects invalid layout values and falls back to default", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+
+      # Target the form element directly so phx-target={@myself} routes the
+      # event to the component, and bypass the `form/2` helper's option
+      # validation to test the server-side allowlist against tampered payloads.
+      view
+      |> element("form[phx-change='update_customisation']")
+      |> render_change(%{"customise" => %{"layout" => "mosaic"}})
+
+      html = render(view)
+      refute html =~ ~s(data-layout="column")
+      refute html =~ "layout: &#39;mosaic&#39;"
+    end
+
+    test "initial_height appears in the inline snippet when set", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+
+      view
+      |> form("form[phx-change='update_customisation']", %{
+        "customise" => %{"initial_height" => "600"}
+      })
+      |> render_change()
+
+      html = render(view)
+      assert html =~ ~s(data-initial-height=\"600\")
+    end
+
+    test "max_width appears in inline, popup, and floating snippets", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+
+      view
+      |> form("form[phx-change='update_customisation']", %{
+        "customise" => %{"max_width" => "1200"}
+      })
+      |> render_change()
+
+      html = render(view)
+      # Inline snippet: data-max-width attribute on the div
+      assert html =~ ~s(data-max-width=\"1200\")
+      # Popup/floating snippets: maxWidth in the JS options object
+      assert html =~ "maxWidth: 1200"
+    end
+
+    test "blank values clear the customisation", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+
+      # Set a value, then clear it
+      view
+      |> form("form[phx-change='update_customisation']", %{
+        "customise" => %{"initial_height" => "600"}
+      })
+      |> render_change()
+
+      view
+      |> form("form[phx-change='update_customisation']", %{
+        "customise" => %{"initial_height" => ""}
+      })
+      |> render_change()
+
+      html = render(view)
+      refute html =~ "data-initial-height"
     end
   end
 
