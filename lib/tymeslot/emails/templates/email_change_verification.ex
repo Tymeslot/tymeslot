@@ -5,17 +5,23 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Buttons, Callouts, Sanitise, Styles, TemplateHelper, Text}
+  alias Tymeslot.Emails.Shared.{
+    Buttons,
+    Callouts,
+    Greeting,
+    Sanitise,
+    Styles,
+    TemplateHelper,
+    Text
+  }
 
   # A confirmation-style action to finalise an account change.
   @intent :confirmed
 
   @spec render(Tymeslot.Emails.EmailService.user_map(), String.t(), String.t()) :: String.t()
   def render(user, new_email, verification_url) do
-    name = user.name || user.email
-
     mjml_content = """
-    #{Text.centered_text(dgettext("emails", "Hi %{name},", name: name),
+    #{Text.centered_text(Greeting.html(user),
     font_size: "16px",
     color: Styles.ink(),
     padding: "8px 0 4px 0")}
@@ -90,12 +96,10 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
 
   @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t(), String.t()) :: String.t()
   def render_text(user, new_email, verification_url) do
-    name = user.name || user.email
-
     """
     #{dgettext("emails", "Verify your new email address")}
 
-    #{dgettext("emails", "Hi %{name},", name: name)}
+    #{Greeting.text(user)}
 
     #{dgettext("emails", "You asked to change the email address on your Tymeslot account to %{new_email}.", new_email: new_email)}
 

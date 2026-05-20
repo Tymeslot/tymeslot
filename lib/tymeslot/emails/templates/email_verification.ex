@@ -4,17 +4,15 @@ defmodule Tymeslot.Emails.Templates.EmailVerification do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Buttons, Sanitise, TemplateHelper, Text}
+  alias Tymeslot.Emails.Shared.{Buttons, Greeting, TemplateHelper, Text}
 
   # A first-contact email welcoming a new user in.
   @intent :confirmed
 
   @spec render(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
   def render(user, verification_url) do
-    user_display_name = Sanitise.sanitize_for_email(user.name || user.email)
-
     mjml_content = """
-    #{Text.centered_text(dgettext("emails", "Hi %{name},", name: user_display_name), padding: "8px 0 4px 0", font_size: "16px")}
+    #{Text.centered_text(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
 
     #{Text.centered_text(dgettext("emails", "We're glad you're here. One quick step and your calendar will be ready to go — please confirm your email below."), padding: "0 0 20px 0")}
 
@@ -40,12 +38,10 @@ defmodule Tymeslot.Emails.Templates.EmailVerification do
 
   @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
   def render_text(user, verification_url) do
-    name = user.name || user.email
-
     """
     #{dgettext("emails", "Welcome to Tymeslot!")}
 
-    #{dgettext("emails", "Hi %{name},", name: name)}
+    #{Greeting.text(user)}
 
     #{dgettext("emails", "We're excited to have you on board! To start scheduling meetings and simplify your calendar, please verify your email address.")}
 

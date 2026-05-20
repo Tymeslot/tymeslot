@@ -5,7 +5,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Callouts, Cards, TemplateHelper, Text}
+  alias Tymeslot.Emails.Shared.{Callouts, Cards, Greeting, TemplateHelper, Text}
 
   # A positive confirmation that an account change succeeded.
   @intent :confirmed
@@ -18,25 +18,23 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
           boolean()
         ) :: String.t()
   def render(user, old_email, new_email, confirmed_time, is_old_email \\ false) do
-    name = user.name || new_email
-
     intro =
       if is_old_email do
         dgettext(
           "emails",
-          "Hi %{name}, your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened.",
-          name: name
+          "Your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened."
         )
       else
         dgettext(
           "emails",
-          "Hi %{name}, your Tymeslot account email address has been successfully changed.",
-          name: name
+          "Your Tymeslot account email address has been successfully changed."
         )
       end
 
     mjml_content = """
-    #{Text.centered_text(intro, padding: "8px 0 20px 0")}
+    #{Text.centered_text(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
+
+    #{Text.centered_text(intro, padding: "0 0 20px 0")}
 
     #{Callouts.alert_box(@intent, dgettext("emails", "Email change completed successfully."))}
 
@@ -77,20 +75,16 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
           boolean()
         ) :: String.t()
   def render_text(user, old_email, new_email, confirmed_time, is_old_email \\ false) do
-    name = user.name || new_email
-
     intro =
       if is_old_email do
         dgettext(
           "emails",
-          "Hi %{name}, your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened.",
-          name: name
+          "Your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened."
         )
       else
         dgettext(
           "emails",
-          "Hi %{name}, your Tymeslot account email address has been successfully changed.",
-          name: name
+          "Your Tymeslot account email address has been successfully changed."
         )
       end
 
@@ -111,6 +105,8 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
 
     """
     #{dgettext("emails", "Email change complete")}
+
+    #{Greeting.text(user)}
 
     #{intro}
 

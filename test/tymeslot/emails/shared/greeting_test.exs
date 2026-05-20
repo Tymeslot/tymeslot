@@ -1,0 +1,73 @@
+defmodule Tymeslot.Emails.Shared.GreetingTest do
+  use Tymeslot.DataCase, async: true
+  @moduletag :emails
+
+  alias Tymeslot.Emails.Shared.Greeting
+
+  describe "html/1" do
+    test "uses the user's name when present" do
+      assert Greeting.html(%{name: "Anna"}) == "Hi Anna,"
+    end
+
+    test "falls back to a neutral greeting when name is nil" do
+      assert Greeting.html(%{name: nil}) == "Hi there,"
+    end
+
+    test "falls back to a neutral greeting when name is blank" do
+      assert Greeting.html(%{name: ""}) == "Hi there,"
+      assert Greeting.html(%{name: "   "}) == "Hi there,"
+    end
+
+    test "falls back to a neutral greeting when the schema lacks a name field" do
+      assert Greeting.html(%{}) == "Hi there,"
+    end
+
+    test "never falls back to the user's email address" do
+      assert Greeting.html(%{name: nil, email: "user@example.com"}) == "Hi there,"
+    end
+
+    test "HTML-escapes the interpolated name" do
+      result = Greeting.html(%{name: "<script>alert('xss')</script>"})
+
+      refute result =~ "<script>"
+      assert result =~ "&lt;script&gt;"
+    end
+
+    test "respects the recipient locale" do
+      assert with_locale("de", fn -> Greeting.html(%{name: nil}) end) == "Hallo,"
+      assert with_locale("fr", fn -> Greeting.html(%{name: nil}) end) == "Bonjour,"
+      assert with_locale("it", fn -> Greeting.html(%{name: nil}) end) == "Ciao,"
+      assert with_locale("uk", fn -> Greeting.html(%{name: nil}) end) == "Вітаю!"
+    end
+  end
+
+  describe "text/1" do
+    test "uses the user's name when present" do
+      assert Greeting.text(%{name: "Anna"}) == "Hi Anna,"
+    end
+
+    test "falls back to a neutral greeting when name is nil" do
+      assert Greeting.text(%{name: nil}) == "Hi there,"
+    end
+
+    test "falls back to a neutral greeting when name is blank" do
+      assert Greeting.text(%{name: ""}) == "Hi there,"
+      assert Greeting.text(%{name: "   "}) == "Hi there,"
+    end
+
+    test "never falls back to the user's email address" do
+      assert Greeting.text(%{name: nil, email: "user@example.com"}) == "Hi there,"
+    end
+
+    test "respects the recipient locale" do
+      assert with_locale("de", fn -> Greeting.text(%{name: nil}) end) == "Hallo,"
+      assert with_locale("fr", fn -> Greeting.text(%{name: nil}) end) == "Bonjour,"
+      assert with_locale("it", fn -> Greeting.text(%{name: nil}) end) == "Ciao,"
+      assert with_locale("uk", fn -> Greeting.text(%{name: nil}) end) == "Вітаю!"
+    end
+  end
+
+  defp with_locale(locale, fun) do
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fun)
+  end
+end
