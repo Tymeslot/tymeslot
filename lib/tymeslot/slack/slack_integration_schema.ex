@@ -187,6 +187,21 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
     ])
   end
 
+  @doc """
+  Changeset for demoting an active OAuth integration back to `:pending_oauth`
+  by clearing its channel selection. The stored bot token and workspace info
+  are preserved so the user can pick a new channel without redoing OAuth.
+  Bypasses `validate_by_mode` so that the resulting `channel_id: nil` state
+  is acceptable.
+  """
+  @spec disconnect_changeset(t()) :: Ecto.Changeset.t()
+  def disconnect_changeset(integration) do
+    integration
+    |> cast(%{}, [])
+    |> put_change(:channel_id, nil)
+    |> put_change(:channel_name, nil)
+  end
+
   defp validate_by_mode(changeset) do
     case get_field(changeset, :app_mode) do
       "oauth" ->

@@ -124,12 +124,11 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
   # ---------------------------------------------------------------------------
 
   describe "Disconnect" do
-    test "shows the production-bug flash for OAuth disconnect", %{conn: conn, user: user} do
-      # KNOWN PRODUCTION BUG: `Slack.update_integration/2` runs the full changeset
-      # which validate_required([:channel_id]) for OAuth mode, so setting channel_id
-      # to nil to "disconnect" always fails. We assert the current user-visible
-      # behaviour (error flash) so a future fix surfaces this test naturally.
-      _integration = oauth_integration(user)
+    test "OAuth integration: clears channel and demotes back to pending", %{
+      conn: conn,
+      user: user
+    } do
+      integration = oauth_integration(user)
 
       {:ok, view, _html} = live(conn, "/dashboard/automation")
       open_slack_tab(view)
@@ -138,7 +137,14 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
       |> element("button[title='Disconnect Slack']")
       |> render_click()
 
-      assert render(view) =~ "Failed to disconnect Slack"
+      assert render(view) =~ "Slack channel disconnected"
+
+      {:ok, refreshed} = Slack.get_integration(integration.id, user.id)
+      assert refreshed.channel_id == nil
+      assert refreshed.channel_name == nil
+      # Bot token and workspace metadata are preserved so the user can pick a
+      # new channel without redoing OAuth.
+      assert refreshed.bot_token_encrypted == integration.bot_token_encrypted
     end
 
     test "webhook URL integrations cannot be disconnected via the OAuth path", %{
