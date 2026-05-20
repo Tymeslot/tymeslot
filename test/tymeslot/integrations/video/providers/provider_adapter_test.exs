@@ -93,7 +93,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
     end
 
     test "returns error for unknown provider" do
-      assert {:error, _} = ProviderAdapter.update_meeting_room(:unknown, "room123", %{})
+      assert {:error, _reason} = ProviderAdapter.update_meeting_room(:unknown, "room123", %{})
     end
   end
 
@@ -120,7 +120,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
     end
 
     test "returns error for unknown provider" do
-      assert {:error, _} = ProviderAdapter.delete_meeting_room(:unknown, "room123", %{})
+      assert {:error, _reason} = ProviderAdapter.delete_meeting_room(:unknown, "room123", %{})
     end
   end
 
