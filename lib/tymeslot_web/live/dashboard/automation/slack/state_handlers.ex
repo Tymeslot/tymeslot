@@ -87,10 +87,13 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
   def handle_disconnect(%{"id" => id}, socket) do
     case AutomationHelpers.get_slack_for_user(socket, id) do
       {:ok, %{app_mode: "oauth"} = integration} ->
-        case Slack.update_integration(integration, %{channel_id: nil, channel_name: nil}) do
+        case Slack.disconnect(integration) do
           {:ok, _updated} ->
             Flash.info("Slack channel disconnected. Pick a new channel to reconnect.")
             {:noreply, AutomationHelpers.maybe_load_slack(socket)}
+
+          {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
+            {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
 
           {:error, _reason} ->
             Flash.error("Failed to disconnect Slack")

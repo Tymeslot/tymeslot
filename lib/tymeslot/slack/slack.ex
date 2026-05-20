@@ -150,6 +150,20 @@ defmodule Tymeslot.Slack do
   end
 
   @doc """
+  Clears the channel on an OAuth integration, demoting it back to
+  `:pending_oauth`. The bot token and workspace info are preserved so the
+  user can pick a new channel without redoing OAuth.
+  """
+  @spec disconnect(SlackIntegrationSchema.t()) ::
+          {:ok, SlackIntegrationSchema.t()}
+          | {:error, Ecto.Changeset.t() | :insufficient_plan | :feature_access_checker_failed}
+  def disconnect(%SlackIntegrationSchema{} = integration) do
+    with :ok <- Features.check_access(integration.user_id, :automations_allowed) do
+      SlackQueries.disconnect(integration)
+    end
+  end
+
+  @doc """
   Lists channels the bot can post to, paginated transparently across
   `conversations.list` cursor responses.
 
