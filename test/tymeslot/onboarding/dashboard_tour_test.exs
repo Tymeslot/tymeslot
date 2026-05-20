@@ -11,7 +11,7 @@ defmodule Tymeslot.Onboarding.DashboardTourTest do
     test "returns a non-empty list of step maps" do
       steps = DashboardTour.steps()
       assert is_list(steps)
-      assert steps != []
+      refute Enum.empty?(steps)
     end
 
     test "every step has the required keys" do
