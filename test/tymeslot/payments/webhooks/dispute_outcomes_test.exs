@@ -63,7 +63,9 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       d = dispute("under_review")
       event = %{"id" => "evt_upd_1", "type" => "charge.dispute.updated"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id -> {:ok, subscription_charge()} end)
+      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
+        {:ok, subscription_charge()}
+      end)
 
       assert {:ok, :dispute_updated} = DisputeHandler.process(event, d)
 
@@ -94,7 +96,9 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       d = dispute("under_review")
       event = %{"id" => "evt_upd_3", "type" => "charge.dispute.updated"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id -> {:error, %{message: "down"}} end)
+      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
+        {:error, %{message: "down"}}
+      end)
 
       assert {:error, :retry_later, _msg} = DisputeHandler.process(event, d)
     end
@@ -105,7 +109,9 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       d = dispute("won")
       event = %{"id" => "evt_close_1", "type" => "charge.dispute.closed"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id -> {:ok, subscription_charge()} end)
+      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
+        {:ok, subscription_charge()}
+      end)
 
       assert {:ok, :dispute_closed} = DisputeHandler.process(event, d)
 
@@ -166,7 +172,9 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       d = dispute("won")
       event = %{"id" => "evt_close_4", "type" => "charge.dispute.closed"}
 
-      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id -> {:error, %{message: "down"}} end)
+      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
+        {:error, %{message: "down"}}
+      end)
 
       assert {:error, :retry_later, _msg} = DisputeHandler.process(event, d)
     end
