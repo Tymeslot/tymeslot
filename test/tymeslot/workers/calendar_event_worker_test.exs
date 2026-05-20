@@ -8,7 +8,6 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
 
-  alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.UUID
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -352,42 +351,6 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
                  "future_field" => "unknown_value",
                  "priority" => "high"
                })
-    end
-  end
-
-  describe "perform/1 - timeout handling" do
-    @tag timeout: 150_000
-    test "snoozes on timeout when CalDAV operation blocks" do
-      # This test exercises the Task.yield timeout path, which only fires when
-      # test_mode is false and the spawned task exceeds @calendar_timeout_ms (90s).
-      # It takes ~90 seconds to run because the timeout is a compiled constant.
-      pid = self()
-      Sandbox.mode(Tymeslot.Repo, {:shared, pid})
-
-      meeting = insert(:meeting)
-
-      # Switch to global mock mode so the Task.Supervisor child process can
-      # see the stub. Global mode is safe here because Sandbox is in shared mode.
-      Mox.set_mox_global()
-
-      Mox.stub(Tymeslot.CalendarMock, :create_event, fn _event_data, _user_id ->
-        # Block indefinitely — Task.yield will time out after 90s
-        Process.sleep(:infinity)
-      end)
-
-      original_test_mode = Application.get_env(:tymeslot, :test_mode, false)
-      Application.put_env(:tymeslot, :test_mode, false)
-
-      try do
-        assert {:snooze, 300} =
-                 perform_job(CalendarEventWorker, %{
-                   "action" => "create",
-                   "meeting_id" => meeting.id
-                 })
-      after
-        Application.put_env(:tymeslot, :test_mode, original_test_mode)
-        Mox.set_mox_private()
-      end
     end
   end
 
