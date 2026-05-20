@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
       <.page_layout show_steps={true} current_step={3} slug={@duration} username_context={@username_context}>
         <div class="stack">
           <div class="flex-1 flex items-center justify-center px-4 py-4">
-            <div class="w-full max-w-2xl">
+            <div class="w-full">
               <.glass_morphism_card class="custom-questions-card">
                 <div class="booking-card-body">
                   <%= if @total > 1 do %>

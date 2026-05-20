@@ -86,7 +86,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
         username_context={@username_context}
       >
         <div class="overview-content-area flex items-start justify-center">
-          <div class="w-full max-w-5xl">
+          <div class="w-full">
             <.glass_morphism_card>
               <div class="overview-card-body">
                 <div class="overview-layout">
