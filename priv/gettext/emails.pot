@@ -107,15 +107,11 @@ msgstr ""
 msgid "Email:"
 msgstr ""
 
+#: lib/tymeslot/emails/shared/greeting.ex:27
+#: lib/tymeslot/emails/shared/greeting.ex:38
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:130
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:177
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:153
-#: lib/tymeslot/emails/templates/email_change_verification.ex:18
-#: lib/tymeslot/emails/templates/email_change_verification.ex:98
-#: lib/tymeslot/emails/templates/email_verification.ex:17
-#: lib/tymeslot/emails/templates/email_verification.ex:48
-#: lib/tymeslot/emails/templates/password_reset.ex:17
-#: lib/tymeslot/emails/templates/password_reset.ex:49
 #: lib/tymeslot/emails/templates/reschedule_request.ex:105
 #, elixir-autogen, elixir-format
 msgid "Hi %{name},"
@@ -651,33 +647,33 @@ msgstr ""
 msgid "What Changed"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:43
+#: lib/tymeslot/emails/templates/email_change_notification.ex:42
 #, elixir-autogen, elixir-format
 msgid "A change was requested on your Tymeslot account."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/password_reset.ex:38
+#: lib/tymeslot/emails/templates/password_reset.ex:36
 #, elixir-autogen, elixir-format
 msgid "A fresh password and you're back in."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:31
-#: lib/tymeslot/emails/templates/email_change_notification.ex:70
+#: lib/tymeslot/emails/templates/email_change_notification.ex:30
+#: lib/tymeslot/emails/templates/email_change_notification.ex:68
 #, elixir-autogen, elixir-format
 msgid "A verification email has been sent to the new address"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/password_reset.ex:33
+#: lib/tymeslot/emails/templates/password_reset.ex:31
 #, elixir-autogen, elixir-format
 msgid "Account Security"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:63
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:61
 #, elixir-autogen, elixir-format
 msgid "Account Update"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_verification.ex:32
+#: lib/tymeslot/emails/templates/email_verification.ex:30
 #, elixir-autogen, elixir-format
 msgid "Account Verification"
 msgstr ""
@@ -697,8 +693,8 @@ msgstr ""
 msgid "Action required: \"%{title}\" was rescheduled in your external calendar (%{date})"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:43
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:121
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:117
 #, elixir-autogen, elixir-format
 msgid "Active"
 msgstr ""
@@ -708,8 +704,8 @@ msgstr ""
 msgid "Add to your calendar"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:47
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:125
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:45
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:121
 #, elixir-autogen, elixir-format
 msgid "All future emails will be sent to your new address"
 msgstr ""
@@ -719,7 +715,7 @@ msgstr ""
 msgid "Attendee Information"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:117
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:113
 #, elixir-autogen, elixir-format
 msgid "CHANGE DETAILS:"
 msgstr ""
@@ -735,34 +731,34 @@ msgstr ""
 msgid "Company"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_verification.ex:21
+#: lib/tymeslot/emails/templates/email_verification.ex:19
 #, elixir-autogen, elixir-format
 msgid "Confirm Email & Get Started"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_verification.ex:52
+#: lib/tymeslot/emails/templates/email_verification.ex:48
 #, elixir-autogen, elixir-format
 msgid "Confirm Email & Get Started:"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:49
+#: lib/tymeslot/emails/templates/email_change_verification.ex:47
 #, elixir-autogen, elixir-format
 msgid "Confirm the new email address on your Tymeslot account."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:52
+#: lib/tymeslot/emails/templates/email_change_verification.ex:50
 #, elixir-autogen, elixir-format
 msgid "Confirm your new email"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:83
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:66
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:64
 #, elixir-autogen, elixir-format
 msgid "Confirmed"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:38
-#: lib/tymeslot/emails/templates/email_change_verification.ex:107
+#: lib/tymeslot/emails/templates/email_change_verification.ex:36
+#: lib/tymeslot/emails/templates/email_change_verification.ex:103
 #, elixir-autogen, elixir-format
 msgid "Didn't request this change? You can safely ignore this email — nothing will happen to your account."
 msgstr ""
@@ -772,19 +768,19 @@ msgstr ""
 msgid "Email"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:67
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:113
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:65
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:107
 #, elixir-autogen, elixir-format
 msgid "Email change complete"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:46
-#: lib/tymeslot/emails/templates/email_change_notification.ex:57
+#: lib/tymeslot/emails/templates/email_change_notification.ex:45
+#: lib/tymeslot/emails/templates/email_change_notification.ex:54
 #, elixir-autogen, elixir-format
 msgid "Email change requested"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:25
+#: lib/tymeslot/emails/templates/email_change_notification.ex:24
 #, elixir-autogen, elixir-format
 msgid "Email change requested to: %{new_email}"
 msgstr ""
@@ -794,12 +790,12 @@ msgstr ""
 msgid "Event updated"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_verification.ex:55
+#: lib/tymeslot/emails/templates/email_verification.ex:51
 #, elixir-autogen, elixir-format
 msgid "For your security, this link expires in 24 hours. If you didn't sign up for Tymeslot, no further action is needed."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_verification.ex:23
+#: lib/tymeslot/emails/templates/email_verification.ex:21
 #, elixir-autogen, elixir-format
 msgid "For your security, this link expires in 24 hours. If you didn't sign up for Tymeslot, you can ignore this email."
 msgstr ""
@@ -809,7 +805,7 @@ msgstr ""
 msgid "Friday"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:34
+#: lib/tymeslot/emails/templates/email_change_verification.ex:32
 #, elixir-autogen, elixir-format
 msgid "Heads up"
 msgstr ""
@@ -849,13 +845,13 @@ msgstr ""
 msgid "If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/password_reset.ex:24
-#: lib/tymeslot/emails/templates/password_reset.ex:58
+#: lib/tymeslot/emails/templates/password_reset.ex:22
+#: lib/tymeslot/emails/templates/password_reset.ex:54
 #, elixir-autogen, elixir-format
 msgid "If you didn't request this change, your account is still secure — you can simply delete this email."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/password_reset.ex:34
+#: lib/tymeslot/emails/templates/password_reset.ex:32
 #, elixir-autogen, elixir-format
 msgid "Instructions to reset your Tymeslot password."
 msgstr ""
@@ -865,12 +861,12 @@ msgstr ""
 msgid "Invited"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/password_reset.ex:51
+#: lib/tymeslot/emails/templates/password_reset.ex:47
 #, elixir-autogen, elixir-format
 msgid "It happens to the best of us! Click the link below to choose a new password and regain access to your account."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/password_reset.ex:19
+#: lib/tymeslot/emails/templates/password_reset.ex:17
 #, elixir-autogen, elixir-format
 msgid "It happens to the best of us. Click the button below to choose a new password and pick up where you left off."
 msgstr ""
@@ -880,8 +876,8 @@ msgstr ""
 msgid "Join when you're ready"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:132
-#: lib/tymeslot/emails/templates/email_change_notification.ex:79
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:128
+#: lib/tymeslot/emails/templates/email_change_notification.ex:77
 #, elixir-autogen, elixir-format
 msgid "Just now"
 msgstr ""
@@ -891,7 +887,7 @@ msgstr ""
 msgid "Let's find a new time"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_verification.ex:37
+#: lib/tymeslot/emails/templates/email_verification.ex:35
 #, elixir-autogen, elixir-format
 msgid "Let's get you scheduling in under a minute."
 msgstr ""
@@ -939,7 +935,7 @@ msgstr ""
 msgid "New booking"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:77
+#: lib/tymeslot/emails/templates/email_change_verification.ex:75
 #, elixir-autogen, elixir-format
 msgid "New email address"
 msgstr ""
@@ -955,7 +951,7 @@ msgstr ""
 msgid "ORIGINAL BOOKING DETAILS:"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:53
+#: lib/tymeslot/emails/templates/email_change_verification.ex:51
 #, elixir-autogen, elixir-format
 msgid "One click and the switch is done."
 msgstr ""
@@ -980,7 +976,7 @@ msgstr ""
 msgid "Quick actions"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:63
+#: lib/tymeslot/emails/templates/email_change_notification.ex:61
 #, elixir-autogen, elixir-format
 msgid "REQUEST DETAILS:"
 msgstr ""
@@ -995,12 +991,12 @@ msgstr ""
 msgid "Reminder"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/password_reset.ex:47
+#: lib/tymeslot/emails/templates/password_reset.ex:43
 #, elixir-autogen, elixir-format
 msgid "Reset Your Password"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/password_reset.ex:37
+#: lib/tymeslot/emails/templates/password_reset.ex:35
 #, elixir-autogen, elixir-format
 msgid "Reset your password"
 msgstr ""
@@ -1010,18 +1006,18 @@ msgstr ""
 msgid "Saturday"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:45
-#: lib/tymeslot/emails/templates/password_reset.ex:36
+#: lib/tymeslot/emails/templates/email_change_notification.ex:44
+#: lib/tymeslot/emails/templates/password_reset.ex:34
 #, elixir-autogen, elixir-format
 msgid "Security"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/password_reset.ex:21
+#: lib/tymeslot/emails/templates/password_reset.ex:19
 #, elixir-autogen, elixir-format
 msgid "Set New Password"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/password_reset.ex:53
+#: lib/tymeslot/emails/templates/password_reset.ex:49
 #, elixir-autogen, elixir-format
 msgid "Set New Password:"
 msgstr ""
@@ -1041,8 +1037,8 @@ msgstr ""
 msgid "Starting soon"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:121
-#: lib/tymeslot/emails/templates/email_change_notification.ex:67
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:117
+#: lib/tymeslot/emails/templates/email_change_notification.ex:65
 #, elixir-autogen, elixir-format
 msgid "Status:"
 msgstr ""
@@ -1052,8 +1048,8 @@ msgstr ""
 msgid "Sunday"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:31
-#: lib/tymeslot/emails/templates/email_change_notification.ex:71
+#: lib/tymeslot/emails/templates/email_change_notification.ex:30
+#: lib/tymeslot/emails/templates/email_change_notification.ex:69
 #, elixir-autogen, elixir-format
 msgid "The change will only be completed after verification"
 msgstr ""
@@ -1078,30 +1074,30 @@ msgstr ""
 msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking — please review the details and update or cancel it accordingly."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:31
-#: lib/tymeslot/emails/templates/email_change_notification.ex:72
+#: lib/tymeslot/emails/templates/email_change_notification.ex:30
+#: lib/tymeslot/emails/templates/email_change_notification.ex:70
 #, elixir-autogen, elixir-format
 msgid "The verification link expires in 24 hours"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:58
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:56
 #, elixir-autogen, elixir-format
 msgid "This is a confirmation of changes made to your account. If you have any questions, please contact support."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:37
+#: lib/tymeslot/emails/templates/email_change_notification.ex:36
 #, elixir-autogen, elixir-format
 msgid "This is a security notification sent to protect your account. If you have concerns, please contact support immediately."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:33
-#: lib/tymeslot/emails/templates/email_change_verification.ex:105
+#: lib/tymeslot/emails/templates/email_change_verification.ex:31
+#: lib/tymeslot/emails/templates/email_change_verification.ex:101
 #, elixir-autogen, elixir-format
 msgid "This link expires in 24 hours. Once confirmed, you'll sign in with your new email address."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/password_reset.ex:23
-#: lib/tymeslot/emails/templates/password_reset.ex:56
+#: lib/tymeslot/emails/templates/password_reset.ex:21
+#: lib/tymeslot/emails/templates/password_reset.ex:52
 #, elixir-autogen, elixir-format
 msgid "This link is valid for the next 2 hours."
 msgstr ""
@@ -1133,7 +1129,7 @@ msgstr ""
 msgid "Timezone"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:102
+#: lib/tymeslot/emails/templates/email_change_verification.ex:98
 #, elixir-autogen, elixir-format
 msgid "To confirm this change, visit the link below:"
 msgstr ""
@@ -1148,24 +1144,24 @@ msgstr ""
 msgid "Updated"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:47
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:124
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:45
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:120
 #, elixir-autogen, elixir-format
 msgid "Use %{new_email} to sign in from now on"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:51
+#: lib/tymeslot/emails/templates/email_change_verification.ex:49
 #, elixir-autogen, elixir-format
 msgid "Verify"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:30
+#: lib/tymeslot/emails/templates/email_change_verification.ex:28
 #, elixir-autogen, elixir-format
 msgid "Verify New Email Address"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:48
-#: lib/tymeslot/emails/templates/email_change_verification.ex:96
+#: lib/tymeslot/emails/templates/email_change_verification.ex:46
+#: lib/tymeslot/emails/templates/email_change_verification.ex:92
 #, elixir-autogen, elixir-format
 msgid "Verify your new email address"
 msgstr ""
@@ -1186,27 +1182,27 @@ msgstr ""
 msgid "View meeting:"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:69
+#: lib/tymeslot/emails/templates/email_change_notification.ex:67
 #, elixir-autogen, elixir-format
 msgid "WHAT HAPPENS NEXT:"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:123
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:119
 #, elixir-autogen, elixir-format
 msgid "WHAT YOU NEED TO KNOW:"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_verification.ex:50
+#: lib/tymeslot/emails/templates/email_verification.ex:46
 #, elixir-autogen, elixir-format
 msgid "We're excited to have you on board! To start scheduling meetings and simplify your calendar, please verify your email address."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_verification.ex:19
+#: lib/tymeslot/emails/templates/email_verification.ex:17
 #, elixir-autogen, elixir-format
 msgid "We're glad you're here. One quick step and your calendar will be ready to go — please confirm your email below."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:47
+#: lib/tymeslot/emails/templates/email_change_notification.ex:46
 #, elixir-autogen, elixir-format
 msgid "We're letting you know in case it wasn't you."
 msgstr ""
@@ -1216,38 +1212,38 @@ msgstr ""
 msgid "Wednesday"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_verification.ex:35
+#: lib/tymeslot/emails/templates/email_verification.ex:33
 #, elixir-autogen, elixir-format
 msgid "Welcome"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_verification.ex:36
+#: lib/tymeslot/emails/templates/email_verification.ex:34
 #, elixir-autogen, elixir-format
 msgid "Welcome to Tymeslot"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_verification.ex:33
+#: lib/tymeslot/emails/templates/email_verification.ex:31
 #, elixir-autogen, elixir-format
 msgid "Welcome to Tymeslot — please verify your email."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_verification.ex:46
+#: lib/tymeslot/emails/templates/email_verification.ex:42
 #, elixir-autogen, elixir-format
 msgid "Welcome to Tymeslot!"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:100
+#: lib/tymeslot/emails/templates/email_change_verification.ex:96
 #, elixir-autogen, elixir-format
 msgid "You asked to change the email address on your Tymeslot account to %{new_email}."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:23
+#: lib/tymeslot/emails/templates/email_change_verification.ex:21
 #, elixir-autogen, elixir-format
 msgid "You asked to change the email address on your Tymeslot account. Confirm the new address below to finish the switch."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:47
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:127
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:45
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:123
 #, elixir-autogen, elixir-format
 msgid "You may need to sign in again on other devices"
 msgstr ""
@@ -1257,24 +1253,24 @@ msgstr ""
 msgid "You're booked."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:64
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:62
 #, elixir-autogen, elixir-format
 msgid "Your Tymeslot email address has been changed."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:68
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:66
 #, elixir-autogen, elixir-format
 msgid "Your account is now using the new address."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:31
-#: lib/tymeslot/emails/templates/email_change_notification.ex:73
+#: lib/tymeslot/emails/templates/email_change_notification.ex:30
+#: lib/tymeslot/emails/templates/email_change_notification.ex:71
 #, elixir-autogen, elixir-format
 msgid "Your current email remains active until the change is confirmed"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:47
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:126
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:45
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:122
 #, elixir-autogen, elixir-format
 msgid "Your meetings and settings remain unchanged"
 msgstr ""
@@ -1305,27 +1301,27 @@ msgstr ""
 msgid "Before"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:43
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
 #, elixir-autogen, elixir-format
 msgid "Change details"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:43
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
 #, elixir-autogen, elixir-format
 msgid "Changed at"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:120
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:116
 #, elixir-autogen, elixir-format
 msgid "Changed at:"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:27
+#: lib/tymeslot/emails/templates/email_change_notification.ex:26
 #, elixir-autogen, elixir-format
 msgid "Current email"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:65
+#: lib/tymeslot/emails/templates/email_change_notification.ex:63
 #, elixir-autogen, elixir-format
 msgid "Current email:"
 msgstr ""
@@ -1335,17 +1331,17 @@ msgstr ""
 msgid "Description"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:52
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:50
 #, elixir-autogen, elixir-format
 msgid "Didn't expect this?"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:35
+#: lib/tymeslot/emails/templates/email_change_notification.ex:34
 #, elixir-autogen, elixir-format
 msgid "Didn't request this?"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:39
 #, elixir-autogen, elixir-format
 msgid "Email change completed successfully."
 msgstr ""
@@ -1355,80 +1351,62 @@ msgstr ""
 msgid "Field"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:19
-#: lib/tymeslot/emails/templates/email_change_notification.ex:59
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, a request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you."
-msgstr ""
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:31
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:90
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, your Tymeslot account email address has been successfully changed."
-msgstr ""
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:25
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:84
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened."
-msgstr ""
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:51
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:100
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:49
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:94
 #, elixir-autogen, elixir-format
 msgid "If you did not authorise this change, please contact support immediately. You will no longer receive emails at this address."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:34
-#: lib/tymeslot/emails/templates/email_change_notification.ex:75
+#: lib/tymeslot/emails/templates/email_change_notification.ex:33
+#: lib/tymeslot/emails/templates/email_change_notification.ex:73
 #, elixir-autogen, elixir-format
 msgid "If you did not request this change, your account may be compromised. Please sign in to your account immediately and change your password."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:43
-#: lib/tymeslot/emails/templates/email_change_notification.ex:27
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
+#: lib/tymeslot/emails/templates/email_change_notification.ex:26
 #, elixir-autogen, elixir-format
 msgid "New email"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:119
-#: lib/tymeslot/emails/templates/email_change_notification.ex:64
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:115
+#: lib/tymeslot/emails/templates/email_change_notification.ex:62
 #, elixir-autogen, elixir-format
 msgid "New email:"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:27
-#: lib/tymeslot/emails/templates/email_change_notification.ex:67
+#: lib/tymeslot/emails/templates/email_change_notification.ex:26
+#: lib/tymeslot/emails/templates/email_change_notification.ex:65
 #, elixir-autogen, elixir-format
 msgid "Pending verification"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:43
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
 #, elixir-autogen, elixir-format
 msgid "Previous email"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:118
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:114
 #, elixir-autogen, elixir-format
 msgid "Previous email:"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:27
+#: lib/tymeslot/emails/templates/email_change_notification.ex:26
 #, elixir-autogen, elixir-format
 msgid "Request details"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:27
+#: lib/tymeslot/emails/templates/email_change_notification.ex:26
 #, elixir-autogen, elixir-format
 msgid "Requested at"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:66
+#: lib/tymeslot/emails/templates/email_change_notification.ex:64
 #, elixir-autogen, elixir-format
 msgid "Requested at:"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:42
+#: lib/tymeslot/emails/templates/email_change_notification.ex:41
 #, elixir-autogen, elixir-format
 msgid "Security notification"
 msgstr ""
@@ -1438,8 +1416,8 @@ msgstr ""
 msgid "Sent with care by"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:43
-#: lib/tymeslot/emails/templates/email_change_notification.ex:27
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
+#: lib/tymeslot/emails/templates/email_change_notification.ex:26
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
@@ -1459,12 +1437,12 @@ msgstr ""
 msgid "What changed"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex:29
+#: lib/tymeslot/emails/templates/email_change_notification.ex:28
 #, elixir-autogen, elixir-format
 msgid "What happens next"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:45
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:43
 #, elixir-autogen, elixir-format
 msgid "What you need to know"
 msgstr ""
@@ -1475,15 +1453,39 @@ msgstr ""
 msgid "scheduling that respects your time"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:55
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex:106
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:53
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:100
 #, elixir-autogen, elixir-format
 msgid "For security, a copy of this confirmation was sent to your previous email address."
+msgstr ""
+
+#: lib/tymeslot/emails/templates/email_change_notification.ex:19
+#: lib/tymeslot/emails/templates/email_change_notification.ex:58
+#, elixir-autogen, elixir-format
+msgid "A request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you."
+msgstr ""
+
+#: lib/tymeslot/emails/shared/greeting.ex:26
+#: lib/tymeslot/emails/shared/greeting.ex:37
+#, elixir-autogen, elixir-format
+msgid "Hi there,"
 msgstr ""
 
 #: dev_support/email_testing/helpers.ex:80
 #, elixir-autogen, elixir-format
 msgid "I'll send you a reminder 24 hours before our appointment."
+msgstr ""
+
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:28
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:85
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account email address has been successfully changed."
+msgstr ""
+
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:23
+#: lib/tymeslot/emails/templates/email_change_confirmed.ex:80
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened."
 msgstr ""
 
 #: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:126

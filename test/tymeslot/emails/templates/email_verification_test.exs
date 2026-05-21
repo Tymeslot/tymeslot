@@ -26,13 +26,14 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       assert html =~ "Jane Smith"
     end
 
-    test "uses email as fallback when name is nil" do
+    test "uses a neutral greeting when name is nil, never the email address" do
       user = build_user_data(%{name: nil, email: "user@example.com"})
       verification_url = "https://example.com/verify/token789"
 
       html = EmailVerification.render(user, verification_url)
 
-      assert html =~ "user@example.com"
+      assert html =~ "Hi there,"
+      refute html =~ "Hi user@example.com"
     end
 
     test "includes verification URL" do
@@ -86,11 +87,12 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       assert text =~ "24 hours"
     end
 
-    test "uses email as fallback when name is nil" do
+    test "uses a neutral greeting when name is nil, never the email address" do
       user = build_user_data(%{name: nil, email: "user@example.com"})
       text = EmailVerification.render_text(user, "https://example.com/verify/token")
 
-      assert text =~ "user@example.com"
+      assert text =~ "Hi there,"
+      refute text =~ "Hi user@example.com"
     end
   end
 

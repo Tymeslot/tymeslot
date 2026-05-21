@@ -5,7 +5,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotification do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Callouts, Cards, TemplateHelper, Text}
+  alias Tymeslot.Emails.Shared.{Callouts, Cards, Greeting, TemplateHelper, Text}
 
   # A security-sensitive notification about a potentially unauthorised change.
   @intent :alert
@@ -13,13 +13,12 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotification do
   @spec render(Tymeslot.Emails.EmailService.user_map(), String.t(), DateTime.t() | nil) ::
           String.t()
   def render(user, new_email, request_time) do
-    name = user.name || user.email
-
     mjml_content = """
+    #{Text.centered_text(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
+
     #{Text.centered_text(dgettext("emails",
-    "Hi %{name}, a request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you.",
-    name: name),
-    padding: "8px 0 20px 0")}
+    "A request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you."),
+    padding: "0 0 20px 0")}
 
     #{Callouts.alert_box(@intent,
     dgettext("emails", "Email change requested to: %{new_email}", new_email: new_email))}
@@ -51,14 +50,13 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotification do
   @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t(), DateTime.t() | nil) ::
           String.t()
   def render_text(user, new_email, request_time) do
-    name = user.name || user.email
-
     """
     #{dgettext("emails", "Email change requested")}
 
+    #{Greeting.text(user)}
+
     #{dgettext("emails",
-    "Hi %{name}, a request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you.",
-    name: name)}
+    "A request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you.")}
 
     #{dgettext("emails", "REQUEST DETAILS:")}
     #{dgettext("emails", "New email:")} #{new_email}
