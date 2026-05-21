@@ -17,9 +17,10 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundaryTest do
 
   defmodule HappyTheme do
     @moduledoc false
+    alias Phoenix.Component
     alias Phoenix.LiveView.Socket
     @spec mount(map(), map(), Socket.t()) :: {:ok, Socket.t()}
-    def mount(_params, _session, socket), do: {:ok, Phoenix.Component.assign(socket, :ok, true)}
+    def mount(_params, _session, socket), do: {:ok, Component.assign(socket, :ok, true)}
 
     @spec handle_params(map(), String.t(), Socket.t()) :: {:noreply, Socket.t()}
     def handle_params(_params, _url, socket), do: {:noreply, socket}
