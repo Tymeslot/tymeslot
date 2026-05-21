@@ -46,5 +46,5 @@ defmodule Tymeslot.Emails.Shared.Greeting do
     end
   end
 
-  defp display_name(_), do: nil
+  defp display_name(_user), do: nil
 end
