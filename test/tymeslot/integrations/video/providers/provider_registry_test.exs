@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
   @moduletag :integrations
 
   import Mox
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
 
   setup :verify_on_exit!
@@ -39,6 +40,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
           # Teams provider may not be available
           :ok
       end
+    end
+
+    test "returns ZoomProvider for :zoom" do
+      assert {:ok, Tymeslot.Integrations.Video.Providers.ZoomProvider} =
+               ProviderRegistry.get_provider(:zoom)
     end
 
     test "returns provider module for valid custom provider" do
@@ -89,6 +95,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
       assert ProviderRegistry.valid_provider?(:google_meet)
       assert ProviderRegistry.valid_provider?(:custom)
       # Teams provider may not be available in all environments
+    end
+
+    test "returns true for :zoom" do
+      assert ProviderRegistry.valid_provider?(:zoom)
     end
 
     test "returns false for invalid video providers" do
@@ -235,6 +245,25 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
       provider = ProviderRegistry.recommend_provider()
 
       assert provider == :mirotalk
+    end
+  end
+
+  describe "ProviderConfig integration with Zoom" do
+    test "providers_map/0 includes Zoom when enabled" do
+      map = ProviderConfig.providers_map()
+      assert map[:zoom] == Tymeslot.Integrations.Video.Providers.ZoomProvider
+    end
+
+    test "all_providers_with_dev/0 lists Zoom among providers" do
+      assert :zoom in ProviderConfig.all_providers_with_dev()
+    end
+
+    test "oauth_providers/0 lists Zoom" do
+      assert :zoom in ProviderConfig.oauth_providers()
+    end
+
+    test "display_name/1 returns Zoom for :zoom" do
+      assert ProviderConfig.display_name(:zoom) == "Zoom"
     end
   end
 end

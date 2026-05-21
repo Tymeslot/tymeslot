@@ -93,6 +93,54 @@ describe('open()', () => {
   })
 })
 
+describe('modal sizing', () => {
+  test('uses default max-width of 1000px for the modal container', () => {
+    window.TymeslotBooking.open('alice')
+
+    const container = document.querySelector('#tymeslot-modal [data-tymeslot-container]')
+    expect(container.style.maxWidth).toContain('1000px')
+  })
+
+  test('honours options.maxWidth when explicitly passed', () => {
+    window.TymeslotBooking.open('alice', { maxWidth: 1200 })
+
+    const container = document.querySelector('#tymeslot-modal [data-tymeslot-container]')
+    expect(container.style.maxWidth).toContain('1200px')
+  })
+
+  test('inherits data-max-width from a sibling inline container when none is passed', () => {
+    const inline = document.createElement('div')
+    inline.id = 'tymeslot-booking'
+    inline.setAttribute('data-username', 'alice')
+    inline.setAttribute('data-max-width', '900')
+    document.body.appendChild(inline)
+
+    window.TymeslotBooking.open('alice')
+
+    const container = document.querySelector('#tymeslot-modal [data-tymeslot-container]')
+    expect(container.style.maxWidth).toContain('900px')
+  })
+
+  test('caps modal max-height with 100px headroom from the viewport', () => {
+    window.TymeslotBooking.open('alice')
+
+    const container = document.querySelector('#tymeslot-modal [data-tymeslot-container]')
+    expect(container.style.maxHeight).toContain('calc(100vh - 100px)')
+  })
+
+  test('mobile full-screen stylesheet is injected once', () => {
+    window.TymeslotBooking.open('alice')
+    const first = document.getElementById('tymeslot-modal-styles')
+    expect(first).not.toBeNull()
+    expect(first.textContent).toContain('@media (max-width: 768px)')
+
+    // Opening a second modal must not duplicate the stylesheet
+    window.TymeslotBooking.close()
+    window.TymeslotBooking.open('bob')
+    expect(document.querySelectorAll('#tymeslot-modal-styles').length).toBe(1)
+  })
+})
+
 describe('close()', () => {
   test('removes the modal from the DOM after the animation delay', async () => {
     vi.useFakeTimers()
@@ -229,6 +277,50 @@ describe('postMessage resize handler', () => {
     expect(wrapper.style.height).toBe('400px')
   })
 
+  test('unconstrained inline embed applies posted height verbatim — grows', () => {
+    const container = document.createElement('div')
+    container.id = 'grow-test'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#grow-test', 'alice')
+
+    const iframe = document.querySelector('#grow-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: 800 }
+      })
+    )
+
+    expect(wrapper.style.height).toBe('800px')
+  })
+
+  test('unconstrained inline embed applies posted height verbatim — shrinks below initial', () => {
+    const container = document.createElement('div')
+    container.id = 'shrink-test'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#shrink-test', 'alice')
+
+    const iframe = document.querySelector('#shrink-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    // Initial placeholder is 400px — shrink to 250 to verify no persistent floor
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: 250 }
+      })
+    )
+
+    expect(wrapper.style.height).toBe('250px')
+    expect(parseInt(wrapper.style.minHeight || '0', 10)).toBe(0)
+  })
+
   test('ignores non-finite height values', () => {
     const container = document.createElement('div')
     container.id = 'booking-container'
@@ -272,81 +364,14 @@ describe('postMessage resize handler', () => {
     expect(wrapper.style.height).toBe('500px')
   })
 
-  test('unconstrained resize never shrinks wrapper below default minimum height', () => {
+  test('constrained wrapper caps applied height at constraintHeight', () => {
     const container = document.createElement('div')
-    container.id = 'floor-test'
+    container.id = 'constrained-cap-test'
     document.body.appendChild(container)
 
-    window.TymeslotBooking.embed('#floor-test', 'alice')
+    window.TymeslotBooking.embed('#constrained-cap-test', 'alice')
 
-    const iframe = document.querySelector('#floor-test iframe[title="Booking Widget"]')
-    const wrapper = iframe.parentNode
-
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        origin: window.location.origin,
-        source: iframe.contentWindow,
-        data: { type: 'tymeslot-resize', height: 150 }
-      })
-    )
-
-    const height = parseInt(wrapper.style.height, 10)
-    expect(height).toBeGreaterThanOrEqual(400)
-  })
-
-  test('unconstrained inline embed ignores tymeslot-resize messages', () => {
-    const container = document.createElement('div')
-    container.id = 'above-floor-test'
-    document.body.appendChild(container)
-
-    window.TymeslotBooking.embed('#above-floor-test', 'alice')
-
-    const iframe = document.querySelector('#above-floor-test iframe[title="Booking Widget"]')
-    const wrapper = iframe.parentNode
-    const initialHeight = wrapper.style.height
-
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        origin: window.location.origin,
-        source: iframe.contentWindow,
-        data: { type: 'tymeslot-resize', height: 800 }
-      })
-    )
-
-    expect(wrapper.style.height).toBe(initialHeight)
-  })
-
-  test('respects custom data-min-height from container', () => {
-    const container = document.createElement('div')
-    container.id = 'custom-floor-test'
-    container.setAttribute('data-min-height', '500')
-    document.body.appendChild(container)
-
-    window.TymeslotBooking.embed('#custom-floor-test', 'alice')
-
-    const iframe = document.querySelector('#custom-floor-test iframe[title="Booking Widget"]')
-    const wrapper = iframe.parentNode
-
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        origin: window.location.origin,
-        source: iframe.contentWindow,
-        data: { type: 'tymeslot-resize', height: 200 }
-      })
-    )
-
-    expect(wrapper.style.height).toBe('500px')
-    expect(wrapper.style.minHeight).toBe('500px')
-  })
-
-  test('constrained mode ignores the floor — constraint height wins', () => {
-    const container = document.createElement('div')
-    container.id = 'constrained-floor-test'
-    document.body.appendChild(container)
-
-    window.TymeslotBooking.embed('#constrained-floor-test', 'alice')
-
-    const iframe = document.querySelector('#constrained-floor-test iframe[title="Booking Widget"]')
+    const iframe = document.querySelector('#constrained-cap-test iframe[title="Booking Widget"]')
     const wrapper = iframe.parentNode
 
     wrapper.dataset.constrained = 'true'
@@ -363,29 +388,89 @@ describe('postMessage resize handler', () => {
     expect(wrapper.style.height).toBe('250px')
   })
 
-  test('data-min-height below 200 is clamped to 200', () => {
+  test('data-initial-height sets the placeholder height shown before first resize message', () => {
     const container = document.createElement('div')
-    container.id = 'clamp-floor-test'
-    container.setAttribute('data-min-height', '100')
+    container.id = 'initial-height-test'
+    container.setAttribute('data-initial-height', '500')
     document.body.appendChild(container)
 
-    window.TymeslotBooking.embed('#clamp-floor-test', 'alice')
+    window.TymeslotBooking.embed('#initial-height-test', 'alice')
 
-    const iframe = document.querySelector('#clamp-floor-test iframe[title="Booking Widget"]')
+    const iframe = document.querySelector('#initial-height-test iframe[title="Booking Widget"]')
     const wrapper = iframe.parentNode
 
+    expect(wrapper.style.height).toBe('500px')
+  })
+
+  test('data-min-height is accepted as a legacy alias for data-initial-height', () => {
+    const container = document.createElement('div')
+    container.id = 'legacy-min-height-test'
+    container.setAttribute('data-min-height', '550')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#legacy-min-height-test', 'alice')
+
+    const iframe = document.querySelector('#legacy-min-height-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    expect(wrapper.style.height).toBe('550px')
+  })
+
+  test('initial height is replaced by resize message — no persistent floor', () => {
+    const container = document.createElement('div')
+    container.id = 'no-persistent-floor-test'
+    container.setAttribute('data-initial-height', '600')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#no-persistent-floor-test', 'alice')
+
+    const iframe = document.querySelector('#no-persistent-floor-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    // Sanity-check the initial placeholder
+    expect(wrapper.style.height).toBe('600px')
+
+    // Posted height of 350 must be applied verbatim — no floor at 600
     window.dispatchEvent(
       new MessageEvent('message', {
         origin: window.location.origin,
         source: iframe.contentWindow,
-        data: { type: 'tymeslot-resize', height: 50 }
+        data: { type: 'tymeslot-resize', height: 350 }
       })
     )
+
+    expect(wrapper.style.height).toBe('350px')
+  })
+
+  test('initial height below 200 is clamped to 200', () => {
+    const container = document.createElement('div')
+    container.id = 'clamp-initial-test'
+    container.setAttribute('data-initial-height', '100')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#clamp-initial-test', 'alice')
+
+    const iframe = document.querySelector('#clamp-initial-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
 
     expect(wrapper.style.height).toBe('200px')
   })
 
-  test('applies default maxWidth of 640px and centering margins when no attribute set', () => {
+  test('data-initial-height above 2000 is clamped to 2000', () => {
+    const container = document.createElement('div')
+    container.id = 'initial-height-upper-clamp-test'
+    container.setAttribute('data-initial-height', '99999')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#initial-height-upper-clamp-test', 'alice')
+
+    const iframe = document.querySelector('#initial-height-upper-clamp-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    expect(wrapper.style.height).toBe('2000px')
+  })
+
+  test('applies default maxWidth of 1000px and centering margins when no attribute set', () => {
     const container = document.createElement('div')
     container.id = 'max-width-default-test'
     document.body.appendChild(container)
@@ -395,7 +480,7 @@ describe('postMessage resize handler', () => {
     const iframe = document.querySelector('#max-width-default-test iframe[title="Booking Widget"]')
     const wrapper = iframe.parentNode
 
-    expect(wrapper.style.maxWidth).toBe('640px')
+    expect(wrapper.style.maxWidth).toBe('1000px')
     expect(wrapper.style.marginLeft).toBe('auto')
     expect(wrapper.style.marginRight).toBe('auto')
   })
@@ -626,6 +711,52 @@ describe('parameter allowlist enforcement', () => {
     const url = new URL(iframe.src)
 
     expect(url.searchParams.get('locale')).toBeNull()
+  })
+
+  test('passes layout=column to the iframe URL', () => {
+    const container = document.createElement('div')
+    container.id = 'layout-column-test'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#layout-column-test', 'alice', {
+      layout: 'column'
+    })
+
+    const iframe = container.querySelector('iframe')
+    const url = new URL(iframe.src)
+
+    expect(url.searchParams.get('layout')).toBe('column')
+  })
+
+  test('reads data-layout from auto-init container', () => {
+    const container = document.createElement('div')
+    container.id = 'data-layout-test'
+    container.setAttribute('data-layout', 'column')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#data-layout-test', 'alice', {
+      layout: container.getAttribute('data-layout')
+    })
+
+    const iframe = container.querySelector('iframe')
+    const url = new URL(iframe.src)
+
+    expect(url.searchParams.get('layout')).toBe('column')
+  })
+
+  test('rejects layout values outside the allowlist', () => {
+    const container = document.createElement('div')
+    container.id = 'layout-reject'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#layout-reject', 'alice', {
+      layout: 'mosaic'
+    })
+
+    const iframe = container.querySelector('iframe')
+    const url = new URL(iframe.src)
+
+    expect(url.searchParams.get('layout')).toBeNull()
   })
 })
 

@@ -218,6 +218,11 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
         |> require_credential_if_absent(:access_token, :access_token_encrypted)
         |> require_credential_if_absent(:refresh_token, :refresh_token_encrypted)
 
+      "zoom" ->
+        changeset
+        |> require_credential_if_absent(:access_token, :access_token_encrypted)
+        |> require_credential_if_absent(:refresh_token, :refresh_token_encrypted)
+
       "custom" ->
         changeset
         |> validate_required([:custom_meeting_url])

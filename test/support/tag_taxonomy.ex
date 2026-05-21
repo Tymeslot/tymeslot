@@ -45,6 +45,7 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :meetings,
       :meeting_types,
       :notifications,
+      :onboarding,
       :payments,
       :profiles,
       :scheduling,
@@ -55,7 +56,8 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :workers,
       :seo,
       :slack,
-      :telegram
+      :telegram,
+      :custom_fields
     ],
     web_layer: [
       :components,

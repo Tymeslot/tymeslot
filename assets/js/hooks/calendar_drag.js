@@ -10,16 +10,16 @@ const SNAP_MINUTES = 15
 const TOUCH_HOLD_MS = 200       // long-press threshold before a touch becomes a drag
 const DRAG_THRESHOLD_PX = 5     // pointer movement before drag starts (mouse)
 
-function snapToGrid(minutes) {
+export function snapToGrid(minutes) {
   return Math.round(minutes / SNAP_MINUTES) * SNAP_MINUTES
 }
 
-function minutesFromY(y) {
+export function minutesFromY(y) {
   return (y / HOUR_HEIGHT_PX) * 60
 }
 
 // Returns {x, y} for mouse or touch events.
-function pointerXY(e) {
+export function pointerXY(e) {
   if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY }
   if (e.changedTouches && e.changedTouches[0]) {
     return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }

@@ -7,6 +7,7 @@ defmodule Tymeslot.Bookings.Cancel do
   require Logger
 
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -51,6 +52,7 @@ defmodule Tymeslot.Bookings.Cancel do
 
         with {:ok, updated_meeting} <- update_meeting_status(meeting),
              :ok <- Meetings.cancel_calendar_event(updated_meeting),
+             :ok <- delete_provider_video_room(updated_meeting),
              :ok <- send_cancellation_notifications(updated_meeting) do
           {:ok, updated_meeting}
         else
@@ -91,6 +93,7 @@ defmodule Tymeslot.Bookings.Cancel do
     )
 
     with {:ok, updated_meeting} <- update_meeting_status_external(meeting),
+         :ok <- delete_provider_video_room(updated_meeting),
          :ok <- send_cancellation_notifications(updated_meeting) do
       {:ok, updated_meeting}
     else
@@ -184,6 +187,32 @@ defmodule Tymeslot.Bookings.Cancel do
   # that the calendar-update template cannot replicate, and double-routing would
   # deliver two cancellation emails. Sequence tracking on `Meeting` rows is handled
   # directly by the template via `ical_sequence` when needed.
+  # Deletes the provider-side video meeting (e.g. Zoom) so it doesn't linger
+  # in the organizer's account after cancellation. Providers without a
+  # server-side meeting object (Google Meet, Teams, MiroTalk, Custom) silently
+  # succeed. Failures are logged but do not block cancellation.
+  defp delete_provider_video_room(%Meeting{video_integration_id: nil}), do: :ok
+  defp delete_provider_video_room(%Meeting{video_room_id: nil}), do: :ok
+  defp delete_provider_video_room(%Meeting{organizer_user_id: nil}), do: :ok
+
+  defp delete_provider_video_room(%Meeting{} = meeting) do
+    case Video.delete_meeting_room(meeting.organizer_user_id,
+           integration_id: meeting.video_integration_id,
+           room_id: meeting.video_room_id
+         ) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to delete provider video meeting on cancellation",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
+  end
+
   defp send_cancellation_notifications(meeting) do
     case Events.meeting_cancelled(meeting) do
       {:ok, _result} ->

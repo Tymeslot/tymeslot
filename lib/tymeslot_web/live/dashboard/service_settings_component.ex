@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> assign(:saving, false)
      |> assign(:video_integrations, [])
      |> assign(:toggling_type_id, nil)
+     |> assign(:custom_questions_allowed, true)
      |> ModalHook.mount_modal(delete_meeting_type: false)}
   end
 
@@ -355,6 +356,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
               client_ip={@client_ip}
               user_agent={@user_agent}
               form_errors={@form_errors}
+              custom_questions_allowed={@custom_questions_allowed}
             />
           </div>
         </div>

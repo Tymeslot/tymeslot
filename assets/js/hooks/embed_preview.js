@@ -5,14 +5,17 @@ export const EmbedPreview = {
     this.initEmbed();
   },
   updated() {
-    const { username, baseUrl, embedType, isReady } = this.el.dataset;
+    const { username, baseUrl, embedType, isReady, layout, initialHeight, maxWidth } = this.el.dataset;
     const prev = this._cachedDataset;
 
     if (
       username === prev.username &&
       baseUrl === prev.baseUrl &&
       embedType === prev.embedType &&
-      isReady === prev.isReady
+      isReady === prev.isReady &&
+      layout === prev.layout &&
+      initialHeight === prev.initialHeight &&
+      maxWidth === prev.maxWidth
     ) {
       return;
     }
@@ -42,32 +45,34 @@ export const EmbedPreview = {
     }
   },
   initEmbed() {
-    const { username, baseUrl, embedType, isReady } = this.el.dataset;
-    this._cachedDataset = { username, baseUrl, embedType, isReady };
+    const { username, baseUrl, embedType, isReady, layout, initialHeight, maxWidth } = this.el.dataset;
+    this._cachedDataset = { username, baseUrl, embedType, isReady, layout, initialHeight, maxWidth };
     const effectiveBaseUrl = baseUrl || window.location.origin;
     const ready = isReady === 'true';
 
+    const options = { layout, initialHeight, maxWidth };
+
     // Clear container
     this.el.innerHTML = '';
-    
+
     if (!ready) {
       this.renderDeactivatedFallback();
       return;
     }
-    
+
     switch (embedType) {
       case 'popup':
-        this.renderPopupPreview(username, effectiveBaseUrl);
+        this.renderPopupPreview(username, effectiveBaseUrl, options);
         break;
       case 'link':
-        this.renderLinkPreview(username, effectiveBaseUrl);
+        this.renderLinkPreview(username, effectiveBaseUrl, options);
         break;
       case 'floating':
-        this.renderFloatingPreview(username, effectiveBaseUrl);
+        this.renderFloatingPreview(username, effectiveBaseUrl, options);
         break;
       case 'inline':
       default:
-        this.renderInlinePreview(username, effectiveBaseUrl);
+        this.renderInlinePreview(username, effectiveBaseUrl, options);
     }
   },
 
@@ -89,15 +94,15 @@ export const EmbedPreview = {
     this.el.appendChild(wrapper);
   },
 
-  renderInlinePreview(username, baseUrl) {
-    const iframe = this.createIframe(username, baseUrl);
+  renderInlinePreview(username, baseUrl, options = {}) {
+    const iframe = this.createIframe(username, baseUrl, options);
     this.el.appendChild(iframe);
   },
 
-  renderPopupPreview(username, baseUrl) {
+  renderPopupPreview(username, baseUrl, options = {}) {
     const wrapper = document.createElement('div');
     wrapper.className = 'text-center p-8 w-full';
-    
+
     const button = document.createElement('button');
     button.textContent = 'Book a Meeting';
     
@@ -123,28 +128,29 @@ export const EmbedPreview = {
     button.onmouseout = () => { button.style.transform = 'scale(1)'; };
     
     button.onclick = () => {
-      this.openModal(username);
+      this.openModal(username, options);
     };
-    
+
     const hint = document.createElement('p');
     hint.textContent = 'Click to test the booking modal';
     hint.className = 'text-xs text-slate-400 mt-4';
-    
+
     wrapper.appendChild(button);
     wrapper.appendChild(hint);
     this.el.appendChild(wrapper);
   },
 
-  openModal(username) {
+  openModal(username, options = {}) {
+    const modalOptions = this.buildOptionsForJs(options);
     if (window.TymeslotBooking) {
-      window.TymeslotBooking.open(username);
+      window.TymeslotBooking.open(username, modalOptions);
     } else {
       // Retry for a moment if script is still loading
       let retries = 0;
       if (this._modalRetryInterval) clearInterval(this._modalRetryInterval);
       this._modalRetryInterval = setInterval(() => {
         if (window.TymeslotBooking) {
-          window.TymeslotBooking.open(username);
+          window.TymeslotBooking.open(username, modalOptions);
           clearInterval(this._modalRetryInterval);
           this._modalRetryInterval = null;
         } else if (retries > 10) {
@@ -157,12 +163,15 @@ export const EmbedPreview = {
     }
   },
 
-  renderLinkPreview(username, baseUrl) {
+  renderLinkPreview(username, baseUrl, options = {}) {
     const wrapper = document.createElement('div');
     wrapper.className = 'text-center p-8 w-full';
 
     const link = document.createElement('a');
     const linkUrl = new URL(`/${encodeURIComponent(username)}`, baseUrl);
+    if (options.layout && options.layout !== 'default') {
+      linkUrl.searchParams.set('layout', options.layout);
+    }
     link.href = linkUrl.toString();
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
@@ -178,7 +187,7 @@ export const EmbedPreview = {
     this.el.appendChild(wrapper);
   },
 
-  renderFloatingPreview(username, baseUrl) {
+  renderFloatingPreview(username, baseUrl, options = {}) {
     const wrapper = document.createElement('div');
     wrapper.className = 'relative w-full h-[400px] bg-white rounded-lg overflow-hidden border-2 border-slate-200';
     
@@ -212,27 +221,54 @@ export const EmbedPreview = {
     
     const button = wrapper.querySelector('div.absolute div');
     button.onclick = () => {
-      this.openModal(username);
+      this.openModal(username, options);
     };
-    
+
     this.el.appendChild(wrapper);
   },
 
-  createIframe(username, baseUrl) {
+  createIframe(username, baseUrl, options = {}) {
     const iframe = document.createElement('iframe');
     const url = new URL(`/${encodeURIComponent(username)}`, baseUrl);
     url.searchParams.set('preview', 'true');
     // Cache buster to force reload when settings change
     url.searchParams.set('v', String(Date.now()));
+    // Mirror embed.js — the server defaults to :column whenever ?embed=1
+    // is present, so the preview matches what a real embed will render.
+    url.searchParams.set('embed', '1');
+
+    // When the picker says "default" we still emit ?layout=default so the
+    // server overrides its embed-mode column default with the centred view.
+    // Skip the param when no layout option is set at all.
+    if (options.layout) {
+      url.searchParams.set('layout', options.layout);
+    }
 
     iframe.src = url.toString();
     iframe.setAttribute('title', 'Booking Preview');
     iframe.style.width = '100%';
-    iframe.style.height = '100%';
+    iframe.style.height = (options.initialHeight ? options.initialHeight + 'px' : '100%');
     iframe.style.minHeight = '400px';
+    iframe.style.maxWidth = options.maxWidth ? options.maxWidth + 'px' : '';
+    iframe.style.margin = '0 auto';
+    iframe.style.display = 'block';
     iframe.style.border = 'none';
     iframe.style.borderRadius = '8px';
     return iframe;
+  },
+
+  // Maps the dataset values (strings) into the shape TymeslotBooking expects.
+  // Only includes layout if non-default and only includes maxWidth as a number.
+  buildOptionsForJs(options) {
+    const out = {};
+    if (options.layout && options.layout !== 'default') {
+      out.layout = options.layout;
+    }
+    if (options.maxWidth) {
+      const n = parseInt(options.maxWidth, 10);
+      if (Number.isFinite(n) && n > 0) out.maxWidth = n;
+    }
+    return out;
   },
 
   getContrastColor(hexcolor) {

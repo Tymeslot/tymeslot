@@ -309,19 +309,26 @@ body.rhythm-theme {
    RESPONSIVE — WIDTH BREAKPOINTS
    ============================================ */
 
+/* ============================================
+   ROOT SIZING — .scheduling-box width/border-radius depends on the
+   page or iframe viewport because the box IS the container query root.
+   These remain @media. The .video-background-theme rules sit OUTSIDE
+   the box, so they stay viewport-driven too.
+   ============================================ */
+
+/* Extra Large Desktop — Better readability */
+@media (min-width: 1440px) {
+  .slide-content {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
 /* Desktop Large */
 @media (min-width: 1024px) and (max-width: 1439px) {
   .scheduling-box {
     max-width: 640px;
     height: auto;
-  }
-}
-
-/* Extra Large Desktop - Better readability */
-@media (min-width: 1440px) {
-  .slide-content {
-    max-width: 600px;
-    margin: 0 auto;
   }
 }
 
@@ -334,7 +341,7 @@ body.rhythm-theme {
   }
 }
 
-/* Tablet */
+/* Tablet — outer wrapper rules */
 @media (min-width: 480px) and (max-width: 767px) {
   .video-background-theme {
     padding: var(--space-md);
@@ -348,7 +355,15 @@ body.rhythm-theme {
     min-height: auto;
     border-radius: var(--radius-xl);
   }
+}
 
+/* ============================================
+   INTERIOR RESPONSIVE — slide content scales with the box's actual width,
+   so the booker adapts the same in a narrow embed as on a small phone.
+   ============================================ */
+
+/* Tablet — slide internals (narrow embeds 480–519px; excludes standard 520px box) */
+@container scheduling (min-width: 480px) and (max-width: 519px) {
   .slide {
     padding: var(--space-lg);
   }

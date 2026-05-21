@@ -1,12 +1,6 @@
 defmodule Tymeslot.Integrations.Video.RoomsTest do
   @moduledoc """
   Tests for video room creation and provider integration.
-
-  ## Note on Process.sleep Usage
-
-  One test in this file uses `Process.sleep/1` in a mock to simulate network
-  latency and increase the likelihood of triggering race conditions in
-  concurrent token refresh scenarios.
   """
 
   use Tymeslot.DataCase, async: true
@@ -114,6 +108,95 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
       assert decrypted.access_token == "new_token"
     end
 
+    test "successfully creates room via Zoom provider" do
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Zoom",
+          provider: "zoom",
+          access_token: "valid_token",
+          refresh_token: "refresh_token",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
+          oauth_scope: "meeting:write:meeting"
+        })
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 201,
+           body:
+             Jason.encode!(%{
+               "id" => 987_654_321,
+               "join_url" => "https://zoom.us/j/987654321",
+               "start_url" => "https://zoom.us/s/987654321?zak=xyz",
+               "password" => "s3cr3t",
+               "host_email" => "host@example.com"
+             })
+         }}
+      end)
+
+      assert {:ok, context} = Rooms.create_meeting_room(user.id, integration_id: integration.id)
+      assert context.provider_type == :zoom
+      assert context.room_data.meeting_url =~ "zoom.us"
+    end
+
+    test "refreshes token for Zoom if needed during room creation and persists to database" do
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Zoom",
+          provider: "zoom",
+          access_token: "expired_token",
+          refresh_token: "refresh_token",
+          token_expires_at: DateTime.add(DateTime.utc_now(), -3600),
+          oauth_scope: "meeting:write:meeting"
+        })
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config ->
+        {:ok, :needs_refresh}
+      end)
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :refresh_access_token, fn "refresh_token", nil ->
+        {:ok,
+         %{
+           access_token: "new_zoom_token",
+           refresh_token: "new_refresh_token",
+           expires_at: DateTime.add(DateTime.utc_now(), 3600),
+           scope: "meeting:write:meeting"
+         }}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 201,
+           body:
+             Jason.encode!(%{
+               "id" => 111_222_333,
+               "join_url" => "https://zoom.us/j/111222333",
+               "start_url" => "https://zoom.us/s/111222333?zak=abc",
+               "password" => nil,
+               "host_email" => nil
+             })
+         }}
+      end)
+
+      assert {:ok, context} = Rooms.create_meeting_room(user.id, integration_id: integration.id)
+      assert context.provider_type == :zoom
+      assert context.room_data.meeting_url =~ "zoom.us"
+
+      # Verify token was persisted to the database
+      updated = Repo.get(VideoIntegrationSchema, integration.id)
+      decrypted = VideoIntegrationSchema.decrypt_credentials(updated)
+      assert decrypted.access_token == "new_zoom_token"
+    end
+
     test "handles concurrent room creation and token refresh gracefully" do
       # Note: This is a complex test because Mox expectations are per-process by default.
       # We need to use allow/2 to share expectations between processes if we want to test concurrency properly.
@@ -132,9 +215,6 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
 
       # Allow the mock helper to be called from other processes
       stub(Tymeslot.GoogleOAuthHelperMock, :refresh_access_token, fn _token, _scope ->
-        # Add a tiny delay to simulate a real network request and increase race condition likelihood
-        Process.sleep(50)
-
         {:ok,
          %{
            access_token: "new_token_#{System.unique_integer()}",
@@ -385,6 +465,125 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
 
       # Should still generate metadata, room_id will be nil or "unknown"
       assert is_map(metadata)
+    end
+  end
+
+  describe "update_meeting_room/2" do
+    test "returns error when room_id opt is missing" do
+      user = insert(:user)
+
+      # No HTTP call expected — fetch_required_opt short-circuits before any
+      # provider dispatch.
+      assert {:error, {:missing_required_opt, :room_id}} =
+               Rooms.update_meeting_room(user.id, [])
+    end
+
+    test "returns error when user has no matching video integration" do
+      user = insert(:user)
+
+      # No integration_id in opts → get_provider_config returns not-found error.
+      assert {:error, message} =
+               Rooms.update_meeting_room(user.id, room_id: "123456789")
+
+      assert is_binary(message)
+      assert String.contains?(message, "integration")
+    end
+
+    test "dispatches PATCH to Zoom and returns :ok on success" do
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Zoom",
+          provider: "zoom",
+          access_token: "valid_token",
+          refresh_token: "refresh_token",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
+          oauth_scope: "meeting:write:meeting"
+        })
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok =
+               Rooms.update_meeting_room(user.id,
+                 integration_id: integration.id,
+                 room_id: "987654321",
+                 topic: "Rescheduled Meeting"
+               )
+    end
+  end
+
+  describe "delete_meeting_room/2" do
+    test "returns error when room_id opt is missing" do
+      user = insert(:user)
+
+      assert {:error, {:missing_required_opt, :room_id}} =
+               Rooms.delete_meeting_room(user.id, [])
+    end
+
+    test "returns error when user has no matching video integration" do
+      user = insert(:user)
+
+      assert {:error, message} =
+               Rooms.delete_meeting_room(user.id, room_id: "123456789")
+
+      assert is_binary(message)
+      assert String.contains?(message, "integration")
+    end
+
+    test "dispatches DELETE to Zoom and returns :ok on success" do
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Zoom",
+          provider: "zoom",
+          access_token: "valid_token",
+          refresh_token: "refresh_token",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
+          oauth_scope: "meeting:write:meeting"
+        })
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok =
+               Rooms.delete_meeting_room(user.id,
+                 integration_id: integration.id,
+                 room_id: "987654321"
+               )
+    end
+
+    test "returns :ok without an HTTP call for a provider that lacks delete_meeting_room" do
+      user = insert(:user)
+
+      # MiroTalk does not implement delete_meeting_room/2, so the
+      # callback_exported? guard in ProviderAdapter returns :ok without any
+      # network call. No mock expectation is registered — verify_on_exit! will
+      # fail the test if an unexpected call is made.
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "MiroTalk",
+          provider: "mirotalk",
+          base_url: "https://mirotalk.test",
+          api_key: "test-key"
+        })
+
+      assert :ok =
+               Rooms.delete_meeting_room(user.id,
+                 integration_id: integration.id,
+                 room_id: "some-room-id"
+               )
     end
   end
 

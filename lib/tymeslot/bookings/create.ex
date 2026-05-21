@@ -8,6 +8,7 @@ defmodule Tymeslot.Bookings.Create do
 
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.{CalendarJobs, Policy, Validation}
+  alias Tymeslot.CustomFields
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Locales
@@ -54,6 +55,7 @@ defmodule Tymeslot.Bookings.Create do
   @spec execute(meeting_params(), form_data(), keyword()) :: execute_result()
   def execute(meeting_params, form_data, opts \\ []) do
     with {:ok, booking_data} <- prepare_booking_data(meeting_params, form_data),
+         :ok <- validate_custom_field_answers(booking_data),
          {:ok, :validated} <- validate_booking(booking_data, opts) do
       create_meeting_and_all_side_effects_atomically(booking_data, opts)
     else
@@ -71,29 +73,38 @@ defmodule Tymeslot.Bookings.Create do
   def execute_with_video_room(meeting_params, form_data, opts \\ []) do
     opts = Keyword.put(opts, :with_video_room, true)
 
-    case prepare_booking_data(meeting_params, form_data) do
-      {:ok, booking_data} ->
-        # Try calendar pre-check for better UX
-        case fresh_calendar_check(booking_data) do
-          :ok ->
-            # Calendar shows available, proceed normally
-            execute_internal(booking_data, form_data, opts)
+    with {:ok, booking_data} <- prepare_booking_data(meeting_params, form_data),
+         :ok <- validate_custom_field_answers(booking_data) do
+      # Try calendar pre-check for better UX
+      case fresh_calendar_check(booking_data) do
+        :ok ->
+          # Calendar shows available, proceed normally
+          execute_internal(booking_data, form_data, opts)
 
-          {:error, :slot_unavailable} ->
-            # Fail fast for better UX
-            {:error, map_error_to_message(:slot_unavailable)}
+        {:error, :slot_unavailable} ->
+          # Fail fast for better UX
+          {:error, map_error_to_message(:slot_unavailable)}
 
-          {:error, _reason} ->
-            # Calendar check failed, but continue with atomic booking
-            execute_internal(booking_data, form_data, opts)
-        end
-
-      {:error, reason} ->
-        {:error, map_error_to_message(reason)}
+        {:error, _reason} ->
+          # Calendar check failed, but continue with atomic booking
+          execute_internal(booking_data, form_data, opts)
+      end
+    else
+      {:error, reason} -> {:error, map_error_to_message(reason)}
     end
   end
 
   # Private functions
+
+  defp validate_custom_field_answers(%{
+         custom_fields_snapshot: snapshot,
+         custom_field_answers: answers
+       }) do
+    case CustomFields.validate_answers(snapshot, answers) do
+      {:ok, _normalised} -> :ok
+      {:error, errors} -> {:error, {:custom_field_errors, errors}}
+    end
+  end
 
   defp prepare_booking_data(meeting_params, form_data) do
     with {:ok, date_string} <- normalize_date_input(meeting_params.date),
@@ -120,7 +131,9 @@ defmodule Tymeslot.Bookings.Create do
         organizer_user_id: Map.get(meeting_params, :organizer_user_id),
         meeting_type_id: Map.get(meeting_params, :meeting_type_id),
         video_integration_id: Map.get(meeting_params, :video_integration_id),
-        attendee_locale: Map.get(meeting_params, :attendee_locale) || default_locale()
+        attendee_locale: Map.get(meeting_params, :attendee_locale) || default_locale(),
+        custom_fields_snapshot: Map.get(meeting_params, :custom_fields_snapshot, []),
+        custom_field_answers: Map.get(meeting_params, :custom_field_answers, %{})
       }
 
       {:ok, booking_data}
@@ -364,6 +377,9 @@ defmodule Tymeslot.Bookings.Create do
 
       :meeting_type_missing ->
         "This meeting type is no longer available. Please go back and select another."
+
+      {:custom_field_errors, _errors} ->
+        "Please fill in all required fields before submitting."
 
       reason when is_binary(reason) ->
         reason

@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
   attr :on_reenable, :any, default: nil
   attr :on_pick_channel, :any, default: nil
   attr :on_disconnect, :any, default: nil
+  attr :on_reconnect, :any, default: nil
 
   @spec slack_card(map()) :: Phoenix.LiveView.Rendered.t()
   def slack_card(assigns) do
@@ -120,6 +121,16 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
               class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-turquoise-50 border-turquoise-200 text-turquoise-700 hover:bg-turquoise-100 font-bold transition-all text-token-sm"
             >
               Pick a channel
+            </button>
+          <% end %>
+
+          <%!-- Reconnect (pending_oauth OAuth only — restart OAuth from scratch) --%>
+          <%= if @status == :pending_oauth && @integration.app_mode == "oauth" && @on_reconnect do %>
+            <button
+              phx-click={@on_reconnect}
+              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-amber-200 text-amber-700 hover:bg-amber-50 font-bold transition-all text-token-sm"
+            >
+              <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
             </button>
           <% end %>
 

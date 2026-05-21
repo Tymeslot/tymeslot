@@ -128,6 +128,34 @@ defmodule Tymeslot.AuthTest do
     end
   end
 
+  describe "dashboard tour helpers" do
+    test "dashboard_tour_seen?/1 returns false for a user with no timestamp" do
+      user = insert(:user, dashboard_tour_seen_at: nil)
+      refute Auth.dashboard_tour_seen?(user)
+    end
+
+    test "dashboard_tour_seen?/1 returns true for a user with a timestamp" do
+      user = insert(:user, dashboard_tour_seen_at: DateTime.utc_now(:second))
+      assert Auth.dashboard_tour_seen?(user)
+    end
+
+    test "mark_dashboard_tour_seen/1 sets the timestamp when nil" do
+      user = insert(:user, dashboard_tour_seen_at: nil)
+
+      assert {:ok, updated} = Auth.mark_dashboard_tour_seen(user)
+      assert %DateTime{} = updated.dashboard_tour_seen_at
+    end
+
+    test "mark_dashboard_tour_seen/1 is idempotent — second call does not overwrite the first timestamp" do
+      user = insert(:user, dashboard_tour_seen_at: nil)
+
+      {:ok, first} = Auth.mark_dashboard_tour_seen(user)
+      {:ok, second} = Auth.mark_dashboard_tour_seen(first)
+
+      assert second.dashboard_tour_seen_at == first.dashboard_tour_seen_at
+    end
+  end
+
   describe "marketing_unsubscribed?/1" do
     test "returns false for a freshly inserted user" do
       user = insert(:user)

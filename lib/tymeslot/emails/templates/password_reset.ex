@@ -4,17 +4,15 @@ defmodule Tymeslot.Emails.Templates.PasswordReset do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Buttons, Sanitise, TemplateHelper, Text}
+  alias Tymeslot.Emails.Shared.{Buttons, Greeting, TemplateHelper, Text}
 
   # A security-sensitive action that warrants the reader's attention.
   @intent :alert
 
   @spec render(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
   def render(user, reset_url) do
-    user_display_name = Sanitise.sanitize_for_email(user.name || user.email)
-
     mjml_content = """
-    #{Text.centered_text(dgettext("emails", "Hi %{name},", name: user_display_name), padding: "8px 0 4px 0", font_size: "16px")}
+    #{Text.centered_text(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
 
     #{Text.centered_text(dgettext("emails", "It happens to the best of us. Click the button below to choose a new password and pick up where you left off."), padding: "0 0 20px 0")}
 
@@ -41,12 +39,10 @@ defmodule Tymeslot.Emails.Templates.PasswordReset do
 
   @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
   def render_text(user, reset_url) do
-    name = user.name || user.email
-
     """
     #{dgettext("emails", "Reset Your Password")}
 
-    #{dgettext("emails", "Hi %{name},", name: name)}
+    #{Greeting.text(user)}
 
     #{dgettext("emails", "It happens to the best of us! Click the link below to choose a new password and regain access to your account.")}
 

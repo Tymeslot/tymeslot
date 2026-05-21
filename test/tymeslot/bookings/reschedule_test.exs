@@ -9,8 +9,11 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   import Mox
 
   alias Tymeslot.Bookings.Reschedule
+  alias Tymeslot.HTTPClientMock
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
+  alias Tymeslot.ZoomOAuthHelperMock
   import Tymeslot.MeetingTestHelpers
 
   setup :verify_on_exit!
@@ -292,5 +295,111 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
       assert updated_meeting.id == meeting.id
     end
+  end
+
+  describe "Zoom video room sync" do
+    test "PATCHes the Zoom meeting with new times when rescheduling" do
+      %{user: user, profile: _profile} = create_user_with_profile()
+      integration = insert_zoom_integration(user)
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_integration_id: integration.id,
+          video_room_id: "123456789",
+          title: "Customer call"
+        })
+
+      new_params = %{
+        date: Date.to_string(Date.add(Date.utc_today(), 2)),
+        time: "2:00 PM",
+        duration: "60min",
+        user_timezone: "America/New_York"
+      }
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :patch, url, body, headers, _opts ->
+        assert url == "https://api.zoom.us/v2/meetings/123456789"
+        assert {"Authorization", "Bearer access-token"} in headers
+
+        decoded = Jason.decode!(body)
+        assert decoded["topic"] == "Customer call"
+        assert decoded["duration"] == 60
+        assert is_binary(decoded["start_time"])
+
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert {:ok, _updated} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+    end
+
+    test "still reschedules successfully when Zoom update fails" do
+      %{user: user, profile: _profile} = create_user_with_profile()
+      integration = insert_zoom_integration(user)
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_integration_id: integration.id,
+          video_room_id: "777"
+        })
+
+      new_params = %{
+        date: Date.to_string(Date.add(Date.utc_today(), 2)),
+        time: "2:00 PM",
+        duration: "60min",
+        user_timezone: "America/New_York"
+      }
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
+        {:error, :timeout}
+      end)
+
+      assert {:ok, _updated} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+    end
+
+    test "skips Zoom call when meeting has no video_room_id" do
+      %{user: user, profile: _profile} = create_user_with_profile()
+      integration = insert_zoom_integration(user)
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_integration_id: integration.id,
+          video_room_id: nil
+        })
+
+      new_params = %{
+        date: Date.to_string(Date.add(Date.utc_today(), 2)),
+        time: "2:00 PM",
+        duration: "60min",
+        user_timezone: "America/New_York"
+      }
+
+      # HTTPClientMock not expected — verify_on_exit! catches stray calls.
+      assert {:ok, _updated} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+    end
+  end
+
+  defp insert_zoom_integration(user) do
+    insert(:video_integration,
+      user: user,
+      name: "Zoom",
+      provider: "zoom",
+      base_url: nil,
+      api_key_encrypted: nil,
+      tenant_id_encrypted: nil,
+      client_id_encrypted: nil,
+      client_secret_encrypted: nil,
+      teams_user_id_encrypted: nil,
+      access_token_encrypted: Encryption.encrypt("access-token"),
+      refresh_token_encrypted: Encryption.encrypt("refresh-token"),
+      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+      oauth_scope: "meeting:write:meeting",
+      provider_account_id: nil
+    )
   end
 end

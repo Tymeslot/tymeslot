@@ -1,29 +1,37 @@
 /**
- * Iframe Embed Detection & Resize Communication
+ * Iframe Embed Detection & Continuous Resize Communication
  *
  * When the scheduling page is loaded inside an iframe (via embed.js),
  * this module:
  * 1. Adds a `data-embedded` attribute to <html> so CSS can adapt
  * 2. Sets `data-embed-mode` ("inline" or "modal") for mode-specific CSS
- * 3. For inline embeds: posts the theme-preferred height (from
- *    data-preferred-embed-height on <html>) so embed.js can size the
- *    iframe instead of using the generic 400px default
- * 4. For modal embeds: uses ResizeObserver to post height changes to the
- *    parent window so the modal can size to content
+ * 3. Continuously posts the page's measured height to the parent on a
+ *    50ms loop so the parent iframe element can grow AND shrink to match
+ *    content as it changes — no dead space at the bottom when the page
+ *    shrinks between steps.
+ *
+ * Measurement protocol (mirrors Cal.com's embed-core approach):
+ * - First pass: document.documentElement.scrollHeight (generous; prevents
+ *   internal scrollbars before layout settles)
+ * - Subsequent passes: ceil(getComputedStyle(main).height + marginTop
+ *   + marginBottom) on the booker's outermost flex container. This value
+ *   can decrease, which is the whole point.
+ * - Diff-checked: same value as the previous post is skipped.
+ *
+ * `setTimeout` (not ResizeObserver/requestAnimationFrame) is used
+ * deliberately: Safari and iframe-hidden contexts have well-known issues
+ * with the latter — cal.com chose setTimeout for the same reason.
  */
-
 (function () {
   "use strict";
 
   const isEmbedded = window.self !== window.top;
   if (!isEmbedded) return;
 
-  // Signal to CSS that we're in an iframe
   document.documentElement.setAttribute("data-embedded", "");
 
-  // Read embed mode from URL params (set by embed.js)
   const params = new URLSearchParams(window.location.search);
-  const embedMode = params.get('embed-mode') || 'modal';
+  const embedMode = params.get("embed-mode") || "modal";
   document.documentElement.setAttribute("data-embed-mode", embedMode);
 
   // --- Derive the allowed parent origin ---
@@ -43,7 +51,7 @@
 
   if (!targetOrigin) {
     try {
-      const paramOrigin = params.get('parent-origin');
+      const paramOrigin = params.get("parent-origin");
       if (paramOrigin) {
         const parsed = new URL(paramOrigin);
         if (parsed.origin !== "null" && /^https?:$/.test(parsed.protocol)) {
@@ -57,69 +65,72 @@
 
   if (!targetOrigin) {
     console.warn(
-      'Tymeslot: auto-resize disabled — parent origin could not be determined ' +
-      'from document.referrer or parent-origin param. Check that the embedding ' +
+      "Tymeslot: auto-resize disabled — parent origin could not be determined " +
+      "from document.referrer or parent-origin param. Check that the embedding " +
       'page does not set referrerpolicy="no-referrer".'
     );
     return;
   }
 
-  // --- Inline mode: post theme-preferred height, then done ---
-  // The theme declares its ideal embed height via data-preferred-embed-height
-  // on <html>. Post it once so embed.js can size the iframe instead of using
-  // the generic 400px default.
-  if (embedMode === 'inline') {
-    const preferred = parseInt(
-      document.documentElement.getAttribute("data-preferred-embed-height"), 10
+  // --- Continuous height measurement loop ---
+  const POLL_INTERVAL_MS = 50;
+  let lastPostedHeight = null;
+  let isFirstPass = true;
+
+  function findMainElement() {
+    return (
+      document.getElementsByClassName("main")[0] ||
+      document.getElementsByTagName("main")[0] ||
+      document.documentElement
     );
-    if (preferred > 0) {
-      window.parent.postMessage(
-        { type: "tymeslot-preferred-height", height: preferred },
-        targetOrigin
-      );
-    }
-    return;
   }
 
-  // --- Modal mode: post content height so embed.js can size the wrapper ---
-  // Use body.offsetHeight (actual content) instead of scrollHeight
-  // because scrollHeight = max(viewport, content) and never shrinks
-  // below the iframe's initial viewport size.
-  let lastPostedHeight = null;
-  let rafPending = false;
+  function measureHeight() {
+    if (isFirstPass) {
+      // Generous initial measurement — prevents an internal scrollbar
+      // flashing before the first computed-height tick lands.
+      return document.documentElement.scrollHeight;
+    }
+    const main = findMainElement();
+    const styles = window.getComputedStyle(main);
+    return Math.ceil(
+      parseFloat(styles.height) +
+      parseFloat(styles.marginTop) +
+      parseFloat(styles.marginBottom)
+    );
+  }
 
   function postHeight() {
-    const height = document.body.offsetHeight;
-    if (height === lastPostedHeight || height < 1) return;
+    const height = measureHeight();
+    if (!Number.isFinite(height) || height < 1) return;
+    if (height === lastPostedHeight) return;
+
     lastPostedHeight = height;
     window.parent.postMessage(
-      { type: "tymeslot-resize", height: height },
+      { type: "tymeslot-resize", height: height, isFirstTime: isFirstPass },
       targetOrigin
     );
+    isFirstPass = false;
   }
 
-  // Observe body size changes and post updated height (debounced via rAF)
-  if (typeof ResizeObserver !== "undefined") {
-    const observer = new ResizeObserver(function () {
-      if (!rafPending) {
-        rafPending = true;
-        requestAnimationFrame(function () {
-          rafPending = false;
-          postHeight();
-        });
-      }
-    });
-
-    if (document.body) {
-      observer.observe(document.body);
-    } else {
-      document.addEventListener("DOMContentLoaded", function () {
-        observer.observe(document.body);
-      });
+  function loop() {
+    if (document.hidden) {
+      setTimeout(loop, POLL_INTERVAL_MS);
+      return;
     }
+    postHeight();
+    setTimeout(loop, POLL_INTERVAL_MS);
   }
 
-  // Also post on load and after LiveView patches
-  window.addEventListener("load", postHeight);
-  window.addEventListener("phx:page-loading-stop", postHeight);
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) {
+      postHeight();
+    }
+  });
+
+  if (document.body) {
+    loop();
+  } else {
+    document.addEventListener("DOMContentLoaded", loop);
+  }
 })();

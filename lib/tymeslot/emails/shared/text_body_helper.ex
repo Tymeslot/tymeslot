@@ -3,6 +3,7 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   Helper functions for generating consistent text body content in email templates.
   """
 
+  alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Emails.Shared.Formatting
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -126,6 +127,50 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
       #{dgettext("emails", "ATTENDEE INFORMATION:")}
       #{Enum.join(info, "\n")}#{message_section}
       """
+    end)
+  end
+
+  @doc """
+  Formats the snapshotted custom-field answers as a plain-text section for
+  email bodies. Mirrors the HTML `MeetingComponents.custom_answers_section/1`.
+  Returns an empty string when there are no fields, or when every field
+  renders as an empty value.
+  """
+  @spec format_custom_answers(map()) :: String.t()
+  def format_custom_answers(appointment_details),
+    do:
+      format_custom_answers(
+        appointment_details,
+        Map.get(appointment_details, :attendee_locale, "en")
+      )
+
+  @spec format_custom_answers(map(), String.t()) :: String.t()
+  def format_custom_answers(appointment_details, locale) do
+    snapshot = Map.get(appointment_details, :custom_fields_snapshot) || []
+    answers = Map.get(appointment_details, :custom_field_answers) || %{}
+
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      rendered =
+        snapshot
+        |> Enum.map(fn field ->
+          value = AnswerRenderer.render(field, answers[field["id"]])
+          {field["label"] || "", value}
+        end)
+        |> Enum.reject(fn {_label, value} -> value == "" end)
+
+      case rendered do
+        [] ->
+          ""
+
+        rows ->
+          lines = Enum.map_join(rows, "\n", fn {label, value} -> "#{label}: #{value}" end)
+
+          """
+
+          #{dgettext("emails", "ADDITIONAL DETAILS:")}
+          #{lines}
+          """
+      end
     end)
   end
 

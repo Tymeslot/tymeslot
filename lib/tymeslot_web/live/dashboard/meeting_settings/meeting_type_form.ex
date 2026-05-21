@@ -11,7 +11,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
-  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{Init, Validation}
+
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
+    CustomQuestionsSection,
+    Init,
+    QuestionEditorComponent,
+    Validation
+  }
+
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
   import TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
@@ -43,6 +50,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:reminder_error, nil)
      |> assign(:show_custom_reminder, false)
      |> assign(:reminder_confirmation, nil)
+     |> assign(:custom_fields, [])
+     |> assign(:editing_question, nil)
+     |> assign(:editing_question_mode, :add)
+     |> assign(:custom_questions_allowed, true)
      |> assign(:__initialized__, false)}
   end
 
@@ -55,6 +66,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
+    <div id={"meeting-type-form-wrapper-#{@id}"}>
     <form phx-submit="save_meeting_type" phx-target={@parent_myself} class="space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <.input
@@ -148,6 +160,76 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         myself={@myself}
       />
 
+      <%!-- Custom questions section --%>
+      <.live_component
+        module={CustomQuestionsSection}
+        id={"custom-questions-section-#{@id}"}
+        custom_fields={@custom_fields}
+        form_id={@id}
+        allowed={@custom_questions_allowed}
+        current_user={@current_user}
+      />
+
+      <%!-- Hidden inputs serialising custom_fields into the form submission.
+           When custom questions are paywalled, we deliberately omit these so
+           the form does not post `custom_fields` at all — Ecto's cast_embed
+           leaves the existing embed untouched, preserving any prior questions. --%>
+      <%= if @custom_questions_allowed do %>
+      <%= for {field, fi} <- Enum.with_index(@custom_fields) do %>
+        <input type="hidden" name={"meeting_type[custom_fields][#{fi}][id]"} value={field.id} />
+        <input type="hidden" name={"meeting_type[custom_fields][#{fi}][type]"} value={field.type} />
+        <input type="hidden" name={"meeting_type[custom_fields][#{fi}][label]"} value={field.label} />
+        <input
+          type="hidden"
+          name={"meeting_type[custom_fields][#{fi}][help_text]"}
+          value={field.help_text || ""}
+        />
+        <input
+          type="hidden"
+          name={"meeting_type[custom_fields][#{fi}][required]"}
+          value={to_string(field.required)}
+        />
+        <input
+          type="hidden"
+          name={"meeting_type[custom_fields][#{fi}][position]"}
+          value={field.position}
+        />
+        <%= if field.body do %>
+          <input
+            type="hidden"
+            name={"meeting_type[custom_fields][#{fi}][body]"}
+            value={field.body}
+          />
+        <% end %>
+        <%= if field.min do %>
+          <input
+            type="hidden"
+            name={"meeting_type[custom_fields][#{fi}][min]"}
+            value={field.min}
+          />
+        <% end %>
+        <%= if field.max do %>
+          <input
+            type="hidden"
+            name={"meeting_type[custom_fields][#{fi}][max]"}
+            value={field.max}
+          />
+        <% end %>
+        <%= for {opt, oi} <- Enum.with_index(field.options || []) do %>
+          <input
+            type="hidden"
+            name={"meeting_type[custom_fields][#{fi}][options][#{oi}][key]"}
+            value={opt.key}
+          />
+          <input
+            type="hidden"
+            name={"meeting_type[custom_fields][#{fi}][options][#{oi}][label]"}
+            value={opt.label}
+          />
+        <% end %>
+      <% end %>
+      <% end %>
+
       <%!-- Hidden fields --%>
       <%= for reminder <- @reminders do %>
         <input type="hidden" name="meeting_type[reminder_config][][value]" value={reminder.value} />
@@ -217,6 +299,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         </button>
       </div>
     </form>
+
+    <%!-- Question editor modal — rendered outside <form> to avoid nested forms --%>
+    <%= if @editing_question do %>
+      <.live_component
+        module={QuestionEditorComponent}
+        id={"question-editor-#{@id}"}
+        definition={@editing_question}
+        existing_fields={@custom_fields}
+        form_id={@id}
+        mode={@editing_question_mode}
+      />
+    <% end %>
+    </div>
     """
   end
 

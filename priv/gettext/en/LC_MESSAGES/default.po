@@ -379,18 +379,18 @@ msgstr "Schedule with"
 msgid "Schedule with %{name}"
 msgstr "Schedule with %{name}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:247
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:255
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:248
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:256
 #, elixir-autogen, elixir-format
 msgid "%{count} hours"
 msgstr "%{count} hours"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:258
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:259
 #, elixir-autogen, elixir-format
 msgid "%{count} minutes"
 msgstr "%{count} minutes"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:50
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:51
 #, elixir-autogen, elixir-format
 msgid "%{date} at %{time}"
 msgstr "%{date} at %{time}"
@@ -400,12 +400,12 @@ msgstr "%{date} at %{time}"
 msgid "%{days} days in advance"
 msgstr "%{days} days in advance"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:260
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:261
 #, elixir-autogen, elixir-format
 msgid "%{hour_text} %{minute_text}"
 msgstr "%{hour_text} %{minute_text}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:241
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:242
 #, elixir-autogen, elixir-format
 msgid "%{minutes} minutes"
 msgstr "%{minutes} minutes"
@@ -415,13 +415,13 @@ msgstr "%{minutes} minutes"
 msgid "%{months} months in advance"
 msgstr "%{months} months in advance"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:89
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:90
 #, elixir-autogen, elixir-format
 msgid "%{month} %{day}, %{year}"
 msgstr "%{month} %{day}, %{year}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:198
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:214
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:199
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:215
 #, elixir-autogen, elixir-format
 msgid "%{month} %{year}"
 msgstr "%{month} %{year}"
@@ -441,17 +441,17 @@ msgstr "%{name}, your meeting %{organizer} is all set."
 msgid "%{name}, your meeting %{organizer} is confirmed"
 msgstr "%{name}, your meeting %{organizer} is confirmed"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:220
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:221
 #, elixir-autogen, elixir-format
 msgid "%{start_month} - %{end_month} %{year}"
 msgstr "%{start_month} - %{end_month} %{year}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:65
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:66
 #, elixir-autogen, elixir-format
 msgid "%{time} %{timezone}"
 msgstr "%{time} %{timezone}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:69
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:70
 #, elixir-autogen, elixir-format
 msgid "%{time} UTC"
 msgstr "%{time} UTC"
@@ -461,7 +461,7 @@ msgstr "%{time} UTC"
 msgid "%{time} local time"
 msgstr "%{time} local time"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:40
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:41
 #, elixir-autogen, elixir-format
 msgid "%{weekday}, %{day} %{month} %{year} at %{time} %{timezone}"
 msgstr "%{weekday}, %{day} %{month} %{year} at %{time} %{timezone}"
@@ -481,14 +481,14 @@ msgstr "%{years} years in advance"
 msgid "1 day in advance"
 msgstr "1 day in advance"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:243
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:255
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:244
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:256
 #, elixir-autogen, elixir-format
 msgid "1 hour"
 msgstr "1 hour"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:238
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:258
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:239
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:259
 #, elixir-autogen, elixir-format
 msgid "1 minute"
 msgstr "1 minute"
@@ -513,7 +513,7 @@ msgstr "1 year in advance"
 msgid "90 days in advance"
 msgstr "90 days in advance"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:20
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:21
 #, elixir-autogen, elixir-format
 msgid "Afternoon"
 msgstr "Afternoon"
@@ -523,7 +523,7 @@ msgstr "Afternoon"
 msgid "Appointment host"
 msgstr "Appointment host"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:137
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:138
 #, elixir-autogen, elixir-format
 msgid "April"
 msgstr "April"
@@ -534,7 +534,7 @@ msgstr "April"
 msgid "Are you sure you want to cancel this appointment?"
 msgstr "Are you sure you want to cancel this appointment?"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:141
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:142
 #, elixir-autogen, elixir-format
 msgid "August"
 msgstr "August"
@@ -574,7 +574,7 @@ msgstr "Confirmation sent to"
 msgid "Date"
 msgstr "Date"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:145
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:146
 #, elixir-autogen, elixir-format
 msgid "December"
 msgstr "December"
@@ -585,17 +585,17 @@ msgstr "December"
 msgid "Duration: %{duration}"
 msgstr "Duration: %{duration}"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:21
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:22
 #, elixir-autogen, elixir-format
 msgid "Evening"
 msgstr "Evening"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:175
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:176
 #, elixir-autogen, elixir-format
 msgid "FRI"
 msgstr "FRI"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:135
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:136
 #, elixir-autogen, elixir-format
 msgid "February"
 msgstr "February"
@@ -605,7 +605,7 @@ msgstr "February"
 msgid "Fri"
 msgstr "Fri"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:159
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:160
 #, elixir-autogen, elixir-format
 msgid "Friday"
 msgstr "Friday"
@@ -616,22 +616,22 @@ msgstr "Friday"
 msgid "Great! Your meeting is still scheduled as planned."
 msgstr "Great! Your meeting is still scheduled as planned."
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:55
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:56
 #, elixir-autogen, elixir-format
 msgid "Invalid date/time"
 msgstr "Invalid date/time"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:134
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:135
 #, elixir-autogen, elixir-format
 msgid "January"
 msgstr "January"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:140
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:141
 #, elixir-autogen, elixir-format
 msgid "July"
 msgstr "July"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:139
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:140
 #, elixir-autogen, elixir-format
 msgid "June"
 msgstr "June"
@@ -642,17 +642,17 @@ msgstr "June"
 msgid "Loading available times..."
 msgstr "Loading available times..."
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:171
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:172
 #, elixir-autogen, elixir-format
 msgid "MON"
 msgstr "MON"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:136
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:137
 #, elixir-autogen, elixir-format
 msgid "March"
 msgstr "March"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:138
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:139
 #, elixir-autogen, elixir-format
 msgid "May"
 msgstr "May"
@@ -689,12 +689,12 @@ msgstr "Meeting with"
 msgid "Mon"
 msgstr "Mon"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:155
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:156
 #, elixir-autogen, elixir-format
 msgid "Monday"
 msgstr "Monday"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:19
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:20
 #, elixir-autogen, elixir-format
 msgid "Morning"
 msgstr "Morning"
@@ -714,12 +714,12 @@ msgstr "Need to reschedule? Check your confirmation email."
 msgid "No time selected"
 msgstr "No time selected"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:144
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:145
 #, elixir-autogen, elixir-format
 msgid "November"
 msgstr "November"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:143
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:144
 #, elixir-autogen, elixir-format
 msgid "October"
 msgstr "October"
@@ -742,12 +742,12 @@ msgstr "Please select another date"
 msgid "Reschedule Appointment"
 msgstr "Reschedule Appointment"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:176
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:177
 #, elixir-autogen, elixir-format
 msgid "SAT"
 msgstr "SAT"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:177
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:178
 #, elixir-autogen, elixir-format
 msgid "SUN"
 msgstr "SUN"
@@ -757,7 +757,7 @@ msgstr "SUN"
 msgid "Sat"
 msgstr "Sat"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:160
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:161
 #, elixir-autogen, elixir-format
 msgid "Saturday"
 msgstr "Saturday"
@@ -795,7 +795,7 @@ msgstr "Select a new time for your meeting"
 msgid "Sent to"
 msgstr "Sent to"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:142
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:143
 #, elixir-autogen, elixir-format
 msgid "September"
 msgstr "September"
@@ -815,17 +815,17 @@ msgstr "Successfully Rescheduled!"
 msgid "Sun"
 msgstr "Sun"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:161
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:162
 #, elixir-autogen, elixir-format
 msgid "Sunday"
 msgstr "Sunday"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:174
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:175
 #, elixir-autogen, elixir-format
 msgid "THU"
 msgstr "THU"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:172
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:173
 #, elixir-autogen, elixir-format
 msgid "TUE"
 msgstr "TUE"
@@ -841,7 +841,7 @@ msgstr "This date is fully booked"
 msgid "Thu"
 msgstr "Thu"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:158
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:159
 #, elixir-autogen, elixir-format
 msgid "Thursday"
 msgstr "Thursday"
@@ -851,18 +851,18 @@ msgstr "Thursday"
 msgid "Tue"
 msgstr "Tue"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:156
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:157
 #, elixir-autogen, elixir-format
 msgid "Tuesday"
 msgstr "Tuesday"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:116
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:126
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:117
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:127
 #, elixir-autogen, elixir-format
 msgid "Unknown duration"
 msgstr "Unknown duration"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:173
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:174
 #, elixir-autogen, elixir-format
 msgid "WED"
 msgstr "WED"
@@ -872,7 +872,7 @@ msgstr "WED"
 msgid "Wed"
 msgstr "Wed"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:157
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:158
 #, elixir-autogen, elixir-format
 msgid "Wednesday"
 msgstr "Wednesday"
@@ -910,7 +910,7 @@ msgstr "Next Step"
 msgid "same day only"
 msgstr "same day only"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:186
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:187
 #, elixir-autogen, elixir-format
 msgid "time_format_type"
 msgstr "24h"
@@ -995,7 +995,7 @@ msgstr "Yes, Cancel Meeting"
 msgid "Cancellation emails have been sent to all participants."
 msgstr "Cancellation emails have been sent to all participants."
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:227
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:228
 #, elixir-autogen, elixir-format
 msgid "%{start_month} %{start_year} - %{end_month} %{end_year}"
 msgstr "%{start_month} %{start_year} - %{end_month} %{end_year}"
@@ -1036,12 +1036,12 @@ msgstr "In-depth discussion or detailed review"
 msgid "Quick chat or brief consultation"
 msgstr "Quick chat or brief consultation"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:18
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:19
 #, elixir-autogen, elixir-format
 msgid "Early Morning"
 msgstr "Early Morning"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:22
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex:23
 #, elixir-autogen, elixir-format
 msgid "Late Night"
 msgstr "Late Night"
@@ -1138,3 +1138,528 @@ msgstr "Open Stripe Checkout"
 #, elixir-autogen, elixir-format
 msgid "We opened Stripe Checkout in a new browser tab. Once your payment is confirmed, this page updates automatically."
 msgstr "We opened Stripe Checkout in a new browser tab. Once your payment is confirmed, this page updates automatically."
+#: lib/tymeslot_web/components/announcement_modal_component.ex:80
+#, elixir-autogen, elixir-format
+msgid "%{current} / %{total}"
+msgstr "%{current} / %{total}"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:72
+#: lib/tymeslot_web/components/tour_overlay.ex:59
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Back"
+msgstr "Back"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:95
+#, elixir-autogen, elixir-format
+msgid "Got it"
+msgstr "Got it"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:102
+#: lib/tymeslot_web/components/announcement_modal_component.ex:106
+#: lib/tymeslot_web/components/tour_overlay.ex:68
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Next"
+msgstr "Next"
+
+#: lib/tymeslot_web/live/admin_live.ex:128
+#, elixir-autogen, elixir-format
+msgid "%{name} disabled."
+msgstr "%{name} disabled."
+
+#: lib/tymeslot_web/live/admin_live.ex:125
+#, elixir-autogen, elixir-format
+msgid "%{name} enabled."
+msgstr "%{name} enabled."
+
+#: lib/tymeslot_web/live/admin_live.ex:135
+#, elixir-autogen, elixir-format
+msgid "%{name} updated."
+msgstr "%{name} updated."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex:48
+#, elixir-autogen, elixir-format
+msgid "(you)"
+msgstr "(you)"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:68
+#, elixir-autogen, elixir-format
+msgid "Account settings and log out are here in the top-right."
+msgstr "Account settings and log out are here in the top-right."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex:37
+#, elixir-autogen, elixir-format
+msgid "Actions"
+msgstr "Actions"
+
+#: lib/tymeslot_web/live/admin_live/components/layout.ex:51
+#: lib/tymeslot_web/live/admin_live/components/users.ex:64
+#, elixir-autogen, elixir-format
+msgid "Admin"
+msgstr "Admin"
+
+#: lib/tymeslot_web/live/admin_live.ex:289
+#, elixir-autogen, elixir-format
+msgid "Admin UI is disabled."
+msgstr "Admin UI is disabled."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:23
+#, elixir-autogen, elixir-format
+msgid "Admin alert recipient"
+msgstr "Admin alert recipient"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:22
+#: lib/tymeslot_web/live/admin_live/formatters.ex:152
+#, elixir-autogen, elixir-format
+msgid "Admin alerts"
+msgstr "Admin alerts"
+
+#: lib/tymeslot_web/live/admin_live/components/layout.ex:59
+#, elixir-autogen, elixir-format
+msgid "Admin sections"
+msgstr "Admin sections"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex:26
+#, elixir-autogen, elixir-format
+msgid "Admins"
+msgstr "Admins"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:43
+#, elixir-autogen, elixir-format
+msgid "Allow log-in with email and password. When disabled, users can only authenticate through configured OAuth providers."
+msgstr "Allow log-in with email and password. When disabled, users can only authenticate through configured OAuth providers."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:37
+#, elixir-autogen, elixir-format
+msgid "Allow new users to sign up via the public registration page. Disable for a private install where admins create accounts manually."
+msgstr "Allow new users to sign up via the public registration page. Disable for a private install where admins create accounts manually."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:150
+#, elixir-autogen, elixir-format
+msgid "Authentication"
+msgstr "Authentication"
+
+#: lib/tymeslot_web/live/admin_live/components/layout.ex:33
+#, elixir-autogen, elixir-format
+msgid "Back to Dashboard"
+msgstr "Back to Dashboard"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:21
+#, elixir-autogen, elixir-format
+msgid "Booking min score"
+msgstr "Booking min score"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex:35
+#, elixir-autogen, elixir-format
+msgid "Booking slug"
+msgstr "Booking slug"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:68
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Cancel"
+msgstr "Cancelling..."
+
+#: lib/tymeslot_web/live/admin_live.ex:292
+#, elixir-autogen, elixir-format
+msgid "Cannot demote the last admin. Promote someone else first."
+msgstr "Cannot demote the last admin. Promote someone else first."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:174
+#, elixir-autogen, elixir-format
+msgid "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
+msgstr "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex:36
+#, elixir-autogen, elixir-format
+msgid "Changes here take effect immediately and override the matching environment variables and application configuration (e.g. REGISTRATION_ENABLED, PASSWORD_AUTH_ENABLED) for this install."
+msgstr "Changes here take effect immediately and override the matching environment variables and application configuration (e.g. REGISTRATION_ENABLED, PASSWORD_AUTH_ENABLED) for this install."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:57
+#, elixir-autogen, elixir-format
+msgid "Common tasks"
+msgstr "Common tasks"
+
+#: lib/tymeslot_web/live/admin_live.ex:298
+#, elixir-autogen, elixir-format
+msgid "Could not demote user."
+msgstr "Could not demote user."
+
+#: lib/tymeslot_web/live/admin_live.ex:295
+#, elixir-autogen, elixir-format
+msgid "Could not promote user."
+msgstr "Could not promote user."
+
+#: lib/tymeslot_web/live/admin_live.ex:53
+#: lib/tymeslot_web/live/admin_live.ex:71
+#: lib/tymeslot_web/live/admin_live.ex:108
+#: lib/tymeslot_web/live/admin_live.ex:143
+#: lib/tymeslot_web/live/admin_live.ex:188
+#: lib/tymeslot_web/live/admin_live.ex:192
+#: lib/tymeslot_web/live/admin_live.ex:204
+#, elixir-autogen, elixir-format
+msgid "Could not update setting."
+msgstr "Could not update setting."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:44
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:97
+#: lib/tymeslot_web/live/admin_live/components/users.ex:127
+#: lib/tymeslot_web/live/admin_live/components/users.ex:146
+#, elixir-autogen, elixir-format
+msgid "Demote"
+msgstr "Demote"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex:143
+#, elixir-autogen, elixir-format
+msgid "Demote %{email} from admin"
+msgstr "Demote %{email} from admin"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:87
+#, elixir-autogen, elixir-format
+msgid "Demote admin"
+msgstr "Demote admin"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:96
+#, elixir-autogen, elixir-format
+msgid "Demote me"
+msgstr "Demote me"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:86
+#, elixir-autogen, elixir-format
+msgid "Demote yourself"
+msgstr "Demote yourself"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:38
+#, elixir-autogen, elixir-format
+msgid "Demote yourself from admin?"
+msgstr "Demote yourself from admin?"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:100
+#, elixir-autogen, elixir-format
+msgid "Demoting..."
+msgstr "Demoting..."
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex:148
+#: lib/tymeslot_web/live/admin_live/formatters.ex:116
+#, elixir-autogen, elixir-format
+msgid "Disabled"
+msgstr "Disabled"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex:34
+#, elixir-autogen, elixir-format
+msgid "Display name"
+msgstr "Display name"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex:33
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Email"
+msgstr "Email"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:97
+#, elixir-autogen, elixir-format
+msgid "Email address that receives admin alerts when the toggle above is enabled. Leave blank to fall back to the ADMIN_ALERT_EMAIL environment variable."
+msgstr "Email address that receives admin alerts when the toggle above is enabled. Leave blank to fall back to the ADMIN_ALERT_EMAIL environment variable."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:91
+#, elixir-autogen, elixir-format
+msgid "Email operational alerts (webhook failures, integration health issues, background job errors) to the admin alert recipient. Requires a recipient address to be set below."
+msgstr "Email operational alerts (webhook failures, integration health issues, background job errors) to the admin alert recipient. Requires a recipient address to be set below."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:61
+#, elixir-autogen, elixir-format
+msgid "Enable generic OAuth 2.0 / OIDC single sign-on (Keycloak, Authentik, Lemonldap, etc.). Requires the OAUTH_* environment variables to be set."
+msgstr "Enable generic OAuth 2.0 / OIDC single sign-on (Keycloak, Authentik, Lemonldap, etc.). Requires the OAUTH_* environment variables to be set."
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex:140
+#: lib/tymeslot_web/live/admin_live/formatters.ex:115
+#, elixir-autogen, elixir-format
+msgid "Enabled"
+msgstr "Enabled"
+
+#: lib/tymeslot_web/live/admin_live.ex:186
+#, elixir-autogen, elixir-format
+msgid "Enter a number between 0.0 and 1.0."
+msgstr "Enter a number between 0.0 and 1.0."
+
+#: lib/tymeslot_web/live/admin_live.ex:187
+#, elixir-autogen, elixir-format
+msgid "Enter a valid email address."
+msgstr "Enter a valid email address."
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex:32
+#, elixir-autogen, elixir-format
+msgid "Environment / config"
+msgstr "Environment / config"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:17
+#, elixir-autogen, elixir-format
+msgid "Generic OIDC login"
+msgstr "Generic OIDC login"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:16
+#, elixir-autogen, elixir-format
+msgid "GitHub login"
+msgstr "GitHub login"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:75
+#, elixir-autogen, elixir-format
+msgid "Go create your first event type — and let people book you."
+msgstr "Go create your first event type — and let people book you."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:15
+#, elixir-autogen, elixir-format
+msgid "Google login"
+msgstr "Google login"
+
+#: lib/tymeslot_web/live/admin_live.ex:221
+#, elixir-autogen, elixir-format
+msgid "Invalid request."
+msgstr "Invalid request."
+
+#: lib/tymeslot_web/live/admin_live.ex:216
+#: lib/tymeslot_web/live/admin_live.ex:227
+#, elixir-autogen, elixir-format
+msgid "Invalid user id."
+msgstr "Invalid user id."
+
+#: lib/tymeslot_web/live/admin_live/components/layout.ex:53
+#, elixir-autogen, elixir-format
+msgid "Manage this self-hosted Tymeslot install."
+msgstr "Manage this self-hosted Tymeslot install."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:85
+#, elixir-autogen, elixir-format
+msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a booking. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
+msgstr "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a booking. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:79
+#, elixir-autogen, elixir-format
+msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a signup. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
+msgstr "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a signup. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:14
+#, elixir-autogen, elixir-format
+msgid "Password authentication"
+msgstr "Password authentication"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:51
+#, elixir-autogen, elixir-format
+msgid "Profile, availability, integrations, and automation — all one click away."
+msgstr "Profile, availability, integrations, and automation — all one click away."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:30
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:95
+#: lib/tymeslot_web/live/admin_live/components/users.ex:158
+#, elixir-autogen, elixir-format
+msgid "Promote"
+msgstr "Promote"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex:155
+#, elixir-autogen, elixir-format
+msgid "Promote %{email} to admin"
+msgstr "Promote %{email} to admin"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:85
+#, elixir-autogen, elixir-format
+msgid "Promote user to admin"
+msgstr "Promote user to admin"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:99
+#, elixir-autogen, elixir-format
+msgid "Promoting..."
+msgstr "Promoting..."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:59
+#, elixir-autogen, elixir-format
+msgid "Quick links to set up your profile, availability, and meeting types. Start here."
+msgstr "Quick links to set up your profile, availability, and meeting types. Start here."
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex:232
+#, elixir-autogen, elixir-format
+msgid "Recommended:"
+msgstr "Recommended:"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:13
+#, elixir-autogen, elixir-format
+msgid "Registration enabled"
+msgstr "Registration enabled"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:73
+#, elixir-autogen, elixir-format
+msgid "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
+msgstr "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:67
+#, elixir-autogen, elixir-format
+msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
+msgstr "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex:36
+#, elixir-autogen, elixir-format
+msgid "Role"
+msgstr "Role"
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex:205
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr "Save"
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex:134
+#: lib/tymeslot_web/live/admin_live/components/settings.ex:163
+#: lib/tymeslot_web/live/admin_live/components/settings.ex:187
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Set %{name}"
+msgstr "with %{name}"
+
+#: lib/tymeslot_web/live/admin_live/components/layout.ex:62
+#, elixir-autogen, elixir-format
+msgid "Settings"
+msgstr "Settings"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:50
+#, elixir-autogen, elixir-format
+msgid "Settings live in the sidebar"
+msgstr "Settings live in the sidebar"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:55
+#, elixir-autogen, elixir-format
+msgid "Show the \"Continue with GitHub\" button on login and signup. Requires GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to be set in the environment."
+msgstr "Show the \"Continue with GitHub\" button on login and signup. Requires GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to be set in the environment."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:49
+#, elixir-autogen, elixir-format
+msgid "Show the \"Continue with Google\" button on login and signup. Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to be set in the environment."
+msgstr "Show the \"Continue with Google\" button on login and signup. Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to be set in the environment."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:20
+#, elixir-autogen, elixir-format
+msgid "Signup min score"
+msgstr "Signup min score"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:44
+#, elixir-autogen, elixir-format
+msgid "Switch between Scheduling (your event types) and Calendar (your bookings)."
+msgstr "Switch between Scheduling (your event types) and Calendar (your bookings)."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:36
+#, elixir-autogen, elixir-format
+msgid "Take 30 seconds to learn where everything lives."
+msgstr "Take 30 seconds to learn where everything lives."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:50
+#, elixir-autogen, elixir-format
+msgid "They will gain access to admin settings and user management."
+msgstr "They will gain access to admin settings and user management."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:58
+#, elixir-autogen, elixir-format
+msgid "They will lose access to admin settings and user management."
+msgstr "They will lose access to admin settings and user management."
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex:25
+#, elixir-autogen, elixir-format
+msgid "Total users"
+msgstr "Total users"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:42
+#, elixir-autogen, elixir-format
+msgid "Two modes"
+msgstr "Two modes"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex:66
+#, elixir-autogen, elixir-format
+msgid "User"
+msgstr "User"
+
+#: lib/tymeslot_web/live/admin_live.ex:275
+#, elixir-autogen, elixir-format
+msgid "User demoted from admin."
+msgstr "User demoted from admin."
+
+#: lib/tymeslot_web/live/admin_live.ex:286
+#, elixir-autogen, elixir-format
+msgid "User not found."
+msgstr "User not found."
+
+#: lib/tymeslot_web/live/admin_live.ex:246
+#, elixir-autogen, elixir-format
+msgid "User promoted to admin."
+msgstr "User promoted to admin."
+
+#: lib/tymeslot_web/live/admin_live/components/layout.ex:65
+#, elixir-autogen, elixir-format
+msgid "Users"
+msgstr "Users"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:35
+#, elixir-autogen, elixir-format
+msgid "Welcome to your Tymeslot dashboard"
+msgstr "Welcome to your Tymeslot dashboard"
+
+#: lib/tymeslot_web/live/admin_live.ex:268
+#, elixir-autogen, elixir-format
+msgid "You have been demoted from admin."
+msgstr "You have been demoted from admin."
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:53
+#, elixir-autogen, elixir-format
+msgid "You will lose access to admin settings and user management, and be returned to your dashboard."
+msgstr "You will lose access to admin settings and user management, and be returned to your dashboard."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:74
+#, elixir-autogen, elixir-format, fuzzy
+msgid "You're set"
+msgstr "You're All Set!"
+
+#: lib/tymeslot_web/live/admin_live/components/users.ex:130
+#, elixir-autogen, elixir-format
+msgid "You're the only admin. Promote someone else before demoting yourself."
+msgstr "You're the only admin. Promote someone else before demoting yourself."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:67
+#, elixir-autogen, elixir-format
+msgid "Your account"
+msgstr "Your account"
+
+#: lib/tymeslot_web/live/admin_live/components/settings.ex:195
+#, elixir-autogen, elixir-format
+msgid "admin@example.com"
+msgstr "admin@example.com"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:46
+#, elixir-autogen, elixir-format
+msgid "from admin?"
+msgstr "from admin?"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:151
+#, elixir-autogen, elixir-format
+msgid "reCAPTCHA"
+msgstr "reCAPTCHA"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:19
+#, elixir-autogen, elixir-format
+msgid "reCAPTCHA on booking"
+msgstr "reCAPTCHA on booking"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:18
+#, elixir-autogen, elixir-format
+msgid "reCAPTCHA on signup"
+msgstr "reCAPTCHA on signup"
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:32
+#, elixir-autogen, elixir-format
+msgid "to admin?"
+msgstr "to admin?"
+
+#: lib/tymeslot_web/components/tour_overlay.ex:77
+#, elixir-autogen, elixir-format
+msgid "Finish"
+msgstr "Finish"
+
+#: lib/tymeslot_web/components/tour_overlay.ex:48
+#, elixir-autogen, elixir-format
+msgid "Skip"
+msgstr "Skip"
+
+#: lib/tymeslot_web/components/tour_overlay.ex:37
+#, elixir-autogen, elixir-format
+msgid "Step %{n} of %{total}"
+msgstr "Step %{n} of %{total}"

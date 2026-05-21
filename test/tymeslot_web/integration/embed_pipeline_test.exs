@@ -230,5 +230,63 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
       # In test env, dev_local_or_deny allows localhost
       assert csp =~ "frame-ancestors"
     end
+
+    test "?embed=1 sets data-embed-layout=\"column\" on the root HTML element", %{conn: conn} do
+      # embed.js appends ?embed=1 to every iframe URL it generates; the server
+      # must respond with data-embed-layout="column" so the wide-canvas layout
+      # activates inside the iframe container.
+      user = insert(:user)
+
+      insert(:profile,
+        user: user,
+        username: "layoutembed",
+        allowed_embed_domains: ["example.com"],
+        booking_theme: "1"
+      )
+
+      insert(:meeting_type, user: user, is_active: true)
+
+      response = conn |> get("/layoutembed?embed=1") |> html_response(200)
+
+      assert response =~ ~s(data-embed-layout="column")
+    end
+
+    test "?embed=1&layout=default opts back into data-embed-layout=\"default\"", %{conn: conn} do
+      # An explicit ?layout=default overrides the embed-default column layout,
+      # letting embed users opt into the centred standalone view.
+      user = insert(:user)
+
+      insert(:profile,
+        user: user,
+        username: "layoutdefault",
+        allowed_embed_domains: ["example.com"],
+        booking_theme: "1"
+      )
+
+      insert(:meeting_type, user: user, is_active: true)
+
+      response = conn |> get("/layoutdefault?embed=1&layout=default") |> html_response(200)
+
+      assert response =~ ~s(data-embed-layout="default")
+    end
+
+    test "?embed=1&layout=column is idempotent — data-embed-layout stays \"column\"", %{
+      conn: conn
+    } do
+      user = insert(:user)
+
+      insert(:profile,
+        user: user,
+        username: "layoutcolumn",
+        allowed_embed_domains: ["example.com"],
+        booking_theme: "1"
+      )
+
+      insert(:meeting_type, user: user, is_active: true)
+
+      response = conn |> get("/layoutcolumn?embed=1&layout=column") |> html_response(200)
+
+      assert response =~ ~s(data-embed-layout="column")
+    end
   end
 end

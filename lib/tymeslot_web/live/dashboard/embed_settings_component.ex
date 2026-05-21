@@ -62,6 +62,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       |> assign_new(:selected_embed_type, fn -> "inline" end)
       |> assign_new(:embed_script_url, fn -> ~p"/embed.js" end)
       |> assign_new(:active_tab, fn -> "options" end)
+      |> assign_new(:embed_layout, fn -> "column" end)
+      |> assign_new(:initial_height, fn -> nil end)
+      |> assign_new(:max_width, fn -> nil end)
 
     {:ok, socket}
   end
@@ -89,6 +92,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
             username={@username}
             base_url={@base_url}
             booking_url={@booking_url}
+            embed_layout={@embed_layout}
+            initial_height={@initial_height}
+            max_width={@max_width}
             myself={@myself}
           />
         </:tab>
@@ -106,6 +112,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
             username={@username}
             base_url={@base_url}
             embed_script_url={@embed_script_url}
+            embed_layout={@embed_layout}
+            initial_height={@initial_height}
+            max_width={@max_width}
             is_ready={@is_ready}
             error_reason={@error_reason}
             myself={@myself}
@@ -125,7 +134,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     do: reject_invalid_event("switch_tab", socket)
 
   def handle_event("copy_code", %{"type" => type}, socket) when type in @valid_embed_types do
-    code = Helpers.embed_code(type, socket.assigns)
+    code = Helpers.embed_code(type, Helpers.snippet_options(socket.assigns))
 
     socket = push_event(socket, "copy-to-clipboard", %{text: code})
     Flash.info("Code copied to clipboard!")
@@ -143,6 +152,28 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
 
   def handle_event("select_embed_type", _params, socket),
     do: reject_invalid_event("select_embed_type", socket)
+
+  # Customisation knobs surfaced to the embedder: layout, initial-height,
+  # and max-width. Phoenix LiveView requires phx-change to fire from inside
+  # a <form>, so the panel posts a `customise[...]` map with all three
+  # values on every change. Validation happens at the snippet helper
+  # boundary so nothing invalid ever reaches the rendered output.
+  def handle_event("update_customisation", %{"customise" => params}, socket) do
+    layout =
+      case params["layout"] do
+        v when is_binary(v) -> if v in Helpers.valid_layouts(), do: v, else: "column"
+        _other -> socket.assigns.embed_layout
+      end
+
+    {:noreply,
+     socket
+     |> assign(:embed_layout, layout)
+     |> assign(:initial_height, blank_to_nil(params["initial_height"]))
+     |> assign(:max_width, blank_to_nil(params["max_width"]))}
+  end
+
+  def handle_event("update_customisation", _params, socket),
+    do: reject_invalid_event("update_customisation", socket)
 
   def handle_event("save_embed_domains", %{"allowed_domains" => domains_str}, socket) do
     case Profiles.add_embed_domains(socket.assigns.profile, domains_str) do
@@ -184,6 +215,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     Logger.warning("handle_event received invalid or missing parameter", event: event_name)
     {:noreply, socket}
   end
+
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(nil), do: nil
+  defp blank_to_nil(value), do: value
 
   defp perform_domain_update(socket, domains_payload, success_message) do
     user_id = socket.assigns.current_user.id

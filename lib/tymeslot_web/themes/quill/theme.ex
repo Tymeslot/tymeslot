@@ -52,8 +52,7 @@ defmodule TymeslotWeb.Themes.Quill.Theme do
       flow_steps: 4,
       design_system: :glassmorphism,
       supports_duration_selection: true,
-      supports_inline_booking: false,
-      preferred_embed_height: 400
+      supports_inline_booking: false
     }
   end
 

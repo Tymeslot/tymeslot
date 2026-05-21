@@ -4,6 +4,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   """
   use Ecto.Schema
   import Ecto.Changeset
+  alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
 
@@ -20,6 +21,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           payment_required: boolean(),
           price_cents: integer() | nil,
           is_archived: boolean(),
+          custom_fields: [FieldDefinition.t()],
           user_id: integer() | nil,
           video_integration_id: integer() | nil,
           calendar_integration_id: integer() | nil,
@@ -45,6 +47,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     belongs_to(:user, Tymeslot.Auth.UserSchema)
     belongs_to(:video_integration, Tymeslot.Integrations.Video.VideoIntegrationSchema)
     belongs_to(:calendar_integration, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema)
+
+    embeds_many(:custom_fields, FieldDefinition, on_replace: :delete)
 
     timestamps()
   end
@@ -98,6 +102,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :price_cents,
       :is_archived
     ])
+    |> cast_embed(:custom_fields, with: &FieldDefinition.changeset/2)
     |> validate_required([:name, :duration_minutes, :user_id])
     |> validate_length(:name, Constraints.name_length_opts())
     |> validate_length(:description, max: Constraints.description_max_length())

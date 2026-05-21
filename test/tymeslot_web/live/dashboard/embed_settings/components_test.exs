@@ -28,6 +28,21 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
       assert html =~ "Recommended"
     end
 
+    test "defaults to column layout when embed_layout is not supplied" do
+      # Confirms the attr default matches the product default set in
+      # EmbedSettingsComponent (assign_new :embed_layout → "column").
+      # Column is the embed default, so inline/popup/floating snippets are
+      # clean (no data-layout override), while the link snippet gets
+      # ?layout=column because the standalone booking page defaults to :default.
+      assigns = Map.put(@base_grid_assigns, :selected_embed_type, "link")
+
+      html = render_component(&OptionsGrid.options_grid/1, assigns)
+
+      assert html =~ "?layout=column"
+      refute html =~ "data-layout=&quot;column&quot;"
+      refute html =~ "layout: &#39;column&#39;"
+    end
+
     test "exactly one card carries the selection indicator at any time" do
       # data-selected="true" is set on the card container only when selected.
       # Regardless of which type is active, exactly one card should be marked.

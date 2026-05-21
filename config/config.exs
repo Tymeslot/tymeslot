@@ -93,7 +93,10 @@ config :tymeslot, :announcement_catalogs, [Tymeslot.Announcements.Catalog]
 # SaaS can override these via on_mount hooks based on subscription status.
 # `:meeting_payments` defaults to false because Core treats it as a self-host
 # opt-in feature; LiveViews use the assign to hide payment-related UI bits.
-config :tymeslot, :feature_assigns, automations_allowed: true, meeting_payments: false
+config :tymeslot, :feature_assigns,
+  automations_allowed: true,
+  custom_questions_allowed: true,
+  meeting_payments: false
 
 # Dashboard Feature Gates - Maps live_action atoms to feature flag assign keys.
 # When an action is listed here, the corresponding assign must be true for the
@@ -141,7 +144,11 @@ config :tymeslot, :oban_queues,
 
 # Webhook configuration
 config :tymeslot, :webhook_base_url, nil
-config :tymeslot, :webhook_paths, ["/webhooks/stripe", "/webhooks/stripe/connect"]
+config :tymeslot, :webhook_paths, [
+  "/webhooks/stripe",
+  "/webhooks/stripe/connect",
+  "/auth/zoom/deauthorize"
+]
 
 # Webhook idempotency cache TTLs
 config :tymeslot, :webhook_idempotency,

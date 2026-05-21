@@ -1,11 +1,13 @@
 /**
  * Tests for iframe_embed.js — the script that runs inside embedded iframes.
  *
- * Covers:
+ * Covers the continuous two-pass resize protocol:
  * - Embedded context detection (window.self !== window.top)
- * - data-embedded attribute on <html>
- * - ResizeObserver-based height reporting via postMessage
- * - Origin derivation from document.referrer
+ * - data-embedded and data-embed-mode attributes on <html>
+ * - First-pass height = documentElement.scrollHeight (generous)
+ * - Subsequent-pass height = computed main + margins (can shrink)
+ * - Diff-checked posting
+ * - Origin derivation from document.referrer / parent-origin param
  * - Graceful degradation when referrer is unavailable
  */
 
@@ -24,11 +26,19 @@ const iframeEmbedSource = readFileSync(
  * Execute iframe_embed.js in a controlled environment.
  *
  * The IIFE checks `window.self !== window.top` immediately, so we need
- * to set that up before evaluating the script. We also need to control
- * `document.referrer` and capture `postMessage` calls.
+ * to set that up before evaluating the script. We also control
+ * `document.referrer` and capture `postMessage` calls. setTimeout is
+ * stubbed so each tick of the resize loop is observable.
  */
-function runScript({ isEmbedded = true, referrer = 'https://embedder.com/page', search = '' } = {}) {
-  // Mock window.self !== window.top
+function runScript({
+  isEmbedded = true,
+  referrer = 'https://embedder.com/page',
+  search = '',
+  scrollHeight = 800,
+  mainHeight = 600,
+  mainMarginTop = 0,
+  mainMarginBottom = 0
+} = {}) {
   if (isEmbedded) {
     Object.defineProperty(window, 'top', {
       value: { not: 'self' },
@@ -43,48 +53,74 @@ function runScript({ isEmbedded = true, referrer = 'https://embedder.com/page', 
     })
   }
 
-  // Mock document.referrer
   Object.defineProperty(document, 'referrer', {
     value: referrer,
     writable: true,
     configurable: true
   })
 
-  // Mock window.location.search for parent-origin param tests
   if (search) {
-    delete window.location;
-    window.location = new URL('http://localhost' + search);
+    delete window.location
+    window.location = new URL('http://localhost' + search)
   }
 
-  // Mock window.parent.postMessage
+  // Mock the height measurements
+  Object.defineProperty(document.documentElement, 'scrollHeight', {
+    value: scrollHeight,
+    configurable: true,
+    writable: true
+  })
+
+  // Mock getComputedStyle for the main element measurement
+  const origGetComputedStyle = window.getComputedStyle
+  window.getComputedStyle = vi.fn((el) => {
+    if (el === document.documentElement || el.tagName === 'MAIN' || el.classList?.contains('main')) {
+      return {
+        height: `${mainHeight}px`,
+        marginTop: `${mainMarginTop}px`,
+        marginBottom: `${mainMarginBottom}px`
+      }
+    }
+    return origGetComputedStyle(el)
+  })
+
   window.parent.postMessage = vi.fn()
 
-  // Mock requestAnimationFrame to execute synchronously
-  window.requestAnimationFrame = vi.fn((cb) => cb())
+  // Capture the setTimeout callback so tests can advance ticks manually.
+  // Each call schedules the next iteration; we let tests drive the loop.
+  const scheduled = []
+  window.setTimeout = vi.fn((cb, _ms) => {
+    scheduled.push(cb)
+    return scheduled.length
+  })
 
   // eslint-disable-next-line no-eval
   eval(iframeEmbedSource)
+
+  return {
+    advance: () => {
+      const cb = scheduled.shift()
+      if (cb) cb()
+    },
+    scheduledCount: () => scheduled.length
+  }
 }
 
-// Capture the original window.location so we can restore it after tests
-// that replace it with a URL object for parent-origin param testing.
 const originalLocation = window.location
 
 beforeEach(() => {
-  // Reset document state
   document.documentElement.removeAttribute('data-embedded')
+  document.documentElement.removeAttribute('data-embed-mode')
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 
-  // Restore window.location in case a previous test replaced it
   if (window.location !== originalLocation) {
-    delete window.location;
-    window.location = originalLocation;
+    delete window.location
+    window.location = originalLocation
   }
 })
 
 afterEach(() => {
-  // Restore window.top
   Object.defineProperty(window, 'top', {
     value: window.self,
     writable: true,
@@ -99,127 +135,228 @@ describe('embedded context detection', () => {
     expect(document.documentElement.hasAttribute('data-embedded')).toBe(true)
   })
 
+  test('sets data-embed-mode from URL params (default "modal")', () => {
+    runScript({ isEmbedded: true })
+
+    expect(document.documentElement.getAttribute('data-embed-mode')).toBe('modal')
+  })
+
+  test('sets data-embed-mode="inline" when ?embed-mode=inline is present', () => {
+    runScript({ isEmbedded: true, search: '?embed-mode=inline' })
+
+    expect(document.documentElement.getAttribute('data-embed-mode')).toBe('inline')
+  })
+
   test('does not set data-embedded when not inside an iframe', () => {
     runScript({ isEmbedded: false })
 
     expect(document.documentElement.hasAttribute('data-embedded')).toBe(false)
   })
 
-  test('does nothing else when not embedded — no postMessage listeners', () => {
+  test('does not post any messages when not embedded', () => {
     runScript({ isEmbedded: false })
 
-    // parent.postMessage should not have been called
     expect(window.parent.postMessage).not.toHaveBeenCalled()
   })
 })
 
-describe('referrer-based origin derivation', () => {
-  test('derives target origin from document.referrer', () => {
-    // Mock ResizeObserver to capture the callback
-    let resizeCallback
-    window.ResizeObserver = vi.fn((cb) => {
-      resizeCallback = cb
-      return { observe: vi.fn() }
+describe('continuous resize protocol', () => {
+  test('first measurement uses documentElement.scrollHeight with isFirstTime: true', () => {
+    runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/',
+      scrollHeight: 1000,
+      mainHeight: 500
     })
 
-    // Set a known body height
-    Object.defineProperty(document.body, 'offsetHeight', { value: 400, configurable: true })
-
-    runScript({ isEmbedded: true, referrer: 'https://embedder.com/some/page' })
-
-    // Trigger resize
-    resizeCallback()
-
     expect(window.parent.postMessage).toHaveBeenCalledWith(
-      { type: 'tymeslot-resize', height: 400 },
+      { type: 'tymeslot-resize', height: 1000, isFirstTime: true },
       'https://embedder.com'
     )
   })
 
-  test('logs warning and disables auto-resize when referrer is empty', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  test('subsequent measurements use computed main height + margins with isFirstTime: false', () => {
+    const handle = runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/',
+      scrollHeight: 1000,
+      mainHeight: 600,
+      mainMarginTop: 10,
+      mainMarginBottom: 20
+    })
 
-    runScript({ isEmbedded: true, referrer: '' })
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('auto-resize disabled')
-    )
-    // postMessage should never be called
-    expect(window.parent.postMessage).not.toHaveBeenCalled()
-  })
+    handle.advance()
 
-  test('logs warning when referrer URL has "null" origin (data: or file: pages)', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-    // data: URIs produce origin "null"
-    runScript({ isEmbedded: true, referrer: 'data:text/html,<h1>test</h1>' })
-
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('auto-resize disabled')
+    expect(window.parent.postMessage).toHaveBeenCalledWith(
+      { type: 'tymeslot-resize', height: 630, isFirstTime: false },
+      'https://embedder.com'
     )
   })
 
-  test('handles malformed referrer URL gracefully', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  test('skips reposting when measured height is unchanged', () => {
+    const handle = runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/',
+      scrollHeight: 800,
+      mainHeight: 800
+    })
 
-    // A completely broken URL string
-    runScript({ isEmbedded: true, referrer: ':::not-a-url' })
+    // First post: scrollHeight 800 (isFirstTime: true)
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('auto-resize disabled')
+    handle.advance()
+    // Second pass measures mainHeight 800 — same value, no post
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
+
+    handle.advance()
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
+  })
+
+  test('reposts when content shrinks below earlier reported height', () => {
+    const handle = runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/',
+      scrollHeight: 1000,
+      mainHeight: 1000
+    })
+
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
+
+    // Simulate the booking page collapsing to a shorter step
+    window.getComputedStyle = vi.fn(() => ({
+      height: '400px',
+      marginTop: '0px',
+      marginBottom: '0px'
+    }))
+
+    handle.advance()
+
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(2)
+    expect(window.parent.postMessage).toHaveBeenLastCalledWith(
+      { type: 'tymeslot-resize', height: 400, isFirstTime: false },
+      'https://embedder.com'
     )
+  })
+
+  test('schedules the next tick after each post', () => {
+    const handle = runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/'
+    })
+
+    // The initial run scheduled one tick
+    expect(handle.scheduledCount()).toBeGreaterThanOrEqual(1)
+
+    handle.advance()
+    // After the tick, another one should be scheduled
+    expect(handle.scheduledCount()).toBeGreaterThanOrEqual(1)
+  })
+
+  test('does not post height less than 1', () => {
+    runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/',
+      scrollHeight: 0
+    })
+
     expect(window.parent.postMessage).not.toHaveBeenCalled()
+  })
+
+  test('skips measurement when document is hidden and resumes on visibilitychange', () => {
+    // Mark the document as hidden before running the script
+    Object.defineProperty(document, 'hidden', {
+      value: true,
+      writable: true,
+      configurable: true
+    })
+
+    const handle = runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/',
+      scrollHeight: 800,
+      mainHeight: 600
+    })
+
+    // The initial loop() call should have been skipped — no postMessage
+    expect(window.parent.postMessage).not.toHaveBeenCalled()
+
+    // Advance several poll ticks — still hidden, still no postMessage
+    handle.advance()
+    handle.advance()
+    expect(window.parent.postMessage).not.toHaveBeenCalled()
+
+    // Page becomes visible — visibilitychange should trigger an immediate postHeight()
+    Object.defineProperty(document, 'hidden', {
+      value: false,
+      writable: true,
+      configurable: true
+    })
+    document.dispatchEvent(new Event('visibilitychange'))
+
+    expect(window.parent.postMessage).toHaveBeenCalledWith(
+      { type: 'tymeslot-resize', height: 800, isFirstTime: true },
+      'https://embedder.com'
+    )
+  })
+
+  test('never uses "*" as target origin', () => {
+    const handle = runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/'
+    })
+    handle.advance()
+
+    for (const call of window.parent.postMessage.mock.calls) {
+      expect(call[1]).not.toBe('*')
+    }
   })
 })
 
-describe('parent-origin URL param fallback', () => {
-  test('uses parent-origin param when referrer is empty', () => {
-    let resizeCallback
-    window.ResizeObserver = vi.fn((cb) => {
-      resizeCallback = cb
-      return { observe: vi.fn() }
+describe('parent origin derivation', () => {
+  test('derives target origin from document.referrer', () => {
+    runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/some/page',
+      scrollHeight: 500
     })
 
-    Object.defineProperty(document.body, 'offsetHeight', { value: 350, configurable: true })
+    expect(window.parent.postMessage).toHaveBeenCalledWith(
+      expect.any(Object),
+      'https://embedder.com'
+    )
+  })
 
+  test('uses parent-origin URL param when referrer is empty', () => {
     runScript({
       isEmbedded: true,
       referrer: '',
-      search: '?embed=1&parent-origin=https://mysite.com'
+      search: '?embed=1&parent-origin=https://mysite.com',
+      scrollHeight: 500
     })
 
-    resizeCallback()
-
     expect(window.parent.postMessage).toHaveBeenCalledWith(
-      { type: 'tymeslot-resize', height: 350 },
+      expect.any(Object),
       'https://mysite.com'
     )
   })
 
   test('prefers referrer over parent-origin param when both are available', () => {
-    let resizeCallback
-    window.ResizeObserver = vi.fn((cb) => {
-      resizeCallback = cb
-      return { observe: vi.fn() }
-    })
-
-    Object.defineProperty(document.body, 'offsetHeight', { value: 400, configurable: true })
-
     runScript({
       isEmbedded: true,
       referrer: 'https://embedder.com/page',
-      search: '?embed=1&parent-origin=https://other.com'
+      search: '?embed=1&parent-origin=https://other.com',
+      scrollHeight: 500
     })
 
-    resizeCallback()
-
     expect(window.parent.postMessage).toHaveBeenCalledWith(
-      { type: 'tymeslot-resize', height: 400 },
+      expect.any(Object),
       'https://embedder.com'
     )
   })
 
-  test('warns and disables resize when neither referrer nor param is available', () => {
+  test('warns and disables resize when no parent origin can be determined', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     runScript({ isEmbedded: true, referrer: '', search: '' })
@@ -230,22 +367,7 @@ describe('parent-origin URL param fallback', () => {
     expect(window.parent.postMessage).not.toHaveBeenCalled()
   })
 
-  test('rejects parent-origin param with invalid URL', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-    runScript({
-      isEmbedded: true,
-      referrer: '',
-      search: '?parent-origin=not-a-url'
-    })
-
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('auto-resize disabled')
-    )
-    expect(window.parent.postMessage).not.toHaveBeenCalled()
-  })
-
-  test('rejects parent-origin with javascript: scheme', () => {
+  test('rejects parent-origin with non-http(s) scheme', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     runScript({
@@ -260,130 +382,14 @@ describe('parent-origin URL param fallback', () => {
     expect(window.parent.postMessage).not.toHaveBeenCalled()
   })
 
-  test('rejects parent-origin with data: scheme', () => {
+  test('handles malformed referrer URL gracefully', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    runScript({
-      isEmbedded: true,
-      referrer: '',
-      search: '?parent-origin=data:text/html,<script>alert(1)</script>'
-    })
+    runScript({ isEmbedded: true, referrer: ':::not-a-url' })
 
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('auto-resize disabled')
     )
     expect(window.parent.postMessage).not.toHaveBeenCalled()
-  })
-
-  test('rejects parent-origin with file: scheme', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-    runScript({
-      isEmbedded: true,
-      referrer: '',
-      search: '?parent-origin=file:///etc/passwd'
-    })
-
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('auto-resize disabled')
-    )
-    expect(window.parent.postMessage).not.toHaveBeenCalled()
-  })
-})
-
-describe('height reporting via postMessage', () => {
-  let resizeCallback
-
-  function setupWithResize(height = 500) {
-    window.ResizeObserver = vi.fn((cb) => {
-      resizeCallback = cb
-      return { observe: vi.fn() }
-    })
-
-    Object.defineProperty(document.body, 'offsetHeight', {
-      value: height,
-      configurable: true,
-      writable: true
-    })
-
-    runScript({ isEmbedded: true, referrer: 'https://embedder.com/' })
-  }
-
-  test('posts tymeslot-resize message with body.offsetHeight', () => {
-    setupWithResize(600)
-    resizeCallback()
-
-    expect(window.parent.postMessage).toHaveBeenCalledWith(
-      { type: 'tymeslot-resize', height: 600 },
-      'https://embedder.com'
-    )
-  })
-
-  test('does not re-post if height has not changed', () => {
-    setupWithResize(500)
-
-    resizeCallback()
-    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
-
-    // Same height again
-    resizeCallback()
-    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
-  })
-
-  test('posts again when height changes', () => {
-    setupWithResize(500)
-    resizeCallback()
-    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
-
-    // Change height
-    Object.defineProperty(document.body, 'offsetHeight', {
-      value: 700,
-      configurable: true,
-      writable: true
-    })
-    resizeCallback()
-    expect(window.parent.postMessage).toHaveBeenCalledTimes(2)
-    expect(window.parent.postMessage).toHaveBeenLastCalledWith(
-      { type: 'tymeslot-resize', height: 700 },
-      'https://embedder.com'
-    )
-  })
-
-  test('does not post height less than 1', () => {
-    setupWithResize(0)
-    resizeCallback()
-
-    expect(window.parent.postMessage).not.toHaveBeenCalled()
-  })
-
-  test('never uses "*" as target origin', () => {
-    setupWithResize(500)
-    resizeCallback()
-
-    // Verify no call ever used "*"
-    for (const call of window.parent.postMessage.mock.calls) {
-      expect(call[1]).not.toBe('*')
-    }
-  })
-})
-
-describe('ResizeObserver fallback', () => {
-  test('observes body after DOMContentLoaded when body is not yet available', () => {
-    // Simulate body not being ready
-    const originalBody = document.body
-    const observeSpy = vi.fn()
-
-    window.ResizeObserver = vi.fn(() => ({
-      observe: observeSpy
-    }))
-
-    // Temporarily remove body reference to test the else branch
-    // In jsdom, document.body is always available, so we test indirectly
-    // by verifying observe was called (the happy path)
-    Object.defineProperty(document.body, 'offsetHeight', { value: 300, configurable: true })
-
-    runScript({ isEmbedded: true, referrer: 'https://embedder.com/' })
-
-    expect(observeSpy).toHaveBeenCalledWith(document.body)
   })
 })

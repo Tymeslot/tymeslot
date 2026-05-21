@@ -17,11 +17,12 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.Urls
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
   alias TymeslotWeb.Endpoint
 
   require Logger
 
-  @type provider :: :google_meet | :teams | :mirotalk | :custom | :none | String.t()
+  @type provider :: :google_meet | :teams | :zoom | :mirotalk | :custom | :none | String.t()
 
   # ---------------
   # Read
@@ -176,7 +177,7 @@ defmodule Tymeslot.Integrations.Video do
 
   # OAuth providers are created after OAuth callback normally; allow manual create only for none
   defp do_create_integration(provider, attrs)
-       when provider in [:google_meet, :teams, :none] do
+       when provider in [:google_meet, :teams, :zoom, :none] do
     VideoIntegrationQueries.create(attrs)
   end
 
@@ -258,6 +259,19 @@ defmodule Tymeslot.Integrations.Video do
     end
   end
 
+  @doc """
+  Removes every video integration matching `(provider, provider_account_id)`,
+  regardless of the owning user. Used by provider-initiated revocation flows —
+  for example, when a Zoom user uninstalls the app, Zoom's deauthorization
+  webhook tells us the Zoom account ID but not the Tymeslot user, so we strip
+  every Tymeslot integration referencing that account.
+  """
+  @spec disconnect_by_provider_account(String.t(), String.t()) :: {:ok, non_neg_integer()}
+  def disconnect_by_provider_account(provider, provider_account_id)
+      when is_binary(provider) and is_binary(provider_account_id) do
+    VideoIntegrationQueries.delete_by_provider_account(provider, provider_account_id)
+  end
+
   # ---------------
   # Toggle active
   # ---------------
@@ -316,6 +330,12 @@ defmodule Tymeslot.Integrations.Video do
 
   @spec handle_meeting_event(map(), atom(), map()) :: :ok | {:error, any()}
   defdelegate handle_meeting_event(meeting_context, event, additional_data \\ %{}), to: Rooms
+
+  @spec update_meeting_room(pos_integer() | nil, keyword()) :: :ok | {:error, any()}
+  defdelegate update_meeting_room(user_id, opts), to: Rooms
+
+  @spec delete_meeting_room(pos_integer() | nil, keyword()) :: :ok | {:error, any()}
+  defdelegate delete_meeting_room(user_id, opts), to: Rooms
 
   @spec generate_meeting_metadata(map()) :: map()
   defdelegate generate_meeting_metadata(meeting_context), to: Rooms
@@ -463,6 +483,9 @@ defmodule Tymeslot.Integrations.Video do
       :teams ->
         teams_oauth_authorization_url(user_id)
 
+      :zoom ->
+        zoom_oauth_authorization_url(user_id)
+
       _other ->
         {:error, "Provider does not support OAuth"}
     end
@@ -496,6 +519,9 @@ defmodule Tymeslot.Integrations.Video do
         url = teams_oauth_helper().authorization_url(user_id, redirect_uri, opts)
         {:ok, url}
 
+      :zoom ->
+        zoom_oauth_reconnect_url(user_id, opts)
+
       _other ->
         {:error, "Provider does not support OAuth reconnection"}
     end
@@ -512,6 +538,10 @@ defmodule Tymeslot.Integrations.Video do
     Application.get_env(:tymeslot, :teams_oauth_helper, TeamsOAuthHelper)
   end
 
+  defp zoom_oauth_helper do
+    Application.get_env(:tymeslot, :zoom_oauth_helper, ZoomOAuthHelper)
+  end
+
   defp normalize_provider(p) when is_atom(p), do: p
 
   defp normalize_provider(p) when is_binary(p) do
@@ -521,6 +551,7 @@ defmodule Tymeslot.Integrations.Video do
       "mirotalk" -> :mirotalk
       "custom" -> :custom
       "none" -> :none
+      "zoom" -> :zoom
       _other -> :unknown
     end
   end
@@ -567,4 +598,33 @@ defmodule Tymeslot.Integrations.Video do
   rescue
     error -> {:error, format_outlook_oauth_error(error)}
   end
+
+  defp zoom_oauth_authorization_url(user_id) do
+    redirect_uri = "#{Endpoint.url()}/auth/zoom/video/callback"
+    url = zoom_oauth_helper().authorization_url(user_id, redirect_uri)
+    {:ok, url}
+  rescue
+    error -> {:error, format_zoom_oauth_error(error)}
+  end
+
+  defp zoom_oauth_reconnect_url(user_id, opts) do
+    redirect_uri = "#{Endpoint.url()}/auth/zoom/video/callback"
+    url = zoom_oauth_helper().authorization_url(user_id, redirect_uri, opts)
+    {:ok, url}
+  rescue
+    error -> {:error, format_zoom_oauth_error(error)}
+  end
+
+  defp format_zoom_oauth_error(%RuntimeError{message: "Zoom OAuth State Secret not configured"}),
+    do:
+      "Zoom OAuth is not configured. Please set ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET, and ZOOM_STATE_SECRET environment variables."
+
+  defp format_zoom_oauth_error(%RuntimeError{message: "Zoom Client ID not configured"}),
+    do: "Zoom OAuth is not configured. Please set ZOOM_CLIENT_ID environment variable."
+
+  defp format_zoom_oauth_error(%RuntimeError{message: "Zoom Client Secret not configured"}),
+    do: "Zoom OAuth is not configured. Please set ZOOM_CLIENT_SECRET environment variable."
+
+  defp format_zoom_oauth_error(error),
+    do: "Failed to setup Zoom OAuth: #{Exception.message(error)}"
 end

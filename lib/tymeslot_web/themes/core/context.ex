@@ -11,6 +11,8 @@ defmodule TymeslotWeb.Themes.Core.Context do
 
   require Logger
 
+  @type layout :: :default | :column
+
   @type t :: %__MODULE__{
           theme_id: String.t(),
           theme_key: atom(),
@@ -18,7 +20,8 @@ defmodule TymeslotWeb.Themes.Core.Context do
           customizations: map() | nil,
           capabilities: map(),
           metadata: map(),
-          preview_mode: boolean()
+          preview_mode: boolean(),
+          layout: layout()
         }
 
   defstruct theme_id: nil,
@@ -27,7 +30,20 @@ defmodule TymeslotWeb.Themes.Core.Context do
             customizations: nil,
             capabilities: %{},
             metadata: %{},
-            preview_mode: false
+            preview_mode: false,
+            layout: :default
+
+  @doc """
+  Returns the list of allowed layout values for embed snippets and URL params.
+
+  This is the authoritative list for the dashboard helpers — it drives input
+  validation and snippet emission. The server-side resolver (`apply_layout/2`)
+  currently only recognises `"column"` as a non-default layout; all other
+  values (including `"default"`) leave the struct's zero value (`:default`)
+  unchanged.
+  """
+  @spec valid_layouts() :: [String.t()]
+  def valid_layouts, do: ~w(default column)
 
   @doc """
   Creates a new theme context from a theme ID and optional profile.
@@ -71,22 +87,41 @@ defmodule TymeslotWeb.Themes.Core.Context do
     context = new(theme_id, profile, preview: preview_mode)
 
     if context do
-      # Handle primary-color override
-      if primary_color = params["primary-color"] do
-        # Validate hex color format to prevent CSS injection
-        if Regex.match?(~r/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, primary_color) do
-          customizations = Map.put(context.customizations || %{}, "primary_color", primary_color)
-          %{context | customizations: customizations}
-        else
-          context
-        end
-      else
-        context
-      end
+      context
+      |> apply_primary_color(params)
+      |> apply_layout(params)
     else
       nil
     end
   end
+
+  # Validate hex color format to prevent CSS injection.
+  defp apply_primary_color(context, params) do
+    with primary_color when is_binary(primary_color) <- params["primary-color"],
+         true <- Regex.match?(~r/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, primary_color) do
+      customizations = Map.put(context.customizations || %{}, "primary_color", primary_color)
+      %{context | customizations: customizations}
+    else
+      _invalid -> context
+    end
+  end
+
+  # An explicit `?layout=` param takes priority over everything else — including
+  # `?embed=1`. "column" forces the wide-canvas layout; any other value
+  # (including "default") keeps the struct's zero value `:default`. This is
+  # the opt-out path for embed users who want the standalone-style centred
+  # layout despite being rendered inside an iframe.
+  defp apply_layout(context, %{"layout" => "column"}), do: %{context | layout: :column}
+  defp apply_layout(context, %{"layout" => _explicit}), do: context
+
+  # No explicit layout, but `?embed=1` is present — embed.js sets this on
+  # every iframe URL it generates. Embedded contexts default to :column because
+  # the wide-canvas variant adapts to any container size, whereas the centred
+  # :default looks cramped in narrow WordPress columns and sidebars.
+  # Only the literal value "1" activates embed mode, matching EmbedTokenPlug.
+  defp apply_layout(context, %{"embed" => "1"}), do: %{context | layout: :column}
+
+  defp apply_layout(context, _params), do: context
 
   @doc """
   Updates the context with new customizations.
@@ -131,7 +166,8 @@ defmodule TymeslotWeb.Themes.Core.Context do
       theme_key: context.theme_key,
       theme_module: context.module,
       theme_customization: context.customizations,
-      theme_preview: context.preview_mode
+      theme_preview: context.preview_mode,
+      embed_layout: context.layout
     }
   end
 

@@ -2,7 +2,7 @@
 <html
   lang={assigns[:locale] || "en"}
   class={"scheduling-app theme-#{assigns[:theme_id] || "1"} #{theme_class(assigns[:theme_id] || "1")}"}
-  data-preferred-embed-height={preferred_embed_height(assigns[:theme_id] || "1")}
+  data-embed-layout={to_string(assigns[:embed_layout] || :default)}
 >
   <head>
     <meta charset="utf-8" />

@@ -5,6 +5,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CustomFields.AnswerRenderer
+
   @doc """
   Generates an ICS file content for a meeting/appointment.
 
@@ -108,7 +110,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     method_line = if method == :none, do: "", else: "METHOD:PUBLISH\n"
     status = status_for(method, event.status)
 
-    """
+    fold_lines("""
     BEGIN:VCALENDAR
     VERSION:2.0
     #{method_line}PRODID:-//Tymeslot//Tymeslot 1.0//EN
@@ -125,8 +127,70 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     #{attendee_line}STATUS:#{status}
     END:VEVENT
     END:VCALENDAR
-    """
+    """)
   end
+
+  # RFC 5545 §3.1 — content lines must not exceed 75 octets (excluding line
+  # terminator). Fold by inserting CRLF + a single SPACE continuation marker.
+  # First segment may be up to 75 octets; each continuation segment up to 74
+  # octets (the leading SPACE occupies one octet of the 75-octet allowance).
+  # We split at UTF-8 character boundaries so multi-byte codepoints are never
+  # torn in half.
+  defp fold_lines(ical_string) do
+    ical_string
+    |> String.split("\n")
+    |> Enum.map_join("\n", &fold_line/1)
+  end
+
+  defp fold_line(line) do
+    fold_line_acc(line, _first = true, _acc = [])
+  end
+
+  defp fold_line_acc(<<>>, _first, acc), do: acc |> Enum.reverse() |> Enum.join("\r\n ")
+
+  defp fold_line_acc(rest, first, acc) do
+    limit = if first, do: 75, else: 74
+
+    {chunk, remaining} = take_octets(rest, limit)
+    fold_line_acc(remaining, false, [chunk | acc])
+  end
+
+  # Takes up to `max_bytes` octets from `binary`, never splitting a UTF-8
+  # multi-byte codepoint. Returns `{taken, rest}`.
+  defp take_octets(binary, max_bytes) when byte_size(binary) <= max_bytes do
+    {binary, ""}
+  end
+
+  defp take_octets(binary, max_bytes) do
+    # Walk forward from max_bytes to find a UTF-8 codepoint boundary.
+    split_at = safe_utf8_split(binary, max_bytes)
+    <<chunk::binary-size(split_at), rest::binary>> = binary
+    {chunk, rest}
+  end
+
+  # Returns the largest byte offset ≤ `pos` at which `binary` can be split
+  # without tearing a UTF-8 multi-byte sequence. UTF-8 continuation bytes
+  # have the bit pattern 10xxxxxx (0x80–0xBF); back up past them to land on
+  # a leading byte.
+  defp safe_utf8_split(binary, pos) do
+    pos = min(pos, byte_size(binary))
+    retreat_to_boundary(binary, pos)
+  end
+
+  defp retreat_to_boundary(_binary, 0), do: 0
+
+  defp retreat_to_boundary(binary, pos) do
+    byte = :binary.at(binary, pos - 1)
+
+    if continuation_byte?(byte) do
+      retreat_to_boundary(binary, pos - 1)
+    else
+      pos
+    end
+  end
+
+  # UTF-8 continuation bytes: 10xxxxxx
+  defp continuation_byte?(byte), do: byte >= 0x80 and byte <= 0xBF
 
   defp status_for(:cancel, _status), do: "CANCELLED"
   defp status_for(_method, status), do: status
@@ -172,7 +236,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     parts = [
       Map.get(meeting_details, :description),
       build_attendee_message_section(meeting_details),
-      build_video_url_section(meeting_details)
+      build_video_url_section(meeting_details),
+      build_custom_answers_section(meeting_details)
     ]
 
     parts
@@ -215,6 +280,23 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
       true ->
         ""
+    end
+  end
+
+  defp build_custom_answers_section(meeting_details) do
+    snap = Map.get(meeting_details, :custom_fields_snapshot)
+    ans = Map.get(meeting_details, :custom_field_answers, %{})
+
+    case snap do
+      list when is_list(list) and list != [] ->
+        Enum.map_join(list, "\n", fn d ->
+          label = d["label"]
+          value = AnswerRenderer.render(d, Map.get(ans || %{}, d["id"]))
+          "#{label}: #{value}"
+        end)
+
+      _other ->
+        nil
     end
   end
 

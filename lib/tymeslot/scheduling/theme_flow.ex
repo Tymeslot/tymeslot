@@ -17,7 +17,7 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
 
   @spec resolve_meeting_type_for_slug(pos_integer(), String.t()) :: map() | nil
   def resolve_meeting_type_for_slug(user_id, slug) do
-    MeetingTypes.find_by_slug(user_id, slug)
+    Demo.find_by_slug(user_id, slug)
   end
 
   @spec build_booking_form_data(String.t() | nil, integer() | nil) :: map()

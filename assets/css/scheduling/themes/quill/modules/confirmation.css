@@ -147,11 +147,41 @@
   font-size: var(--theme-font-size-xs);
 }
 
+/* ============================================================================
+   OUTER WRAPPERS — viewport-driven
+   .confirmation-outer and .confirmation-container sit OUTSIDE the
+   .glass-morphism-card, so they cannot be queried by @container scheduling.
+   Their padding/width remains a function of the iframe/page width.
+   ============================================================================ */
 @media (min-width: 640px) {
   .confirmation-outer {
     padding: var(--space-xs) var(--space-md);
   }
+}
 
+@media (min-width: 768px) {
+  .confirmation-outer {
+    padding: var(--space-md) var(--space-md);
+  }
+}
+
+@media (min-width: 1024px) {
+  .confirmation-container {
+    max-width: 72rem;
+  }
+
+  .confirmation-outer {
+    padding: var(--space-2xl) var(--space-md);
+  }
+}
+
+/* ============================================================================
+   CARD INTERIOR — container-driven
+   Everything from .confirmation-content inward lives inside the card and
+   scales with the card's own width, so the confirmation step adapts the
+   same way whether it's a wide standalone page or a narrow embed.
+   ============================================================================ */
+@container scheduling (min-width: 640px) {
   .confirmation-heading-row {
     gap: var(--space-md);
     margin-bottom: var(--space-md);
@@ -192,11 +222,7 @@
   }
 }
 
-@media (min-width: 768px) {
-  .confirmation-outer {
-    padding: var(--space-md) var(--space-md);
-  }
-
+@container scheduling (min-width: 768px) {
   .confirmation-content {
     padding: var(--space-lg);
   }
@@ -225,15 +251,7 @@
   }
 }
 
-@media (min-width: 1024px) {
-  .confirmation-container {
-    max-width: 72rem;
-  }
-
-  .confirmation-outer {
-    padding: var(--space-2xl) var(--space-md);
-  }
-
+@container scheduling (min-width: 1024px) {
   .confirmation-content {
     padding: var(--space-2xl);
   }
@@ -287,4 +305,49 @@ html.quill-theme[data-embedded] .confirmation-badge-dot {
 html.quill-theme[data-embedded] .confirmation-badge-dot svg {
   width: 10px;
   height: 10px;
+}
+
+/* ============================================================================
+   CUSTOM FIELD ANSWERS — "Your answers" section on the confirmation step
+   ============================================================================ */
+
+.custom-answers-section {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-medium);
+}
+
+.custom-answers-heading {
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--theme-text-secondary, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  margin: 0 0 var(--space-xs);
+}
+
+.custom-answers-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+}
+
+.custom-answer-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--space-sm);
+}
+
+.custom-answer-label {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--theme-text-secondary, #94a3b8);
+}
+
+.custom-answer-value {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--theme-text, #e2e8f0);
+  margin: 0;
 }

@@ -43,19 +43,23 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
       </label>
 
       <div class="timezone-dropdown-wrapper">
-        <button
-          class="timezone-trigger"
-          phx-click="toggle_timezone_dropdown"
-          phx-target={@target}
-          type="button"
+        <.dropdown
+          id="quill-timezone-dropdown"
+          open={@timezone_dropdown_open}
+          on_toggle="toggle_timezone_dropdown"
+          on_close="close_timezone_dropdown"
+          target={@target}
+          position={:bottom_start}
+          role="dialog"
+          trigger_class="timezone-trigger"
+          class="timezone-dropdown"
+          unstyled={true}
+          aria-label="Select timezone"
         >
+        <:trigger>
           <div class="timezone-trigger-row">
             <div class="timezone-trigger-info">
-              <.timezone_flag
-                timezone={@user_timezone}
-                class="timezone-flag"
-                fallback_icon="🌐"
-              />
+              <.timezone_flag timezone={@user_timezone} class="timezone-flag" fallback_icon="🌐" />
               <div class="timezone-trigger-text">
                 <div class="timezone-name">
                   {Timezones.format(@user_timezone)}
@@ -86,56 +90,43 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
               </svg>
             </div>
           </div>
-        </button>
-
-        <%!-- Dropdown: uses phx-click-away (not phx-blur) so clicks inside
-             the list don't close the dropdown prematurely --%>
-        <%= if @timezone_dropdown_open do %>
-          <div
-            class="timezone-dropdown"
-            phx-click-away="close_timezone_dropdown"
-            phx-target={@target}
-          >
-            <div class="timezone-search-wrapper">
-              <input
-                id="timezone-search"
-                type="text"
-                class="timezone-search"
-                phx-keyup="search_timezone"
-                phx-target={@target}
-                name="search"
-                value={@timezone_search}
-                placeholder={gettext("Search cities, countries, or timezones...")}
-                autocomplete="off"
-                phx-hook="AutoFocus"
-              />
-            </div>
-
-            <div class="timezone-options scroll-y">
-              <%= for {label, value, offset} <- Timezones.search(@timezone_search) do %>
-                <button
-                  class="timezone-option"
-                  phx-click="change_timezone"
-                  phx-value-timezone={value}
-                  phx-target={@target}
-                  type="button"
-                >
-                  <div class="timezone-option-content">
-                    <.timezone_flag
-                      timezone={value}
-                      class="timezone-option-flag"
-                      fallback_icon="🌐"
-                    />
-                    <div class="timezone-option-text">
-                      <div class="timezone-option-label">{label}</div>
-                      <div class="timezone-option-offset">{offset}</div>
-                    </div>
-                  </div>
-                </button>
-              <% end %>
-            </div>
+        </:trigger>
+        <:panel>
+          <div class="timezone-search-wrapper">
+            <input
+              id="timezone-search"
+              type="text"
+              class="timezone-search"
+              phx-keyup="search_timezone"
+              phx-target={@target}
+              name="search"
+              value={@timezone_search}
+              placeholder={gettext("Search cities, countries, or timezones...")}
+              autocomplete="off"
+              phx-hook="AutoFocus"
+            />
           </div>
-        <% end %>
+          <div class="timezone-options scroll-y">
+            <%= for {label, value, offset} <- Timezones.search(@timezone_search) do %>
+              <button
+                class="timezone-option"
+                phx-click="change_timezone"
+                phx-value-timezone={value}
+                phx-target={@target}
+                type="button"
+              >
+                <div class="timezone-option-content">
+                  <.timezone_flag timezone={value} class="timezone-option-flag" fallback_icon="🌐" />
+                  <div class="timezone-option-text">
+                    <div class="timezone-option-label">{label}</div>
+                    <div class="timezone-option-offset">{offset}</div>
+                  </div>
+                </div>
+              </button>
+            <% end %>
+          </div>
+        </:panel>
+      </.dropdown>
       </div>
     </div>
     """

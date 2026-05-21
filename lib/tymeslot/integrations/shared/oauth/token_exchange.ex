@@ -34,10 +34,19 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
           String.t(),
           String.t(),
           String.t(),
-          String.t()
+          String.t(),
+          keyword()
         ) ::
           {:ok, map()} | {:error, String.t()}
-  def exchange_code_for_tokens(code, redirect_uri, token_url, client_id, client_secret, scope) do
+  def exchange_code_for_tokens(
+        code,
+        redirect_uri,
+        token_url,
+        client_id,
+        client_secret,
+        scope,
+        opts \\ []
+      ) do
     body = %{
       code: code,
       client_id: client_id,
@@ -47,7 +56,16 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
       scope: scope
     }
 
-    case http_client().request(:post, token_url, URI.encode_query(body), @default_headers, []) do
+    body =
+      if Keyword.get(opts, :omit_body_credentials, false) do
+        Map.drop(body, [:client_id, :client_secret])
+      else
+        body
+      end
+
+    headers = Keyword.get(opts, :headers, @default_headers)
+
+    case http_client().request(:post, token_url, URI.encode_query(body), headers, []) do
       {:ok, response} ->
         %{status: status, body: resp_body} = normalize_response(response)
 
@@ -119,7 +137,8 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
   defp parse_token_response(response_body, fallback_refresh_token, fallback_scope) do
     case Jason.decode(response_body) do
       {:ok, response} ->
-        expires_at = DateTime.add(DateTime.utc_now(), response["expires_in"], :second)
+        expires_in = if is_integer(response["expires_in"]), do: response["expires_in"], else: 3600
+        expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
 
         {:ok,
          %{

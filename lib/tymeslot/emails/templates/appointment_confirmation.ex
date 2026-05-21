@@ -65,6 +65,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
+      #{MeetingComponents.custom_answers_section(appointment_details)}
+
       #{if attendee_video_url do
         MeetingComponents.video_meeting_section(@intent, attendee_video_url,
         title: dgettext("emails", "Ready to join when it's time?"),
@@ -130,6 +132,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       #{MeetingComponents.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time_owner_tz, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type, video_url: Map.get(appointment_details, :meeting_url), video_url_role: "host"}, organizer_locale(appointment_details))}
 
+      #{MeetingComponents.custom_answers_section(appointment_details)}
       #{if organiser_payment, do: organizer_payment_block_html(organiser_payment)}
 
       #{Text.section_title(dgettext("emails", "Need to make changes?"))}
@@ -183,6 +186,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       )
 
     action_links = TextBodyHelper.format_action_links(appointment_details, locale)
+    custom_answers = TextBodyHelper.format_custom_answers(appointment_details, locale)
 
     payment_section =
       case payment_receipt do
@@ -198,7 +202,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     #{dgettext("emails", "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you.")}
 
     #{dgettext("emails", "MEETING DETAILS:")}
-    #{meeting_details}#{video_section}
+    #{meeting_details}#{video_section}#{custom_answers}
     #{action_links}#{payment_section}
     #{if appointment_details.organizer_contact_info, do: "\n#{dgettext("emails", "QUESTIONS?")}\n#{appointment_details.organizer_contact_info}\n"}
     #{if appointment_details.reminders_summary, do: "\n#{appointment_details.reminders_summary}\n", else: ""}
@@ -233,6 +237,12 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         organizer_locale(appointment_details)
       )
 
+    custom_answers =
+      TextBodyHelper.format_custom_answers(
+        appointment_details,
+        organizer_locale(appointment_details)
+      )
+
     payment_section =
       case organiser_payment do
         nil -> ""
@@ -245,7 +255,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     #{dgettext("emails", "%{name} has scheduled a meeting with you.", name: appointment_details.attendee_name)}#{attendee_info}
 
     #{dgettext("emails", "MEETING DETAILS:")}
-    #{meeting_details}#{video_section}#{action_links}#{payment_section}
+    #{meeting_details}#{video_section}#{custom_answers}#{action_links}#{payment_section}
+
     #{dgettext("emails", "PREPARATION REMINDERS:")}
     #{dgettext("emails", "- Review any relevant materials")}
     #{dgettext("emails", "- Prepare an agenda if needed")}

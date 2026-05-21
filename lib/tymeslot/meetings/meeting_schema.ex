@@ -60,6 +60,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           provider_event_id: String.t() | nil,
           ical_sequence: integer(),
           last_notified_state: map(),
+          custom_fields_snapshot: [map()],
+          custom_field_answers: map(),
           organizer_user: any() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -154,6 +156,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:ical_sequence, :integer, default: 0)
     field(:last_notified_state, :map, default: %{})
 
+    # Custom booking fields
+    field(:custom_fields_snapshot, {:array, :map}, default: [])
+    field(:custom_field_answers, :map, default: %{})
+
     timestamps(type: :utc_datetime)
   end
 
@@ -209,7 +215,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :calendar_sync_status_dismissed_at,
     :provider_event_id,
     :ical_sequence,
-    :last_notified_state
+    :last_notified_state,
+    :custom_fields_snapshot,
+    :custom_field_answers
   ]
 
   @valid_statuses [

@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   Renders a provider icon for calendar, video, and OAuth providers.
 
   Supports different sizes (compact, medium, large) and all providers:
-  - Video: mirotalk, google_meet, teams, custom, in_person, local, none
+  - Video: mirotalk, google_meet, teams, zoom, custom, in_person, local, none
   - Calendar: google, google_calendar, outlook, outlook_calendar, nextcloud, nextcloud_calendar, caldav, radicale, zimbra, mailbox_org
   - OAuth: google, github
 
@@ -66,7 +66,17 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
 
   defp determine_provider_type(provider) do
     case provider do
-      p when p in ["mirotalk", "google_meet", "teams", "custom", "in_person", "local", "none"] ->
+      p
+      when p in [
+             "mirotalk",
+             "google_meet",
+             "teams",
+             "zoom",
+             "custom",
+             "in_person",
+             "local",
+             "none"
+           ] ->
         "video"
 
       p when p in ["github", "oauth"] ->

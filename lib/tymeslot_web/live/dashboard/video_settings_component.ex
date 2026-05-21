@@ -72,6 +72,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
       "teams" ->
         initiate_oauth(socket, :teams)
 
+      "zoom" ->
+        initiate_oauth(socket, :zoom)
+
       _other ->
         {:noreply,
          socket
@@ -561,6 +564,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
       :mirotalk ->
         {"Self-hosted peer-to-peer video meetings", "Connect MiroTalk"}
+
+      :zoom ->
+        {"OAuth integration with automatic Zoom meeting creation", "Connect Zoom"}
 
       :custom ->
         {"Any video platform with static meeting URLs", "Add Custom Link"}

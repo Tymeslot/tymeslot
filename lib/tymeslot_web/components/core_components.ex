@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
     Brand,
     Buttons,
     Containers,
+    Dropdown,
     Feedback,
     Flash,
     Forms,
@@ -268,6 +269,68 @@ defmodule TymeslotWeb.Components.CoreComponents do
 
   @spec tabs(map()) :: Phoenix.LiveView.Rendered.t()
   def tabs(assigns), do: Navigation.tabs(assigns)
+
+  # ========== DROPDOWN ==========
+
+  @doc """
+  Standardised dropdown shell: a trigger button that reveals a floating panel.
+
+  The component owns the `div.relative` wrapper, the `<button>` trigger, and the
+  conditional panel. Callers manage open/close state via parent assigns and handle
+  `on_toggle` / `on_close` events. Theme-specific visual styling passes through `class`.
+
+  ## Attributes
+
+    * `:id` - Required. DOM id on the outer container.
+    * `:open` - Required. Whether the panel is visible.
+    * `:on_toggle` - Required. Event name fired on trigger button click.
+    * `:on_close` - Required. Event name fired by `phx-click-away` and Escape key when open.
+    * `:target` - `phx-target` forwarded to the trigger button and the click-away handler.
+    * `:position` - Panel placement: `:bottom_end` (default), `:bottom_start`, `:top_end`, `:top_start`.
+    * `:role` - ARIA role on the panel `<div>`. Default `"menu"`. Pass `"dialog"` for panels that contain non-menuitem content such as inputs or checkboxes.
+    * `:aria_orientation` - ARIA orientation on the panel. Default `"vertical"`.
+    * `:trigger_class` - CSS classes on the trigger `<button>`.
+    * `:class` - Additional CSS classes appended to the panel `<div>`.
+    * `:unstyled` - When `true`, the panel receives only the caller-supplied `class` — the default Tailwind positioning/animation utilities and `position` shorthand are omitted. Use from self-contained themes that own their own positioning via theme CSS. Functional bindings (click-away, Escape) remain active. Default `false`.
+    * `:aria-label` - Forwarded to the trigger button.
+
+  ## Slots
+
+    * `:trigger` - Required. Inner content of the trigger button.
+    * `:panel` - Required. Content rendered inside the panel.
+  """
+  attr :id, :string, required: true
+  attr :open, :boolean, required: true
+  attr :on_toggle, :string, required: true
+  attr :on_close, :string, required: true
+  attr :target, :any, default: nil
+
+  attr :position, :atom,
+    default: :bottom_end,
+    values: [:bottom_end, :bottom_start, :top_end, :top_start]
+
+  attr :role, :string, default: "menu"
+  attr :aria_orientation, :string, default: "vertical"
+  attr :trigger_class, :string, default: nil
+  attr :class, :string, default: nil
+  attr :unstyled, :boolean, default: false
+  attr :rest, :global, include: ~w(aria-label)
+  slot :trigger, required: true
+  slot :panel, required: true
+  @spec dropdown(map()) :: Phoenix.LiveView.Rendered.t()
+  def dropdown(assigns), do: Dropdown.dropdown(assigns)
+
+  @doc "Standard clickable row inside a dropdown panel. Accepts `navigate`, `href`, `phx-click`, and all `phx-value-*` via `:global`."
+  attr :label, :string, required: true
+  attr :icon, :string, default: nil
+  attr :danger, :boolean, default: false
+  attr :rest, :global, include: ~w(navigate href patch method)
+  @spec dropdown_item(map()) :: Phoenix.LiveView.Rendered.t()
+  def dropdown_item(assigns), do: Dropdown.dropdown_item(assigns)
+
+  @doc "Thin horizontal separator inside a dropdown panel."
+  @spec dropdown_divider(map()) :: Phoenix.LiveView.Rendered.t()
+  def dropdown_divider(assigns), do: Dropdown.dropdown_divider(assigns)
 
   # ========== FLASH MESSAGES ==========
 

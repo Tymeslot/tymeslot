@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.CustomFields
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Security.InputProcessor
@@ -74,6 +75,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
           {:ok, Phoenix.LiveView.Socket.t()}
           | {:redirect, Phoenix.LiveView.Socket.t()}
           | {:awaiting_payment, Phoenix.LiveView.Socket.t()}
+          | {:honeypot, Phoenix.LiveView.Socket.t()}
           | {:error, Phoenix.LiveView.Socket.t()}
   def submit_booking(socket, booking_params) do
     Logger.info("Submit event triggered for booking form")
@@ -85,14 +87,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       case InputProcessor.validate_form(booking_params, BookingConfig.booking_field_spec()) do
         {:ok, sanitized_params} ->
           Logger.info("Form validation passed, proceeding to booking")
-
-          with {:ok, socket} <- check_duplicate_submission(socket),
-               {:ok, socket} <- check_rate_limit(socket),
-               :ok <- verify_recaptcha(socket, booking_params) do
-            process_booking_submission(socket, sanitized_params)
-          else
-            {:error, socket} -> {:error, socket}
-          end
+          validate_and_submit(socket, sanitized_params, booking_params)
 
         {:error, errors} ->
           Logger.warning("Form validation failed", errors: inspect(errors))
@@ -210,6 +205,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> assign(:meeting_uid, meeting.uid)
       |> assign(:name, validated_data["name"])
       |> assign(:email, validated_data["email"])
+      |> assign(:custom_fields_snapshot, Map.get(validated_data, "custom_fields_snapshot", []))
+      |> assign(:custom_field_answers, Map.get(validated_data, "custom_field_answers", %{}))
       |> Flash.put_flash(:info, success_message)
 
     {:ok, socket}
@@ -260,6 +257,37 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
   # Private functions
 
+  defp validate_and_submit(socket, sanitized_params, booking_params) do
+    engine = socket.assigns[:engine]
+    snapshot = if engine, do: engine.definitions, else: []
+    raw_answers = if engine, do: engine.answers, else: %{}
+
+    with {:ok, custom_answers} <- CustomFields.validate_answers(snapshot, raw_answers),
+         {:ok, socket} <- check_duplicate_submission(socket),
+         {:ok, socket} <- check_rate_limit(socket),
+         :ok <- verify_recaptcha(socket, booking_params) do
+      enriched_params =
+        sanitized_params
+        |> Map.put("custom_fields_snapshot", snapshot)
+        |> Map.put("custom_field_answers", custom_answers)
+
+      process_booking_submission(socket, enriched_params)
+    else
+      {:error, field_errors} when is_map(field_errors) and not is_struct(field_errors) ->
+        Logger.warning("Custom field validation failed", errors: inspect(field_errors))
+
+        socket =
+          socket
+          |> assign(:validation_errors, %{custom_fields: field_errors})
+          |> Flash.put_flash(:error, "Please correct the errors below.")
+
+        {:error, socket}
+
+      {:error, socket} ->
+        {:error, socket}
+    end
+  end
+
   defp honeypot_tripped?(params) do
     case Map.get(params, "website") do
       value when is_binary(value) -> value != ""
@@ -276,12 +304,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     socket =
       socket
       |> assign(:submitting, false)
-      |> Flash.put_flash(
-        :info,
-        "Booking submitted successfully! You'll receive a confirmation email shortly."
-      )
+      |> assign(:custom_fields_snapshot, [])
+      |> assign(:custom_field_answers, %{})
 
-    {:ok, socket}
+    {:honeypot, socket}
   end
 
   defp log_honeypot(socket) do
@@ -343,7 +369,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         attendee_locale:
           socket.assigns[:locale] || Application.get_env(:tymeslot, :locales)[:default] || "en",
         # Always true for public booking flow
-        with_video_room: true
+        with_video_room: true,
+        custom_fields_snapshot: Map.get(sanitized_params, "custom_fields_snapshot", []),
+        custom_field_answers: Map.get(sanitized_params, "custom_field_answers", %{})
       }
     }
 

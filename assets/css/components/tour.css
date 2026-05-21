@@ -1,0 +1,92 @@
+/* ==========================================================================
+   Dashboard Tour — Overlay, spotlight, and tooltip
+   ==========================================================================
+
+   Post-onboarding guided tour. Dimming is produced by either:
+     - the spotlight's massive box-shadow (anchored / spotlit steps), OR
+     - the full-viewport `__backdrop` element (centered steps with no anchor).
+   The JS hook toggles which element is visible per step.
+   ========================================================================== */
+
+.dashboard-tour {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.dashboard-tour__backdrop {
+  /* Visible by default so the welcome step (first paint) shows a dimmed
+     dashboard immediately. The JS hook hides it for spotlit steps where
+     the spotlight's box-shadow provides the dim instead. */
+  position: fixed;
+  inset: 0;
+  display: block;
+  background: rgba(20, 20, 40, 0.55);
+  pointer-events: none;
+}
+
+.dashboard-tour__spotlight {
+  position: fixed;
+  display: none;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 0 0 9999px rgba(20, 20, 40, 0.55);
+  pointer-events: none;
+  transition:
+    top var(--duration-200) ease,
+    left var(--duration-200) ease,
+    width var(--duration-200) ease,
+    height var(--duration-200) ease;
+}
+
+.dashboard-tour__tooltip {
+  /* Default to centred so the welcome step renders correctly on the
+     first paint. The JS hook overrides position/transform for spotlit
+     steps. Prevents a flash of top-left positioning before JS runs. */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  pointer-events: auto;
+  max-width: 22rem;
+  padding: var(--spacing-5) var(--spacing-6);
+  background-color: var(--color-bg-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  font-family: var(--font-family-sans);
+}
+
+.dashboard-tour__progress {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+  color: var(--color-neutral-500);
+  margin: 0 0 var(--spacing-2);
+}
+
+.dashboard-tour__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--spacing-2);
+  color: var(--color-neutral-900);
+  line-height: var(--line-height-snug);
+}
+
+.dashboard-tour__body {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-neutral-700);
+  margin: 0 0 var(--spacing-5);
+}
+
+.dashboard-tour__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.dashboard-tour__spacer {
+  flex: 1;
+}
+

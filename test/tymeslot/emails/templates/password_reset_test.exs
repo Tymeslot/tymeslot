@@ -26,13 +26,14 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
       assert html =~ "Bob Smith"
     end
 
-    test "uses email as fallback when name is nil" do
+    test "uses a neutral greeting when name is nil, never the email address" do
       user = build_user_data(%{name: nil, email: "reset@example.com"})
       reset_url = "https://example.com/reset/token789"
 
       html = PasswordReset.render(user, reset_url)
 
-      assert html =~ "reset@example.com"
+      assert html =~ "Hi there,"
+      refute html =~ "Hi reset@example.com"
     end
 
     test "includes reset URL" do
@@ -87,11 +88,12 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
       assert text =~ "2 hours"
     end
 
-    test "uses email as fallback when name is nil" do
+    test "uses a neutral greeting when name is nil, never the email address" do
       user = build_user_data(%{name: nil, email: "reset@example.com"})
       text = PasswordReset.render_text(user, "https://example.com/reset/token")
 
-      assert text =~ "reset@example.com"
+      assert text =~ "Hi there,"
+      refute text =~ "Hi reset@example.com"
     end
   end
 

@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
 
           <div class="min-w-0">
             <%!-- Title --%>
-            <div class="flex items-center gap-2 mb-1">
+            <div class="flex items-center gap-2 mb-1 flex-wrap">
               <h4 class="text-base font-bold text-tymeslot-900 truncate">
                 <%= if @integration.name == @provider_display_name do %>
                   {@provider_display_name}
@@ -43,6 +43,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
                   {@integration.name}
                 <% end %>
               </h4>
+              <span
+                :if={@integration.needs_reauth}
+                class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-token-2xs font-black uppercase tracking-widest"
+              >
+                Reconnect required
+              </span>
               <UIComponents.health_warning_badge
                 :if={@health_state && @health_state.status == :unhealthy}
               />
@@ -59,6 +65,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
                   <span class="font-semibold text-turquoise-700">OAuth Provider</span>
                 <% "teams" -> %>
                   <span class="font-semibold text-turquoise-700">OAuth Provider</span>
+                <% "zoom" -> %>
+                  <span class="font-semibold text-turquoise-700">OAuth Provider</span>
                 <% "mirotalk" -> %>
                   <span class="font-semibold text-blue-700">Self-Hosted</span>
                 <% "custom" -> %>
@@ -71,7 +79,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
             <%!-- Details --%>
             <div class="text-sm text-tymeslot-600 break-all">
               <%= if @integration.is_active do %>
-                <%= if @integration.provider in ["google_meet", "teams"] do %>
+                <%= if @integration.provider in ["google_meet", "teams", "zoom"] do %>
                   <span>Authenticated via OAuth</span>
                 <% end %>
                 <%= if @integration.base_url do %>
@@ -108,7 +116,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
           <% end %>
 
           <button
-            :if={@integration.provider in ["google_meet", "teams"]}
+            :if={@integration.provider in ["google_meet", "teams", "zoom"]}
             phx-click="reconnect_integration"
             phx-value-id={@integration.id}
             phx-target={@myself}
@@ -183,6 +191,18 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
             <% end %>
           </button>
         <% end %>
+
+        <button
+          :if={@integration.provider in ["google_meet", "teams", "zoom"]}
+          phx-click="reconnect_integration"
+          phx-value-id={@integration.id}
+          phx-target={@myself}
+          class="btn btn-sm btn-secondary"
+          title="Reconnect OAuth"
+        >
+          <.icon name="hero-arrow-path" class="w-4 h-4 mr-1" />
+          Reconnect
+        </button>
 
         <button
           phx-click="show"

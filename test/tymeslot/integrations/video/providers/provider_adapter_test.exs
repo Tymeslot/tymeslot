@@ -3,8 +3,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
   @moduletag :integrations
 
   import Mox
+  alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
+  alias Tymeslot.ZoomOAuthHelperMock
 
   setup :verify_on_exit!
 
@@ -63,6 +65,62 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
     test "returns error for unknown provider" do
       assert {:error, "Unknown video provider type: unknown"} =
                ProviderAdapter.create_meeting_room(:unknown, %{})
+    end
+  end
+
+  describe "update_meeting_room/3" do
+    test "dispatches to provider callback and propagates return value (Zoom)" do
+      config = %{
+        oauth_scope: "meeting:write:meeting",
+        access_token: "test-token",
+        refresh_token: "test-refresh",
+        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+        meeting_start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
+        meeting_end_time: DateTime.add(DateTime.utc_now(), 5400, :second)
+      }
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok = ProviderAdapter.update_meeting_room(:zoom, "987654321", config)
+    end
+
+    test "returns :ok via no-op fallback for providers without the callback (MiroTalk)" do
+      assert :ok = ProviderAdapter.update_meeting_room(:mirotalk, "room123", %{})
+    end
+
+    test "returns error for unknown provider" do
+      assert {:error, _reason} = ProviderAdapter.update_meeting_room(:unknown, "room123", %{})
+    end
+  end
+
+  describe "delete_meeting_room/3" do
+    test "dispatches to provider callback and propagates return value (Zoom)" do
+      config = %{
+        oauth_scope: "meeting:write:meeting",
+        access_token: "test-token",
+        refresh_token: "test-refresh",
+        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok = ProviderAdapter.delete_meeting_room(:zoom, "987654321", config)
+    end
+
+    test "returns :ok via no-op fallback for providers without the callback (MiroTalk)" do
+      assert :ok = ProviderAdapter.delete_meeting_room(:mirotalk, "room123", %{})
+    end
+
+    test "returns error for unknown provider" do
+      assert {:error, _reason} = ProviderAdapter.delete_meeting_room(:unknown, "room123", %{})
     end
   end
 

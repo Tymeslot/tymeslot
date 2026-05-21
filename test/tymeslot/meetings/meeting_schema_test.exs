@@ -4,7 +4,47 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
   @moduletag :database
   @moduletag :schema
 
+  alias Ecto.{Changeset, UUID}
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+
+  @valid_base_attrs %{
+    uid: "test-uid-123",
+    title: "Test Meeting",
+    start_time: ~U[2024-01-01 10:00:00Z],
+    end_time: ~U[2024-01-01 11:00:00Z],
+    organizer_name: "Test Organizer",
+    organizer_email: "organizer@test.com",
+    attendee_name: "Test Attendee",
+    attendee_email: "attendee@test.com"
+  }
+
+  describe "custom_fields_snapshot and custom_field_answers" do
+    test "custom_fields_snapshot defaults to empty list" do
+      assert %Meeting{custom_fields_snapshot: []} = %Meeting{}
+    end
+
+    test "custom_field_answers defaults to empty map" do
+      assert %Meeting{custom_field_answers: %{}} = %Meeting{}
+    end
+
+    test "changeset accepts a snapshot and answers map" do
+      field_id = UUID.generate()
+      snap = [%{"id" => field_id, "type" => "short_text", "label" => "Company"}]
+      ans = %{field_id => "Acme"}
+
+      attrs =
+        Map.merge(@valid_base_attrs, %{
+          custom_fields_snapshot: snap,
+          custom_field_answers: ans
+        })
+
+      cs = Meeting.changeset(%Meeting{}, attrs)
+
+      assert cs.valid?
+      assert Changeset.get_field(cs, :custom_fields_snapshot) == snap
+      assert Changeset.get_field(cs, :custom_field_answers) == ans
+    end
+  end
 
   describe "business logic" do
     test "prevents meetings with end time before start time" do

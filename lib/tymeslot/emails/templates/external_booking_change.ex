@@ -20,6 +20,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     Styles,
     TemplateHelper,
     Text,
+    TextBodyHelper,
     TimezoneHelper
   }
 
@@ -78,6 +79,8 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
     #{MeetingComponents.meeting_details_table(%{date: owner_time, start_time: owner_time, duration: meeting.duration, location: meeting.location, location_type: if(meeting.meeting_url, do: :video, else: :custom), meeting_type: meeting.meeting_type},
     locale)}
+
+    #{MeetingComponents.custom_answers_section(meeting)}
 
     #{explanation_section(discrepancy)}
 
@@ -158,6 +161,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   defp render_text(meeting, owner_time, :deleted, locale) do
     dashboard_url = UrlBuilder.build_url("/dashboard/meetings")
     view_url = meeting.view_url || dashboard_url
+    custom_answers = TextBodyHelper.format_custom_answers(meeting, locale)
 
     """
     #{dgettext("emails", "Meeting Deleted in External Calendar")}
@@ -169,7 +173,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     #{dgettext("emails", "Time:")} #{Formatting.format_time(owner_time, locale)}
     #{dgettext("emails", "Duration:")} #{Formatting.format_duration(meeting.duration, locale)}
     #{dgettext("emails", "Location:")} #{meeting.location || dgettext("emails", "Not specified")}
-
+    #{custom_answers}
     #{dgettext("emails", "If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up.")}
 
     #{dgettext("emails", "View meeting:")}
@@ -182,6 +186,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   defp render_text(meeting, owner_time, :modified, locale) do
     dashboard_url = UrlBuilder.build_url("/dashboard/meetings")
     view_url = meeting.view_url || dashboard_url
+    custom_answers = TextBodyHelper.format_custom_answers(meeting, locale)
 
     """
     #{dgettext("emails", "Meeting Rescheduled in External Calendar")}
@@ -193,7 +198,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     #{dgettext("emails", "Time:")} #{Formatting.format_time(owner_time, locale)}
     #{dgettext("emails", "Duration:")} #{Formatting.format_duration(meeting.duration, locale)}
     #{dgettext("emails", "Location:")} #{meeting.location || dgettext("emails", "Not specified")}
-
+    #{custom_answers}
     #{dgettext("emails", "If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details.")}
 
     #{dgettext("emails", "View meeting:")}

@@ -139,12 +139,12 @@ Plus: two themes (Quill, Rhythm) with dark mode, five languages (English, German
 <tr>
 <td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/video/medium/google_meet.png" alt="Google Meet" height="44" /><br><sub>Google Meet</sub></td>
 <td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/video/medium/teams.png" alt="Microsoft Teams" height="44" /><br><sub>Microsoft Teams</sub></td>
+<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/video/medium/zoom.png" alt="Zoom" height="44" /><br><sub>Zoom</sub></td>
 <td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/video/medium/mirotalk.png" alt="MiroTalk P2P" height="44" /><br><sub>MiroTalk P2P</sub></td>
-<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/video/medium/local.png" alt="In-Person / Phone" height="44" /><br><sub>In-Person / Phone</sub></td>
 </tr>
 <tr>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/local.png" alt="In-Person / Phone" height="44" /><br><sub>In-Person / Phone</sub></td>
 <td align="center"><img src="./priv/static/icons/providers/video/medium/custom.png" alt="Custom" height="44" /><br><sub>Custom Links</sub></td>
-<td>&nbsp;</td>
 <td>&nbsp;</td>
 <td>&nbsp;</td>
 </tr>
