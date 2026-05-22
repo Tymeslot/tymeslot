@@ -91,7 +91,12 @@ defmodule Tymeslot.Webhooks.InputValidationTest do
       assert Map.has_key?(errors, :events)
     end
 
-    test "strips XSS from name field" do
+    test "preserves angle-bracket and quote characters in name verbatim" do
+      # Webhook names are free-form text. XSS is prevented at render time by
+      # Phoenix template auto-escaping; SQL injection is prevented by Ecto
+      # parameterised queries. The input validator does not strip these
+      # symbols so legitimate names like "Luka <> Paul" or
+      # "Webhook 'Production'" round-trip unchanged.
       params = %{
         "name" => "<script>alert(1)</script>My Webhook",
         "url" => "https://example.com/hook",
@@ -99,10 +104,10 @@ defmodule Tymeslot.Webhooks.InputValidationTest do
       }
 
       assert {:ok, validated} = InputValidation.validate_webhook_form(params)
-      refute String.contains?(validated.name, "<script>")
+      assert validated.name == "<script>alert(1)</script>My Webhook"
     end
 
-    test "strips SQL injection pattern from name field" do
+    test "preserves SQL-comment punctuation in name verbatim" do
       params = %{
         "name" => "Webhook'; DROP TABLE webhooks; --",
         "url" => "https://example.com/hook",
@@ -110,7 +115,7 @@ defmodule Tymeslot.Webhooks.InputValidationTest do
       }
 
       assert {:ok, validated} = InputValidation.validate_webhook_form(params)
-      refute String.contains?(validated.name, "DROP TABLE")
+      assert validated.name == "Webhook'; DROP TABLE webhooks; --"
     end
 
     test "preserves percent-encoded url unchanged" do
@@ -157,11 +162,9 @@ defmodule Tymeslot.Webhooks.InputValidationTest do
       assert {:error, _msg} = InputValidation.validate_name_update(long_name)
     end
 
-    test "strips XSS from name" do
-      assert {:ok, sanitized} =
+    test "preserves angle-bracket characters in name verbatim" do
+      assert {:ok, "<script>alert(1)</script>My Webhook"} =
                InputValidation.validate_name_update("<script>alert(1)</script>My Webhook")
-
-      refute String.contains?(sanitized, "<script>")
     end
 
     test "returns error for non-string name" do

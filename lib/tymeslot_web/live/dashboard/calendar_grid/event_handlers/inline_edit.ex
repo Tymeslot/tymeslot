@@ -363,7 +363,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
       event ->
         with {:ok, sanitised} <-
-               UniversalSanitizer.sanitize_and_validate(new_value, max_length: max_length),
+               UniversalSanitizer.sanitize_and_validate(new_value,
+                 mode: :plain_text,
+                 max_length: max_length
+               ),
              trimmed = String.trim(sanitised),
              false <- trimmed == (Map.get(event, field) || ""),
              :ok <- EditWorkflow.assert_owns_event(socket, event),
@@ -396,7 +399,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             {:noreply, socket}
 
           {:error, reason} when is_binary(reason) ->
-            send(self(), {:flash, {:error, "Input too long"}})
+            message =
+              if String.starts_with?(reason, "Input exceeds"),
+                do: "Input too long",
+                else: "Input contains invalid characters"
+
+            send(self(), {:flash, {:error, message}})
             {:noreply, socket}
         end
     end

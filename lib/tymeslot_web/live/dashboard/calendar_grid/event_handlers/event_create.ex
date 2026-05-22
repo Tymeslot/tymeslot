@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
         {:noreply, socket}
 
       creating_event ->
-        case UniversalSanitizer.sanitize_and_validate(title, max_length: 500) do
+        case UniversalSanitizer.sanitize_and_validate(title, mode: :plain_text, max_length: 500) do
           {:ok, sanitised} ->
             creating = Map.put(creating_event, :title, sanitised)
             {:noreply, assign(socket, :creating_event, creating)}
