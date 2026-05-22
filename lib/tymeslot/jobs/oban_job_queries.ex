@@ -23,6 +23,27 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
+  Returns distinct `user_id` values from `args` for jobs of the given worker
+  whose `args["action"]` is in `actions` and whose state is not yet terminal
+  (`available`, `scheduled`, `executing`, or `retryable`).
+
+  Useful for workers that must avoid enqueueing additional actions for a user
+  while any related action is still pending.
+  """
+  @spec user_ids_with_pending_jobs_for_actions(String.t(), [String.t()]) :: [integer()]
+  def user_ids_with_pending_jobs_for_actions(worker_name, actions) do
+    Repo.all(
+      from(j in Job,
+        where: j.worker == ^worker_name,
+        where: j.state in ["available", "scheduled", "executing", "retryable"],
+        where: fragment("?->>'action' = ANY(?)", j.args, ^actions),
+        distinct: true,
+        select: fragment("(?->>'user_id')::bigint", j.args)
+      )
+    )
+  end
+
+  @doc """
   Gets all stuck executing jobs older than the given threshold.
   """
   @spec get_stuck_executing_jobs(DateTime.t()) :: [Job.t()]
