@@ -290,5 +290,18 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       assert email.html_body != nil
       assert email.text_body != nil
     end
+
+    test "subject is free of CR/LF when attendee name contains header-injection payload" do
+      details =
+        build_appointment_details(%{
+          attendee_name: "Bob\r\nCc: someone@evil.com"
+        })
+
+      email =
+        AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
+
+      refute email.subject =~ "\r"
+      refute email.subject =~ "\n"
+    end
   end
 end

@@ -372,4 +372,68 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
       assert diff_seconds < 60
     end
   end
+
+  describe "confirmation email subject CRLF injection prevention" do
+    test "booking and email job complete without error when organiser name carries a header-injection payload",
+         %{} do
+      # Create a separate organiser whose name contains a CRLF injection payload.
+      # The policy resolves organizer_name as: profile.full_name || user.name,
+      # so setting user.name is sufficient when full_name is nil (default profile).
+      #
+      # Note: email *subject* CRLF stripping is verified at the template layer in
+      # reschedule_request_test.exs and sibling tests. Here we verify that the full
+      # booking → EmailWorker pipeline runs to completion — the CRLF payload does
+      # not crash the template renderer, the sanitizer, or the delivery path.
+      # (Swoosh.Adapters.Test delivers via CircuitBreaker GenServer, so the
+      # {:email, ...} message does not reach the test process mailbox — see
+      # test/tymeslot/emails/delivery_test.exs for the explanation.)
+      malicious_name = "Evil Organiser\r\nBcc: attacker@evil.com"
+
+      user =
+        insert(:user,
+          email: "injector@example.com",
+          name: malicious_name
+        )
+
+      _profile = insert(:profile, user: user, timezone: "America/New_York")
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          name: "Injection Test Meeting",
+          duration_minutes: 30,
+          is_active: true
+        )
+
+      meeting_params = %{
+        date: Date.add(Date.utc_today(), 3),
+        time: "11:00",
+        duration: "30min",
+        user_timezone: "America/New_York",
+        organizer_user_id: user.id,
+        meeting_type_id: meeting_type.id
+      }
+
+      form_data = %{
+        "name" => "Test Attendee",
+        "email" => "attendee@example.com",
+        "message" => "Test booking"
+      }
+
+      assert {:ok, meeting} = Create.execute(meeting_params, form_data)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_confirmation_emails",
+                 "meeting_id" => meeting.id
+               })
+
+      # If sanitization crashed or the template raised, the job would return
+      # {:error, _} or {:discard, _} — asserting :ok proves the CRLF payload
+      # was handled safely end-to-end. The DB flags confirm both emails sent.
+      updated_meeting = Repo.get!(MeetingSchema, meeting.id)
+      assert updated_meeting.organizer_email_sent == true
+      assert updated_meeting.attendee_email_sent == true
+    end
+  end
 end

@@ -54,7 +54,9 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
       MjmlEmail.base_email()
       |> to({meeting.organizer_name || organizer_email, organizer_email})
-      |> subject(email_subject(discrepancy, meeting.title, date_short))
+      |> subject(
+        Sanitise.sanitize_for_header(email_subject(discrepancy, meeting.title, date_short))
+      )
       |> html_body(html_body)
       |> text_body(text_body)
     end)

@@ -144,6 +144,16 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
                "Expected text_body for locale #{locale}"
       end
     end
+
+    test "subject is free of CR/LF when event title contains header-injection payload" do
+      details =
+        build_invitation_details(%{event_title: "Sprint Planning\r\nBcc: attacker@evil.com"})
+
+      email = CalendarInvitation.render("guest@example.com", details)
+
+      refute email.subject =~ "\r"
+      refute email.subject =~ "\n"
+    end
   end
 
   defp build_invitation_details(overrides \\ %{}) do
