@@ -216,7 +216,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   defp validate_meeting_name("", _metadata), do: {:error, %{name: "Meeting name is required"}}
 
   defp validate_meeting_name(name, metadata) when is_binary(name) do
-    case UniversalSanitizer.sanitize_and_validate(name, allow_html: false, metadata: metadata) do
+    case UniversalSanitizer.sanitize_and_validate(name, mode: :plain_text, metadata: metadata) do
       {:ok, sanitized_name} ->
         trimmed = String.trim(sanitized_name)
 
@@ -299,7 +299,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
   defp validate_meeting_description(description, metadata) when is_binary(description) do
     case UniversalSanitizer.sanitize_and_validate(description,
-           allow_html: false,
+           mode: :plain_text,
            metadata: metadata
          ) do
       {:ok, sanitized_description} ->

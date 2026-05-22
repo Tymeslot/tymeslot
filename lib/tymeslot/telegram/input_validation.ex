@@ -82,7 +82,7 @@ defmodule Tymeslot.Telegram.InputValidation do
   def validate_name("", errors), do: {nil, Map.put(errors, :name, "is required")}
 
   def validate_name(name, errors) when is_binary(name) do
-    case UniversalSanitizer.sanitize_and_validate(name, max_length: 255) do
+    case UniversalSanitizer.sanitize_and_validate(name, mode: :plain_text, max_length: 255) do
       {:ok, sanitized} ->
         if String.length(sanitized) < 1 do
           {nil, Map.put(errors, :name, "is required")}

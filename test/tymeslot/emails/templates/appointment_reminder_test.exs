@@ -108,6 +108,18 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
       assert email.subject != nil
       assert email.to != []
     end
+
+    test "organizer subject is free of CR/LF when attendee name contains header-injection payload" do
+      details =
+        build_appointment_details(%{
+          attendee_name: "Bob\r\nBcc: attacker@evil.com"
+        })
+
+      email = AppointmentReminder.render(:organizer, "organizer@example.com", details)
+
+      refute email.subject =~ "\r"
+      refute email.subject =~ "\n"
+    end
   end
 
   describe "render/3 as attendee" do

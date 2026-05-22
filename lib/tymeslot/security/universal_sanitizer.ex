@@ -19,7 +19,16 @@ defmodule Tymeslot.Security.UniversalSanitizer do
   - `:max_input_bytes` - Maximum allowed input size in bytes before sanitization (default: 1_000_000)
   - `:max_length` - Maximum allowed length (default: 10_000)
   - `:on_too_long` - Behavior when input exceeds `:max_length` (`:error` or `:truncate`, default: `:error`)
-  - `:allow_html` - Allow basic HTML tags (default: false)
+  - `:mode` - Sanitisation profile (`:strict` or `:plain_text`, default: `:strict`).
+    Use `:plain_text` for free-form user-authored text (event titles, names,
+    descriptions) that is only ever rendered through Phoenix templates (which
+    auto-escape) and bound to Ecto queries as parameters. Plain-text mode
+    skips HTML/SQL/path/protocol stripping so symbols like `<>`, `--`,
+    `<email@x.com>` round-trip unchanged. It still validates UTF-8, strips
+    null bytes, normalises to NFC, enforces length/byte limits, and trims
+    whitespace. Do NOT use `:plain_text` for values that get interpolated
+    into raw HTML strings, URLs, file paths, or shell commands.
+  - `:allow_html` - Allow basic HTML tags (default: false). Ignored when `:mode` is `:plain_text`.
   - `:log_events` - Log security events (default: true)
   - `:metadata` - Additional metadata for logging
 
@@ -27,12 +36,15 @@ defmodule Tymeslot.Security.UniversalSanitizer do
 
       iex> sanitize_and_validate("Hello world")
       {:ok, "Hello world"}
-      
+
       iex> sanitize_and_validate("<script>alert('xss')</script>")
       {:ok, "alert('xss')"}
-      
+
       iex> sanitize_and_validate("'; DROP TABLE users; --")
       {:ok, "' users "}
+
+      iex> sanitize_and_validate("Luka <> Paul", mode: :plain_text)
+      {:ok, "Luka <> Paul"}
   """
   @spec sanitize_and_validate(any(), keyword()) :: {:ok, any()} | {:error, String.t()}
   def sanitize_and_validate(input, opts \\ [])
@@ -41,6 +53,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
     max_input_bytes = Keyword.get(opts, :max_input_bytes, 1_000_000)
     max_length = Keyword.get(opts, :max_length, 10_000)
     on_too_long = Keyword.get(opts, :on_too_long, :error)
+    mode = Keyword.get(opts, :mode, :strict)
     allow_html = Keyword.get(opts, :allow_html, false)
     log_events = Keyword.get(opts, :log_events, true)
     metadata = Keyword.get(opts, :metadata, %{})
@@ -49,7 +62,8 @@ defmodule Tymeslot.Security.UniversalSanitizer do
     with :ok <- validate_utf8(input, log_events, field, metadata),
          {:ok, bounded} <-
            enforce_max_input_bytes(input, max_input_bytes, on_too_long, log_events, metadata),
-         {:ok, sanitized} <- sanitize_input(bounded, allow_html, log_events, field, metadata),
+         {:ok, sanitized} <-
+           sanitize_input(bounded, mode, allow_html, log_events, field, metadata),
          {:ok, validated} <-
            validate_length(sanitized, max_length, on_too_long, log_events, metadata) do
       {:ok, String.trim(validated)}
@@ -168,7 +182,18 @@ defmodule Tymeslot.Security.UniversalSanitizer do
     })
   end
 
-  defp sanitize_input(input, allow_html, log_events, field, metadata) do
+  defp sanitize_input(input, :plain_text, _allow_html, _log_events, _field, _metadata) do
+    # Plain-text mode: trust downstream layers (Phoenix auto-escaping, Ecto
+    # parameterised queries) for XSS/SQLi protection. Only apply checks that
+    # have value regardless of how the string is later consumed: encoding
+    # integrity, null-byte stripping, and Unicode normalisation. Length and
+    # whitespace handling happen in the caller pipeline.
+    input
+    |> remove_null_bytes()
+    |> then(&{:ok, &1})
+  end
+
+  defp sanitize_input(input, _strict, allow_html, log_events, field, metadata) do
     input
     |> decode_url_recursive(3)
     |> remove_null_bytes()

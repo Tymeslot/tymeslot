@@ -124,5 +124,17 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
 
       refute email.html_body =~ "<script>"
     end
+
+    test "subject is free of CR/LF when event title contains header-injection payload" do
+      details =
+        build_event_update_details(%{
+          event_title: "Planning Session\r\nBcc: attacker@evil.com"
+        })
+
+      email = EventUpdateNotification.render("a@example.com", details)
+
+      refute email.subject =~ "\r"
+      refute email.subject =~ "\n"
+    end
   end
 end

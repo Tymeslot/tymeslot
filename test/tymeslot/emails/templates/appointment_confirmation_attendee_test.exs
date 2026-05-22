@@ -294,6 +294,20 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendeeTest do
     end
   end
 
+  describe "subject CRLF injection prevention" do
+    test "subject is free of CR/LF when organizer name contains header-injection payload" do
+      details =
+        build_appointment_details(%{
+          organizer_name: "Alice\r\nBcc: attacker@evil.com"
+        })
+
+      email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
+
+      refute email.subject =~ "\r"
+      refute email.subject =~ "\n"
+    end
+  end
+
   describe "attendee locale rendering" do
     test "renders without error for all supported locales" do
       for locale <- ["en", "de", "uk", "fr", "it"] do

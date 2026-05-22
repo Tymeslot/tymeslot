@@ -196,4 +196,14 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       assert email.text_body =~ "Choose a New Time"
     end
   end
+
+  describe "subject CRLF injection prevention" do
+    test "subject is free of CR/LF when meeting title contains header-injection payload" do
+      meeting = insert(:meeting, title: "Demo\r\nBcc: attacker@evil.com")
+      email = RescheduleRequest.render(meeting)
+
+      refute email.subject =~ "\r"
+      refute email.subject =~ "\n"
+    end
+  end
 end

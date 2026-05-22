@@ -70,17 +70,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       assert html =~ "Team Standup"
     end
 
-    test "sanitises malicious input in title", %{conn: conn, event: event} do
+    test "preserves benign angle-bracket symbols in title", %{conn: conn, event: event} do
+      # Plain-text fields rely on Phoenix template auto-escaping for XSS
+      # protection rather than stripping every `<...>` substring. This keeps
+      # natural punctuation like `<>`, `<3`, and `<email@x.com>` intact when
+      # the user types them as part of a meeting title.
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       html =
         lv
         |> element("#calendar-grid")
-        |> render_hook("update_event_title", %{"value" => "<script>alert('xss')</script>"})
+        |> render_hook("update_event_title", %{"value" => "Luka <> Paul"})
 
-      refute html =~ "<script>"
-      assert html =~ "alert"
+      assert html =~ "Luka &lt;&gt; Paul"
     end
 
     test "rejects title exceeding max length", %{conn: conn, event: event} do

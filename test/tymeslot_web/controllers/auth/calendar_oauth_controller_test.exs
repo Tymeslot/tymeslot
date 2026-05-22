@@ -27,6 +27,24 @@ defmodule TymeslotWeb.CalendarOAuthControllerTest do
       :meck.new(mod, [:passthrough])
     end
 
+    # OAuthStateGuard.provider_secret/1 raises if these aren't set, even when
+    # State.validate/2 is mecked — provider_secret/1 is evaluated as an
+    # argument before the mecked call is invoked.
+    original_google_oauth = Application.get_env(:tymeslot, :google_oauth)
+    original_outlook_oauth = Application.get_env(:tymeslot, :outlook_oauth)
+
+    Application.put_env(
+      :tymeslot,
+      :google_oauth,
+      Keyword.merge(original_google_oauth || [], state_secret: "test_google_state_secret")
+    )
+
+    Application.put_env(
+      :tymeslot,
+      :outlook_oauth,
+      Keyword.merge(original_outlook_oauth || [], state_secret: "test_outlook_state_secret")
+    )
+
     case Process.whereis(DashboardCache) do
       nil -> DashboardCache.start_link([])
       _pid -> :ok
@@ -39,6 +57,18 @@ defmodule TymeslotWeb.CalendarOAuthControllerTest do
         rescue
           _error -> :ok
         end
+      end
+
+      if is_nil(original_google_oauth) do
+        Application.delete_env(:tymeslot, :google_oauth)
+      else
+        Application.put_env(:tymeslot, :google_oauth, original_google_oauth)
+      end
+
+      if is_nil(original_outlook_oauth) do
+        Application.delete_env(:tymeslot, :outlook_oauth)
+      else
+        Application.put_env(:tymeslot, :outlook_oauth, original_outlook_oauth)
       end
     end)
 
