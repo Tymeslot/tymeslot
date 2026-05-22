@@ -13,7 +13,14 @@ defmodule Tymeslot.Integrations.Calendar.CalendarBehaviour do
   @callback get_events_for_month(pos_integer(), pos_integer(), pos_integer(), String.t()) ::
               {:ok, list()} | {:error, any()}
   @callback get_event(binary(), pos_integer() | nil) :: {:ok, any()} | {:error, any()}
-  @callback create_event(map(), pos_integer() | MeetingSchema.t() | MeetingTypeSchema.t() | nil) ::
+  @callback create_event(
+              map(),
+              pos_integer()
+              | MeetingSchema.t()
+              | MeetingTypeSchema.t()
+              | {pos_integer(), pos_integer()}
+              | nil
+            ) ::
               {:ok, any()} | {:error, any()}
   @callback update_event(
               binary(),

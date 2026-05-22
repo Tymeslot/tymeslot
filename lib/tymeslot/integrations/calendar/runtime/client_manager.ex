@@ -74,7 +74,13 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   Gets the calendar client for creating bookings from a Meeting,
   MeetingType, or bare user id context.
   """
-  @spec booking_client(user_id() | MeetingSchema.t() | MeetingTypeSchema.t() | nil) ::
+  @spec booking_client(
+          user_id()
+          | {integration_id(), user_id()}
+          | MeetingSchema.t()
+          | MeetingTypeSchema.t()
+          | nil
+        ) ::
           client() | nil
   def booking_client(context \\ nil) do
     context
