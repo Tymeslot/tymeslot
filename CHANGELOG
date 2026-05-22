@@ -1,4 +1,15 @@
 
+[1.0.3]
+* core: Allow moving events between calendar integrations
+* core: Prevent email header injection in subject lines
+* core: Use a neutral greeting in transactional emails when no name is set
+* core: Route demo meeting-type slug lookup through Demo facade
+* core: Skip force-with-lease for new remote branches in sync-core.sh
+* core: Respect calendar selection in meeting picker and grid
+* core: Show placeholder hints in form inputs
+* core: Prevent CalDAV event delete and update from failing through circuit breaker
+* core: Prevent Docker container from failing to restart with an existing volume
+* core: Preserve special characters in meeting titles and labels
 [1.0.2]
 * core: Prevent duplicate booking invites from CalDAV servers (closes #41)
 [1.0.1]
