@@ -25,7 +25,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
            required(:start_time) => DateTime.t() | Date.t() | nil,
            required(:end_time) => DateTime.t() | Date.t() | nil,
            required(:status) => String.t() | nil,
-           required(:transparency) => String.t() | nil
+           required(:transparency) => String.t() | nil,
+           required(:meet_url) => String.t() | nil
          }
 
   @typep calendar_entry :: %{
@@ -114,8 +115,30 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       start_time: parse_datetime(google_event["start"]),
       end_time: parse_datetime(google_event["end"]),
       status: google_event["status"],
-      transparency: google_event["transparency"]
+      transparency: google_event["transparency"],
+      meet_url: extract_meet_url(google_event)
     }
+  end
+
+  @doc false
+  @spec extract_meet_url(map()) :: String.t() | nil
+  def extract_meet_url(google_event) when is_map(google_event) do
+    case get_in(google_event, ["conferenceData", "entryPoints"]) do
+      entry_points when is_list(entry_points) ->
+        video_entry_point_uri(entry_points)
+
+      _other ->
+        nil
+    end
+  end
+
+  def extract_meet_url(_other), do: nil
+
+  defp video_entry_point_uri(entry_points) do
+    case Enum.find(entry_points, fn ep -> ep["entryPointType"] == "video" end) do
+      %{"uri" => uri} when is_binary(uri) and uri != "" -> uri
+      _other -> nil
+    end
   end
 
   @spec get_calendar_api_module() :: module()

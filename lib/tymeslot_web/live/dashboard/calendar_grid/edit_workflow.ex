@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
+  alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
@@ -587,7 +588,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   end
 
   defp provision_video_link(event, integration_id, user_id) do
-    case video_rooms_module().create_meeting_room(user_id, integration_id: integration_id) do
+    opts = [
+      integration_id: integration_id,
+      event_details: EventDetails.from_grid_event(event)
+    ]
+
+    case video_rooms_module().create_meeting_room(user_id, opts) do
       {:ok, %{room_data: room_data}} ->
         url = room_data[:meeting_url] || room_data[:join_url]
         persist_video_link(event, url)

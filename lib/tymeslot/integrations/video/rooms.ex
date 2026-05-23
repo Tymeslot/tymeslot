@@ -30,11 +30,19 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   defp do_create_meeting_room(user_id, opts) do
     case get_provider_config(user_id, opts) do
       {:ok, provider_type, config} ->
+        config = maybe_attach_event_details(config, opts)
         create_room_with_provider(provider_type, config)
 
       {:error, reason} = error ->
         Logger.error("Failed to get provider configuration", reason: inspect(reason))
         error
+    end
+  end
+
+  defp maybe_attach_event_details(config, opts) do
+    case Keyword.get(opts, :event_details) do
+      details when is_map(details) -> Map.put(config, :event_details, details)
+      _other -> config
     end
   end
 
