@@ -92,6 +92,27 @@ defmodule Tymeslot.MeetingPayments do
     do: ConnectAccountQueries.live_for_user(user_id)
 
   @doc """
+  Returns `true` when the instance has a real Stripe platform API key
+  configured — i.e. a `STRIPE_SECRET_KEY` env var was supplied and is not
+  the `"sk_test_fake"` placeholder used in dev/test fixtures. The admin UI
+  uses this to lock the "Meeting payments" toggle into the disabled state
+  when an operator has not yet supplied platform credentials.
+  """
+  @spec platform_configured?() :: boolean()
+  def platform_configured? do
+    key =
+      Application.get_env(:tymeslot, :stripe_secret_key) ||
+        Application.get_env(:stripity_stripe, :api_key)
+
+    case key do
+      nil -> false
+      "" -> false
+      "sk_test_fake" -> false
+      _real -> true
+    end
+  end
+
+  @doc """
   Returns `true` if the user's Connect account has charges enabled.
   """
   @spec charges_enabled_for_user?(integer()) :: boolean()

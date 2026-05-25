@@ -35,6 +35,7 @@ defmodule Tymeslot.AppSettings do
 
   alias Tymeslot.AppSettings.{AppSettingsQueries, AppSettingsSchema}
   alias Tymeslot.Auth
+  alias Tymeslot.MeetingPayments
 
   @type setting_key ::
           :registration_enabled
@@ -48,6 +49,7 @@ defmodule Tymeslot.AppSettings do
           | :recaptcha_booking_min_score
           | :admin_alerts_enabled
           | :admin_alert_email
+          | :meeting_payments_enabled
 
   @type effective_source :: :db | :config | :default
   @type effective_value :: %{
@@ -258,6 +260,10 @@ defmodule Tymeslot.AppSettings do
     if would_cause_lockout?(%{key => false}), do: [false], else: []
   end
 
+  defp locked_states_for(:meeting_payments_enabled) do
+    if MeetingPayments.platform_configured?(), do: [], else: [true]
+  end
+
   defp locked_states_for(_key), do: []
 
   # Computes what the effective value of `key` would be after applying `attrs`,
@@ -302,6 +308,7 @@ defmodule Tymeslot.AppSettings do
   def default_for(:recaptcha_booking_min_score), do: 0.3
   def default_for(:admin_alerts_enabled), do: false
   def default_for(:admin_alert_email), do: nil
+  def default_for(:meeting_payments_enabled), do: false
 
   # Projection from setting key to its location in the Application env.
   # Single-atom paths live at the top level; two-atom paths live nested
