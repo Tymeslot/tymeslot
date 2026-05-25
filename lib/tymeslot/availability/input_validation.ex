@@ -244,7 +244,7 @@ defmodule Tymeslot.Availability.InputValidation do
   defp validate_break_label("", _metadata), do: {:ok, "Break"}
 
   defp validate_break_label(label, metadata) when is_binary(label) do
-    case UniversalSanitizer.sanitize_and_validate(label, allow_html: false, metadata: metadata) do
+    case UniversalSanitizer.sanitize_and_validate(label, mode: :plain_text, metadata: metadata) do
       {:ok, sanitized_label} ->
         cond do
           String.length(sanitized_label) > 50 ->

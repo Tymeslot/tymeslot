@@ -252,6 +252,114 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
     end
   end
 
+  describe "mode: :plain_text" do
+    test "preserves angle-bracket symbols that strict mode would strip" do
+      preserved = [
+        "Luka <> Paul",
+        "1 < 2 > 0",
+        "<email@example.com>",
+        "<3 my team",
+        "value <- pipe",
+        "a<b>c"
+      ]
+
+      for input <- preserved do
+        assert {:ok, ^input} =
+                 UniversalSanitizer.sanitize_and_validate(input,
+                   mode: :plain_text,
+                   log_events: false
+                 ),
+               "Expected #{inspect(input)} to round-trip unchanged in :plain_text mode"
+      end
+    end
+
+    test "preserves SQL-comment and dangerous-protocol substrings as plain text" do
+      preserved = [
+        "Lunch -- 30 min",
+        "deploy /* prod */ today",
+        "talk about javascript: best practices",
+        "'; DROP TABLE users; --",
+        "../assets/logo.png"
+      ]
+
+      for input <- preserved do
+        assert {:ok, ^input} =
+                 UniversalSanitizer.sanitize_and_validate(input,
+                   mode: :plain_text,
+                   log_events: false
+                 ),
+               "Expected #{inspect(input)} to round-trip unchanged in :plain_text mode"
+      end
+    end
+
+    test "still validates UTF-8" do
+      invalid = <<0xC3, 0x28>>
+
+      assert {:error, "Invalid text encoding"} =
+               UniversalSanitizer.sanitize_and_validate(invalid,
+                 mode: :plain_text,
+                 log_events: false
+               )
+    end
+
+    test "still strips null bytes" do
+      assert {:ok, "abdef"} =
+               UniversalSanitizer.sanitize_and_validate("ab\x00def",
+                 mode: :plain_text,
+                 log_events: false
+               )
+    end
+
+    test "still enforces max_length" do
+      assert {:error, "Input exceeds maximum length (3 characters)"} =
+               UniversalSanitizer.sanitize_and_validate("abcd",
+                 mode: :plain_text,
+                 max_length: 3,
+                 log_events: false
+               )
+    end
+
+    test "still enforces max_input_bytes" do
+      input = String.duplicate("a", 11)
+
+      assert {:error, "Input exceeds maximum size (10 bytes)"} =
+               UniversalSanitizer.sanitize_and_validate(input,
+                 mode: :plain_text,
+                 max_input_bytes: 10,
+                 log_events: false
+               )
+    end
+
+    test "still trims surrounding whitespace" do
+      assert {:ok, "Luka <> Paul"} =
+               UniversalSanitizer.sanitize_and_validate("  Luka <> Paul  ",
+                 mode: :plain_text,
+                 log_events: false
+               )
+    end
+
+    test "does not URL-decode encoded sequences" do
+      # Strict mode runs the input through URI.decode up to three times to
+      # surface encoded malicious patterns. Plain-text mode skips that step
+      # so a literal "%20" or "%3Cscript%3E" in a user-authored title is
+      # preserved verbatim.
+      assert {:ok, "Lunch %20 break"} =
+               UniversalSanitizer.sanitize_and_validate("Lunch %20 break",
+                 mode: :plain_text,
+                 log_events: false
+               )
+    end
+
+    test "ignores allow_html option when mode is :plain_text" do
+      assert {:ok, "<b>hello</b>"} =
+               UniversalSanitizer.sanitize_and_validate("<b>hello</b>",
+                 mode: :plain_text,
+                 allow_html: true,
+                 log_events: false
+               )
+    end
+  end
+
   # Captures Logger.warning calls with their metadata by attaching a temporary
   # :logger handler that forwards every log event to the test process. Returns
   # the list of captured events along with the text-level log output so

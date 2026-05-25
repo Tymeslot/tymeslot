@@ -11,6 +11,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
   alias Tymeslot.Emails.Shared.{
     MeetingComponents,
     MjmlEmail,
+    Sanitise,
     TemplateHelper,
     Text,
     TextBodyHelper
@@ -76,8 +77,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
       MjmlEmail.base_email()
       |> to({appointment_details.attendee_name, attendee_email})
       |> subject(
-        dgettext("emails", "Reminder: Our meeting is %{time_until}",
-          time_until: appointment_details.time_until
+        Sanitise.sanitize_for_header(
+          dgettext("emails", "Reminder: Our meeting is %{time_until}",
+            time_until: appointment_details.time_until
+          )
         )
       )
       |> html_body(html_body)
@@ -133,9 +136,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
       MjmlEmail.base_email()
       |> to({appointment_details.organizer_name, organizer_email})
       |> subject(
-        dgettext("emails", "⏰ Meeting with %{name} in %{time_until}",
-          name: appointment_details.attendee_name,
-          time_until: appointment_details.time_until
+        Sanitise.sanitize_for_header(
+          dgettext("emails", "⏰ Meeting with %{name} in %{time_until}",
+            name: appointment_details.attendee_name,
+            time_until: appointment_details.time_until
+          )
         )
       )
       |> html_body(html_body)

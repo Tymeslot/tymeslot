@@ -98,9 +98,11 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       MjmlEmail.base_email()
       |> to(attendee_email)
       |> subject(
-        dgettext("emails", "Updated: %{title} — %{date}",
-          title: details.event_title,
-          date: date_short
+        Sanitise.sanitize_for_header(
+          dgettext("emails", "Updated: %{title} — %{date}",
+            title: details.event_title,
+            date: date_short
+          )
         )
       )
       |> html_body(html_body)

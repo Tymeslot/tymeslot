@@ -33,7 +33,8 @@ defmodule CredoChecks.UseCoreInputs do
     if String.contains?(filename, "core_components/forms.ex") or
          String.contains?(filename, "use_core_inputs.ex") or
          String.contains?(filename, "form_system.ex") or
-         String.contains?(filename, "controllers/dev/") do
+         String.contains?(filename, "controllers/dev/") or
+         String.ends_with?(filename, "_test.exs") do
       []
     else
       issue_meta = IssueMeta.for(source_file, params)

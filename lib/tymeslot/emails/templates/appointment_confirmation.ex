@@ -104,9 +104,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       MjmlEmail.base_email()
       |> to({appointment_details.attendee_name, attendee_email})
       |> subject(
-        dgettext("emails", "Appointment Confirmed - %{date} with %{name}",
-          date: date_short,
-          name: appointment_details.organizer_name
+        Sanitise.sanitize_for_header(
+          dgettext("emails", "Appointment Confirmed - %{date} with %{name}",
+            date: date_short,
+            name: appointment_details.organizer_name
+          )
         )
       )
       |> html_body(html_body)
@@ -162,13 +164,15 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       MjmlEmail.base_email()
       |> to({appointment_details.organizer_name, organizer_email})
       |> subject(
-        dgettext("emails", "New Appointment: %{name} - %{date}",
-          name: appointment_details.attendee_name,
-          date:
-            Formatting.format_date_short(
-              appointment_details.date,
-              organizer_locale(appointment_details)
-            )
+        Sanitise.sanitize_for_header(
+          dgettext("emails", "New Appointment: %{name} - %{date}",
+            name: appointment_details.attendee_name,
+            date:
+              Formatting.format_date_short(
+                appointment_details.date,
+                organizer_locale(appointment_details)
+              )
+          )
         )
       )
       |> html_body(html_body)

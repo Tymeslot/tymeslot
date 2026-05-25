@@ -83,6 +83,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
 
   @doc """
   Creates a new event in the specified calendar.
+
+  When `conferenceData` was attached to the request and the initial response
+  carries a pending `createRequest` (Google's async Meet provisioning), a
+  single follow-up GET is issued to retrieve the populated `entryPoints`. If
+  the second response is still pending the original response is returned as-is
+  and the caller handles the missing URL.
   """
   @impl CalendarAPIBehaviour
   @spec create_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
@@ -93,11 +99,52 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
       |> EventMapper.format_event_data()
       |> EventMapper.add_tymeslot_fingerprint()
 
+    params = create_event_params(event_data)
+    conference_requested? = EventMapper.requires_conference_data_version?(event_data)
+
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      make_request_with_body(:post, "/calendars/#{calendar_id}/events", token, body,
-        params: %{"sendUpdates" => "none"}
-      )
+      with {:ok, created} <-
+             make_request_with_body(:post, "/calendars/#{calendar_id}/events", token, body,
+               params: params
+             ) do
+        if conference_requested? and conference_pending?(created) do
+          event_id = created["id"]
+          fetch_event_once(token, calendar_id, event_id, created)
+        else
+          {:ok, created}
+        end
+      end
     end)
+  end
+
+  # Issues a single GET for the event and returns the fresh response when
+  # `entryPoints` are now populated, otherwise falls back to `fallback`.
+  defp fetch_event_once(token, calendar_id, event_id, fallback) do
+    case make_request(:get, "/calendars/#{URI.encode(calendar_id)}/events/#{event_id}", token) do
+      {:ok, refreshed} -> {:ok, refreshed}
+      {:error, _type, _msg} -> {:ok, fallback}
+    end
+  end
+
+  # Returns true when the Google response signals that Meet provisioning is
+  # still in-flight: `createRequest` present AND `entryPoints` absent/empty.
+  defp conference_pending?(event) do
+    create_request = get_in(event, ["conferenceData", "createRequest"])
+    entry_points = get_in(event, ["conferenceData", "entryPoints"])
+
+    not is_nil(create_request) and
+      (is_nil(entry_points) or entry_points == [] or
+         get_in(create_request, ["status", "statusCode"]) == "pending")
+  end
+
+  defp create_event_params(event_data) do
+    base = %{"sendUpdates" => "none"}
+
+    if EventMapper.requires_conference_data_version?(event_data) do
+      Map.put(base, "conferenceDataVersion", "1")
+    else
+      base
+    end
   end
 
   @doc """

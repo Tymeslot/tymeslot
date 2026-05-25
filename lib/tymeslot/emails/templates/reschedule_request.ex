@@ -11,6 +11,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
     Formatting,
     MeetingComponents,
     MjmlEmail,
+    Sanitise,
     Styles,
     TemplateHelper,
     Text,
@@ -88,9 +89,11 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
       |> to({meeting.attendee_name, meeting.attendee_email})
       |> from({meeting.organizer_name, MjmlEmail.fetch_from_email()})
       |> subject(
-        dgettext("emails", "Reschedule Request: %{title} - %{date}",
-          title: meeting.title,
-          date: Formatting.format_date_short(attendee_time, locale)
+        Sanitise.sanitize_for_header(
+          dgettext("emails", "Reschedule Request: %{title} - %{date}",
+            title: meeting.title,
+            date: Formatting.format_date_short(attendee_time, locale)
+          )
         )
       )
       |> html_body(html_body)

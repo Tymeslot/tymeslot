@@ -193,7 +193,7 @@ defmodule Tymeslot.Webhooks.InputValidation do
   defp sanitize_field_for_form(value, _field, _metadata) when value in [nil, ""], do: {:ok, value}
 
   defp sanitize_field_for_form(value, field, metadata) when is_binary(value) do
-    case UniversalSanitizer.sanitize_and_validate(value, allow_html: false, metadata: metadata) do
+    case UniversalSanitizer.sanitize_and_validate(value, mode: :plain_text, metadata: metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
       {:error, reason} -> {:error, %{field => reason}}
     end
@@ -205,7 +205,7 @@ defmodule Tymeslot.Webhooks.InputValidation do
   defp sanitize_text_value(value, _metadata) when value in [nil, ""], do: {:ok, value}
 
   defp sanitize_text_value(value, metadata) when is_binary(value) do
-    UniversalSanitizer.sanitize_and_validate(value, allow_html: false, metadata: metadata)
+    UniversalSanitizer.sanitize_and_validate(value, mode: :plain_text, metadata: metadata)
   end
 
   defp sanitize_text_value(_value, _metadata), do: {:error, "must be a string"}

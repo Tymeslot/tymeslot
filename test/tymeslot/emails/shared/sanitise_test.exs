@@ -58,4 +58,48 @@ defmodule Tymeslot.Emails.Shared.SanitiseTest do
       assert Sanitise.sanitize_for_email("") == ""
     end
   end
+
+  describe "sanitize_for_header/1" do
+    test "returns empty string for nil" do
+      assert Sanitise.sanitize_for_header(nil) == ""
+    end
+
+    test "leaves clean text unchanged" do
+      assert Sanitise.sanitize_for_header("Reminder: Meeting tomorrow") ==
+               "Reminder: Meeting tomorrow"
+    end
+
+    test "replaces CR and LF with single space to defeat header injection" do
+      injected = "Reminder\r\nBcc: attacker@example.com"
+      assert Sanitise.sanitize_for_header(injected) == "Reminder Bcc: attacker@example.com"
+    end
+
+    test "strips a bare LF as well as CRLF pairs" do
+      assert Sanitise.sanitize_for_header("Subject\nLine") == "Subject Line"
+      assert Sanitise.sanitize_for_header("Subject\rLine") == "Subject Line"
+    end
+
+    test "strips null bytes and other C0 control characters" do
+      assert Sanitise.sanitize_for_header("Hello\x00World") == "Hello World"
+      assert Sanitise.sanitize_for_header("Tab\there") == "Tab here"
+    end
+
+    test "preserves benign punctuation including angle brackets" do
+      # The header sanitiser is about control characters only — it must not
+      # mangle natural punctuation a user might legitimately put in a title.
+      assert Sanitise.sanitize_for_header("Luka <> Paul — sync") ==
+               "Luka <> Paul — sync"
+
+      assert Sanitise.sanitize_for_header("Webhook 'Production'") ==
+               "Webhook 'Production'"
+    end
+
+    test "collapses runs of whitespace introduced by control-char substitution" do
+      assert Sanitise.sanitize_for_header("Hello\r\n\r\nWorld") == "Hello World"
+    end
+
+    test "trims surrounding whitespace" do
+      assert Sanitise.sanitize_for_header("\n  Subject  \n") == "Subject"
+    end
+  end
 end

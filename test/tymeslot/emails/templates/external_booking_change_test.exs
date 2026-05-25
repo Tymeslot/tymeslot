@@ -105,6 +105,23 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
     end
   end
 
+  describe "subject CRLF injection prevention" do
+    test "subject is free of CR/LF when meeting title contains header-injection payload" do
+      meeting = build_meeting(%{title: "Team Standup\r\nBcc: attacker@evil.com"})
+
+      email =
+        ExternalBookingChange.render(
+          meeting,
+          "john@example.com",
+          :deleted,
+          "Europe/London"
+        )
+
+      refute email.subject =~ "\r"
+      refute email.subject =~ "\n"
+    end
+  end
+
   describe "EmailService.send_external_booking_change/3" do
     test "delivers deleted notification" do
       user = insert(:user)

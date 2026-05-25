@@ -312,4 +312,59 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
       assert result["status"] == "confirmed"
     end
   end
+
+  describe "format_event_data/1 — conference_data" do
+    test "includes conferenceData (stringified) when :conference_data is set" do
+      event_data = %{
+        summary: "Team Sync",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC",
+        conference_data: %{
+          createRequest: %{
+            requestId: "req-abc",
+            conferenceSolutionKey: %{type: "hangoutsMeet"}
+          }
+        }
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["conferenceData"] == %{
+               "createRequest" => %{
+                 "requestId" => "req-abc",
+                 "conferenceSolutionKey" => %{"type" => "hangoutsMeet"}
+               }
+             }
+    end
+
+    test "omits conferenceData when :conference_data is absent" do
+      event_data = %{
+        summary: "Plain Meeting",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC"
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      refute Map.has_key?(result, "conferenceData")
+    end
+  end
+
+  describe "requires_conference_data_version?/1" do
+    test "returns true when :conference_data is a non-empty map" do
+      assert EventMapper.requires_conference_data_version?(%{
+               conference_data: %{createRequest: %{}}
+             })
+    end
+
+    test "returns false when :conference_data is absent" do
+      refute EventMapper.requires_conference_data_version?(%{summary: "no conf"})
+    end
+
+    test "returns false when :conference_data is an empty map" do
+      refute EventMapper.requires_conference_data_version?(%{conference_data: %{}})
+    end
+  end
 end

@@ -12,6 +12,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
     Formatting,
     MeetingComponents,
     MjmlEmail,
+    Sanitise,
     TemplateHelper,
     TextBodyHelper
   }
@@ -81,9 +82,11 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
       MjmlEmail.base_email()
       |> to(attendee_email)
       |> subject(
-        dgettext("emails", "Calendar Invitation - %{title} on %{date}",
-          title: invitation_details.event_title,
-          date: date_short
+        Sanitise.sanitize_for_header(
+          dgettext("emails", "Calendar Invitation - %{title} on %{date}",
+            title: invitation_details.event_title,
+            date: date_short
+          )
         )
       )
       |> html_body(html_body)

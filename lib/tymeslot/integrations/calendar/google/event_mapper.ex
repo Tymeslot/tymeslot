@@ -17,8 +17,23 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     event_data
     |> extract_event_fields()
     |> add_google_event_id(event_data)
+    |> maybe_add_conference_data(event_data)
     |> remove_nil_values()
   end
+
+  @doc """
+  Returns `true` when the event data carries a Google `conferenceData` payload
+  that requires the `conferenceDataVersion=1` query parameter on writes.
+  """
+  @spec requires_conference_data_version?(map()) :: boolean()
+  def requires_conference_data_version?(event_data) when is_map(event_data) do
+    case get_field_value(event_data, :conference_data) do
+      data when is_map(data) and map_size(data) > 0 -> true
+      _other -> false
+    end
+  end
+
+  def requires_conference_data_version?(_other), do: false
 
   @doc """
   Adds Tymeslot provenance markers to a Google Calendar event body.
@@ -120,6 +135,26 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
       uid -> Map.put(base_data, "id", uuid_to_google_event_id(uid))
     end
   end
+
+  defp maybe_add_conference_data(base_data, event_data) do
+    case get_field_value(event_data, :conference_data) do
+      data when is_map(data) and map_size(data) > 0 ->
+        Map.put(base_data, "conferenceData", stringify_keys(data))
+
+      _other ->
+        base_data
+    end
+  end
+
+  defp stringify_keys(map) when is_map(map) do
+    Enum.into(map, %{}, fn
+      {k, v} when is_atom(k) -> {Atom.to_string(k), stringify_keys(v)}
+      {k, v} -> {k, stringify_keys(v)}
+    end)
+  end
+
+  defp stringify_keys(list) when is_list(list), do: Enum.map(list, &stringify_keys/1)
+  defp stringify_keys(other), do: other
 
   defp to_string_or_default(nil, default), do: default
   defp to_string_or_default(value, _default) when is_binary(value), do: value

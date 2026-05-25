@@ -480,6 +480,32 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
     end
   end
 
+  describe "subject CRLF injection prevention" do
+    test "attendee subject is free of CR/LF when organizer name contains header-injection payload" do
+      details =
+        build_appointment_details(%{
+          organizer_name: "Alice\r\nBcc: attacker@evil.com"
+        })
+
+      email = AppointmentCancellation.render(:attendee, "attendee@example.com", details)
+
+      refute email.subject =~ "\r"
+      refute email.subject =~ "\n"
+    end
+
+    test "organizer subject is free of CR/LF when attendee name contains header-injection payload" do
+      details =
+        build_appointment_details(%{
+          attendee_name: "Bob\r\nCc: someone@evil.com"
+        })
+
+      email = AppointmentCancellation.render(:organizer, "organizer@example.com", details)
+
+      refute email.subject =~ "\r"
+      refute email.subject =~ "\n"
+    end
+  end
+
   describe "cancellation emails for both roles" do
     test "organizer and attendee emails have different recipients" do
       details = build_appointment_details()

@@ -326,6 +326,36 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
 
       assert result.transparency == "opaque"
     end
+
+    test "extracts the Meet URL from conferenceData.entryPoints into :meet_url" do
+      google_event = %{
+        "id" => "meet-event",
+        "summary" => "With Meet",
+        "start" => %{"dateTime" => "2024-03-15T14:00:00Z"},
+        "end" => %{"dateTime" => "2024-03-15T15:00:00Z"},
+        "conferenceData" => %{
+          "entryPoints" => [
+            %{"entryPointType" => "phone", "uri" => "tel:+123"},
+            %{"entryPointType" => "video", "uri" => "https://meet.google.com/abc-defg-hij"}
+          ]
+        }
+      }
+
+      result = Provider.convert_event(google_event)
+
+      assert result.meet_url == "https://meet.google.com/abc-defg-hij"
+    end
+
+    test "sets :meet_url to nil when no conferenceData is present" do
+      google_event = %{
+        "id" => "no-meet",
+        "start" => %{"dateTime" => "2024-03-15T14:00:00Z"},
+        "end" => %{"dateTime" => "2024-03-15T15:00:00Z"}
+      }
+
+      result = Provider.convert_event(google_event)
+      assert is_nil(result.meet_url)
+    end
   end
 
   describe "convert_events/1" do

@@ -271,6 +271,67 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
                GoogleMeetProvider.create_meeting_room(config)
     end
 
+    test "uses :event_details summary/times/attendees in the Calendar API write" do
+      start_time = ~U[2026-06-01 09:00:00Z]
+      end_time = ~U[2026-06-01 10:00:00Z]
+
+      config =
+        Map.put(valid_token_config(), :event_details, %{
+          summary: "Quarterly Review",
+          description: "Plan Q3",
+          start_time: start_time,
+          end_time: end_time,
+          attendees: [%{email: "alice@example.com"}, "bob@example.com"]
+        })
+
+      event_response = %{
+        "conferenceData" => %{
+          "entryPoints" => [
+            %{"entryPointType" => "video", "uri" => "https://meet.google.com/xyz-pqrs-uvw"}
+          ]
+        }
+      }
+
+      expect(HTTPClientMock, :request, fn :post, _url, body, _headers, _opts ->
+        decoded = Jason.decode!(body)
+
+        assert decoded["summary"] == "Quarterly Review"
+        assert decoded["description"] == "Plan Q3"
+        assert decoded["start"]["dateTime"] == DateTime.to_iso8601(start_time)
+        assert decoded["end"]["dateTime"] == DateTime.to_iso8601(end_time)
+
+        assert Enum.sort(Enum.map(decoded["attendees"], & &1["email"])) ==
+                 ["alice@example.com", "bob@example.com"]
+
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(event_response)}}
+      end)
+
+      assert {:ok, _room} = GoogleMeetProvider.create_meeting_room(config)
+    end
+
+    test "falls back to placeholder summary and stub times when :event_details is absent" do
+      config = valid_token_config()
+
+      event_response = %{
+        "conferenceData" => %{
+          "entryPoints" => [
+            %{"entryPointType" => "video", "uri" => "https://meet.google.com/qaz-wsx-edc"}
+          ]
+        }
+      }
+
+      expect(HTTPClientMock, :request, fn :post, _url, body, _headers, _opts ->
+        decoded = Jason.decode!(body)
+
+        assert decoded["summary"] == "Tymeslot - Temporary Event for Google Meet"
+        assert decoded["attendees"] == []
+
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(event_response)}}
+      end)
+
+      assert {:ok, _room} = GoogleMeetProvider.create_meeting_room(config)
+    end
+
     test "persists refreshed tokens to database" do
       user = insert(:user)
       expires_at = DateTime.add(DateTime.utc_now(), -3600, :second)
