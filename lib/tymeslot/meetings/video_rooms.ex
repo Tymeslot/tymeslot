@@ -26,6 +26,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.Repo
 
@@ -141,7 +142,8 @@ defmodule Tymeslot.Meetings.VideoRooms do
 
     case video_module().create_meeting_room(user_id,
            integration_id: meeting.video_integration_id,
-           meeting_id: meeting.id
+           meeting_id: meeting.id,
+           event_details: EventDetails.from_meeting(meeting)
          ) do
       {:ok, meeting_context} ->
         {:ok, meeting_context}

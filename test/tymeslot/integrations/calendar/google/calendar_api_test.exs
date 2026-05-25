@@ -152,6 +152,148 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
       assert {:ok, %{"id" => "new_google_id"}} =
                CalendarAPI.create_event(integration, "primary", event_data)
     end
+
+    test "returns Meet URL immediately when entryPoints are populated in the create response" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      event_data = %{
+        summary: "Meet sync",
+        start_time: ~U[2026-05-01 10:00:00Z],
+        end_time: ~U[2026-05-01 11:00:00Z],
+        conference_data: %{
+          createRequest: %{requestId: "req1", conferenceSolutionKey: %{type: "hangoutsMeet"}}
+        }
+      }
+
+      # Only one HTTP request — no follow-up GET needed
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "id" => "event-abc",
+               "conferenceData" => %{
+                 "entryPoints" => [
+                   %{"entryPointType" => "video", "uri" => "https://meet.google.com/abc-defg"}
+                 ]
+               }
+             })
+         }}
+      end)
+
+      assert {:ok, response} = CalendarAPI.create_event(integration, "primary", event_data)
+      assert get_in(response, ["conferenceData", "entryPoints"]) != nil
+    end
+
+    test "issues a follow-up GET when createRequest is pending and returns populated entryPoints" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      event_data = %{
+        summary: "Pending Meet sync",
+        start_time: ~U[2026-05-01 10:00:00Z],
+        end_time: ~U[2026-05-01 11:00:00Z],
+        conference_data: %{
+          createRequest: %{requestId: "req2", conferenceSolutionKey: %{type: "hangoutsMeet"}}
+        }
+      }
+
+      pending_body =
+        Jason.encode!(%{
+          "id" => "event-pending",
+          "conferenceData" => %{
+            "createRequest" => %{
+              "requestId" => "req2",
+              "status" => %{"statusCode" => "pending"}
+            }
+          }
+        })
+
+      resolved_body =
+        Jason.encode!(%{
+          "id" => "event-pending",
+          "conferenceData" => %{
+            "createRequest" => %{
+              "requestId" => "req2",
+              "status" => %{"statusCode" => "success"}
+            },
+            "entryPoints" => [
+              %{"entryPointType" => "video", "uri" => "https://meet.google.com/pending-resolved"}
+            ]
+          }
+        })
+
+      # POST returns pending; follow-up GET returns resolved — two HTTP calls total
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: pending_body}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: resolved_body}}
+      end)
+
+      assert {:ok, response} = CalendarAPI.create_event(integration, "primary", event_data)
+      entry_points = get_in(response, ["conferenceData", "entryPoints"])
+      assert entry_points != nil
+      assert Enum.any?(entry_points, &(&1["uri"] == "https://meet.google.com/pending-resolved"))
+    end
+
+    test "returns the original pending response when follow-up GET is still pending" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      event_data = %{
+        summary: "Still pending Meet",
+        start_time: ~U[2026-05-01 10:00:00Z],
+        end_time: ~U[2026-05-01 11:00:00Z],
+        conference_data: %{
+          createRequest: %{requestId: "req3", conferenceSolutionKey: %{type: "hangoutsMeet"}}
+        }
+      }
+
+      still_pending_body =
+        Jason.encode!(%{
+          "id" => "event-still-pending",
+          "conferenceData" => %{
+            "createRequest" => %{
+              "requestId" => "req3",
+              "status" => %{"statusCode" => "pending"}
+            }
+          }
+        })
+
+      # Both POST and follow-up GET return the pending state
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn _method, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: still_pending_body}}
+      end)
+
+      assert {:ok, response} = CalendarAPI.create_event(integration, "primary", event_data)
+      # entryPoints absent — finalise/3 will surface :no_meet_url
+      assert is_nil(get_in(response, ["conferenceData", "entryPoints"]))
+    end
   end
 
   describe "update_event/4" do

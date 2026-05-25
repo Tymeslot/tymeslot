@@ -146,6 +146,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
 
       assert_receive {:video_sync_result, event_id, {:ok, "https://video.example.com/join/abc"}}
       assert event_id == event.id
+
+      opts = FakeRooms.last_opts()
+      event_details = Keyword.fetch!(opts, :event_details)
+      assert %Tymeslot.Integrations.Video.EventDetails{} = event_details
+      assert event_details.summary == "Team Sync"
+      assert %DateTime{} = event_details.start_time
+      assert %DateTime{} = event_details.end_time
     end
 
     test "returns socket unchanged when the integration id did not change",
@@ -244,12 +251,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest.FakeRooms do
   end
 
   @spec create_meeting_room(integer() | nil, keyword()) :: {:ok, map()} | {:error, term()}
-  def create_meeting_room(_user_id, _opts) do
+  def create_meeting_room(_user_id, opts) do
     start()
+    :ets.insert(__MODULE__, {:last_opts, opts})
 
     case :ets.lookup(__MODULE__, :response) do
       [{:response, resp}] -> resp
       [] -> {:error, :no_response_configured}
+    end
+  end
+
+  @spec last_opts() :: keyword() | nil
+  def last_opts do
+    start()
+
+    case :ets.lookup(__MODULE__, :last_opts) do
+      [{:last_opts, opts}] -> opts
+      [] -> nil
     end
   end
 end

@@ -12,6 +12,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.MeetingProvisioning
+  alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.UniversalSanitizer
@@ -248,14 +250,49 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
     # so a retry targets the same event.
     uid = ICalBuilder.generate_uid()
 
-    # Provision a video room first (if requested) so its URL can be attached
-    # to the calendar event description before the provider writes it out.
-    video_context = provision_video_room(creating[:video_integration_id], user_id)
+    # Canonical event-details shape used by the video provider and the
+    # provisioning strategy. Times are merged from the resolved start_at/end_at
+    # since they are only available after parsing the form dates.
+    event_details =
+      EventDetails.from_creating_form(
+        Map.merge(creating, %{start_time: start_at, end_time: end_at})
+      )
 
-    attendees = Enum.map(creating[:attendees] || [], fn email -> %{"email" => email} end)
+    # Decide how to attach a Google Meet link (if any). The "inline" strategy
+    # piggybacks a `conferenceData.createRequest` onto the calendar create
+    # itself (avoiding a duplicate event) when both the calendar and video
+    # integrations point at the same Google account. The "separate" strategy
+    # falls back to provisioning a Meet via the video provider, which writes
+    # its own event to Google Calendar and surfaces the URL up-front.
+    plan =
+      MeetingProvisioning.plan(creating.integration_id, creating[:video_integration_id], user_id)
+
+    video_context = provision_video_room_for_plan(plan, event_details, user_id)
+
+    event_data =
+      build_event_data(uid, creating, start_at, end_at, event_details, video_context, plan)
+
+    result =
+      calendar_operations_module().create_event(
+        event_data,
+        {creating.integration_id, user_id}
+      )
+
+    finalise_create_result(result, %{
+      uid: uid,
+      creating: creating,
+      user_id: user_id,
+      start_at: start_at,
+      end_at: end_at,
+      plan: plan,
+      video_context: video_context
+    })
+  end
+
+  defp build_event_data(uid, creating, start_at, end_at, event_details, video_context, plan) do
     description = build_description(creating[:description], video_context)
 
-    base_data = %{
+    raw_base = %{
       uid: uid,
       summary: creating.title,
       start_time: start_at,
@@ -266,34 +303,65 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
       description: description
     }
 
-    event_data =
-      if attendees != [], do: Map.put(base_data, :attendees, attendees), else: base_data
+    base_data = MeetingProvisioning.attach_conference_data(raw_base, plan)
 
-    result =
-      calendar_operations_module().create_event(
-        event_data,
-        {creating.integration_id, user_id}
-      )
+    attendees = Enum.map(event_details.attendees, fn a -> %{"email" => a.email} end)
 
-    case result do
-      {:ok, created} ->
-        build_create_success(created, creating, user_id, start_at, end_at, video_context)
+    if attendees != [], do: Map.put(base_data, :attendees, attendees), else: base_data
+  end
 
-      {:error, reason} ->
-        # Carry context so the LiveView can tag the cache row for offline
-        # retry. Use the pre-generated UID so a later retry reconciles to
-        # the same cache entry.
-        {:error, reason,
-         %{
-           uid: uid,
-           calendar_integration_id: creating.integration_id,
-           summary: creating.title,
-           start_time: start_at,
-           end_time: end_at,
-           location: creating[:location],
-           description: creating[:description]
-         }}
+  defp finalise_create_result({:ok, created}, ctx) do
+    case MeetingProvisioning.finalise(ctx.video_context, created, ctx.plan) do
+      {:ok, video_context} ->
+        build_create_success(
+          created,
+          ctx.creating,
+          ctx.user_id,
+          ctx.start_at,
+          ctx.end_at,
+          video_context
+        )
+
+      {:error, :no_meet_url, video_context} ->
+        warning =
+          "Google Calendar saved the event but didn't return a Meet link — " <>
+            "please try again or add it manually."
+
+        case build_create_success(
+               created,
+               ctx.creating,
+               ctx.user_id,
+               ctx.start_at,
+               ctx.end_at,
+               video_context
+             ) do
+          {:ok, result} -> {:ok, Map.put(result, :warning, warning)}
+          error -> error
+        end
     end
+  end
+
+  defp finalise_create_result({:error, reason}, ctx) do
+    # Carry context so the LiveView can tag the cache row for offline
+    # retry. Use the pre-generated UID so a later retry reconciles to
+    # the same cache entry.
+    {:error, reason,
+     %{
+       uid: ctx.uid,
+       calendar_integration_id: ctx.creating.integration_id,
+       summary: ctx.creating.title,
+       start_time: ctx.start_at,
+       end_time: ctx.end_at,
+       location: ctx.creating[:location],
+       description: ctx.creating[:description]
+     }}
+  end
+
+  defp provision_video_room_for_plan(:none, _event_details, _user_id), do: %{}
+  defp provision_video_room_for_plan({:inline, _video_id}, _event_details, _user_id), do: %{}
+
+  defp provision_video_room_for_plan({:separate, video_id}, event_details, user_id) do
+    provision_video_room(video_id, user_id, event_details)
   end
 
   defp build_create_success(created, creating, user_id, start_at, end_at, video_context) do
@@ -340,10 +408,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
     Application.get_env(:tymeslot, :event_create_operations_module, EventOperations)
   end
 
-  defp provision_video_room(nil, _user_id), do: %{}
+  defp provision_video_room(integration_id, user_id, event_details)
+       when is_integer(integration_id) do
+    opts = [integration_id: integration_id, event_details: event_details]
 
-  defp provision_video_room(integration_id, user_id) when is_integer(integration_id) do
-    case VideoRooms.create_meeting_room(user_id, integration_id: integration_id) do
+    case VideoRooms.create_meeting_room(user_id, opts) do
       {:ok, %{room_data: room_data}} ->
         %{
           meeting_url: room_data[:meeting_url] || room_data[:join_url],
@@ -465,7 +534,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
       action: :event_created
     )
 
-    {:noreply, put_flash(socket, :info, flash_for_create(attendees))}
+    socket = put_flash(socket, :info, flash_for_create(attendees))
+
+    socket =
+      case result[:warning] do
+        nil -> socket
+        msg -> put_flash(socket, :warning, msg)
+      end
+
+    {:noreply, socket}
   end
 
   def handle_create_result({:error, _reason, context}, socket) when is_map(context) do

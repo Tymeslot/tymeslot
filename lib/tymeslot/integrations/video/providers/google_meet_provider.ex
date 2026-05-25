@@ -346,14 +346,13 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   defp create_calendar_event_with_meet(config) do
     calendar_id = Map.get(config, :calendar_id, "primary")
     access_token = Map.get(config, :access_token)
+    event_details = Map.get(config, :event_details) || %{}
 
-    now = DateTime.utc_now()
-    start_time = DateTime.add(now, 3600, :second)
-    end_time = DateTime.add(start_time, 1800, :second)
+    {start_time, end_time} = resolve_event_times(event_details)
 
     event_data = %{
-      summary: "Tymeslot - Temporary Event for Google Meet",
-      description: "Temporary event created by Tymeslot to generate a Google Meet link.",
+      summary: resolve_event_summary(event_details),
+      description: resolve_event_description(event_details),
       start: %{dateTime: DateTime.to_iso8601(start_time), timeZone: "UTC"},
       end: %{dateTime: DateTime.to_iso8601(end_time), timeZone: "UTC"},
       conferenceData: %{
@@ -362,7 +361,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
           conferenceSolutionKey: %{type: "hangoutsMeet"}
         }
       },
-      attendees: [],
+      attendees: resolve_event_attendees(event_details),
       reminders: %{useDefault: false, overrides: []}
     }
 
@@ -453,4 +452,53 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   defp generate_request_id do
     Base.encode16(:crypto.strong_rand_bytes(8))
   end
+
+  defp resolve_event_summary(event_details) do
+    case Map.get(event_details, :summary) do
+      summary when is_binary(summary) and summary != "" -> summary
+      _other -> "Tymeslot - Temporary Event for Google Meet"
+    end
+  end
+
+  defp resolve_event_description(event_details) do
+    case Map.get(event_details, :description) do
+      description when is_binary(description) and description != "" -> description
+      _other -> ""
+    end
+  end
+
+  defp resolve_event_times(event_details) do
+    start_time = Map.get(event_details, :start_time)
+    end_time = Map.get(event_details, :end_time)
+
+    if is_struct(start_time, DateTime) and is_struct(end_time, DateTime) do
+      {start_time, end_time}
+    else
+      now = DateTime.utc_now()
+      fallback_start = DateTime.add(now, 3600, :second)
+      fallback_end = DateTime.add(fallback_start, 1800, :second)
+      {fallback_start, fallback_end}
+    end
+  end
+
+  defp resolve_event_attendees(event_details) do
+    case Map.get(event_details, :attendees) do
+      attendees when is_list(attendees) ->
+        attendees
+        |> Enum.map(&normalise_attendee/1)
+        |> Enum.reject(&is_nil/1)
+
+      _other ->
+        []
+    end
+  end
+
+  defp normalise_attendee(%{email: email}) when is_binary(email) and email != "",
+    do: %{email: email}
+
+  defp normalise_attendee(%{"email" => email}) when is_binary(email) and email != "",
+    do: %{email: email}
+
+  defp normalise_attendee(email) when is_binary(email) and email != "", do: %{email: email}
+  defp normalise_attendee(_other), do: nil
 end

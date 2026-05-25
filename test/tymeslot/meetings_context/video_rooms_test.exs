@@ -8,6 +8,7 @@ defmodule Tymeslot.MeetingsContext.VideoRoomsTest do
   @moduletag :utils
 
   import Mox
+  import Tymeslot.Factory
 
   alias Ecto.UUID
   alias Tymeslot.Meetings
