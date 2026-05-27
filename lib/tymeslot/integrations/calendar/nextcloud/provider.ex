@@ -17,7 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
   alias Tymeslot.Integrations.Calendar.CalDAV.XmlHandler
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
-  alias Tymeslot.Integrations.Calendar.Shared.{DiscoveryService, PathUtils}
+  alias Tymeslot.Integrations.Calendar.Shared.{DiscoveryService, PathUtils, ProviderCommon}
   alias Tymeslot.Security.RateLimiter
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -242,6 +242,16 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
         error
     end
   end
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  defdelegate build_client_configs(integration),
+    to: ProviderCommon,
+    as: :caldav_build_client_configs
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  defdelegate build_booking_client_config(integration),
+    to: ProviderCommon,
+    as: :caldav_build_booking_client_config
 
   @impl Tymeslot.Integrations.Calendar.Provider
   defdelegate normalise_events(raw_events, context), to: CalDAVProvider
