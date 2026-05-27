@@ -2,17 +2,44 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @moduledoc """
   LiveComponent rendering a week/day/month calendar grid backed by cached calendar events.
 
-  State assigns:
-  - `:view`               — `:week` | `:three_day` | `:day` | `:month` (default `:week`)
-  - `:date`               — `Date.t()` anchor date (default `Date.utc_today()`)
-  - `:events`             — list of cached events (default `[]`)
-  - `:integrations`       — list of active integrations (default `[]`)
-  - `:integration_colors` — map `%{id => color_class}` (default `%{}`)
-  - `:loading`            — boolean (default `false`)
-  - `:selected_event`     — selected event or `nil`
-  - `:current_time`       — `DateTime.t()` for the current-time indicator
-  - `:hidden_integration_ids` — list of integration IDs to hide (default `[]`)
-  - `:preferences`        — `CalendarPreferencesSchema.t()` or `nil`
+  ## Public API
+
+  The parent LiveView passes the following assigns. The two that are component-specific
+  are declared as `attr` below for documentation purposes; the remainder are forwarded
+  from the dashboard's generic component dispatch pattern and stored via
+  `UpdateHandlers.handle_initial/2`.
+
+  Note: the call site uses a dynamic `module={@component_module}` reference, so Phoenix
+  cannot perform compile-time `attr` validation. Moving to a static module reference
+  would enable that check.
+
+  Component-specific assigns (declared as `attr`):
+  - `:current_user` — required, owns the calendar preferences and integrations.
+  - `:profile`      — optional, only its `:timezone` field is read.
+
+  Additional assigns forwarded from the parent dashboard LiveView:
+  - `:shared_data`               — map of shared cross-component data, defaults to `%{}`.
+  - `:integration_status`        — current calendar integration status.
+  - `:saving`                    — boolean, whether the parent is persisting something.
+  - `:client_ip`                 — client IP string, used for audit / rate-limit context.
+  - `:user_agent`                — client user-agent string.
+  - `:live_action`               — current route live action atom.
+  - `:params`                    — current URL params map.
+  - `:custom_questions_allowed`  — boolean feature flag.
+
+  Parent-to-component messages travel through `send_update/2` with an `:action` key.
+  These bypass attr validation and are dispatched in the `update/2` clauses below:
+  `:revert_event`, `:refresh_events`, `:reload_events`, `:ad_hoc_meeting_created`,
+  `:ad_hoc_meeting_failed`, `:event_created`, `:event_create_failed`, `:event_moved`,
+  `:event_deleted`, `:event_delete_failed`, `:events_updated`, `:video_link_updated`,
+  `:integration_synced`.
+
+  ## Internal state
+
+  Initialised in `mount/1` and mutated by handlers — not part of the public API:
+  `:view`, `:date`, `:events`, `:integrations`, `:integration_colors`, `:loading`,
+  `:selected_event`, `:current_time`, `:hidden_integration_ids`, `:preferences`,
+  plus modal/menu visibility flags and sync-progress counters.
   """
   use TymeslotWeb, :live_component
 
@@ -35,6 +62,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal
   alias TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers
+
+  attr :current_user, :map, required: true, doc: "Owns calendar preferences and integrations."
+
+  attr :profile, :any,
+    default: nil,
+    doc: "Profile struct or nil; only `:timezone` is read."
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
