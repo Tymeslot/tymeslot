@@ -340,23 +340,25 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     form = Component.to_form(sanitized_params)
     socket = assign(socket, :form, form)
 
+    base_meeting_params = %{
+      date: socket.assigns.selected_date,
+      time: socket.assigns.selected_time,
+      duration: resolve_duration_minutes(socket),
+      user_timezone: socket.assigns.user_timezone,
+      organizer_user_id: socket.assigns.organizer_user_id,
+      meeting_type_id: get_meeting_type_id(socket),
+      attendee_locale:
+        socket.assigns[:locale] || Application.get_env(:tymeslot, :locales)[:default] || "en",
+      # Always true for public booking flow
+      with_video_room: true,
+      custom_fields_snapshot: Map.get(sanitized_params, "custom_fields_snapshot", []),
+      custom_field_answers: Map.get(sanitized_params, "custom_field_answers", %{})
+    }
+
     # Prepare parameters for orchestrator
     params = %{
       form_data: sanitized_params,
-      meeting_params: %{
-        date: socket.assigns.selected_date,
-        time: socket.assigns.selected_time,
-        duration: resolve_duration_minutes(socket),
-        user_timezone: socket.assigns.user_timezone,
-        organizer_user_id: socket.assigns.organizer_user_id,
-        meeting_type_id: get_meeting_type_id(socket),
-        attendee_locale:
-          socket.assigns[:locale] || Application.get_env(:tymeslot, :locales)[:default] || "en",
-        # Always true for public booking flow
-        with_video_room: true,
-        custom_fields_snapshot: Map.get(sanitized_params, "custom_fields_snapshot", []),
-        custom_field_answers: Map.get(sanitized_params, "custom_field_answers", %{})
-      }
+      meeting_params: Map.merge(base_meeting_params, socket.assigns[:tracking] || %{})
     }
 
     opts = [

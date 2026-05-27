@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
 
   alias Phoenix.LiveView
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
+  alias TymeslotWeb.Themes.Shared.LiveHelpers
   import Phoenix.Component, only: [assign: 3]
 
   @doc """
@@ -34,7 +35,11 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
   @spec handle_change_locale(LiveView.Socket.t(), String.t(), module()) ::
           {:noreply, LiveView.Socket.t()}
   def handle_change_locale(socket, locale, path_handlers_module) do
-    path = path_handlers_module.build_path_with_locale(socket, locale)
+    path =
+      socket
+      |> path_handlers_module.build_path_with_locale(locale)
+      |> LiveHelpers.tracking_path(socket.assigns[:tracking])
+
     {:noreply, LiveView.redirect(socket, external: path)}
   end
 

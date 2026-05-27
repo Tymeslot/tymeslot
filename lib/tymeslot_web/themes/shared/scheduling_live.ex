@@ -71,6 +71,8 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
             &setup_initial_state/3
           )
 
+        socket = LiveHelpers.assign_tracking(socket, params)
+
         {:ok, socket}
       end
 
