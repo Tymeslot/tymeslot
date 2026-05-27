@@ -230,6 +230,7 @@ defmodule TymeslotWeb.Router do
       live "/dashboard/theme/customize/:theme_id", DashboardLive, :theme_customization
       live "/dashboard/meetings", DashboardLive, :meetings
       live "/dashboard/embed", DashboardLive, :embed
+      live "/dashboard/analytics", Dashboard.AnalyticsLive, :index
     end
   end
 

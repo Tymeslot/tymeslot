@@ -469,6 +469,19 @@ defmodule TymeslotWeb.Components.Icons.IconComponents do
     """
   end
 
+  def icon(%{name: :bar_chart} = assigns) do
+    ~H"""
+    <svg class={@class} fill="none" stroke="currentColor" viewBox="0 0 24 24" {@rest}>
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M9 19V9m6 10V5m-12 14V13m18 6H3"
+      />
+    </svg>
+    """
+  end
+
   # Fallback for unknown icons
   def icon(assigns) do
     ~H"""

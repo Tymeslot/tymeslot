@@ -335,6 +335,36 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Returns the count of bookings created for an organizer within the given
+  window. Used by the analytics dashboard to compute conversion rate.
+  """
+  @spec count_bookings(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
+  def count_bookings(organizer_user_id, %DateTime{} = from, %DateTime{} = to) do
+    Meeting
+    |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> where([m], m.inserted_at >= ^from and m.inserted_at <= ^to)
+    |> select([m], count(m.id))
+    |> Repo.one() || 0
+  end
+
+  @doc """
+  Returns the count of bookings grouped by `utm_source` for an organizer
+  within the given window. Used by the analytics dashboard to join visit
+  counts with booking counts per source.
+  """
+  @spec bookings_by_source(integer(), DateTime.t(), DateTime.t()) :: [
+          %{utm_source: String.t() | nil, bookings: non_neg_integer()}
+        ]
+  def bookings_by_source(organizer_user_id, %DateTime{} = from, %DateTime{} = to) do
+    Meeting
+    |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> where([m], m.inserted_at >= ^from and m.inserted_at <= ^to)
+    |> group_by([m], m.utm_source)
+    |> select([m], %{utm_source: m.utm_source, bookings: count(m.id)})
+    |> Repo.all()
+  end
+
+  @doc """
   Returns the count of meetings for a specific attendee.
 
   ## Examples
