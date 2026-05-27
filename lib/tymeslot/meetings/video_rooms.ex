@@ -27,6 +27,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.Repo
 
@@ -343,24 +344,12 @@ defmodule Tymeslot.Meetings.VideoRooms do
         {:error, :video_integration_inactive}
 
       {:ok, integration} ->
-        case integration.provider do
-          "mirotalk" ->
-            {:ok, :mirotalk}
+        case ProviderConfig.parse(integration.provider) do
+          {:ok, provider_type} ->
+            {:ok, provider_type}
 
-          "google_meet" ->
-            {:ok, :google_meet}
-
-          "teams" ->
-            {:ok, :teams}
-
-          "custom" ->
-            {:ok, :custom}
-
-          "none" ->
-            {:ok, :none}
-
-          other ->
-            Logger.warning("Unknown video provider type", provider: other)
+          {:error, :unknown} ->
+            Logger.warning("Unknown video provider type", provider: integration.provider)
             {:error, :unknown_provider}
         end
 

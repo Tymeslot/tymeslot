@@ -101,7 +101,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     |> validate_required([:name, :provider, :user_id])
     |> validate_inclusion(
       :provider,
-      ProviderConfig.provider_constraint_list()
+      ProviderConfig.provider_constraint_list_all()
     )
     |> validate_provider_specific_fields()
     |> encrypt_credentials()
@@ -199,38 +199,31 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   # Private functions
 
   defp validate_provider_specific_fields(changeset) do
-    provider = get_field(changeset, :provider)
-
-    case provider do
-      "mirotalk" ->
-        changeset
-        |> validate_required([:base_url])
-        |> require_credential_if_absent(:api_key, :api_key_encrypted)
-        |> URLValidator.validate_url(:base_url, block_private_ips: true)
-
-      "teams" ->
-        changeset
-        |> require_credential_if_absent(:tenant_id, :tenant_id_encrypted)
-        |> require_credential_if_absent(:teams_user_id, :teams_user_id_encrypted)
-
-      "google_meet" ->
-        changeset
-        |> require_credential_if_absent(:access_token, :access_token_encrypted)
-        |> require_credential_if_absent(:refresh_token, :refresh_token_encrypted)
-
-      "zoom" ->
-        changeset
-        |> require_credential_if_absent(:access_token, :access_token_encrypted)
-        |> require_credential_if_absent(:refresh_token, :refresh_token_encrypted)
-
-      "custom" ->
-        changeset
-        |> validate_required([:custom_meeting_url])
-        |> URLValidator.validate_url(:custom_meeting_url, block_private_ips: true)
-
-      _other_provider ->
-        changeset
+    with {:ok, provider_type} <- ProviderConfig.parse_known(get_field(changeset, :provider)),
+         module when module != nil <- ProviderConfig.get_provider_module(provider_type) do
+      apply_credential_spec(changeset, module.credential_spec())
+    else
+      _other -> changeset
     end
+  end
+
+  defp apply_credential_spec(changeset, spec) do
+    changeset
+    |> validate_required(spec.required)
+    |> apply_credential_pairs(spec.credential_pairs)
+    |> apply_url_validations(spec.url_fields)
+  end
+
+  defp apply_credential_pairs(changeset, pairs) do
+    Enum.reduce(pairs, changeset, fn {virtual, encrypted}, acc ->
+      require_credential_if_absent(acc, virtual, encrypted)
+    end)
+  end
+
+  defp apply_url_validations(changeset, fields) do
+    Enum.reduce(fields, changeset, fn field, acc ->
+      URLValidator.validate_url(acc, field, block_private_ips: true)
+    end)
   end
 
   # Only require a virtual credential field when the persisted encrypted

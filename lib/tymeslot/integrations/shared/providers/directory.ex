@@ -191,6 +191,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
       display_name: display_name(domain, type, mod),
       icon: icon_for(domain, type, provider_config),
       description: description_for(domain, type, provider_config),
+      button_text: button_text_for(domain, type, provider_config),
       oauth: oauth_flag(domain, type, mod),
       capabilities: capabilities_for(mod),
       config_schema: schema_for(mod),
@@ -268,6 +269,10 @@ defmodule Tymeslot.Integrations.Providers.Directory do
 
   defp description_for(_domain, type, provider_config) do
     provider_config.description(type)
+  end
+
+  defp button_text_for(_domain, type, provider_config) do
+    provider_config.button_text(type)
   end
 
   @spec resolve_type(domain(), atom() | String.t() | any()) :: atom() | nil

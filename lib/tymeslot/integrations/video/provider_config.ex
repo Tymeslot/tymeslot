@@ -18,35 +18,35 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   @provider_metadata %{
     mirotalk: %{
       icon: "mirotalk",
-      description: "Free, open-source video conferencing",
+      description: "Self-hosted peer-to-peer video meetings",
       button_text: "Connect MiroTalk",
       click_event: "connect_mirotalk",
       circuit_breaker_enabled: true
     },
     google_meet: %{
       icon: "google_meet",
-      description: "Google Meet video conferencing",
+      description: "Full OAuth integration with automatic room creation",
       button_text: "Connect Google Meet",
       click_event: "connect_google_meet",
       circuit_breaker_enabled: true
     },
     teams: %{
       icon: "teams",
-      description: "Microsoft Teams meetings",
+      description: "Enterprise OAuth integration with organizational accounts",
       button_text: "Connect Teams",
       click_event: "connect_teams",
       circuit_breaker_enabled: true
     },
     zoom: %{
       icon: "zoom",
-      description: "Zoom meetings via OAuth",
+      description: "OAuth integration with automatic Zoom meeting creation",
       button_text: "Connect Zoom",
       click_event: "connect_zoom",
       circuit_breaker_enabled: true
     },
     custom: %{
       icon: "custom",
-      description: "Use your own video conferencing link",
+      description: "Any video platform with static meeting URLs",
       button_text: "Add Custom Link",
       click_event: "connect_custom",
       circuit_breaker_enabled: false
@@ -183,6 +183,78 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   end
 
   @doc """
+  Parses a provider identifier (atom or string) to its canonical atom form.
+
+  Accepts the providers in `@providers` plus the meta-value `:none`
+  (used as a sentinel for "video disabled" on an integration record).
+  Returns `{:error, :unknown}` for anything else — including unrelated
+  atoms the system happens to know about. This is the canonical
+  string↔atom converter; do not reimplement.
+
+  This variant is **toggle-aware**: it only accepts providers that are
+  currently enabled. Use it to gate new OAuth/setup flows. For operations
+  on persisted integrations (where the provider may have been disabled after
+  the integration was created), use `parse_known/1` instead.
+  """
+  @spec parse(atom() | String.t() | any()) :: {:ok, atom()} | {:error, :unknown}
+  def parse(:none), do: {:ok, :none}
+
+  def parse(provider) when is_atom(provider) do
+    if valid_provider?(provider), do: {:ok, provider}, else: {:error, :unknown}
+  end
+
+  def parse("none"), do: {:ok, :none}
+
+  def parse(provider) when is_binary(provider) do
+    parse(String.to_existing_atom(provider))
+  rescue
+    ArgumentError -> {:error, :unknown}
+  end
+
+  def parse(_other), do: {:error, :unknown}
+
+  @doc """
+  Toggle-agnostic counterpart to `parse/1`.
+
+  Parses a provider identifier against the full static `@providers` list,
+  regardless of whether that provider is currently enabled via config.
+  Use this for any operation on a persisted integration — connection tests,
+  credential validation, room creation — where the provider may have been
+  disabled after the integration was created.
+
+  Returns `{:ok, provider_atom}` for any known provider (or `:none`),
+  `{:error, :unknown}` for anything not in `@providers`.
+  """
+  @spec parse_known(atom() | String.t() | any()) :: {:ok, atom()} | {:error, :unknown}
+  def parse_known(:none), do: {:ok, :none}
+
+  def parse_known(provider) when is_atom(provider) do
+    if provider in @providers, do: {:ok, provider}, else: {:error, :unknown}
+  end
+
+  def parse_known("none"), do: {:ok, :none}
+
+  def parse_known(provider) when is_binary(provider) do
+    parse_known(String.to_existing_atom(provider))
+  rescue
+    ArgumentError -> {:error, :unknown}
+  end
+
+  def parse_known(_other), do: {:error, :unknown}
+
+  @doc """
+  Checks whether a provider uses OAuth for setup/reconnect.
+  Accepts atom or string.
+  """
+  @spec oauth_provider?(atom() | String.t() | any()) :: boolean()
+  def oauth_provider?(provider) do
+    case parse(provider) do
+      {:ok, atom} -> atom in @oauth_providers
+      {:error, :unknown} -> false
+    end
+  end
+
+  @doc """
   Gets the display name for a provider.
   """
   @spec display_name(atom()) :: String.t()
@@ -231,11 +303,23 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   end
 
   @doc """
-  Returns provider strings for database constraint validation.
+  Returns provider strings for database constraint validation (enabled providers only).
   """
   @spec provider_constraint_list() :: list(String.t())
   def provider_constraint_list do
     Enum.map(all_providers_with_dev(), &Atom.to_string/1)
+  end
+
+  @doc """
+  Returns provider strings for changeset inclusion validation on persisted rows.
+
+  Unlike `provider_constraint_list/0` this is toggle-agnostic: it always
+  returns all providers in `@providers`, ensuring that existing DB rows for
+  a now-disabled provider still pass changeset validation.
+  """
+  @spec provider_constraint_list_all() :: list(String.t())
+  def provider_constraint_list_all do
+    Enum.map(@providers, &Atom.to_string/1)
   end
 
   # Private helpers

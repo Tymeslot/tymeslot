@@ -300,6 +300,23 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     }
   end
 
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def build_config(integration, _decrypted, opts) do
+    %{
+      custom_meeting_url: integration.custom_meeting_url,
+      meeting_id: Keyword.get(opts, :meeting_id)
+    }
+  end
+
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def credential_spec do
+    %{
+      required: [:custom_meeting_url],
+      credential_pairs: [],
+      url_fields: [:custom_meeting_url]
+    }
+  end
+
   # Private helpers
   defp valid_url?(url) when is_binary(url) do
     uri = URI.parse(url)

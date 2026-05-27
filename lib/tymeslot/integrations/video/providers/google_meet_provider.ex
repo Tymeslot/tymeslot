@@ -209,6 +209,33 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     }
   end
 
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def build_config(integration, decrypted, _opts) do
+    %{
+      access_token: decrypted.access_token,
+      refresh_token: decrypted.refresh_token,
+      token_expires_at: integration.token_expires_at,
+      oauth_scope: integration.oauth_scope,
+      integration_id: integration.id,
+      user_id: integration.user_id
+    }
+  end
+
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def credential_spec do
+    %{
+      required: [],
+      credential_pairs: [
+        {:access_token, :access_token_encrypted},
+        {:refresh_token, :refresh_token_encrypted}
+      ],
+      url_fields: []
+    }
+  end
+
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def url_patterns, do: ["meet.google.com"]
+
   # Private helper functions (token validation, API calls)
   defp http_client do
     Application.get_env(:tymeslot, :http_client_module, HTTPClient)

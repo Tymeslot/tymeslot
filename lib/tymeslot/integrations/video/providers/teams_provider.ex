@@ -164,6 +164,34 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     }
   end
 
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def build_config(integration, decrypted, _opts) do
+    %{
+      access_token: decrypted.access_token,
+      refresh_token: decrypted.refresh_token,
+      token_expires_at: integration.token_expires_at,
+      oauth_scope: integration.oauth_scope,
+      tenant_id: decrypted.tenant_id,
+      integration_id: integration.id,
+      user_id: integration.user_id
+    }
+  end
+
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def credential_spec do
+    %{
+      required: [],
+      credential_pairs: [
+        {:tenant_id, :tenant_id_encrypted},
+        {:teams_user_id, :teams_user_id_encrypted}
+      ],
+      url_fields: []
+    }
+  end
+
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def url_patterns, do: ["teams.microsoft.com"]
+
   # Private functions
 
   defp validate_teams_scope(config) do
