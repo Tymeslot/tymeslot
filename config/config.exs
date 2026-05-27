@@ -366,5 +366,9 @@ config :tymeslot,
   slack_client_id: nil,
   slack_client_secret: nil
 
+# Analytics — secret used to derive the daily-rotated visitor fingerprint salt.
+# Required in production; dev/test override with fixed values for repeatability.
+config :tymeslot, :analytics_salt_secret, nil
+
 # Import environment specific config
 import_config "#{config_env()}.exs"
