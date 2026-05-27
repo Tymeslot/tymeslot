@@ -15,7 +15,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
   do not derive it from `@definition.id`, which is always populated.
   """
   use TymeslotWeb, :live_component
-  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
   alias Phoenix.LiveView
@@ -178,9 +177,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
       >
         <:header>
           <%= if @mode == :edit do %>
-            {gettext("Edit question")}
+            Edit question
           <% else %>
-            {gettext("Add question")}
+            Add question
           <% end %>
         </:header>
 
@@ -197,15 +196,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             value={field_value(@changeset, :label)}
             id="definition_label"
             type="text"
-            label={gettext("Label")}
-            placeholder={gettext("e.g., Company name")}
+            label="Label"
+            placeholder="e.g., Company name"
             required
             phx-blur="field_blur"
             phx-value-field="label"
             phx-target={@myself}
             errors={FormValidationHelpers.field_errors(@field_errors, :label)}
           >
-            <:description>{gettext("The question shown to the booker.")}</:description>
+            <:description>The question shown to the booker.</:description>
           </CoreComponents.input>
 
           <CoreComponents.input
@@ -213,14 +212,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             value={field_value(@changeset, :help_text)}
             id="definition_help_text"
             type="text"
-            label={gettext("Help text (optional)")}
-            placeholder={gettext("e.g., Enter your company's registered name")}
+            label="Help text (optional)"
+            placeholder="e.g., Enter your company's registered name"
             phx-blur="field_blur"
             phx-value-field="help_text"
             phx-target={@myself}
             errors={FormValidationHelpers.field_errors(@field_errors, :help_text)}
           >
-            <:description>{gettext("Shown below the question — use it to clarify what you're asking or give an example.")}</:description>
+            <:description>Shown below the question — use it to clarify what you're asking or give an example.</:description>
           </CoreComponents.input>
 
           <CoreComponents.input
@@ -228,10 +227,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             value={field_value(@changeset, :type)}
             id="definition_type"
             type="select"
-            label={gettext("Type")}
+            label="Type"
             options={type_options()}
           >
-            <:description>{gettext("Controls how the booker enters their answer.")}</:description>
+            <:description>Controls how the booker enters their answer.</:description>
           </CoreComponents.input>
 
           <CoreComponents.input
@@ -239,9 +238,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             value={field_value(@changeset, :required)}
             id="definition_required"
             type="checkbox"
-            label={gettext("Required")}
+            label="Required"
           >
-            <:description>{gettext("The booker must answer this question before they can continue.")}</:description>
+            <:description>The booker must answer this question before they can continue.</:description>
           </CoreComponents.input>
 
           <%!-- Type-specific config --%>
@@ -258,8 +257,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                 value={field_value(@changeset, :body)}
                 id="definition_body"
                 type="textarea"
-                label={gettext("Body text")}
-                placeholder={gettext("Text that the booker must acknowledge before proceeding")}
+                label="Body text"
+                placeholder="Text that the booker must acknowledge before proceeding"
                 rows={4}
                 required
                 phx-blur="field_blur"
@@ -267,7 +266,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                 phx-target={@myself}
                 errors={FormValidationHelpers.field_errors(@field_errors, :body)}
               >
-                <:description>{gettext("The notice the booker must read and confirm before they can continue.")}</:description>
+                <:description>The notice the booker must read and confirm before they can continue.</:description>
               </CoreComponents.input>
             <% t when t in ~w(number date) -> %>
               <div class="grid grid-cols-2 gap-3">
@@ -276,20 +275,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                   value={field_value(@changeset, :min)}
                   id="definition_min"
                   type="number"
-                  label={gettext("Min")}
+                  label="Min"
                   errors={FormValidationHelpers.field_errors(@field_errors, :min)}
                 >
-                  <:description>{gettext("Lowest value the booker may enter.")}</:description>
+                  <:description>Lowest value the booker may enter.</:description>
                 </CoreComponents.input>
                 <CoreComponents.input
                   name="definition[max]"
                   value={field_value(@changeset, :max)}
                   id="definition_max"
                   type="number"
-                  label={gettext("Max")}
+                  label="Max"
                   errors={FormValidationHelpers.field_errors(@field_errors, :max)}
                 >
-                  <:description>{gettext("Highest value the booker may enter.")}</:description>
+                  <:description>Highest value the booker may enter.</:description>
                 </CoreComponents.input>
               </div>
             <% _ -> %>
@@ -299,9 +298,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
           <%= if @pending_type_change do %>
             <div role="alertdialog" aria-live="polite" class="rounded-token-lg border-2 bg-amber-50 border-amber-200 text-amber-800 p-4">
               <p class="font-medium text-token-sm mb-3">
-                {gettext(
-                  "Changing the type will clear the configuration you've defined (options, body, min/max). Past bookings keep their original answers. Continue?"
-                )}
+                Changing the type will clear the configuration you've defined (options, body, min/max). Past bookings keep their original answers. Continue?
               </p>
               <div class="flex gap-2">
                 <CoreComponents.action_button
@@ -310,7 +307,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                   phx-click="cancel_type_change"
                   phx-target={@myself}
                 >
-                  {gettext("Cancel")}
+                  Cancel
                 </CoreComponents.action_button>
                 <CoreComponents.action_button
                   type="button"
@@ -318,7 +315,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
                   phx-click="confirm_type_change"
                   phx-target={@myself}
                 >
-                  {gettext("Yes, change type")}
+                  Yes, change type
                 </CoreComponents.action_button>
               </div>
             </div>
@@ -331,10 +328,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
               phx-click="cancel"
               phx-target={@myself}
             >
-              {gettext("Cancel")}
+              Cancel
             </CoreComponents.action_button>
             <CoreComponents.action_button type="submit" variant={:primary}>
-              {gettext("Save question")}
+              Save question
             </CoreComponents.action_button>
           </div>
         </.form>
@@ -353,11 +350,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
     ~H"""
     <div>
       <label class="label">
-        {gettext("Options")}
-        <span class="text-red-500 ml-0.5">*</span>
+        Options <span class="text-red-500 ml-0.5">*</span>
       </label>
       <p class="text-token-xs text-tymeslot-500 font-medium normal-case tracking-normal -mt-1 mb-3">
-        {gettext("Each entry becomes a selectable choice for the booker.")}
+        Each entry becomes a selectable choice for the booker.
       </p>
       <div class="space-y-2">
         <%= for {option, index} <- Enum.with_index(options_list(@changeset)) do %>
@@ -372,7 +368,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
               name={"definition[options][#{index}][label]"}
               value={option.label || ""}
               class="input flex-1"
-              placeholder={gettext("Option %{n}", n: index + 1)}
+              placeholder={"Option #{index + 1}"}
               phx-blur="field_blur"
               phx-value-field="options"
               phx-target={@myself}
@@ -383,7 +379,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
               phx-click="remove_option"
               phx-value-index={index}
               phx-target={@myself}
-              aria-label={gettext("Remove option")}
+              aria-label="Remove option"
             >×</button>
           </div>
         <% end %>
@@ -394,7 +390,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
         phx-click="add_option"
         phx-target={@myself}
       >
-        + {gettext("Add option")}
+        + Add option
       </button>
       <%= for error <- FormValidationHelpers.field_errors(@field_errors, :options) do %>
         <p class="field-error">{translate_options_error(error)}</p>
@@ -431,16 +427,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
 
   defp type_options do
     [
-      {gettext("Short text"), "short_text"},
-      {gettext("Number"), "number"},
-      {gettext("Single choice"), "single_select"},
-      {gettext("Multiple choice"), "multi_select"},
-      {gettext("Yes / No"), "yes_no"},
-      {gettext("Phone"), "phone"},
-      {gettext("URL"), "url"},
-      {gettext("Date"), "date"},
-      {gettext("Time"), "time"},
-      {gettext("Note for acknowledgement"), "note"}
+      {"Short text", "short_text"},
+      {"Number", "number"},
+      {"Single choice", "single_select"},
+      {"Multiple choice", "multi_select"},
+      {"Yes / No", "yes_no"},
+      {"Phone", "phone"},
+      {"URL", "url"},
+      {"Date", "date"},
+      {"Time", "time"},
+      {"Note for acknowledgement", "note"}
     ]
   end
 end
