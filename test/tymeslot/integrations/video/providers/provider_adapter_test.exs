@@ -24,6 +24,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
       assert ProviderAdapter.valid_meeting_url?("https://teams.microsoft.com/l/meetup-join/abc")
     end
 
+    test "detects zoom" do
+      assert ProviderAdapter.valid_meeting_url?("https://zoom.us/j/12345678901")
+    end
+
     test "returns false for unknown provider" do
       refute ProviderAdapter.valid_meeting_url?("https://unknown.com/room")
     end

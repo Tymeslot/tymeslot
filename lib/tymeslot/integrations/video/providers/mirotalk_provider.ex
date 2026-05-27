@@ -355,6 +355,23 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     }
   end
 
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def build_config(integration, decrypted, _opts) do
+    %{api_key: decrypted.api_key, base_url: integration.base_url}
+  end
+
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def credential_spec do
+    %{
+      required: [:base_url],
+      credential_pairs: [{:api_key, :api_key_encrypted}],
+      url_fields: [:base_url]
+    }
+  end
+
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def url_patterns, do: ["mirotalk", "talk."]
+
   # Rate limit helper
   defp check_rate_limit(ip) do
     case RateLimiter.check_mirotalk_connection_rate_limit(ip) do
