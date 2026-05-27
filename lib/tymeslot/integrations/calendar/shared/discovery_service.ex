@@ -8,12 +8,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
 
   require Logger
 
-  alias Tymeslot.Integrations.Calendar.CalDAV
-  alias Tymeslot.Integrations.Calendar.MailboxOrg
-  alias Tymeslot.Integrations.Calendar.Nextcloud
-  alias Tymeslot.Integrations.Calendar.Radicale
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
-  alias Tymeslot.Integrations.Calendar.Zimbra
 
   # Cache discovery results for 5 minutes
   @cache_ttl_seconds 300
@@ -175,56 +171,22 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
     ErrorHandler.with_error_handling(
       provider,
       fn ->
-        case provider do
-          :caldav ->
-            perform_caldav_discovery(config)
-
-          :nextcloud ->
-            perform_nextcloud_discovery(config)
-
-          :radicale ->
-            perform_radicale_discovery(config)
-
-          :mailbox_org ->
-            perform_mailbox_org_discovery(config)
-
-          :zimbra ->
-            perform_zimbra_discovery(config)
-
-          _other ->
-            {:error, "Unsupported provider: #{provider}"}
+        if ProviderConfig.caldav_based?(provider) do
+          # apply/3 keeps the dispatch dynamic so the compiler does not warn
+          # about non-caldav provider modules (debug/demo/nil) lacking a
+          # `discover_calendars/1` arity — the caldav_based? gate above
+          # already filters them out at runtime.
+          provider_module = ProviderConfig.get_provider_module(provider)
+          # credo:disable-for-next-line Credo.Check.Refactor.Apply
+          client = apply(provider_module, :new, [config])
+          # credo:disable-for-next-line Credo.Check.Refactor.Apply
+          apply(provider_module, :discover_calendars, [client])
+        else
+          {:error, "Unsupported provider: #{provider}"}
         end
       end,
       %{operation: "calendar_discovery"}
     )
-  end
-
-  defp perform_caldav_discovery(config) do
-    # Create CalDAV client and discover calendars
-    client = CalDAV.Provider.new(config)
-    CalDAV.Provider.discover_calendars(client)
-  end
-
-  defp perform_nextcloud_discovery(config) do
-    # Create Nextcloud client and discover calendars
-    client = Nextcloud.Provider.new(config)
-    Nextcloud.Provider.discover_calendars(client)
-  end
-
-  defp perform_radicale_discovery(config) do
-    # Create Radicale client and discover calendars
-    client = Radicale.Provider.new(config)
-    Radicale.Provider.discover_calendars(client)
-  end
-
-  defp perform_mailbox_org_discovery(config) do
-    client = MailboxOrg.Provider.new(config)
-    MailboxOrg.Provider.discover_calendars(client)
-  end
-
-  defp perform_zimbra_discovery(config) do
-    client = Zimbra.Provider.new(config)
-    Zimbra.Provider.discover_calendars(client)
   end
 
   defp build_cache_key(provider, config) do

@@ -120,6 +120,32 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
     end
   end
 
+  @doc """
+  Common implementation of `discover_calendars_for_integration/1` for
+  CalDAV-based providers that store encrypted credentials.
+
+  Decrypts the integration's username/password, builds a config map,
+  constructs a client via `provider_module.new/1`, and calls
+  `provider_module.discover_calendars/1`. Used by Radicale, Zimbra,
+  MailboxOrg, and Baikal — providers whose discovery shim is otherwise
+  identical apart from the module being dispatched to.
+  """
+  @spec caldav_discover_from_integration(module(), map()) ::
+          {:ok, list(map())} | {:error, term()}
+  def caldav_discover_from_integration(provider_module, integration) do
+    decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
+
+    config = %{
+      base_url: integration.base_url,
+      username: decrypted.username,
+      password: decrypted.password,
+      calendar_paths: integration.calendar_paths
+    }
+
+    client = provider_module.new(config)
+    provider_module.discover_calendars(client)
+  end
+
   defp valid_url?(url) when is_binary(url) do
     uri = URI.parse(url)
     uri.scheme in ["http", "https"] and uri.host not in [nil, ""]

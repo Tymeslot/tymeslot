@@ -15,8 +15,9 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
   alias Tymeslot.Integrations.Calendar.CalDAV.XmlHandler
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
-  alias Tymeslot.Integrations.Calendar.Shared.PathUtils
+  alias Tymeslot.Integrations.Calendar.Shared.{DiscoveryService, PathUtils}
   alias Tymeslot.Security.RateLimiter
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -217,6 +218,28 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
         {:error, reason} ->
           {:error, "Network error during calendar discovery: #{inspect(reason)}"}
       end
+    end
+  end
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def discover_calendars_for_integration(integration) do
+    # Nextcloud goes through DiscoveryService for its cache layer and emits
+    # standardized calendar entries (id/path/name/type/selected/provider/metadata).
+    decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
+
+    config = %{
+      base_url: integration.base_url,
+      username: decrypted.username,
+      password: decrypted.password,
+      calendar_paths: integration.calendar_paths
+    }
+
+    case DiscoveryService.discover_calendars(:nextcloud, config, force_refresh: true) do
+      {:ok, calendars} ->
+        {:ok, DiscoveryService.standardize_calendar_data(calendars, :nextcloud)}
+
+      error ->
+        error
     end
   end
 
