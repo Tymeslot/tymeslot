@@ -123,12 +123,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
       returned_html = lv |> element("button", "Today") |> render_click()
       assert extract_period_label(returned_html) == original_label
     end
+
+    test "today button phx-click dispatches calendar:scroll-to-current", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      button_html = lv |> element("button", "Today") |> render()
+      assert button_html =~ "calendar:scroll-to-current"
+    end
   end
 
   describe "refresh" do
-    test "shows refresh button", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/dashboard/calendar")
-      assert html =~ "Refresh"
+    test "refresh button phx-click dispatches calendar:scroll-to-current", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      button_html = lv |> element("button[aria-label='Refresh']") |> render()
+      assert button_html =~ "calendar:scroll-to-current"
     end
   end
 
