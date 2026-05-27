@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict aTbm9eckdOUnefgpq86mexmcdwDOWtQ7N8G9uh6rS2rBSTxpNQjdlt2COxGEXnM
+\restrict fgOvFznF3h80d0g7kMBCd73tBexwbZF1R5JpvptfvFUYwogjcfumxeGqdnm8oq2
 
 -- Dumped from database version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
@@ -664,7 +664,14 @@ CREATE TABLE public.meetings (
     ical_sequence integer DEFAULT 0 NOT NULL,
     last_notified_state jsonb DEFAULT '{}'::jsonb NOT NULL,
     custom_fields_snapshot jsonb[] DEFAULT ARRAY[]::jsonb[] NOT NULL,
-    custom_field_answers jsonb DEFAULT '{}'::jsonb NOT NULL
+    custom_field_answers jsonb DEFAULT '{}'::jsonb NOT NULL,
+    utm_source character varying(255),
+    utm_medium character varying(255),
+    utm_campaign character varying(255),
+    utm_content character varying(255),
+    utm_term character varying(255),
+    referrer_host character varying(255),
+    tracking_params jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -2339,6 +2346,20 @@ CREATE UNIQUE INDEX meetings_uid_index ON public.meetings USING btree (uid);
 
 
 --
+-- Name: meetings_utm_campaign_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX meetings_utm_campaign_index ON public.meetings USING btree (utm_campaign);
+
+
+--
+-- Name: meetings_utm_source_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX meetings_utm_source_index ON public.meetings USING btree (utm_source);
+
+
+--
 -- Name: meetings_video_integration_id_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3164,7 +3185,7 @@ ALTER TABLE ONLY public.weekly_availability
 -- PostgreSQL database dump complete
 --
 
-\unrestrict aTbm9eckdOUnefgpq86mexmcdwDOWtQ7N8G9uh6rS2rBSTxpNQjdlt2COxGEXnM
+\unrestrict fgOvFznF3h80d0g7kMBCd73tBexwbZF1R5JpvptfvFUYwogjcfumxeGqdnm8oq2
 
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180112);
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180204);
@@ -3301,3 +3322,4 @@ INSERT INTO public."schema_migrations" (version) VALUES (20260516123251);
 INSERT INTO public."schema_migrations" (version) VALUES (20260516141548);
 INSERT INTO public."schema_migrations" (version) VALUES (20260519102624);
 INSERT INTO public."schema_migrations" (version) VALUES (20260527165324);
+INSERT INTO public."schema_migrations" (version) VALUES (20260527173402);
