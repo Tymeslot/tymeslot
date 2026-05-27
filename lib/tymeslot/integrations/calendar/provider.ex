@@ -99,5 +99,27 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   @callback discover_calendars_for_integration(integration :: map()) ::
               {:ok, list(map())} | {:error, term()}
 
-  @optional_callbacks discover_calendars_for_integration: 1
+  @doc """
+  Builds the list of provider-specific client configs for an integration.
+
+  Used by `Runtime.ClientManager` to construct adapter clients for sync,
+  multi-calendar fetch, and any flow that iterates over every calendar the
+  user has selected. OAuth providers typically return `[integration]` (the
+  integration struct itself is the client); CalDAV providers return one
+  config map per selected calendar path.
+  """
+  @callback build_client_configs(integration :: map()) :: [any()]
+
+  @doc """
+  Builds a single provider-specific client config for the booking flow.
+
+  Returns `nil` when no suitable client can be constructed — for example,
+  a CalDAV integration with no resolvable booking path. OAuth providers
+  typically return the integration struct directly.
+  """
+  @callback build_booking_client_config(integration :: map()) :: any() | nil
+
+  @optional_callbacks discover_calendars_for_integration: 1,
+                      build_client_configs: 1,
+                      build_booking_client_config: 1
 end

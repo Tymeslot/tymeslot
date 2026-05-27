@@ -58,6 +58,18 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
+  def build_client_configs(integration) do
+    if Application.get_env(:tymeslot, :environment) in [:dev, :test] do
+      [%{user_id: integration.user_id}]
+    else
+      []
+    end
+  end
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def build_booking_client_config(_integration), do: nil
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   def list_events(_client, opts) do
     start_time = opts[:start_time] || DateTime.add(DateTime.utc_now(), -7, :day)
     end_time = opts[:end_time] || DateTime.add(DateTime.utc_now(), 30, :day)

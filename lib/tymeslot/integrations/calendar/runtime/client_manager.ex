@@ -3,7 +3,9 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   Creates and resolves calendar provider clients.
 
   Responsibilities:
-  - Create provider-specific clients (OAuth, CalDAV, Debug) from integrations
+  - Create provider-specific clients from integrations by dispatching to
+    each provider's `build_client_configs/1` and `build_booking_client_config/1`
+    behaviour callbacks
   - Resolve a runtime client from a Meeting/MeetingType/user-id context
   - Look up the booking integration info that the SaaS layer needs
 
@@ -25,8 +27,6 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
   @type client :: map()
-
-  @caldav_providers ProviderConfig.caldav_based_providers()
 
   @doc """
   Gets configured calendar clients for all calendars belonging to a user.
@@ -147,17 +147,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
         nil
 
       {:ok, integration} ->
-        case ProviderConfig.parse_known(integration.provider) do
-          {:ok, provider} when provider in [:google, :outlook] ->
-            create_adapter_client(provider, integration)
-
-          {:ok, provider} when provider in @caldav_providers ->
-            create_caldav_client(provider, integration)
-
-          _unknown ->
-            Logger.error("Unknown calendar provider", provider: integration.provider)
-            nil
-        end
+        booking_client_for_integration(integration)
     end
   end
 
@@ -189,132 +179,38 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   # --- Private Implementation ---
 
   defp create_clients_from_integration(integration) do
-    case ProviderConfig.parse_known(integration.provider) do
-      {:ok, provider} when provider in [:google, :outlook] ->
-        create_oauth_client(provider, integration)
-
-      {:ok, provider} when provider in @caldav_providers ->
-        create_caldav_clients(provider, integration)
-
-      {:ok, :debug} ->
-        create_debug_client(integration)
-
-      _unknown ->
-        Logger.warning("Unknown provider type", provider_type: inspect(integration.provider))
-        []
-    end
-  end
-
-  defp create_oauth_client(provider_type, integration) do
-    case ProviderAdapter.new_client(provider_type, integration, skip_validation: true) do
-      %{client: _client, provider_module: _module, provider_type: _type} = adapter_client ->
-        [adapter_client]
-
-      {:error, reason} ->
-        Logger.error("Failed to create calendar client",
-          provider_type: provider_type,
-          reason: reason
-        )
-
-        []
-    end
-  end
-
-  defp create_caldav_clients(provider_type, integration) do
-    integration
-    |> selected_caldav_paths()
-    |> Enum.map(&caldav_client_for_path(provider_type, integration, &1))
-    |> Enum.reject(&is_nil/1)
-  end
-
-  defp selected_caldav_paths(integration) do
-    if integration.calendar_list && integration.calendar_list != [] do
-      integration.calendar_list
-      |> Enum.filter(fn cal ->
-        (cal["selected"] == true || cal[:selected] == true) &&
-          not (Map.get(cal, "read_only", false) || Map.get(cal, :read_only, false))
-      end)
-      |> Enum.map(fn cal -> cal["path"] || cal[:path] || cal["id"] || cal[:id] end)
+    with {:ok, provider} <- ProviderConfig.parse_known(integration.provider),
+         provider_module when is_atom(provider_module) and provider_module != nil <-
+           ProviderConfig.get_provider_module(provider),
+         true <- function_exported?(provider_module, :build_client_configs, 1) do
+      provider_module.build_client_configs(integration)
+      |> Enum.map(&create_adapter_client(provider, &1))
       |> Enum.reject(&is_nil/1)
     else
-      integration.calendar_paths || []
-    end
-  end
-
-  defp caldav_client_for_path(provider_type, integration, path) do
-    config = %{
-      base_url: integration.base_url,
-      username: integration.username,
-      password: integration.password,
-      calendar_path: path,
-      calendar_paths: [path],
-      verify_ssl: true
-    }
-
-    case ProviderAdapter.new_client(provider_type, config, skip_validation: true) do
-      %{client: _client, provider_module: _module, provider_type: _type} = adapter_client ->
-        adapter_client
-
-      {:error, reason} ->
-        Logger.error("Failed to create calendar client",
-          provider_type: provider_type,
-          path: path,
-          reason: reason
+      _other ->
+        Logger.warning("Unknown or unsupported calendar provider",
+          provider: inspect(integration.provider)
         )
 
-        nil
-    end
-  end
-
-  defp create_debug_client(integration) do
-    if Application.get_env(:tymeslot, :environment) in [:dev, :test] do
-      case ProviderAdapter.new_client(:debug, %{user_id: integration.user_id},
-             skip_validation: true
-           ) do
-        %{client: _client, provider_module: _module, provider_type: _type} = adapter_client ->
-          [adapter_client]
-
-        {:error, reason} ->
-          Logger.error("Failed to create debug client", reason: reason)
-          []
-      end
-    else
-      Logger.warning("Debug calendar provider is only available in development/test environments")
-      []
+        []
     end
   end
 
   defp create_booking_client_from_integration(nil), do: nil
 
   defp create_booking_client_from_integration(integration) do
-    case ProviderConfig.parse_known(integration.provider) do
-      {:ok, provider} when provider in [:google, :outlook] ->
-        create_adapter_client(provider, integration)
-
-      {:ok, provider} when provider in @caldav_providers ->
-        create_caldav_client(provider, integration)
-
-      _unknown ->
-        nil
-    end
+    booking_client_for_integration(integration)
   end
 
-  defp create_caldav_client(provider_type, integration) do
-    case CalendarPathResolver.resolve(integration) do
-      nil ->
-        nil
-
-      calendar_path ->
-        config = %{
-          base_url: integration.base_url,
-          username: integration.username,
-          password: integration.password,
-          calendar_path: calendar_path,
-          calendar_paths: [calendar_path],
-          verify_ssl: true
-        }
-
-        create_adapter_client(provider_type, config)
+  defp booking_client_for_integration(integration) do
+    with {:ok, provider} <- ProviderConfig.parse_known(integration.provider),
+         provider_module when is_atom(provider_module) and provider_module != nil <-
+           ProviderConfig.get_provider_module(provider),
+         true <- function_exported?(provider_module, :build_booking_client_config, 1),
+         %{} = config <- provider_module.build_booking_client_config(integration) do
+      create_adapter_client(provider, config)
+    else
+      _other -> nil
     end
   end
 
