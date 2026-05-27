@@ -1,6 +1,8 @@
 defmodule Tymeslot.Analytics.BotDetectorTest do
   use ExUnit.Case, async: true
 
+  @moduletag :unit
+
   alias Tymeslot.Analytics.BotDetector
 
   describe "bot?/1" do

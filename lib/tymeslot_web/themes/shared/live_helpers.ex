@@ -319,6 +319,12 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   matches what `Tymeslot.Bookings.Create.execute/3` expects on the
   meeting params, so merging this assign into the meeting params at
   submit time persists the attribution on the booking.
+
+  **First-touch attribution only.** This function is called once in `mount/3`.
+  Internal LiveView navigations within the same session (e.g. schedule →
+  booking → confirmation) do not invoke `mount/3` again, so the tracking
+  assign is never refreshed mid-session. The UTM and referrer values
+  recorded here reflect the URL the visitor first arrived on.
   """
   @spec assign_tracking(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_tracking(socket, params) do

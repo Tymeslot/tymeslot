@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
   @moduletag :live
 
   import Tymeslot.DashboardTestHelpers
+  import Tymeslot.Factory
 
   alias Tymeslot.Analytics.EventQueries
   alias Tymeslot.Security.RateLimiter
@@ -50,6 +51,46 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
 
       assert html =~ "Analytics"
       assert html =~ "linkedin"
+    end
+  end
+
+  describe "attribution table with real booking data" do
+    test "shows linkedin visit count, booking count, and conversion rate", %{
+      conn: conn,
+      user: user
+    } do
+      # 4 visits with 3 distinct visitor_hashes → 3 unique visitors
+      seed_visit(user, "linkedin", "hash-uv-1")
+      seed_visit(user, "linkedin", "hash-uv-2")
+      seed_visit(user, "linkedin", "hash-uv-3")
+      seed_visit(user, "linkedin", "hash-uv-3")
+
+      # 2 booked meetings attributed to linkedin, distinct start times to dodge unique constraint
+      base = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
+
+      insert(:meeting,
+        organizer_user_id: user.id,
+        utm_source: "linkedin",
+        start_time: base,
+        end_time: DateTime.add(base, 60, :minute)
+      )
+
+      insert(:meeting,
+        organizer_user_id: user.id,
+        utm_source: "linkedin",
+        start_time: DateTime.add(base, 3600, :second),
+        end_time: DateTime.add(base, 3600 + 60 * 60, :second)
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/analytics")
+
+      assert html =~ "linkedin"
+      # 4 visits
+      assert html =~ "4"
+      # 2 bookings
+      assert html =~ "2"
+      # Conversion: 2 bookings / 3 unique visitors * 100 = 66.7%
+      assert html =~ "66.7"
     end
   end
 

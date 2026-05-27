@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
   @moduledoc """
   Renders the per-source attribution table: utm_source, visits, bookings,
   conversion rate. The `sources` list comes from
-  `Tymeslot.Analytics.top_sources/3` joined with booking counts.
+  `Tymeslot.Analytics.attribution_table/3`.
   """
   use TymeslotWeb, :html
 
@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
     <div class="card-glass overflow-hidden p-0">
       <table class="w-full text-token-sm">
         <thead class="bg-tymeslot-50">
-          <tr class="text-xs font-black uppercase tracking-widest text-tymeslot-400">
+          <tr class="text-token-xs font-black uppercase tracking-widest text-tymeslot-400">
             <th class="px-4 py-3 text-left">Source</th>
             <th class="px-4 py-3 text-right">Visits</th>
             <th class="px-4 py-3 text-right">Bookings</th>
@@ -39,9 +39,10 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
     """
   end
 
-  defp conversion(%{visits: 0}), do: "0.0"
+  defp conversion(%{unique_visitors: 0}), do: "0.0"
 
-  defp conversion(%{visits: visits, bookings: bookings}) do
-    :erlang.float_to_binary(bookings / visits * 100, decimals: 1)
+  defp conversion(%{unique_visitors: unique_visitors, bookings: bookings}) do
+    rate = min(100.0, bookings / unique_visitors * 100)
+    :erlang.float_to_binary(rate, decimals: 1)
   end
 end

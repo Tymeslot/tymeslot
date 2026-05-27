@@ -23,10 +23,11 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
     """
   end
 
-  defp conversion_rate(%{visits: 0}), do: "0.0"
+  defp conversion_rate(%{unique_visitors: 0}), do: "0.0"
 
-  defp conversion_rate(%{visits: visits, bookings: bookings}) do
-    :erlang.float_to_binary(bookings / visits * 100, decimals: 1)
+  defp conversion_rate(%{unique_visitors: unique_visitors, bookings: bookings}) do
+    rate = min(100.0, bookings / unique_visitors * 100)
+    :erlang.float_to_binary(rate, decimals: 1)
   end
 
   attr :label, :string, required: true
@@ -35,10 +36,10 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
   defp stat_card(assigns) do
     ~H"""
     <div class="card-glass">
-      <div class="text-sm font-black uppercase tracking-widest text-tymeslot-400">
+      <div class="text-token-sm font-black uppercase tracking-widest text-tymeslot-400">
         {@label}
       </div>
-      <div class="mt-2 text-3xl font-black tracking-tight text-tymeslot-900">
+      <div class="mt-2 text-token-3xl font-black tracking-tight text-tymeslot-900">
         {@value}
       </div>
     </div>

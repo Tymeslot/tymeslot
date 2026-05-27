@@ -78,6 +78,13 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
   end
 
   @tag :capture_log
+  # NOTE: end-to-end coverage of `Referer` → `meeting.referrer_host` requires
+  # `:x_headers` connect_info propagation that LiveView's test helpers do not
+  # provide for request headers set via `put_req_header/3`. The host-parsing
+  # half is unit-tested in `Tymeslot.Analytics.UtmExtractorTest`. Full HTTP
+  # coverage would require a Wallaby/browser-driven test.
+
+  @tag :capture_log
   test "UTM and tracking params from the landing URL persist on the created meeting", %{
     conn: conn,
     profile: profile,

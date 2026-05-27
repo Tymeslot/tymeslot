@@ -78,21 +78,32 @@ defmodule Tymeslot.Analytics.EventQueriesTest do
     end
   end
 
-  describe "top_sources/3" do
-    test "groups by utm_source, ordered by count desc", %{user: user} do
-      insert_event(%{user_id: user.id, utm_source: "linkedin"})
-      insert_event(%{user_id: user.id, utm_source: "linkedin"})
-      insert_event(%{user_id: user.id, utm_source: "twitter"})
-      insert_event(%{user_id: user.id, utm_source: nil})
+  describe "top_sources_with_unique/3" do
+    test "groups by utm_source with unique visitor counts, ordered by visits desc", %{
+      user: user
+    } do
+      insert_event(%{user_id: user.id, utm_source: "linkedin", visitor_hash: "a"})
+      insert_event(%{user_id: user.id, utm_source: "linkedin", visitor_hash: "b"})
+      insert_event(%{user_id: user.id, utm_source: "twitter", visitor_hash: "c"})
+      insert_event(%{user_id: user.id, utm_source: nil, visitor_hash: "d"})
 
       from = DateTime.add(DateTime.utc_now(), -3600, :second)
       to = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       assert [
-               %{utm_source: "linkedin", visits: 2},
-               %{utm_source: "twitter", visits: 1},
-               %{utm_source: nil, visits: 1}
-             ] = EventQueries.top_sources(user.id, from, to)
+               %{utm_source: "linkedin", visits: 2, unique_visitors: 2},
+               %{utm_source: "twitter", visits: 1, unique_visitors: 1}
+             ] = EventQueries.top_sources_with_unique(user.id, from, to)
+    end
+
+    test "does not return a row for nil utm_source", %{user: user} do
+      insert_event(%{user_id: user.id, utm_source: nil})
+      insert_event(%{user_id: user.id, utm_source: nil})
+
+      from = DateTime.add(DateTime.utc_now(), -3600, :second)
+      to = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      assert EventQueries.top_sources_with_unique(user.id, from, to) == []
     end
   end
 

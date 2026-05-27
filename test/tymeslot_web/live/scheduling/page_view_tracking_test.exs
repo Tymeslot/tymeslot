@@ -133,12 +133,16 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
     )
   end
 
-  # Gives the supervised Task a brief window to run so we can assert that it
-  # did NOT insert anything. We can't observe completion directly, so wait a
-  # short fixed interval — bot detection and static-render skipping both
-  # short-circuit before any async work, so this is only a safety margin.
+  # Asserts that no analytics event is written within a short window.
+  # Bot detection and the static-render guard both short-circuit before
+  # any async work, so the poll simply confirms the table stays empty.
   defp wait_quiet do
-    Process.sleep(150)
+    eventually(
+      fn -> Repo.aggregate(EventSchema, :count, :id) == 0 end,
+      timeout: 500,
+      interval: 50
+    )
+
     :ok
   end
 end

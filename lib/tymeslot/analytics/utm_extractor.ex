@@ -9,8 +9,9 @@ defmodule Tymeslot.Analytics.UtmExtractor do
   """
 
   @utm_keys ~w(utm_source utm_medium utm_campaign utm_content utm_term)
-  @routing_keys ~w(username slug meeting_uid step)
+  @routing_keys ~w(username slug meeting_uid step locale theme tz)
   @max_value_length 255
+  @max_tracking_keys 16
 
   @type extracted :: %{
           utm_source: String.t() | nil,
@@ -43,8 +44,11 @@ defmodule Tymeslot.Analytics.UtmExtractor do
 
   def referrer_host(url) when is_binary(url) do
     case URI.parse(url) do
-      %URI{host: host} when is_binary(host) and host != "" -> String.downcase(host)
-      _other -> nil
+      %URI{host: host} when is_binary(host) and host != "" ->
+        host |> String.downcase() |> String.slice(0, 255)
+
+      _other ->
+        nil
     end
   end
 
@@ -66,7 +70,13 @@ defmodule Tymeslot.Analytics.UtmExtractor do
   defp place(acc, key, _value) when key in @routing_keys, do: acc
 
   defp place(acc, key, value) do
-    Map.update!(acc, :tracking_params, &Map.put(&1, key, value))
+    Map.update!(acc, :tracking_params, fn params ->
+      if map_size(params) >= @max_tracking_keys do
+        params
+      else
+        Map.put(params, key, value)
+      end
+    end)
   end
 
   defp truncate(value) when byte_size(value) <= @max_value_length, do: value

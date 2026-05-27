@@ -33,16 +33,21 @@ defmodule Tymeslot.Analytics.EventQueries do
     |> Repo.one() || 0
   end
 
-  @spec top_sources(integer(), DateTime.t(), DateTime.t()) :: [
-          %{utm_source: String.t() | nil, visits: non_neg_integer()}
+  @spec top_sources_with_unique(integer(), DateTime.t(), DateTime.t()) :: [
+          %{utm_source: String.t(), visits: non_neg_integer(), unique_visitors: non_neg_integer()}
         ]
-  def top_sources(user_id, from, to) do
+  def top_sources_with_unique(user_id, from, to) do
     EventSchema
     |> where([e], e.user_id == ^user_id)
     |> where([e], e.inserted_at >= ^from and e.inserted_at <= ^to)
+    |> where([e], not is_nil(e.utm_source))
     |> group_by([e], e.utm_source)
-    |> select([e], %{utm_source: e.utm_source, visits: count(e.id)})
-    |> order_by([e], desc: count(e.id), asc_nulls_last: e.utm_source)
+    |> select([e], %{
+      utm_source: e.utm_source,
+      visits: count(e.id),
+      unique_visitors: count(e.visitor_hash, :distinct)
+    })
+    |> order_by([e], desc: count(e.id), asc: e.utm_source)
     |> Repo.all()
   end
 

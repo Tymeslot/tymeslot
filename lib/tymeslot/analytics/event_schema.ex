@@ -59,6 +59,9 @@ defmodule Tymeslot.Analytics.EventSchema do
     |> cast(attrs, @required ++ @optional)
     |> validate_required(@required)
     |> validate_inclusion(:event_type, @valid_event_types)
+    |> validate_length(:path, max: 255)
+    |> validate_length(:session_id, max: 255)
+    |> validate_length(:referrer_host, max: 255)
   end
 
   @spec valid_event_types() :: [String.t()]

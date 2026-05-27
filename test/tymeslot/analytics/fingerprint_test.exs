@@ -26,8 +26,19 @@ defmodule Tymeslot.Analytics.FingerprintTest do
                Fingerprint.hash("1.2.3.4", "Mozilla/5.0", 43)
     end
 
-    test "tolerates nil ip/ua/meeting_type" do
-      hash = Fingerprint.hash(nil, nil, nil)
+    test "returns nil when both ip and user_agent are nil" do
+      assert Fingerprint.hash(nil, nil, nil) == nil
+      assert Fingerprint.hash(nil, nil, 42) == nil
+    end
+
+    test "returns a hash when ip is present but user_agent is nil" do
+      hash = Fingerprint.hash("1.2.3.4", nil, nil)
+      assert is_binary(hash)
+      assert String.length(hash) == 64
+    end
+
+    test "returns a hash when user_agent is present but ip is nil" do
+      hash = Fingerprint.hash(nil, "Mozilla/5.0", nil)
       assert is_binary(hash)
       assert String.length(hash) == 64
     end

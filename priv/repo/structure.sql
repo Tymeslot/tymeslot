@@ -1898,20 +1898,6 @@ CREATE INDEX analytics_events_user_id_inserted_at_index ON public.analytics_even
 
 
 --
--- Name: analytics_events_utm_campaign_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX analytics_events_utm_campaign_index ON public.analytics_events USING btree (utm_campaign);
-
-
---
--- Name: analytics_events_utm_source_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX analytics_events_utm_source_index ON public.analytics_events USING btree (utm_source);
-
-
---
 -- Name: analytics_events_visitor_hash_inserted_at_index; Type: INDEX; Schema: public; Owner: -
 --
 

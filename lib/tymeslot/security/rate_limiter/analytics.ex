@@ -17,4 +17,10 @@ defmodule Tymeslot.Security.RateLimiter.Analytics do
   def check(visitor_hash) when is_binary(visitor_hash) do
     Helpers.check_rate("analytics:visitor:" <> visitor_hash, @window_ms, @limit)
   end
+
+  @spec check_ip(String.t(), pos_integer(), pos_integer()) ::
+          {:allow, pos_integer()} | {:deny, pos_integer()}
+  def check_ip(bucket_key, window_ms, limit) when is_binary(bucket_key) do
+    Helpers.check_rate(bucket_key, window_ms, limit)
+  end
 end

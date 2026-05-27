@@ -1,6 +1,8 @@
 defmodule Tymeslot.Analytics.UtmExtractorTest do
   use ExUnit.Case, async: true
 
+  @moduletag :unit
+
   alias Tymeslot.Analytics.UtmExtractor
 
   describe "extract/1" do

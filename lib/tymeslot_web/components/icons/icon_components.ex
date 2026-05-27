@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Components.Icons.IconComponents do
     [
       :arrow_left,
       :arrow_right,
+      :bar_chart,
       :bell,
       :bolt,
       :calendar,

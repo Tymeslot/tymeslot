@@ -6,13 +6,12 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   signed-in user over a configurable date range (7/30/90 days), plus a
   per-source attribution table and a visits-over-time chart.
 
-  Data is read through `Tymeslot.Analytics` and
-  `Tymeslot.Meetings.MeetingQueries`; no Ecto queries live in this module.
+  All data is read through `Tymeslot.Analytics`; no Ecto queries live in
+  this module.
   """
   use TymeslotWeb, :live_view
 
   alias Tymeslot.Analytics
-  alias Tymeslot.Meetings.MeetingQueries
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable
   alias TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards
@@ -76,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           bookings={@bookings}
         />
 
-        <VisitsChart.chart points={@visits_by_day} />
+        <VisitsChart.chart points={@visits_by_day} from={@from} to={@to} />
 
         <SourcesTable.table sources={@sources} />
       </div>
@@ -131,9 +130,9 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   defp load_data(%{assigns: %{current_user: user, from: from, to: to}} = socket) do
     visits = Analytics.count_visits(user.id, from, to)
     unique_visitors = Analytics.count_unique_visitors(user.id, from, to)
-    bookings = MeetingQueries.count_bookings(user.id, from, to)
+    bookings = Analytics.count_bookings(user.id, from, to)
     visits_by_day = Analytics.visits_by_day(user.id, from, to)
-    sources = build_sources(user.id, from, to)
+    sources = Analytics.attribution_table(user.id, from, to)
 
     assign(socket,
       visits: visits,
@@ -142,15 +141,5 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
       visits_by_day: visits_by_day,
       sources: sources
     )
-  end
-
-  defp build_sources(user_id, from, to) do
-    visits = Analytics.top_sources(user_id, from, to)
-    bookings = MeetingQueries.bookings_by_source(user_id, from, to)
-    bookings_by_source = Map.new(bookings, &{&1.utm_source, &1.bookings})
-
-    Enum.map(visits, fn row ->
-      Map.put(row, :bookings, Map.get(bookings_by_source, row.utm_source, 0))
-    end)
   end
 end

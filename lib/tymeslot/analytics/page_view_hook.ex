@@ -57,13 +57,32 @@ defmodule Tymeslot.Analytics.PageViewHook do
   end
 
   defp extract_peer_ip(socket) do
-    case get_connect_info(socket, :peer_data) do
-      %{address: address} when is_tuple(address) ->
-        address |> :inet.ntoa() |> to_string()
+    forwarded =
+      case get_connect_info(socket, :x_headers) do
+        headers when is_list(headers) -> find_forwarded_ip(headers)
+        _other -> nil
+      end
 
-      _other ->
-        nil
-    end
+    forwarded ||
+      case get_connect_info(socket, :peer_data) do
+        %{address: address} when is_tuple(address) -> address |> :inet.ntoa() |> to_string()
+        _other -> nil
+      end
+  end
+
+  # Check proxy headers in priority order: x-forwarded-for (first IP),
+  # x-real-ip, then cf-connecting-ip (Cloudflare).
+  defp find_forwarded_ip(headers) do
+    Enum.find_value(
+      ["x-forwarded-for", "x-real-ip", "cf-connecting-ip"],
+      fn name ->
+        Enum.find_value(headers, fn {k, v} ->
+          if String.downcase(to_string(k)) == name do
+            v |> String.split(",") |> List.first() |> String.trim()
+          end
+        end)
+      end
+    )
   end
 
   defp extract_header(socket, name) do

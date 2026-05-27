@@ -259,6 +259,12 @@ defmodule Tymeslot.Meetings.MeetingSchema do
       message: "is not a supported locale"
     )
     |> TimeOrder.validate_time_order(:start_time, :end_time)
+    |> validate_length(:utm_source, max: 255)
+    |> validate_length(:utm_medium, max: 255)
+    |> validate_length(:utm_campaign, max: 255)
+    |> validate_length(:utm_content, max: 255)
+    |> validate_length(:utm_term, max: 255)
+    |> validate_length(:referrer_host, max: 255)
     |> calculate_duration()
     |> unique_constraint(:uid)
     |> unique_constraint([:organizer_user_id, :start_time],

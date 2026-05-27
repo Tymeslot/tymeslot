@@ -1,8 +1,8 @@
 defmodule Tymeslot.AnalyticsTest do
   use Tymeslot.DataCase, async: false
 
+  @moduletag :analytics
   @moduletag :database
-  @moduletag :context
 
   alias Tymeslot.Analytics
   alias Tymeslot.Analytics.EventSchema

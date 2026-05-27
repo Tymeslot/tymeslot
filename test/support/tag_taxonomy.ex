@@ -31,6 +31,7 @@ defmodule Tymeslot.Test.TagTaxonomy do
   @taxonomy %{
     domain: [
       # Core scheduling & user features
+      :analytics,
       :auth,
       :automation,
       :availability,
