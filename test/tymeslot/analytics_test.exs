@@ -1,5 +1,5 @@
 defmodule Tymeslot.AnalyticsTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
 
   @moduletag :database
   @moduletag :context
