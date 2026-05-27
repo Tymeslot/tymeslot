@@ -3,10 +3,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   import Phoenix.Component, only: [assign: 3]
 
+  require Logger
+
   alias Tymeslot.CalendarGrid
-  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
-  alias Tymeslot.Integrations.Calendar.ICalBuilder
-  alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
   alias Tymeslot.Meetings.AttendeeNotifications
