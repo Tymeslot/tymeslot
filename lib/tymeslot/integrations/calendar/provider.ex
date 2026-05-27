@@ -83,4 +83,21 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   """
   @callback list_events(client :: any(), opts :: keyword()) ::
               {:ok, list()} | {:error, any()}
+
+  @doc """
+  Discovers the user's calendars given a persisted integration.
+
+  Unified entry point for the dashboard's "discover calendars" flow. CalDAV
+  providers decrypt the stored credentials and probe the configured server;
+  OAuth providers issue the appropriate API call against the stored token.
+  Returns a list of provider-shaped calendar maps — `Shared.DiscoveryService`
+  callers normalise these via `standardize_calendar_data/2`.
+
+  Optional: providers that do not support discovery (e.g. demo/debug)
+  may omit this callback.
+  """
+  @callback discover_calendars_for_integration(integration :: map()) ::
+              {:ok, list(map())} | {:error, term()}
+
+  @optional_callbacks discover_calendars_for_integration: 1
 end

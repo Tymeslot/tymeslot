@@ -195,6 +195,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     )
   end
 
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def discover_calendars_for_integration(integration), do: discover_calendars(integration)
+
   @doc """
   Tests the connection to Google Calendar API.
   Makes a simple API call to verify OAuth token validity and API accessibility.
