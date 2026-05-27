@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
 
   alias Tymeslot.Analytics.EventSchema
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
@@ -106,7 +107,7 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
 
     insert(:calendar_integration, user: user, is_active: true)
 
-    slug = Tymeslot.MeetingTypes.to_slug(meeting_type)
+    slug = MeetingTypes.to_slug(meeting_type)
 
     %{
       user: user,
@@ -124,7 +125,7 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
       fn ->
         case Repo.all(EventSchema) do
           [event] -> event
-          _ -> raise "expected exactly one event"
+          _other -> raise "expected exactly one event"
         end
       end,
       timeout: 2_000,
