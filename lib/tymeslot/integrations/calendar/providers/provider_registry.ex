@@ -41,32 +41,20 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
   @spec valid_provider?(atom()) :: boolean()
   defdelegate valid_provider?(provider), to: ProviderConfig
 
-  # Override default to honor enabled/disabled providers from ProviderConfig
-  @spec get_provider(atom()) :: {:ok, module()} | {:error, String.t()}
-  def get_provider(provider_type) when is_atom(provider_type) do
-    case ProviderConfig.validate_provider(provider_type) do
-      {:ok, type} ->
-        case Map.get(
-               %{
-                 caldav: Tymeslot.Integrations.Calendar.CalDAV.Provider,
-                 radicale: Tymeslot.Integrations.Calendar.Radicale.Provider,
-                 nextcloud: Tymeslot.Integrations.Calendar.Nextcloud.Provider,
-                 zimbra: Tymeslot.Integrations.Calendar.Zimbra.Provider,
-                 mailbox_org: Tymeslot.Integrations.Calendar.MailboxOrg.Provider,
-                 baikal: Tymeslot.Integrations.Calendar.Baikal.Provider,
-                 google: Tymeslot.Integrations.Calendar.Google.Provider,
-                 outlook: Tymeslot.Integrations.Calendar.Outlook.Provider,
-                 debug: Tymeslot.Integrations.Calendar.DebugCalendarProvider,
-                 demo: Tymeslot.Integrations.Calendar.DemoCalendarProvider
-               },
-               type
-             ) do
-          nil -> {:error, "Unknown provider type: #{inspect(type)}"}
-          module -> {:ok, module}
-        end
-
-      {:error, message} ->
-        {:error, message}
+  # Toggle-agnostic module lookup: returns the provider module for any known
+  # provider, regardless of whether it is currently enabled via config. This
+  # ensures persisted integrations (sync, room creation, connection test)
+  # continue to function when a provider has been disabled after the
+  # integration was created. Enforcement of the toggle belongs at user-input
+  # boundaries (form validation, new-connection flows), not here.
+  @spec get_provider(atom() | String.t()) :: {:ok, module()} | {:error, String.t()}
+  def get_provider(provider_type) do
+    with {:ok, type} <- ProviderConfig.parse_known(provider_type),
+         module when is_atom(module) and module != nil <-
+           ProviderConfig.get_provider_module(type) do
+      {:ok, module}
+    else
+      _other -> {:error, "Unknown provider type: #{inspect(provider_type)}"}
     end
   end
 

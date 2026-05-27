@@ -51,7 +51,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   @spec new_client_from_integration(CalendarIntegrationSchema.t()) ::
           {:ok, adapter_client()} | {:error, term()}
   def new_client_from_integration(%CalendarIntegrationSchema{} = integration) do
-    with {:ok, provider_atom} <- ProviderConfig.validate_provider(integration.provider),
+    with {:ok, provider_atom} <- ProviderConfig.parse_known(integration.provider),
          {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom) do
       if ProviderConfig.caldav_based?(provider_atom) do
         decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)

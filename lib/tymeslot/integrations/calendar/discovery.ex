@@ -71,10 +71,12 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
       calendar_paths: calendar_paths_or_empty(integration)
     }
 
-    with {:ok, provider_atom} <- resolve_provider_atom(provider),
+    with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
          {:ok, provider_module} <- provider_module_for(provider_atom) do
       client = provider_module.new(config)
       provider_module.discover_calendars(client)
+    else
+      _other -> {:error, :unknown_provider}
     end
   end
 
@@ -184,14 +186,8 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   # Production callers pass atom-keyed attrs from Creation.prepare_attrs/2.
   @spec discover_caldav_calendar_paths(map()) :: {:ok, list(String.t())} | {:error, String.t()}
   defp discover_caldav_calendar_paths(%{provider: provider} = config) do
-    provider_atom =
-      case ProviderRegistry.validate_provider(provider) do
-        {:ok, atom} -> atom
-        _other -> :unknown
-      end
-
-    with true <- provider_atom != :unknown,
-         {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom),
+    with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
+         {:ok, provider_module} <- provider_module_for(provider_atom),
          client = provider_module.new(config),
          {:ok, calendars} <- provider_module.discover_calendars(client) do
       {:ok, extract_calendar_paths(calendars)}

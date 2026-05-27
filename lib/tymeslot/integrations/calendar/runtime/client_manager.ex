@@ -147,17 +147,15 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
         nil
 
       {:ok, integration} ->
-        provider_type = parse_provider(integration.provider)
+        case ProviderConfig.parse_known(integration.provider) do
+          {:ok, provider} when provider in [:google, :outlook] ->
+            create_adapter_client(provider, integration)
 
-        case provider_type do
-          provider when provider in [:google, :outlook] ->
-            create_adapter_client(provider_type, integration)
-
-          provider when provider in @caldav_providers ->
-            create_caldav_client(provider_type, integration)
+          {:ok, provider} when provider in @caldav_providers ->
+            create_caldav_client(provider, integration)
 
           _unknown ->
-            Logger.error("Unknown calendar provider", provider: provider_type)
+            Logger.error("Unknown calendar provider", provider: integration.provider)
             nil
         end
     end
@@ -191,18 +189,18 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   # --- Private Implementation ---
 
   defp create_clients_from_integration(integration) do
-    case parse_provider(integration.provider) do
-      provider when provider in [:google, :outlook] ->
+    case ProviderConfig.parse_known(integration.provider) do
+      {:ok, provider} when provider in [:google, :outlook] ->
         create_oauth_client(provider, integration)
 
-      provider when provider in @caldav_providers ->
+      {:ok, provider} when provider in @caldav_providers ->
         create_caldav_clients(provider, integration)
 
-      :debug ->
+      {:ok, :debug} ->
         create_debug_client(integration)
 
-      unknown ->
-        Logger.warning("Unknown provider type", provider_type: inspect(unknown))
+      _unknown ->
+        Logger.warning("Unknown provider type", provider_type: inspect(integration.provider))
         []
     end
   end
@@ -289,11 +287,11 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   defp create_booking_client_from_integration(nil), do: nil
 
   defp create_booking_client_from_integration(integration) do
-    case parse_provider(integration.provider) do
-      provider when provider in [:google, :outlook] ->
+    case ProviderConfig.parse_known(integration.provider) do
+      {:ok, provider} when provider in [:google, :outlook] ->
         create_adapter_client(provider, integration)
 
-      provider when provider in @caldav_providers ->
+      {:ok, provider} when provider in @caldav_providers ->
         create_caldav_client(provider, integration)
 
       _unknown ->
@@ -334,14 +332,6 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
         nil
     end
   end
-
-  defp parse_provider(provider) when is_binary(provider) do
-    String.to_existing_atom(provider)
-  rescue
-    ArgumentError -> :unknown
-  end
-
-  defp parse_provider(_other), do: :unknown
 
   defp fetch_active_integrations(nil), do: {:error, :user_id_required}
 

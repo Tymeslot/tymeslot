@@ -57,7 +57,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
     }
 
     provider_atom =
-      case ProviderRegistry.validate_provider(provider) do
+      case ProviderConfig.parse_known(provider) do
         {:ok, atom} -> atom
         _other -> :unknown
       end
@@ -77,15 +77,10 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   """
   @spec test_connection(CalendarIntegrationSchema.t()) :: {:ok, String.t()} | {:error, term()}
   def test_connection(%{provider: provider} = integration) do
-    provider_atom =
-      try do
-        String.to_existing_atom(provider)
-      rescue
-        ArgumentError -> nil
-      end
-
-    case provider_atom && ProviderRegistry.get_provider(provider_atom) do
-      {:ok, provider_module} -> provider_module.test_connection(integration)
+    with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
+         {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom) do
+      provider_module.test_connection(integration)
+    else
       _other -> {:error, :unsupported_provider}
     end
   end

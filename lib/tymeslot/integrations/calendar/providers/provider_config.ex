@@ -330,6 +330,61 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   end
 
   @doc """
+  Parses a provider identifier (atom or string) to its canonical atom form.
+
+  This variant is **toggle-aware**: it only accepts providers that are
+  currently enabled via config. Use it to gate new setup or connection
+  flows. For operations on persisted integrations (where the provider may
+  have been disabled after the integration was created), use
+  `parse_known/1` instead.
+
+  Returns `{:ok, provider_atom}` for enabled providers,
+  `{:error, :unknown}` for anything else.
+  """
+  @spec parse(atom() | String.t() | any()) :: {:ok, atom()} | {:error, :unknown}
+  def parse(provider) when is_atom(provider) do
+    if valid_provider?(provider), do: {:ok, provider}, else: {:error, :unknown}
+  end
+
+  def parse(provider) when is_binary(provider) do
+    parse(String.to_existing_atom(provider))
+  rescue
+    ArgumentError -> {:error, :unknown}
+  end
+
+  def parse(_other), do: {:error, :unknown}
+
+  @doc """
+  Toggle-agnostic counterpart to `parse/1`.
+
+  Parses a provider identifier against the full static provider list
+  (`@providers` plus `@dev_only_providers`), regardless of whether that
+  provider is currently enabled via config. Use this for any operation
+  on a persisted integration — connection tests, client construction,
+  sync, room creation — where the provider may have been disabled after
+  the integration was created.
+
+  Returns `{:ok, provider_atom}` for any known provider,
+  `{:error, :unknown}` for anything not in the static list.
+  """
+  @spec parse_known(atom() | String.t() | any()) :: {:ok, atom()} | {:error, :unknown}
+  def parse_known(provider) when is_atom(provider) do
+    if provider in @providers or provider in @dev_only_providers do
+      {:ok, provider}
+    else
+      {:error, :unknown}
+    end
+  end
+
+  def parse_known(provider) when is_binary(provider) do
+    parse_known(String.to_existing_atom(provider))
+  rescue
+    ArgumentError -> {:error, :unknown}
+  end
+
+  def parse_known(_other), do: {:error, :unknown}
+
+  @doc """
   Gets the display name for a provider.
   """
   @spec display_name(atom()) :: String.t()
