@@ -42,7 +42,7 @@ defmodule Tymeslot.Analytics.EventQueries do
     |> where([e], e.inserted_at >= ^from and e.inserted_at <= ^to)
     |> group_by([e], e.utm_source)
     |> select([e], %{utm_source: e.utm_source, visits: count(e.id)})
-    |> order_by([e], desc: count(e.id))
+    |> order_by([e], desc: count(e.id), asc_nulls_last: e.utm_source)
     |> Repo.all()
   end
 
