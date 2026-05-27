@@ -30,6 +30,18 @@ defmodule Tymeslot.Analytics.EventQueriesTest do
     event
   end
 
+  defp insert_event_at(attrs, inserted_at) do
+    base = %{
+      event_type: "booking_page_view",
+      path: "/x",
+      visitor_hash: "h",
+      tracking_params: %{},
+      inserted_at: inserted_at
+    }
+
+    Repo.insert!(struct(EventSchema, Map.merge(base, attrs)))
+  end
+
   describe "count_visits/3" do
     test "counts events for user in the given window", %{user: user} do
       other_user = Factory.insert(:user)
@@ -81,6 +93,47 @@ defmodule Tymeslot.Analytics.EventQueriesTest do
                %{utm_source: "twitter", visits: 1},
                %{utm_source: nil, visits: 1}
              ] = EventQueries.top_sources(user.id, from, to)
+    end
+  end
+
+  describe "visits_by_day/3" do
+    test "groups visits by day in ascending order", %{user: user} do
+      today = DateTime.utc_now()
+      yesterday = DateTime.add(today, -86_400, :second)
+
+      insert_event_at(%{user_id: user.id}, yesterday)
+      insert_event_at(%{user_id: user.id}, yesterday)
+      insert_event_at(%{user_id: user.id}, today)
+
+      from = DateTime.add(today, -2 * 86_400, :second)
+      to = DateTime.add(today, 3600, :second)
+
+      result = EventQueries.visits_by_day(user.id, from, to)
+
+      assert length(result) == 2
+      [first, second] = result
+      assert first.day == DateTime.to_date(yesterday)
+      assert first.visits == 2
+      assert second.day == DateTime.to_date(today)
+      assert second.visits == 1
+    end
+
+    test "excludes events outside the window", %{user: user} do
+      today = DateTime.utc_now()
+      two_days_ago = DateTime.add(today, -2 * 86_400, :second)
+
+      insert_event_at(%{user_id: user.id}, two_days_ago)
+      insert_event_at(%{user_id: user.id}, today)
+
+      from = DateTime.add(today, -3600, :second)
+      to = DateTime.add(today, 3600, :second)
+
+      result = EventQueries.visits_by_day(user.id, from, to)
+
+      assert length(result) == 1
+      [only] = result
+      assert only.day == DateTime.to_date(today)
+      assert only.visits == 1
     end
   end
 end
