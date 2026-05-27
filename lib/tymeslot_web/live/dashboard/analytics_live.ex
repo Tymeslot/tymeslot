@@ -10,7 +10,6 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   `Tymeslot.Meetings.MeetingQueries`; no Ecto queries live in this module.
   """
   use TymeslotWeb, :live_view
-  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Analytics
   alias Tymeslot.Meetings.MeetingQueries
@@ -62,12 +61,12 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
       <div class="space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h1 class="text-2xl font-black tracking-tight text-tymeslot-900">
-            {gettext("Analytics")}
+            Analytics
           </h1>
-          <div class="flex gap-2" role="group" aria-label={gettext("Date range")}>
-            <.range_button label={gettext("7 days")} value="7d" current={@range} />
-            <.range_button label={gettext("30 days")} value="30d" current={@range} />
-            <.range_button label={gettext("90 days")} value="90d" current={@range} />
+          <div class="flex gap-2" role="group" aria-label="Date range">
+            <.range_button label="7 days" value="7d" current={@range} />
+            <.range_button label="30 days" value="30d" current={@range} />
+            <.range_button label="90 days" value="90d" current={@range} />
           </div>
         </div>
 

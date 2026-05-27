@@ -4,7 +4,6 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
   JS hook and renders on first paint.
   """
   use TymeslotWeb, :html
-  use Gettext, backend: TymeslotWeb.Gettext
 
   @width 800
   @height 200
@@ -25,11 +24,11 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
     ~H"""
     <div class="card-glass">
       <div class="text-xs font-black uppercase tracking-widest text-tymeslot-400">
-        {gettext("Visits over time")}
+        Visits over time
       </div>
       <%= if @points == [] do %>
         <div class="mt-4 py-8 text-center text-token-sm text-tymeslot-400">
-          {gettext("No traffic in this period yet.")}
+          No traffic in this period yet.
         </div>
       <% else %>
         <svg
@@ -37,7 +36,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
           preserveAspectRatio="none"
           class="mt-3 h-48 w-full"
           role="img"
-          aria-label={gettext("Visits over time")}
+          aria-label="Visits over time"
         >
           <g :for={{point, idx} <- Enum.with_index(@points)}>
             <rect

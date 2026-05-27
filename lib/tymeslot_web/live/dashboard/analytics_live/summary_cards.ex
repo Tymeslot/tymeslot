@@ -4,7 +4,6 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
   visitors, total bookings, and conversion rate over the chosen window.
   """
   use TymeslotWeb, :html
-  use Gettext, backend: TymeslotWeb.Gettext
 
   attr :visits, :integer, required: true
   attr :unique_visitors, :integer, required: true
@@ -16,10 +15,10 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
 
     ~H"""
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <.stat_card label={gettext("Visits")} value={@visits} />
-      <.stat_card label={gettext("Unique visitors")} value={@unique_visitors} />
-      <.stat_card label={gettext("Bookings")} value={@bookings} />
-      <.stat_card label={gettext("Conversion")} value={"#{@conversion_rate}%"} />
+      <.stat_card label="Visits" value={@visits} />
+      <.stat_card label="Unique visitors" value={@unique_visitors} />
+      <.stat_card label="Bookings" value={@bookings} />
+      <.stat_card label="Conversion" value={"#{@conversion_rate}%"} />
     </div>
     """
   end
