@@ -303,7 +303,8 @@ defmodule TymeslotWeb.Router do
         TymeslotWeb.Hooks.EmbedAuthHook,
         TymeslotWeb.Hooks.LocaleHook,
         TymeslotWeb.Hooks.ThemeHook,
-        TymeslotWeb.Hooks.ClientInfoHook
+        TymeslotWeb.Hooks.ClientInfoHook,
+        Tymeslot.Analytics.PageViewHook
       ] do
       live "/:username", Themes.Core.Dispatcher, :overview
       live "/:username/thank-you", Themes.Core.Dispatcher, :confirmation
