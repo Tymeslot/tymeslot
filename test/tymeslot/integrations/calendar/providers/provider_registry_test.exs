@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
-  use Tymeslot.MockCase, async: true
+  use Tymeslot.MockCase, async: false
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
@@ -64,10 +64,19 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
                String.contains?(message, "Unknown provider")
     end
 
-    test "returns error for invalid provider in disabled state" do
-      # This would test provider config disabled state
-      # For now, all providers are enabled in test
-      :ok
+    test "returns {:ok, module} for a provider that is disabled in config (toggle-agnostic)" do
+      previous = Application.get_env(:tymeslot, :calendar_providers)
+
+      Application.put_env(
+        :tymeslot,
+        :calendar_providers,
+        Map.put(previous, :caldav, enabled: false)
+      )
+
+      on_exit(fn -> Application.put_env(:tymeslot, :calendar_providers, previous) end)
+
+      assert ProviderRegistry.get_provider(:caldav) ==
+               {:ok, Tymeslot.Integrations.Calendar.CalDAV.Provider}
     end
   end
 
