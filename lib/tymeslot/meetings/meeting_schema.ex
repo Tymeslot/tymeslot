@@ -62,6 +62,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           last_notified_state: map(),
           custom_fields_snapshot: [map()],
           custom_field_answers: map(),
+          utm_source: String.t() | nil,
+          utm_medium: String.t() | nil,
+          utm_campaign: String.t() | nil,
+          utm_content: String.t() | nil,
+          utm_term: String.t() | nil,
+          referrer_host: String.t() | nil,
+          tracking_params: map(),
           organizer_user: any() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -160,6 +167,15 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:custom_fields_snapshot, {:array, :map}, default: [])
     field(:custom_field_answers, :map, default: %{})
 
+    # Source attribution
+    field(:utm_source, :string)
+    field(:utm_medium, :string)
+    field(:utm_campaign, :string)
+    field(:utm_content, :string)
+    field(:utm_term, :string)
+    field(:referrer_host, :string)
+    field(:tracking_params, :map, default: %{})
+
     timestamps(type: :utc_datetime)
   end
 
@@ -217,7 +233,14 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :ical_sequence,
     :last_notified_state,
     :custom_fields_snapshot,
-    :custom_field_answers
+    :custom_field_answers,
+    :utm_source,
+    :utm_medium,
+    :utm_campaign,
+    :utm_content,
+    :utm_term,
+    :referrer_host,
+    :tracking_params
   ]
 
   @valid_statuses ["pending", "confirmed", "cancelled", "completed", "reschedule_requested"]
