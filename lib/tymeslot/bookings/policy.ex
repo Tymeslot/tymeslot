@@ -60,6 +60,13 @@ defmodule Tymeslot.Bookings.Policy do
           optional(:meeting_type_id) => integer() | nil,
           optional(:video_integration_id) => integer() | String.t() | nil,
           optional(:attendee_locale) => String.t() | nil,
+          optional(:utm_source) => String.t() | nil,
+          optional(:utm_medium) => String.t() | nil,
+          optional(:utm_campaign) => String.t() | nil,
+          optional(:utm_content) => String.t() | nil,
+          optional(:utm_term) => String.t() | nil,
+          optional(:referrer_host) => String.t() | nil,
+          optional(:tracking_params) => map(),
           optional(atom()) => term()
         }
 
@@ -99,7 +106,14 @@ defmodule Tymeslot.Bookings.Policy do
           required(:cancel_url) => String.t(),
           required(:meeting_url) => String.t() | nil,
           required(:custom_fields_snapshot) => [map()],
-          required(:custom_field_answers) => map()
+          required(:custom_field_answers) => map(),
+          required(:utm_source) => String.t() | nil,
+          required(:utm_medium) => String.t() | nil,
+          required(:utm_campaign) => String.t() | nil,
+          required(:utm_content) => String.t() | nil,
+          required(:utm_term) => String.t() | nil,
+          required(:referrer_host) => String.t() | nil,
+          required(:tracking_params) => map()
         }
 
   @typedoc "A meeting record with the fields required by the policy checks."
@@ -173,7 +187,14 @@ defmodule Tymeslot.Bookings.Policy do
         status: "confirmed",
         reminders: reminders,
         custom_fields_snapshot: Map.get(params, :custom_fields_snapshot, []),
-        custom_field_answers: Map.get(params, :custom_field_answers, %{})
+        custom_field_answers: Map.get(params, :custom_field_answers, %{}),
+        utm_source: Map.get(params, :utm_source),
+        utm_medium: Map.get(params, :utm_medium),
+        utm_campaign: Map.get(params, :utm_campaign),
+        utm_content: Map.get(params, :utm_content),
+        utm_term: Map.get(params, :utm_term),
+        referrer_host: Map.get(params, :referrer_host),
+        tracking_params: Map.get(params, :tracking_params, %{})
       },
       build_meeting_action_urls(meeting_uid, org_username)
     )
