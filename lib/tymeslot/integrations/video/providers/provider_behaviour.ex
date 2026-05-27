@@ -150,5 +150,44 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   @callback delete_meeting_room(room_id :: String.t(), config :: map()) ::
               :ok | {:error, any()}
 
-  @optional_callbacks update_meeting_room: 2, delete_meeting_room: 2
+  @doc """
+  Builds the runtime config map this provider expects in `create_meeting_room/1`,
+  `test_connection/1`, etc.
+
+  Receives the persisted integration record, its decrypted credentials, and any
+  call-site options (e.g. `meeting_id` for the custom provider). The provider
+  knows which fields it needs — the dispatcher (`Connection`, `Rooms`) just
+  delegates here.
+  """
+  @callback build_config(
+              integration :: struct(),
+              decrypted :: map(),
+              opts :: keyword()
+            ) :: map()
+
+  @doc """
+  Declares the provider-specific changeset validation rules used by
+  `VideoIntegrationSchema`. Pure data; the schema interprets it.
+
+    * `:required` — fields that must be present
+    * `:credential_pairs` — `{virtual_field, encrypted_field}` pairs where the
+      virtual field is required only when the encrypted counterpart is absent
+    * `:url_fields` — fields to URL-validate (with `block_private_ips: true`)
+  """
+  @callback credential_spec() :: %{
+              required: [atom()],
+              credential_pairs: [{atom(), atom()}],
+              url_fields: [atom()]
+            }
+
+  @doc """
+  Substrings that identify a meeting URL as belonging to this provider.
+
+  Used by `ProviderAdapter.detect_provider_from_url/1` to dispatch URL
+  extraction to the right provider. Return `[]` (or omit) for providers
+  whose URLs are arbitrary user-supplied links (e.g. custom).
+  """
+  @callback url_patterns() :: [String.t()]
+
+  @optional_callbacks update_meeting_room: 2, delete_meeting_room: 2, url_patterns: 0
 end

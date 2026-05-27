@@ -2,13 +2,14 @@ defmodule Tymeslot.Integrations.Video.Connection do
   @moduledoc """
   Connection-related operations for video integrations.
 
-  - Builds provider configs from DB records
   - Tests connection to providers
-  - Normalizes provider identifiers
   - Emits telemetry for connection tests
+
+  Provider-specific config shapes live in each provider module's `build_config/3`.
   """
 
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
@@ -25,64 +26,25 @@ defmodule Tymeslot.Integrations.Video.Connection do
 
   defp run_connection_test(integration) do
     start_time = System.monotonic_time(:millisecond)
-
-    provider_atom = to_existing_atom_safe(integration.provider)
-    decrypted = VideoIntegrationSchema.decrypt_credentials(integration)
-    config = build_config(provider_atom, integration, decrypted)
-
-    result =
-      case provider_atom do
-        :unknown -> {:error, :unsupported_provider}
-        _provider -> ProviderAdapter.test_connection(provider_atom, config)
-      end
-
-    duration = System.monotonic_time(:millisecond) - start_time
+    result = do_test_connection(integration)
 
     :telemetry.execute(
       [:tymeslot, :integration, :test_connection],
-      %{duration: duration},
+      %{duration: System.monotonic_time(:millisecond) - start_time},
       %{provider: integration.provider, type: "video", success: match?({:ok, _}, result)}
     )
 
     result
   end
 
-  # Internal helpers
-  defp to_existing_atom_safe(bin) when is_binary(bin) do
-    String.to_existing_atom(bin)
-  rescue
-    ArgumentError -> :unknown
+  defp do_test_connection(integration) do
+    with {:ok, provider_atom} <- ProviderConfig.parse_known(integration.provider),
+         module when module != nil <- ProviderConfig.get_provider_module(provider_atom) do
+      decrypted = VideoIntegrationSchema.decrypt_credentials(integration)
+      config = module.build_config(integration, decrypted, [])
+      ProviderAdapter.test_connection(provider_atom, config)
+    else
+      _other -> {:error, :unsupported_provider}
+    end
   end
-
-  defp build_config(:mirotalk, integration, decrypted) do
-    %{api_key: decrypted.api_key, base_url: integration.base_url}
-  end
-
-  defp build_config(:google_meet, integration, decrypted) do
-    %{
-      access_token: decrypted.access_token,
-      refresh_token: decrypted.refresh_token,
-      token_expires_at: integration.token_expires_at,
-      oauth_scope: integration.oauth_scope,
-      integration_id: integration.id,
-      user_id: integration.user_id
-    }
-  end
-
-  defp build_config(:teams, integration, decrypted) do
-    %{
-      access_token: decrypted.access_token,
-      refresh_token: decrypted.refresh_token,
-      token_expires_at: integration.token_expires_at,
-      integration_id: integration.id,
-      user_id: integration.user_id
-    }
-  end
-
-  defp build_config(:custom, integration, _decrypted) do
-    %{custom_meeting_url: integration.custom_meeting_url}
-  end
-
-  defp build_config(:none, _integration, _decrypted), do: %{}
-  defp build_config(_provider, _integration, _decrypted), do: %{}
 end

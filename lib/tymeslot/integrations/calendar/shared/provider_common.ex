@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
+  alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
 
   @doc """
   Ensures all required fields are present in the config map.
@@ -118,6 +119,85 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       {:error, reason} ->
         {:error, error_formatter.(reason)}
     end
+  end
+
+  @doc """
+  Common implementation of `discover_calendars_for_integration/1` for
+  CalDAV-based providers that store encrypted credentials.
+
+  Decrypts the integration's username/password, builds a config map,
+  constructs a client via `provider_module.new/1`, and calls
+  `provider_module.discover_calendars/1`. Used by Radicale, Zimbra,
+  MailboxOrg, and Baikal — providers whose discovery shim is otherwise
+  identical apart from the module being dispatched to.
+  """
+  @spec caldav_discover_from_integration(module(), map()) ::
+          {:ok, list(map())} | {:error, term()}
+  def caldav_discover_from_integration(provider_module, integration) do
+    decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
+
+    config = %{
+      base_url: integration.base_url,
+      username: decrypted.username,
+      password: decrypted.password,
+      calendar_paths: integration.calendar_paths
+    }
+
+    client = provider_module.new(config)
+    provider_module.discover_calendars(client)
+  end
+
+  @doc """
+  Returns one CalDAV client config per selected calendar path on the
+  integration. Drives the multi-calendar sync/fetch path in `ClientManager`.
+
+  Honors `integration.calendar_list` selection when present, falling back to
+  `integration.calendar_paths` (the legacy path-only representation).
+  Read-only entries are skipped.
+  """
+  @spec caldav_build_client_configs(map()) :: [map()]
+  def caldav_build_client_configs(integration) do
+    integration
+    |> caldav_selected_paths()
+    |> Enum.map(&caldav_path_config(integration, &1))
+  end
+
+  @doc """
+  Returns a single CalDAV client config for the booking flow, scoped to the
+  path resolved by `CalendarPathResolver`. Returns `nil` when no path is
+  resolvable for the integration.
+  """
+  @spec caldav_build_booking_client_config(map()) :: map() | nil
+  def caldav_build_booking_client_config(integration) do
+    case CalendarPathResolver.resolve(integration) do
+      nil -> nil
+      path -> caldav_path_config(integration, path)
+    end
+  end
+
+  defp caldav_selected_paths(integration) do
+    if integration.calendar_list && integration.calendar_list != [] do
+      integration.calendar_list
+      |> Enum.filter(fn cal ->
+        (cal["selected"] == true || cal[:selected] == true) &&
+          not (Map.get(cal, "read_only", false) || Map.get(cal, :read_only, false))
+      end)
+      |> Enum.map(fn cal -> cal["path"] || cal[:path] || cal["id"] || cal[:id] end)
+      |> Enum.reject(&is_nil/1)
+    else
+      integration.calendar_paths || []
+    end
+  end
+
+  defp caldav_path_config(integration, path) do
+    %{
+      base_url: integration.base_url,
+      username: integration.username,
+      password: integration.password,
+      calendar_path: path,
+      calendar_paths: [path],
+      verify_ssl: true
+    }
   end
 
   defp valid_url?(url) when is_binary(url) do

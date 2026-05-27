@@ -15,8 +15,9 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
   alias Tymeslot.Integrations.Calendar.CalDAV.XmlHandler
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
-  alias Tymeslot.Integrations.Calendar.Shared.PathUtils
+  alias Tymeslot.Integrations.Calendar.Shared.{DiscoveryService, PathUtils, ProviderCommon}
   alias Tymeslot.Security.RateLimiter
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -219,6 +220,38 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
       end
     end
   end
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def discover_calendars_for_integration(integration) do
+    # Nextcloud goes through DiscoveryService for its cache layer and emits
+    # standardized calendar entries (id/path/name/type/selected/provider/metadata).
+    decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
+
+    config = %{
+      base_url: integration.base_url,
+      username: decrypted.username,
+      password: decrypted.password,
+      calendar_paths: integration.calendar_paths
+    }
+
+    case DiscoveryService.discover_calendars(:nextcloud, config, force_refresh: true) do
+      {:ok, calendars} ->
+        {:ok, DiscoveryService.standardize_calendar_data(calendars, :nextcloud)}
+
+      error ->
+        error
+    end
+  end
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  defdelegate build_client_configs(integration),
+    to: ProviderCommon,
+    as: :caldav_build_client_configs
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  defdelegate build_booking_client_config(integration),
+    to: ProviderCommon,
+    as: :caldav_build_booking_client_config
 
   @impl Tymeslot.Integrations.Calendar.Provider
   defdelegate normalise_events(raw_events, context), to: CalDAVProvider

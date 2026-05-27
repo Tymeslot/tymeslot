@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
   alias Tymeslot.Utils.SanitizeMerge
@@ -65,23 +66,21 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   def handle_event("setup_provider", %{"provider" => provider}, socket) do
-    case provider do
-      "google_meet" ->
-        initiate_oauth(socket, :google_meet)
-
-      "teams" ->
-        initiate_oauth(socket, :teams)
-
-      "zoom" ->
-        initiate_oauth(socket, :zoom)
+    case ProviderConfig.parse(provider) do
+      {:ok, provider_atom} when provider_atom != :none ->
+        if Directory.oauth?(:video, provider_atom) == true do
+          initiate_oauth(socket, provider_atom)
+        else
+          {:noreply,
+           socket
+           |> assign(:view_mode, :config)
+           |> assign(:config_provider, provider)
+           |> assign(:form_errors, %{})
+           |> assign(:form_values, %{})}
+        end
 
       _other ->
-        {:noreply,
-         socket
-         |> assign(:view_mode, :config)
-         |> assign(:config_provider, provider)
-         |> assign(:form_errors, %{})
-         |> assign(:form_values, %{})}
+        {:noreply, socket}
     end
   end
 
@@ -393,13 +392,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
           <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             <%= for descp <- @available_video_providers do %>
               <% provider = Atom.to_string(descp.type) %>
-              <% {desc, btn} = get_provider_display_info(descp.type) %>
               <% has_existing = Enum.any?(@integrations, &(&1.provider == provider)) %>
               <ProviderCard.provider_card
                 provider={provider}
                 title={descp.display_name}
-                description={desc}
-                button_text={if has_existing, do: "Add Another Account", else: btn}
+                description={descp.description}
+                button_text={if has_existing, do: "Add Another Account", else: descp.button_text}
                 click_event="setup_provider"
                 target={@myself}
                 provider_value={provider}
@@ -551,28 +549,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     case Enum.find(socket.assigns.integrations, &(&1.id == id)) do
       nil -> ""
       integration -> integration.provider
-    end
-  end
-
-  defp get_provider_display_info(provider_atom) do
-    case provider_atom do
-      :google_meet ->
-        {"Full OAuth integration with automatic room creation", "Connect Google Meet"}
-
-      :teams ->
-        {"Enterprise OAuth integration with organizational accounts", "Connect Teams"}
-
-      :mirotalk ->
-        {"Self-hosted peer-to-peer video meetings", "Connect MiroTalk"}
-
-      :zoom ->
-        {"OAuth integration with automatic Zoom meeting creation", "Connect Zoom"}
-
-      :custom ->
-        {"Any video platform with static meeting URLs", "Add Custom Link"}
-
-      _other ->
-        {"", "Connect"}
     end
   end
 end

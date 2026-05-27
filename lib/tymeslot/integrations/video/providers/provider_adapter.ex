@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
 
   require Logger
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
 
   @doc """
@@ -293,17 +294,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   end
 
   defp detect_provider_from_url(meeting_url) when is_binary(meeting_url) do
-    provider_patterns = [
-      {["mirotalk", "talk."], :mirotalk},
-      {["meet.google.com"], :google_meet},
-      {["teams.microsoft.com"], :teams},
-      {["zoom.us"], :zoom},
-      {["webex.com"], :webex},
-      {["meet.jit.si"], :jitsi},
-      {["whereby.com"], :whereby}
-    ]
-
-    case find_matching_provider(meeting_url, provider_patterns) do
+    case find_matching_provider(meeting_url) do
       {:ok, provider} -> {:ok, provider}
       :not_found -> {:error, "Unknown provider"}
     end
@@ -311,12 +302,17 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
 
   defp detect_provider_from_url(_arg), do: {:error, "Invalid URL"}
 
-  defp find_matching_provider(meeting_url, provider_patterns) do
-    Enum.find_value(provider_patterns, :not_found, fn {patterns, provider} ->
-      if Enum.any?(patterns, &String.contains?(meeting_url, &1)) do
-        {:ok, provider}
+  defp find_matching_provider(meeting_url) do
+    Enum.find_value(ProviderConfig.all_providers_with_dev(), :not_found, fn provider_type ->
+      with module when is_atom(module) <- ProviderConfig.get_provider_module(provider_type),
+           true <- module != nil,
+           true <- Code.ensure_loaded?(module),
+           true <- function_exported?(module, :url_patterns, 0),
+           patterns when patterns != [] <- module.url_patterns(),
+           true <- Enum.any?(patterns, &String.contains?(meeting_url, &1)) do
+        {:ok, provider_type}
       else
-        nil
+        _other -> nil
       end
     end)
   end

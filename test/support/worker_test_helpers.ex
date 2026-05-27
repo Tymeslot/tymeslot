@@ -191,6 +191,24 @@ defmodule Tymeslot.WorkerTestHelpers do
   2. POST /api/v1/join - Generates organizer join token
   3. POST /api/v1/join - Generates participant join token
   """
+  @spec expect_zoom_success(String.t()) :: :ok
+  def expect_zoom_success(join_url \\ "https://zoom.us/j/12345678901") do
+    expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+      {:ok,
+       %Req.Response{
+         status: 201,
+         body:
+           Jason.encode!(%{
+             "id" => 12_345_678_901,
+             "join_url" => join_url,
+             "password" => "test123",
+             "start_url" => "#{join_url}?zak=host-token",
+             "host_email" => "host@example.com"
+           })
+       }}
+    end)
+  end
+
   @spec expect_mirotalk_success(String.t()) :: :ok
   def expect_mirotalk_success(room_url \\ "https://test.mirotalk.com/join/test-room-123") do
     # First two calls: room creation

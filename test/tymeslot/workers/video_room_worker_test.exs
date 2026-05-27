@@ -14,6 +14,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoomWorker
+  alias Tymeslot.ZoomOAuthHelperMock
 
   setup :verify_on_exit!
 
@@ -259,6 +260,35 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
                  },
                  attempt: 5
                )
+    end
+
+    test "successfully creates a Zoom video room" do
+      user = insert(:user)
+      _profile = insert(:profile, user: user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          oauth_scope: "meeting:write:meeting",
+          is_active: true
+        )
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          video_integration_id: integration.id
+        )
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+      expect_zoom_success()
+
+      assert :ok = perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
+
+      updated_meeting = Repo.get(MeetingSchema, meeting.id)
+      assert updated_meeting.video_room_enabled
+      assert updated_meeting.video_room_id =~ "12345678901"
     end
 
     test "video created but calendar update continues on failure (partial success)" do

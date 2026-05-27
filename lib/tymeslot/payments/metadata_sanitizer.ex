@@ -26,14 +26,15 @@ defmodule Tymeslot.Payments.MetadataSanitizer do
 
   # Whitelisted keys that users can provide
   @allowed_user_keys ~w(
-    referral_code
+    billing_interval
     campaign_id
-    utm_source
-    utm_medium
-    utm_campaign
     custom_field_1
     custom_field_2
     custom_field_3
+    referral_code
+    utm_campaign
+    utm_medium
+    utm_source
   )
 
   @doc """

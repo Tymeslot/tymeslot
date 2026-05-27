@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   require Logger
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
@@ -244,67 +245,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   defp get_provider_config(user_id, opts) do
     case get_integration_from_database(user_id, opts) do
       {:ok, integration} ->
-        decrypted = VideoIntegrationSchema.decrypt_credentials(integration)
-
-        provider_type =
-          try do
-            String.to_existing_atom(integration.provider)
-          rescue
-            ArgumentError -> :unknown
-          end
-
-        config =
-          case provider_type do
-            :mirotalk ->
-              %{
-                api_key: decrypted.api_key,
-                base_url: integration.base_url
-              }
-
-            :google_meet ->
-              %{
-                access_token: decrypted.access_token,
-                refresh_token: decrypted.refresh_token,
-                token_expires_at: integration.token_expires_at,
-                oauth_scope: integration.oauth_scope,
-                integration_id: integration.id,
-                user_id: integration.user_id
-              }
-
-            :teams ->
-              %{
-                access_token: decrypted.access_token,
-                refresh_token: decrypted.refresh_token,
-                token_expires_at: integration.token_expires_at,
-                oauth_scope: integration.oauth_scope,
-                tenant_id: decrypted.tenant_id,
-                integration_id: integration.id,
-                user_id: integration.user_id
-              }
-
-            :zoom ->
-              %{
-                access_token: decrypted.access_token,
-                refresh_token: decrypted.refresh_token,
-                token_expires_at: integration.token_expires_at,
-                oauth_scope: integration.oauth_scope,
-                integration_id: integration.id,
-                user_id: integration.user_id
-              }
-
-            :custom ->
-              %{
-                custom_meeting_url: integration.custom_meeting_url,
-                meeting_id: Keyword.get(opts, :meeting_id)
-              }
-
-            :none ->
-              %{}
-
-            _other_provider ->
-              %{}
-          end
-
+        {provider_type, config} = build_provider_config(integration, opts)
         {:ok, provider_type, config}
 
       :not_found ->
@@ -314,6 +255,35 @@ defmodule Tymeslot.Integrations.Video.Rooms do
       {:error, :user_id_required} ->
         {:error, :user_id_required}
     end
+  end
+
+  defp build_provider_config(integration, opts) do
+    case ProviderConfig.parse_known(integration.provider) do
+      {:ok, :none} ->
+        {:none, %{}}
+
+      {:ok, provider_type} ->
+        build_via_module(provider_type, integration, opts)
+
+      {:error, :unknown} ->
+        {:unknown, %{}}
+    end
+  end
+
+  defp build_via_module(provider_type, integration, opts) do
+    case ProviderConfig.get_provider_module(provider_type) do
+      nil ->
+        {provider_type, %{}}
+
+      module ->
+        decrypted = VideoIntegrationSchema.decrypt_credentials(integration)
+        {provider_type, invoke_build_config(module, integration, decrypted, opts)}
+    end
+  end
+
+  @spec invoke_build_config(module(), term(), term(), keyword()) :: map()
+  defp invoke_build_config(module, integration, decrypted, opts) do
+    module.build_config(integration, decrypted, opts)
   end
 
   defp get_integration_from_database(user_id, opts) do

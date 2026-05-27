@@ -133,6 +133,33 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
+  def discover_calendars_for_integration(integration) do
+    # Generic CalDAV uses the integration's virtual username/password fields
+    # directly — credentials reach this path already in plaintext from the
+    # connection flow rather than via the encrypted-fields decrypt round-trip
+    # used by Radicale/Zimbra/etc.
+    config = %{
+      base_url: integration.base_url,
+      username: integration.username,
+      password: integration.password,
+      calendar_paths: integration.calendar_paths
+    }
+
+    client = new(config)
+    discover_calendars(client)
+  end
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  defdelegate build_client_configs(integration),
+    to: ProviderCommon,
+    as: :caldav_build_client_configs
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  defdelegate build_booking_client_config(integration),
+    to: ProviderCommon,
+    as: :caldav_build_booking_client_config
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   def create_event(client, event_data), do: CaldavCommon.create_event(client, event_data)
 
   @impl Tymeslot.Integrations.Calendar.Provider

@@ -7,6 +7,15 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   """
   use Phoenix.Component
 
+  alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
+
+  @video_meta_providers ~w(in_person local none)
+  @oauth_only_providers ~w(github oauth)
+  @calendar_providers ~w(
+    google_calendar outlook outlook_calendar nextcloud nextcloud_calendar
+    caldav radicale zimbra mailbox_org
+  )
+
   @doc """
   Renders a provider icon for calendar, video, and OAuth providers.
 
@@ -65,47 +74,23 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   defp normalize_provider_filename(provider), do: provider
 
   defp determine_provider_type(provider) do
-    case provider do
-      p
-      when p in [
-             "mirotalk",
-             "google_meet",
-             "teams",
-             "zoom",
-             "custom",
-             "in_person",
-             "local",
-             "none"
-           ] ->
-        "video"
-
-      p when p in ["github", "oauth"] ->
-        "oauth"
-
-      "google" ->
-        # Note: OAuth providers share names with calendar providers
-        # Caller should explicitly specify type="oauth" when using OAuth context
-        "calendar"
-
-      p
-      when p in [
-             "google_calendar",
-             "outlook",
-             "outlook_calendar",
-             "nextcloud",
-             "nextcloud_calendar",
-             "caldav",
-             "radicale",
-             "zimbra",
-             "mailbox_org"
-           ] ->
-        "calendar"
-
-      # default to calendar
-      _other ->
-        "calendar"
+    cond do
+      video_provider?(provider) -> "video"
+      provider in @oauth_only_providers -> "oauth"
+      # Note: OAuth providers share names with calendar providers.
+      # Caller should explicitly specify type="oauth" when using OAuth context.
+      provider == "google" -> "calendar"
+      provider in @calendar_providers -> "calendar"
+      true -> "calendar"
     end
   end
+
+  defp video_provider?(provider) when is_binary(provider) do
+    provider in @video_meta_providers or
+      match?({:ok, _atom}, VideoProviderConfig.parse_known(provider))
+  end
+
+  defp video_provider?(_other), do: false
 
   defp build_icon_classes(size, additional_class) do
     base_classes =

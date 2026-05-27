@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.Discovery
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Video.Rooms
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
@@ -125,7 +126,11 @@ defmodule Tymeslot.Integrations.Video do
         ) ::
           {:ok, any()} | {:error, any()}
   def create_integration(user_id, provider, attrs) when is_integer(user_id) and is_map(attrs) do
-    provider = normalize_provider(provider)
+    provider =
+      case ProviderConfig.parse(provider) do
+        {:ok, atom} -> atom
+        {:error, :unknown} -> :unknown
+      end
 
     # Ensure all keys are atoms to avoid mixed keys error in Ecto.cast
     # We use try/rescue to safely handle unknown atom strings
@@ -474,20 +479,11 @@ defmodule Tymeslot.Integrations.Video do
   @spec oauth_authorization_url(pos_integer(), provider()) ::
           {:ok, String.t()} | {:error, String.t()}
   def oauth_authorization_url(user_id, provider) when is_integer(user_id) do
-    provider = normalize_provider(provider)
-
-    case provider do
-      :google_meet ->
-        google_oauth_authorization_url(user_id)
-
-      :teams ->
-        teams_oauth_authorization_url(user_id)
-
-      :zoom ->
-        zoom_oauth_authorization_url(user_id)
-
-      _other ->
-        {:error, "Provider does not support OAuth"}
+    case ProviderConfig.parse(provider) do
+      {:ok, :google_meet} -> google_oauth_authorization_url(user_id)
+      {:ok, :teams} -> teams_oauth_authorization_url(user_id)
+      {:ok, :zoom} -> zoom_oauth_authorization_url(user_id)
+      _other -> {:error, "Provider does not support OAuth"}
     end
   end
 
@@ -503,10 +499,8 @@ defmodule Tymeslot.Integrations.Video do
       login_hint: integration.provider_account_email
     ]
 
-    provider = normalize_provider(integration.provider)
-
-    case provider do
-      :google_meet ->
+    case ProviderConfig.parse_known(integration.provider) do
+      {:ok, :google_meet} ->
         redirect_uri = "#{Endpoint.url()}/auth/google/video/callback"
 
         url =
@@ -514,12 +508,12 @@ defmodule Tymeslot.Integrations.Video do
 
         {:ok, url}
 
-      :teams ->
+      {:ok, :teams} ->
         redirect_uri = "#{Endpoint.url()}/auth/teams/video/callback"
         url = teams_oauth_helper().authorization_url(user_id, redirect_uri, opts)
         {:ok, url}
 
-      :zoom ->
+      {:ok, :zoom} ->
         zoom_oauth_reconnect_url(user_id, opts)
 
       _other ->
@@ -540,20 +534,6 @@ defmodule Tymeslot.Integrations.Video do
 
   defp zoom_oauth_helper do
     Application.get_env(:tymeslot, :zoom_oauth_helper, ZoomOAuthHelper)
-  end
-
-  defp normalize_provider(p) when is_atom(p), do: p
-
-  defp normalize_provider(p) when is_binary(p) do
-    case String.downcase(p) do
-      "google_meet" -> :google_meet
-      "teams" -> :teams
-      "mirotalk" -> :mirotalk
-      "custom" -> :custom
-      "none" -> :none
-      "zoom" -> :zoom
-      _other -> :unknown
-    end
   end
 
   defp format_google_oauth_error(%RuntimeError{message: "Google State Secret not configured"}),

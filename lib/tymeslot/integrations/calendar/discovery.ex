@@ -4,9 +4,6 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   Standardizes provider-specific discovery flows.
   """
 
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
-  alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Calendar.Shared.{DiscoveryService, ErrorHandler}
@@ -25,76 +22,11 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   """
   @spec discover_calendars_for_integration(map()) :: {:ok, list()} | {:error, any()}
   def discover_calendars_for_integration(%{provider: provider} = integration) do
-    case provider do
-      "google" ->
-        GoogleProvider.discover_calendars(integration)
-
-      "outlook" ->
-        OutlookProvider.discover_calendars(integration)
-
-      "caldav" ->
-        discover_caldav_without_decrypt(
-          integration,
-          Tymeslot.Integrations.Calendar.CalDAV.Provider
-        )
-
-      "nextcloud" ->
-        discover_nextcloud_calendars(integration)
-
-      caldav when caldav in ["radicale", "zimbra", "mailbox_org", "baikal"] ->
-        discover_caldav_with_decrypt(integration, caldav)
-
-      _unknown ->
-        {:error, "Unknown provider: #{provider}"}
-    end
-  end
-
-  defp discover_caldav_without_decrypt(integration, provider_module) do
-    config = %{
-      base_url: integration.base_url,
-      username: integration.username,
-      password: integration.password,
-      calendar_paths: calendar_paths_or_empty(integration)
-    }
-
-    client = provider_module.new(config)
-    provider_module.discover_calendars(client)
-  end
-
-  defp discover_caldav_with_decrypt(integration, provider) do
-    decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
-
-    config = %{
-      base_url: integration.base_url,
-      username: decrypted.username,
-      password: decrypted.password,
-      calendar_paths: calendar_paths_or_empty(integration)
-    }
-
-    with {:ok, provider_atom} <- resolve_provider_atom(provider),
+    with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
          {:ok, provider_module} <- provider_module_for(provider_atom) do
-      client = provider_module.new(config)
-      provider_module.discover_calendars(client)
-    end
-  end
-
-  defp discover_nextcloud_calendars(integration) do
-    decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
-
-    config = %{
-      base_url: integration.base_url,
-      username: decrypted.username,
-      password: decrypted.password,
-      calendar_paths: calendar_paths_or_empty(integration)
-    }
-
-    case DiscoveryService.discover_calendars(:nextcloud, config, force_refresh: true) do
-      {:ok, calendars} ->
-        standardized = DiscoveryService.standardize_calendar_data(calendars, :nextcloud)
-        {:ok, standardized}
-
-      error ->
-        error
+      provider_module.discover_calendars_for_integration(integration)
+    else
+      _other -> {:error, "Unknown provider: #{provider}"}
     end
   end
 
@@ -177,21 +109,12 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
 
   def maybe_discover_calendars(attrs), do: {:ok, attrs}
 
-  defp calendar_paths_or_empty(%{calendar_paths: paths}) when is_list(paths), do: paths
-  defp calendar_paths_or_empty(_arg), do: []
-
   # Internal helper that returns just the list of paths for CalDAV/Radicale.
   # Production callers pass atom-keyed attrs from Creation.prepare_attrs/2.
   @spec discover_caldav_calendar_paths(map()) :: {:ok, list(String.t())} | {:error, String.t()}
   defp discover_caldav_calendar_paths(%{provider: provider} = config) do
-    provider_atom =
-      case ProviderRegistry.validate_provider(provider) do
-        {:ok, atom} -> atom
-        _other -> :unknown
-      end
-
-    with true <- provider_atom != :unknown,
-         {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom),
+    with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
+         {:ok, provider_module} <- provider_module_for(provider_atom),
          client = provider_module.new(config),
          {:ok, calendars} <- provider_module.discover_calendars(client) do
       {:ok, extract_calendar_paths(calendars)}

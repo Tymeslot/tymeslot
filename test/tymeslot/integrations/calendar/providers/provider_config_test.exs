@@ -53,6 +53,82 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
     end
   end
 
+  describe "parse/1" do
+    test "accepts a valid provider atom" do
+      assert ProviderConfig.parse(:caldav) == {:ok, :caldav}
+    end
+
+    test "accepts a valid provider string" do
+      assert ProviderConfig.parse("google") == {:ok, :google}
+    end
+
+    test "rejects an atom that is known to the VM but not a valid provider" do
+      assert ProviderConfig.parse(:totally_unknown_atom) == {:error, :unknown}
+    end
+
+    test "rejects a string whose atom has never been created (truly unknown)" do
+      assert ProviderConfig.parse("totally_unknown_string_xyzzy") == {:error, :unknown}
+    end
+
+    test "rejects a non-string, non-atom value" do
+      assert ProviderConfig.parse(42) == {:error, :unknown}
+    end
+
+    test "accepts all enabled provider atoms" do
+      for provider <- ProviderConfig.all_providers() do
+        assert ProviderConfig.parse(provider) == {:ok, provider}
+      end
+    end
+
+    test "accepts all enabled provider strings" do
+      for provider <- ProviderConfig.all_providers() do
+        assert ProviderConfig.parse(Atom.to_string(provider)) == {:ok, provider}
+      end
+    end
+
+    test "rejects providers that are statically known but disabled via toggle" do
+      # :demo is in @providers but pinned off via test config; parse/1 must
+      # refuse to surface it because it gates user-input setup flows.
+      assert ProviderConfig.parse(:demo) == {:error, :unknown}
+      assert ProviderConfig.parse("demo") == {:error, :unknown}
+    end
+  end
+
+  describe "parse_known/1" do
+    test "accepts a valid provider atom" do
+      assert ProviderConfig.parse_known(:caldav) == {:ok, :caldav}
+    end
+
+    test "accepts a valid provider string" do
+      assert ProviderConfig.parse_known("google") == {:ok, :google}
+    end
+
+    test "accepts dev-only providers regardless of toggle (e.g. :debug)" do
+      assert ProviderConfig.parse_known(:debug) == {:ok, :debug}
+      assert ProviderConfig.parse_known("debug") == {:ok, :debug}
+    end
+
+    test "accepts providers that may be disabled via config but are statically known" do
+      # `:demo` is disabled in the test environment but is part of @providers,
+      # so parse_known/1 must still return {:ok, :demo} — this is the whole
+      # point of the toggle-agnostic variant.
+      assert ProviderConfig.parse_known(:demo) == {:ok, :demo}
+      assert ProviderConfig.parse_known("demo") == {:ok, :demo}
+    end
+
+    test "rejects an atom that is not a known provider" do
+      assert ProviderConfig.parse_known(:totally_unknown_atom) == {:error, :unknown}
+    end
+
+    test "rejects a string whose atom has never been created" do
+      assert ProviderConfig.parse_known("totally_unknown_string_xyzzy") == {:error, :unknown}
+    end
+
+    test "rejects a non-string, non-atom value" do
+      assert ProviderConfig.parse_known(42) == {:error, :unknown}
+    end
+  end
+
   describe "providers_with_circuit_breakers/0" do
     test "includes every CalDAV-based and OAuth provider" do
       breakers = ProviderConfig.providers_with_circuit_breakers()

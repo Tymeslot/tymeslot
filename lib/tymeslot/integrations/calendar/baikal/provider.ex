@@ -125,6 +125,20 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
+  def discover_calendars_for_integration(integration),
+    do: ProviderCommon.caldav_discover_from_integration(__MODULE__, integration)
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  defdelegate build_client_configs(integration),
+    to: ProviderCommon,
+    as: :caldav_build_client_configs
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  defdelegate build_booking_client_config(integration),
+    to: ProviderCommon,
+    as: :caldav_build_booking_client_config
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   def create_event(client, event_data), do: CaldavCommon.create_event(client, event_data)
 
   @impl Tymeslot.Integrations.Calendar.Provider
