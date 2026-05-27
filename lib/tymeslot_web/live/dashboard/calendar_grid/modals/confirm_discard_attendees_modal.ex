@@ -2,7 +2,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDiscardAttendeesModal
   @moduledoc "Confirmation modal for discarding unsent attendee invitations."
 
   use TymeslotWeb, :html
-  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
 
@@ -21,11 +20,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDiscardAttendeesModal
       <:header>Unsent invitations</:header>
 
       <p class="text-token-sm text-tymeslot-500">
-        <%= ngettext(
-          "1 attendee hasn't been invited yet. Discard?",
-          "%{count} attendees haven't been invited yet. Discard?",
-          @count
-        ) %>
+        <%= if @count == 1 do %>
+          1 attendee hasn't been invited yet. Discard?
+        <% else %>
+          {@count} attendees haven't been invited yet. Discard?
+        <% end %>
       </p>
 
       <:footer>
