@@ -49,8 +49,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             <IconComponents.icon name={:chevron_right} class="w-4 h-4" />
           </button>
           <button
-            phx-click="today"
-            phx-target={@myself}
+            phx-click={
+              JS.push("today", target: @myself)
+              |> JS.dispatch("calendar:scroll-to-current", to: "#calendar-drag-zone")
+            }
             class="px-2.5 py-1.5 md:px-3 text-token-sm border border-tymeslot-200 rounded hover:bg-tymeslot-50 text-tymeslot-600 focus:outline-none focus:ring-2 focus:ring-turquoise-400"
           >Today</button>
           <h2 class="text-token-sm md:text-token-base font-semibold text-tymeslot-800 ml-1 md:ml-2 min-w-0 truncate">
@@ -201,8 +203,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   defp refresh_button(assigns) do
     ~H"""
     <button
-      phx-click="refresh"
-      phx-target={@myself}
+      phx-click={
+        JS.push("refresh", target: @myself)
+        |> JS.dispatch("calendar:scroll-to-current", to: "#calendar-drag-zone")
+      }
       disabled={@syncing}
       class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 flex items-center justify-center gap-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-turquoise-400"
       aria-label="Refresh"

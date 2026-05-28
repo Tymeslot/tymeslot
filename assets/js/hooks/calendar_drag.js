@@ -51,7 +51,8 @@ export const CalendarDrag = {
     this.el.addEventListener('scroll', this._onScroll, { passive: true })
 
     this._scrollToCurrentTime()
-    this.handleEvent('calendar:scroll-to-current', () => this._scrollToCurrentTime())
+    this._onScrollToCurrent = () => this._scrollToCurrentTime()
+    this.el.addEventListener('calendar:scroll-to-current', this._onScrollToCurrent)
 
     // Initial pill visibility check after layout settles.
     requestAnimationFrame(() => this._updateJumpToNowVisibility())
@@ -71,6 +72,7 @@ export const CalendarDrag = {
     document.removeEventListener('touchend', this._onPointerUp)
     document.removeEventListener('touchcancel', this._onPointerUp)
     this.el.removeEventListener('scroll', this._onScroll)
+    this.el.removeEventListener('calendar:scroll-to-current', this._onScrollToCurrent)
     this._clearTouchHold()
   },
 
@@ -577,6 +579,7 @@ export const CalendarMobile = {
         case 't':
         case 'T':
           this.pushEventTo(this.el, 'today', {})
+          document.getElementById('calendar-drag-zone')?.dispatchEvent(new CustomEvent('calendar:scroll-to-current'))
           break
         case 'd':
         case 'D':

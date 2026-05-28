@@ -2,7 +2,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
   @moduledoc "Calendar visibility and refresh event handlers for CalendarGridComponent."
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [push_event: 3]
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Security.RateLimiter
@@ -91,10 +90,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
   defp do_refresh(socket, user_id) do
     case CalendarGrid.refresh_events(user_id) do
       {:ok, result} ->
-        socket =
-          socket
-          |> Helpers.load_events()
-          |> push_event("calendar:scroll-to-current", %{})
+        socket = Helpers.load_events(socket)
 
         cond do
           result.errors != [] ->
