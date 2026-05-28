@@ -6,6 +6,7 @@ defmodule Tymeslot.CalendarGridTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
@@ -181,29 +182,49 @@ defmodule Tymeslot.CalendarGridTest do
       )
     end
 
-    test "tracks outlook as skipped, not enqueued (webhook-driven, no job fires)" do
+    test "enqueues RefreshOutlookCalendarWorker for outlook integrations" do
+      # Regression: Outlook manual refresh used to short-circuit with {:ok, nil}
+      # because the legacy event-level worker required a graph_resource_id. The
+      # "Refresh now" button silently did nothing for Outlook users when webhook
+      # delivery was missing or delayed. Manual refresh must enqueue an actual
+      # job that performs a delta sync (or bootstrap, if no delta link yet).
       integration = insert(:calendar_integration, provider: "outlook")
 
-      {:ok, result} = CalendarGrid.refresh_events(integration.user_id)
+      {:ok, %{enqueued: 1, skipped: 0, errors: []}} =
+        CalendarGrid.refresh_events(integration.user_id)
 
-      assert result.enqueued == 0
-      assert result.skipped == 1
-      assert result.errors == []
-      refute_enqueued(worker: SyncGoogleCalendarWorker)
-      refute_enqueued(worker: SyncCalDavCalendarWorker)
+      assert_enqueued(
+        worker: RefreshOutlookCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
     end
 
-    test "counts enqueued and skipped across mixed providers" do
+    test "counts every provider as enqueued across a mixed set" do
       user = insert(:user)
-      insert(:calendar_integration, user: user, provider: "google")
-      insert(:calendar_integration, user: user, provider: "caldav")
-      insert(:calendar_integration, user: user, provider: "outlook")
+      google = insert(:calendar_integration, user: user, provider: "google")
+      caldav = insert(:calendar_integration, user: user, provider: "caldav")
+      outlook = insert(:calendar_integration, user: user, provider: "outlook")
 
       {:ok, result} = CalendarGrid.refresh_events(user.id)
 
-      assert result.enqueued == 2
-      assert result.skipped == 1
+      assert result.enqueued == 3
+      assert result.skipped == 0
       assert result.errors == []
+
+      assert_enqueued(
+        worker: SyncGoogleCalendarWorker,
+        args: %{"calendar_integration_id" => google.id}
+      )
+
+      assert_enqueued(
+        worker: SyncCalDavCalendarWorker,
+        args: %{"calendar_integration_id" => caldav.id, "force_full_fetch" => true}
+      )
+
+      assert_enqueued(
+        worker: RefreshOutlookCalendarWorker,
+        args: %{"calendar_integration_id" => outlook.id}
+      )
     end
 
     test "returns zeros when user has no active integrations" do
@@ -442,7 +463,7 @@ defmodule Tymeslot.CalendarGridTest do
         id: 1,
         provider: "outlook",
         caldav_sync_tier: nil,
-        graph_delta_link: "https://graph.microsoft.com/v1.0/me/events/delta?token=abc",
+        graph_delta_link: "https://graph.microsoft.com/v1.0/me/calendarView/delta?token=abc",
         last_external_sync_at: nil
       }
 
