@@ -140,7 +140,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
 
       # Simulate another process having already refreshed the token in the DB
       {:ok, _updated} =
-        CalendarIntegrationQueries.update_integration(integration, %{
+        CalendarIntegrationQueries.update(integration, %{
           access_token: "already-refreshed",
           token_expires_at: valid_expires
         })

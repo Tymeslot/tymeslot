@@ -142,7 +142,7 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
       sync_error: nil
     }
 
-    case CalendarIntegrationQueries.update_integration(integration, attrs) do
+    case CalendarIntegrationQueries.update(integration, attrs) do
       {:ok, updated} ->
         {:ok, CalendarIntegrationSchema.decrypt_oauth_tokens(updated)}
 

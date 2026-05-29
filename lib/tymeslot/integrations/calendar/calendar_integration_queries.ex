@@ -357,13 +357,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
-  Updates a calendar integration - delegates to update/2.
-  """
-  @spec update_integration(CalendarIntegrationSchema.t(), map()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  defdelegate update_integration(integration, attrs), to: __MODULE__, as: :update
-
-  @doc """
   Counts calendar integrations for a user.
   """
   @spec count_for_user(integer()) :: non_neg_integer()

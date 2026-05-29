@@ -184,7 +184,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
       token_expires_at: expires_at
     }
 
-    case CalendarIntegrationQueries.update_integration(integration, attrs) do
+    case CalendarIntegrationQueries.update(integration, attrs) do
       {:ok, _updated_integration} -> :ok
       {:error, update_error} -> {:error, update_error}
     end
