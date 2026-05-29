@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   @moduledoc "Public API facade — delegates to EventCreate, EventDelete, and EventRecurrence."
 
+  alias Tymeslot.CalendarGrid.EventCreation
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence
@@ -15,8 +16,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   defdelegate handle_update_create_attendee_input(params, socket), to: EventCreate
   defdelegate handle_update_create_video(params, socket), to: EventCreate
   defdelegate handle_save_event(params, socket), to: EventCreate
-  defdelegate run_create_event(payload), to: EventCreate
-  defdelegate run_create_ad_hoc_meeting(params), to: EventCreate
+  defdelegate run_create_event(payload), to: EventCreation
+  defdelegate run_create_ad_hoc_meeting(params), to: EventCreation
   defdelegate handle_create_result(result, socket), to: EventCreate
 
   defdelegate handle_request_delete_event(params, socket), to: EventDelete
