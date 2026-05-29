@@ -20,7 +20,7 @@ defmodule Tymeslot.Profiles do
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Themes.Theme
+  alias Tymeslot.Themes.Catalog
   alias Tymeslot.Validation.Constraints
 
   @type user_id :: pos_integer()
@@ -361,7 +361,7 @@ defmodule Tymeslot.Profiles do
   """
   @spec update_booking_theme(profile, term()) :: result(profile)
   def update_booking_theme(%ProfileSchema{} = profile, theme_id) do
-    if Theme.valid_theme_id?(theme_id),
+    if Catalog.valid_id?(to_string(theme_id)),
       do: update_profile(profile, %{booking_theme: theme_id}),
       else: {:error, "Invalid theme ID"}
   end

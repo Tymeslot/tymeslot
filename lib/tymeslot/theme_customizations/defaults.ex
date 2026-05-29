@@ -5,7 +5,7 @@ defmodule Tymeslot.ThemeCustomizations.Defaults do
   """
 
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
-  alias Tymeslot.Themes.Registry
+  alias Tymeslot.Themes.Catalog
 
   @doc """
   Gets the default configuration for a specific theme.
@@ -109,17 +109,17 @@ defmodule Tymeslot.ThemeCustomizations.Defaults do
   """
   @spec theme_supports_feature?(String.t(), atom()) :: boolean()
   def theme_supports_feature?(theme_id, feature) do
-    case Registry.get_theme_by_id(theme_id) do
-      {:ok, theme} -> Map.get(theme.features, registry_feature_key(feature), false)
+    case Catalog.get_by_id(theme_id) do
+      {:ok, theme} -> Map.get(theme.features, catalog_feature_key(feature), false)
       _other -> false
     end
   end
 
-  defp registry_feature_key(:video_backgrounds), do: :supports_video_background
-  defp registry_feature_key(:image_backgrounds), do: :supports_image_background
-  defp registry_feature_key(:gradient_backgrounds), do: :supports_gradient_background
-  defp registry_feature_key(:color_backgrounds), do: :supports_color_background
-  defp registry_feature_key(_unknown), do: nil
+  defp catalog_feature_key(:video_backgrounds), do: :supports_video_background
+  defp catalog_feature_key(:image_backgrounds), do: :supports_image_background
+  defp catalog_feature_key(:gradient_backgrounds), do: :supports_gradient_background
+  defp catalog_feature_key(:color_backgrounds), do: :supports_color_background
+  defp catalog_feature_key(_unknown), do: nil
 
   @doc """
   Gets the recommended background type for a theme.

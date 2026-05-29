@@ -10,8 +10,8 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
   import Phoenix.LiveView, only: [get_connect_params: 1]
 
   alias Tymeslot.Profiles
-  alias Tymeslot.Themes.Theme
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @doc """
   Assigns theme-related data to the socket dynamically based on the theme_id.
@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
 
     socket
     |> assign(:scheduling_theme_id, theme_id)
-    |> assign(:scheduling_theme_css, Theme.get_css_file(theme_id))
+    |> assign(:scheduling_theme_css, ThemeInfo.get_css_file(theme_id))
   end
 
   @doc """
@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
 
     socket
     |> assign(:scheduling_theme_id, theme_id)
-    |> assign(:scheduling_theme_css, Theme.get_css_file(theme_id))
+    |> assign(:scheduling_theme_css, ThemeInfo.get_css_file(theme_id))
     |> assign(:theme_preview, theme_preview)
   end
 

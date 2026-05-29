@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Themes.Core.ValidatorTest do
   use ExUnit.Case, async: false
   @moduletag :utils
 
-  alias Tymeslot.Themes.Theme
+  alias TymeslotWeb.Themes.Core.ThemeInfo, as: Theme
   alias TymeslotWeb.Themes.Core.Validator
   import ExUnit.CaptureLog
 

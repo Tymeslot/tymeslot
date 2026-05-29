@@ -11,9 +11,8 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   alias Phoenix.LiveView
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
-  alias Tymeslot.Themes.Registry
   alias Tymeslot.Timezones
-  alias TymeslotWeb.Themes.Core.{Context, EventBus, MeetingManagement}
+  alias TymeslotWeb.Themes.Core.{Context, EventBus, MeetingManagement, Registry}
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
 
   @doc """

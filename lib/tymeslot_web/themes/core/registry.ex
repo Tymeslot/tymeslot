@@ -2,9 +2,14 @@ defmodule TymeslotWeb.Themes.Core.Registry do
   @moduledoc """
   Centralized registry for all available themes in the system.
 
-  This module provides a single source of truth for theme definitions,
-  eliminating magic strings and providing type-safe theme access.
+  This module provides a single source of truth for theme *definitions* —
+  theme facts (sourced from `Tymeslot.Themes.Catalog`) merged with the
+  presentation bindings the web layer owns: the theme module, its CSS file, and
+  its preview image. Domain code reads facts directly from the catalog; only the
+  web layer needs these full definitions.
   """
+
+  alias Tymeslot.Themes.Catalog
 
   @type theme_id :: String.t()
   @type theme_key :: atom()
@@ -21,45 +26,27 @@ defmodule TymeslotWeb.Themes.Core.Registry do
           status: :active | :beta | :deprecated
         }
 
-  # Define all themes with their metadata
-  @themes %{
-    quill: %{
-      id: "1",
-      key: :quill,
-      name: "Quill",
-      description: "Professional glassmorphism theme with elegant transparency effects",
+  # Presentation bindings keyed by theme ID. The web layer owns these; the
+  # theme facts they are merged with live in Tymeslot.Themes.Catalog.
+  @bindings %{
+    "1" => %{
       module: TymeslotWeb.Themes.Quill.Theme,
       css_file: "/assets/scheduling-theme-quill.css",
-      preview_image: "/images/themes/quill-preview.png",
-      features: %{
-        supports_video_background: true,
-        supports_image_background: true,
-        supports_gradient_background: true,
-        supports_custom_colors: true,
-        flow_type: :multi_step,
-        step_count: 4
-      },
-      status: :active
+      preview_image: "/images/themes/quill-preview.png"
     },
-    rhythm: %{
-      id: "2",
-      key: :rhythm,
-      name: "Rhythm",
-      description: "Modern sliding theme with immersive video backgrounds",
+    "2" => %{
       module: TymeslotWeb.Themes.Rhythm.Theme,
       css_file: "/assets/scheduling-theme-rhythm.css",
-      preview_image: "/images/themes/rhythm-preview.png",
-      features: %{
-        supports_video_background: true,
-        supports_image_background: true,
-        supports_gradient_background: true,
-        supports_custom_colors: true,
-        flow_type: :multi_step,
-        step_count: 4
-      },
-      status: :active
+      preview_image: "/images/themes/rhythm-preview.png"
     }
   }
+
+  # Build full definitions at compile time by merging catalog facts with bindings.
+  @themes Catalog.all()
+          |> Enum.map(fn {key, facts} ->
+            {key, Map.merge(facts, Map.fetch!(@bindings, facts.id))}
+          end)
+          |> Map.new()
 
   # Create reverse lookup maps at compile time
   @id_to_key_map @themes

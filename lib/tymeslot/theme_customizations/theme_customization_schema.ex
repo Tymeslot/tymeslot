@@ -6,7 +6,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
   import Ecto.Changeset
 
   alias Tymeslot.Profiles.ProfileSchema
-  alias TymeslotWeb.Themes.Core.Registry
+  alias Tymeslot.Themes.Catalog
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -433,7 +433,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
         changeset
 
       theme_id ->
-        if Registry.valid_theme_id?(theme_id) do
+        if Catalog.valid_id?(theme_id) do
           changeset
         else
           add_error(changeset, :theme_id, "is not a valid theme")
