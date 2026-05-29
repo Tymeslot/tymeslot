@@ -101,6 +101,51 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       render(lv)
       assert render(lv) =~ "Dashboard Created Event"
     end
+
+    test "shows reconnect flash when task signals reauth_required", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      start_at = DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC")
+      end_at = DateTime.new!(Date.utc_today(), ~T[10:30:00], "Etc/UTC")
+
+      creating = %{
+        date: Date.to_iso8601(Date.utc_today()),
+        end_date: Date.to_iso8601(Date.utc_today()),
+        title: "Reauth Event",
+        integration_id: integration.id,
+        calendar_id: "primary",
+        attendees: [],
+        attendee_input: "",
+        video_integration_id: nil,
+        start_hour: 10,
+        start_minute: 0,
+        end_hour: 10,
+        end_minute: 30
+      }
+
+      send(
+        lv.pid,
+        {:create_event_result,
+         {:ok,
+          %{
+            uid: "reauth-event-uid",
+            creating: creating,
+            start_at: start_at,
+            end_at: end_at,
+            provider: "google",
+            default_booking_calendar_id: "primary",
+            attendees: [],
+            meeting_url: nil,
+            description: nil,
+            reauth_required: true
+          }}}
+      )
+
+      html = render(lv)
+      assert html =~ "reconnected"
+    end
   end
 
   describe "async event move result" do
