@@ -327,17 +327,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
           "Google Calendar saved the event but didn't return a Meet link — " <>
             "please try again or add it manually."
 
-        case build_create_success(
-               created,
-               ctx.creating,
-               ctx.user_id,
-               ctx.start_at,
-               ctx.end_at,
-               video_context
-             ) do
-          {:ok, result} -> {:ok, Map.put(result, :warning, warning)}
-          error -> error
-        end
+        {:ok, result} =
+          build_create_success(
+            created,
+            ctx.creating,
+            ctx.user_id,
+            ctx.start_at,
+            ctx.end_at,
+            video_context
+          )
+
+        {:ok, Map.put(result, :warning, warning)}
     end
   end
 
