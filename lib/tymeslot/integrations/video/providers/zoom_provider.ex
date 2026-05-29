@@ -9,12 +9,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   """
 
   alias Tymeslot.Infrastructure.HTTPClient
-  alias Tymeslot.Integrations.Shared.Lock
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
-  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
 
   require Logger
@@ -256,43 +255,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   end
 
   defp refresh_and_update_token(config) do
-    integration_id = Map.get(config, :integration_id)
-    user_id = Map.get(config, :user_id)
-
-    if is_nil(integration_id) or is_nil(user_id) do
-      case do_actual_refresh(config) do
-        {:ok, refreshed} -> {:ok, refreshed.access_token}
-        error -> error
-      end
-    else
-      Lock.with_lock(
-        {:zoom, integration_id},
-        fn -> check_and_refresh(integration_id, user_id, config) end,
-        mode: :blocking
-      )
-    end
-  end
-
-  defp check_and_refresh(integration_id, user_id, config) do
-    case Video.fetch_integration_for_user(integration_id, user_id) do
-      {:ok, fresh} ->
-        decrypted = VideoIntegrationSchema.decrypt_credentials(fresh)
-
-        if token_still_valid?(decrypted.token_expires_at) do
-          {:ok, decrypted.access_token}
-        else
-          perform_refresh(config)
-        end
-
-      {:error, :not_found} ->
-        perform_refresh(config)
-    end
-  end
-
-  defp token_still_valid?(nil), do: false
-
-  defp token_still_valid?(expires_at) do
-    DateTime.compare(expires_at, DateTime.add(DateTime.utc_now(), 300, :second)) == :gt
+    OAuthTokenManager.refresh_with_lock(config, %{
+      provider: :zoom,
+      refresh: &perform_refresh/1,
+      already_refreshed: fn _config, decrypted -> {:ok, decrypted.access_token} end
+    })
   end
 
   defp perform_refresh(config) do
@@ -414,11 +381,18 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
         {:error, :meeting_not_found}
 
-      {:ok, %Req.Response{status: 401, body: body}} ->
+      {:ok, %Req.Response{status: 401, body: _body}} ->
         # Token may have been server-side revoked. Attempt one forced refresh
         # and retry. If refresh fails or the retry also returns 401, flag the
         # integration for reauthentication.
-        handle_patch_401(token, room_id, start_time, end_time, config, body)
+        payload =
+          build_meeting_payload(
+            start_time,
+            max(div(DateTime.diff(end_time, start_time, :second), 60), 15),
+            config
+          )
+
+        retry_after_401(:patch, room_id, config, Jason.encode!(payload))
 
       {:ok, %Req.Response{status: status, body: body}} ->
         decode_and_format_error(status, body)
@@ -428,39 +402,60 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     end
   end
 
-  defp handle_patch_401(_token, room_id, start_time, end_time, config, _body) do
+  # Shared retry-after-token-refresh path for the PATCH (reschedule) and DELETE
+  # (cancel) requests. Both attempt one forced refresh, replay the request with
+  # the fresh token, and flag the integration for reauthentication if the retry
+  # still returns 401 (server-side revocation) or the refresh itself fails. The
+  # verb drives the request body and which statuses count as success.
+  defp retry_after_401(verb, room_id, config, body) do
     case refresh_and_update_token(config) do
       {:ok, fresh_token} ->
-        duration = max(div(DateTime.diff(end_time, start_time, :second), 60), 15)
-        payload = build_meeting_payload(start_time, duration, config)
-
-        headers = [
-          {"Authorization", "Bearer #{fresh_token}"},
-          {"Content-Type", "application/json"}
-        ]
-
         url = "#{@api_base_url}/meetings/#{room_id}"
 
-        case http_client().request(:patch, url, Jason.encode!(payload), headers, []) do
-          {:ok, %Req.Response{status: 204}} ->
-            :ok
-
-          {:ok, %Req.Response{status: 401, body: body}} ->
+        case http_client().request(verb, url, body, request_headers(verb, fresh_token), []) do
+          {:ok, %Req.Response{status: 401, body: response_body}} ->
             # Refresh succeeded but Zoom still rejects — token is revoked.
             flag_revoked_token(config)
-            decode_and_format_error(401, body)
+            decode_and_format_error(401, response_body)
 
-          {:ok, %Req.Response{status: status, body: body}} ->
-            decode_and_format_error(status, body)
-
-          {:error, reason} ->
-            {:error, "Network error: #{inspect(reason)}"}
+          response ->
+            handle_verb_response(verb, room_id, response)
         end
 
       {:error, _reason} ->
         # Refresh itself failed — credentials are no longer usable.
         flag_revoked_token(config)
         {:error, "Zoom token refresh failed after 401. Please reconnect your Zoom account."}
+    end
+  end
+
+  defp request_headers(:patch, token),
+    do: [{"Authorization", "Bearer #{token}"}, {"Content-Type", "application/json"}]
+
+  defp request_headers(:delete, token), do: [{"Authorization", "Bearer #{token}"}]
+
+  defp handle_verb_response(:patch, _room_id, response) do
+    case response do
+      {:ok, %Req.Response{status: 204}} -> :ok
+      {:ok, %Req.Response{status: status, body: body}} -> decode_and_format_error(status, body)
+      {:error, reason} -> {:error, "Network error: #{inspect(reason)}"}
+    end
+  end
+
+  defp handle_verb_response(:delete, room_id, response) do
+    case response do
+      {:ok, %Req.Response{status: status}} when status in [204, 200] ->
+        :ok
+
+      {:ok, %Req.Response{status: 404}} ->
+        Logger.info("Zoom meeting already deleted", room_id: room_id)
+        :ok
+
+      {:ok, %Req.Response{status: status, body: body}} ->
+        decode_and_format_error(status, body)
+
+      {:error, reason} ->
+        {:error, "Network error: #{inspect(reason)}"}
     end
   end
 
@@ -478,50 +473,17 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
         Logger.info("Zoom meeting already deleted", room_id: room_id)
         :ok
 
-      {:ok, %Req.Response{status: 401, body: body}} ->
+      {:ok, %Req.Response{status: 401, body: _body}} ->
         # Token may have been server-side revoked. Attempt one forced refresh
         # and retry. If refresh fails or the retry also returns 401, flag the
         # integration for reauthentication.
-        handle_delete_401(token, room_id, config, body)
+        retry_after_401(:delete, room_id, config, "")
 
       {:ok, %Req.Response{status: status, body: body}} ->
         decode_and_format_error(status, body)
 
       {:error, reason} ->
         {:error, "Network error: #{inspect(reason)}"}
-    end
-  end
-
-  defp handle_delete_401(_token, room_id, config, _body) do
-    case refresh_and_update_token(config) do
-      {:ok, fresh_token} ->
-        headers = [{"Authorization", "Bearer #{fresh_token}"}]
-        url = "#{@api_base_url}/meetings/#{room_id}"
-
-        case http_client().request(:delete, url, "", headers, []) do
-          {:ok, %Req.Response{status: status}} when status in [204, 200] ->
-            :ok
-
-          {:ok, %Req.Response{status: 404}} ->
-            Logger.info("Zoom meeting already deleted", room_id: room_id)
-            :ok
-
-          {:ok, %Req.Response{status: 401, body: body}} ->
-            # Refresh succeeded but Zoom still rejects — token is revoked.
-            flag_revoked_token(config)
-            decode_and_format_error(401, body)
-
-          {:ok, %Req.Response{status: status, body: body}} ->
-            decode_and_format_error(status, body)
-
-          {:error, reason} ->
-            {:error, "Network error: #{inspect(reason)}"}
-        end
-
-      {:error, _reason} ->
-        # Refresh itself failed — credentials are no longer usable.
-        flag_revoked_token(config)
-        {:error, "Zoom token refresh failed after 401. Please reconnect your Zoom account."}
     end
   end
 

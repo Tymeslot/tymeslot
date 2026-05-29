@@ -7,14 +7,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   """
 
   alias Tymeslot.Infrastructure.HTTPClient
-  alias Tymeslot.Integrations.Shared.Lock
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
-  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   require Logger
 
@@ -235,39 +234,14 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   defp refresh_and_update_token(config) do
-    integration_id = Map.get(config, :integration_id)
-    user_id = Map.get(config, :user_id)
-
-    if is_nil(integration_id) or is_nil(user_id) do
-      do_actual_refresh(config)
-    else
-      Lock.with_lock(
-        {:teams, integration_id},
-        fn -> check_and_refresh_token(integration_id, user_id, config) end,
-        mode: :blocking
-      )
-    end
-  end
-
-  defp check_and_refresh_token(integration_id, user_id, config) do
-    case Video.fetch_integration_for_user(integration_id, user_id) do
-      {:ok, fresh_integration} ->
-        decrypted = VideoIntegrationSchema.decrypt_credentials(fresh_integration)
-
-        if token_still_valid?(decrypted.token_expires_at) do
-          {:ok, decrypted.access_token}
-        else
-          perform_refresh(config)
-        end
-
-      {:error, :not_found} ->
-        perform_refresh(config)
-    end
-  end
-
-  defp token_still_valid?(expires_at) do
-    now = DateTime.utc_now()
-    DateTime.compare(expires_at, DateTime.add(now, 300, :second)) == :gt
+    OAuthTokenManager.refresh_with_lock(config, %{
+      provider: :teams,
+      refresh: &perform_refresh/1,
+      already_refreshed: fn _config, decrypted -> {:ok, decrypted.access_token} end,
+      # The no-ids fallback historically returns the full refreshed-token map,
+      # not just the bare access token — preserved here intentionally.
+      fallback_refresh: &do_actual_refresh/1
+    })
   end
 
   defp perform_refresh(config) do
