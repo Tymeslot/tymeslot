@@ -1,6 +1,9 @@
 defmodule Tymeslot.Meetings.CalendarEventSyncTest do
   use Tymeslot.DataCase, async: true
 
+  @moduletag :meetings
+  @moduletag :integration
+
   import Mox
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
