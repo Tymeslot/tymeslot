@@ -482,9 +482,7 @@ defmodule TymeslotWeb.AdminLiveTest do
       # The dashboard requires onboarding to be complete before it renders.
       {:ok, admin} =
         admin
-        |> Changeset.change(
-          onboarding_completed_at: DateTime.utc_now(:second)
-        )
+        |> Changeset.change(onboarding_completed_at: DateTime.utc_now(:second))
         |> Repo.update()
 
       {:ok, _user} = UserQueries.set_admin(admin, false)

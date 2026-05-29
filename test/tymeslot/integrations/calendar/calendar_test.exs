@@ -68,7 +68,11 @@ defmodule Tymeslot.Integrations.Calendar.DiagnosticsTest do
       range_end = DateTime.add(range_start, 7, :day)
 
       assert {:error, _reason} =
-               Diagnostics.fetch_and_normalise_provider_events(integration, range_start, range_end)
+               Diagnostics.fetch_and_normalise_provider_events(
+                 integration,
+                 range_start,
+                 range_end
+               )
     end
   end
 
