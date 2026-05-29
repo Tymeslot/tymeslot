@@ -5,19 +5,18 @@ defmodule Tymeslot.ThemeCustomizations do
   """
 
   alias Ecto.Changeset
-  alias Tymeslot.Media.Transcoder
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
-  alias TymeslotWeb.Helpers.UploadHandler
 
   # Functional submodules
   alias __MODULE__.{
     Backgrounds,
     Capability,
+    Css,
     DataTransform,
     Defaults,
-    PaletteDerivation,
+    FileLifecycle,
     Presets,
     Storage,
     Validation
@@ -120,52 +119,10 @@ defmodule Tymeslot.ThemeCustomizations do
   @spec update_theme_customization(ThemeCustomizationSchema.t(), map()) ::
           persistence_result()
   def update_theme_customization(%ThemeCustomizationSchema{} = customization, attrs) do
-    # Track old files for cleanup
-    old_image_path = customization.background_image_path
-    old_video_path = customization.background_video_path
-    new_image_path = Map.get(attrs, "background_image_path")
-    new_video_path = Map.get(attrs, "background_video_path")
-
-    context = %{
-      profile_id: customization.profile_id,
-      theme_id: customization.theme_id,
-      operation: "theme_update"
-    }
-
-    # Perform the atomic database update
+    # Perform the atomic database update, then cleanup replaced files on success
     case ThemeCustomizationQueries.update(customization, attrs) do
       {:ok, updated} ->
-        # Success: cleanup old files if they were replaced
-        if old_image_path && old_image_path != new_image_path do
-          old_file_path = Storage.build_theme_file_path(old_image_path)
-
-          UploadHandler.delete_file_safely(
-            old_file_path,
-            Map.put(context, :file_type, "old_image")
-          )
-        end
-
-        if old_video_path && old_video_path != new_video_path do
-          old_file_path = Storage.build_theme_file_path(old_video_path)
-
-          UploadHandler.delete_file_safely(
-            old_file_path,
-            Map.put(context, :file_type, "old_video")
-          )
-
-          # Clean up old video variants
-          old_video_path
-          |> Transcoder.derive_variant_paths()
-          |> Enum.each(fn variant_path ->
-            variant_file_path = Storage.build_theme_file_path(variant_path)
-
-            UploadHandler.delete_file_safely(
-              variant_file_path,
-              Map.put(context, :file_type, "old_video_variant")
-            )
-          end)
-        end
-
+        FileLifecycle.cleanup_replaced_files(customization, attrs)
         {:ok, updated}
 
       error ->
@@ -179,38 +136,10 @@ defmodule Tymeslot.ThemeCustomizations do
   @spec delete_theme_customization(ThemeCustomizationSchema.t()) ::
           {:ok, ThemeCustomizationSchema.t()} | {:error, Changeset.t()}
   def delete_theme_customization(%ThemeCustomizationSchema{} = customization) do
-    context = %{
-      profile_id: customization.profile_id,
-      theme_id: customization.theme_id,
-      operation: "theme_delete"
-    }
-
-    # Delete database record first
+    # Delete database record first, then cleanup files on success
     case ThemeCustomizationQueries.delete(customization) do
       {:ok, deleted} ->
-        # Then cleanup files if they exist
-        if customization.background_image_path do
-          file_path = Storage.build_theme_file_path(customization.background_image_path)
-          UploadHandler.delete_file_safely(file_path, Map.put(context, :file_type, "image"))
-        end
-
-        if customization.background_video_path do
-          file_path = Storage.build_theme_file_path(customization.background_video_path)
-          UploadHandler.delete_file_safely(file_path, Map.put(context, :file_type, "video"))
-
-          # Clean up transcoded video variants
-          customization.background_video_path
-          |> Transcoder.derive_variant_paths()
-          |> Enum.each(fn variant_path ->
-            variant_file_path = Storage.build_theme_file_path(variant_path)
-
-            UploadHandler.delete_file_safely(
-              variant_file_path,
-              Map.put(context, :file_type, "video_variant")
-            )
-          end)
-        end
-
+        FileLifecycle.cleanup_all_files(customization)
         {:ok, deleted}
 
       error ->
@@ -239,47 +168,13 @@ defmodule Tymeslot.ThemeCustomizations do
   via `PaletteDerivation.derive_palette/1` instead of preset lookup.
   """
   @spec get_color_scheme_css(String.t() | atom() | map()) :: String.t() | nil
-  def get_color_scheme_css(customization) when is_map(customization) do
-    case resolve_palette(customization) do
-      nil -> nil
-      %{colors: colors} -> format_palette_css(colors)
-    end
-  end
-
-  def get_color_scheme_css(scheme_id) when is_binary(scheme_id) or is_atom(scheme_id) do
-    case Presets.find_preset_by_id(:color_scheme, scheme_id) do
-      nil -> nil
-      %{colors: colors} -> format_palette_css(colors)
-    end
-  end
-
-  defp resolve_palette(customization) do
-    seed = get_seed(customization)
-    scheme_id = get_scheme_id(customization)
-
-    cond do
-      is_binary(seed) and seed != "" -> PaletteDerivation.derive_palette(seed)
-      is_binary(scheme_id) -> Presets.find_preset_by_id(:color_scheme, scheme_id)
-      true -> nil
-    end
-  end
-
-  defp format_palette_css(colors) do
-    Enum.map_join(colors, "\n", fn {key, value} ->
-      "--theme-#{String.replace(to_string(key), "_", "-")}: #{value};"
-    end)
-  end
+  defdelegate get_color_scheme_css(customization), to: Css
 
   @doc """
   Gets the CSS for a gradient preset.
   """
   @spec get_gradient_css(String.t() | atom()) :: String.t() | nil
-  def get_gradient_css(gradient_id) do
-    case Presets.find_preset_by_id(:gradient, gradient_id) do
-      nil -> nil
-      %{value: value} -> value
-    end
-  end
+  defdelegate get_gradient_css(gradient_id), to: Css
 
   @doc """
   Converts a theme customization schema to a map for use in capability-based customization.
@@ -303,11 +198,7 @@ defmodule Tymeslot.ThemeCustomizations do
   """
   @spec generate_theme_css(theme_id(), customization_input()) :: String.t()
   def generate_theme_css(theme_id, customization) do
-    customization_map = to_map(customization)
-
-    theme_id
-    |> Capability.generate_css(customization_map)
-    |> Validation.sanitize_css()
+    Css.generate_theme_css(theme_id, to_map(customization))
   end
 
   # New orchestrator functions for component interface
@@ -353,28 +244,7 @@ defmodule Tymeslot.ThemeCustomizations do
   to a known scheme.
   """
   @spec resolve_active_scheme(ThemeCustomizationSchema.t() | map(), map()) :: map() | nil
-  def resolve_active_scheme(customization, presets) do
-    seed = get_seed(customization)
-
-    if is_binary(seed) and seed != "" do
-      PaletteDerivation.derive_palette(seed)
-    else
-      scheme_id = get_scheme_id(customization)
-      Map.get(presets.color_schemes, scheme_id)
-    end
-  end
-
-  defp get_seed(%ThemeCustomizationSchema{custom_palette_seed: seed}), do: seed
-
-  defp get_seed(map) when is_map(map) do
-    Map.get(map, :custom_palette_seed) || Map.get(map, "custom_palette_seed")
-  end
-
-  defp get_scheme_id(%ThemeCustomizationSchema{color_scheme: s}), do: s
-
-  defp get_scheme_id(map) when is_map(map) do
-    Map.get(map, :color_scheme) || Map.get(map, "color_scheme")
-  end
+  defdelegate resolve_active_scheme(customization, presets), to: Css
 
   @doc """
   Applies a color scheme change through the component interface.
@@ -391,7 +261,7 @@ defmodule Tymeslot.ThemeCustomizations do
           String.t() | atom()
         ) :: {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
   def apply_color_scheme_change(profile_id, theme_id, current_customization, "custom") do
-    seed = get_seed(current_customization) || @default_custom_palette_seed
+    seed = Css.get_seed(current_customization) || @default_custom_palette_seed
     apply_custom_palette_change(profile_id, theme_id, current_customization, seed)
   end
 
@@ -435,7 +305,7 @@ defmodule Tymeslot.ThemeCustomizations do
           String.t()
         ) :: {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
   def apply_custom_palette_change(profile_id, theme_id, current_customization, seed_hex) do
-    with :ok <- validate_seed_hex(seed_hex),
+    with :ok <- Css.validate_seed_hex(seed_hex),
          new_customization <-
            DataTransform.merge_customization_changes(current_customization, %{
              custom_palette_seed: String.downcase(seed_hex)
@@ -446,19 +316,6 @@ defmodule Tymeslot.ThemeCustomizations do
       |> format_persistence_error()
     end
   end
-
-  @hex_color_regex ~r/^#[0-9A-Fa-f]{6}$/
-
-  defp validate_seed_hex(seed) when is_binary(seed) do
-    if String.match?(seed, @hex_color_regex) do
-      :ok
-    else
-      {:error, "Custom palette seed must be a 6-character hex colour"}
-    end
-  end
-
-  defp validate_seed_hex(_other),
-    do: {:error, "Custom palette seed must be a 6-character hex colour"}
 
   @doc """
   Applies a background change through the component interface.
@@ -484,7 +341,7 @@ defmodule Tymeslot.ThemeCustomizations do
            profile_id
            |> upsert_theme_customization(theme_id, save_attrs)
            |> format_persistence_error() do
-      Enum.each(cleanup_files, &cleanup_old_backgrounds/1)
+      Enum.each(cleanup_files, &FileLifecycle.cleanup_old_backgrounds/1)
 
       {:ok, saved}
     end
@@ -560,23 +417,7 @@ defmodule Tymeslot.ThemeCustomizations do
   Legacy cleanup function - now delegates to unified system.
   """
   @spec cleanup_old_backgrounds(cleanup_entry() | ThemeCustomizationSchema.t()) :: :ok
-  def cleanup_old_backgrounds(customization) do
-    context = %{operation: "legacy_cleanup"}
-
-    # Cleanup image if exists
-    if image_path = Map.get(customization, :background_image_path) do
-      file_path = Storage.build_theme_file_path(image_path)
-      UploadHandler.delete_file_safely(file_path, Map.put(context, :file_type, "image"))
-    end
-
-    # Cleanup video if exists
-    if video_path = Map.get(customization, :background_video_path) do
-      file_path = Storage.build_theme_file_path(video_path)
-      UploadHandler.delete_file_safely(file_path, Map.put(context, :file_type, "video"))
-    end
-
-    :ok
-  end
+  defdelegate cleanup_old_backgrounds(customization), to: FileLifecycle
 
   # Private functions
 
