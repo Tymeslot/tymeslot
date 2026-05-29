@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
@@ -272,6 +273,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
     socket
     |> put_flash(:info, flash_for_create(attendees))
     |> maybe_flash_warning(result[:warning])
+    |> maybe_flash_reauth(result[:reauth_required])
     |> then(&{:noreply, &1})
   end
 
@@ -313,6 +315,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
 
   defp maybe_flash_warning(socket, nil), do: socket
   defp maybe_flash_warning(socket, msg), do: put_flash(socket, :warning, msg)
+
+  # The domain layer signals — via data, since it runs in a Task — that the
+  # integration's credentials need re-encrypting. Surface the reconnect flash
+  # here, in the LiveView process, where it actually reaches the user.
+  defp maybe_flash_reauth(socket, true) do
+    put_flash(socket, :error, EventCreation.reauth_flash_message())
+  end
+
+  defp maybe_flash_reauth(socket, _other), do: socket
 
   defp maybe_update_date(creating, date_str, key)
        when is_binary(date_str) and date_str != "" do

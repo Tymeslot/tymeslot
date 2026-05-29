@@ -5,8 +5,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
   result map into cache writes, grid updates, and user-facing flashes:
 
     * persists `video_integration_id` and description to the cache row, and
-      flashes copy that reflects attendee presence, and
-    * flashes the "no Meet link" warning when the domain signals one.
+      flashes copy that reflects attendee presence,
+    * flashes the "no Meet link" warning when the domain signals one, and
+    * flashes the "reconnect your calendar" error when the domain returns
+      `reauth_required: true`.
 
   The orchestration itself (`run_create_event/1`) is covered in
   `Tymeslot.CalendarGrid.EventCreationTest`.
@@ -21,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
   import Tymeslot.Factory
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.EventCreation
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate
 
   describe "handle_create_result/2" do
@@ -102,6 +105,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
 
       assert updated_socket.assigns.flash["info"] == "Event created."
       assert is_nil(updated_socket.assigns.flash["warning"])
+    end
+  end
+
+  describe "handle_create_result/2 — reauth required" do
+    test "flashes the reconnect error when the domain returns reauth_required: true" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      result = build_result(integration, attendees: [], reauth_required: true)
+      socket = build_socket()
+
+      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+
+      # The event still saved, so the success info flash is present…
+      assert updated_socket.assigns.flash["info"] == "Event created."
+      # …and the reconnect prompt now reaches the user from the LiveView layer.
+      assert updated_socket.assigns.flash["error"] == EventCreation.reauth_flash_message()
+    end
+
+    test "does not flash a reconnect error when reauth_required is false" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      result = build_result(integration, attendees: [], reauth_required: false)
+      socket = build_socket()
+
+      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+
+      assert is_nil(updated_socket.assigns.flash["error"])
     end
   end
 
