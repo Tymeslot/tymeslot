@@ -238,9 +238,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       provider: :teams,
       refresh: &perform_refresh/1,
       already_refreshed: fn _config, decrypted -> {:ok, decrypted.access_token} end,
-      # The no-ids fallback historically returns the full refreshed-token map,
-      # not just the bare access token — preserved here intentionally.
-      fallback_refresh: &do_actual_refresh/1
+      fallback_refresh: &perform_refresh/1
     })
   end
 
