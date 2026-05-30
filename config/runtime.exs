@@ -745,8 +745,14 @@ config :tymeslot, :recaptcha,
 
 # Webhook base URL for inbound push notifications from calendar providers.
 # Required to enable Google Calendar push channels and Outlook Graph subscriptions.
-# When unset, push channel registration is silently skipped (integrations still work
-# via polling fallback).
-if webhook_base_url = System.get_env("WEBHOOK_BASE_URL") do
-  config :tymeslot, :webhook_base_url, webhook_base_url
+# When unset or blank, push channel registration is silently skipped (integrations
+# still work via polling fallback).
+#
+# A blank value is treated as unset: an empty string is truthy in Elixir, so deployment
+# templates that pass `${WEBHOOK_BASE_URL:-}` would otherwise configure a host-less URL
+# and generate broken notification endpoints like "/webhooks/outlook-calendar".
+webhook_base_url = System.get_env("WEBHOOK_BASE_URL")
+
+if webhook_base_url && String.trim(webhook_base_url) != "" do
+  config :tymeslot, :webhook_base_url, String.trim(webhook_base_url)
 end
