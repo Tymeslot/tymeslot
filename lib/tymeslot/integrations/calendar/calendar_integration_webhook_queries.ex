@@ -113,6 +113,32 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
     )
   end
 
+  @doc """
+  Lists active Google integrations that have no push channel yet
+  (`google_channel_id` is nil) and are not awaiting reauthorisation.
+
+  Used to backfill push channels for integrations connected before
+  `WEBHOOK_BASE_URL` was configured. Callers must confirm push is enabled
+  before scheduling registration.
+  """
+  @spec list_unregistered_google_channels() :: [CalendarIntegrationSchema.t()]
+  def list_unregistered_google_channels do
+    list_unregistered_webhook_integrations("google", :google_channel_id)
+  end
+
+  @doc """
+  Lists active Outlook integrations that have no Graph subscription yet
+  (`graph_subscription_id` is nil) and are not awaiting reauthorisation.
+
+  Used to backfill subscriptions for integrations connected before
+  `WEBHOOK_BASE_URL` was configured. Callers must confirm push is enabled
+  before scheduling registration.
+  """
+  @spec list_unregistered_outlook_subscriptions() :: [CalendarIntegrationSchema.t()]
+  def list_unregistered_outlook_subscriptions do
+    list_unregistered_webhook_integrations("outlook", :graph_subscription_id)
+  end
+
   # ---------------------------------------------------------------------------
   # Silent webhooks / subscriptions
   # ---------------------------------------------------------------------------
@@ -272,6 +298,15 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
     |> where([c], not is_nil(field(c, ^id_field)))
     |> where([c], field(c, ^expires_at_field) < ^threshold)
     |> order_by([c], asc: field(c, ^expires_at_field))
+    |> Repo.all()
+  end
+
+  defp list_unregistered_webhook_integrations(provider, id_field) do
+    CalendarIntegrationSchema
+    |> where([c], c.provider == ^provider)
+    |> where([c], c.is_active == true)
+    |> where([c], c.needs_reauth == false)
+    |> where([c], is_nil(field(c, ^id_field)))
     |> Repo.all()
   end
 

@@ -7,6 +7,12 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   Graph subscription expires within the next 48 hours, then re-registers each
   one. A random stagger of 0–30 seconds between renewals avoids burst traffic
   to provider APIs.
+
+  When `WEBHOOK_BASE_URL` is configured, the same run also backfills
+  integrations that have no channel/subscription yet — those connected before
+  push was enabled. The daily cadence doubles as retry throttling: a
+  registration that keeps failing is retried at most once per day rather than
+  on every fallback-sync tick.
   """
 
   use Oban.Worker,
@@ -24,7 +30,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   alias Tymeslot.Integrations.CalendarManagement
 
   # Batch entry point: enumerate expiring integrations and schedule one
-  # per-integration renewal job with a staggered `scheduled_in` delay.
+  # per-integration renewal job with a staggered `schedule_in` delay.
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) when not is_map_key(args, "calendar_integration_id") do
     google_ids = schedule_google_renewals()
@@ -73,15 +79,38 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   end
 
   defp schedule_google_renewals do
-    48
-    |> CalendarIntegrationWebhookQueries.list_expiring_google_channels()
-    |> schedule_renewal_jobs("google")
+    expiring = CalendarIntegrationWebhookQueries.list_expiring_google_channels(48)
+
+    unregistered =
+      backfill(&CalendarIntegrationWebhookQueries.list_unregistered_google_channels/0)
+
+    schedule_renewal_jobs(expiring ++ unregistered, "google")
   end
 
   defp schedule_outlook_renewals do
-    48
-    |> CalendarIntegrationWebhookQueries.list_expiring_outlook_subscriptions()
-    |> schedule_renewal_jobs("outlook")
+    expiring = CalendarIntegrationWebhookQueries.list_expiring_outlook_subscriptions(48)
+
+    unregistered =
+      backfill(&CalendarIntegrationWebhookQueries.list_unregistered_outlook_subscriptions/0)
+
+    schedule_renewal_jobs(expiring ++ unregistered, "outlook")
+  end
+
+  # Push registration backfill: integrations connected before WEBHOOK_BASE_URL
+  # was configured have no channel/subscription. When push is enabled, fold them
+  # into the daily run so they adopt push automatically. Expiring and unregistered
+  # lists are disjoint (expiring requires a non-nil id, unregistered requires nil),
+  # so no deduplication is needed. When push is disabled the backfill is skipped
+  # entirely, leaving polling-only deployments untouched.
+  defp backfill(list_fun) do
+    if push_enabled?(), do: list_fun.(), else: []
+  end
+
+  defp push_enabled? do
+    case Application.get_env(:tymeslot, :webhook_base_url) do
+      url when is_binary(url) -> String.trim(url) != ""
+      _other -> false
+    end
   end
 
   defp schedule_renewal_jobs(integrations, provider) do
@@ -94,7 +123,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
              "calendar_integration_id" => integration.id,
              "provider" => provider
            }
-           |> new(scheduled_in: stagger)
+           |> new(schedule_in: stagger)
            |> Oban.insert() do
         {:ok, _job} ->
           [integration.id]
