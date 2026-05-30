@@ -67,5 +67,5 @@ defmodule Tymeslot.MeetingTypes.PrivateLinkToken do
       else: {:error, :expired}
   end
 
-  defp validate(_), do: {:error, :invalid}
+  defp validate(_term), do: {:error, :invalid}
 end

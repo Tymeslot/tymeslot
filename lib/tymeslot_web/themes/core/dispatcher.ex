@@ -10,7 +10,15 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
   alias Tymeslot.Themes.{Registry, Theme}
   alias TymeslotWeb.Live.Scheduling.Helpers
-  alias TymeslotWeb.Themes.Core.{ErrorBoundary, EventBus, MeetingManagement, MountHelpers, PrivateBookingResolver}
+
+  alias TymeslotWeb.Themes.Core.{
+    ErrorBoundary,
+    EventBus,
+    MeetingManagement,
+    MountHelpers,
+    PrivateBookingResolver
+  }
+
   alias TymeslotWeb.Themes.Shared.{EventHandlers, LocaleHandler, PathHandlers}
 
   require Logger
@@ -33,7 +41,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
            |> Phoenix.LiveView.put_flash(:error, "This booking link has expired.")
            |> Phoenix.LiveView.redirect(to: "/")}
 
-        {:error, _} ->
+        {:error, _reason} ->
           {:ok,
            socket
            |> Phoenix.LiveView.put_flash(:error, "Invalid booking link.")
@@ -46,7 +54,13 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
         case socket.assigns do
           %{organizer_profile: %{} = profile} ->
-            MountHelpers.mount_with_profile(profile, params, session, socket, &delegate_to_theme/3)
+            MountHelpers.mount_with_profile(
+              profile,
+              params,
+              session,
+              socket,
+              &delegate_to_theme/3
+            )
 
           %{error: error} ->
             {:ok, assign(socket, :error, error)}

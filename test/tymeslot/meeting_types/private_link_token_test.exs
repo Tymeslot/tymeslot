@@ -7,25 +7,24 @@ defmodule Tymeslot.MeetingTypes.PrivateLinkTokenTest do
   @moduletag :unit
   @moduletag :meeting_types
 
+  alias Phoenix.Token
   alias Tymeslot.MeetingTypes.PrivateLinkToken
 
   describe "sign/3 and verify/1" do
     test "round-trips a permanent token" do
       assert {:ok, {1, 42}} =
-               PrivateLinkToken.sign(1, 42)
-               |> PrivateLinkToken.verify()
+               PrivateLinkToken.verify(PrivateLinkToken.sign(1, 42))
     end
 
     test "round-trips a time-limited token that has not expired" do
       assert {:ok, {5, 99}} =
-               PrivateLinkToken.sign(5, 99, 30)
-               |> PrivateLinkToken.verify()
+               PrivateLinkToken.verify(PrivateLinkToken.sign(5, 99, 30))
     end
 
     test "returns :expired for a token with valid_days: 0 equivalent (already past)" do
       # Build a token whose expires_at is in the past by using negative seconds offset
       token =
-        Phoenix.Token.sign(
+        Token.sign(
           TymeslotWeb.Endpoint,
           "private_booking_link_v1",
           {7, 3, System.os_time(:second) - 1}
@@ -44,14 +43,14 @@ defmodule Tymeslot.MeetingTypes.PrivateLinkTokenTest do
 
     test "returns :invalid when payload has wrong shape" do
       bad_token =
-        Phoenix.Token.sign(TymeslotWeb.Endpoint, "private_booking_link_v1", "wrong_shape")
+        Token.sign(TymeslotWeb.Endpoint, "private_booking_link_v1", "wrong_shape")
 
       assert {:error, :invalid} = PrivateLinkToken.verify(bad_token)
     end
 
     test "returns :invalid when signed with a different salt" do
       bad_token =
-        Phoenix.Token.sign(TymeslotWeb.Endpoint, "wrong_salt", {1, 2, nil})
+        Token.sign(TymeslotWeb.Endpoint, "wrong_salt", {1, 2, nil})
 
       assert {:error, :invalid} = PrivateLinkToken.verify(bad_token)
     end

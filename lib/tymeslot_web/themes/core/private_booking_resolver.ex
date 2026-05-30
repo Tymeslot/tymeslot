@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Themes.Core.PrivateBookingResolver do
   def resolve(token, socket) do
     with {:ok, {user_id, meeting_type_id}} <- PrivateLinkToken.verify(token),
          {:ok, profile} <- ProfileQueries.get_by_user_id(user_id),
-         mt when not is_nil(mt) <- MeetingTypes.get_meeting_type(meeting_type_id, user_id) do
+         mt when is_map(mt) <- MeetingTypes.get_meeting_type(meeting_type_id, user_id) do
       socket =
         socket
         |> assign(:organizer_profile, profile)
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Themes.Core.PrivateBookingResolver do
       {:error, :expired} ->
         {:error, :expired}
 
-      {:error, _} ->
+      {:error, _reason} ->
         {:error, :invalid}
 
       nil ->

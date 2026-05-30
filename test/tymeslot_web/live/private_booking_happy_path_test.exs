@@ -10,8 +10,8 @@ defmodule TymeslotWeb.PrivateBookingHappyPathTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.MeetingTypes
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
 
@@ -130,7 +130,8 @@ defmodule TymeslotWeb.PrivateBookingHappyPathTest do
   end
 
   @tag :capture_log
-  test "visitor can book via private link even when meeting type is inactive (is_active: false)", %{conn: conn} do
+  test "visitor can book via private link even when meeting type is inactive (is_active: false)",
+       %{conn: conn} do
     timezone = "America/New_York"
     user = insert(:user)
 
@@ -225,5 +226,4 @@ defmodule TymeslotWeb.PrivateBookingHappyPathTest do
 
     assert meeting.status == "confirmed"
   end
-
 end
