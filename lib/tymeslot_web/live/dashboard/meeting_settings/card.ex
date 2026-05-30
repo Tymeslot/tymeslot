@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   """
   use Phoenix.Component
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.MeetingTypes
   alias TymeslotWeb.Components.Icons.ProviderIcon
 
   @doc """
@@ -110,6 +111,24 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
 
         <%!-- Actions --%>
         <div class="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            id={"copy-private-link-#{@type.id}"}
+            phx-hook="CopyOnClick"
+            data-copy-text={"#{TymeslotWeb.Endpoint.url()}/b/#{MeetingTypes.generate_private_link_token(@type)}"}
+            data-copy-feedback="Private link copied!"
+            class="p-1.5 text-tymeslot-500 hover:text-tymeslot-700 hover:bg-tymeslot-100 rounded-lg transition-colors"
+            title="Copy private booking link"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+              />
+            </svg>
+          </button>
+
           <button
             phx-click="edit_type"
             phx-value-id={@type.id}

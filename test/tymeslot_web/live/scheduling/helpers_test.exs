@@ -6,6 +6,10 @@ defmodule TymeslotWeb.Live.Scheduling.HelpersTest do
   alias Tymeslot.Availability.Calculate
   alias TymeslotWeb.Live.Scheduling.Helpers
 
+  defp mock_socket(assigns \\ %{}) do
+    %Phoenix.LiveView.Socket{assigns: Map.merge(%{__changed__: %{}}, assigns)}
+  end
+
   describe "get_week_days/4" do
     test "accepts user_timezone parameter and uses it for today detection" do
       week_start = ~D[2027-06-07]
@@ -53,6 +57,32 @@ defmodule TymeslotWeb.Live.Scheduling.HelpersTest do
       calendar_days = Calculate.get_calendar_days("Etc/UTC", 2027, 3, %{})
       assert Date.to_string(start_date) == List.first(calendar_days).date
       assert Date.to_string(end_date) == List.last(calendar_days).date
+    end
+  end
+
+  describe "handle_username_resolution/2 with nil username" do
+    test "preserves username_context already set on socket (private booking link)" do
+      socket = mock_socket(%{username_context: "alice"})
+
+      result = Helpers.handle_username_resolution(socket, nil)
+
+      assert result.assigns.username_context == "alice"
+    end
+
+    test "assigns nil when username_context is not present in assigns" do
+      socket = mock_socket()
+
+      result = Helpers.handle_username_resolution(socket, nil)
+
+      assert result.assigns.username_context == nil
+    end
+
+    test "keeps nil when username_context is already nil" do
+      socket = mock_socket(%{username_context: nil})
+
+      result = Helpers.handle_username_resolution(socket, nil)
+
+      assert result.assigns.username_context == nil
     end
   end
 end

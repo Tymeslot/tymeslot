@@ -8,12 +8,13 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
 
   @doc """
   Gets all active meeting types for a user, ordered by sort_order.
+  Excludes private meeting types (is_private: true) — those are only accessible via token links.
   """
   @spec list_active_meeting_types(integer()) :: [MeetingTypeSchema.t()]
   def list_active_meeting_types(user_id) do
     query =
       from(mt in MeetingTypeSchema,
-        where: mt.user_id == ^user_id and mt.is_active == true,
+        where: mt.user_id == ^user_id and mt.is_active == true and mt.is_private == false,
         order_by: [asc: mt.sort_order, asc: mt.name],
         preload: [:video_integration, :calendar_integration]
       )

@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
   Shared initialization helpers for scheduling themes.
   """
 
-  import Phoenix.Component, only: [assign: 3]
+  import Phoenix.Component, only: [assign: 3, assign_new: 3]
 
   alias Phoenix.LiveView
   alias TymeslotWeb.Live.Scheduling.Helpers
@@ -35,16 +35,16 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> Helpers.setup_form_state(%{}, as: :booking)
     |> assign(:client_ip, nil)
     |> assign(:submission_token, nil)
-    |> assign(:meeting_types, [])
+    |> assign_new(:meeting_types, fn -> [] end)
   end
 
   @spec assign_base_state(LiveView.Socket.t()) :: LiveView.Socket.t()
   def assign_base_state(socket) do
     socket
     |> assign(:current_state, :overview)
-    |> assign(:username_context, nil)
-    |> assign(:organizer_profile, nil)
-    |> assign(:organizer_user_id, nil)
+    |> assign_new(:username_context, fn -> nil end)
+    |> assign_new(:organizer_profile, fn -> nil end)
+    |> assign_new(:organizer_user_id, fn -> nil end)
     |> assign(:selected_duration, nil)
     |> assign(:selected_date, nil)
     |> assign(:selected_time, nil)

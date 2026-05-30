@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
   alias Tymeslot.Themes.{Registry, Theme}
   alias TymeslotWeb.Live.Scheduling.Helpers
-  alias TymeslotWeb.Themes.Core.{ErrorBoundary, EventBus, MeetingManagement, MountHelpers}
+  alias TymeslotWeb.Themes.Core.{ErrorBoundary, EventBus, MeetingManagement, MountHelpers, PrivateBookingResolver}
   alias TymeslotWeb.Themes.Shared.{EventHandlers, LocaleHandler, PathHandlers}
 
   require Logger
@@ -20,22 +20,43 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     # Initialize locale dropdown state
     socket = assign(socket, :language_dropdown_open, false)
 
-    # For all routes with username (including meeting management), resolve the username first
-    if params["username"] do
-      socket = Helpers.handle_username_resolution(socket, params["username"])
-
-      case socket.assigns do
-        %{organizer_profile: %{} = profile} ->
+    # Private booking links: token-based routes (/b/:token)
+    if socket.assigns.live_action in [:private_schedule, :private_booking] do
+      case PrivateBookingResolver.resolve(params["token"], socket) do
+        {:ok, socket} ->
+          profile = socket.assigns.organizer_profile
           MountHelpers.mount_with_profile(profile, params, session, socket, &delegate_to_theme/3)
 
-        %{error: error} ->
-          {:ok, assign(socket, :error, error)}
+        {:error, :expired} ->
+          {:ok,
+           socket
+           |> Phoenix.LiveView.put_flash(:error, "This booking link has expired.")
+           |> Phoenix.LiveView.redirect(to: "/")}
 
-        _no_profile ->
-          MountHelpers.mount_without_profile(params, session, socket, &delegate_to_theme/3)
+        {:error, _} ->
+          {:ok,
+           socket
+           |> Phoenix.LiveView.put_flash(:error, "Invalid booking link.")
+           |> Phoenix.LiveView.redirect(to: "/")}
       end
     else
-      MountHelpers.mount_without_profile(params, session, socket, &delegate_to_theme/3)
+      # For all routes with username (including meeting management), resolve the username first
+      if params["username"] do
+        socket = Helpers.handle_username_resolution(socket, params["username"])
+
+        case socket.assigns do
+          %{organizer_profile: %{} = profile} ->
+            MountHelpers.mount_with_profile(profile, params, session, socket, &delegate_to_theme/3)
+
+          %{error: error} ->
+            {:ok, assign(socket, :error, error)}
+
+          _no_profile ->
+            MountHelpers.mount_without_profile(params, session, socket, &delegate_to_theme/3)
+        end
+      else
+        MountHelpers.mount_without_profile(params, session, socket, &delegate_to_theme/3)
+      end
     end
   end
 
@@ -56,6 +77,17 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
       # For meeting management, we don't need handle_params
       {:noreply, socket}
     else
+      # For private booking routes, inject the meeting type slug into params so the
+      # theme's handle_schedule_entry can resolve it via the normal slug lookup path.
+      params =
+        if action in [:private_schedule, :private_booking] do
+          meeting_type = List.first(socket.assigns[:meeting_types] || [])
+          slug = meeting_type && Tymeslot.MeetingTypes.to_slug(meeting_type)
+          if slug, do: Map.put(params, "slug", slug), else: params
+        else
+          params
+        end
+
       delegate_handle_params(params, url, socket)
     end
   end

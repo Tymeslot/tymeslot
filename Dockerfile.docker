@@ -1,5 +1,5 @@
 # Build stage
-FROM elixir:1.19.5 AS build
+FROM hexpm/elixir:1.19.5-erlang-28.3.3-debian-bookworm-20260223-slim AS build
 
 # Avoid prompts from apt and configure debconf
 ENV DEBIAN_FRONTEND=noninteractive
@@ -14,6 +14,7 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
     apt-get update && apt-get install -y \
     git \
     curl \
+    ca-certificates \
     build-essential \
     autoconf \
     m4 \
@@ -29,14 +30,23 @@ WORKDIR /app
 
 # Set build ENV early (before any mix commands)
 ENV MIX_ENV=prod \
+    ERL_FLAGS='+JMsingle true' \
     DEPLOYMENT_TYPE=docker
 
 # Copy mix files and config from tymeslot app (build context is apps/tymeslot/)
 COPY mix.exs mix.lock ./
 COPY config ./config
 
+# Install Hex and Rebar explicitly so the build does not depend on image defaults
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
 # Get dependencies using committed lock file
 RUN mix deps.get --only prod
+
+# Compile dependencies before copying the full app source so local project files
+# do not interfere with Mix loading dependency projects.
+RUN mix deps.compile
 
 # Copy the rest of the application code. Wipe any locally-built assets first
 # so the image build is hermetic — assets are always produced by mix assets.deploy
@@ -44,13 +54,13 @@ RUN mix deps.get --only prod
 COPY . .
 RUN rm -rf priv/static/assets/
 
-# Compile dependencies and application code
-RUN mix do deps.compile + compile
+# Compile application code
+RUN mix compile
 
 # Install Tailwind and esbuild with retry mechanism
 RUN for i in 1 2 3 4 5; do \
         echo "Attempt $i: Installing tailwind and esbuild" && \
-        mix do tailwind.install + esbuild.install && break || sleep 5; \
+    mix do tailwind.install, esbuild.install && break || sleep 5; \
     done  
 
 # Install node_modules for tailwind plugins (tailwindcss-animate) — the
@@ -107,6 +117,7 @@ RUN chmod +x /app/start-docker.sh
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
     MIX_ENV=prod \
+    ERL_FLAGS='+JMsingle true' \
     DEPLOYMENT_TYPE=docker \
     PHX_SERVER=true \
     PORT=4000

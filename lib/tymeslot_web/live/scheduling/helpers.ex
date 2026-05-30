@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
 
   require Logger
 
-  import Component, only: [assign: 3]
+  import Component, only: [assign: 3, assign_new: 3]
 
   @doc """
   Handles username resolution and organizer setup.
@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   def handle_username_resolution(socket, nil) do
     socket
     |> store_client_ip()
-    |> assign(:username_context, nil)
+    |> assign_new(:username_context, fn -> nil end)
   end
 
   def handle_username_resolution(socket, username) do

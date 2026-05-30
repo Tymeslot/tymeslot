@@ -240,6 +240,23 @@ defmodule TymeslotWeb.Router do
     end
   end
 
+  # Private booking link routes (token-based, no username in URL)
+  scope "/", TymeslotWeb do
+    pipe_through :theme_browser
+
+    live_session :private_booking,
+      session: {__MODULE__, :scheduling_session, []},
+      on_mount: [
+        TymeslotWeb.Hooks.EmbedAuthHook,
+        TymeslotWeb.Hooks.LocaleHook,
+        TymeslotWeb.Hooks.ThemeHook,
+        TymeslotWeb.Hooks.ClientInfoHook
+      ] do
+      live "/b/:token", Themes.Core.Dispatcher, :private_schedule
+      live "/b/:token/book", Themes.Core.Dispatcher, :private_booking
+    end
+  end
+
   # Username-based scheduling routes (must be before catch-all)
   scope "/", TymeslotWeb do
     pipe_through :theme_browser

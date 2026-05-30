@@ -207,8 +207,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
            {:username_context, is_binary(socket.assigns[:username_context])},
          {:slug, slug} when is_binary(slug) <- {:slug, slug},
          {:meeting_type, nil} <-
-           {:meeting_type,
-            ThemeFlow.resolve_meeting_type_for_slug(socket.assigns[:organizer_user_id], slug)} do
+           {:meeting_type, resolve_meeting_type_by_slug(socket, slug)} do
       socket
       |> put_flash(:error, "Invalid meeting type")
       |> redirect(to: ~p"/#{socket.assigns[:username_context]}")
@@ -221,6 +220,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       _other ->
         do_handle_schedule_entry(socket, params)
     end
+  end
+
+  # Tries the public slug lookup first, then falls back to the pre-loaded meeting_types list.
+  # The fallback handles private meeting types (is_private: true) that are excluded from the
+  # public query but already verified by PrivateBookingResolver via token.
+  defp resolve_meeting_type_by_slug(socket, slug) do
+    ThemeFlow.resolve_meeting_type_for_slug(socket.assigns[:organizer_user_id], slug) ||
+      Enum.find(socket.assigns[:meeting_types] || [], &(MeetingTypes.to_slug(&1) == slug))
   end
 
   defp do_handle_schedule_entry(socket, params) do

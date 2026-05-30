@@ -25,8 +25,7 @@ config :tymeslot, TymeslotWeb.Endpoint,
   live_view: [signing_salt: "dev_liveview_signing_salt"],
   session_signing_salt: "dev_session_signing_salt",
   watchers: [
-    esbuild: {Esbuild, :install_and_run, [:tymeslot, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:tymeslot, ~w(--watch)]},
+    esbuild: {Esbuild, :install_and_run, [:tymeslot, ~w(--sourcemap=inline --watch)]},    esbuild_bundles: {Esbuild, :install_and_run, [:bundles, ~w(--sourcemap=inline --watch)]},    tailwind: {Tailwind, :install_and_run, [:tymeslot, ~w(--watch)]},
     tailwind_quill: {Tailwind, :install_and_run, [:quill, ~w(--watch)]},
     tailwind_rhythm: {Tailwind, :install_and_run, [:rhythm, ~w(--watch)]}
   ],
@@ -53,9 +52,9 @@ config :phoenix_live_view,
 
 # Configure the database
 config :tymeslot, Tymeslot.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
+  username: System.get_env("POSTGRES_USER", "postgres"),
+  password: System.get_env("POSTGRES_PASSWORD", "postgres"),
+  hostname: System.get_env("POSTGRES_HOST", "localhost"),
   database: "tymeslot_dev#{System.get_env("DB_SUFFIX")}",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,

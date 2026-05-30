@@ -40,7 +40,9 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
     case live_action do
       :overview -> :overview
       :schedule -> :schedule
+      :private_schedule -> :schedule
       :booking -> :booking
+      :private_booking -> :booking
       :confirmation -> :confirmation
       _other -> :overview
     end

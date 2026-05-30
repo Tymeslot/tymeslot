@@ -153,3 +153,5 @@ data/
 uploads/
 
 # Coverage reports
+push.sh
+.dev/config/config

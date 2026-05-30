@@ -110,6 +110,21 @@ defmodule Tymeslot.MeetingTypes do
   end
 
   @doc """
+  Generates a signed private booking URL token for the given meeting type.
+
+  Pass `valid_days` to limit the link's validity (e.g. 30 for 30 days).
+  Omit to create a permanent link.
+  """
+  @spec generate_private_link_token(Ecto.Schema.t(), pos_integer() | nil) :: String.t()
+  def generate_private_link_token(meeting_type, valid_days \\ nil) do
+    Tymeslot.MeetingTypes.PrivateLinkToken.sign(
+      meeting_type.user_id,
+      meeting_type.id,
+      valid_days
+    )
+  end
+
+  @doc """
   Finds a meeting type by its slug (derived from name).
   """
   @spec find_by_slug(integer(), String.t()) :: Ecto.Schema.t() | nil

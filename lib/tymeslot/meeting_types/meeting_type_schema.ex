@@ -14,6 +14,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           duration_minutes: integer() | nil,
           icon: String.t() | nil,
           is_active: boolean(),
+          is_private: boolean(),
           allow_video: boolean(),
           sort_order: integer(),
           reminder_config: [map()],
@@ -31,6 +32,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:duration_minutes, :integer)
     field(:icon, :string)
     field(:is_active, :boolean, default: true)
+    field(:is_private, :boolean, default: false)
     field(:allow_video, :boolean, default: false)
     field(:sort_order, :integer, default: 0)
     field(:target_calendar_id, :string)
@@ -71,6 +73,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :duration_minutes,
       :icon,
       :is_active,
+      :is_private,
       :allow_video,
       :sort_order,
       :user_id,

@@ -326,7 +326,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         attendee_locale:
           socket.assigns[:locale] || Application.get_env(:tymeslot, :locales)[:default] || "en",
         # Always true for public booking flow
-        with_video_room: true
+        with_video_room: true,
+        private_booking: socket.assigns[:is_private_booking] || false
       }
     }
 

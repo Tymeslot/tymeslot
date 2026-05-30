@@ -108,7 +108,8 @@ defmodule Tymeslot.Bookings.Create do
         organizer_user_id: Map.get(meeting_params, :organizer_user_id),
         meeting_type_id: Map.get(meeting_params, :meeting_type_id),
         video_integration_id: Map.get(meeting_params, :video_integration_id),
-        attendee_locale: Map.get(meeting_params, :attendee_locale) || default_locale()
+        attendee_locale: Map.get(meeting_params, :attendee_locale) || default_locale(),
+        private_booking: Map.get(meeting_params, :private_booking, false)
       }
 
       {:ok, booking_data}
@@ -156,7 +157,13 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
+  # No meeting type attached — general meeting, no active check needed.
   defp validate_meeting_type_active(%{meeting_type_id: nil}, _user_id), do: :ok
+
+  # Private booking links authorise the booking regardless of is_active.
+  # The signed token is the booking authorisation; the organiser chose to share
+  # this link and cannot be blocked by the public is_active toggle.
+  defp validate_meeting_type_active(%{private_booking: true}, _user_id), do: :ok
 
   defp validate_meeting_type_active(%{meeting_type_id: type_id}, user_id) do
     alias Tymeslot.MeetingTypes
