@@ -71,7 +71,7 @@ defmodule TymeslotWeb.PrivateBookingHappyPathTest do
     all_types = MeetingTypes.get_all_meeting_types(user.id)
     mt = Enum.find(all_types, &(&1.is_private == true))
 
-    token = Tymeslot.MeetingTypes.generate_private_link_token(mt)
+    token = MeetingTypes.generate_private_link_token(mt)
 
     {:ok, view, _html} = live(conn, ~p"/b/#{token}?timezone=#{timezone}")
 

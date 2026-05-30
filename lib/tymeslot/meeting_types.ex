@@ -7,6 +7,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.PrivateLinkToken
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Utils.UriUtils
   require Logger
@@ -117,7 +118,7 @@ defmodule Tymeslot.MeetingTypes do
   """
   @spec generate_private_link_token(Ecto.Schema.t(), pos_integer() | nil) :: String.t()
   def generate_private_link_token(meeting_type, valid_days \\ nil) do
-    Tymeslot.MeetingTypes.PrivateLinkToken.sign(
+    PrivateLinkToken.sign(
       meeting_type.user_id,
       meeting_type.id,
       valid_days

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   """
   use TymeslotWeb, :live_view
 
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Themes.{Registry, Theme}
   alias TymeslotWeb.Live.Scheduling.Helpers
 
@@ -38,14 +39,14 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
         {:error, :expired} ->
           {:ok,
            socket
-           |> Phoenix.LiveView.put_flash(:error, "This booking link has expired.")
-           |> Phoenix.LiveView.redirect(to: "/")}
+           |> put_flash(:error, "This booking link has expired.")
+           |> redirect(to: "/")}
 
         {:error, _reason} ->
           {:ok,
            socket
-           |> Phoenix.LiveView.put_flash(:error, "Invalid booking link.")
-           |> Phoenix.LiveView.redirect(to: "/")}
+           |> put_flash(:error, "Invalid booking link.")
+           |> redirect(to: "/")}
       end
     else
       # For all routes with username (including meeting management), resolve the username first
@@ -96,7 +97,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
       params =
         if action in [:private_schedule, :private_booking] do
           meeting_type = List.first(socket.assigns[:meeting_types] || [])
-          slug = meeting_type && Tymeslot.MeetingTypes.to_slug(meeting_type)
+          slug = meeting_type && MeetingTypes.to_slug(meeting_type)
           if slug, do: Map.put(params, "slug", slug), else: params
         else
           params

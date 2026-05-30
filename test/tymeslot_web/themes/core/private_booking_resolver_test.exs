@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Core.PrivateBookingResolverTest do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Phoenix.Token
   alias Tymeslot.MeetingTypes.PrivateLinkToken
   alias TymeslotWeb.Themes.Core.PrivateBookingResolver
 
@@ -77,7 +78,7 @@ defmodule TymeslotWeb.Themes.Core.PrivateBookingResolverTest do
 
       # Build a token that expired 1 second ago
       expired_token =
-        Phoenix.Token.sign(
+        Token.sign(
           TymeslotWeb.Endpoint,
           "private_booking_link_v1",
           {user.id, mt.id, System.os_time(:second) - 1}

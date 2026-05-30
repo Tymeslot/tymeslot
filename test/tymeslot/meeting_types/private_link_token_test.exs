@@ -8,6 +8,7 @@ defmodule Tymeslot.MeetingTypes.PrivateLinkTokenTest do
   @moduletag :meeting_types
 
   alias Phoenix.Token
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.PrivateLinkToken
 
   describe "sign/3 and verify/1" do
@@ -87,13 +88,13 @@ defmodule Tymeslot.MeetingTypes.PrivateLinkTokenTest do
   describe "generate_private_link_token/2 (public MeetingTypes API)" do
     test "delegates to PrivateLinkToken.sign with user_id and id from struct" do
       mt = %{id: 7, user_id: 3}
-      token = Tymeslot.MeetingTypes.generate_private_link_token(mt)
+      token = MeetingTypes.generate_private_link_token(mt)
       assert {:ok, {3, 7}} = PrivateLinkToken.verify(token)
     end
 
     test "passes valid_days through" do
       mt = %{id: 7, user_id: 3}
-      token = Tymeslot.MeetingTypes.generate_private_link_token(mt, 14)
+      token = MeetingTypes.generate_private_link_token(mt, 14)
       assert {:ok, {3, 7}} = PrivateLinkToken.verify(token)
     end
   end
