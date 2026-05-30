@@ -31,26 +31,38 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
   end
 
   describe "perform/1 - expiring Google channels" do
-    test "returns :ok when expiring Google channels exist" do
-      insert(:calendar_integration,
-        provider: "google",
-        google_channel_id: "expiring-channel",
-        google_channel_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
-      )
+    test "enqueues a per-integration renewal job for an expiring Google channel" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_channel_id: "expiring-channel",
+          google_channel_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
+        )
 
       assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+
+      assert_enqueued(
+        worker: RenewWebhookChannelsWorker,
+        args: %{"calendar_integration_id" => integration.id, "provider" => "google"}
+      )
     end
   end
 
   describe "perform/1 - expiring Outlook subscriptions" do
-    test "returns :ok when expiring Outlook subscriptions exist" do
-      insert(:calendar_integration,
-        provider: "outlook",
-        graph_subscription_id: "expiring-subscription",
-        graph_subscription_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
-      )
+    test "enqueues a per-integration renewal job for an expiring Outlook subscription" do
+      integration =
+        insert(:calendar_integration,
+          provider: "outlook",
+          graph_subscription_id: "expiring-subscription",
+          graph_subscription_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
+        )
 
       assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+
+      assert_enqueued(
+        worker: RenewWebhookChannelsWorker,
+        args: %{"calendar_integration_id" => integration.id, "provider" => "outlook"}
+      )
     end
   end
 
@@ -173,6 +185,107 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
                  "calendar_integration_id" => integration.id,
                  "provider" => "outlook"
                })
+    end
+  end
+
+  describe "perform/1 - push registration backfill (WEBHOOK_BASE_URL set)" do
+    setup do
+      previous = Application.get_env(:tymeslot, :webhook_base_url)
+      Application.put_env(:tymeslot, :webhook_base_url, "https://tymeslot.example")
+
+      on_exit(fn ->
+        case previous do
+          nil -> Application.delete_env(:tymeslot, :webhook_base_url)
+          value -> Application.put_env(:tymeslot, :webhook_base_url, value)
+        end
+      end)
+
+      :ok
+    end
+
+    test "schedules registration for a Google integration that has no channel yet" do
+      integration = insert(:calendar_integration, provider: "google", google_channel_id: nil)
+
+      assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+
+      assert_enqueued(
+        worker: RenewWebhookChannelsWorker,
+        args: %{"calendar_integration_id" => integration.id, "provider" => "google"}
+      )
+    end
+
+    test "schedules registration for an Outlook integration that has no subscription yet" do
+      integration =
+        insert(:calendar_integration, provider: "outlook", graph_subscription_id: nil)
+
+      assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+
+      assert_enqueued(
+        worker: RenewWebhookChannelsWorker,
+        args: %{"calendar_integration_id" => integration.id, "provider" => "outlook"}
+      )
+    end
+
+    test "skips integrations awaiting reauthorisation" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_channel_id: nil,
+          needs_reauth: true
+        )
+
+      assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+
+      refute_enqueued(
+        worker: RenewWebhookChannelsWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+
+    test "skips inactive integrations" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_channel_id: nil,
+          is_active: false
+        )
+
+      assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+
+      refute_enqueued(
+        worker: RenewWebhookChannelsWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+  end
+
+  describe "perform/1 - push registration backfill (WEBHOOK_BASE_URL unset)" do
+    setup do
+      previous = Application.get_env(:tymeslot, :webhook_base_url)
+      Application.delete_env(:tymeslot, :webhook_base_url)
+
+      on_exit(fn ->
+        if previous, do: Application.put_env(:tymeslot, :webhook_base_url, previous)
+      end)
+
+      :ok
+    end
+
+    test "does not backfill channel-less integrations when push is disabled" do
+      google = insert(:calendar_integration, provider: "google", google_channel_id: nil)
+      outlook = insert(:calendar_integration, provider: "outlook", graph_subscription_id: nil)
+
+      assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+
+      refute_enqueued(
+        worker: RenewWebhookChannelsWorker,
+        args: %{"calendar_integration_id" => google.id}
+      )
+
+      refute_enqueued(
+        worker: RenewWebhookChannelsWorker,
+        args: %{"calendar_integration_id" => outlook.id}
+      )
     end
   end
 end

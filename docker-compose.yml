@@ -49,6 +49,9 @@ services:
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+
+      # Calendar real-time push (optional; falls back to polling when unset)
+      WEBHOOK_BASE_URL: ${WEBHOOK_BASE_URL:-}
     volumes:
       - tymeslot_data:/app/data
       - postgres_data:/var/lib/postgresql/data
