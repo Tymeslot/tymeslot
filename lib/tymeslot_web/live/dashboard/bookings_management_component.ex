@@ -378,7 +378,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
       {:error, :exceeds_remaining} ->
         {:error, "Refund amount exceeds the remaining refundable balance."}
 
-      {:error, _} ->
+      {:error, _reason} ->
         {:error, "Enter a valid partial refund amount."}
     end
   end

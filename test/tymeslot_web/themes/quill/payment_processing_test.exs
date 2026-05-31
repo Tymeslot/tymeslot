@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingTest do
     get(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
 
     received_sources =
-      Enum.flat_map(1..50, fn _ ->
+      Enum.flat_map(1..50, fn _iteration ->
         receive do
           {:db_query, ^ref, source} -> [source]
         after

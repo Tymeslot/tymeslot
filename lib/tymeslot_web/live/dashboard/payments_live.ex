@@ -12,7 +12,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   alias Tymeslot.Features
   alias Tymeslot.MeetingPayments
   alias TymeslotWeb.Components.CoreComponents
-  alias TymeslotWeb.Components.PaymentHelpers
+
+  import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
@@ -590,8 +591,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   defp state_message(_account, _state), do: ""
 
   # Formatters ---------------------------------------------------------
-
-  defp format_amount(cents, currency), do: PaymentHelpers.format_amount(cents, currency)
 
   defp format_status("paid"), do: "Paid"
   defp format_status("partially_refunded"), do: "Partially refunded"

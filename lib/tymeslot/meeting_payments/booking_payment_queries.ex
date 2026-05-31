@@ -170,8 +170,8 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
         where: b.id == ^id and b.status == "pending"
 
     case Repo.update_all(query, set: [status: "failed", updated_at: now]) do
-      {1, _} -> {:ok, :cancelled}
-      {0, _} -> {:ok, :skipped}
+      {1, _rows} -> {:ok, :cancelled}
+      {0, _rows} -> {:ok, :skipped}
     end
   rescue
     exception -> {:error, exception}

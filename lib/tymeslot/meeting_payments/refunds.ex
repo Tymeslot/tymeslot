@@ -244,7 +244,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
              true <- major > 0 do
           {:ok, major * 100}
         else
-          _ -> :error
+          _error -> :error
         end
 
       [major_str, minor_str] when byte_size(minor_str) == 2 ->
@@ -254,7 +254,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
              true <- cents > 0 do
           {:ok, cents}
         else
-          _ -> :error
+          _error -> :error
         end
 
       _other ->
@@ -265,7 +265,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   defp parse_non_negative_integer(str) when is_binary(str) and str != "" do
     case Integer.parse(str) do
       {n, ""} when n >= 0 -> {:ok, n}
-      _ -> :error
+      _other -> :error
     end
   end
 

@@ -115,7 +115,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
         )
 
       # Simulate the concurrent webhook arriving: flip the row to "paid" directly.
-      {:ok, _} = BookingPaymentQueries.update(payment, %{status: "paid"})
+      {:ok, _updated} = BookingPaymentQueries.update(payment, %{status: "paid"})
 
       # disconnect/1 pre-fetches the payment as "pending" (it was pending when
       # list_pending_for_host ran), but inside the transaction the conditional

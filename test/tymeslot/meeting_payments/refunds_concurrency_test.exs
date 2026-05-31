@@ -66,11 +66,11 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
 
       results = Task.await_many(tasks, 10_000)
 
-      successes = Enum.filter(results, &match?({:ok, _}, &1))
-      errors = Enum.filter(results, &match?({:error, _}, &1))
+      successes = Enum.filter(results, &match?({:ok, _result}, &1))
+      errors = Enum.filter(results, &match?({:error, _result}, &1))
 
       # At least one refund must have succeeded.
-      assert length(successes) >= 1,
+      assert successes != [],
              "expected at least one {:ok, _} result, got: #{inspect(results)}"
 
       # No unexpected errors — only :invalid_amount is acceptable on the loser.
@@ -115,7 +115,7 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
 
       results = Task.await_many(tasks, 10_000)
 
-      successes = Enum.count(results, &match?({:ok, _}, &1))
+      successes = Enum.count(results, &match?({:ok, _result}, &1))
 
       rejected =
         Enum.count(

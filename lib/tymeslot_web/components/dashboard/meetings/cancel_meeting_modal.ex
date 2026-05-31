@@ -14,7 +14,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   alias Tymeslot.MeetingPayments
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
-  alias TymeslotWeb.Components.PaymentHelpers
+
+  import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
 
   @doc """
   Renders a cancel meeting confirmation modal.
@@ -179,6 +180,4 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     do: max(amount - refunded, 0)
 
   defp refundable_remaining(_payment), do: 0
-
-  defp format_amount(cents, currency), do: PaymentHelpers.format_amount(cents, currency)
 end

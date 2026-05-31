@@ -53,29 +53,31 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
   defp update_payment(payment, event_id, amount_refunded) do
     result =
       Repo.transaction(fn ->
-        with {:ok, locked} <- BookingPaymentQueries.get_for_update(payment.id) do
-          # Re-check idempotency after acquiring the lock to avoid reprocessing
-          # during a concurrent in-app refund race.
-          if locked.last_event_id == event_id do
-            :idempotent_replay
-          else
-            new_total = max(locked.refunded_amount_cents, amount_refunded)
-            new_status = derive_status(locked, new_total)
+        case BookingPaymentQueries.get_for_update(payment.id) do
+          {:ok, locked} ->
+            # Re-check idempotency after acquiring the lock to avoid reprocessing
+            # during a concurrent in-app refund race.
+            if locked.last_event_id == event_id do
+              :idempotent_replay
+            else
+              new_total = max(locked.refunded_amount_cents, amount_refunded)
+              new_status = derive_status(locked, new_total)
 
-            case BookingPaymentQueries.update(locked, %{
-                   refunded_amount_cents: new_total,
-                   status: new_status,
-                   last_event_id: event_id
-                 }) do
-              {:ok, updated} ->
-                {locked.status, updated.status}
+              case BookingPaymentQueries.update(locked, %{
+                     refunded_amount_cents: new_total,
+                     status: new_status,
+                     last_event_id: event_id
+                   }) do
+                {:ok, updated} ->
+                  {locked.status, updated.status}
 
-              {:error, reason} ->
-                Repo.rollback(reason)
+                {:error, reason} ->
+                  Repo.rollback(reason)
+              end
             end
-          end
-        else
-          {:error, reason} -> Repo.rollback(reason)
+
+          {:error, reason} ->
+            Repo.rollback(reason)
         end
       end)
 
