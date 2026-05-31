@@ -385,7 +385,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
     case orchestrator.submit_booking(params, opts) do
       {:ok, :payment_required, %{meeting: meeting, checkout_url: url}} ->
-        handle_payment_required(socket, meeting, url)
+        handle_payment_required(socket, meeting, url, sanitized_params)
 
       {:ok, meeting} ->
         handle_booking_success(socket, meeting, sanitized_params)
@@ -408,9 +408,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     end
   end
 
-  defp handle_payment_required(socket, meeting, url) do
+  defp handle_payment_required(socket, meeting, url, sanitized_params) do
     if socket.assigns[:embedded] do
-      handle_payment_required_embedded(socket, meeting, url)
+      handle_payment_required_embedded(socket, meeting, url, sanitized_params)
     else
       handle_payment_required_top_level(socket, url)
     end
@@ -432,7 +432,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   # The iframe LiveView subscribes to `meeting_payment:<id>` and flips to
   # the confirmation view when the webhook broadcasts `:paid`, or back to
   # the booking form on `:expired`.
-  defp handle_payment_required_embedded(socket, meeting, url) do
+  defp handle_payment_required_embedded(socket, meeting, url, sanitized_params) do
     Logger.info("Embedded booking awaiting payment in new tab",
       meeting_id: meeting.id,
       checkout_url: url
@@ -442,11 +442,16 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       Phoenix.PubSub.subscribe(Tymeslot.PubSub, "meeting_payment:#{meeting.id}")
     end
 
+    # Seed the custom-answer assigns now so the confirmation view can render
+    # when the `:paid` webhook flips this socket to `:confirmation` — that
+    # transition carries no params, unlike the synchronous success path.
     socket =
       socket
       |> assign(:submitting, false)
       |> assign(:awaiting_payment_meeting, meeting)
       |> assign(:awaiting_payment_checkout_url, url)
+      |> assign(:custom_fields_snapshot, Map.get(sanitized_params, "custom_fields_snapshot", []))
+      |> assign(:custom_field_answers, Map.get(sanitized_params, "custom_field_answers", %{}))
       |> LiveView.push_event("payment_redirect_open_tab", %{url: url})
 
     {:awaiting_payment, socket}
