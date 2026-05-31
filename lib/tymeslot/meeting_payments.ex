@@ -81,7 +81,7 @@ defmodule Tymeslot.MeetingPayments do
   @doc """
   Fetches a Connect account by its row ID, or `nil` if not found.
   """
-  @spec get_connect_account(integer()) :: account() | nil
+  @spec get_connect_account(Ecto.UUID.t()) :: account() | nil
   def get_connect_account(id), do: ConnectAccountQueries.get(id)
 
   @doc """
