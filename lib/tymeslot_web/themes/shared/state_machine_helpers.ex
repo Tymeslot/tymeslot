@@ -19,7 +19,6 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
     confirmation: %{step: 5, prev: :booking}
   }
 
-
   @default_states %{
     overview: %{step: 1, next: :schedule, prev: nil},
     schedule: %{step: 2, next: :booking, prev: :overview},

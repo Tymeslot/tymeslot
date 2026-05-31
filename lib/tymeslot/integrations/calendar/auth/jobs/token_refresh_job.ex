@@ -168,7 +168,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
             "#{reason} (PERMANENT)"
           )
 
-        CalendarIntegrationQueries.update_integration(integration, %{
+        CalendarIntegrationQueries.update(integration, %{
           sync_error: error_msg,
           is_active: false
         })
@@ -186,7 +186,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
             "#{reason} (RATE_LIMITED)"
           )
 
-        CalendarIntegrationQueries.update_integration(integration, %{sync_error: error_msg})
+        CalendarIntegrationQueries.update(integration, %{sync_error: error_msg})
 
         {:snooze, retry_after}
 
@@ -199,7 +199,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
             "#{reason} (RETRYABLE)"
           )
 
-        CalendarIntegrationQueries.update_integration(integration, %{sync_error: error_msg})
+        CalendarIntegrationQueries.update(integration, %{sync_error: error_msg})
 
         {:error, "#{reason}"}
     end

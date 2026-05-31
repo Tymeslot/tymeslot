@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
   alias Tymeslot.GoogleOAuthHelperMock
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.Providers.GoogleMeetProvider
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
 
@@ -387,6 +388,53 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       assert decrypted.access_token == "new_token"
       assert decrypted.refresh_token == "new_refresh"
       assert updated.oauth_scope == "new_scope"
+    end
+
+    test "skips refresh and uses fresh DB token when token already refreshed concurrently" do
+      user = insert(:user)
+      fresh_expiry = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Google Meet",
+          provider: "google_meet",
+          access_token: "fresh-token-from-other-process",
+          refresh_token: "fresh-refresh-from-other-process",
+          token_expires_at: fresh_expiry,
+          oauth_scope: "calendar.scope"
+        })
+
+      config = %{
+        access_token: "stale-token-current-process",
+        refresh_token: "stale-refresh",
+        token_expires_at: DateTime.add(DateTime.utc_now(), -10, :second),
+        oauth_scope: "calendar.scope",
+        integration_id: integration.id,
+        user_id: user.id
+      }
+
+      # No refresh_access_token expectation: another process already refreshed
+      # while we waited on the lock, so the merged config must carry the fresh
+      # DB token and the HTTP call must use it.
+      expect(HTTPClientMock, :request, fn :post, _url, _body, headers, _opts ->
+        assert {"Authorization", "Bearer fresh-token-from-other-process"} in headers
+
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "conferenceData" => %{
+                 "entryPoints" => [
+                   %{"entryPointType" => "video", "uri" => "https://meet.google.com/abc-defg-hij"}
+                 ]
+               }
+             })
+         }}
+      end)
+
+      assert {:ok, _room} = GoogleMeetProvider.create_meeting_room(config)
     end
   end
 

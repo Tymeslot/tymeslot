@@ -7,10 +7,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
 
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
-  alias Tymeslot.Themes.Theme
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemePreview
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
     customization_theme_id =
       if assigns.live_action == :theme_customization do
         theme_id = assigns.params["theme_id"]
-        if Theme.valid_theme_id?(theme_id), do: theme_id, else: nil
+        if ThemeInfo.valid_theme_id?(theme_id), do: theme_id, else: nil
       else
         assigns[:customization_theme_id]
       end
@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
     socket =
       socket
       |> assign(assigns)
-      |> assign(:themes, Theme.theme_options())
+      |> assign(:themes, ThemeInfo.theme_options())
       |> assign(:show_customization, show_customization)
       |> assign(:customization_theme_id, customization_theme_id)
       |> assign_new(:customization_timestamp, fn -> System.system_time() end)
@@ -129,7 +129,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
 
                 <div class="p-8">
                   <p class="text-tymeslot-600 font-medium leading-relaxed line-clamp-2">
-                    {Theme.get_description(theme_id)}
+                    {ThemeInfo.get_description(theme_id)}
                   </p>
                 </div>
               </div>
@@ -234,10 +234,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
   end
 
   def handle_event("select_theme", %{"theme" => theme_id}, socket) do
-    if Theme.valid_theme_id?(theme_id) do
+    if ThemeInfo.valid_theme_id?(theme_id) do
       case Profiles.update_booking_theme(socket.assigns.profile, theme_id) do
         {:ok, updated_profile} ->
-          theme_name = Theme.get_theme_name(updated_profile.booking_theme)
+          theme_name = ThemeInfo.get_theme_name(updated_profile.booking_theme)
           send(self(), {:profile_updated, updated_profile})
 
           {:noreply,

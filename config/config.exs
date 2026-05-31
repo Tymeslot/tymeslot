@@ -144,6 +144,7 @@ config :tymeslot, :oban_queues,
 
 # Webhook configuration
 config :tymeslot, :webhook_base_url, nil
+
 config :tymeslot, :webhook_paths, [
   "/webhooks/stripe",
   "/webhooks/stripe/connect",

@@ -5,13 +5,23 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
 
   Two independent concerns live here:
 
-  - `bootstrap_sync/1` — paginated `events/delta` call that populates the cache
-    and seeds `graph_delta_link`. Has **no webhook dependency**: it's plain
-    HTTP and works on every deployment, self-hosted or managed.
+  - `bootstrap_sync/1` — paginated `calendarView/delta` call that populates the
+    cache and seeds `graph_delta_link`. Has **no webhook dependency**: it's
+    plain HTTP and works on every deployment, self-hosted or managed.
   - `register/1` — creates a Graph push subscription so changes are pushed to
     our webhook. Requires `:webhook_base_url` because the subscription payload
     needs a `notificationUrl`. Deployments without a public webhook address
     still sync correctly via the fallback sweep polling `bootstrap_sync`.
+
+  ## Why `calendarView/delta` and not `events/delta`
+
+  `/me/events/delta` accepts no date parameters and freezes the initial window
+  Graph picks (about 30 days from bootstrap) into the returned `$deltatoken`
+  forever — events outside that window never surface, no matter how far in the
+  future the calendar moves. `/me/calendarView/delta` accepts explicit
+  `startDateTime`/`endDateTime` parameters and tracks changes to occurrences
+  within the requested window, which matches what the rest of the codebase
+  reads for the dashboard and booking flows.
   """
 
   require Logger
@@ -23,11 +33,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
 
   @max_delta_pages 50
 
-  # Microsoft Graph rejects these query parameters on the `events/delta`
+  @delta_path "/me/calendarView/delta"
+
+  # Microsoft Graph rejects these query parameters on the `calendarView/delta`
   # change-tracking resource with HTTP 400 `ErrorInvalidUrlQuery`. They must
   # never appear on either the initial request or on any follow-up URL
   # (`@odata.nextLink`, `@odata.deltaLink`) that we reuse.
@@ -144,7 +157,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   defp fetch_initial_delta(token) do
     result =
       CalendarCircuitBreaker.call(:outlook, fn ->
-        fetch_delta_page(token, "/me/events/delta", %{}, [])
+        fetch_delta_page(token, @delta_path, initial_delta_params(), [])
       end)
 
     case result do
@@ -192,6 +205,24 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
         end
       end
     end
+  end
+
+  # `calendarView/delta` requires `startDateTime` + `endDateTime` on the very
+  # first request; the returned `$deltatoken` thereafter encodes that window,
+  # so subsequent calls (using the stored deltaLink as-is) do not repeat them.
+  defp initial_delta_params do
+    now = DateTime.utc_now()
+
+    %{
+      "startDateTime" =>
+        now
+        |> DateTime.add(-ProviderConfig.sync_window_past_days() * 86_400, :second)
+        |> DateTime.to_iso8601(),
+      "endDateTime" =>
+        now
+        |> DateTime.add(ProviderConfig.sync_window_future_days() * 86_400, :second)
+        |> DateTime.to_iso8601()
+    }
   end
 
   defp drop_unsupported_delta_params(params) do

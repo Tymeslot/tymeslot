@@ -10,7 +10,7 @@ defmodule Tymeslot.ProfilesContextTest do
 
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
-  alias Tymeslot.Themes.Theme
+  alias TymeslotWeb.Themes.Core.ThemeInfo
 
   # =====================================
   # Profile Retrieval Behaviors
@@ -409,8 +409,8 @@ defmodule Tymeslot.ProfilesContextTest do
     end
 
     test "accepts a valid registered theme ID", %{profile: profile} do
-      # Theme.all_themes() returns a map; Enum.at/2 yields a {id, config} tuple.
-      themes = Theme.all_themes()
+      # ThemeInfo.all_themes() returns a map; Enum.at/2 yields a {id, config} tuple.
+      themes = ThemeInfo.all_themes()
       assert map_size(themes) > 0, "No themes are registered"
       {valid_theme, _config} = Enum.at(themes, 0)
 

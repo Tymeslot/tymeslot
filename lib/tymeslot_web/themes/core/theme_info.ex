@@ -1,9 +1,12 @@
-defmodule Tymeslot.Themes.Theme do
+defmodule TymeslotWeb.Themes.Core.ThemeInfo do
   @moduledoc """
-  Theme registry facade for backward compatibility.
+  Convenience accessors over the theme system for the web layer.
 
-  This module maintains the old API while delegating to the new theme system.
-  Consider this deprecated - use TymeslotWeb.Themes.Core modules directly.
+  Resolves full theme metadata, loads theme modules, and exposes per-theme
+  runtime details (states, components, LiveView module, CSS file) by combining
+  the registry definitions with the theme behaviour callbacks. This is a
+  presentation-layer concern: domain code reads theme facts from
+  `Tymeslot.Themes.Catalog` instead.
   """
 
   require Logger

@@ -8,9 +8,17 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   """
   use TymeslotWeb, :live_view
 
-  alias Tymeslot.Themes.{Registry, Theme}
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
-  alias TymeslotWeb.Themes.Core.{ErrorBoundary, EventBus, MeetingManagement, MountHelpers}
+
+  alias TymeslotWeb.Themes.Core.{
+    ErrorBoundary,
+    EventBus,
+    MeetingManagement,
+    MountHelpers,
+    Registry,
+    ThemeInfo
+  }
+
   alias TymeslotWeb.Themes.Shared.{EventHandlers, LocaleHandler, PathHandlers}
 
   require Logger
@@ -132,7 +140,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   defp render_meeting_management_component(assigns, action) do
     theme_id = assigns[:theme_id] || Registry.default_theme_id()
 
-    case Theme.get_theme_module(theme_id) do
+    case ThemeInfo.get_theme_module(theme_id) do
       nil ->
         render_error(assigns, "Theme not found for meeting management")
 
@@ -163,7 +171,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   defp render_scheduling_component(assigns) do
     theme_id = assigns[:theme_id] || Registry.default_theme_id()
 
-    case Theme.get_live_view_module(theme_id) do
+    case ThemeInfo.get_live_view_module(theme_id) do
       nil ->
         render_error(assigns, "Theme not found")
 
@@ -187,7 +195,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   end
 
   defp delegate_to_theme(theme_id, function, args) do
-    case Theme.get_live_view_module(theme_id) do
+    case ThemeInfo.get_live_view_module(theme_id) do
       nil ->
         Logger.error("Theme module not found", theme_id: theme_id)
         handle_theme_error(function, args)

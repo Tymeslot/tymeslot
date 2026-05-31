@@ -9,9 +9,9 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Security.Security
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
+  alias Tymeslot.Themes.Catalog
   alias Tymeslot.Timezones
   alias Tymeslot.Validation.Constraints
-  alias TymeslotWeb.Themes.Core.Registry
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -47,7 +47,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:advance_booking_days, :integer, default: 90)
     field(:min_advance_hours, :integer, default: 3)
     field(:avatar, :string)
-    field(:booking_theme, :string, default: Registry.default_theme_id())
+    field(:booking_theme, :string, default: Catalog.default_id())
     field(:has_custom_theme, :boolean, default: false)
     field(:allowed_embed_domains, {:array, :string}, default: ["none"])
     field(:meeting_types, {:array, :map}, virtual: true)
@@ -132,7 +132,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
   end
 
   defp validate_booking_theme(changeset) do
-    valid_theme_ids = Registry.valid_theme_ids()
+    valid_theme_ids = Catalog.valid_ids()
 
     validate_inclusion(changeset, :booking_theme, valid_theme_ids,
       message: "must be a valid theme"

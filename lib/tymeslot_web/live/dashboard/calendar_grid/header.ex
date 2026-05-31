@@ -64,8 +64,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           </div>
         </div>
 
-        <%!-- Row 2: actions (mobile) / right-aligned row 1 (desktop) --%>
-        <div class="flex items-center gap-1 md:gap-2 md:ml-auto overflow-x-auto">
+        <%!--
+          Row 2: actions (mobile) / right-aligned row 1 (desktop).
+          Use flex-wrap (not overflow-x-auto) so the toolbar reflows on narrow
+          screens. overflow-x-auto forces overflow-y to compute to auto, which
+          clips the dropdown panels (calendars, view switcher) that extend below
+          the row via `top-full`.
+        --%>
+        <div class="flex flex-wrap items-center gap-1 md:gap-2 md:ml-auto">
           <div class="md:hidden">
             <AvailabilityHelpers.timezone_display timezone_display={@timezone_display} country_code={@timezone_country_code} />
           </div>

@@ -1,4 +1,8 @@
 
+[1.0.4]
+* core: Restore clipped dropdown menus in the calendar grid toolbar
+* core: Refresh Outlook calendars on demand with a rolling sync window
+* core: Create Google Meet links inline with Google Calendar events
 [1.0.3]
 * core: Allow moving events between calendar integrations
 * core: Prevent email header injection in subject lines

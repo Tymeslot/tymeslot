@@ -61,7 +61,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
       integration =
         outlook_integration(
           graph_delta_link:
-            "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=old-token"
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old-token"
         )
 
       user_id = integration.user_id
@@ -69,7 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
 
       event1 = graph_event(%{"iCalUId" => "uid-event-1"})
       event2 = graph_event(%{"iCalUId" => "uid-event-2"})
-      new_delta_link = "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=fresh"
+      new_delta_link = "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=fresh"
 
       expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         {:ok,
@@ -108,10 +108,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
       integration =
         outlook_integration(
           graph_delta_link:
-            "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=old-token"
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old-token"
         )
 
-      new_delta_link = "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=fresh-empty"
+      new_delta_link =
+        "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=fresh-empty"
 
       expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         {:ok,
@@ -136,7 +137,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
     test "clears the stored delta link and returns :error" do
       integration =
         outlook_integration(
-          graph_delta_link: "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=expired"
+          graph_delta_link:
+            "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=expired"
         )
 
       expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
@@ -159,7 +161,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
   describe "fetch_and_apply/1 - nil delta link in response (I-17)" do
     test "does not overwrite a stored delta link when the response contains no link" do
       stored_link =
-        "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=preserved"
+        "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=preserved"
 
       integration = outlook_integration(graph_delta_link: stored_link)
 
@@ -189,7 +191,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
         provider: "outlook",
         is_active: true,
         graph_delta_link:
-          "https://graph.microsoft.com/v1.0/me/events/delta?$skiptoken=fake-skiptoken",
+          "https://graph.microsoft.com/v1.0/me/calendarView/delta?$skiptoken=fake-skiptoken",
         token_expires_at: nil
       )
 
@@ -207,24 +209,24 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
               provider: "outlook",
               is_active: true,
               graph_delta_link:
-                "https://graph.microsoft.com/v1.0/me/events/delta?$skiptoken=fake-skiptoken",
+                "https://graph.microsoft.com/v1.0/me/calendarView/delta?$skiptoken=fake-skiptoken",
               token_expires_at: nil
             )
 
           assert :error = DeltaSync.fetch_and_apply(integration)
         end)
 
-      assert log =~ "Outlook token refresh failed during fallback sweep"
+      assert log =~ "Outlook token refresh failed"
     end
   end
 
   describe "fetch_and_apply/1 - stale delta link with unsupported query parameters" do
     # A stored delta link written before the fix may carry $select/$expand —
-    # Microsoft Graph rejects these on events/delta with HTTP 400. The module
-    # must strip them before reuse.
+    # Microsoft Graph rejects these on calendarView/delta with HTTP 400. The
+    # module must strip them before reuse.
     test "strips unsupported query parameters from a stale stored delta link" do
       stale_delta_link =
-        "https://graph.microsoft.com/v1.0/me/events/delta?" <>
+        "https://graph.microsoft.com/v1.0/me/calendarView/delta?" <>
           "$deltatoken=stale-token&$select=id,subject&$expand=extendedProperties"
 
       integration =
@@ -242,12 +244,35 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
              Jason.encode!(%{
                "value" => [],
                "@odata.deltaLink" =>
-                 "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=fresh"
+                 "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=fresh"
              })
          }}
       end)
 
       assert :ok = DeltaSync.fetch_and_apply(integration)
+    end
+  end
+
+  describe "fetch_and_apply/1 - obsolete /events/delta link" do
+    # Earlier bootstraps wrote a `/me/events/delta` link whose $deltatoken
+    # froze the date window for the life of the integration — new events
+    # outside that window never reached the cache. The module must detect
+    # the obsolete endpoint, clear the link, and let the next sync run a
+    # re-bootstrap via `/me/calendarView/delta`. No HTTP must be issued
+    # against the bad URL.
+    test "clears the link and returns :error without making any HTTP request" do
+      obsolete_link =
+        "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=frozen-window"
+
+      integration = outlook_integration(graph_delta_link: obsolete_link)
+
+      # Mox would raise if any HTTP request fires — the obsolete link must
+      # never be sent back to Graph.
+
+      assert :error = DeltaSync.fetch_and_apply(integration)
+
+      {:ok, reloaded} = CalendarIntegrationQueries.get(integration.id)
+      assert is_nil(reloaded.graph_delta_link)
     end
   end
 end

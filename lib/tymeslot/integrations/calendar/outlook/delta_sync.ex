@@ -43,6 +43,25 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   @spec fetch_and_apply(map()) :: :ok | :error
   def fetch_and_apply(integration) do
     delta_link = integration.graph_delta_link
+
+    if obsolete_delta_link?(delta_link) do
+      # Older bootstraps wrote a `/me/events/delta` link whose `$deltatoken`
+      # froze a ~30-day window at the moment of bootstrap and never widened.
+      # Clearing the link forces the next sync to re-bootstrap via
+      # `calendarView/delta` with a rolling ±365-day window.
+      Logger.info(
+        "Outlook delta link uses obsolete /events/delta endpoint; clearing for re-bootstrap",
+        calendar_integration_id: integration.id
+      )
+
+      CalendarIntegrationWebhookQueries.update_delta_link(integration, nil)
+      :error
+    else
+      do_fetch_and_apply(integration, delta_link)
+    end
+  end
+
+  defp do_fetch_and_apply(integration, delta_link) do
     api_module = outlook_calendar_api()
 
     result =
@@ -55,6 +74,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     handle_fetch_result(result, integration)
   end
 
+  defp obsolete_delta_link?(nil), do: false
+  defp obsolete_delta_link?(url) when is_binary(url), do: String.contains?(url, "/events/delta")
+  defp obsolete_delta_link?(_other), do: false
+
   defp handle_fetch_result({:ok, {:ok, events, new_delta_link}}, integration) do
     apply_delta(integration, events, new_delta_link)
   end
@@ -63,7 +86,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   # is open, and {:error, reason} for errors returned by the function it wraps.
   # The {:ok, {:error, ...}} shape never occurs — errors are not wrapped in {:ok}.
   defp handle_fetch_result({:error, :circuit_open}, integration) do
-    Logger.warning("Outlook circuit breaker open during fallback sweep",
+    Logger.warning("Outlook circuit breaker open during delta sync",
       calendar_integration_id: integration.id
     )
 
@@ -80,7 +103,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   end
 
   defp handle_fetch_result({:error, _reason} = fetch_error, integration) do
-    Logger.warning("Outlook delta fetch failed during fallback sweep",
+    Logger.warning("Outlook delta fetch failed",
       calendar_integration_id: integration.id,
       error: format_error(fetch_error)
     )
@@ -89,7 +112,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   end
 
   defp handle_fetch_result(refresh_error, integration) do
-    Logger.warning("Outlook token refresh failed during fallback sweep",
+    Logger.warning("Outlook token refresh failed",
       calendar_integration_id: integration.id,
       error: format_error(refresh_error)
     )
