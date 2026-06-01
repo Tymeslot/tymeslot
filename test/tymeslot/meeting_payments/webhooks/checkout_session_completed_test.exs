@@ -199,6 +199,39 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
       assert reloaded_meeting.status == "confirmed"
     end
+
+    test "backfills stripe_charge_id from an atom-keyed payment intent (real adapter shape)" do
+      meeting = insert(:meeting, status: "awaiting_payment")
+
+      bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "pending",
+          stripe_checkout_session_id: "cs_CHARGE"
+        )
+
+      # The real Stripity adapter returns an atom-keyed %Stripe.PaymentIntent{}
+      # whose expanded latest_charge is a %Stripe.Charge{} struct — unlike the
+      # string-keyed webhook events. The handler must read the charge id from
+      # this shape too, otherwise stripe_charge_id stays blank and every
+      # downstream refund/dispute lookup (keyed on it) fails.
+      Mox.expect(
+        Tymeslot.MeetingPayments.StripeAdapterMock,
+        :retrieve_payment_intent,
+        fn "pi_CHARGE", _opts -> {:ok, %{latest_charge: %{id: "ch_REAL"}}} end
+      )
+
+      event =
+        completed_event("evt_CHARGE", %{
+          "id" => "cs_CHARGE",
+          "client_reference_id" => meeting.id,
+          "payment_intent" => "pi_CHARGE"
+        })
+
+      assert :ok = CheckoutSessionCompleted.handle(event)
+
+      assert Repo.reload!(bp).stripe_charge_id == "ch_REAL"
+    end
   end
 
   defp completed_event(event_id, object) do

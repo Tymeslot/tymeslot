@@ -144,8 +144,15 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
     end
   end
 
+  # The mock adapter (and `construct_webhook_event`) yields string-keyed maps;
+  # the real Stripity adapter returns an atom-keyed `%Stripe.PaymentIntent{}`
+  # whose expanded `latest_charge` is a `%Stripe.Charge{}` struct. Handle both
+  # so the charge id is captured regardless of adapter — without it, every
+  # refund/dispute lookup (keyed on `stripe_charge_id`) fails.
   defp extract_charge_id(%{"latest_charge" => %{"id" => id}}) when is_binary(id), do: id
   defp extract_charge_id(%{"latest_charge" => id}) when is_binary(id), do: id
+  defp extract_charge_id(%{latest_charge: %{id: id}}) when is_binary(id), do: id
+  defp extract_charge_id(%{latest_charge: id}) when is_binary(id), do: id
   defp extract_charge_id(_other), do: nil
 
   defp run_in_transaction(payment, event_id, object) do
