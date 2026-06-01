@@ -42,7 +42,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
       with {:ok, context} <- build_context(meeting),
            {:ok, booking_payment} <- BookingPaymentQueries.insert(context.snapshot),
            {:ok, session} <- create_stripe_session(meeting, context),
-           {:ok, booking_payment} <- attach_session_id(booking_payment, session) do
+           {:ok, booking_payment} <- attach_session_details(booking_payment, session) do
         %{checkout_url: session.url, booking_payment: booking_payment}
       else
         {:error, reason} -> Repo.rollback(reason)
@@ -89,10 +89,23 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     )
   end
 
-  defp attach_session_id(booking_payment, session) do
-    BookingPaymentQueries.update(booking_payment, %{
-      stripe_checkout_session_id: session.id
-    })
+  # Persist the PaymentIntent id alongside the session id at creation time.
+  # In `payment` mode Stripe creates the PaymentIntent with the session, so it
+  # is already available here — capturing it now gives charge-based Connect
+  # webhooks (dispute/refund) a join key that exists before the
+  # `checkout.session.completed` handler runs, closing a webhook-ordering race
+  # where a dispute arriving first would otherwise match no row and be dropped.
+  defp attach_session_details(booking_payment, session) do
+    attrs =
+      Map.reject(
+        %{
+          stripe_checkout_session_id: session.id,
+          stripe_payment_intent_id: Map.get(session, :payment_intent)
+        },
+        fn {_key, value} -> is_nil(value) end
+      )
+
+    BookingPaymentQueries.update(booking_payment, attrs)
   end
 
   defp fetch_host(nil), do: {:error, :host_missing}

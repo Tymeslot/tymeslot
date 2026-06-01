@@ -192,7 +192,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
 
   defp mark_paid(payment, event_id, object) do
     case BookingPaymentQueries.update(payment, %{
-           status: "paid",
+           status: paid_status(payment.status),
            paid_at: DateTime.utc_now(:second),
            stripe_payment_intent_id: object["payment_intent"],
            last_event_id: event_id
@@ -205,6 +205,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
         err
     end
   end
+
+  # A dispute can land before this completed event (the charge is disputed the
+  # instant it is captured). When it has, the row is already `disputed` — record
+  # the payment_intent and timestamp but keep the dispute status rather than
+  # clobbering it back to `paid`.
+  defp paid_status("disputed"), do: "disputed"
+  defp paid_status(_status), do: "paid"
 
   defp broadcast_paid(meeting_id) do
     Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting_id}", :paid)

@@ -70,6 +70,41 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
       assert :ok = ChargeDisputeCreated.handle(event)
     end
 
+    test "matches by payment_intent when the charge id is not yet on the row (race)" do
+      # The dispute can race ahead of checkout.session.completed, before the
+      # charge id is backfilled. The row still carries the payment_intent id
+      # (captured at session creation), so the dispute must match on that.
+      bp =
+        insert(:booking_payment,
+          status: "paid",
+          amount_cents: 5000,
+          stripe_charge_id: nil,
+          stripe_payment_intent_id: "pi_RACE_DISP"
+        )
+
+      event = %{
+        "id" => "evt_RACE_DISP",
+        "type" => "charge.dispute.created",
+        "created" => System.os_time(:second),
+        "data" => %{
+          "object" => %{
+            "id" => "dp_RACE_DISP",
+            "charge" => "ch_NOT_YET_LINKED",
+            "payment_intent" => "pi_RACE_DISP",
+            "object" => "dispute",
+            "amount" => 5000,
+            "reason" => "fraudulent"
+          }
+        }
+      }
+
+      assert :ok = ChargeDisputeCreated.handle(event)
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == "disputed"
+      assert reloaded.last_event_id == "evt_RACE_DISP"
+    end
+
     test "enqueues the host dispute email after marking disputed" do
       bp =
         insert(:booking_payment,

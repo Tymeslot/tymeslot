@@ -41,6 +41,10 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   def by_charge_id(charge_id),
     do: Repo.get_by(BookingPaymentSchema, stripe_charge_id: charge_id)
 
+  @spec by_payment_intent_id(String.t()) :: BookingPaymentSchema.t() | nil
+  def by_payment_intent_id(payment_intent_id),
+    do: Repo.get_by(BookingPaymentSchema, stripe_payment_intent_id: payment_intent_id)
+
   @doc """
   Lists all `pending` booking payments for a host that still carry a
   `stripe_checkout_session_id`, with the associated meeting preloaded.

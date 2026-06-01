@@ -22,6 +22,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
 
   @event_type "charge.dispute.closed"
 
@@ -30,8 +31,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
     Telemetry.span_webhook(@event_type, fn -> do_handle(event) end)
   end
 
-  defp do_handle(%{"id" => event_id, "data" => %{"object" => object}}) do
-    case lookup_payment(object) do
+  defp do_handle(%{"id" => event_id, "data" => %{"object" => object}} = event) do
+    case PaymentLookup.find(object["charge"], object["payment_intent"], event["account"]) do
       nil ->
         Logger.info("charge.dispute.closed: no booking_payment matched",
           charge_id: object["charge"]
@@ -51,12 +52,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
 
   defp classify(:ok), do: {:ok, :ok}
   defp classify({:error, _reason} = err), do: {err, :error}
-
-  defp lookup_payment(%{"charge" => charge_id}) when is_binary(charge_id) do
-    BookingPaymentQueries.by_charge_id(charge_id)
-  end
-
-  defp lookup_payment(_object), do: nil
 
   defp apply_outcome(payment, event_id, "won", _amount) do
     new_status = derive_status_from_refund(payment, payment.refunded_amount_cents)

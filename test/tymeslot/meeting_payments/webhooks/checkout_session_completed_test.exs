@@ -200,6 +200,38 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       assert reloaded_meeting.status == "confirmed"
     end
 
+    test "preserves a disputed status when a dispute landed before completion" do
+      # Race: the charge is disputed the instant it is captured, so the dispute
+      # webhook can mark the booking_payment disputed before this completed event
+      # is processed. Completion must record the payment_intent and confirm the
+      # meeting without clobbering the dispute back to paid.
+      meeting = insert(:meeting, status: "awaiting_payment")
+
+      bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "disputed",
+          stripe_checkout_session_id: "cs_DISP_FIRST"
+        )
+
+      event =
+        completed_event("evt_DISP_FIRST", %{
+          "id" => "cs_DISP_FIRST",
+          "client_reference_id" => meeting.id,
+          "payment_intent" => "pi_DISP_FIRST"
+        })
+
+      assert :ok = CheckoutSessionCompleted.handle(event)
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == "disputed"
+      assert reloaded.paid_at
+      assert reloaded.stripe_payment_intent_id == "pi_DISP_FIRST"
+
+      {:ok, confirmed_meeting} = MeetingQueries.get_meeting(meeting.id)
+      assert confirmed_meeting.status == "confirmed"
+    end
+
     test "backfills stripe_charge_id from an atom-keyed payment intent (real adapter shape)" do
       meeting = insert(:meeting, status: "awaiting_payment")
 

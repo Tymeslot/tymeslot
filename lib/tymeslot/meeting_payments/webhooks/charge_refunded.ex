@@ -20,6 +20,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
   alias Tymeslot.Repo
 
   @event_type "charge.refunded"
@@ -29,9 +30,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
     Telemetry.span_webhook(@event_type, fn -> do_handle(event) end)
   end
 
-  defp do_handle(%{"id" => event_id, "data" => %{"object" => %{"id" => charge_id} = object}})
+  defp do_handle(
+         %{"id" => event_id, "data" => %{"object" => %{"id" => charge_id} = object}} = event
+       )
        when is_binary(charge_id) do
-    case BookingPaymentQueries.by_charge_id(charge_id) do
+    case PaymentLookup.find(charge_id, object["payment_intent"], event["account"]) do
       nil ->
         Logger.info("charge.refunded: no booking_payment matched", charge_id: charge_id)
         {:ok, :ok}

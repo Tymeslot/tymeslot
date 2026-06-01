@@ -14,6 +14,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.MeetingPayments.Webhooks.PaymentLookup
   alias Tymeslot.Workers.SendChargeDisputeOpened
 
   @event_type "charge.dispute.created"
@@ -23,8 +24,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
     Telemetry.span_webhook(@event_type, fn -> do_handle(event) end)
   end
 
-  defp do_handle(%{"id" => event_id, "data" => %{"object" => object}}) do
-    case lookup_payment(object) do
+  defp do_handle(%{"id" => event_id, "data" => %{"object" => object}} = event) do
+    case PaymentLookup.find(object["charge"], object["payment_intent"], event["account"]) do
       nil ->
         Logger.info("charge.dispute.created: no booking_payment matched",
           charge_id: object["charge"]
@@ -44,12 +45,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
 
   defp classify(:ok), do: {:ok, :ok}
   defp classify({:error, _reason} = err), do: {err, :error}
-
-  defp lookup_payment(%{"charge" => charge_id}) when is_binary(charge_id) do
-    BookingPaymentQueries.by_charge_id(charge_id)
-  end
-
-  defp lookup_payment(_object), do: nil
 
   defp mark_disputed(payment, event_id, object) do
     case BookingPaymentQueries.update(payment, %{status: "disputed", last_event_id: event_id}) do

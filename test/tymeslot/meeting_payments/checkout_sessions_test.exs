@@ -69,7 +69,9 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
         refute Map.has_key?(params, :automatic_payment_methods)
         assert params.customer_email == "alice@example.com"
         assert params.locale == "en"
-        {:ok, %{id: "cs_TEST", url: "https://checkout.stripe.com/cs_TEST"}}
+
+        {:ok,
+         %{id: "cs_TEST", url: "https://checkout.stripe.com/cs_TEST", payment_intent: "pi_TEST"}}
       end)
 
       assert {:ok, %{checkout_url: url, booking_payment: bp}} =
@@ -86,6 +88,9 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
       assert bp.booking_theme_id == "1"
       assert bp.stripe_account_id == "acct_HOST"
       assert bp.stripe_checkout_session_id == "cs_TEST"
+      # Captured at creation so charge-based webhooks have a join key before the
+      # checkout.session.completed handler backfills the charge id.
+      assert bp.stripe_payment_intent_id == "pi_TEST"
       assert bp.status == "pending"
     end
 
