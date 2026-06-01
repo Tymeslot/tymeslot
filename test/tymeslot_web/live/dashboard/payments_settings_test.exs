@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
+defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
   use TymeslotWeb.ConnCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
@@ -47,6 +47,12 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
     :ok
   end
 
+  defp enable_payments do
+    Application.put_env(:tymeslot, :meeting_payments_enabled, true)
+    on_exit(fn -> Application.put_env(:tymeslot, :meeting_payments_enabled, false) end)
+    :ok
+  end
+
   describe "/dashboard/payments — when feature disabled" do
     setup do
       Application.put_env(:tymeslot, :meeting_payments_enabled, false)
@@ -62,16 +68,42 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
 
       assert flash["error"] =~ "not available"
     end
+
+    test "hides the Payments sidebar link", %{conn: conn} do
+      user = create_onboarded_user()
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} = live(conn, "/dashboard")
+
+      refute html =~ "payments-nav-link"
+      refute html =~ "/dashboard/payments"
+    end
   end
 
-  describe "/dashboard/payments — when feature enabled, no Stripe" do
-    setup do
-      Application.put_env(:tymeslot, :meeting_payments_enabled, true)
-      on_exit(fn -> Application.put_env(:tymeslot, :meeting_payments_enabled, false) end)
-      :ok
+  describe "/dashboard/payments — when feature enabled" do
+    setup do: enable_payments()
+
+    test "shows the Payments sidebar link", %{conn: conn} do
+      user = create_onboarded_user()
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} = live(conn, "/dashboard")
+
+      assert html =~ "payments-nav-link"
+      assert html =~ "/dashboard/payments"
     end
 
-    test "renders Connect Stripe CTA", %{conn: conn} do
+    test "renders inside the dashboard shell with the sidebar", %{conn: conn} do
+      user = create_onboarded_user()
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, html} = live(conn, "/dashboard/payments")
+
+      assert html =~ "dashboard-sidebar"
+      assert html =~ "Connect Stripe"
+    end
+
+    test "renders Connect Stripe CTA when no Stripe account", %{conn: conn} do
       user = create_onboarded_user()
       conn = log_in_user(conn, user)
 
@@ -81,13 +113,14 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
   end
 
   describe "/dashboard/payments — with active Stripe account" do
-    setup do
-      Application.put_env(:tymeslot, :meeting_payments_enabled, true)
-      on_exit(fn -> Application.put_env(:tymeslot, :meeting_payments_enabled, false) end)
-      :ok
-    end
+    setup do: enable_payments()
 
-    test "shows green status when charges_enabled and payouts_enabled", %{conn: conn} do
+    # The status banner's full state machine (green / amber / red / not-connected)
+    # is unit-tested in
+    # `TymeslotWeb.Dashboard.PaymentsSettings.StatusCardTest`. This test only
+    # proves the connected account is wired through to the rendered banner and
+    # the payments section.
+    test "renders the connected status banner for an active account", %{conn: conn} do
       user = create_onboarded_user()
 
       insert(:connect_account,
@@ -103,39 +136,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
 
       assert html =~ "Connected and ready"
       assert html =~ "Recent payments"
-    end
-
-    test "shows amber when details submitted but charges disabled", %{conn: conn} do
-      user = create_onboarded_user()
-
-      insert(:connect_account,
-        user: user,
-        stripe_account_id: "acct_amber",
-        charges_enabled: false,
-        payouts_enabled: false,
-        details_submitted: true
-      )
-
-      conn = log_in_user(conn, user)
-      {:ok, _view, html} = live(conn, "/dashboard/payments")
-
-      assert html =~ "Pending Stripe review"
-    end
-
-    test "shows red when disabled_reason is set", %{conn: conn} do
-      user = create_onboarded_user()
-
-      insert(:connect_account,
-        user: user,
-        stripe_account_id: "acct_red",
-        disabled_reason: "rejected.fraud"
-      )
-
-      conn = log_in_user(conn, user)
-      {:ok, _view, html} = live(conn, "/dashboard/payments")
-
-      assert html =~ "Restricted"
-      assert html =~ "rejected.fraud"
     end
 
     test "enqueues a Stripe resync when the host returns from onboarding", %{conn: conn} do
@@ -211,9 +211,15 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, "/dashboard/payments")
 
-      view |> element("button[phx-click=disconnect]") |> render_click()
+      # The disconnect button opens an in-app confirmation modal; the actual
+      # disconnect happens from the modal's confirm button.
+      view |> element("button[phx-click=open_disconnect_modal]") |> render_click()
+      assert has_element?(view, "#disconnect-modal")
+
+      view |> element("#disconnect-modal button[phx-click=disconnect]") |> render_click()
 
       refute ConnectAccountQueries.live_for_user(user.id)
+      refute has_element?(view, "#disconnect-modal")
     end
 
     test "change_currency updates the account currency and resets paid event types", %{conn: conn} do
@@ -235,8 +241,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
       {:ok, view, _html} = live(conn, "/dashboard/payments")
 
       view
-      |> form("form[phx-change=change_currency]", %{"currency" => "gbp"})
-      |> render_change()
+      |> element("button[phx-click=change_currency][phx-value-currency=gbp]")
+      |> render_click()
 
       account = ConnectAccountQueries.live_for_user(user.id)
       assert account.default_currency == "gbp"
@@ -247,12 +253,41 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
     end
   end
 
-  describe "/dashboard/payments — refund flow" do
-    setup do
-      Application.put_env(:tymeslot, :meeting_payments_enabled, true)
-      on_exit(fn -> Application.put_env(:tymeslot, :meeting_payments_enabled, false) end)
-      :ok
+  describe "/dashboard/payments — incomplete onboarding" do
+    setup do: enable_payments()
+
+    test "prompts to finish onboarding and hides the operational sections", %{conn: conn} do
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_incomplete",
+        charges_enabled: false,
+        payouts_enabled: false,
+        details_submitted: false
+      )
+
+      conn = log_in_user(conn, user)
+      {:ok, _view, html} = live(conn, "/dashboard/payments")
+
+      # The host can resume onboarding rather than landing on a dead-end card.
+      assert html =~ "Finish connecting Stripe"
+      assert html =~ "Continue onboarding"
+      assert html =~ ~s(action="/dashboard/payments/connect")
+
+      # The status conflation bug: an unsubmitted account must NOT claim to be
+      # under Stripe review.
+      refute html =~ "Pending Stripe review"
+
+      # Operational sections are meaningless until onboarding is submitted.
+      refute html =~ "Default currency"
+      refute html =~ "Recent payments"
+      refute html =~ "Disconnect Stripe"
     end
+  end
+
+  describe "/dashboard/payments — refund flow" do
+    setup do: enable_payments()
 
     defp paid_payment_for(user, attrs \\ %{}) do
       defaults = %{
@@ -389,7 +424,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
       conn = log_in_user(conn, attacker)
       {:ok, view, _html} = live(conn, "/dashboard/payments")
 
-      render_click(view, "open_refund_modal", %{"id" => victim_payment.id})
+      # Drive the component event directly with a crafted id; no rendered
+      # button exists for a payment the attacker does not own.
+      view
+      |> with_target("#payments-settings")
+      |> render_click("open_refund_modal", %{"id" => victim_payment.id})
 
       refute render(view) =~ "Refund payment"
     end

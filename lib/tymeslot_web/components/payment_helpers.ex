@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Components.PaymentHelpers do
   @moduledoc """
   Shared formatting helpers for payment amounts and currencies.
 
-  Used by `TymeslotWeb.Dashboard.PaymentsLive` and
+  Used by `TymeslotWeb.Dashboard.PaymentsSettingsComponent` and
   `TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal`.
   """
 
