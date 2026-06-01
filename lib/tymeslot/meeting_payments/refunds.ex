@@ -158,28 +158,36 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   defp create_stripe_refund(payment, amount_cents, reason) do
     cumulative_after = payment.refunded_amount_cents + amount_cents
 
-    base_params = %{
-      charge: payment.stripe_charge_id,
-      amount: amount_cents,
-      reason: reason,
-      metadata: %{
-        meeting_id: payment.meeting_id,
-        booking_payment_id: payment.id
-      }
-    }
-
     params =
-      if (payment.application_fee_cents || 0) > 0 do
-        Map.put(base_params, :refund_application_fee, true)
-      else
-        base_params
-      end
+      %{
+        charge: payment.stripe_charge_id,
+        amount: amount_cents,
+        metadata: %{
+          meeting_id: payment.meeting_id,
+          booking_payment_id: payment.id
+        }
+      }
+      |> maybe_put_reason(reason)
+      |> maybe_refund_application_fee(payment)
 
     StripeAdapter.create_refund(params,
       connect_account: payment.stripe_account_id,
       idempotency_key: "refund:#{payment.id}:#{cumulative_after}:#{amount_cents}"
     )
   end
+
+  # Stripe rejects a blank `reason` ("cannot be unset") — only include it when
+  # the caller supplies a non-empty value, otherwise omit the param entirely.
+  defp maybe_put_reason(params, reason) when is_binary(reason) and reason != "",
+    do: Map.put(params, :reason, reason)
+
+  defp maybe_put_reason(params, _reason), do: params
+
+  defp maybe_refund_application_fee(params, %{application_fee_cents: fee})
+       when is_integer(fee) and fee > 0,
+       do: Map.put(params, :refund_application_fee, true)
+
+  defp maybe_refund_application_fee(params, _payment), do: params
 
   defp update_payment_after_refund(payment, amount_cents) do
     new_total = payment.refunded_amount_cents + amount_cents

@@ -454,11 +454,13 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       assert {:ok, _payment} = Refunds.issue_refund(payment, 500, "requested_by_customer")
     end
 
-    test "passes nil reason when none supplied" do
+    test "omits the reason param when none is supplied" do
       payment = paid_booking_payment()
 
+      # Stripe rejects a blank `reason` ("cannot be unset"), so the param must
+      # be absent entirely rather than sent as nil/empty.
       expect(StripeAdapterMock, :create_refund, fn params, _opts ->
-        assert params.reason == nil
+        refute Map.has_key?(params, :reason)
         {:ok, %{id: "re_no_reason"}}
       end)
 
