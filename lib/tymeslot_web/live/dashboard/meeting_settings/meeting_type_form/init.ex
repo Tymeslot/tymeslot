@@ -2,7 +2,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   @moduledoc "Initialisation and form data building for MeetingTypeForm."
 
   alias Phoenix.Component
+  alias Tymeslot.Features
   alias Tymeslot.Integrations.Calendar.Selection
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Utils.ReminderUtils
 
   @doc """
@@ -27,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:selected_target_calendar_id, get_target_calendar_id(type))
     |> Component.assign(:reminders, get_reminders(type))
     |> Component.assign(:custom_fields, get_custom_fields(type))
+    |> assign_payment_state(type, Map.get(assigns, :current_user))
     |> then(fn socket ->
       if id = socket.assigns.selected_calendar_integration_id do
         Component.assign(
@@ -41,6 +44,78 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:form_data, build_form_data(type))
     |> Component.assign(:__initialized__, true)
   end
+
+  @doc """
+  Assigns the payments-section gating state and form values.
+
+  Gating mirrors the payments dashboard: the section is only active when
+  the `:meeting_payments` feature is enabled *and* the host's Stripe
+  Connect account can accept charges. When the feature is off entirely the
+  section is hidden; when it is on but Stripe is not yet connected the
+  toggle renders disabled with a link to connect Stripe.
+  """
+  @spec assign_payment_state(
+          Phoenix.LiveView.Socket.t(),
+          Ecto.Schema.t() | nil,
+          map() | nil
+        ) :: Phoenix.LiveView.Socket.t()
+  def assign_payment_state(socket, type, current_user) do
+    feature_enabled? = payments_feature_enabled?(current_user)
+    charges_enabled? = feature_enabled? and charges_enabled?(current_user)
+    currency = host_currency(current_user)
+
+    socket
+    |> Component.assign(:payments_feature_enabled, feature_enabled?)
+    |> Component.assign(:payments_charges_enabled, charges_enabled?)
+    |> Component.assign(:payment_currency, currency)
+    |> Component.assign(
+      :payment_currency_minimum_cents,
+      MeetingPayments.currency_minimum_cents(currency)
+    )
+    |> Component.assign(:payment_required, get_payment_required(type))
+    |> Component.assign(:payment_price, get_payment_price(type))
+  end
+
+  defp payments_feature_enabled?(%{id: user_id}) do
+    case Features.check_access(user_id, :meeting_payments) do
+      :ok -> true
+      {:error, :stripe_required} -> true
+      _other -> false
+    end
+  end
+
+  defp payments_feature_enabled?(_user), do: false
+
+  defp charges_enabled?(%{id: user_id}), do: MeetingPayments.charges_enabled_for_user?(user_id)
+  defp charges_enabled?(_user), do: false
+
+  defp host_currency(%{id: user_id}) do
+    case MeetingPayments.get_connect_account_for_user(user_id) do
+      %{default_currency: currency} when is_binary(currency) and currency != "" ->
+        currency
+
+      _other ->
+        List.first(MeetingPayments.currency_allowlist()) || "usd"
+    end
+  end
+
+  defp host_currency(_user), do: List.first(MeetingPayments.currency_allowlist()) || "usd"
+
+  @doc "Returns whether payment is required for an existing meeting type."
+  @spec get_payment_required(Ecto.Schema.t() | nil) :: boolean()
+  def get_payment_required(%{payment_required: true}), do: true
+  def get_payment_required(_type), do: false
+
+  @doc """
+  Returns the major-unit price string for an existing meeting type's
+  `price_cents`, or an empty string when unset.
+  """
+  @spec get_payment_price(Ecto.Schema.t() | nil) :: String.t()
+  def get_payment_price(%{price_cents: cents}) when is_integer(cents) do
+    :erlang.float_to_binary(cents / 100, decimals: 2)
+  end
+
+  def get_payment_price(_type), do: ""
 
   @doc "Builds the initial form data map from an existing meeting type or nil."
   @spec build_form_data(Ecto.Schema.t() | nil) :: map()

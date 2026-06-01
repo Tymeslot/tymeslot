@@ -65,22 +65,30 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
 
   @doc """
   Creates a new meeting type.
+
+  `opts` are forwarded to `MeetingTypeSchema.changeset/3` so callers can
+  thread payment-validation context (`:host_charges_enabled`,
+  `:currency_minimum_cents`) into the changeset.
   """
-  @spec create_meeting_type(map()) :: {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
-  def create_meeting_type(attrs) do
+  @spec create_meeting_type(map(), keyword()) ::
+          {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
+  def create_meeting_type(attrs, opts \\ []) do
     %MeetingTypeSchema{}
-    |> MeetingTypeSchema.changeset(attrs)
+    |> MeetingTypeSchema.changeset(attrs, opts)
     |> Repo.insert()
   end
 
   @doc """
   Updates a meeting type.
+
+  `opts` are forwarded to `MeetingTypeSchema.changeset/3` (see
+  `create_meeting_type/2`).
   """
-  @spec update_meeting_type(MeetingTypeSchema.t(), map()) ::
+  @spec update_meeting_type(MeetingTypeSchema.t(), map(), keyword()) ::
           {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_meeting_type(meeting_type, attrs) do
+  def update_meeting_type(meeting_type, attrs, opts \\ []) do
     meeting_type
-    |> MeetingTypeSchema.changeset(attrs)
+    |> MeetingTypeSchema.changeset(attrs, opts)
     |> Repo.update()
   end
 

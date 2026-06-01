@@ -15,11 +15,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
     CustomQuestionsSection,
     Init,
+    PaymentsSection,
     QuestionEditorComponent,
     Validation
   }
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+  import PaymentsSection, only: [payments_section: 1]
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
   import TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
 
@@ -54,6 +56,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:editing_question, nil)
      |> assign(:editing_question_mode, :add)
      |> assign(:custom_questions_allowed, true)
+     |> assign(:payments_feature_enabled, false)
+     |> assign(:payments_charges_enabled, false)
+     |> assign(:payment_currency, "usd")
+     |> assign(:payment_currency_minimum_cents, 50)
+     |> assign(:payment_required, false)
+     |> assign(:payment_price, "")
      |> assign(:__initialized__, false)}
   end
 
@@ -160,6 +168,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         myself={@myself}
       />
 
+      <.payments_section
+        :if={@payments_feature_enabled}
+        charges_enabled={@payments_charges_enabled}
+        payment_required={@payment_required}
+        payment_price={@payment_price}
+        currency={@payment_currency}
+        currency_minimum_cents={@payment_currency_minimum_cents}
+        form_errors={@form_errors}
+        myself={@myself}
+      />
+
       <%!-- Custom questions section --%>
       <.live_component
         module={CustomQuestionsSection}
@@ -257,6 +276,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         value={@selected_target_calendar_id}
       />
       <input type="hidden" name="meeting_type[icon]" value={@selected_icon} />
+      <%!-- Payment fields are mirrored from socket state so the section's
+           toggle/price controls survive re-render and post on submit. They
+           are only meaningful when the host can accept charges. --%>
+      <%= if @payments_feature_enabled and @payments_charges_enabled do %>
+        <input
+          type="hidden"
+          name="meeting_type[payment_required]"
+          value={to_string(@payment_required)}
+        />
+        <input type="hidden" name="meeting_type[price]" value={@payment_price} />
+      <% end %>
 
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :base) do %>
         <p class="form-error">{Helpers.format_errors(error)}</p>
@@ -418,6 +448,34 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       )
 
     {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_payment_required", _params, socket) do
+    # Guard: hosts who cannot accept charges must not flip the toggle even
+    # if a stale/forged event arrives — the control renders disabled.
+    if socket.assigns.payments_charges_enabled do
+      {:noreply,
+       socket
+       |> assign(:payment_required, !socket.assigns.payment_required)
+       |> assign(
+         :form_errors,
+         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :payment_required)
+       )}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("change_payment_price", %{"meeting_type" => %{"price_input" => price}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:payment_price, price)
+     |> assign(
+       :form_errors,
+       FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :price_cents)
+     )}
   end
 
   @impl Phoenix.LiveComponent

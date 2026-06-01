@@ -160,7 +160,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
 
       changeset =
         MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
-          host_currency: "eur",
+          currency: "eur",
           host_charges_enabled: true
         )
 
@@ -181,12 +181,12 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
 
       changeset =
         MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
-          host_currency: "eur",
+          currency: "eur",
           host_charges_enabled: true
         )
 
       refute changeset.valid?
-      assert "must be greater than or equal to 50" in errors_on(changeset).price_cents
+      assert "must be at least EUR 0.50" in errors_on(changeset).price_cents
     end
 
     test "accepts price at or above currency minimum" do
@@ -202,7 +202,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
 
       changeset =
         MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
-          host_currency: "eur",
+          currency: "eur",
           host_charges_enabled: true
         )
 
@@ -223,7 +223,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
 
       changeset =
         MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
-          host_currency: "eur",
+          currency: "eur",
           host_charges_enabled: false
         )
 
@@ -243,7 +243,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
 
       changeset =
         MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
-          host_currency: "eur",
+          currency: "eur",
           host_charges_enabled: false
         )
 
@@ -252,7 +252,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       assert "Stripe must be connected" in errors_on(changeset).payment_required
     end
 
-    test "defaults host_currency to eur when opt is omitted" do
+    test "defaults currency to usd when opt is omitted" do
       user = insert(:user)
 
       attrs = %{
@@ -267,7 +267,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
         MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs, host_charges_enabled: true)
 
       refute changeset.valid?
-      assert "must be greater than or equal to 50" in errors_on(changeset).price_cents
+      assert "must be at least USD 0.50" in errors_on(changeset).price_cents
     end
   end
 end

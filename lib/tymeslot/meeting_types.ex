@@ -6,6 +6,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Utils.ReminderUtils
@@ -54,19 +55,24 @@ defmodule Tymeslot.MeetingTypes do
 
   @doc """
   Creates a new meeting type.
+
+  `opts` are forwarded to the changeset for payment-validation context.
   """
-  @spec create_meeting_type(map()) :: {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
-  def create_meeting_type(attrs) do
-    MeetingTypeQueries.create_meeting_type(attrs)
+  @spec create_meeting_type(map(), keyword()) ::
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+  def create_meeting_type(attrs, opts \\ []) do
+    MeetingTypeQueries.create_meeting_type(attrs, opts)
   end
 
   @doc """
   Updates a meeting type.
+
+  `opts` are forwarded to the changeset for payment-validation context.
   """
-  @spec update_meeting_type(Ecto.Schema.t(), map()) ::
+  @spec update_meeting_type(Ecto.Schema.t(), map(), keyword()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
-  def update_meeting_type(meeting_type, attrs) do
-    MeetingTypeQueries.update_meeting_type(meeting_type, attrs)
+  def update_meeting_type(meeting_type, attrs, opts \\ []) do
+    MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts)
   end
 
   @doc """
@@ -222,7 +228,7 @@ defmodule Tymeslot.MeetingTypes do
          :ok <- gate_custom_fields_change(user_id, attrs),
          :ok <- validate_video_integration(attrs, user_id),
          :ok <- validate_calendar_integration(attrs, user_id) do
-      create_meeting_type(Map.put(attrs, :user_id, user_id))
+      create_meeting_type(Map.put(attrs, :user_id, user_id), payment_opts(user_id))
     end
   end
 
@@ -236,7 +242,7 @@ defmodule Tymeslot.MeetingTypes do
          :ok <- gate_custom_fields_change(meeting_type.user_id, attrs),
          :ok <- validate_video_integration(attrs, meeting_type.user_id),
          :ok <- validate_calendar_integration(attrs, meeting_type.user_id) do
-      update_meeting_type(meeting_type, attrs)
+      update_meeting_type(meeting_type, attrs, payment_opts(meeting_type.user_id))
     end
   end
 
@@ -322,7 +328,10 @@ defmodule Tymeslot.MeetingTypes do
         nil
       end
 
-    with {:ok, reminder_config} <- normalize_reminder_config_params(params["reminder_config"]) do
+    payment_required = params["payment_required"] == "true"
+
+    with {:ok, reminder_config} <- normalize_reminder_config_params(params["reminder_config"]),
+         {:ok, price_cents} <- parse_price_cents(payment_required, params["price"]) do
       attrs = %{
         name: params["name"],
         duration_minutes: String.to_integer(params["duration"]),
@@ -333,7 +342,9 @@ defmodule Tymeslot.MeetingTypes do
         video_integration_id: video_integration_id,
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
         target_calendar_id: blank_to_nil(params["target_calendar_id"]),
-        reminder_config: reminder_config
+        reminder_config: reminder_config,
+        payment_required: payment_required,
+        price_cents: price_cents
       }
 
       attrs =
@@ -352,6 +363,60 @@ defmodule Tymeslot.MeetingTypes do
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
+
+  # Builds the payment-validation opts the schema changeset needs. The
+  # schema must not reach into the payments domain itself (layering), so
+  # the context resolves the host's charge capability, default currency,
+  # and the per-currency minimum here and threads them in as opts.
+  defp payment_opts(user_id) do
+    currency = host_currency(user_id)
+
+    [
+      host_charges_enabled: MeetingPayments.charges_enabled_for_user?(user_id),
+      currency: currency,
+      currency_minimum_cents: MeetingPayments.currency_minimum_cents(currency)
+    ]
+  end
+
+  # The host's pricing currency is their Connect account's default
+  # currency. When no account exists yet, fall back to the first entry of
+  # the currency allowlist (defaulting to "usd"), matching the default the
+  # payments dashboard surfaces.
+  defp host_currency(user_id) do
+    case MeetingPayments.get_connect_account_for_user(user_id) do
+      %{default_currency: currency} when is_binary(currency) and currency != "" ->
+        currency
+
+      _other ->
+        List.first(MeetingPayments.currency_allowlist()) || "usd"
+    end
+  end
+
+  # Converts the major-unit price string from the form into integer cents.
+  # When payment is not required the price is irrelevant and stored as nil.
+  # Bad input yields `{:error, :invalid_price}` so the form surfaces it the
+  # same way an invalid duration does.
+  defp parse_price_cents(false, _price), do: {:ok, nil}
+  defp parse_price_cents(true, nil), do: {:ok, nil}
+  defp parse_price_cents(true, ""), do: {:ok, nil}
+
+  defp parse_price_cents(true, price) when is_binary(price) do
+    case Decimal.parse(String.trim(price)) do
+      {decimal, ""} ->
+        cents =
+          decimal
+          |> Decimal.mult(100)
+          |> Decimal.round(0)
+          |> Decimal.to_integer()
+
+        {:ok, cents}
+
+      _invalid ->
+        {:error, :invalid_price}
+    end
+  end
+
+  defp parse_price_cents(true, _price), do: {:error, :invalid_price}
 
   # Custom booking questions are gated behind the :custom_questions_allowed
   # feature flag. Core's default checker always allows access, so self-hosted

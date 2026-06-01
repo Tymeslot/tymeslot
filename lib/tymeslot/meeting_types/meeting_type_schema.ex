@@ -78,6 +78,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
 
     * `:host_charges_enabled` (default `false`) — whether the host's Stripe
       Connect account can accept charges.
+    * `:currency` (default `"usd"`) — the host's pricing currency, used only
+      to format the minimum-charge error message in major units.
     * `:currency_minimum_cents` (default `50`) — minimum charge amount in
       cents for the host's currency. Callers should retrieve this via
       `Tymeslot.MeetingPayments.currency_minimum_cents/1`.
@@ -224,7 +226,18 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
 
   defp validate_currency_minimum(changeset, opts) do
     minimum = Keyword.get(opts, :currency_minimum_cents, 50)
-    validate_number(changeset, :price_cents, greater_than_or_equal_to: minimum)
+    currency = Keyword.get(opts, :currency, "usd")
+
+    validate_number(changeset, :price_cents,
+      greater_than_or_equal_to: minimum,
+      message: "must be at least #{format_minimum(minimum, currency)}"
+    )
+  end
+
+  # Mirrors the minimum hint shown beside the price input (e.g. "EUR 0.50"),
+  # so the validation error speaks in major units rather than raw cents.
+  defp format_minimum(cents, currency) do
+    "#{String.upcase(currency)} #{:erlang.float_to_binary(cents / 100, decimals: 2)}"
   end
 
   @doc """

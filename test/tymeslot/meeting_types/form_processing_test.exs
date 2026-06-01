@@ -322,6 +322,172 @@ defmodule Tymeslot.MeetingTypes.FormProcessingTest do
   end
 
   # =====================================
+  # Paid Meeting Types from Form
+  # =====================================
+
+  describe "when creating a paid meeting type from form" do
+    test "creates a paid meeting type when the host has Stripe charges enabled" do
+      user = insert(:user)
+      insert(:connect_account, user: user, charges_enabled: true, default_currency: "usd")
+
+      form_params = paid_form_params(%{"price" => "20.00"})
+
+      assert {:ok, meeting_type} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 form_params,
+                 personal_ui_state()
+               )
+
+      assert meeting_type.payment_required == true
+      # 20.00 USD in major units must persist as integer cents.
+      assert meeting_type.price_cents == 2000
+    end
+
+    test "converts a fractional major-unit price into integer cents" do
+      user = insert(:user)
+      insert(:connect_account, user: user, charges_enabled: true, default_currency: "usd")
+
+      form_params = paid_form_params(%{"price" => "12.34"})
+
+      assert {:ok, meeting_type} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 form_params,
+                 personal_ui_state()
+               )
+
+      assert meeting_type.price_cents == 1234
+    end
+
+    test "rejects a paid meeting type when Stripe is not connected" do
+      user = insert(:user)
+
+      form_params = paid_form_params(%{"price" => "20.00"})
+
+      assert {:error, changeset} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 form_params,
+                 personal_ui_state()
+               )
+
+      assert "Stripe must be connected" in errors_on(changeset).payment_required
+    end
+
+    test "rejects a paid meeting type priced below the currency minimum" do
+      user = insert(:user)
+      insert(:connect_account, user: user, charges_enabled: true, default_currency: "usd")
+
+      # USD minimum is 50 cents; 0.10 -> 10 cents is below it.
+      form_params = paid_form_params(%{"price" => "0.10"})
+
+      assert {:error, changeset} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 form_params,
+                 personal_ui_state()
+               )
+
+      assert "must be at least USD 0.50" in errors_on(changeset).price_cents
+    end
+
+    test "uses the host's connect-account currency minimum, not the default" do
+      user = insert(:user)
+      # CZK minimum is 1500 cents; a 100-cent price must be rejected.
+      insert(:connect_account, user: user, charges_enabled: true, default_currency: "czk")
+
+      form_params = paid_form_params(%{"price" => "1.00"})
+
+      assert {:error, changeset} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 form_params,
+                 personal_ui_state()
+               )
+
+      assert "must be at least CZK 15.00" in errors_on(changeset).price_cents
+    end
+
+    test "rejects an unparseable price" do
+      user = insert(:user)
+      insert(:connect_account, user: user, charges_enabled: true, default_currency: "usd")
+
+      form_params = paid_form_params(%{"price" => "abc"})
+
+      assert {:error, :invalid_price} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 form_params,
+                 personal_ui_state()
+               )
+    end
+
+    test "ignores any submitted price when payment is not required" do
+      user = insert(:user)
+
+      form_params =
+        paid_form_params(%{"payment_required" => "false", "price" => "20.00"})
+
+      assert {:ok, meeting_type} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 form_params,
+                 personal_ui_state()
+               )
+
+      assert meeting_type.payment_required == false
+      assert meeting_type.price_cents == nil
+    end
+  end
+
+  describe "when updating a meeting type to be paid" do
+    test "marks an existing free meeting type as paid" do
+      user = insert(:user)
+      insert(:connect_account, user: user, charges_enabled: true, default_currency: "usd")
+      meeting_type = insert(:meeting_type, user: user, payment_required: false, price_cents: nil)
+
+      form_params =
+        paid_form_params(%{
+          "name" => meeting_type.name,
+          "duration" => to_string(meeting_type.duration_minutes),
+          "price" => "15.00"
+        })
+
+      assert {:ok, updated} =
+               MeetingTypes.update_meeting_type_from_form(
+                 meeting_type,
+                 form_params,
+                 personal_ui_state()
+               )
+
+      assert updated.payment_required == true
+      assert updated.price_cents == 1500
+    end
+  end
+
+  defp paid_form_params(overrides) do
+    Map.merge(
+      %{
+        "name" => "Paid Consultation",
+        "duration" => "30",
+        "description" => "A paid session",
+        "is_active" => "true",
+        "payment_required" => "true"
+      },
+      overrides
+    )
+  end
+
+  defp personal_ui_state do
+    %{
+      meeting_mode: "personal",
+      selected_icon: "hero-clock",
+      selected_video_integration_id: nil
+    }
+  end
+
+  # =====================================
   # Updating Meeting Types from Form
   # =====================================
 
