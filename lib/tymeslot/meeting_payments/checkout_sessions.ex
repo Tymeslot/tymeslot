@@ -164,7 +164,6 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
 
     %{
       mode: "payment",
-      automatic_payment_methods: %{enabled: true},
       line_items: [
         %{
           price_data: %{

@@ -63,7 +63,10 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
         assert params.success_url =~ "session_id={CHECKOUT_SESSION_ID}"
         assert params.cancel_url =~ "/themes/quill/payment-cancelled/#{meeting.id}"
         assert params.client_reference_id == meeting.id
-        assert params.automatic_payment_methods == %{enabled: true}
+        # Checkout Sessions must NOT carry `automatic_payment_methods` (a
+        # PaymentIntent-only param Stripe rejects); methods come from the
+        # dashboard config when the param is omitted.
+        refute Map.has_key?(params, :automatic_payment_methods)
         assert params.customer_email == "alice@example.com"
         assert params.locale == "en"
         {:ok, %{id: "cs_TEST", url: "https://checkout.stripe.com/cs_TEST"}}
