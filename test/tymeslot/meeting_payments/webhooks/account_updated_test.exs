@@ -9,6 +9,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdatedTest do
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.Webhooks.AccountUpdated
 
+  # Stripe's account object carries a `created` field that is the
+  # account-creation time — a constant across every account.updated event.
+  # The event envelope carries its own `created` (the event emission time),
+  # which is the value ordering must key off. Tests therefore keep the object
+  # `created` fixed and vary only the envelope `created`.
+  @account_created 1_600_000_000
+
   describe "handle/1" do
     test "applies the latest account snapshot to a known connect_account" do
       user = insert(:user)
@@ -22,23 +29,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdatedTest do
           details_submitted: false
         )
 
-      now = System.os_time(:second)
-
-      event = %{
-        "id" => "evt_ACCT",
-        "type" => "account.updated",
-        "created" => now,
-        "data" => %{
-          "object" => %{
-            "id" => "acct_LIVE",
-            "created" => now,
-            "charges_enabled" => true,
-            "payouts_enabled" => true,
-            "details_submitted" => true,
-            "requirements" => %{"disabled_reason" => nil}
-          }
-        }
-      }
+      event =
+        account_event("acct_LIVE", System.os_time(:second),
+          charges_enabled: true,
+          payouts_enabled: true,
+          details_submitted: true
+        )
 
       assert :ok = AccountUpdated.handle(event)
 
@@ -48,6 +44,45 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdatedTest do
       assert reloaded.payouts_enabled == true
       assert reloaded.details_submitted == true
       assert reloaded.last_account_event_at
+    end
+
+    test "applies successive events that share the account object's created timestamp" do
+      # Regression: ordering must use the event-envelope `created`, not the
+      # account object's `created`. Both events below share the same object
+      # `created` (the account-creation time); only the envelope `created`
+      # advances. Keying off the object `created` would drop the second event
+      # as `:eq` and the capability change would never land.
+      user = insert(:user)
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_SHARED_CREATED",
+        charges_enabled: false,
+        payouts_enabled: false
+      )
+
+      first_emitted = System.os_time(:second) - 120
+      second_emitted = first_emitted + 60
+
+      assert :ok =
+               AccountUpdated.handle(
+                 account_event("acct_SHARED_CREATED", first_emitted,
+                   charges_enabled: false,
+                   payouts_enabled: false
+                 )
+               )
+
+      assert :ok =
+               AccountUpdated.handle(
+                 account_event("acct_SHARED_CREATED", second_emitted,
+                   charges_enabled: true,
+                   payouts_enabled: true
+                 )
+               )
+
+      reloaded = ConnectAccountQueries.by_stripe_account_id("acct_SHARED_CREATED")
+      assert reloaded.charges_enabled == true
+      assert reloaded.payouts_enabled == true
     end
 
     test "ignores out-of-order events older than the stored last_account_event_at" do
@@ -63,21 +98,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdatedTest do
           last_account_event_at: stored_event_at
         )
 
-      stale_event_created = DateTime.to_unix(stored_event_at) - 60
+      stale_emitted = DateTime.to_unix(stored_event_at) - 60
 
-      event = %{
-        "id" => "evt_OLD",
-        "type" => "account.updated",
-        "created" => stale_event_created,
-        "data" => %{
-          "object" => %{
-            "id" => "acct_OUT_OF_ORDER",
-            "created" => stale_event_created,
-            "charges_enabled" => false,
-            "payouts_enabled" => false
-          }
-        }
-      }
+      event =
+        account_event("acct_OUT_OF_ORDER", stale_emitted,
+          charges_enabled: false,
+          payouts_enabled: false
+        )
 
       assert :ok = AccountUpdated.handle(event)
 
@@ -87,20 +114,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdatedTest do
     end
 
     test "returns :ok when no connect_account matches the stripe_account_id" do
-      now = System.os_time(:second)
-
-      event = %{
-        "id" => "evt_NOMATCH",
-        "type" => "account.updated",
-        "created" => now,
-        "data" => %{
-          "object" => %{
-            "id" => "acct_GHOST",
-            "created" => now,
-            "charges_enabled" => true
-          }
-        }
-      }
+      event = account_event("acct_GHOST", System.os_time(:second), charges_enabled: true)
 
       assert :ok = AccountUpdated.handle(event)
     end
@@ -116,44 +130,29 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdatedTest do
           payouts_enabled: false
         )
 
-      # First event: no `created` field — fallback is epoch 0.
-      missing_created_event = %{
-        "id" => "evt_NO_TS",
-        "type" => "account.updated",
-        "created" => System.os_time(:second),
-        "data" => %{
-          "object" => %{
-            "id" => "acct_EPOCH_FALLBACK",
-            # `created` deliberately absent — ensure_created sets it to 0
-            "charges_enabled" => false,
-            "payouts_enabled" => false,
-            "details_submitted" => false,
-            "requirements" => %{"disabled_reason" => nil}
-          }
-        }
-      }
+      # First event: the envelope has no `created` field — ordering falls back
+      # to epoch 0.
+      missing_created_event =
+        "acct_EPOCH_FALLBACK"
+        |> account_event(System.os_time(:second),
+          charges_enabled: false,
+          payouts_enabled: false,
+          details_submitted: false
+        )
+        |> Map.delete("created")
 
       assert :ok = AccountUpdated.handle(missing_created_event)
 
-      # Subsequent real event with a genuine (but older-than-now) timestamp
-      # must NOT be rejected as stale because epoch 0 is always older.
-      real_ts = System.os_time(:second) - 3600
+      # Subsequent real event with a genuine (but older-than-now) envelope
+      # timestamp must NOT be rejected as stale because epoch 0 is always older.
+      real_emitted = System.os_time(:second) - 3600
 
-      real_event = %{
-        "id" => "evt_REAL",
-        "type" => "account.updated",
-        "created" => real_ts,
-        "data" => %{
-          "object" => %{
-            "id" => "acct_EPOCH_FALLBACK",
-            "created" => real_ts,
-            "charges_enabled" => true,
-            "payouts_enabled" => true,
-            "details_submitted" => true,
-            "requirements" => %{"disabled_reason" => nil}
-          }
-        }
-      }
+      real_event =
+        account_event("acct_EPOCH_FALLBACK", real_emitted,
+          charges_enabled: true,
+          payouts_enabled: true,
+          details_submitted: true
+        )
 
       assert :ok = AccountUpdated.handle(real_event)
 
@@ -161,4 +160,27 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdatedTest do
       assert reloaded.charges_enabled == true
     end
   end
+
+  # Build a realistic account.updated envelope: the top-level `created` is the
+  # event emission time (`emitted_at`); the nested account object's `created`
+  # is the fixed account-creation time.
+  defp account_event(account_id, emitted_at, object_attrs) do
+    object =
+      %{
+        "id" => account_id,
+        "created" => @account_created,
+        "details_submitted" => false,
+        "requirements" => %{"disabled_reason" => nil}
+      }
+      |> Map.merge(stringify_keys(object_attrs))
+
+    %{
+      "id" => "evt_#{account_id}_#{emitted_at}",
+      "type" => "account.updated",
+      "created" => emitted_at,
+      "data" => %{"object" => object}
+    }
+  end
+
+  defp stringify_keys(attrs), do: Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
 end

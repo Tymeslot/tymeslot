@@ -132,7 +132,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
     end
   end
 
-  describe "apply_account_event/1" do
+  describe "apply_account_event/2" do
     test "updates capability flags from a Stripe account event" do
       user = insert(:user)
       {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
@@ -143,16 +143,15 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
           status: "active"
         })
 
-      stripe_event = %{
+      stripe_account = %{
         "id" => "acct_EVENT",
-        "created" => DateTime.to_unix(DateTime.utc_now()),
         "charges_enabled" => true,
         "payouts_enabled" => true,
         "details_submitted" => true,
         "requirements" => %{"disabled_reason" => nil}
       }
 
-      assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
 
       reloaded = ConnectAccountQueries.live_for_user(user.id)
       assert reloaded.charges_enabled == true
@@ -161,16 +160,15 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
     end
 
     test "ignores events for unknown accounts" do
-      stripe_event = %{
+      stripe_account = %{
         "id" => "acct_UNKNOWN",
-        "created" => DateTime.to_unix(DateTime.utc_now()),
         "charges_enabled" => true,
         "payouts_enabled" => true,
         "details_submitted" => true,
         "requirements" => %{"disabled_reason" => nil}
       }
 
-      assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
     end
 
     test "enqueues a restriction email when disabled_reason transitions from nil to a value" do
@@ -184,16 +182,15 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
           disabled_reason: nil
         })
 
-      stripe_event = %{
+      stripe_account = %{
         "id" => "acct_RESTRICT",
-        "created" => DateTime.to_unix(DateTime.utc_now()),
         "charges_enabled" => false,
         "payouts_enabled" => false,
         "details_submitted" => true,
         "requirements" => %{"disabled_reason" => "requirements.past_due"}
       }
 
-      assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
 
       reloaded = ConnectAccountQueries.live_for_user(user.id)
 
@@ -219,16 +216,15 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
           disabled_reason: "requirements.past_due"
         })
 
-      stripe_event = %{
+      stripe_account = %{
         "id" => "acct_SAME",
-        "created" => DateTime.to_unix(DateTime.utc_now()),
         "charges_enabled" => false,
         "payouts_enabled" => false,
         "details_submitted" => true,
         "requirements" => %{"disabled_reason" => "requirements.past_due"}
       }
 
-      assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
 
       refute_enqueued(worker: SendConnectAccountRestricted)
     end
@@ -244,16 +240,15 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
           disabled_reason: "requirements.past_due"
         })
 
-      stripe_event = %{
+      stripe_account = %{
         "id" => "acct_CHANGE",
-        "created" => DateTime.to_unix(DateTime.utc_now()),
         "charges_enabled" => false,
         "payouts_enabled" => false,
         "details_submitted" => true,
         "requirements" => %{"disabled_reason" => "rejected.fraud"}
       }
 
-      assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
 
       assert_enqueued(
         worker: SendConnectAccountRestricted,
@@ -275,16 +270,15 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
           disabled_reason: "requirements.past_due"
         })
 
-      stripe_event = %{
+      stripe_account = %{
         "id" => "acct_CLEAR",
-        "created" => DateTime.to_unix(DateTime.utc_now()),
         "charges_enabled" => true,
         "payouts_enabled" => true,
         "details_submitted" => true,
         "requirements" => %{"disabled_reason" => nil}
       }
 
-      assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
 
       refute_enqueued(worker: SendConnectAccountRestricted)
     end
@@ -305,16 +299,15 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       older = DateTime.add(now, -3600, :second)
 
-      stripe_event = %{
+      stripe_account = %{
         "id" => "acct_OOO",
-        "created" => DateTime.to_unix(older),
         "charges_enabled" => false,
         "payouts_enabled" => false,
         "details_submitted" => false,
         "requirements" => %{"disabled_reason" => nil}
       }
 
-      assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+      assert :ok = ConnectAccounts.apply_account_event(stripe_account, older)
 
       reloaded = ConnectAccountQueries.live_for_user(user.id)
       assert reloaded.charges_enabled == true
@@ -331,21 +324,20 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
           disabled_reason: nil
         })
 
-      # Stripe replays carry the same `created` timestamp.
-      timestamp = DateTime.to_unix(DateTime.utc_now(:second))
+      # Stripe replays carry the same envelope `created` timestamp.
+      event_at = DateTime.utc_now(:second)
 
-      event = %{
+      stripe_account = %{
         "id" => "acct_REPLAY",
-        "created" => timestamp,
         "charges_enabled" => false,
         "payouts_enabled" => false,
         "details_submitted" => true,
         "requirements" => %{"disabled_reason" => "requirements.past_due"}
       }
 
-      assert :ok = ConnectAccounts.apply_account_event(event)
+      assert :ok = ConnectAccounts.apply_account_event(stripe_account, event_at)
       # Second delivery with identical timestamp must be a no-op.
-      assert :ok = ConnectAccounts.apply_account_event(event)
+      assert :ok = ConnectAccounts.apply_account_event(stripe_account, event_at)
 
       assert [_single_job] =
                all_enqueued(
@@ -367,16 +359,15 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       ConnectAccounts.disconnect(user)
 
-      stripe_event = %{
+      stripe_account = %{
         "id" => "acct_DELETED",
-        "created" => DateTime.to_unix(DateTime.utc_now()),
         "charges_enabled" => false,
         "payouts_enabled" => false,
         "details_submitted" => false,
         "requirements" => %{"disabled_reason" => nil}
       }
 
-      assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
       # The deleted row must not have been updated.
       refute ConnectAccountQueries.live_for_user(user.id)
       refute_enqueued(worker: SendConnectAccountRestricted)

@@ -8,7 +8,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
   so the dashboard reflects the new capability flags without having to
   wait for the next `account.updated` webhook.
 
-  Delegates the heavy lifting to `ConnectAccounts.apply_account_event/1`,
+  Delegates the heavy lifting to `ConnectAccounts.apply_account_event/2`,
   which owns the timestamp ordering guard and the restriction-email
   side effect.
   """
@@ -32,7 +32,11 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
       when is_binary(stripe_account_id) do
     case StripeAdapter.retrieve_account(stripe_account_id) do
       {:ok, account} ->
-        ConnectAccounts.apply_account_event(ensure_created(account))
+        # A direct retrieve reflects Stripe's current truth as of now, so we
+        # stamp the snapshot with the current time for the ordering guard. An
+        # account.updated webhook emitted before this fetch but delivered later
+        # is then correctly treated as stale.
+        ConnectAccounts.apply_account_event(account, DateTime.utc_now(:second))
 
       {:error, reason} ->
         Logger.warning("ResyncConnectAccount could not retrieve Stripe account",
@@ -47,17 +51,5 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
   def perform(%Oban.Job{args: args}) do
     Logger.error("ResyncConnectAccount missing stripe_account_id", args: inspect(args))
     {:discard, "missing stripe_account_id"}
-  end
-
-  # `apply_account_event/1` requires a `"created"` field for ordering. The
-  # Stripe API exposes one on retrieved accounts, but synthesise a fallback
-  # so a stripped-down test or future API change cannot crash the worker.
-  defp ensure_created(%{"created" => created} = account) when is_integer(created), do: account
-
-  defp ensure_created(account) do
-    # Treat a missing `created` field as the oldest possible event (Unix
-    # epoch = 0) so any subsequent real Stripe event with a genuine timestamp
-    # is always considered newer and never rejected as stale.
-    Map.put(account, "created", 0)
   end
 end

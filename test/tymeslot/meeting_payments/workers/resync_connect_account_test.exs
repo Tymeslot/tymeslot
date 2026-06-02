@@ -71,34 +71,32 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccountTest do
                perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_BOOM"})
     end
 
-    test "account without created field gets epoch fallback so real events stay accepted" do
-      {user, _account} = insert_active_account("acct_NO_TS")
+    test "applies the snapshot even when the account's created matches the stored event time" do
+      # Regression: the worker must stamp the snapshot with the current time,
+      # not the account object's `created` (the constant account-creation time).
+      # Here the stored last_account_event_at equals that account-creation time;
+      # keying ordering off the object `created` would treat the resync as a
+      # stale `:eq` and silently drop the capability change.
+      account_created = 1_600_000_000
 
-      # First resync: Stripe returns account data with no `created` field.
-      # The worker must synthesise epoch 0, not wall-clock time.
-      expect(StripeAdapterMock, :retrieve_account, fn "acct_NO_TS" ->
+      user = insert(:user)
+      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      {:ok, _account} =
+        ConnectAccountQueries.update(account, %{
+          stripe_account_id: "acct_RESTAMP",
+          status: "active",
+          charges_enabled: false,
+          payouts_enabled: false,
+          details_submitted: false,
+          last_account_event_at: DateTime.from_unix!(account_created)
+        })
+
+      expect(StripeAdapterMock, :retrieve_account, fn "acct_RESTAMP" ->
         {:ok,
          %{
-           "id" => "acct_NO_TS",
-           # `created` deliberately absent
-           "charges_enabled" => false,
-           "payouts_enabled" => false,
-           "details_submitted" => false,
-           "requirements" => %{"disabled_reason" => nil}
-         }}
-      end)
-
-      assert :ok = perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_NO_TS"})
-
-      # A subsequent resync with a real (older-than-now) timestamp must still
-      # be applied — epoch 0 must not block it.
-      real_ts = System.os_time(:second) - 3600
-
-      expect(StripeAdapterMock, :retrieve_account, fn "acct_NO_TS" ->
-        {:ok,
-         %{
-           "id" => "acct_NO_TS",
-           "created" => real_ts,
+           "id" => "acct_RESTAMP",
+           "created" => account_created,
            "charges_enabled" => true,
            "payouts_enabled" => true,
            "details_submitted" => true,
@@ -106,10 +104,11 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccountTest do
          }}
       end)
 
-      assert :ok = perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_NO_TS"})
+      assert :ok = perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_RESTAMP"})
 
       reloaded = ConnectAccountQueries.live_for_user(user.id)
       assert reloaded.charges_enabled == true
+      assert reloaded.payouts_enabled == true
     end
   end
 end

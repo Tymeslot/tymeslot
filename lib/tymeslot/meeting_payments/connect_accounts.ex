@@ -164,29 +164,42 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
     end)
   end
 
-  @spec apply_account_event(map()) :: :ok
-  def apply_account_event(%{"id" => stripe_account_id, "created" => stripe_created} = event) do
+  @doc """
+  Reconciles a local `connect_accounts` row against a Stripe account snapshot.
+
+  `account` is the Stripe account object (`charges_enabled`, `payouts_enabled`,
+  `requirements.disabled_reason`, …). `event_at` is when that snapshot was
+  emitted, used purely for the out-of-order guard against `last_account_event_at`.
+
+  Callers must supply `event_at` from the right source. For `account.updated`
+  webhooks it is the **event envelope's** `created` (the event emission time) —
+  never the account object's own `created`, which is the account-creation
+  timestamp and is identical across every event, so keying ordering off it
+  would drop every update after the first. A direct account retrieve (resync)
+  has no envelope and stamps the current time, since it reflects Stripe's
+  current truth as of the fetch.
+  """
+  @spec apply_account_event(map(), DateTime.t()) :: :ok
+  def apply_account_event(%{"id" => stripe_account_id} = account, %DateTime{} = event_at) do
     case ConnectAccountQueries.by_stripe_account_id(stripe_account_id) do
       nil ->
         :ok
 
       %ConnectAccountSchema{} = local ->
-        event_dt = DateTime.from_unix!(stripe_created)
-
-        if stale_or_equal?(event_dt, local.last_account_event_at) do
+        if stale_or_equal?(event_at, local.last_account_event_at) do
           :ok
         else
           now = DateTime.utc_now(:second)
-          new_disabled_reason = get_in(event, ["requirements", "disabled_reason"])
+          new_disabled_reason = get_in(account, ["requirements", "disabled_reason"])
 
           {:ok, updated} =
             ConnectAccountQueries.update(local, %{
-              charges_enabled: event["charges_enabled"],
-              payouts_enabled: event["payouts_enabled"],
-              details_submitted: event["details_submitted"],
+              charges_enabled: account["charges_enabled"],
+              payouts_enabled: account["payouts_enabled"],
+              details_submitted: account["details_submitted"],
               disabled_reason: new_disabled_reason,
               last_synced_at: now,
-              last_account_event_at: event_dt
+              last_account_event_at: event_at
             })
 
           maybe_notify_restriction(updated, local.disabled_reason)

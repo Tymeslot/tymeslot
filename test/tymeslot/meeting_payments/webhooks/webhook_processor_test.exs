@@ -52,7 +52,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessorTest do
 
       expect(StripeAdapterMock, :construct_webhook_event, fn _payload, _sig, _secret ->
         # account.updated dispatches to AccountUpdated which delegates to
-        # ConnectAccounts.apply_account_event/1; with no row in the DB it
+        # ConnectAccounts.apply_account_event/2; with no row in the DB it
         # short-circuits to :ok without needing a sandbox connection.
         {:ok,
          %{
