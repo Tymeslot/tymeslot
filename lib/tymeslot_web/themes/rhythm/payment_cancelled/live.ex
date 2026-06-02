@@ -16,14 +16,14 @@ defmodule TymeslotWeb.Themes.Rhythm.PaymentCancelledLive do
   def mount(%{"meeting_id" => meeting_id}, _session, socket) do
     if LiveView.connected?(socket) do
       case PaymentReturn.lookup_for_cancel(meeting_id, "rhythm") do
-        {:ok, %{meeting: meeting}} ->
-          {:ok, assign(socket, loading: false, meeting: meeting)}
+        {:ok, %{meeting: meeting, rebook_path: rebook_path}} ->
+          {:ok, assign(socket, loading: false, meeting: meeting, rebook_path: rebook_path)}
 
         {:error, _reason} ->
           {:ok, redirect(socket, to: ~p"/")}
       end
     else
-      {:ok, assign(socket, loading: true, meeting: nil)}
+      {:ok, assign(socket, loading: true, meeting: nil, rebook_path: nil)}
     end
   end
 
@@ -43,6 +43,9 @@ defmodule TymeslotWeb.Themes.Rhythm.PaymentCancelledLive do
                   "Your booking is not confirmed. You can return and try again at any time."
                 )}
               </p>
+              <a :if={@rebook_path} href={@rebook_path} class="payment-page-link">
+                {gettext("Return to booking")}
+              </a>
             </div>
           </div>
         </div>

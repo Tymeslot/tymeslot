@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Phoenix.PubSub
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias TymeslotWeb.Themes.Core.Registry, as: ThemeRegistry
 
@@ -47,20 +48,44 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   end
 
   @doc """
-  Resolves a meeting + profile for the cancellation page (no session_id
+  Resolves a meeting + rebook path for the cancellation page (no session_id
   match — the attendee may arrive here from any state, including
   before checkout completed).
+
+  `rebook_path` points back to the meeting type's booking page so the
+  attendee can try again, falling back to the host's overview page (or `/`
+  when the host has no public username).
   """
   @spec lookup_for_cancel(meeting_id :: String.t(), theme_slug :: String.t()) ::
-          {:ok, %{meeting: Tymeslot.Meetings.MeetingSchema.t()}}
+          {:ok, %{meeting: Tymeslot.Meetings.MeetingSchema.t(), rebook_path: String.t()}}
           | {:error, atom()}
   def lookup_for_cancel(meeting_id, theme_slug) do
     with {:ok, meeting} <- get_meeting(meeting_id),
          {:ok, profile} <- get_profile(meeting),
          :ok <- validate_theme(profile, theme_slug) do
-      {:ok, %{meeting: meeting}}
+      {:ok, %{meeting: meeting, rebook_path: rebook_path(profile, meeting)}}
     end
   end
+
+  defp rebook_path(%{username: username}, meeting)
+       when is_binary(username) and username != "" do
+    case meeting_type_slug(meeting) do
+      nil -> "/" <> username
+      slug -> "/" <> username <> "/" <> slug
+    end
+  end
+
+  defp rebook_path(_profile, _meeting), do: "/"
+
+  defp meeting_type_slug(%{meeting_type_id: id, organizer_user_id: user_id})
+       when is_integer(id) and is_integer(user_id) do
+    case MeetingTypes.get_meeting_type(id, user_id) do
+      %{} = meeting_type -> MeetingTypes.to_slug(meeting_type)
+      _missing -> nil
+    end
+  end
+
+  defp meeting_type_slug(_meeting), do: nil
 
   @doc """
   Stable PubSub topic for payment status broadcasts on a given meeting.

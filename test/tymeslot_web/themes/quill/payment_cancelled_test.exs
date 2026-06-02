@@ -34,6 +34,26 @@ defmodule TymeslotWeb.Themes.Quill.PaymentCancelledTest do
     assert html =~ "Payment cancelled"
   end
 
+  test "offers a rebook link to the meeting type's booking page", %{conn: conn, user: user} do
+    {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
+    {:ok, _profile} = Profiles.update_profile(profile, %{username: "hosttester"})
+
+    meeting_type = insert(:meeting_type, user: user, name: "Paid Consultation")
+
+    meeting =
+      insert(:meeting,
+        organizer_user_id: user.id,
+        meeting_type_id: meeting_type.id,
+        status: "awaiting_payment"
+      )
+
+    {:ok, _view, html} =
+      live(conn, ~p"/themes/quill/payment-cancelled/#{meeting.id}")
+
+    assert html =~ ~s(href="/hosttester/paid-consultation")
+    assert html =~ "Return to booking"
+  end
+
   test "redirects to / when meeting belongs to a different theme", %{conn: conn, user: user} do
     {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
     {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: "2"})

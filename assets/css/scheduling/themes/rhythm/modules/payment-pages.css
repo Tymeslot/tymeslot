@@ -57,3 +57,21 @@
   color: rgba(255, 255, 255, 0.9);
   margin: 0;
 }
+
+/* Return-to-booking link shown after a cancelled checkout so the attendee
+   has a clear path back to the booking page. Styled as a primary action. */
+.payment-page-link {
+  display: inline-block;
+  margin-top: var(--space-lg);
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--theme-primary);
+  color: white;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+  transition: background var(--transition-smooth);
+}
+
+.payment-page-link:hover {
+  background: var(--theme-primary-hover);
+}
