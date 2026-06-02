@@ -104,24 +104,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
       process_with_handler(handler, event, object)
     else
       {:error, :no_handler} ->
-        # Log details for unhandled events
-        Logger.info("Received unhandled Stripe event",
-          event_type: event_type,
-          object_type: get_field(object, :object),
-          object_keys: Map.keys(object),
-          metadata: get_field(object, :metadata) || %{}
-        )
-
-        # Record unhandled event in database for monitoring
-        record_unhandled_event(event_type, event, object)
-
-        # Alert admin about unhandled event
-        AdminAlerts.report(:unhandled_webhook,
-          summary: "Unhandled Stripe webhook event type",
-          context: sanitize_alert_payload(event, object)
-        )
-
-        {:ok, :unhandled_event}
+        handle_no_handler(event_type, event, object)
 
       {:error, reason, message} ->
         # Validation failed
@@ -135,6 +118,38 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
 
         {:error, %WebhookError.ValidationError{reason: reason, message: message}, nil}
     end
+  end
+
+  # Known-benign event types we receive but never act on are acknowledged
+  # silently. Everything else is recorded and alerted so genuinely unexpected
+  # events surface to an operator.
+  defp handle_no_handler(event_type, event, object) do
+    if is_binary(event_type) and WebhookRegistry.ignored?(event_type) do
+      Logger.debug("Ignoring known benign Stripe event", event_type: event_type)
+      {:ok, :ignored_event}
+    else
+      alert_unhandled_event(event_type, event, object)
+    end
+  end
+
+  defp alert_unhandled_event(event_type, event, object) do
+    Logger.info("Received unhandled Stripe event",
+      event_type: event_type,
+      object_type: get_field(object, :object),
+      object_keys: Map.keys(object),
+      metadata: get_field(object, :metadata) || %{}
+    )
+
+    # Record unhandled event in database for monitoring
+    record_unhandled_event(event_type, event, object)
+
+    # Alert admin about unhandled event
+    AdminAlerts.report(:unhandled_webhook,
+      summary: "Unhandled Stripe webhook event type",
+      context: sanitize_alert_payload(event, object)
+    )
+
+    {:ok, :unhandled_event}
   end
 
   defp process_with_handler(handler, event, object) do

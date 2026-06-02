@@ -67,6 +67,33 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessorTest do
       refute Map.has_key?(payload, :event)
       refute Map.has_key?(payload, :object)
     end
+
+    test "acknowledges benign application_fee events without alerting" do
+      original_alerts = Application.get_env(:tymeslot, :admin_alerts_impl)
+      original_pid = Application.get_env(:tymeslot, :admin_alerts_test_pid)
+
+      Application.put_env(:tymeslot, :admin_alerts_impl, TestAdminAlerts)
+      Application.put_env(:tymeslot, :admin_alerts_test_pid, self())
+
+      on_exit(fn ->
+        Application.put_env(:tymeslot, :admin_alerts_impl, original_alerts)
+        Application.put_env(:tymeslot, :admin_alerts_test_pid, original_pid)
+      end)
+
+      event = %{
+        "id" => "evt_fee_1",
+        "type" => "application_fee.created",
+        "created" => 1_700_000_000,
+        "livemode" => false,
+        "data" => %{
+          "object" => %{"id" => "fee_123", "object" => "application_fee"}
+        }
+      }
+
+      assert {:ok, :ignored_event} = WebhookProcessor.process_event(event)
+
+      refute_receive {:send_alert, :unhandled_webhook, _payload}
+    end
   end
 
   describe "process_event/1 retry behavior" do
