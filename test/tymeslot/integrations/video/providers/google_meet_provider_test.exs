@@ -3,14 +3,10 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
   @moduletag :integrations
 
   import Mox
-  import Tymeslot.Factory
 
   alias Tymeslot.GoogleOAuthHelperMock
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.Providers.GoogleMeetProvider
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
-  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
-  alias Tymeslot.Repo
 
   setup :verify_on_exit!
 

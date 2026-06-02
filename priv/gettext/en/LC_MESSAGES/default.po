@@ -1665,7 +1665,7 @@ msgstr "Step %{n} of %{total}"
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:85
 #, elixir-autogen, elixir-format
 msgid "%{day} %{month} %{year} at %{time} %{timezone}"
-msgstr ""
+msgstr "%{day} %{month} %{year} at %{time} %{timezone}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex:85
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex:85
@@ -1676,17 +1676,17 @@ msgstr "Continue"
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:206
 #, elixir-autogen, elixir-format
 msgid "Custom answers"
-msgstr ""
+msgstr "Custom answers"
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/note.ex:34
 #, elixir-autogen, elixir-format
 msgid "I acknowledge the above"
-msgstr ""
+msgstr "I acknowledge the above"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:104
 #, elixir-autogen, elixir-format
 msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment — without them the toggle stays locked."
-msgstr ""
+msgstr "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment — without them the toggle stays locked."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:24
 #, elixir-autogen, elixir-format, fuzzy
@@ -1697,48 +1697,48 @@ msgstr "Meeting Details"
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/yes_no.ex:68
 #, elixir-autogen, elixir-format
 msgid "No"
-msgstr ""
+msgstr "No"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:160
 #, elixir-autogen, elixir-format
 msgid "Payments"
-msgstr ""
+msgstr "Payments"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex:40
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex:37
 #, elixir-autogen, elixir-format
 msgid "Question %{n} of %{m}"
-msgstr ""
+msgstr "Question %{n} of %{m}"
 
 #: lib/tymeslot_web/themes/quill/payment_cancelled/live.ex:49
 #: lib/tymeslot_web/themes/rhythm/payment_cancelled/live.ex:47
 #, elixir-autogen, elixir-format
 msgid "Return to booking"
-msgstr ""
+msgstr "Return to booking"
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/single_select.ex:50
 #, elixir-autogen, elixir-format
 msgid "Select…"
-msgstr ""
+msgstr "Select…"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:189
 #, elixir-autogen, elixir-format
 msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
-msgstr ""
+msgstr "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
 
 #: lib/tymeslot/custom_fields/answer_renderer.ex:14
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/yes_no.ex:44
 #, elixir-autogen, elixir-format
 msgid "Yes"
-msgstr ""
+msgstr "Yes"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex:123
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex:125
 #, elixir-autogen, elixir-format
 msgid "Your answers"
-msgstr ""
+msgstr "Your answers"
 
 #: lib/tymeslot/custom_fields/answer_renderer.ex:31
 #, elixir-autogen, elixir-format
 msgid "✓ Acknowledged (%{at})"
-msgstr ""
+msgstr "✓ Acknowledged (%{at})"

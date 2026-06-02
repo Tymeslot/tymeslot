@@ -14,7 +14,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccountTest do
   setup :verify_on_exit!
   setup :set_mox_from_context
 
-  defp insert_active_account(stripe_account_id \\ "acct_RESYNC") do
+  defp insert_active_account(stripe_account_id) do
     user = insert(:user)
     {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
 
