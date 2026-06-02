@@ -1047,7 +1047,7 @@ msgid "Late Night"
 msgstr "Nuit tardive"
 
 #: lib/tymeslot_web/components/step_navigation.ex:48
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Confirmation"
 msgstr "Confirmation"
 
@@ -1090,9 +1090,9 @@ msgstr "%{current} / %{total}"
 
 #: lib/tymeslot_web/components/announcement_modal_component.ex:72
 #: lib/tymeslot_web/components/tour_overlay.ex:59
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Back"
-msgstr "Retour"
+msgstr ""
 
 #: lib/tymeslot_web/components/announcement_modal_component.ex:95
 #, elixir-autogen, elixir-format
@@ -1102,9 +1102,9 @@ msgstr "Compris"
 #: lib/tymeslot_web/components/announcement_modal_component.ex:102
 #: lib/tymeslot_web/components/announcement_modal_component.ex:106
 #: lib/tymeslot_web/components/tour_overlay.ex:68
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Next"
-msgstr "Suivant"
+msgstr ""
 
 #: lib/tymeslot_web/live/admin_live.ex:128
 #, elixir-autogen, elixir-format
@@ -1199,9 +1199,9 @@ msgid "Booking slug"
 msgstr "Slug de réservation"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:68
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Cancel"
-msgstr "Annulation en cours..."
+msgstr ""
 
 #: lib/tymeslot_web/live/admin_live.ex:292
 #, elixir-autogen, elixir-format
@@ -1294,9 +1294,9 @@ msgid "Display name"
 msgstr "Nom affiché"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:33
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Email"
-msgstr "E-mail"
+msgstr ""
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:97
 #, elixir-autogen, elixir-format
@@ -1450,9 +1450,9 @@ msgstr "Enregistrer"
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:134
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:163
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:187
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Set %{name}"
-msgstr "avec %{name}"
+msgstr ""
 
 #: lib/tymeslot_web/live/admin_live/components/layout.ex:62
 #, elixir-autogen, elixir-format
@@ -1550,9 +1550,9 @@ msgid "You will lose access to admin settings and user management, and be return
 msgstr "Vous perdrez l’accès aux paramètres d’administration et à la gestion des utilisateurs, et serez redirigé vers votre Dashboard."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:74
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You're set"
-msgstr "Tout est prêt !"
+msgstr ""
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:130
 #, elixir-autogen, elixir-format

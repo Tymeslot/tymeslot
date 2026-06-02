@@ -1466,9 +1466,9 @@ msgid "Hi there,"
 msgstr "Ciao,"
 
 #: dev_support/email_testing/helpers.ex:80
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "I'll send you a reminder 24 hours before our appointment."
-msgstr "Ti invierò un promemoria %{label} prima del nostro appuntamento."
+msgstr ""
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:28
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:85
@@ -1497,14 +1497,14 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: dev_support/email_testing/helpers.ex:77
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "in %{time_until}"
-msgstr "INIZIA TRA %{time_until}"
+msgstr ""
 
 #: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:132
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "today"
-msgstr "Lunedì"
+msgstr ""
 
 #: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:129
 #, elixir-autogen, elixir-format
