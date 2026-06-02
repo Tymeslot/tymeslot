@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingLive do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingPayments
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PaymentReturn
 
   @impl Phoenix.LiveView
@@ -40,7 +41,11 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingLive do
                 </h1>
                 <p class="payment-page-body">
                   {gettext("Thank you, your booking is confirmed for %{date}.",
-                    date: format_dt(@meeting.start_time)
+                    date:
+                      LocalizationHelpers.format_meeting_datetime(
+                        @meeting.start_time,
+                        @meeting.attendee_timezone
+                      )
                   )}
                 </p>
               <% else %>
@@ -58,6 +63,4 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingLive do
     </div>
     """
   end
-
-  defp format_dt(dt), do: Calendar.strftime(dt, "%-d %B %Y at %H:%M")
 end

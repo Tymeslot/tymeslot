@@ -74,6 +74,37 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingTest do
     assert render(view) =~ "Booking confirmed"
   end
 
+  test "confirmation shows the time in the attendee's timezone", %{conn: conn, user: user} do
+    # 14:00 UTC in June is 10:00 in New York (EDT, UTC-4).
+    meeting =
+      insert(:meeting,
+        organizer_user_id: user.id,
+        status: "awaiting_payment",
+        start_time: ~U[2026-06-15 14:00:00Z],
+        attendee_timezone: "America/New_York"
+      )
+
+    bp =
+      insert(:booking_payment,
+        meeting: meeting,
+        host_user_id: user.id,
+        status: "pending",
+        stripe_checkout_session_id: "cs_TEST"
+      )
+
+    {:ok, view, _html} =
+      live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    {:ok, _bp} =
+      BookingPaymentQueries.update(bp, %{status: "paid", paid_at: DateTime.utc_now(:second)})
+
+    PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting.id}", :paid)
+
+    html = render(view)
+    assert html =~ "10:00"
+    refute html =~ "14:00"
+  end
+
   test "rejects mismatched session_id", %{conn: conn, user: user} do
     meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
 
