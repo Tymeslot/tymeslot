@@ -166,13 +166,15 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdatedTest do
   # is the fixed account-creation time.
   defp account_event(account_id, emitted_at, object_attrs) do
     object =
-      %{
-        "id" => account_id,
-        "created" => @account_created,
-        "details_submitted" => false,
-        "requirements" => %{"disabled_reason" => nil}
-      }
-      |> Map.merge(stringify_keys(object_attrs))
+      Map.merge(
+        %{
+          "id" => account_id,
+          "created" => @account_created,
+          "details_submitted" => false,
+          "requirements" => %{"disabled_reason" => nil}
+        },
+        stringify_keys(object_attrs)
+      )
 
     %{
       "id" => "evt_#{account_id}_#{emitted_at}",
