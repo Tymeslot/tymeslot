@@ -413,5 +413,29 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     test "falls back to upper-cased ISO code for unknown currencies" do
       assert Formatting.format_currency(1234, "xyz") == "XYZ 12.34"
     end
+
+    test "0 cents formats as zero with two decimal places" do
+      assert Formatting.format_currency(0, "eur") == "€0.00"
+    end
+
+    test "1 cent formats correctly without truncating the leading zero in minor units" do
+      assert Formatting.format_currency(1, "eur") == "€0.01"
+    end
+
+    test "99 cents formats correctly" do
+      assert Formatting.format_currency(99, "eur") == "€0.99"
+    end
+
+    test "100 cents formats as 1.00" do
+      assert Formatting.format_currency(100, "eur") == "€1.00"
+    end
+
+    test "9_999_999 cents formats without floating-point rounding errors" do
+      assert Formatting.format_currency(9_999_999, "eur") == "€99999.99"
+    end
+
+    test "-50 cents (partial refund display) formats with leading sign" do
+      assert Formatting.format_currency(-50, "eur") == "€-0.50"
+    end
   end
 end

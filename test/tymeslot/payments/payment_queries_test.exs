@@ -2,8 +2,11 @@ defmodule Tymeslot.Payments.PaymentQueriesTest do
   use Tymeslot.DataCase, async: true
   @moduletag :payments
 
+  alias Ecto.Changeset
   alias Tymeslot.Payments.PaymentQueries
+  alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.PaymentTestHelpers
+  alias Tymeslot.Repo
   alias Tymeslot.TestFixtures
 
   setup do
@@ -198,6 +201,46 @@ defmodule Tymeslot.Payments.PaymentQueriesTest do
 
       assert {:error, :transaction_not_found} =
                PaymentQueries.coordinate_successful_payment("nonexistent", tax_info, 0)
+    end
+  end
+
+  describe "anonymise_for_host/2" do
+    test "nilifies user_id, stamps host_deleted_at, retains host PII", %{user: user} do
+      transaction = PaymentTestHelpers.create_test_transaction(%{user_id: user.id})
+
+      # The migration backfills these columns from the users table; simulate
+      # that snapshot here so we can assert it survives anonymisation.
+      {:ok, transaction} =
+        transaction
+        |> Changeset.change(%{host_email: "host@example.com", host_name: "Host"})
+        |> Repo.update()
+
+      now = DateTime.utc_now(:second)
+
+      assert {1, nil} = PaymentQueries.anonymise_for_host(user.id, now)
+
+      reloaded = Repo.get!(PaymentTransactionSchema, transaction.id)
+      assert reloaded.user_id == nil
+      assert reloaded.host_deleted_at == now
+      assert reloaded.host_email == "host@example.com"
+      assert reloaded.host_name == "Host"
+    end
+
+    test "skips already-anonymised rows", %{user: user} do
+      transaction = PaymentTestHelpers.create_test_transaction(%{user_id: user.id})
+      earlier = DateTime.add(DateTime.utc_now(:second), -3600, :second)
+
+      {:ok, _updated} =
+        transaction
+        |> Changeset.change(%{host_deleted_at: earlier})
+        |> Repo.update()
+
+      now = DateTime.utc_now(:second)
+
+      assert {0, nil} = PaymentQueries.anonymise_for_host(user.id, now)
+
+      reloaded = Repo.get!(PaymentTransactionSchema, transaction.id)
+      assert reloaded.host_deleted_at == earlier
     end
   end
 end

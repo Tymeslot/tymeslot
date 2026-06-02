@@ -6,6 +6,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
 
   import Phoenix.Component, only: [assign: 3]
 
+  require Logger
+
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
@@ -200,8 +202,25 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
     socket
   end
 
+  def handle_feature_access_error(socket, reason)
+      when reason in [:pro_required, :feature_disabled] do
+    Flash.error("This automation feature is available on the Pro plan.")
+    socket
+  end
+
+  def handle_feature_access_error(socket, :stripe_required) do
+    Flash.error("Connect a Stripe account to use this automation.")
+    socket
+  end
+
   def handle_feature_access_error(socket, :feature_access_checker_failed) do
     Flash.error("Unable to verify subscription status. Please try again.")
+    socket
+  end
+
+  def handle_feature_access_error(socket, other) do
+    Logger.warning("handle_feature_access_error: unhandled reason", reason: inspect(other))
+    Flash.error("Unable to perform this action. Please try again.")
     socket
   end
 

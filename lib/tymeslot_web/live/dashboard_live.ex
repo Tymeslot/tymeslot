@@ -151,6 +151,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
   alias TymeslotWeb.Dashboard.ComponentDispatch
   alias TymeslotWeb.Dashboard.MeetingFormMessages
+  alias TymeslotWeb.Dashboard.PaymentsHandlers
   alias TymeslotWeb.Dashboard.ScheduleSettingsComponent
   alias TymeslotWeb.Dashboard.ServiceSettingsComponent
   alias TymeslotWeb.Dashboard.TourEventHandlers
@@ -190,6 +191,8 @@ defmodule TymeslotWeb.DashboardLive do
       |> assign(:params, params)
       |> TourEventHandlers.assign_tour_state(action)
 
+    socket = if action == :payments, do: PaymentsHandlers.handle(params, socket), else: socket
+
     socket = if connected?(socket), do: load_dashboard_data(socket), else: socket
 
     {:noreply, socket}
@@ -220,6 +223,7 @@ defmodule TymeslotWeb.DashboardLive do
       current_action={@live_action}
       integration_status={@integration_status}
       automations_allowed={@automations_allowed}
+      payments_allowed={@payments_allowed}
       full_width={@live_action == :calendar}
       sidebar_extensions={@sidebar_extensions}
       unseen_announcements={@unseen_announcements}

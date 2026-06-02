@@ -214,8 +214,12 @@ defmodule Tymeslot.Emails.Shared.Formatting do
     if zero_decimal_currency?(normalised) do
       "#{symbol}#{cents}"
     else
-      amount = cents / 100
-      "#{symbol}#{:erlang.float_to_binary(amount / 1, decimals: 2)}"
+      sign = if cents < 0, do: "-", else: ""
+      abs_cents = abs(cents)
+      major = div(abs_cents, 100)
+      minor = rem(abs_cents, 100)
+      formatted = "#{sign}#{major}.#{String.pad_leading(Integer.to_string(minor), 2, "0")}"
+      "#{symbol}#{formatted}"
     end
   end
 

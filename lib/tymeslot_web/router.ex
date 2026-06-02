@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Router do
   scope "/webhooks", TymeslotWeb do
     pipe_through :api
 
+    post "/stripe/connect", StripeConnectWebhookController, :handle
     post "/google-calendar", GoogleCalendarWebhookController, :webhook
     post "/outlook-calendar", OutlookCalendarWebhookController, :webhook
     post "/outlook-lifecycle", OutlookLifecycleController, :webhook
@@ -230,7 +231,10 @@ defmodule TymeslotWeb.Router do
       live "/dashboard/theme/customize/:theme_id", DashboardLive, :theme_customization
       live "/dashboard/meetings", DashboardLive, :meetings
       live "/dashboard/embed", DashboardLive, :embed
+      live "/dashboard/payments", DashboardLive, :payments
     end
+
+    post "/dashboard/payments/connect", Dashboard.PaymentsController, :connect
   end
 
   # =============================================================================
@@ -290,6 +294,29 @@ defmodule TymeslotWeb.Router do
            :cancel_confirmed
 
       live "/:username/meeting/:meeting_uid/reschedule", Themes.Core.Dispatcher, :reschedule
+    end
+  end
+
+  # Theme-aware payment return pages (Stripe Checkout success/cancel)
+  scope "/", TymeslotWeb do
+    pipe_through :theme_browser
+
+    live_session :payment_return,
+      on_mount: [
+        TymeslotWeb.Hooks.LocaleHook,
+        TymeslotWeb.Hooks.ClientInfoHook
+      ] do
+      live "/themes/quill/payment-processing/:meeting_id",
+           Themes.Quill.PaymentProcessingLive
+
+      live "/themes/quill/payment-cancelled/:meeting_id",
+           Themes.Quill.PaymentCancelledLive
+
+      live "/themes/rhythm/payment-processing/:meeting_id",
+           Themes.Rhythm.PaymentProcessingLive
+
+      live "/themes/rhythm/payment-cancelled/:meeting_id",
+           Themes.Rhythm.PaymentCancelledLive
     end
   end
 

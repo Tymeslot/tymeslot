@@ -20,6 +20,17 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
   Handles booking submission from the LiveView.
   This centralizes the validation and submission logic by delegating to
   the shared BookingSubmissionHandlerComponent.
+
+  When the meeting type requires payment, the handler returns a socket that
+  is already configured to redirect to the Stripe Checkout URL — we forward
+  that socket without transitioning to the confirmation step so the
+  attendee leaves the booking flow for the hosted payment page.
+
+  When the booker is embedded inside an iframe (Stripe Checkout cannot
+  render in an iframe), the handler instead instructs the browser to open
+  Checkout in a new tab and we transition to the local `:awaiting_payment`
+  view; the LiveView subscribes to `meeting_payment:<id>` and flips back
+  to `:confirmation` on `:paid` or `:booking` on `:expired`.
   """
   @spec submit_booking(Phoenix.LiveView.Socket.t(), map(), transition_fun()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -32,6 +43,12 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
       case BookingSubmissionHandlerComponent.submit_booking(socket, booking_params) do
         {:ok, socket} ->
           {:noreply, transition_fun.(socket, :confirmation, %{})}
+
+        {:redirect, socket} ->
+          {:noreply, socket}
+
+        {:awaiting_payment, socket} ->
+          {:noreply, transition_fun.(socket, :awaiting_payment, %{})}
 
         {:honeypot, socket} ->
           {:noreply,

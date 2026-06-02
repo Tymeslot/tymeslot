@@ -72,6 +72,30 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   @doc """
+  Formats a meeting start time for the payment return pages — localized and
+  shifted into the attendee's timezone, so the confirmation shows the time the
+  attendee will actually keep rather than raw UTC. Falls back to UTC if the
+  timezone is missing or unknown, and to an empty string for an unusable value.
+  """
+  @spec format_meeting_datetime(DateTime.t() | NaiveDateTime.t() | nil, String.t() | nil) ::
+          String.t()
+  def format_meeting_datetime(start_time, timezone) do
+    case to_attendee_datetime(start_time, timezone) do
+      {:ok, dt} ->
+        gettext("%{day} %{month} %{year} at %{time} %{timezone}",
+          day: dt.day,
+          month: get_month_name(dt.month),
+          year: dt.year,
+          time: format_time_by_locale(dt),
+          timezone: dt.zone_abbr
+        )
+
+      :error ->
+        ""
+    end
+  end
+
+  @doc """
   Formats date string or struct for display.
   """
   @spec format_date(String.t() | Date.t() | DateTime.t() | nil) :: String.t()
@@ -262,4 +286,24 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   defp parse_date(date) when is_binary(date), do: Date.from_iso8601(date)
+
+  defp to_attendee_datetime(%DateTime{} = dt, timezone), do: {:ok, shift_or_keep(dt, timezone)}
+
+  defp to_attendee_datetime(%NaiveDateTime{} = naive, timezone) do
+    case DateTime.from_naive(naive, "Etc/UTC") do
+      {:ok, dt} -> {:ok, shift_or_keep(dt, timezone)}
+      _error -> :error
+    end
+  end
+
+  defp to_attendee_datetime(_other, _timezone), do: :error
+
+  defp shift_or_keep(dt, timezone) when is_binary(timezone) and timezone != "" do
+    case DateTime.shift_zone(dt, timezone) do
+      {:ok, shifted} -> shifted
+      _error -> dt
+    end
+  end
+
+  defp shift_or_keep(dt, _timezone), do: dt
 end

@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
   alias TymeslotWeb.Dashboard.CalendarGridComponent
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
   alias TymeslotWeb.Dashboard.DashboardOverviewComponent
+  alias TymeslotWeb.Dashboard.PaymentsSettingsComponent
   alias TymeslotWeb.Dashboard.ProfileSettingsComponent
   alias TymeslotWeb.Dashboard.ScheduleSettingsComponent
   alias TymeslotWeb.Dashboard.ServiceSettingsComponent
@@ -49,6 +50,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
   def component_for_action(:theme_customization, _components), do: ThemeSettingsComponent
   def component_for_action(:meetings, _components), do: BookingsManagementComponent
   def component_for_action(:embed, _components), do: EmbedSettingsComponent
+  def component_for_action(:payments, _components), do: PaymentsSettingsComponent
 
   def component_for_action(action, components) do
     Map.get(components || %{}, action, DashboardOverviewComponent)

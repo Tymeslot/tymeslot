@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Security.RateLimiter
 
@@ -31,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> assign(:loading, true)
      |> assign(:is_empty, true)
      |> assign(:cancelling_meeting, nil)
+     |> assign(:cancel_booking_payment, nil)
      |> assign(:sending_reschedule, nil)
      |> assign(:per_page, 20)
      |> assign(:next_cursor, nil)
@@ -112,7 +114,12 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     case fetch_meeting_for_modal(socket, params, policy_fun: &Policy.can_cancel_meeting?/1) do
       {:ok, meeting} ->
         emit_cancel_open_telemetry(socket.assigns.current_user.id, meeting.id)
-        {:noreply, ModalHook.show_modal(socket, :cancel_meeting, meeting)}
+        booking_payment = MeetingPayments.payment_for_meeting(meeting.id)
+
+        {:noreply,
+         socket
+         |> assign(:cancel_booking_payment, booking_payment)
+         |> ModalHook.show_modal(:cancel_meeting, meeting)}
 
       {:error, :validation_failed, reason} ->
         emit_cancel_error_telemetry(socket.assigns.current_user.id, reason, :validation_failed)
@@ -129,10 +136,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   def handle_event("hide_cancel_modal", _params, socket) do
-    {:noreply, ModalHook.hide_modal(socket, :cancel_meeting)}
+    {:noreply,
+     socket
+     |> assign(:cancel_booking_payment, nil)
+     |> ModalHook.hide_modal(:cancel_meeting)}
   end
 
-  def handle_event("confirm_cancel_meeting", _params, socket) do
+  def handle_event("confirm_cancel_meeting", params, socket) do
     user_id = socket.assigns.current_user.id
 
     case RateLimiter.check_dashboard_cancel_rate_limit(user_id) do
@@ -141,7 +151,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         {:noreply, socket}
 
       :ok ->
-        do_cancel_meeting(socket)
+        do_cancel_meeting(socket, params)
     end
   end
 
@@ -296,6 +306,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         id="cancel-meeting-modal"
         show={@show_cancel_meeting_modal || false}
         meeting={@cancel_meeting_modal_data}
+        booking_payment={@cancel_booking_payment}
         timezone={
           if @cancel_meeting_modal_data,
             do: Helpers.get_meeting_timezone(@cancel_meeting_modal_data, @profile),
@@ -303,7 +314,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         }
         cancelling={@cancelling_meeting != nil}
         on_cancel={JS.push("hide_cancel_modal", target: @myself)}
-        on_confirm={JS.push("confirm_cancel_meeting", target: @myself)}
+        confirm_event="confirm_cancel_meeting"
+        target={@myself}
       />
 
       <RescheduleRequestModal.reschedule_request_modal
@@ -328,23 +340,95 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   # Private functions
 
-  defp do_cancel_meeting(socket) do
+  defp do_cancel_meeting(socket, params) do
     meeting = socket.assigns.cancel_meeting_modal_data
-    socket = assign(socket, :cancelling_meeting, meeting.id)
+    booking_payment = socket.assigns.cancel_booking_payment
 
-    case Meetings.cancel_meeting(meeting) do
-      {:ok, _cancelled_meeting} ->
+    case prepare_refund_action(booking_payment, params) do
+      {:ok, refund_action} ->
+        socket = assign(socket, :cancelling_meeting, meeting.id)
+        execute_cancel_with_refund(socket, meeting, booking_payment, refund_action)
+
+      {:error, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+    end
+  end
+
+  defp prepare_refund_action(nil, _params), do: {:ok, :none}
+
+  defp prepare_refund_action(_payment, %{"cancel_refund_choice" => "none"} = params) do
+    if params["cancel_refund_no_refund_ack"] == "true" do
+      {:ok, :none}
+    else
+      {:error, "Tick the acknowledgement to cancel without refunding the attendee."}
+    end
+  end
+
+  defp prepare_refund_action(payment, %{"cancel_refund_choice" => "partial"} = params) do
+    raw = params["cancel_refund_amount"]
+
+    case MeetingPayments.parse_refund_amount(payment, %{
+           "refund_type" => "partial",
+           "amount" => raw
+         }) do
+      {:ok, cents} ->
+        {:ok, {:refund, cents}}
+
+      {:error, :exceeds_remaining} ->
+        {:error, "Refund amount exceeds the remaining refundable balance."}
+
+      {:error, _reason} ->
+        {:error, "Enter a valid partial refund amount."}
+    end
+  end
+
+  defp prepare_refund_action(payment, _params) do
+    case MeetingPayments.refundable_remaining_cents(payment) do
+      remaining when remaining > 0 -> {:ok, {:refund, remaining}}
+      _zero -> {:ok, :none}
+    end
+  end
+
+  defp execute_cancel_with_refund(socket, meeting, booking_payment, refund_action) do
+    with {:ok, _cancelled_meeting} <- Meetings.cancel_meeting(meeting),
+         :ok <- maybe_issue_refund(booking_payment, refund_action) do
+      :telemetry.execute(
+        [:tymeslot, :dashboard, :meetings, :cancel, :confirm],
+        %{},
+        %{user_id: socket.assigns.current_user.id, meeting_id: meeting.id, result: :ok}
+      )
+
+      Flash.info(cancel_success_flash(refund_action))
+
+      {:noreply,
+       socket
+       |> assign(:cancelling_meeting, nil)
+       |> assign(:cancel_booking_payment, nil)
+       |> load_meetings()
+       |> ModalHook.hide_modal(:cancel_meeting)}
+    else
+      {:error, {:refund_failed, reason}} ->
         :telemetry.execute(
           [:tymeslot, :dashboard, :meetings, :cancel, :confirm],
           %{},
-          %{user_id: socket.assigns.current_user.id, meeting_id: meeting.id, result: :ok}
+          %{
+            user_id: socket.assigns.current_user.id,
+            meeting_id: meeting.id,
+            result: :error,
+            reason: inspect(reason)
+          }
         )
 
-        Flash.info("Meeting cancelled successfully")
+        Flash.error(
+          "Meeting cancelled but refund could not be issued. " <>
+            "Please issue the refund manually from your Stripe dashboard."
+        )
 
         {:noreply,
          socket
          |> assign(:cancelling_meeting, nil)
+         |> assign(:cancel_booking_payment, nil)
          |> load_meetings()
          |> ModalHook.hide_modal(:cancel_meeting)}
 
@@ -360,10 +444,31 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           }
         )
 
-        Flash.error("Failed to cancel meeting: #{inspect(reason)}")
+        Logger.error("cancel_meeting_failed",
+          reason: inspect(reason),
+          meeting_id: meeting.id
+        )
+
+        Flash.error(cancel_error_flash(reason))
         {:noreply, assign(socket, :cancelling_meeting, nil)}
     end
   end
+
+  defp maybe_issue_refund(_payment, :none), do: :ok
+
+  defp maybe_issue_refund(payment, {:refund, amount_cents}) do
+    case MeetingPayments.issue_refund(payment, amount_cents) do
+      {:ok, _payment} -> :ok
+      {:error, reason} -> {:error, {:refund_failed, reason}}
+    end
+  end
+
+  defp cancel_success_flash({:refund, _cents}),
+    do: "Meeting cancelled and refund issued."
+
+  defp cancel_success_flash(:none), do: "Meeting cancelled successfully"
+
+  defp cancel_error_flash(_reason), do: "Failed to cancel meeting. Please try again."
 
   defp do_send_reschedule_request(socket) do
     meeting = socket.assigns.reschedule_request_modal_data
@@ -397,7 +502,12 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           }
         )
 
-        Flash.error("Failed to send reschedule request: #{inspect(reason)}")
+        Logger.error("send_reschedule_request_failed",
+          reason: inspect(reason),
+          meeting_id: meeting.id
+        )
+
+        Flash.error("Failed to send reschedule request. Please try again.")
         {:noreply, assign(socket, :sending_reschedule, nil)}
     end
   end

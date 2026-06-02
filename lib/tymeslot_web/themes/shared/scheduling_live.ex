@@ -142,6 +142,18 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
         InfoHandlers.handle_availability_down(socket, ref, reason)
       end
 
+      # PubSub broadcasts for embedded paid bookings — see
+      # `BookingSubmissionHandlerComponent.handle_payment_required_embedded/3`.
+      @impl Phoenix.LiveView
+      def handle_info(:paid, socket) do
+        InfoHandlers.handle_payment_paid(socket, &transition_to/3)
+      end
+
+      @impl Phoenix.LiveView
+      def handle_info(:expired, socket) do
+        InfoHandlers.handle_payment_expired(socket, &transition_to/3)
+      end
+
       @impl Phoenix.LiveView
       def handle_event("toggle_language_dropdown", _params, socket) do
         EventHandlers.handle_toggle_language_dropdown(socket)

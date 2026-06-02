@@ -5,6 +5,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   """
 
   require Logger
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.ReminderUtils
@@ -35,8 +36,17 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       |> Map.merge(url_details)
       |> Map.merge(reminder_details)
       |> Map.put(:attendee_locale, attendee_locale)
+      |> Map.put(:booking_payment, booking_payment_for(meeting))
     end)
   end
+
+  # Look up the booking payment row attached to this meeting, if any.
+  # Free bookings have no booking_payment row, so this returns nil and the
+  # email template short-circuits the receipt block.
+  defp booking_payment_for(%{id: meeting_id}) when is_binary(meeting_id),
+    do: MeetingPayments.payment_for_meeting(meeting_id)
+
+  defp booking_payment_for(_meeting), do: nil
 
   defp owner_timezone(meeting) do
     case meeting.organizer_user_id do

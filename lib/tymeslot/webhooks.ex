@@ -49,7 +49,7 @@ defmodule Tymeslot.Webhooks do
   """
   @spec create_webhook(integer(), map()) ::
           {:ok, WebhookSchema.t()}
-          | {:error, Ecto.Changeset.t() | :insufficient_plan | :feature_access_checker_failed}
+          | {:error, Ecto.Changeset.t() | Features.access_error()}
   def create_webhook(user_id, attrs) do
     with :ok <- Features.check_access(user_id, :automations_allowed) do
       attrs
@@ -63,7 +63,7 @@ defmodule Tymeslot.Webhooks do
   """
   @spec update_webhook(WebhookSchema.t(), map()) ::
           {:ok, WebhookSchema.t()}
-          | {:error, Ecto.Changeset.t() | :insufficient_plan | :feature_access_checker_failed}
+          | {:error, Ecto.Changeset.t() | Features.access_error()}
   def update_webhook(webhook, attrs) do
     with :ok <- Features.check_access(webhook.user_id, :automations_allowed) do
       WebhookQueries.update_webhook(webhook, attrs)
@@ -84,7 +84,7 @@ defmodule Tymeslot.Webhooks do
   """
   @spec toggle_webhook(WebhookSchema.t()) ::
           {:ok, WebhookSchema.t()}
-          | {:error, Ecto.Changeset.t() | :insufficient_plan | :feature_access_checker_failed}
+          | {:error, Ecto.Changeset.t() | Features.access_error()}
   def toggle_webhook(webhook) do
     with :ok <- Features.check_access(webhook.user_id, :automations_allowed) do
       WebhookQueries.toggle_webhook(webhook)
@@ -114,7 +114,7 @@ defmodule Tymeslot.Webhooks do
   """
   @spec enable_webhook(WebhookSchema.t()) ::
           {:ok, WebhookSchema.t()}
-          | {:error, Ecto.Changeset.t() | :insufficient_plan | :feature_access_checker_failed}
+          | {:error, Ecto.Changeset.t() | Features.access_error()}
   def enable_webhook(webhook) do
     with :ok <- Features.check_access(webhook.user_id, :automations_allowed) do
       WebhookQueries.enable_webhook(webhook)
@@ -126,7 +126,7 @@ defmodule Tymeslot.Webhooks do
   """
   @spec regenerate_token(WebhookSchema.t()) ::
           {:ok, WebhookSchema.t()}
-          | {:error, Ecto.Changeset.t() | :insufficient_plan | :feature_access_checker_failed}
+          | {:error, Ecto.Changeset.t() | Features.access_error()}
   def regenerate_token(%WebhookSchema{} = webhook) do
     with :ok <- Features.check_access(webhook.user_id, :automations_allowed) do
       # Passing nil for webhook_token triggers generation in the changeset

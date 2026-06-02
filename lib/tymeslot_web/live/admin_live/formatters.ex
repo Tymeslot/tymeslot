@@ -21,6 +21,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def humanise(:recaptcha_booking_min_score), do: gettext("Booking min score")
   def humanise(:admin_alerts_enabled), do: gettext("Admin alerts")
   def humanise(:admin_alert_email), do: gettext("Admin alert recipient")
+  def humanise(:meeting_payments_enabled), do: gettext("Meeting payments")
 
   def humanise(key),
     do: key |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
@@ -99,6 +100,12 @@ defmodule TymeslotWeb.AdminLive.Formatters do
     )
   end
 
+  def describe(:meeting_payments_enabled) do
+    gettext(
+      "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment — without them the toggle stays locked."
+    )
+  end
+
   def describe(_other), do: ""
 
   @doc """
@@ -132,7 +139,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   Section heading a setting row belongs under. Used to group the settings
   page into Authentication / reCAPTCHA / Admin alerts blocks.
   """
-  @spec section(atom()) :: :authentication | :recaptcha | :admin_alerts
+  @spec section(atom()) :: :authentication | :recaptcha | :payments | :admin_alerts
   def section(:registration_enabled), do: :authentication
   def section(:password_auth_enabled), do: :authentication
   def section(:google_auth_enabled), do: :authentication
@@ -142,6 +149,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def section(:recaptcha_booking_enabled), do: :recaptcha
   def section(:recaptcha_signup_min_score), do: :recaptcha
   def section(:recaptcha_booking_min_score), do: :recaptcha
+  def section(:meeting_payments_enabled), do: :payments
   def section(:admin_alerts_enabled), do: :admin_alerts
   def section(:admin_alert_email), do: :admin_alerts
 
@@ -149,6 +157,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   @spec section_label(atom()) :: String.t()
   def section_label(:authentication), do: gettext("Authentication")
   def section_label(:recaptcha), do: gettext("reCAPTCHA")
+  def section_label(:payments), do: gettext("Payments")
   def section_label(:admin_alerts), do: gettext("Admin alerts")
 
   @doc """
@@ -173,6 +182,12 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def lock_reason(:password_auth_enabled, false) do
     gettext(
       "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
+    )
+  end
+
+  def lock_reason(:meeting_payments_enabled, true) do
+    gettext(
+      "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
     )
   end
 

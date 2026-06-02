@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   Shared handle_info handlers for theme scheduling LiveViews.
   """
   import Phoenix.Component, only: [assign: 3]
+  import Phoenix.LiveView, only: [put_flash: 3]
   require Logger
 
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
@@ -135,5 +136,55 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
     case SlotFetchingHandlerComponent.load_slots(socket, date) do
       {:ok, updated_socket} -> {:noreply, updated_socket}
     end
+  end
+
+  @doc """
+  Handles the `:paid` PubSub broadcast for an embedded paid booking.
+
+  The booker iframe subscribed to `meeting_payment:<meeting_id>` when it
+  pushed Stripe Checkout to a new tab; when the webhook confirms the
+  payment we flip the iframe directly to the theme's `:confirmation`
+  view so the attendee never sees Stripe inside the host's page.
+  """
+  @spec handle_payment_paid(
+          Phoenix.LiveView.Socket.t(),
+          (Phoenix.LiveView.Socket.t(), atom(), map() -> Phoenix.LiveView.Socket.t())
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_payment_paid(socket, transition_fun) do
+    case socket.assigns[:awaiting_payment_meeting] do
+      %{} = meeting ->
+        socket =
+          socket
+          |> assign(:meeting_uid, meeting.uid)
+          |> assign(:name, meeting.attendee_name)
+          |> assign(:email, meeting.attendee_email)
+
+        {:noreply, transition_fun.(socket, :confirmation, %{})}
+
+      _other ->
+        {:noreply, socket}
+    end
+  end
+
+  @doc """
+  Handles the `:expired` PubSub broadcast for an embedded paid booking.
+
+  When the Stripe Checkout session expires (attendee closed the tab,
+  30 minutes elapsed, etc.) we send the booker back to the booking form
+  with a flash so they can try again.
+  """
+  @spec handle_payment_expired(
+          Phoenix.LiveView.Socket.t(),
+          (Phoenix.LiveView.Socket.t(), atom(), map() -> Phoenix.LiveView.Socket.t())
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_payment_expired(socket, transition_fun) do
+    socket =
+      socket
+      |> assign(:awaiting_payment_meeting, nil)
+      |> assign(:awaiting_payment_checkout_url, nil)
+      |> assign(:submission_processed, false)
+      |> put_flash(:error, "Payment was cancelled. Please try booking again.")
+
+    {:noreply, transition_fun.(socket, :booking, %{})}
   end
 end

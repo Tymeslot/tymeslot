@@ -89,7 +89,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
     end
 
     test "handles different timezones" do
-      date = Date.add(Date.utc_today(), 7)
+      date = get_future_weekday()
 
       result =
         Conflicts.date_has_slots_with_events?(

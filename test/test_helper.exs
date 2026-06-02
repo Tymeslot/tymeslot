@@ -78,6 +78,10 @@ Mox.defmock(Tymeslot.Payments.SubscriptionManagerMock,
   for: Tymeslot.Payments.Behaviours.SubscriptionManager
 )
 
+Mox.defmock(Tymeslot.MeetingPayments.StripeAdapterMock,
+  for: Tymeslot.MeetingPayments.StripeAdapter
+)
+
 Mox.defmock(Tymeslot.Auth.OAuth.ClientMock,
   for: Tymeslot.Auth.OAuth.ClientBehaviour
 )

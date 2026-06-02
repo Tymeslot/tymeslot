@@ -132,6 +132,32 @@ defmodule Tymeslot.AppSettingsTest do
 
       assert values[:registration_enabled].locked_states == []
     end
+
+    test "locked_states flags meeting_payments_enabled -> true when Stripe platform key is unset" do
+      # Default dev/test fixture sets :stripity_stripe :api_key to "sk_test_fake".
+      # platform_configured?/0 should reject that placeholder, so the admin
+      # cannot transition the toggle from Disabled to Enabled until an operator
+      # supplies real Stripe credentials in the environment.
+      Application.put_env(:stripity_stripe, :api_key, "sk_test_fake")
+
+      values = AppSettings.effective_values()
+
+      assert values[:meeting_payments_enabled].locked_states == [true]
+    end
+
+    test "locked_states is empty for meeting_payments_enabled when Stripe platform key is configured" do
+      Application.put_env(:stripity_stripe, :api_key, "sk_test_51Hxxxxxxxxxxxxxxxxxxxxxx")
+
+      on_exit(fn ->
+        # Restore the dev/test placeholder set in runtime.exs so subsequent
+        # tests do not see a real-looking key leak from this one.
+        Application.put_env(:stripity_stripe, :api_key, "sk_test_fake")
+      end)
+
+      values = AppSettings.effective_values()
+
+      assert values[:meeting_payments_enabled].locked_states == []
+    end
   end
 
   # Bridge tests: prove that toggling a setting through the admin code path
