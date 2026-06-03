@@ -96,11 +96,11 @@
   text-align: left;
 }
 
-/* overview-duration-list: a single full-width column by default (narrow/mobile),
-   where each card shows its description. It becomes a multi-column card grid once
-   the card is wide enough to tile — see the @container rule below, which also
-   drops the descriptions so the tiles stay uniform. The clear drops the list
-   below the floated avatar header. */
+/* overview-duration-list: a single full-width column by default (narrow/mobile).
+   It becomes a multi-column card grid once the card is wide enough to tile — see
+   the @container rule below. Descriptions show in both layouts; they collapse
+   only when vertical space is tight (short-viewport rule at the bottom of this
+   file). The clear drops the list below the floated avatar header. */
 .overview-duration-list {
   display: grid;
   grid-template-columns: 1fr;
@@ -175,17 +175,12 @@
   }
 
   /* Wide enough to tile: lay the meeting types across in as many columns as fit
-     (auto-fill), and drop the descriptions so the tiles stay uniform and dense —
-     name + duration only. The full text stays in the single-column layout below
-     this breakpoint, and remains in the DOM / accessibility tree either way. */
+     (auto-fill). Descriptions stay visible here — a laptop has the vertical room
+     for them, and grid rows align to the tallest card so uneven text lengths
+     don't break the layout. They're only collapsed when vertical space is tight
+     (see the short-viewport rule at the bottom of this file). */
   .overview-duration-list {
     grid-template-columns: repeat(auto-fill, minmax(var(--container-xs), 1fr));
-  }
-
-  .duration-card-description {
-    max-height: 0;
-    overflow: hidden;
-    opacity: 0;
   }
 
   .overview-title {
