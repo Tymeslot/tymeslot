@@ -1,4 +1,7 @@
 
+[1.0.5]
+* core: Repair payment-transactions user FK to cascade on delete
+* core: Keep real-time calendar sync working for all connected calendars
 [1.0.4]
 * core: Restore clipped dropdown menus in the calendar grid toolbar
 * core: Refresh Outlook calendars on demand with a rolling sync window
