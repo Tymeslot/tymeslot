@@ -1,52 +1,6 @@
 /* Reusable UI Components */
 
 /* ============================================
-   SURFACE & ELEVATION SYSTEM
-   ============================================ */
-
-/* Surface utilities for glassmorphism effects */
-.surface-subtle {
-  background: var(--surface-subtle);
-}
-
-.surface-light {
-  background: var(--surface-light);
-}
-
-.surface-medium {
-  background: var(--surface-medium);
-}
-
-.surface-strong {
-  background: var(--surface-strong);
-}
-
-.surface-intense {
-  background: var(--surface-intense);
-}
-
-/* Elevation utilities combining surface + shadow */
-.elevation-1 {
-  background: var(--surface-light);
-  box-shadow: var(--shadow-sm);
-}
-
-.elevation-2 {
-  background: var(--surface-medium);
-  box-shadow: var(--shadow-md);
-}
-
-.elevation-3 {
-  background: var(--surface-strong);
-  box-shadow: var(--shadow-lg);
-}
-
-.elevation-4 {
-  background: var(--surface-intense);
-  box-shadow: var(--shadow-xl);
-}
-
-/* ============================================
    INTERACTIVE STATE BASE PATTERNS
    ============================================ */
 
@@ -61,19 +15,6 @@
 }
 
 .interactive:active {
-  transform: translateY(0);
-}
-
-/* Hover lift utility - subtle elevation on hover */
-.hover-lift {
-  transition: transform var(--transition-smooth), box-shadow var(--transition-smooth);
-}
-
-.hover-lift:hover {
-  transform: translateY(-1px);
-}
-
-.hover-lift:active {
   transform: translateY(0);
 }
 
@@ -207,7 +148,6 @@
    ============================================ */
 
 /* Base Button Styles */
-.theme-button,
 .submit-button,
 .prev-button,
 .next-button,
@@ -446,7 +386,7 @@
 /* Extremely short screens */
 @media (max-height: 400px) {
   .duration-grid {
-    gap: 3px;
+    gap: var(--space-3xs);
   }
 }
 

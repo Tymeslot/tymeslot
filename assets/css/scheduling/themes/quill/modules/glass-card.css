@@ -1,0 +1,93 @@
+/* Glass Card — the glassmorphism surface that wraps each booking step and acts
+   as the scheduling container-query root (container-name: scheduling). Every
+   per-feature module queries against it.
+   Self-contained: base styles + responsive. */
+
+/* ===== Base Styles ===== */
+
+.glass-morphism-card {
+  container-type: inline-size;
+  container-name: scheduling;
+  background: linear-gradient(135deg, var(--surface-dark-medium) 0%, var(--surface-dark-light) 100%);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--card-border-radius);
+  border: var(--border-width-thin) solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--theme-text);
+}
+
+/* Calendar card needs more height for the month grid */
+.glass-morphism-card.calendar-card {
+  min-height: var(--card-height-md);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Booking form card - use natural content height */
+.glass-morphism-card.booking-form-card {
+  min-height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Prevent content overflow within glass cards */
+.glass-morphism-card > div {
+  box-sizing: border-box;
+}
+
+/* ===== Responsive ===== */
+
+/* Short viewports — compact the glass card's inner padding in tiers. These
+   height tiers are declared BEFORE the container-width rule below: both target
+   `.glass-morphism-card > div` padding, and when a card is BOTH short and narrow
+   the width-based rule is the intended winner, so it must come later in source. */
+@media (max-height: 700px) and (min-height: 601px) {
+  .glass-morphism-card > div {
+    padding: var(--space-lg);
+  }
+}
+
+@media (max-height: 600px) {
+  .glass-morphism-card > div {
+    padding: var(--space-md);
+  }
+}
+
+@media (max-height: 500px) {
+  .glass-morphism-card > div {
+    padding: var(--space-sm);
+  }
+}
+
+@media (max-height: 400px) {
+  .glass-morphism-card > div {
+    padding: var(--space-xs);
+  }
+}
+
+/* Ultra-wide: centre the glass card with a max-width cap */
+@media (min-width: 1440px) {
+  .glass-morphism-card {
+    max-width: var(--container-lg);
+    margin: 0 auto;
+  }
+}
+
+/* Let glass card content determine its own height on narrow cards */
+@container scheduling (max-width: 640px) {
+  .glass-morphism-card:not(.step-navigation-card) {
+    min-height: auto;
+  }
+}
+
+/* Compact glass card padding on very narrow cards — intentionally after the
+   height tiers above so width wins when a card is both short and narrow. */
+@container scheduling (max-width: 480px) {
+  .glass-morphism-card > div {
+    padding: var(--space-sm);
+  }
+}

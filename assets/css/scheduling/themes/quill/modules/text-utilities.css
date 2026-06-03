@@ -1,0 +1,19 @@
+/* Text Utilities — the theme's named text-colour helpers, used across the
+   booking copy. (The responsive type scale lives in typography.css.) */
+
+[class~="text-glass-primary"] {
+  color: var(--theme-text);
+}
+
+[class~="text-glass-secondary"] {
+  color: var(--theme-text-secondary);
+}
+
+.text-quill-primary {
+  color: var(--text-opacity-medium-high);
+  line-height: var(--theme-line-height-relaxed);
+}
+
+.text-quill-secondary {
+  color: var(--text-opacity-low);
+}

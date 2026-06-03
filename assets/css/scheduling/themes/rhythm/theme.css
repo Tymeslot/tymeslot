@@ -12,7 +12,8 @@
 @import "./modules/video.css";
 @import "./modules/overview.css";
 @import "./modules/schedule-header.css";
-@import "./modules/booking.css";
+@import "./modules/booking-form.css";
+@import "./modules/custom-questions.css";
 @import "./modules/confirmation.css";
 @import "./modules/payment-pages.css";
 @import "./modules/components.css";

@@ -1,4 +1,13 @@
 /* Rhythm Theme Variables */
+
+/* Responsive height ladder (convention — NOT tokenisable: @media feature values
+   can't use var()). Every `@media (max-height: …)` query in this theme snaps to
+   one of these tiers; add new height rules to an existing tier rather than
+   introducing a new threshold:
+     600px  short    — compact section padding, drop calendar aspect ratio
+     500px  shorter  — shrink badges, tighten component spacing
+     400px  minimal  — strip remaining chrome to fit the booking flow
+     350px  bare     — last-resort trims for the tiniest landscape viewports */
 :root {
   /* Typography - Comprehensive scale */
   --theme-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -84,6 +93,7 @@
   --border-width-thick: 3px;
 
   /* Spacing scale - fluid responsive */
+  --space-hairline: 2px; /* sub-grid gap, compact calendar cells only */
   --space-3xs: 4px;
   --space-2xs: 6px;
   --space-xs: clamp(8px, 1.2vw, 12px);

@@ -5,10 +5,9 @@
   background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
 }
 
-/* ============================================================================
-   SEMANTIC CLASSES — replacing responsive Tailwind prefixes in overview_component
-   (dissolved from glass-components.css — width queries → @container scheduling)
-   ============================================================================ */
+/* ===== Base Styles ===== */
+/* Semantic classes that replace the responsive Tailwind prefixes the
+   overview_component used to carry; width adaptations are @container queries below. */
 
 /* overview-content-area: replaces px-4 py-2 md:py-4 */
 .overview-content-area {
@@ -53,8 +52,8 @@
 
 /* overview-success-badge positioning: compact default */
 .overview-success-badge {
-  bottom: -4px;
-  right: -4px;
+  bottom: calc(-1 * var(--space-3xs));
+  right: calc(-1 * var(--space-3xs));
   width: 1.75rem;
   height: 1.75rem;
 }
@@ -98,12 +97,12 @@
 .duration-card--selected {
   background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
   box-shadow: 0 10px 30px color-mix(in srgb, var(--theme-primary) 40%, transparent);
-  border: 2px solid var(--theme-primary);
+  border: var(--border-width-medium) solid var(--theme-primary);
 }
 
 .duration-card--unselected {
   background: var(--surface-medium);
-  border: 2px solid var(--border-medium);
+  border: var(--border-width-medium) solid var(--border-medium);
 }
 
 .duration-card--unselected:hover {

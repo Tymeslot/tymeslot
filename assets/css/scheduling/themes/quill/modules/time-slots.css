@@ -97,8 +97,6 @@
   }
 
   .action-button,
-  .btn-primary,
-  .btn-secondary,
   .time-slot-button,
   .calendar-day {
     min-height: var(--min-touch-target);
@@ -136,10 +134,8 @@
   }
 }
 
-/* ============================================================================
-   HEIGHT MEDIA QUERIES — kept as @media (viewport height has no container
-   equivalent)
-   ============================================================================ */
+/* ===== Height & Aspect Queries ===== */
+/* Viewport height has no container-query equivalent, so these stay as @media. */
 
 @media (max-height: 500px) {
   .slots-box {

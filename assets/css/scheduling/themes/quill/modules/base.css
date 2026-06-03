@@ -52,6 +52,45 @@ body.quill-theme {
   padding-bottom: 10vh;
 }
 
+/* When the SaaS branding banner occupies grid-row 2 it already provides the
+   bottom weight that biases the card upward — so the 10vh optical-centering
+   padding double-counts and pushes the banner past 100vh, leaving a persistent
+   scroll even when the booking content fits. Drop the bias when the banner is
+   present (the card's auto margins still leave a gap above it) so card + banner
+   share the viewport. Self-hosted Core has no banner (`:has` doesn't match), so
+   the full 10vh bias is kept there. */
+.main-gradient.theme-grid:has(.branding-footer) .content-area {
+  padding-bottom: 0;
+}
+
+/* Very small vertical sizes: the SaaS branding banner is a dedicated grid row
+   (~58px) — a sixth of a 320px-tall viewport — that steals height the booking
+   flow needs. The promo is the most expendable element when space is scarce, so
+   drop it below this threshold; grid row 2 (`auto`) then collapses and the
+   booking card claims the full viewport. The banner still shows on the common
+   short laptop heights above this. Core owns the banner's grid slot, so the
+   responsive hide lives here, not in SaaS. */
+@media (max-height: 500px) {
+  .main-gradient.theme-grid .branding-footer {
+    display: none;
+  }
+}
+
+/* Short viewports: the 10vh optical bias is decorative — shrink it so the
+   viewport-bounded schedule card claims the reclaimed height instead of forcing
+   a page scroll. Two tiers keep the transition smooth as the window shortens. */
+@media (max-height: 800px) {
+  .main-gradient.theme-grid .content-area {
+    padding-bottom: var(--space-2xl);
+  }
+}
+
+@media (max-height: 640px) {
+  .main-gradient.theme-grid .content-area {
+    padding-bottom: var(--space-md);
+  }
+}
+
 /* Center the content vertically — optical centering biases upward
    so the card feels balanced rather than sinking toward the bottom.
    The bottom padding on content-area steals space from below, shifting
@@ -60,6 +99,92 @@ body.quill-theme {
   flex: initial;
   margin-top: auto;
   margin-bottom: auto;
+}
+
+/* ===== Schedule Step — Viewport-Locked App Shell =====
+   Scoped to the schedule step only via `:has(.calendar-card)`; every other step
+   and page keeps the natural page-scroll model above.
+
+   The schedule step locks to the viewport so its calendar's internal scroll is
+   the SINGLE scroll region — never a page scroll on top of it (the "double
+   overflow"). The grid becomes exactly 100dvh with a *bounded* content row
+   (`minmax(0, 1fr)`) that can't grow past the viewport, and the centred wrapper
+   chain is stretched into a full-height flex column so the card's available
+   height is set by layout (viewport − step-nav − banner − gutters) rather than a
+   magic calc. The card then fills that space on short viewports (calendar scrolls
+   inside) and sits at its natural height, centred, on tall ones.
+
+   The booking markup leans on utility classes (`flex-1`, `flex-col`, `min-h-0`)
+   that the self-contained theme doesn't ship, so each link below is set
+   explicitly rather than assumed from the class names. */
+
+/* Lock the theme wrapper to the viewport. A viewport unit is definite regardless
+   of ancestor sizing, which gives the grid below a real height to fill — setting
+   `height: 100dvh` on the grid itself fails because it is a flex item whose
+   automatic min-content size wins. */
+.quill-theme-wrapper:has(.calendar-card),
+.quill-theme-wrapper:has(.calendar-card) > div {
+  height: 100dvh;
+  min-height: 0;
+}
+
+.main-gradient.theme-grid:has(.calendar-card) {
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.main-gradient.theme-grid:has(.calendar-card) .content-area {
+  padding-bottom: 0;
+}
+
+/* Stretch the centred container into a full-height column (was margin-auto
+   centred + content-sized) so its descendants can flex-fill the row. */
+.main-gradient.theme-grid:has(.calendar-card) .content-area .container {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* page_layout (`flex-1 flex flex-col`) wraps the step-nav + stack. It grows
+   already but defaults to `min-height: auto` (min-content), which would refuse to
+   shrink below its tall content — so the bound never reaches the card. */
+.main-gradient.theme-grid:has(.calendar-card) .content-area .container > div {
+  min-height: 0;
+}
+
+.main-gradient.theme-grid:has(.calendar-card) .stack {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-gradient.theme-grid:has(.calendar-card) .schedule-content-area {
+  align-items: stretch;
+  min-height: 0;
+}
+
+/* Card wrapper: a full-height column that vertically centres the card, so the
+   card is natural-height-and-centred when it fits and fills-and-scrolls when it
+   doesn't. */
+.main-gradient.theme-grid:has(.calendar-card) .schedule-content-area > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+}
+
+/* The card is a shrinkable flex item of that wrapper: natural height when it
+   fits, shrunk to the wrapper's resolved height (calendar scrolls inside) when
+   it doesn't. `min-height: 0` lets it shrink past its content and overrides the
+   container-query minimums, which would otherwise pin it too tall to fit. */
+.main-gradient.theme-grid:has(.calendar-card) .calendar-card {
+  flex: 0 1 auto;
+  min-height: 0;
 }
 
 /* Override glass gradient colors with theme colors */
@@ -88,7 +213,9 @@ body.quill-theme {
   padding-right: var(--space-lg);
 }
 
-/* Core Typography */
+/* Section header (the per-step heading). Its responsive font-size lives with the
+   height tiers below; named text-colour utilities are in text-utilities.css and
+   motion utilities in animations.css. */
 .section-header {
   font-weight: var(--font-weight-bold);
   margin-bottom: var(--space-xs);
@@ -96,25 +223,7 @@ body.quill-theme {
   text-shadow: var(--shadow-xs);
 }
 
-/* Text utilities */
-/* Use attribute selector for higher specificity */
-[class~="text-glass-primary"] {
-  color: var(--theme-text);
-}
-
-[class~="text-glass-secondary"] {
-  color: var(--theme-text-secondary);
-}
-
-/* Animations */
-.animate-fade-in-up {
-  animation: fadeInUp 0.3s ease-out;
-}
-
-/* ============================================================================
-   CONTAINER BREAKPOINTS
-   (dissolved from responsive.css)
-   ============================================================================ */
+/* ===== Container Breakpoints ===== */
 
 @media (max-width: 640px) {
   .container {
@@ -179,17 +288,10 @@ body.quill-theme {
   }
 }
 
-/* ============================================================================
-   SHORT VIEWPORTS
-   (dissolved from responsive.css)
-   ============================================================================ */
+/* ===== Height & Aspect Queries ===== */
 
 /* Medium short screens — reduce vertical padding */
 @media (max-height: 700px) and (min-height: 601px) {
-  .glass-morphism-card > div {
-    padding: var(--space-lg);
-  }
-
   .container {
     padding-top: var(--space-xs);
     padding-bottom: var(--space-xs);
@@ -207,41 +309,13 @@ body.quill-theme {
     margin-bottom: var(--space-xs);
   }
 
-  .glass-morphism-card > div {
-    padding: var(--space-md);
-  }
-
   .content-area {
     gap: var(--space-xs);
   }
 }
 
-/* Very short screens — aggressive compaction */
-@media (max-height: 500px) {
-  .glass-morphism-card > div {
-    padding: var(--space-sm);
-  }
-
-  html.quill-theme .step-item-wrapper .step-label {
-    display: none;
-  }
-
-  .action-button--primary,
-  .action-button--secondary {
-    padding: var(--space-xs) var(--space-sm);
-  }
-}
-
 /* Extremely short screens — minimal chrome */
 @media (max-height: 400px) {
-  .step-navigation-card {
-    display: none;
-  }
-
-  .glass-morphism-card > div {
-    padding: var(--space-xs);
-  }
-
   .section-header {
     font-size: var(--theme-font-size-sm);
   }
@@ -252,10 +326,7 @@ body.quill-theme {
   }
 }
 
-/* ============================================================================
-   REDUCED MOTION
-   (dissolved from responsive.css)
-   ============================================================================ */
+/* ===== Reduced Motion ===== */
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
@@ -265,10 +336,7 @@ body.quill-theme {
   }
 }
 
-/* ============================================================================
-   MOBILE WIDTH ADAPTATIONS
-   (dissolved from responsive.css)
-   ============================================================================ */
+/* ===== Mobile ===== */
 
 /* Prevent horizontal overflow on narrow screens */
 @media (max-width: 640px) {
@@ -278,50 +346,7 @@ body.quill-theme {
   }
 }
 
-/* Step indicators — compact layout on narrow cards */
-@container scheduling (max-width: 640px) {
-  .step-indicator-container {
-    gap: var(--space-md);
-  }
-
-  .step-item-wrapper .step-label {
-    font-size: var(--theme-font-size-2xs);
-    margin-top: var(--space-2xs);
-  }
-
-  .step-circle {
-    width: 1.75rem;
-    height: 1.75rem;
-  }
-
-  .step-connector {
-    width: 1rem;
-  }
-
-  .step-indicator {
-    padding: 0 var(--space-xs);
-  }
-}
-
-/* Hide step labels on very narrow cards — circles alone are sufficient.
-   Specificity boosted with html.quill-theme to beat the display: block rule
-   in booking.css (.quill-theme-wrapper [class*=...] > span:last-child). */
-@container scheduling (max-width: 480px) {
-  html.quill-theme .step-item-wrapper .step-label {
-    display: none;
-  }
-}
-
-/* Hide step connectors on the narrowest cards */
-@container scheduling (max-width: 360px) {
-  .step-connector {
-    display: none;
-  }
-}
-
-/* ============================================================================
-   SCROLLABLE CONTAINERS
-   ============================================================================ */
+/* ===== Scrollable Containers ===== */
 
 .scroll-y {
   overflow-y: auto;
@@ -349,10 +374,7 @@ body.quill-theme {
   background: var(--scrollbar-thumb-hover);
 }
 
-/* ============================================================================
-   PRINT
-   (dissolved from responsive.css)
-   ============================================================================ */
+/* ===== Print ===== */
 @media print {
   .glass-morphism-card {
     background: white;
