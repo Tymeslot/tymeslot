@@ -340,6 +340,98 @@ describe('continuous resize protocol', () => {
       expect(call[1]).not.toBe('*')
     }
   })
+
+  test('sub-pixel jitter is suppressed by Math.ceil — two heights differing by <1px produce one post', () => {
+    // First measurement: mainHeight 600.2 → Math.ceil(600.2) = 601
+    const handle = runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/',
+      scrollHeight: 602,
+      mainHeight: 600.2
+    })
+
+    // Initial script run posts height 601
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
+    expect(window.parent.postMessage).toHaveBeenCalledWith(
+      { type: 'tymeslot-resize', height: 601, isFirstTime: true },
+      'https://embedder.com'
+    )
+
+    // Second measurement: 600.7px → Math.ceil(600.7) = 601 (same ceiled value)
+    window.getComputedStyle = vi.fn(() => ({
+      height: '600.7px',
+      marginTop: '0px',
+      marginBottom: '0px'
+    }))
+
+    handle.advance()
+
+    // No second post — identical ceiled value is suppressed, not a sub-pixel guard
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
+  })
+
+  test('postMessage failure does not crash the resize loop', () => {
+    window.parent.postMessage = vi.fn(() => {
+      throw new Error('cross-origin postMessage blocked')
+    })
+
+    const handle = runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/',
+      scrollHeight: 800,
+      mainHeight: 600
+    })
+
+    // First post threw — loop must still have scheduled a next tick
+    expect(handle.scheduledCount()).toBeGreaterThanOrEqual(1)
+
+    // Advance a tick; content changes so there will be another post attempt
+    window.getComputedStyle = vi.fn(() => ({
+      height: '700px',
+      marginTop: '0px',
+      marginBottom: '0px'
+    }))
+
+    // This must not throw
+    expect(() => handle.advance()).not.toThrow()
+
+    // Loop continues scheduling despite repeated failures
+    expect(handle.scheduledCount()).toBeGreaterThanOrEqual(1)
+  })
+
+  test('falls back to documentElement.scrollHeight when getComputedStyle height is non-numeric', () => {
+    // First tick: normal computed height so the loop starts cleanly.
+    const handle = runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/',
+      scrollHeight: 600,
+      mainHeight: 500
+    })
+
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
+
+    // Simulate a layout state where computed height resolves to 'auto' (unresolved).
+    // measureHeight() must fall back to documentElement.scrollHeight in this case.
+    window.getComputedStyle = vi.fn(() => ({
+      height: 'auto',
+      marginTop: '0px',
+      marginBottom: '0px'
+    }))
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      value: 850,
+      configurable: true,
+      writable: true
+    })
+
+    handle.advance()
+
+    // The fallback posts scrollHeight (850), not NaN from the unresolvable height.
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(2)
+    expect(window.parent.postMessage).toHaveBeenLastCalledWith(
+      { type: 'tymeslot-resize', height: 850, isFirstTime: false },
+      'https://embedder.com'
+    )
+  })
 })
 
 describe('parent origin derivation', () => {
