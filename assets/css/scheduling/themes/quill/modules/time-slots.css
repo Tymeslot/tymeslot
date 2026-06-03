@@ -70,13 +70,17 @@
   color: var(--text-opacity-medium-low);
 }
 
-/* Slot grid — auto-fit for fluid columns.
+/* Slot grid — fluid columns. auto-FILL (not auto-fit) keeps the empty trailing
+   tracks instead of collapsing them, so every period grid lays out the same
+   number of equal-width columns regardless of how many slots it holds. Without
+   this a sparse period (e.g. a 4-slot Evening) would stretch its buttons across
+   fewer, wider columns than a full Afternoon — giving inconsistent slot sizes.
    The template uses .time-slots-grid as the per-period wrapper; .time-period-slots
    is kept as an alias for symmetry with the token system. */
 .time-slots-grid,
 .time-period-slots {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
   gap: var(--space-xs);
 }
 
