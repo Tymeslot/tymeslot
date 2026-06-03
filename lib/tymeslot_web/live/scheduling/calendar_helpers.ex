@@ -53,6 +53,30 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
       # Return empty calendar days when profile is nil
       []
     end
+    |> trim_trailing_other_month_weeks()
+  end
+
+  @doc """
+  Drops trailing calendar weeks made up entirely of adjacent-month days.
+
+  The underlying grid is a fixed 6 weeks, which for shorter months ends in a row
+  that is *all* next-month — greyed out and never bookable. Removing such trailing
+  rows shortens the calendar by up to a week so it fits more viewports without an
+  internal scroll. Any week containing a current-month day is always kept, so the
+  current month is never truncated.
+  """
+  @spec trim_trailing_other_month_weeks([map()]) :: [map()]
+  def trim_trailing_other_month_weeks([]), do: []
+
+  def trim_trailing_other_month_weeks(days) do
+    days
+    |> Enum.chunk_every(7)
+    |> Enum.reverse()
+    |> Enum.drop_while(fn week ->
+      Enum.all?(week, &(not Map.get(&1, :current_month, false)))
+    end)
+    |> Enum.reverse()
+    |> Enum.concat()
   end
 
   @doc """
