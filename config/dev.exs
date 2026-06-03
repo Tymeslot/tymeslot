@@ -98,3 +98,11 @@ config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 
 # Webhook verification enabled by default
 config :tymeslot, :skip_webhook_verification, false
+
+# Opt-in dev calendar stub: when DEV_EMPTY_CALENDAR is set, the seeded demo
+# organiser's slots resolve with no busy events, bypassing real CalDAV — handy
+# for booking-UI and scheduling-theme work. Left unset, dev uses the real
+# calendar so genuine sync can be exercised. See Tymeslot.Dev.EmptyCalendar.
+if System.get_env("DEV_EMPTY_CALENDAR") in ~w(1 true) do
+  config :tymeslot, :calendar_module, Tymeslot.Dev.EmptyCalendar
+end
