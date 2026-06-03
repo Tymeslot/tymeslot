@@ -69,8 +69,13 @@
   }
 }
 
-/* Ultra-wide: centre the glass card with a max-width cap */
-@media (min-width: 1440px) {
+/* Ultra-wide: centre the glass card at a comfortable reading width — but only
+   when the viewport is also tall. On a wide *short* viewport that 800px cap
+   wastes the horizontal room and forces content (notably the schedule's time
+   slots) to scroll vertically instead. So below the weekly-reflow height the cap
+   lifts and the card fills the available width (still bounded by .container's
+   own 1280/1536 caps), letting the slot grid spread into more columns. */
+@media (min-width: 1440px) and (min-height: 621px) {
   .glass-morphism-card {
     max-width: var(--container-lg);
     margin: 0 auto;
