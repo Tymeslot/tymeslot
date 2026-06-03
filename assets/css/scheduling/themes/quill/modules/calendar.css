@@ -4,9 +4,21 @@
 
 /* ===== Base Styles ===== */
 
+/* The calendar/slots middle is the schedule card's single scrolling region:
+   it flexes to fill the space between the pinned header and actions, and scrolls
+   internally once the calendar can shrink no further. */
 .calendar-slots-container {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Vertical is the only intended scroll axis. Without this, overflow-y: auto
+     makes the browser compute overflow-x as auto too, so any child a few px too
+     wide (e.g. the 7-cell week strip on a narrow phone) raises a stray
+     horizontal scrollbar. Clip it instead. */
+  overflow-x: hidden;
+  overscroll-behavior: contain;
 }
 
 .calendar-section {
@@ -118,33 +130,13 @@
   color: white;
 }
 
-/* Calendar and slots grid layout */
-.calendar-slots-grid {
-  display: block;
-}
-
-.calendar-slots-grid > div {
-  margin-bottom: var(--space-2xl);
-}
-
-/* Prevent calendar and content overflow — scoped to scheduling context */
-.glass-morphism-card .max-h-96 {
-  max-height: 24rem;
-}
-
-.glass-morphism-card .max-w-5xl {
-  max-width: 100%;
-}
-
 /* Calendar Weekday Headers */
 .calendar-weekday {
   color: var(--text-opacity-medium-low);
 }
 
-/* ============================================================================
-   Weekly / Monthly Calendar Toggle
-   Default: show weekly (mobile-first), show monthly at wider containers.
-   ============================================================================ */
+/* ===== Weekly / Monthly Calendar Toggle =====
+   Default: show weekly (mobile-first), show monthly at wider containers. */
 .calendar-weekly {
   display: block;
 }
@@ -153,9 +145,7 @@
   display: none;
 }
 
-/* ============================================================================
-   Week Day Strip
-   ============================================================================ */
+/* ===== Week Day Strip ===== */
 .week-day-strip {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -167,7 +157,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: var(--space-hairline);
   padding: var(--space-xs) var(--space-2xs);
   background: var(--surface-light);
   border: var(--border-width-thin) solid var(--border-medium);
@@ -176,6 +166,9 @@
   cursor: pointer;
   transition: var(--transition-smooth);
   min-height: var(--min-touch-target, 44px);
+  /* Let the seven 1fr tracks shrink to equal widths on narrow phones instead of
+     each holding its content's min-width and overflowing the strip. */
+  min-width: 0;
 }
 
 .week-day-cell:hover:not(:disabled) {
@@ -218,19 +211,51 @@
   font-weight: var(--font-weight-semibold);
 }
 
-/* ============================================================================
-   Semantic Classes — schedule content layout
-   ============================================================================ */
+/* ===== Semantic Classes — Schedule Content Layout =====
+
+   Adaptive vertical model: the app-shell (base.css) hands the card a layout-
+   defined height (viewport − step-nav − banner − gutters); the card shrinks to
+   fit it. Inside, header and actions are pinned (flex-shrink: 0) and
+   the calendar/slots middle is the single scrolling region. So the Back/Next
+   actions stay on-screen at every height — the calendar shrinks fluidly (cqi
+   sizing) and, only once it can shrink no further, scrolls internally — and there
+   is never a page scroll on top of that internal scroll (no double scrollbar). */
 
 .schedule-content-area {
   padding: var(--space-xs) var(--space-md);
 }
 
-.schedule-card-body {
-  padding: var(--space-xs);
+/* Card frame: a flex column. The app-shell (base.css) makes it a shrinkable
+   flex item of a full-height wrapper, so it sits at its natural height when it
+   fits and shrinks to the available height when it doesn't — at which point its
+   calendar/slots middle scrolls internally. Sizing is driven by flex-shrink, not
+   a percentage height (a flex-stretched parent isn't "definite" enough to
+   resolve `height: 100%`), so the bound is reliable. */
+.glass-morphism-card.calendar-card {
   display: flex;
   flex-direction: column;
+}
+
+/* Body fills the card and stacks its three regions; the middle region scrolls.
+   `overflow: visible` (not hidden) is deliberate: on a normal short viewport the
+   header and actions fit and only the calendar scrolls internally, but on an
+   extreme viewport where even header + actions exceed the card, they spill to a
+   page scroll (still reachable) rather than being clipped off-screen.
+   Specificity is raised to `.calendar-card > …` so the generic short-height
+   `.glass-morphism-card > div` padding rules in base.css can't override the
+   compact schedule padding. */
+.glass-morphism-card.calendar-card > .schedule-card-body {
+  flex: 1 1 auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-xs);
+  overflow: visible;
+}
+
+/* Header pins to the top — never shrinks, never scrolls. */
+.schedule-card-header {
+  flex-shrink: 0;
 }
 
 .schedule-title {
@@ -272,8 +297,18 @@
   gap: var(--space-3xs);
 }
 
+/* Calendar navigation buttons (prev/next month) — used by the month-nav cluster
+   here and by the schedule card header. */
 .calendar-nav-button {
   padding: var(--space-3xs);
+  background: var(--surface-light);
+  color: white;
+  border: var(--border-width-thin) solid var(--border-intense);
+  transition: var(--transition-normal);
+}
+
+.calendar-nav-button:hover:not(:disabled) {
+  background: var(--border-medium);
 }
 
 .calendar-month-label {
@@ -282,7 +317,9 @@
   padding-right: var(--space-xs);
 }
 
+/* Actions pin to the bottom — never shrink, always reachable. */
 .schedule-actions {
+  flex-shrink: 0;
   margin-top: var(--space-xs);
   display: flex;
   gap: var(--space-xs);
@@ -355,7 +392,7 @@
     padding: var(--space-md) var(--space-md);
   }
 
-  .schedule-card-body {
+  .glass-morphism-card.calendar-card > .schedule-card-body {
     padding: var(--space-sm);
   }
 
@@ -420,7 +457,7 @@
     min-height: var(--card-height-lg);
   }
 
-  .schedule-card-body {
+  .glass-morphism-card.calendar-card > .schedule-card-body {
     padding: var(--space-md);
   }
 
@@ -438,13 +475,9 @@
 
 /* Large container — side-by-side layout */
 @container scheduling (min-width: 768px) {
-  .schedule-card-body {
-    max-height: calc(80vh - 2rem);
-  }
-
   .calendar-slots-container {
     flex-direction: row;
-    flex: 1;
+    flex: 1 1 auto;
     min-height: 0;
   }
 
@@ -465,53 +498,95 @@
   .glass-morphism-card.calendar-card {
     min-height: var(--card-height-xl);
   }
-
-  .calendar-slots-grid.lg\:grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: var(--space-lg);
-    align-items: start;
-  }
-
-  .max-w-5xl {
-    max-width: var(--container-xl);
-  }
-}
-
-@container scheduling (min-width: 900px) {
-  .calendar-slots-grid.lg\:grid {
-    gap: var(--space-2xl);
-  }
 }
 
 @container scheduling (min-width: 1100px) {
   .glass-morphism-card.calendar-card {
     min-height: var(--card-height-2xl);
   }
+}
 
-  .calendar-slots-grid.lg\:grid {
-    gap: var(--space-3xl);
+/* ===== Height & Aspect Queries =====
+   Viewport height has no container-query equivalent, so the calendar's adaptive
+   reflow keys on @media height/aspect. These rules are declared after the
+   width-based @container queries above so that, at equal specificity, the
+   height-driven form wins when both apply. */
+
+/* HEIGHT-DRIVEN REFLOW — the primary adaptive mechanism.
+
+   The month grid is intrinsically tall (a header row + up to 6 day rows). The
+   width-based toggle above shows it whenever the card is wide enough, but a wide
+   card can still be *short* (landscape phones, embedded panels, a dragged-down
+   desktop window). In that case the grid cannot fit and gets clipped.
+
+   So we reflow on the other axis too: when the viewport lacks the vertical room
+   for the month grid, fall back to the compact one-row week strip — which fits
+   almost any height. This flips the form to match the space instead of forcing
+   the tall form into a short space. It wins over the width-based @container rule
+   above by source order (equal specificity, declared later).
+
+   The threshold approximates the month form's minimum: card header + month nav +
+   weekday row + ~5–6 day rows + actions ≈ a ~620px viewport once step-nav and
+   gutters are subtracted. Below that, the strip is the better fit. An iframe has
+   its own viewport, so embedded panels reflow by their own height too. */
+@media (max-height: 620px) {
+  .calendar-monthly {
+    display: none;
+  }
+
+  .calendar-weekly {
+    display: block;
   }
 }
 
-/* ============================================================================
-   EMBEDDED COMPACTION — compact schedule in iframes
-   ============================================================================ */
+/* SHORT + WIDE — spend spare horizontal space to relieve scarce vertical space.
 
-/* Force weekly calendar, hide monthly */
-html.quill-theme[data-embedded] .calendar-weekly {
-  display: block;
+   On a short viewport (weekly form) that is still wide enough to split, lay the
+   week strip and the time slots side by side — earlier than the default 768px
+   container breakpoint — and scale the strip up to fill the reclaimed width:
+   taller cells with larger numerals, centred in their column. This turns the
+   sparse "small content in a wide void" landscape into a balanced, touch-
+   friendly layout and keeps the whole flow shorter. Gated on min-width so it
+   never fires on short *narrow* phones, which stay stacked. */
+@media (max-height: 620px) and (min-width: 560px) {
+  .calendar-slots-container {
+    flex-direction: row;
+    gap: var(--space-xl);
+    align-items: stretch;
+  }
+
+  .calendar-section,
+  .time-slots-panel {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* Fill the taller column and centre the strip within it. */
+  .calendar-weekly {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+  }
+
+  .week-day-cell {
+    min-height: clamp(3.5rem, 13vh, 5.5rem);
+    padding: var(--space-sm) var(--space-2xs);
+    gap: var(--space-2xs);
+  }
+
+  .week-day-number {
+    font-size: var(--theme-font-size-xl);
+  }
 }
 
-html.quill-theme[data-embedded] .calendar-monthly {
-  display: none;
-}
-
-/* ============================================================================
-   HEIGHT MEDIA QUERIES — kept as @media (viewport height has no container
-   equivalent)
-   ============================================================================ */
-
+/* Short viewports — compact the calendar in tandem: shrink the day cells, and
+   shrink the gutters AROUND the card so the app-shell hands it more room before
+   its calendar must scroll internally. The card is always bounded by the
+   app-shell to the viewport, so its pinned Back/Next actions stay on-screen no
+   matter how short the viewport gets — these rules only reduce how often the
+   calendar needs its internal scrollbar. (The step-navigation band's own
+   short-height padding lives in steps.css — coordinated at the same 800px.) */
 @media (max-height: 800px) {
   .calendar-day {
     height: var(--calendar-day-height-mobile);
@@ -519,4 +594,50 @@ html.quill-theme[data-embedded] .calendar-monthly {
     padding: var(--space-3xs);
     font-size: var(--theme-font-size-xs);
   }
+
+  .schedule-content-area {
+    padding-top: var(--space-3xs);
+    padding-bottom: var(--space-3xs);
+  }
+
+  .glass-morphism-card.calendar-card > .schedule-card-body {
+    padding-top: var(--space-2xs);
+    padding-bottom: var(--space-2xs);
+  }
 }
+
+/* Very short viewports: the header's secondary lines (advance-notice + duration)
+   are decorative. Drop them so the pinned header stays compact and the calendar
+   keeps a usable scroll region instead of being squeezed toward zero. The
+   essential title and timezone selector remain. */
+@media (max-height: 640px) {
+  .schedule-advance-notice,
+  .schedule-duration-label {
+    display: none;
+  }
+
+  .schedule-card-header {
+    margin-bottom: var(--space-2xs);
+  }
+
+  /* Collapse the timezone selector to a single compact row: drop the "Your
+     timezone" label and the secondary "local time" line. The city name and the
+     offset badge — the parts a booker actually needs — stay. This keeps the
+     pinned header short so the calendar retains a usable scroll region. */
+  .timezone-label,
+  .timezone-time-display {
+    display: none;
+  }
+}
+
+/* ===== Embedded ===== */
+
+/* No calendar-form override is needed for iframes. The height-driven reflow above
+   already picks the right form from the embed's own viewport height: a short embed
+   (the common case — default inline height ~400px) gets the compact week strip via
+   `@media (max-height: 620px)`, while a deliberately tall embed gets the month grid
+   and grows to fit (in embed mode the page sizes to content — see iframe.css — so
+   the month grid can never clip). Forcing weekly here used to pin every embed to
+   the cramped strip regardless of the space available; letting the embed's height
+   govern is both simpler and more adaptive. */
+

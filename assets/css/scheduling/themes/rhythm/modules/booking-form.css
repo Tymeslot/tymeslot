@@ -1,0 +1,297 @@
+/* Booking Form — the attendee details step: meeting summary, form fields, and
+   their container/height-responsive layout. The custom-questions step that
+   followed in the original booking.css now lives in custom-questions.css. */
+.booking-slide {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.slide-actions.horizontal {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.slide-actions.horizontal button {
+  flex: 1;
+}
+
+.meeting-summary {
+  background: var(--surface-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.meeting-summary.compact {
+  padding: var(--space-sm);
+  gap: var(--space-xs);
+}
+
+.summary-row {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.summary-item {
+  flex: 1;
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  color: var(--theme-text);
+}
+
+.summary-icon {
+  flex-shrink: 0;
+}
+
+.summary-value {
+  color: var(--theme-text);
+}
+
+.summary-label {
+  color: var(--theme-text-secondary);
+  margin-top: var(--space-3xs);
+}
+
+.booking-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  flex: 0 0 auto;
+  overflow: visible;
+  margin-bottom: 0;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 500px;
+  margin-inline: auto;
+}
+
+/* Form Field Styling
+ * Theme-specific form styling that naturally overrides @tailwindcss/forms plugin
+ * via higher specificity selectors (.rhythm-theme-wrapper .booking-form input.input)
+ */
+.rhythm-theme-wrapper .booking-form .form-field-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.rhythm-theme-wrapper .booking-form .label {
+  color: var(--theme-text);
+  margin-bottom: var(--space-xs);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.rhythm-theme-wrapper .booking-form .label span {
+  color: var(--theme-error);
+}
+
+.rhythm-theme-wrapper .booking-form .input,
+.rhythm-theme-wrapper .booking-form input.input,
+.rhythm-theme-wrapper .booking-form textarea.input {
+  width: 100%;
+  padding: var(--space-sm);
+  border: var(--border-width-thin) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-light);
+  color: var(--theme-text);
+  min-height: var(--min-touch-target);
+  transition: border-color var(--transition-normal), background var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.rhythm-theme-wrapper .booking-form .input::placeholder,
+.rhythm-theme-wrapper .booking-form input.input::placeholder,
+.rhythm-theme-wrapper .booking-form textarea.input::placeholder {
+  color: var(--theme-text-secondary);
+}
+
+.rhythm-theme-wrapper .booking-form .input:hover,
+.rhythm-theme-wrapper .booking-form input.input:hover,
+.rhythm-theme-wrapper .booking-form textarea.input:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-medium);
+}
+
+.rhythm-theme-wrapper .booking-form .input:focus,
+.rhythm-theme-wrapper .booking-form input.input:focus,
+.rhythm-theme-wrapper .booking-form textarea.input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  background: var(--surface-strong);
+  box-shadow: none;
+}
+
+.rhythm-theme-wrapper .booking-form .input-error,
+.rhythm-theme-wrapper .booking-form input.input-error,
+.rhythm-theme-wrapper .booking-form textarea.input-error {
+  border-color: var(--theme-error-border);
+  background: var(--theme-error-bg);
+}
+
+/* Error message styling for Rhythm theme */
+/* Target the actual error message div by its core component classes */
+.rhythm-theme-wrapper .booking-form .form-field-wrapper > div.mt-2.flex.items-center {
+  color: var(--theme-error);
+  margin-top: var(--space-3xs);
+}
+
+/* ============================================================================
+   BOOKING FORM — CONTAINER-RESPONSIVE LAYOUT
+   Breakpoint: 420px on .scheduling-box (container-name: scheduling)
+   ============================================================================ */
+
+/* Wide layout — 2-column grid for name + email */
+@container scheduling (min-width: 420px) {
+  .slide-content.booking-slide {
+    max-width: var(--container-xl);
+    margin: 0 auto;
+  }
+
+  .booking-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: var(--space-md);
+    row-gap: var(--space-sm);
+    flex: 1;
+  }
+
+  /* Name and email side by side — nth-child(2) and (3) because the honeypot
+     field is always nth-child(1) in the DOM (even though it's out of flow) */
+  .booking-form .form-field-wrapper:nth-child(2),
+  .booking-form .form-field-wrapper:nth-child(3) {
+    grid-column: span 1;
+  }
+
+  /* Message spans full width */
+  .booking-form .form-field-wrapper:nth-child(4) {
+    grid-column: 1 / -1;
+  }
+
+  /* Recaptcha notice always full width, always below message field */
+  .booking-form .recaptcha-notice {
+    grid-column: 1 / -1;
+  }
+
+  /* Buttons always full width */
+  .booking-form .slide-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Narrow layout — single column */
+@container scheduling (max-width: 419px) {
+  .booking-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .booking-form .form-field-wrapper {
+    width: 100%;
+  }
+
+  .rhythm-theme-wrapper .booking-form textarea.input {
+    min-height: 100px;
+  }
+
+  /* Booking form inputs — explicit padding/height for small containers */
+  .rhythm-theme-wrapper .slide .booking-form .input,
+  .rhythm-theme-wrapper .slide .booking-form input.input,
+  .rhythm-theme-wrapper .slide .booking-form textarea.input {
+    padding: var(--space-sm);
+    min-height: var(--min-touch-target);
+  }
+
+  .rhythm-theme-wrapper .slide .booking-form textarea.input {
+    min-height: 80px;
+  }
+
+  .rhythm-theme-wrapper .slide .booking-form .label {
+    margin-bottom: var(--space-2xs);
+  }
+}
+
+/* Tablet-range — duration adjustments (container ≤ 519px) */
+@container scheduling (max-width: 519px) {
+  /* Duration grid — single column */
+  .duration-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+  }
+
+  .duration-button {
+    min-height: var(--min-touch-target);
+  }
+}
+
+/* ============================================================================
+   BOOKING FORM — SHORT VIEWPORT COMPACTION
+   Height queries compact the booking slide for small screens / iframes.
+   ============================================================================ */
+
+/* Short screens — compact meeting summary, smaller textarea */
+@media (max-height: 600px) {
+  .meeting-summary {
+    padding: var(--space-3xs) var(--space-xs);
+    margin-bottom: var(--space-xs);
+    gap: 0;
+  }
+
+  .meeting-summary .summary-row {
+    gap: var(--space-sm);
+  }
+
+  .meeting-summary .summary-icon {
+    display: none;
+  }
+
+  .meeting-summary .summary-label {
+    display: inline;
+    margin-top: 0;
+  }
+
+  .meeting-summary .summary-label::before {
+    content: " · ";
+  }
+
+  .meeting-summary .summary-value {
+    display: inline;
+  }
+
+  /* Textarea — compact height */
+  .booking-form textarea.input {
+    min-height: auto;
+    max-height: 4em;
+  }
+
+  /* Tighter form gaps */
+  .booking-form {
+    gap: var(--space-xs);
+  }
+
+  .rhythm-theme-wrapper .booking-form .label {
+    margin-bottom: var(--space-3xs);
+  }
+}
+
+/* Extremely short screens — minimal booking form */
+@media (max-height: 400px) {
+  .meeting-summary {
+    padding: var(--space-3xs) var(--space-2xs);
+    margin-bottom: var(--space-3xs);
+  }
+
+  .booking-form textarea.input {
+    max-height: 2.5em;
+  }
+
+  .booking-form .slide-actions {
+    padding-top: var(--space-3xs);
+  }
+}

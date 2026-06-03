@@ -82,13 +82,13 @@
   padding: var(--space-sm) var(--space-3xs) var(--space-3xs) 0;
 }
 
-/* Adaptive layout for many meeting types */
+/* Adaptive layout for many meeting types — stack into a single full-width
+   column and tighten the button padding so the longer list stays compact.
+   Descriptions are NOT dropped here: they're content, and the count of meeting
+   types says nothing about whether there's room to show them. They collapse
+   only when vertical space is genuinely tight (short-viewport rule below). */
 .duration-grid:has(.duration-card:nth-child(5)) {
   grid-template-columns: 1fr;
-}
-
-.duration-grid:has(.duration-card:nth-child(5)) .duration-description {
-  display: none;
 }
 
 .duration-grid:has(.duration-card:nth-child(5)) .duration-button {
@@ -181,6 +181,15 @@
   .organizer-profile {
     margin-bottom: var(--space-sm);
     gap: var(--space-sm);
+  }
+
+  /* Collapse meeting-type descriptions when vertical space is tight, so more
+     cards fit without scrolling. Visually collapsed only — kept in the DOM and
+     accessibility tree so screen readers still reach the full description. */
+  .duration-description {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
   }
 }
 

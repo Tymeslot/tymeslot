@@ -5,17 +5,37 @@
 @import "../../shared/layout.css";
 @import "../../shared/utilities.css";
 
-/* Import theme modules in dependency order */
+/* Import theme modules in dependency order.
+   Foundation → primitives/controls → per-feature modules → embed/delivery.
+   Ordering notes that matter for the cascade:
+   - glass-card before steps: .step-navigation-card overrides .glass-morphism-card's
+     container-type at equal specificity, so it must come later.
+   - typography before the controls/feature modules: each component sets its own
+     font-size, which is meant to win over the generic type clamps. */
+
+/* Foundation */
 @import "./modules/variables.css";
 @import "./modules/base.css";
 @import "./modules/iframe.css";
 @import "./modules/video.css";
 @import "./modules/typography.css";
-@import "./modules/components.css";
+
+/* Primitives & controls */
+@import "./modules/animations.css";
+@import "./modules/glass-card.css";
+@import "./modules/buttons.css";
+@import "./modules/spinner.css";
+@import "./modules/meeting-details.css";
+@import "./modules/text-utilities.css";
+
+/* Per-feature modules */
+@import "./modules/steps.css";
 @import "./modules/schedule-header.css";
+@import "./modules/timezone.css";
 @import "./modules/calendar.css";
 @import "./modules/time-slots.css";
-@import "./modules/booking.css";
+@import "./modules/booking-form.css";
+@import "./modules/custom-questions.css";
 @import "./modules/overview.css";
 @import "./modules/confirmation.css";
 @import "./modules/payment-pages.css";
