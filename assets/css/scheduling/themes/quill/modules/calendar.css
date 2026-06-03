@@ -13,6 +13,11 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  /* Vertical is the only intended scroll axis. Without this, overflow-y: auto
+     makes the browser compute overflow-x as auto too, so any child a few px too
+     wide (e.g. the 7-cell week strip on a narrow phone) raises a stray
+     horizontal scrollbar. Clip it instead. */
+  overflow-x: hidden;
   overscroll-behavior: contain;
 }
 
@@ -161,6 +166,9 @@
   cursor: pointer;
   transition: var(--transition-smooth);
   min-height: var(--min-touch-target, 44px);
+  /* Let the seven 1fr tracks shrink to equal widths on narrow phones instead of
+     each holding its content's min-width and overflowing the strip. */
+  min-width: 0;
 }
 
 .week-day-cell:hover:not(:disabled) {
