@@ -21,9 +21,10 @@
  *   scrollbar mid-expansion); a shrink is posted only once the height has held
  *   steady for one tick, collapsing the transient frames of a step reflow into a
  *   single resize instead of a flicker.
- * - Sub-pixel jitter (< 1px from the last posted value) and unchanged values are
- *   skipped. postMessage is wrapped so a closed/cross-origin parent can't kill
- *   the loop.
+ * - Sub-pixel jitter is suppressed naturally by Math.ceil in measureHeight — the
+ *   stored height is always an integer, so equal consecutive measurements are
+ *   exact duplicates and are skipped. postMessage is wrapped so a closed/cross-origin
+ *   parent can't kill the loop.
  *
  * `setTimeout` (not ResizeObserver/requestAnimationFrame) is used deliberately:
  * Safari and iframe-hidden contexts have well-known issues with the latter.
@@ -80,7 +81,6 @@
 
   // --- Continuous height measurement loop ---
   const POLL_INTERVAL_MS = 50;
-  const MIN_DELTA_PX = 1;
 
   let lastPostedHeight = null;
   let lastMeasuredHeight = null;
@@ -120,13 +120,8 @@
     // Grow immediately (no transient scrollbar); shrink only once the height has
     // settled for a tick (no flicker from a reflow's intermediate frames).
     if (!grew && !steady) return;
-    // Ignore sub-threshold jitter once a baseline exists.
-    if (
-      lastPostedHeight !== null &&
-      Math.abs(height - lastPostedHeight) < MIN_DELTA_PX
-    ) {
-      return;
-    }
+    // Skip posting an identical height (steady state with no change).
+    if (lastPostedHeight !== null && height === lastPostedHeight) return;
 
     lastPostedHeight = height;
     const isFirstTime = !hasPosted;
