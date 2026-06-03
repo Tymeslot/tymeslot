@@ -1,12 +1,11 @@
 /**
  * Tests for iframe_embed.js — the script that runs inside embedded iframes.
  *
- * Covers the continuous two-pass resize protocol:
+ * Covers the continuous resize protocol:
  * - Embedded context detection (window.self !== window.top)
  * - data-embedded and data-embed-mode attributes on <html>
- * - First-pass height = documentElement.scrollHeight (generous)
- * - Subsequent-pass height = computed main + margins (can shrink)
- * - Diff-checked posting
+ * - Consistent height = computed main + margins every pass (no first-pass lurch)
+ * - Grow immediately, settle a shrink for one tick, skip sub-pixel jitter
  * - Origin derivation from document.referrer / parent-origin param
  * - Graceful degradation when referrer is unavailable
  */
@@ -161,7 +160,7 @@ describe('embedded context detection', () => {
 })
 
 describe('continuous resize protocol', () => {
-  test('first measurement uses documentElement.scrollHeight with isFirstTime: true', () => {
+  test('first measurement uses computed main height + margins with isFirstTime: true', () => {
     runScript({
       isEmbedded: true,
       referrer: 'https://embedder.com/',
@@ -169,14 +168,15 @@ describe('continuous resize protocol', () => {
       mainHeight: 500
     })
 
+    // Consistent measurement from the first pass — no generous-scrollHeight lurch.
     expect(window.parent.postMessage).toHaveBeenCalledWith(
-      { type: 'tymeslot-resize', height: 1000, isFirstTime: true },
+      { type: 'tymeslot-resize', height: 500, isFirstTime: true },
       'https://embedder.com'
     )
   })
 
-  test('subsequent measurements use computed main height + margins with isFirstTime: false', () => {
-    const handle = runScript({
+  test('includes the main element margins in the measured height', () => {
+    runScript({
       isEmbedded: true,
       referrer: 'https://embedder.com/',
       scrollHeight: 1000,
@@ -186,11 +186,8 @@ describe('continuous resize protocol', () => {
     })
 
     expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
-
-    handle.advance()
-
     expect(window.parent.postMessage).toHaveBeenCalledWith(
-      { type: 'tymeslot-resize', height: 630, isFirstTime: false },
+      { type: 'tymeslot-resize', height: 630, isFirstTime: true },
       'https://embedder.com'
     )
   })
@@ -203,18 +200,44 @@ describe('continuous resize protocol', () => {
       mainHeight: 800
     })
 
-    // First post: scrollHeight 800 (isFirstTime: true)
+    // First post: computed height 800 (isFirstTime: true)
     expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
 
     handle.advance()
-    // Second pass measures mainHeight 800 — same value, no post
+    // Next pass measures 800 again — same value, no post
     expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
 
     handle.advance()
     expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
   })
 
-  test('reposts when content shrinks below earlier reported height', () => {
+  test('grows immediately to a larger height', () => {
+    const handle = runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/',
+      scrollHeight: 1000,
+      mainHeight: 500
+    })
+
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
+
+    // Content expands — growth is posted on the very next tick, no settle wait.
+    window.getComputedStyle = vi.fn(() => ({
+      height: '900px',
+      marginTop: '0px',
+      marginBottom: '0px'
+    }))
+
+    handle.advance()
+
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(2)
+    expect(window.parent.postMessage).toHaveBeenLastCalledWith(
+      { type: 'tymeslot-resize', height: 900, isFirstTime: false },
+      'https://embedder.com'
+    )
+  })
+
+  test('settles a shrink for one tick before reposting (no flicker)', () => {
     const handle = runScript({
       isEmbedded: true,
       referrer: 'https://embedder.com/',
@@ -231,8 +254,12 @@ describe('continuous resize protocol', () => {
       marginBottom: '0px'
     }))
 
+    // A shrink is debounced: the first tick records the new height; the next
+    // tick (now steady) posts it. This collapses a reflow's intermediate frames.
     handle.advance()
+    expect(window.parent.postMessage).toHaveBeenCalledTimes(1)
 
+    handle.advance()
     expect(window.parent.postMessage).toHaveBeenCalledTimes(2)
     expect(window.parent.postMessage).toHaveBeenLastCalledWith(
       { type: 'tymeslot-resize', height: 400, isFirstTime: false },
@@ -258,7 +285,8 @@ describe('continuous resize protocol', () => {
     runScript({
       isEmbedded: true,
       referrer: 'https://embedder.com/',
-      scrollHeight: 0
+      scrollHeight: 0,
+      mainHeight: 0
     })
 
     expect(window.parent.postMessage).not.toHaveBeenCalled()
@@ -296,7 +324,7 @@ describe('continuous resize protocol', () => {
     document.dispatchEvent(new Event('visibilitychange'))
 
     expect(window.parent.postMessage).toHaveBeenCalledWith(
-      { type: 'tymeslot-resize', height: 800, isFirstTime: true },
+      { type: 'tymeslot-resize', height: 600, isFirstTime: true },
       'https://embedder.com'
     )
   })
