@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
   end
 
   describe "trim_trailing_other_month_weeks/1" do
-    defp week(current_month?), do: for(_ <- 1..7, do: %{current_month: current_month?})
+    defp week(current_month?), do: for(_i <- 1..7, do: %{current_month: current_month?})
 
     test "drops trailing weeks that are entirely other-month" do
       days = week(true) ++ week(true) ++ week(false)
@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
     end
 
     test "treats a missing :current_month key as other-month" do
-      days = week(true) ++ for(_ <- 1..7, do: %{})
+      days = week(true) ++ for(_i <- 1..7, do: %{})
       assert length(CalendarHelpers.trim_trailing_other_month_weeks(days)) == 7
     end
   end
