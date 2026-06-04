@@ -23,3 +23,7 @@ config :swoosh, api_client: Swoosh.ApiClient.Finch, finch_name: Tymeslot.Finch
 
 # Disable Swoosh Local Memory Storage
 config :swoosh, local: false
+
+# Analytics contract validation logs-and-drops in prod instead of raising, so a
+# malformed event never crashes a live user flow (it raises in dev/test).
+config :tymeslot, :analytics_strict, false

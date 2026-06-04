@@ -141,6 +141,19 @@ max_cases =
       end
   end
 
+# Analytics: collect emitted events across the suite. In a full CI run
+# (ANALYTICS_COMPLETENESS=1) assert that every declared event actually fired.
+# A focused/partial run won't exercise every flow, so the assertion is gated.
+{:ok, _collector} = Tymeslot.Analytics.TestCollector.start_link()
+Tymeslot.Analytics.TestCollector.attach()
+
+if System.get_env("ANALYTICS_COMPLETENESS") == "1" do
+  ExUnit.after_suite(fn _result ->
+    Tymeslot.Analytics.TestCollector.assert_complete!(Tymeslot.Analytics.Contract.registry())
+    :ok
+  end)
+end
+
 ExUnit.start()
 
 # Exclude slow/external test suites by default — run them explicitly with --include.
