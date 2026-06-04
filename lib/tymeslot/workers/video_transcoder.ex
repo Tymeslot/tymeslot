@@ -12,7 +12,7 @@ defmodule Tymeslot.Workers.VideoTranscoder do
     unique: [
       fields: [:worker, :args],
       keys: [:theme_customization_id],
-      states: [:available, :scheduled, :executing, :retryable]
+      states: [:available, :scheduled, :executing, :retryable, :suspended]
     ]
 
   require Logger

@@ -14,7 +14,7 @@ defmodule Tymeslot.Workers.DeadChannelAlertWorker do
   use Oban.Worker,
     queue: :calendar_integrations,
     max_attempts: 1,
-    unique: [period: 21_600, states: [:available, :scheduled, :executing, :retryable]]
+    unique: [period: 21_600, states: [:available, :scheduled, :executing, :retryable, :suspended]]
 
   require Logger
 

@@ -14,7 +14,7 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpened do
     priority: 0,
     unique: [
       keys: [:booking_payment_id],
-      states: [:available, :scheduled, :executing, :retryable],
+      states: [:available, :scheduled, :executing, :retryable, :suspended],
       period: 86_400
     ]
 

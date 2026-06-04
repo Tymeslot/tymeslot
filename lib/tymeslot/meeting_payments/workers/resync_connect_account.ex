@@ -18,7 +18,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
     max_attempts: 5,
     unique: [
       keys: [:stripe_account_id],
-      states: [:available, :scheduled, :executing, :retryable],
+      states: [:available, :scheduled, :executing, :retryable, :suspended],
       period: 60
     ]
 

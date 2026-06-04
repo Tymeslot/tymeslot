@@ -17,7 +17,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
     priority: 0,
     unique: [
       keys: [:connect_account_id],
-      states: [:available, :scheduled, :executing, :retryable],
+      states: [:available, :scheduled, :executing, :retryable, :suspended],
       period: 86_400
     ]
 

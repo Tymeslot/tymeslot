@@ -18,7 +18,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     unique: [
       period: 300,
       keys: [:calendar_integration_id],
-      states: [:available, :scheduled, :executing, :retryable]
+      states: [:available, :scheduled, :executing, :retryable, :suspended]
     ]
 
   require Logger

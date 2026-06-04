@@ -21,7 +21,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
     priority: 1,
     unique: [
       keys: [:booking_payment_id],
-      states: [:available, :scheduled, :executing, :retryable],
+      states: [:available, :scheduled, :executing, :retryable, :suspended],
       period: 86_400
     ]
 

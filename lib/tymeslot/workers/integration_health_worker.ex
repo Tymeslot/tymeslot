@@ -13,7 +13,7 @@ defmodule Tymeslot.Workers.IntegrationHealthWorker do
     unique: [
       fields: [:worker, :args],
       period: @unique_period_seconds,
-      states: [:available, :scheduled, :executing, :retryable]
+      states: [:available, :scheduled, :executing, :retryable, :suspended]
     ]
 
   require Logger

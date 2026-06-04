@@ -16,7 +16,7 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
   use Oban.Worker,
     queue: :calendar_integrations,
     max_attempts: 1,
-    unique: [period: 86_400, states: [:available, :scheduled, :executing, :retryable]]
+    unique: [period: 86_400, states: [:available, :scheduled, :executing, :retryable, :suspended]]
 
   require Logger
 

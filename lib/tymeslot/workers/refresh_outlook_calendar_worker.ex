@@ -24,7 +24,7 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
     unique: [
       period: 60,
       keys: [:calendar_integration_id],
-      states: [:available, :scheduled, :executing, :retryable]
+      states: [:available, :scheduled, :executing, :retryable, :suspended]
     ]
 
   require Logger
