@@ -115,6 +115,83 @@ defmodule Tymeslot.MeetingPayments.TelemetryTest do
                        %{event_type: "checkout.session.completed", processed: :ok}}
     end
 
+    test "a successful paid booking emits anonymous booking_payment_succeeded telemetry" do
+      meeting = insert(:meeting, status: "awaiting_payment")
+
+      _bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "pending",
+          currency: "eur",
+          stripe_checkout_session_id: "cs_TEL_ANALYTICS"
+        )
+
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:tymeslot, :meeting_payments, :booking_payment, :succeeded]
+        ])
+
+      event = %{
+        "id" => "evt_TEL_ANALYTICS",
+        "data" => %{
+          "object" => %{
+            "id" => "cs_TEL_ANALYTICS",
+            "client_reference_id" => meeting.id,
+            "payment_intent" => "pi_TEL_ANALYTICS"
+          }
+        }
+      }
+
+      assert :ok = CheckoutSessionCompleted.handle(event)
+
+      assert_received {[:tymeslot, :meeting_payments, :booking_payment, :succeeded], ^ref,
+                       %{count: 1}, metadata}
+
+      assert metadata == %{currency: "eur", has_video: false}
+      refute Map.has_key?(metadata, :user_id)
+      refute Map.has_key?(metadata, :amount)
+    end
+
+    test "a recovered paid booking also emits booking_payment_succeeded telemetry" do
+      # Simulates the race where checkout.session.completed arrives after the
+      # expiry webhook has already run — the meeting is expired and the payment
+      # is in a failed/cancelled state.
+      meeting = insert(:meeting, status: "expired")
+
+      _bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "failed",
+          currency: "usd",
+          stripe_checkout_session_id: "cs_TEL_RECOVERED"
+        )
+
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:tymeslot, :meeting_payments, :booking_payment, :succeeded]
+        ])
+
+      event = %{
+        "id" => "evt_TEL_RECOVERED",
+        "data" => %{
+          "object" => %{
+            "id" => "cs_TEL_RECOVERED",
+            "client_reference_id" => meeting.id,
+            "payment_intent" => "pi_TEL_RECOVERED"
+          }
+        }
+      }
+
+      assert :ok = CheckoutSessionCompleted.handle(event)
+
+      assert_received {[:tymeslot, :meeting_payments, :booking_payment, :succeeded], ^ref,
+                       %{count: 1}, metadata}
+
+      assert metadata == %{currency: "usd", has_video: false}
+      refute Map.has_key?(metadata, :user_id)
+      refute Map.has_key?(metadata, :amount)
+    end
+
     test "emits :idempotent_replay processed metadata on a replay" do
       meeting = insert(:meeting, status: "awaiting_payment")
 

@@ -19,6 +19,18 @@ defmodule Tymeslot.Auth.AuthenticationTest do
       assert returned_user.id == user.id
     end
 
+    test "successful authentication emits [:tymeslot, :auth, :login_completed] telemetry" do
+      password = "ValidPass123!"
+      user = insert(:user, password_hash: Password.hash_password(password))
+
+      ref = :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :auth, :login_completed]])
+
+      assert {:ok, _user, _msg} = Authentication.authenticate_user(user.email, password)
+
+      assert_received {[:tymeslot, :auth, :login_completed], ^ref, %{count: 1},
+                       %{method: "password"}}
+    end
+
     test "unverified user returns {:error, :email_not_verified, _}" do
       password = "ValidPass123!"
       user = insert(:unverified_user, password_hash: Password.hash_password(password))

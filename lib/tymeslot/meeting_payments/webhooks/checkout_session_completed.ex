@@ -78,6 +78,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
         # them to work.  A failure here is logged but does not roll back the
         # payment transition; the reconciler can retry if needed.
         backfill_charge_id(paid, object)
+        emit_payment_succeeded(paid, meeting)
         broadcast_paid(meeting.id)
         enqueue_post_payment_effects(meeting, paid)
         :ok
@@ -91,6 +92,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
         )
 
         backfill_charge_id(paid, object)
+        emit_payment_succeeded(paid, meeting)
         broadcast_paid(meeting.id)
         enqueue_post_payment_effects(meeting, paid)
         :ok
@@ -212,6 +214,14 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   # clobbering it back to `paid`.
   defp paid_status("disputed"), do: "disputed"
   defp paid_status(_status), do: "paid"
+
+  defp emit_payment_succeeded(paid, meeting) do
+    :telemetry.execute(
+      [:tymeslot, :meeting_payments, :booking_payment, :succeeded],
+      %{count: 1},
+      %{currency: paid.currency, has_video: not is_nil(meeting.video_integration_id)}
+    )
+  end
 
   defp broadcast_paid(meeting_id) do
     Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting_id}", :paid)

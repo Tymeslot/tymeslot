@@ -27,6 +27,18 @@ defmodule Tymeslot.Auth.VerificationTest do
       assert {:error, :invalid_token} = Verification.verify_user(token)
     end
 
+    test "verifying a user emits anonymous [:tymeslot, :auth, :email_verified] telemetry" do
+      user = insert(:unverified_user)
+      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
+
+      ref = :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :auth, :email_verified]])
+
+      {:ok, _verified_user} = Verification.verify_user(token)
+
+      assert_received {[:tymeslot, :auth, :email_verified], ^ref, %{count: 1}, %{}}
+    end
+
     test "expired token (>24 hours) returns {:error, :token_expired}" do
       user = insert(:unverified_user)
       {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)

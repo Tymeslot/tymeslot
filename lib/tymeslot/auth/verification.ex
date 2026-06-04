@@ -176,6 +176,7 @@ defmodule Tymeslot.Auth.Verification do
         case Config.user_queries_module().verify_user(user) do
           {:ok, updated_user} ->
             AccountLogging.log_user_verified(updated_user, "email")
+            :telemetry.execute([:tymeslot, :auth, :email_verified], %{count: 1}, %{})
             {:ok, updated_user}
 
           {:error, _changeset} ->
