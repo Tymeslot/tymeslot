@@ -14,6 +14,7 @@ import topbar from "../../vendor/topbar.cjs"
 import { ConfirmDelete, PageReload } from "../ui_interaction_hooks"
 import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick } from "../utility_hooks"
 import { ClipboardCopy } from "../clipboard_hook"
+import { installAnalytics, installEventBridge } from "../analytics"
 
 // CSRF token
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
@@ -155,6 +156,11 @@ document.addEventListener("click", (e) => {
   if (!link) return;
   window.__tymeslot_suppress_lv_disconnect_until = Date.now() + 2500;
 }, true);
+
+// Vendor-neutral analytics: facade (no-op unless an analytics script is loaded)
+// plus the bridge that forwards server-pushed `ts:analytics` events to it.
+installAnalytics();
+installEventBridge();
 
 // Export for route bundles to extend
 window.liveSocket = liveSocket;
