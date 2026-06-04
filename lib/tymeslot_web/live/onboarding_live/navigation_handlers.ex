@@ -13,6 +13,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
+  alias TymeslotWeb.Analytics
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
   alias TymeslotWeb.OnboardingLive.StepConfig
@@ -36,6 +37,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
         {:noreply,
          socket
          |> Component.assign(:current_step, StepConfig.next_step(step))
+         |> Analytics.push("onboarding_step_completed", %{step: to_string(step)})
          |> LiveView.clear_flash()}
     end
   end
@@ -89,7 +91,9 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   """
   @spec handle_skip_step(Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_skip_step(socket) do
-    case StepConfig.next_step(socket.assigns.current_step) do
+    skipped = socket.assigns.current_step
+
+    case StepConfig.next_step(skipped) do
       nil ->
         {:noreply, socket}
 
@@ -97,6 +101,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
         {:noreply,
          socket
          |> Component.assign(:current_step, next)
+         |> Analytics.push("onboarding_step_completed", %{step: to_string(skipped), skipped: true})
          |> LiveView.clear_flash()}
     end
   end
@@ -206,6 +211,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
           |> Component.assign(:profile, profile)
           |> Component.assign(:booking_url, booking_url)
           |> Component.assign(:current_step, :connect_calendar)
+          |> Analytics.push("onboarding_step_completed", %{step: "profile"})
           |> LiveView.clear_flash()
 
         {:noreply, socket}
