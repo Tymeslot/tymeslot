@@ -14,20 +14,40 @@
   padding: var(--space-xs) var(--space-md);
 }
 
-/* Let the overview box use the available width rather than the tighter
-   per-step container caps, so the meeting-type grid has room to tile several
-   cards across on wide screens. Scoped to the overview via :has so other steps
-   (which the same .container wraps) keep their own width caps. Bounded at
-   1536px so it never sprawls edge-to-edge on ultra-wide monitors. */
+/* The overview box sizes to the number of meeting types rather than always
+   sprawling full-width. With one or two it matches the schedule/booking box
+   width (--container-lg, the same cap the calendar card uses on ultra-wide — see
+   glass-card.css) and the meeting types read as a single stacked column, so
+   slide 1 has the same footprint as the calendar slide instead of a shrunken
+   one. As more meeting types are added the box grows in tiers (the :has quantity
+   queries below), giving the grid room to tile several across. Scoped to the
+   overview via :has so other steps (which the same .container wraps) keep their
+   own width caps.
+
+   At this width the container query that drives tiling (640px) is already met,
+   so the single-vs-multi-column switch is gated on card count instead: the grid
+   only tiles once a third card appears (see the @container rule below). */
 .container:has(.overview-content-area) {
+  max-width: var(--container-lg);
+}
+
+/* Three or four meeting types: widen enough for the grid to tile a couple of
+   columns across. */
+.container:has(.overview-duration-list .duration-card:nth-child(3)) {
+  max-width: var(--container-xl);
+}
+
+/* Five or more: grow to full width, tiling as many cards across as fit. Bounded
+   at 1536px so it never sprawls edge-to-edge on ultra-wide monitors. */
+.container:has(.overview-duration-list .duration-card:nth-child(5)) {
   max-width: 1536px;
 }
 
-/* On ultra-wide screens the scheduling glass card is centred at --container-lg
-   (see glass-card.css) — the right reading width for the schedule/booking steps,
-   but too narrow for the overview's meeting-type grid. Opt the overview card out
-   so it fills the wider container above and the cards can tile across. The more
-   specific selector wins over the min-width:1440px cap. */
+/* The glass card fills whatever width the container caps above allow — it would
+   otherwise be centred at --container-lg on ultra-wide screens (see
+   glass-card.css), too narrow once the overview widens to tile. The more
+   specific selector wins over that min-width:1440px cap, leaving the container
+   caps as the single source of the overview's width. */
 .overview-content-area .glass-morphism-card {
   max-width: 100%;
 }
@@ -174,12 +194,15 @@
     padding: var(--space-lg);
   }
 
-  /* Wide enough to tile: lay the meeting types across in as many columns as fit
-     (auto-fill). Descriptions stay visible here — a laptop has the vertical room
-     for them, and grid rows align to the tallest card so uneven text lengths
-     don't break the layout. They're only collapsed when vertical space is tight
-     (see the short-viewport rule at the bottom of this file). */
-  .overview-duration-list {
+  /* Three or more meeting types: lay them across in as many columns as fit
+     (auto-fill). With only one or two the list stays a single stacked column
+     even though the box is wide — gating on the third card keeps the default
+     two-type slide reading as a calendar-width column rather than splitting.
+     Descriptions stay visible here — a laptop has the vertical room for them, and
+     grid rows align to the tallest card so uneven text lengths don't break the
+     layout. They're only collapsed when vertical space is tight (see the
+     short-viewport rule at the bottom of this file). */
+  .overview-duration-list:has(.duration-card:nth-child(3)) {
     grid-template-columns: repeat(auto-fill, minmax(var(--container-xs), 1fr));
   }
 
