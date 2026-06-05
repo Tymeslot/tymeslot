@@ -21,41 +21,56 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
 
   @spec on_mount(atom(), map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()} | {:halt, Phoenix.LiveView.Socket.t()}
-  def on_mount(:default, _params, session, socket) do
+  def on_mount(:default, params, session, socket) do
     embed_token = session["embed_token"]
 
     if embed_token do
-      handle_embedded(embed_token, socket)
+      handle_embedded(embed_token, preview?(params), socket)
     else
       {:cont, socket}
     end
   end
 
-  defp handle_embedded(embed_token, socket) do
+  # The dashboard "Live Preview" iframe loads the booking page with
+  # ?preview=true&embed=1 from tymeslot's own origin, so it is always
+  # same-origin. It is exempt from the third-party embed allowlist:
+  # SecurityHeadersPlug already pins framing to 'self' for preview requests,
+  # which prevents any cross-origin site from abusing the flag to embed.
+  defp preview?(params), do: params["preview"] in ["true", "1"]
+
+  defp handle_embedded(embed_token, preview?, socket) do
     case Token.verify(embed_token) do
       {:ok, {username, parent_origin}} ->
-        if connected?(socket) do
-          # On the connected (WebSocket) render, verify the signed parent_origin
-          # (set by embed.js at HTTP request time) against the profile's allowed domains.
-          # The WebSocket Origin header always reflects tymeslot's own origin when running
-          # inside an iframe, so parent_origin from the signed token is the correct value
-          # to check.
-          case verify_embedding(username, parent_origin) do
-            :ok ->
-              {:cont, assign(socket, :embedded, true)}
-
-            {:error, reason} ->
-              Logger.warning("Embed auth rejected",
-                reason: reason,
-                parent_origin: parent_origin
-              )
-
-              {:halt, redirect(socket, to: "/")}
-          end
-        else
+        cond do
           # Disconnected (static) render — origin verification is deferred to the
           # WebSocket phase.
-          {:cont, assign(socket, :embedded, true)}
+          not connected?(socket) ->
+            {:cont, assign(socket, :embedded, true)}
+
+          # Same-origin dashboard preview — skip the third-party allowlist so a
+          # freshly created account (no allowed_embed_domains yet) can still see
+          # its own live preview instead of being redirected to "/".
+          preview? ->
+            {:cont, assign(socket, :embedded, true)}
+
+          # On the connected (WebSocket) render, verify the signed parent_origin
+          # (set by embed.js at HTTP request time) against the profile's allowed
+          # domains. The WebSocket Origin header always reflects tymeslot's own
+          # origin when running inside an iframe, so parent_origin from the signed
+          # token is the correct value to check.
+          true ->
+            case verify_embedding(username, parent_origin) do
+              :ok ->
+                {:cont, assign(socket, :embedded, true)}
+
+              {:error, reason} ->
+                Logger.warning("Embed auth rejected",
+                  reason: reason,
+                  parent_origin: parent_origin
+                )
+
+                {:halt, redirect(socket, to: "/")}
+            end
         end
 
       {:error, reason} ->

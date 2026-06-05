@@ -138,6 +138,68 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
     end
   end
 
+  describe "on_mount/4 — live preview (?preview=true)" do
+    test "assigns embedded=true for a fresh account with no allowed domains (connected)" do
+      # Regression: the dashboard "Live Preview" iframe loads the booking page
+      # from tymeslot's own origin. A freshly created account has no
+      # allowed_embed_domains, so without the preview exemption the connected
+      # render would redirect the iframe to "/", which is then served with
+      # frame-ancestors 'none' and blocked by the browser.
+      user = insert(:user)
+
+      profile =
+        insert(:profile, user: user, username: "freshacct", allowed_embed_domains: nil)
+
+      socket = build_socket(%{}, %{}, connected: true)
+      token = Token.sign(profile.username, "https://staging.tymeslot.app")
+
+      assert {:cont, updated_socket} =
+               EmbedAuthHook.on_mount(
+                 :default,
+                 %{"preview" => "true"},
+                 %{"embed_token" => token},
+                 socket
+               )
+
+      assert updated_socket.assigns.embedded == true
+    end
+
+    test "accepts preview=1 as well as preview=true" do
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: "previewone", allowed_embed_domains: [])
+
+      socket = build_socket(%{}, %{}, connected: true)
+      token = Token.sign(profile.username, "https://staging.tymeslot.app")
+
+      assert {:cont, updated_socket} =
+               EmbedAuthHook.on_mount(
+                 :default,
+                 %{"preview" => "1"},
+                 %{"embed_token" => token},
+                 socket
+               )
+
+      assert updated_socket.assigns.embedded == true
+    end
+
+    test "still rejects a real cross-origin embed (no preview flag)" do
+      # The preview exemption must not weaken third-party embed enforcement:
+      # a real embed sends embed=1 without preview, so the allowlist still applies.
+      user = insert(:user)
+
+      profile =
+        insert(:profile, user: user, username: "guarded", allowed_embed_domains: ["example.com"])
+
+      socket = build_socket(%{}, %{}, connected: true)
+      token = Token.sign(profile.username, "https://evil.com")
+
+      assert {:halt, updated_socket} =
+               EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
+
+      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+    end
+  end
+
   describe "origin_allowed?/2" do
     test "returns false for nil domains" do
       refute EmbedAuthHook.origin_allowed?("https://example.com", nil)
