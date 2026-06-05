@@ -15,7 +15,7 @@ defmodule Tymeslot.AnnouncementsSingleTestCatalog do
         body: "Single test announcement",
         image_path: nil,
         cta_label: nil,
-        cta_path: nil,
+        cta_docs_slug: nil,
         published_at: ~U[2026-01-01 00:00:00Z]
       }
     ]

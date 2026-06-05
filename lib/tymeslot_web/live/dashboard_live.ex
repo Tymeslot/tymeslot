@@ -354,12 +354,6 @@ defmodule TymeslotWeb.DashboardLive do
     end
   end
 
-  @spec handle_info({:announcement_cta_navigate, String.t()}, Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info({:announcement_cta_navigate, path}, socket) when is_binary(path) do
-    {:noreply, push_navigate(socket, to: path)}
-  end
-
   @spec handle_info({:reload_schedule}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:reload_schedule}, socket) do

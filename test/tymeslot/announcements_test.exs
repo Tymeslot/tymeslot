@@ -6,6 +6,42 @@ defmodule Tymeslot.RaisingTestCatalog do
   def list, do: raise("catalog boom")
 end
 
+defmodule Tymeslot.ExpiringTestCatalog do
+  @moduledoc false
+  # Fixture catalog exercising the expiry filter. All three publish in the
+  # distant past so the signup gate is never the reason an entry is hidden —
+  # only `expires_at` differs between them.
+
+  alias Tymeslot.Announcements.Announcement
+
+  @spec list() :: [Announcement.t()]
+  def list do
+    [
+      %Announcement{
+        key: "expired_entry",
+        title: "Expired",
+        body: "Already past its expiry",
+        published_at: ~U[2019-01-01 00:00:00Z],
+        expires_at: ~U[2019-06-01 00:00:00Z]
+      },
+      %Announcement{
+        key: "live_entry",
+        title: "Live",
+        body: "Expires far in the future",
+        published_at: ~U[2019-01-01 00:00:00Z],
+        expires_at: ~U[2099-01-01 00:00:00Z]
+      },
+      %Announcement{
+        key: "evergreen_entry",
+        title: "Evergreen",
+        body: "Never expires",
+        published_at: ~U[2019-01-01 00:00:00Z],
+        expires_at: nil
+      }
+    ]
+  end
+end
+
 defmodule Tymeslot.AnnouncementsTest do
   use Tymeslot.DataCase, async: false
 
@@ -18,6 +54,7 @@ defmodule Tymeslot.AnnouncementsTest do
   alias Tymeslot.Announcements.AnnouncementQueries
   alias Tymeslot.Announcements.UserSeenAnnouncementSchema
   alias Tymeslot.AnnouncementsTestCatalog
+  alias Tymeslot.ExpiringTestCatalog
   alias Tymeslot.RaisingTestCatalog
   alias Tymeslot.Repo
 
@@ -185,6 +222,58 @@ defmodule Tymeslot.AnnouncementsTest do
       keys = user |> Announcements.list_for() |> Enum.map(& &1.key)
 
       assert keys == ["test_alpha", "test_beta", "test_gamma"]
+    end
+  end
+
+  describe "Announcements.list_for/1 expiry" do
+    setup do
+      previous = Application.get_env(:tymeslot, :announcement_catalogs, [])
+      Application.put_env(:tymeslot, :announcement_catalogs, [ExpiringTestCatalog])
+      on_exit(fn -> Application.put_env(:tymeslot, :announcement_catalogs, previous) end)
+      :ok
+    end
+
+    test "excludes announcements whose expires_at has passed but keeps live and evergreen ones" do
+      user = insert(:user, inserted_at: ~N[2018-01-01 00:00:00])
+
+      keys = user |> Announcements.list_for() |> Enum.map(& &1.key)
+
+      assert "live_entry" in keys
+      assert "evergreen_entry" in keys
+      refute "expired_entry" in keys
+    end
+  end
+
+  describe "Announcements.list_for/1 admin bypass" do
+    setup do
+      previous = Application.get_env(:tymeslot, :announcement_catalogs, [])
+      Application.put_env(:tymeslot, :announcement_catalogs, [AnnouncementsTestCatalog])
+      on_exit(fn -> Application.put_env(:tymeslot, :announcement_catalogs, previous) end)
+      :ok
+    end
+
+    test "an admin who signed up after publication still sees all announcements" do
+      # Signed up after both test_alpha (2026-01-01) and test_beta (2026-02-01).
+      admin = insert(:user, is_admin: true, inserted_at: ~N[2026-04-01 00:00:00])
+
+      assert [%{key: "test_alpha"}, %{key: "test_beta"}] = Announcements.list_for(admin)
+    end
+
+    test "a non-admin with the same signup date sees none — the bypass is admin-only" do
+      user = insert(:user, is_admin: false, inserted_at: ~N[2026-04-01 00:00:00])
+
+      assert [] = Announcements.list_for(user)
+    end
+
+    test "an admin sees each announcement only once — marking it seen suppresses it" do
+      admin = insert(:user, is_admin: true, inserted_at: ~N[2026-04-01 00:00:00])
+
+      assert [%{key: "test_alpha"}, %{key: "test_beta"}] = Announcements.list_for(admin)
+
+      Announcements.mark_seen!(admin, "test_alpha")
+      Announcements.mark_seen!(admin, "test_beta")
+
+      assert [] = Announcements.list_for(admin)
     end
   end
 end

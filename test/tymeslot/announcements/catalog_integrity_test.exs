@@ -63,26 +63,27 @@ defmodule Tymeslot.Announcements.CatalogIntegrityTest do
       end
     end
 
-    test "every cta_path is a local path starting with a single /", %{entries: entries} do
-      for %{key: key, cta_path: path} when is_binary(path) <- entries do
-        assert String.starts_with?(path, "/"),
-               "cta_path #{inspect(path)} for #{key} must start with /"
+    test "every cta_docs_slug is a bare slug, not a path or URL", %{entries: entries} do
+      for %{key: key, cta_docs_slug: slug} when is_binary(slug) <- entries do
+        assert slug != "", "blank cta_docs_slug for #{key}"
 
-        refute String.starts_with?(path, "//"),
-               "cta_path #{inspect(path)} for #{key} must not start with //; " <>
-                 "Phoenix push_navigate rejects protocol-relative URLs"
+        refute String.starts_with?(slug, "/"),
+               "cta_docs_slug #{inspect(slug)} for #{key} must not start with /; " <>
+                 "it is composed onto :docs_base_url, so store just the slug"
 
-        refute Regex.match?(~r/^\/?https?:\/\//i, path),
-               "cta_path #{inspect(path)} for #{key} looks like an absolute URL; " <>
-                 "use a local path instead"
+        refute Regex.match?(~r{https?://}i, slug),
+               "cta_docs_slug #{inspect(slug)} for #{key} looks like an absolute URL; " <>
+                 "store just the slug — the base URL comes from :docs_base_url"
       end
     end
 
-    test "cta_label and cta_path are present together or absent together", %{entries: entries} do
+    test "cta_label and cta_docs_slug are present together or absent together", %{
+      entries: entries
+    } do
       for entry <- entries do
-        assert is_nil(entry.cta_label) == is_nil(entry.cta_path),
-               "cta_label/cta_path mismatch for #{entry.key}: #{inspect(entry.cta_label)} / " <>
-                 "#{inspect(entry.cta_path)}. The component renders a CTA only when both are set."
+        assert is_nil(entry.cta_label) == is_nil(entry.cta_docs_slug),
+               "cta_label/cta_docs_slug mismatch for #{entry.key}: #{inspect(entry.cta_label)} / " <>
+                 "#{inspect(entry.cta_docs_slug)}. The component renders a CTA only when both are set."
       end
     end
 
@@ -100,6 +101,16 @@ defmodule Tymeslot.Announcements.CatalogIntegrityTest do
       for entry <- entries do
         assert match?(%DateTime{time_zone: "Etc/UTC"}, entry.published_at),
                "published_at for #{entry.key} must be a UTC DateTime; got #{inspect(entry.published_at)}"
+      end
+    end
+
+    test "every expires_at, when set, is a UTC DateTime after published_at", %{entries: entries} do
+      for %{expires_at: %DateTime{} = expires_at} = entry <- entries do
+        assert expires_at.time_zone == "Etc/UTC",
+               "expires_at for #{entry.key} must be a UTC DateTime; got #{inspect(expires_at)}"
+
+        assert DateTime.after?(expires_at, entry.published_at),
+               "expires_at for #{entry.key} must be after published_at; the entry would never be shown."
       end
     end
   end

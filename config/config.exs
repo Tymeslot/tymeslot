@@ -89,6 +89,11 @@ config :tymeslot,
 # what's-new modal shown on dashboard mount. SaaS appends its own catalog.
 config :tymeslot, :announcement_catalogs, [Tymeslot.Announcements.Catalog]
 
+# Base URL for documentation articles linked from announcement CTAs. Kept in
+# config (rather than hardcoded in the catalogue) so Core's code stays free of
+# the SaaS marketing domain; self-hosters can point this at their own docs.
+config :tymeslot, :docs_base_url, "https://tymeslot.app/docs"
+
 # Feature Assigns - Default to allowing all features
 # SaaS can override these via on_mount hooks based on subscription status.
 # `:meeting_payments` defaults to false because Core treats it as a self-host
