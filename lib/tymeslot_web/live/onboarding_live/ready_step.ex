@@ -29,9 +29,10 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
         <span class="truncate">{@booking_url}</span>
         <button
           type="button"
-          phx-click={
-            Phoenix.LiveView.JS.dispatch("phx:copy", detail: %{text: @booking_url})
-          }
+          id="onboarding-copy-booking-url"
+          phx-hook="CopyOnClick"
+          data-copy-text={@booking_url}
+          data-copy-feedback="Booking link copied!"
           class="onboarding-url-copy-btn"
           title="Copy booking link"
         >
