@@ -102,6 +102,30 @@ defmodule TymeslotWeb.Dashboard.AnnouncementModalTest do
       assert_redirect(view, "https://tymeslot.app/docs/beta")
     end
 
+    test "Got it on the last item finishes without navigating, even when it has a CTA", %{
+      conn: conn
+    } do
+      user = pre_existing_user()
+
+      conn = log_in(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+      # Advance to the last item (test_beta), which carries a CTA.
+      view |> element(~s|button[phx-click="next"]|) |> render_click()
+
+      rendered = render(view)
+      # The last slide offers both the CTA and a plain finish button.
+      assert rendered =~ "Try Beta"
+      assert rendered =~ "Got it"
+
+      # "Got it" (the finish action) closes and marks all seen, with no redirect.
+      view |> element(~s|button[phx-click="next"]|) |> render_click()
+
+      keys = Enum.sort(AnnouncementQueries.seen_keys_for(user.id))
+      assert keys == ["test_alpha", "test_beta"]
+      refute render(view) =~ "announcement-modal-modal"
+    end
+
     test "closing on item 1 marks every announcement seen", %{conn: conn} do
       user = pre_existing_user()
 

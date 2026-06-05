@@ -8,6 +8,7 @@ defmodule Tymeslot.Announcements.CatalogIntegrityTest do
   @max_title_length 80
   @max_body_length 500
   @max_cta_label_length 40
+  @max_bullet_length 100
 
   setup do
     {:ok, entries: Catalog.list()}
@@ -84,6 +85,16 @@ defmodule Tymeslot.Announcements.CatalogIntegrityTest do
         assert is_nil(entry.cta_label) == is_nil(entry.cta_docs_slug),
                "cta_label/cta_docs_slug mismatch for #{entry.key}: #{inspect(entry.cta_label)} / " <>
                  "#{inspect(entry.cta_docs_slug)}. The component renders a CTA only when both are set."
+      end
+    end
+
+    test "every bullet is a non-empty binary that fits one line", %{entries: entries} do
+      for %{key: key, bullets: bullets} <- entries, bullet <- bullets do
+        assert is_binary(bullet) and bullet != "", "blank bullet for #{key}"
+
+        assert String.length(bullet) <= @max_bullet_length,
+               "bullet for #{key} is #{String.length(bullet)} chars; " <>
+                 "max is #{@max_bullet_length}. Long bullets wrap awkwardly in the modal."
       end
     end
 

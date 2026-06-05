@@ -55,7 +55,15 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
         show={true}
         on_cancel={JS.push("close", target: @myself)}
       >
-        <:header>{@current.title}</:header>
+        <:header>
+          <span class="flex flex-col gap-2">
+            <span class="inline-flex items-center gap-1.5 self-start rounded-full bg-turquoise-600 px-3 py-1 text-token-sm font-bold uppercase tracking-wide text-white shadow-sm">
+              <.icon name="hero-sparkles-mini" class="h-4 w-4" />
+              {gettext("New feature")}
+            </span>
+            <span>{@current.title}</span>
+          </span>
+        </:header>
 
         <div aria-live="polite" aria-atomic="true">
           <div :if={@current.image_path} class="mb-4">
@@ -63,6 +71,16 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
           </div>
 
           <p class="text-token-base text-tymeslot-700 leading-relaxed">{@current.body}</p>
+
+          <ul :if={@current.bullets != []} class="mt-3 space-y-2">
+            <li
+              :for={item <- @current.bullets}
+              class="flex items-start gap-2 text-token-base text-tymeslot-700 leading-relaxed"
+            >
+              <.icon name="hero-check-circle-mini" class="mt-0.5 h-5 w-5 shrink-0 text-turquoise-600" />
+              <span>{item}</span>
+            </li>
+          </ul>
         </div>
 
         <:footer>
@@ -92,8 +110,11 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
             <div class="flex items-center gap-2">
               <%= cond do %>
                 <% @on_last? and @has_cta? -> %>
-                  <.action_button variant={:primary} phx-click="cta" phx-target={@myself}>
+                  <.action_button variant={:secondary} phx-click="cta" phx-target={@myself}>
                     {@current.cta_label}
+                  </.action_button>
+                  <.action_button variant={:primary} phx-click="next" phx-target={@myself}>
+                    {gettext("Got it")}
                   </.action_button>
                 <% @on_last? -> %>
                   <.action_button variant={:primary} phx-click="next" phx-target={@myself}>

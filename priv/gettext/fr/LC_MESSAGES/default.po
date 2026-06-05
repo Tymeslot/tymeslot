@@ -1136,24 +1136,24 @@ msgstr "Ouvrir Stripe Checkout"
 msgid "We opened Stripe Checkout in a new browser tab. Once your payment is confirmed, this page updates automatically."
 msgstr "Nous avons ouvert Stripe Checkout dans un nouvel onglet. Une fois votre paiement confirmé, cette page se mettra à jour automatiquement."
 
-#: lib/tymeslot_web/components/announcement_modal_component.ex:80
+#: lib/tymeslot_web/components/announcement_modal_component.ex:93
 #, elixir-autogen, elixir-format
 msgid "%{current} / %{total}"
 msgstr "%{current} / %{total}"
 
-#: lib/tymeslot_web/components/announcement_modal_component.ex:72
+#: lib/tymeslot_web/components/announcement_modal_component.ex:85
 #: lib/tymeslot_web/components/tour_overlay.ex:50
 #, elixir-autogen, elixir-format
 msgid "Back"
 msgstr "Retour"
 
-#: lib/tymeslot_web/components/announcement_modal_component.ex:95
+#: lib/tymeslot_web/components/announcement_modal_component.ex:108
 #, elixir-autogen, elixir-format
 msgid "Got it"
 msgstr "Compris"
 
-#: lib/tymeslot_web/components/announcement_modal_component.ex:102
-#: lib/tymeslot_web/components/announcement_modal_component.ex:106
+#: lib/tymeslot_web/components/announcement_modal_component.ex:115
+#: lib/tymeslot_web/components/announcement_modal_component.ex:119
 #: lib/tymeslot_web/components/tour_overlay.ex:58
 #, elixir-autogen, elixir-format
 msgid "Next"
@@ -1742,3 +1742,8 @@ msgstr "Vos réponses"
 #, elixir-autogen, elixir-format
 msgid "✓ Acknowledged (%{at})"
 msgstr "✓ Confirmé (%{at})"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:62
+#, elixir-autogen, elixir-format
+msgid "New feature"
+msgstr "Nouvelle fonctionnalité"
