@@ -16,7 +16,14 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.ShortTextTest do
 
     assert html =~ ~s(type="text")
     assert html =~ ~s(name="value")
-    assert html =~ ~s(phx-blur="answer")
+    assert html =~ ~s(phx-change="answer")
+  end
+
+  test "wraps the input in a form so Enter flushes the value before advancing" do
+    html = render_input(%{"type" => "short_text", "label" => "Company"})
+
+    assert html =~ "<form"
+    assert html =~ ~s(phx-submit="next")
   end
 
   test "debounces input until blur and disables browser autocomplete" do

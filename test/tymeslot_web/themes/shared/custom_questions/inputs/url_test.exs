@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.UrlTest do
   test "renders an HTML5 url input" do
     html = render_input(%{"type" => "url", "label" => "Website"})
     assert html =~ ~s(type="url")
-    assert html =~ ~s(phx-blur="answer")
+    assert html =~ ~s(phx-change="answer")
   end
 
   test "renders the provided value" do

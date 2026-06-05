@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.NumberTest do
   test "renders an HTML5 number input" do
     html = render_input(%{"type" => "number", "label" => "Age"})
     assert html =~ ~s(type="number")
-    assert html =~ ~s(phx-blur="answer")
+    assert html =~ ~s(phx-change="answer")
   end
 
   test "renders the provided numeric value" do
