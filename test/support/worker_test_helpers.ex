@@ -193,19 +193,29 @@ defmodule Tymeslot.WorkerTestHelpers do
   """
   @spec expect_zoom_success(String.t()) :: :ok
   def expect_zoom_success(join_url \\ "https://zoom.us/j/12345678901") do
-    expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-      {:ok,
-       %Req.Response{
-         status: 201,
-         body:
-           Jason.encode!(%{
-             "id" => 12_345_678_901,
-             "join_url" => join_url,
-             "password" => "test123",
-             "start_url" => "#{join_url}?zak=host-token",
-             "host_email" => "host@example.com"
-           })
-       }}
+    # Zoom room creation makes two calls: POST to create the meeting, then a
+    # best-effort GET to read it back (exercises the meeting:read:meeting scope).
+    expect(Tymeslot.HTTPClientMock, :request, 2, fn
+      :post, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 201,
+           body:
+             Jason.encode!(%{
+               "id" => 12_345_678_901,
+               "join_url" => join_url,
+               "password" => "test123",
+               "start_url" => "#{join_url}?zak=host-token",
+               "host_email" => "host@example.com"
+             })
+         }}
+
+      :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body: Jason.encode!(%{"id" => 12_345_678_901, "status" => "waiting"})
+         }}
     end)
   end
 

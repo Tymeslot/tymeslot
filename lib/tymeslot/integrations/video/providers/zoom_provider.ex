@@ -31,6 +31,12 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
          {:ok, token} <- get_access_token(config),
          {:ok, {start_time, end_time}} <- get_meeting_times(config),
          {:ok, meeting} <- create_scheduled_meeting(token, start_time, end_time, config) do
+      # Read the meeting back from Zoom to confirm it is retrievable before we
+      # hand the join link to attendees. Exercises the meeting:read:meeting
+      # scope and is best-effort: the meeting already exists, so a failed read
+      # only warrants a log line, never a failed booking.
+      verify_meeting_created(token, meeting["id"])
+
       room_data = %{
         room_id: to_string(meeting["id"]),
         meeting_url: meeting["join_url"],
@@ -355,6 +361,44 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
       {:error, reason} ->
         {:error, "Network error: #{inspect(reason)}"}
+    end
+  end
+
+  # Best-effort read-back of a freshly created meeting via GET /meetings/{id}.
+  # Confirms the meeting is retrievable and exercises the meeting:read:meeting
+  # scope. Returns :ok regardless of outcome — the meeting already exists, so a
+  # failed verification must not fail the booking.
+  defp verify_meeting_created(_token, nil), do: :ok
+
+  defp verify_meeting_created(token, meeting_id) do
+    headers = [{"Authorization", "Bearer #{token}"}]
+    url = "#{@api_base_url}/meetings/#{meeting_id}"
+
+    case http_client().request(:get, url, "", headers, []) do
+      {:ok, %Req.Response{status: 200, body: body}} ->
+        Logger.info("Verified Zoom meeting",
+          room_id: to_string(meeting_id),
+          meeting_status: read_meeting_status(body)
+        )
+
+      {:ok, %Req.Response{status: status}} ->
+        Logger.warning("Could not verify Zoom meeting after creation",
+          room_id: to_string(meeting_id),
+          http_status: status
+        )
+
+      {:error, reason} ->
+        Logger.warning("Network error verifying Zoom meeting after creation",
+          room_id: to_string(meeting_id),
+          error: inspect(reason)
+        )
+    end
+  end
+
+  defp read_meeting_status(body) do
+    case Jason.decode(body) do
+      {:ok, %{"status" => status}} -> status
+      _other -> "unknown"
     end
   end
 

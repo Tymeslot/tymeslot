@@ -94,33 +94,48 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
 
       expect(ZoomOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
-      expect(HTTPClientMock, :request, fn :post, url, body, headers, _opts ->
-        assert url == "https://api.zoom.us/v2/users/me/meetings"
+      expect(HTTPClientMock, :request, 2, fn
+        :post, url, body, headers, _opts ->
+          assert url == "https://api.zoom.us/v2/users/me/meetings"
 
-        assert Enum.any?(headers, fn {k, v} ->
-                 String.downcase(k) == "authorization" and v == "Bearer valid_token"
-               end)
+          assert Enum.any?(headers, fn {k, v} ->
+                   String.downcase(k) == "authorization" and v == "Bearer valid_token"
+                 end)
 
-        decoded = Jason.decode!(body)
-        assert decoded["topic"] == "Test Meeting"
-        assert decoded["type"] == 2
-        assert decoded["timezone"] == "UTC"
-        assert decoded["settings"]["waiting_room"] == true
-        assert decoded["settings"]["join_before_host"] == false
-        assert decoded["settings"]["mute_upon_entry"] == true
+          decoded = Jason.decode!(body)
+          assert decoded["topic"] == "Test Meeting"
+          assert decoded["type"] == 2
+          assert decoded["timezone"] == "UTC"
+          assert decoded["settings"]["waiting_room"] == true
+          assert decoded["settings"]["join_before_host"] == false
+          assert decoded["settings"]["mute_upon_entry"] == true
 
-        {:ok,
-         %Req.Response{
-           status: 201,
-           body:
-             Jason.encode!(%{
-               "id" => 123_456_789,
-               "join_url" => "https://zoom.us/j/123456789",
-               "start_url" => "https://zoom.us/s/123456789?zak=abc",
-               "password" => "p4ss",
-               "host_email" => "alice@example.com"
-             })
-         }}
+          {:ok,
+           %Req.Response{
+             status: 201,
+             body:
+               Jason.encode!(%{
+                 "id" => 123_456_789,
+                 "join_url" => "https://zoom.us/j/123456789",
+                 "start_url" => "https://zoom.us/s/123456789?zak=abc",
+                 "password" => "p4ss",
+                 "host_email" => "alice@example.com"
+               })
+           }}
+
+        :get, url, _body, headers, _opts ->
+          # Read-back verification exercises the meeting:read:meeting scope.
+          assert url == "https://api.zoom.us/v2/meetings/123456789"
+
+          assert Enum.any?(headers, fn {k, v} ->
+                   String.downcase(k) == "authorization" and v == "Bearer valid_token"
+                 end)
+
+          {:ok,
+           %Req.Response{
+             status: 200,
+             body: Jason.encode!(%{"id" => 123_456_789, "status" => "waiting"})
+           }}
       end)
 
       assert {:ok, room} = ZoomProvider.create_meeting_room(config)
@@ -129,6 +144,34 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
       assert room.provider_data.passcode == "p4ss"
       assert String.contains?(room.provider_data.start_url, "/s/123456789")
       assert room.provider_data.host_email == "alice@example.com"
+    end
+
+    test "still returns the room when the read-back verification fails" do
+      config = valid_config()
+
+      expect(ZoomOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, 2, fn
+        :post, _url, _body, _headers, _opts ->
+          {:ok,
+           %Req.Response{
+             status: 201,
+             body:
+               Jason.encode!(%{
+                 "id" => 123_456_789,
+                 "join_url" => "https://zoom.us/j/123456789"
+               })
+           }}
+
+        # The meeting already exists, so a failed read-back must not fail the
+        # booking — verification is best-effort.
+        :get, _url, _body, _headers, _opts ->
+          {:error, :timeout}
+      end)
+
+      assert {:ok, room} = ZoomProvider.create_meeting_room(config)
+      assert room.room_id == "123456789"
+      assert room.meeting_url == "https://zoom.us/j/123456789"
     end
 
     test "returns structured error on Zoom API 401" do
@@ -227,21 +270,26 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
          }}
       end)
 
-      expect(HTTPClientMock, :request, fn :post, _url, _body, headers, _opts ->
-        assert {"Authorization", "Bearer new_token"} in headers
+      expect(HTTPClientMock, :request, 2, fn
+        :post, _url, _body, headers, _opts ->
+          assert {"Authorization", "Bearer new_token"} in headers
 
-        {:ok,
-         %Req.Response{
-           status: 201,
-           body:
-             Jason.encode!(%{
-               "id" => 999,
-               "join_url" => "https://zoom.us/j/999",
-               "start_url" => "https://zoom.us/s/999",
-               "password" => nil,
-               "host_email" => nil
-             })
-         }}
+          {:ok,
+           %Req.Response{
+             status: 201,
+             body:
+               Jason.encode!(%{
+                 "id" => 999,
+                 "join_url" => "https://zoom.us/j/999",
+                 "start_url" => "https://zoom.us/s/999",
+                 "password" => nil,
+                 "host_email" => nil
+               })
+           }}
+
+        :get, _url, _body, headers, _opts ->
+          assert {"Authorization", "Bearer new_token"} in headers
+          {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => 999})}}
       end)
 
       assert {:ok, room} = ZoomProvider.create_meeting_room(config)
@@ -267,21 +315,25 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
          }}
       end)
 
-      expect(HTTPClientMock, :request, fn :post, _url, _body, headers, _opts ->
-        assert {"Authorization", "Bearer fresh_token"} in headers
+      expect(HTTPClientMock, :request, 2, fn
+        :post, _url, _body, headers, _opts ->
+          assert {"Authorization", "Bearer fresh_token"} in headers
 
-        {:ok,
-         %Req.Response{
-           status: 201,
-           body:
-             Jason.encode!(%{
-               "id" => 555,
-               "join_url" => "https://zoom.us/j/555",
-               "start_url" => "https://zoom.us/s/555",
-               "password" => nil,
-               "host_email" => nil
-             })
-         }}
+          {:ok,
+           %Req.Response{
+             status: 201,
+             body:
+               Jason.encode!(%{
+                 "id" => 555,
+                 "join_url" => "https://zoom.us/j/555",
+                 "start_url" => "https://zoom.us/s/555",
+                 "password" => nil,
+                 "host_email" => nil
+               })
+           }}
+
+        :get, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => 555})}}
       end)
 
       assert {:ok, room} = ZoomProvider.create_meeting_room(config)
@@ -320,21 +372,25 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
 
       # We expect refresh_access_token NOT to be called: another process already
       # refreshed. The HTTP call should use the fresh DB token.
-      expect(HTTPClientMock, :request, fn :post, _url, _body, headers, _opts ->
-        assert {"Authorization", "Bearer fresh-token-from-other-process"} in headers
+      expect(HTTPClientMock, :request, 2, fn
+        :post, _url, _body, headers, _opts ->
+          assert {"Authorization", "Bearer fresh-token-from-other-process"} in headers
 
-        {:ok,
-         %Req.Response{
-           status: 201,
-           body:
-             Jason.encode!(%{
-               "id" => 111,
-               "join_url" => "https://zoom.us/j/111",
-               "start_url" => "https://zoom.us/s/111",
-               "password" => nil,
-               "host_email" => nil
-             })
-         }}
+          {:ok,
+           %Req.Response{
+             status: 201,
+             body:
+               Jason.encode!(%{
+                 "id" => 111,
+                 "join_url" => "https://zoom.us/j/111",
+                 "start_url" => "https://zoom.us/s/111",
+                 "password" => nil,
+                 "host_email" => nil
+               })
+           }}
+
+        :get, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => 111})}}
       end)
 
       assert {:ok, _room} = ZoomProvider.create_meeting_room(config)
@@ -368,21 +424,25 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
          }}
       end)
 
-      expect(HTTPClientMock, :request, fn :post, _url, _body, headers, _opts ->
-        assert {"Authorization", "Bearer after-refresh"} in headers
+      expect(HTTPClientMock, :request, 2, fn
+        :post, _url, _body, headers, _opts ->
+          assert {"Authorization", "Bearer after-refresh"} in headers
 
-        {:ok,
-         %Req.Response{
-           status: 201,
-           body:
-             Jason.encode!(%{
-               "id" => 222,
-               "join_url" => "https://zoom.us/j/222",
-               "start_url" => "https://zoom.us/s/222",
-               "password" => nil,
-               "host_email" => nil
-             })
-         }}
+          {:ok,
+           %Req.Response{
+             status: 201,
+             body:
+               Jason.encode!(%{
+                 "id" => 222,
+                 "join_url" => "https://zoom.us/j/222",
+                 "start_url" => "https://zoom.us/s/222",
+                 "password" => nil,
+                 "host_email" => nil
+               })
+           }}
+
+        :get, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => 222})}}
       end)
 
       assert {:ok, _room} = ZoomProvider.create_meeting_room(config)
