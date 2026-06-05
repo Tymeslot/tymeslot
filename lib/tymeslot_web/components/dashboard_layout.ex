@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   def dashboard_layout(assigns) do
     ~H"""
     <div
-      class={["flex flex-col", if(@full_width, do: "h-screen overflow-hidden")]}
+      class="flex flex-col h-screen overflow-hidden"
       id="dashboard-root"
       phx-hook="ClipboardCopy"
     >
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
       />
 
       <%!-- Top Navigation --%>
-      <div class={if @full_width, do: "flex-shrink-0"}>
+      <div class="flex-shrink-0">
         <.top_navigation
           current_user={@current_user}
           profile={@profile}
@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
       <.mode_tabs current_action={@current_action} />
 
       <%!-- Main Layout Area --%>
-      <div class={["flex lg:gap-8", if(@full_width, do: "flex-1 overflow-hidden")]}>
+      <div class="flex lg:gap-8 flex-1 overflow-hidden min-h-0">
         <%= if mode(@current_action) == :scheduling do %>
           <DashboardSidebar.sidebar
             current_action={@current_action}
@@ -69,7 +69,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
         <%!-- Main Content Area --%>
         <div
           id="dashboard-content-container"
-          class={["flex-1 min-w-0 w-full lg:ml-0", if(@full_width, do: "flex flex-col overflow-hidden")]}
+          class={["flex-1 min-w-0 w-full lg:ml-0", if(@full_width, do: "flex flex-col overflow-hidden", else: "overflow-y-auto")]}
           phx-hook="ScrollReset"
           data-action={@current_action}
         >
