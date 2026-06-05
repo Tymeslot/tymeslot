@@ -127,8 +127,8 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
 
       # --- Fill the short_text field and advance ---
       view
-      |> element("input[name='value']")
-      |> render_blur(%{"value" => "Acme Corp"})
+      |> form("form[phx-submit='next']", %{"value" => "Acme Corp"})
+      |> render_change()
 
       view |> element("button[phx-click='next'][phx-target]") |> render_click()
 
@@ -232,8 +232,8 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
 
       # Fill in the answer and advance to :booking.
       view
-      |> element("input[name='value']")
-      |> render_blur(%{"value" => "Acme Corp"})
+      |> form("form[phx-submit='next']", %{"value" => "Acme Corp"})
+      |> render_change()
 
       view |> element("button[phx-click='next'][phx-target]") |> render_click()
 
@@ -307,8 +307,8 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
 
       # Walk through the wizard normally, supplying a valid answer.
       view
-      |> element("input[name='value']")
-      |> render_blur(%{"value" => "Acme Corp"})
+      |> form("form[phx-submit='next']", %{"value" => "Acme Corp"})
+      |> render_change()
 
       view |> element("button[phx-click='next'][phx-target]") |> render_click()
 
