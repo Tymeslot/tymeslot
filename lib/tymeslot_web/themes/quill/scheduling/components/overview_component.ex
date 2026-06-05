@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
       phx-target={@target}
       data-testid="duration-option"
       data-duration={@duration}
-      class={"duration-card w-full rounded-xl cursor-pointer transform #{if @selected, do: "duration-card--selected scale-105", else: "duration-card--unselected hover:scale-105"}"}
+      class={"duration-card w-full rounded-xl cursor-pointer #{if @selected, do: "duration-card--selected", else: "duration-card--unselected"}"}
     >
       <div class="flex items-center justify-between">
         <div class="text-left flex-1">
