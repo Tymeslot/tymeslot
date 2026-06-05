@@ -38,7 +38,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
      |> assign(:definition, definition)
      |> assign(:changeset, changeset)
      |> assign_new(:mode, fn -> :add end)
-     |> assign_new(:original_type, fn -> definition.type end)
      |> assign_new(:pending_type_change, fn -> nil end)
      |> assign_new(:field_errors, fn -> %{} end)}
   end
@@ -46,9 +45,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
   @impl Phoenix.LiveComponent
   def handle_event("validate", %{"definition" => params} = event_params, socket) do
     new_type = params["type"]
-    original_type = socket.assigns.original_type
+    current_type = Changeset.get_field(socket.assigns.changeset, :type)
 
-    if destructive_type_change?(new_type, original_type, socket.assigns.changeset) do
+    if destructive_type_change?(new_type, current_type, socket.assigns.changeset) do
       {:noreply, assign(socket, :pending_type_change, new_type)}
     else
       changeset = FieldDefinition.changeset(socket.assigns.definition, params)
@@ -83,7 +82,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
     {:noreply,
      socket
      |> assign(:changeset, changeset)
-     |> assign(:original_type, new_type)
      |> assign(:pending_type_change, nil)}
   end
 
@@ -406,10 +404,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
     Changeset.get_field(changeset, field)
   end
 
-  # Returns true when the user has selected a different type AND the current
-  # changeset has non-empty type-specific config that would be silently cleared.
-  defp destructive_type_change?(new_type, original_type, changeset)
-       when is_binary(new_type) and is_binary(original_type) and new_type != original_type do
+  # Returns true when the newly-selected type differs from the type currently
+  # held in the changeset AND that changeset has non-empty type-specific config
+  # that would be silently cleared. Comparing against the changeset's own type
+  # (rather than a separately-tracked assign) keeps the two in lock-step, so
+  # merely editing config for a freshly-chosen type never trips the dialog.
+  defp destructive_type_change?(new_type, current_type, changeset)
+       when is_binary(new_type) and is_binary(current_type) and new_type != current_type do
     options = Changeset.get_field(changeset, :options)
     has_options = is_list(options) and options != []
     body = Changeset.get_field(changeset, :body)
@@ -419,7 +420,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
     has_options or has_body or has_min or has_max
   end
 
-  defp destructive_type_change?(_new_type, _original_type, _changeset), do: false
+  defp destructive_type_change?(_new_type, _current_type, _changeset), do: false
 
   defp options_list(changeset) do
     Changeset.get_field(changeset, :options) || []

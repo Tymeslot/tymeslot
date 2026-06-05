@@ -365,6 +365,42 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
 
       refute render(view) =~ "Changing the type will clear the configuration"
     end
+
+    test "configuring a freshly-chosen type does not show banner", %{conn: conn, user: user} do
+      # Regression: when adding a new question, switching to a config-bearing
+      # type and then editing that config (without touching the type again)
+      # must not falsely trip the type-change confirmation.
+      meeting_type = insert(:meeting_type, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      view |> element("button", "Add question") |> render_click()
+      assert render(view) =~ "Add question"
+
+      # Switch from the default short_text to single_select — nothing defined
+      # yet, so this is not destructive.
+      view
+      |> form("form[phx-change='validate']", %{"definition" => %{"type" => "single_select"}})
+      |> render_change()
+
+      refute render(view) =~ "Changing the type will clear the configuration"
+
+      # Add the two required options for the choice question.
+      view |> element("button[phx-click='add_option']") |> render_click()
+      view |> element("button[phx-click='add_option']") |> render_click()
+
+      # Continue configuring the SAME question (edit the label) — the type is
+      # unchanged, so no confirmation dialog should appear.
+      view
+      |> form("form[phx-change='validate']", %{
+        "definition" => %{"type" => "single_select", "label" => "Favourite colour"}
+      })
+      |> render_change()
+
+      refute render(view) =~ "Changing the type will clear the configuration"
+    end
   end
 
   describe "reordering custom questions" do
