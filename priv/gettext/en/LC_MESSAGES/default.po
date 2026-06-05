@@ -1746,4 +1746,4 @@ msgstr "✓ Acknowledged (%{at})"
 #: lib/tymeslot_web/components/announcement_modal_component.ex:62
 #, elixir-autogen, elixir-format
 msgid "New feature"
-msgstr ""
+msgstr "New feature"
