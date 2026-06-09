@@ -28,6 +28,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     integration_health_recovery: %{category: "System", severity: :info},
     oban_queue_stuck: %{category: "Queue", severity: :error},
     oban_jobs_accumulating: %{category: "Queue", severity: :warning},
+    oban_job_failure: %{category: "Queue", severity: :error},
     reconciliation_discrepancies: %{category: "Payment", severity: :warning},
     subscription_not_in_database: %{category: "Payment", severity: :warning}
   }
@@ -107,6 +108,13 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     queues = Map.get(metadata, :affected_queues, [])
     threshold = Map.get(metadata, :threshold, "unknown")
     "Oban job accumulation detected (threshold: #{threshold}): #{inspect(queues)}"
+  end
+
+  def format_message(:oban_job_failure, metadata) do
+    worker = Map.get(metadata, :worker, "unknown")
+    queue = Map.get(metadata, :queue, "unknown")
+    reason = Map.get(metadata, :reason_message) || Map.get(metadata, :reason_code, "unknown")
+    "Oban job #{worker} (queue: #{queue}) failed permanently: #{reason}"
   end
 
   def format_message(:reconciliation_discrepancies, metadata) do
