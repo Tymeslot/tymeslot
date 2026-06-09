@@ -33,7 +33,11 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
     [:oban, :job, :exception]
   ]
 
-  @detail_keys [:attempt, :args, :id, :max_attempts, :meta, :queue, :tags, :worker]
+  # :args is deliberately excluded — job args can carry secrets (password-reset
+  # and verification URLs with live tokens) and PII (recipient emails), and the
+  # metadata redactor cannot reach into the log message. Args are queryable in
+  # the oban_jobs table via the logged job id when needed.
+  @detail_keys [:attempt, :id, :max_attempts, :meta, :queue, :tags, :worker]
 
   @doc """
   Attaches the telemetry handler for Oban job events. Call once during startup.

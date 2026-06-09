@@ -90,6 +90,48 @@ defmodule Tymeslot.Infrastructure.ObanLoggerTest do
     end
   end
 
+  describe "handle_event/4 - sensitive args" do
+    setup do
+      # The test env logger level is :warning, which would drop the :info
+      # start/stop lines before capture_log sees them.
+      :ok = Logger.put_module_level(ObanLogger, :info)
+      on_exit(fn -> Logger.delete_module_level(ObanLogger) end)
+    end
+
+    test "never includes job args in log output" do
+      secret_job = %{
+        job()
+        | args: %{"reset_url" => "https://example.com/reset-password/secret-token-123"}
+      }
+
+      for {event, meta} <- [
+            {:start, %{job: secret_job}},
+            {:stop, %{job: secret_job, state: :success}},
+            {:exception,
+             %{
+               job: secret_job,
+               state: :discard,
+               kind: :error,
+               reason: %RuntimeError{message: "boom"}
+             }}
+          ] do
+        output =
+          capture_log([level: :info], fn ->
+            ObanLogger.handle_event(
+              [:oban, :job, event],
+              %{system_time: 0, duration: 1000, queue_time: 500},
+              meta,
+              []
+            )
+          end)
+
+        assert output =~ "job:#{event}"
+        refute output =~ "secret-token-123"
+        refute output =~ "reset_url"
+      end
+    end
+  end
+
   describe "handle_event/4 - resilience" do
     test "never raises even on malformed telemetry payloads" do
       capture_log(fn ->
