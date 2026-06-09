@@ -71,6 +71,21 @@ config :tymeslot,
   admin_alerts_enabled: false,
   admin_alert_email: nil,
 
+  # Crashes whose exception maps to a client (4xx) error are routine request
+  # noise, not operator-actionable — never raise an admin alert for them.
+  crash_reporter_ignored_exceptions: [
+    Phoenix.Router.NoRouteError,
+    Ecto.NoResultsError,
+    Plug.Parsers.UnsupportedMediaTypeError,
+    Plug.Parsers.RequestTooLargeError,
+    Plug.BadRequestError,
+    Plug.CSRFProtectionError
+  ],
+  # Global cap on crash alerts to survive a crash storm without flooding the
+  # logging subsystem or the email queue. Tune per deployment traffic.
+  crash_reporter_rate_limit_max: 20,
+  crash_reporter_rate_limit_window_ms: 60_000,
+
   # Dashboard Extensions
   dashboard_sidebar_extensions: [],
   dashboard_action_components: %{}
