@@ -33,6 +33,14 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
       rate limit caps alert volume during a crash storm.
   """
 
+  alias Tymeslot.Infrastructure.AdminAlerts
+
+  require Logger
+
+  @own_domain [:tymeslot, :crash_reporter]
+
+  @stacktrace_max_lines 50
+
   @normal_exits [:normal, :shutdown]
 
   @doc """
@@ -53,5 +61,65 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
 
   defp ignored_exceptions do
     Application.get_env(:tymeslot, :crash_reporter_ignored_exceptions, [])
+  end
+
+  # :logger handler callback. Return value is ignored by :logger.
+  # Clauses are ordered: exception, then throw, then the catch-all exit.
+
+  @doc false
+  @spec log(:logger.log_event(), :logger.handler_config()) :: :ok
+  def log(%{meta: %{crash_reason: {reason, stacktrace}}}, _config)
+      when is_exception(reason) and is_list(stacktrace) do
+    handle_crash(:error, reason, stacktrace)
+  end
+
+  def log(%{meta: %{crash_reason: {{:nocatch, reason}, stacktrace}}}, _config)
+      when is_list(stacktrace) do
+    handle_crash(:throw, reason, stacktrace)
+  end
+
+  def log(%{meta: %{crash_reason: {reason, stacktrace}}}, _config)
+      when is_list(stacktrace) do
+    handle_crash(:exit, reason, stacktrace)
+  end
+
+  def log(_log_event, _config), do: :ok
+
+  defp handle_crash(kind, reason, stacktrace) do
+    if reportable?(kind, reason) do
+      offload(kind, reason, stacktrace)
+    end
+
+    :ok
+  end
+
+  defp offload(kind, reason, stacktrace) do
+    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      try do
+        AdminAlerts.report(:unhandled_crash,
+          summary: "Unhandled #{kind} crash",
+          reason: reason,
+          context: %{kind: kind, stacktrace: format_stacktrace(stacktrace)}
+        )
+      rescue
+        exception ->
+          # Never let the alert path crash-loop back into this handler. Logged
+          # under our own domain, which attach/0's own_logs filter drops.
+          Logger.error("CrashReporter failed to report a crash",
+            error: Exception.message(exception),
+            domain: @own_domain
+          )
+      end
+    end)
+
+    :ok
+  end
+
+  defp format_stacktrace(stacktrace) when is_list(stacktrace) do
+    stacktrace
+    |> Exception.format_stacktrace()
+    |> String.split("\n")
+    |> Enum.take(@stacktrace_max_lines)
+    |> Enum.join("\n")
   end
 end
