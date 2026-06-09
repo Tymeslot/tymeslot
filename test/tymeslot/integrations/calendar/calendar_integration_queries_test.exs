@@ -123,4 +123,38 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueriesTest do
       assert "Only HTTP and HTTPS URLs are allowed" in errors_on(changeset).base_url
     end
   end
+
+  describe "deselect_calendars/2" do
+    test "marks matching calendars as unselected and leaves others untouched" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          calendar_list: [
+            %{"id" => "primary", "selected" => true, "name" => "Primary"},
+            %{"id" => "gone@example.com", "selected" => true, "name" => "Gone"}
+          ]
+        )
+
+      {:ok, updated} =
+        CalendarIntegrationQueries.deselect_calendars(integration, ["gone@example.com"])
+
+      assert Enum.find(updated.calendar_list, &(&1["id"] == "gone@example.com"))["selected"] ==
+               false
+
+      assert Enum.find(updated.calendar_list, &(&1["id"] == "primary"))["selected"] == true
+    end
+
+    test "is a no-op that persists unchanged when no ids match" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          calendar_list: [%{"id" => "primary", "selected" => true, "name" => "Primary"}]
+        )
+
+      {:ok, updated} =
+        CalendarIntegrationQueries.deselect_calendars(integration, ["nonexistent@example.com"])
+
+      assert updated.calendar_list == integration.calendar_list
+    end
+  end
 end

@@ -103,6 +103,14 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
         {:snooze, 120}
 
+      {:error, _type, reason} ->
+        Logger.error("Google Calendar incremental sync failed",
+          calendar_integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        {:error, reason}
+
       {:error, reason} ->
         Logger.error("Google Calendar incremental sync failed",
           calendar_integration_id: integration.id,
@@ -168,56 +176,111 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   end
 
   defp sync_secondary_calendars(integration) do
+    case selected_secondary_calendar_ids(integration) do
+      [] -> :ok
+      ids -> sync_each_secondary_calendar(integration, ids)
+    end
+  end
+
+  defp selected_secondary_calendar_ids(integration) do
     primary_id = integration.default_booking_calendar_id || "primary"
 
-    secondary_ids =
-      integration.calendar_list
-      |> Enum.filter(fn cal ->
-        (cal["selected"] || cal[:selected]) == true and
-          (cal["id"] || cal[:id]) != primary_id
-      end)
-      |> Enum.map(fn cal -> cal["id"] || cal[:id] end)
+    integration.calendar_list
+    |> Enum.filter(fn cal ->
+      (cal["selected"] || cal[:selected]) == true and
+        (cal["id"] || cal[:id]) != primary_id
+    end)
+    |> Enum.map(fn cal -> cal["id"] || cal[:id] end)
+  end
 
-    if secondary_ids == [] do
-      :ok
-    else
-      now = DateTime.utc_now()
-      start_time = DateTime.add(now, -@sync_window_past_days, :day)
-      end_time = DateTime.add(now, @sync_window_future_days, :day)
+  # Iterates each selected secondary calendar, accumulating the ids of any that
+  # no longer exist on Google's side so they can be de-selected in a single write
+  # afterwards — preventing a deleted calendar from being re-fetched (and 404ing)
+  # on every sync. The accumulator is `{status, missing_ids}`.
+  defp sync_each_secondary_calendar(integration, calendar_ids) do
+    now = DateTime.utc_now()
+    start_time = DateTime.add(now, -@sync_window_past_days, :day)
+    end_time = DateTime.add(now, @sync_window_future_days, :day)
 
-      Enum.reduce_while(secondary_ids, :ok, fn calendar_id, _acc ->
-        case google_calendar_api().list_events(integration, calendar_id, start_time, end_time) do
-          {:ok, events} ->
-            case safe_process_events(integration, events, calendar_id) do
-              :ok -> {:cont, :ok}
-              error -> {:halt, error}
-            end
-
-          {:error, :circuit_open} ->
-            Logger.warning("Google Calendar circuit breaker open during secondary sync; snoozing",
-              calendar_integration_id: integration.id
-            )
-
-            {:halt, {:snooze, 120}}
-
-          {:error, :unauthorized, _message} ->
-            Logger.warning("Google Calendar secondary sync unauthorised; skipping calendar",
-              calendar_integration_id: integration.id,
-              calendar_id: calendar_id
-            )
-
-            {:cont, :ok}
-
-          {:error, reason} ->
-            Logger.error("Google Calendar secondary sync failed",
-              calendar_integration_id: integration.id,
-              calendar_id: calendar_id,
-              error: inspect(reason)
-            )
-
-            {:halt, {:error, reason}}
+    {status, missing_ids} =
+      Enum.reduce_while(calendar_ids, {:ok, []}, fn calendar_id, {:ok, missing} ->
+        case sync_one_secondary_calendar(integration, calendar_id, start_time, end_time) do
+          :ok -> {:cont, {:ok, missing}}
+          :not_found -> {:cont, {:ok, [calendar_id | missing]}}
+          {:halt, value} -> {:halt, {value, missing}}
         end
       end)
+
+    deselect_missing_calendars(integration, missing_ids)
+    status
+  end
+
+  defp sync_one_secondary_calendar(integration, calendar_id, start_time, end_time) do
+    case google_calendar_api().list_events(integration, calendar_id, start_time, end_time) do
+      {:ok, events} ->
+        case safe_process_events(integration, events, calendar_id) do
+          :ok -> :ok
+          error -> {:halt, error}
+        end
+
+      {:error, :not_found, _message} ->
+        Logger.warning("Google Calendar secondary calendar not found; de-selecting",
+          calendar_integration_id: integration.id,
+          calendar_id: calendar_id
+        )
+
+        :not_found
+
+      {:error, :circuit_open} ->
+        Logger.warning("Google Calendar circuit breaker open during secondary sync; snoozing",
+          calendar_integration_id: integration.id
+        )
+
+        {:halt, {:snooze, 120}}
+
+      {:error, :unauthorized, _message} ->
+        Logger.warning("Google Calendar secondary sync unauthorised; skipping calendar",
+          calendar_integration_id: integration.id,
+          calendar_id: calendar_id
+        )
+
+        :ok
+
+      {:error, _type, reason} ->
+        Logger.error("Google Calendar secondary sync failed",
+          calendar_integration_id: integration.id,
+          calendar_id: calendar_id,
+          error: inspect(reason)
+        )
+
+        {:halt, {:error, reason}}
+
+      {:error, reason} ->
+        Logger.error("Google Calendar secondary sync failed",
+          calendar_integration_id: integration.id,
+          calendar_id: calendar_id,
+          error: inspect(reason)
+        )
+
+        {:halt, {:error, reason}}
+    end
+  end
+
+  defp deselect_missing_calendars(_integration, []), do: :ok
+
+  defp deselect_missing_calendars(integration, missing_ids) do
+    case CalendarIntegrationQueries.deselect_calendars(integration, missing_ids) do
+      {:ok, _updated} ->
+        :ok
+
+      {:error, changeset} ->
+        Logger.error("Failed to de-select missing Google calendars",
+          calendar_integration_id: integration.id,
+          calendar_ids: missing_ids,
+          error: inspect(changeset.errors)
+        )
+
+        :ok
     end
   end
 

@@ -261,6 +261,34 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
+  Marks the given calendars as unselected within an integration's `calendar_list`.
+
+  Used when a previously-selected secondary calendar no longer exists on the
+  provider (HTTP 404), so the sync worker stops attempting to fetch it on every
+  run. Entries are matched on the provider calendar id; `calendar_list` is loaded
+  from JSONB so entries carry string keys, with an atom-key fallback for any
+  in-memory callers. A no-op (returns `{:ok, integration}`) when nothing matches.
+  """
+  @spec deselect_calendars(CalendarIntegrationSchema.t(), [String.t()]) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def deselect_calendars(%CalendarIntegrationSchema{} = integration, calendar_ids) do
+    ids = MapSet.new(calendar_ids)
+
+    updated_list =
+      Enum.map(integration.calendar_list, fn cal ->
+        if MapSet.member?(ids, cal["id"] || cal[:id]) do
+          Map.put(cal, "selected", false)
+        else
+          cal
+        end
+      end)
+
+    integration
+    |> CalendarIntegrationSchema.changeset(%{calendar_list: updated_list})
+    |> Repo.update()
+  end
+
+  @doc """
   Deletes a calendar integration.
   """
   @spec delete(CalendarIntegrationSchema.t()) ::
