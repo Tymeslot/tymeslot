@@ -289,6 +289,24 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
+  Removes the given paths from an integration's `calendar_paths`.
+
+  Used when a CalDAV calendar collection no longer exists on the server
+  (HTTP 404), so the sync worker stops fetching it on every run — the CalDAV
+  counterpart to `deselect_calendars/2`. A no-op (returns `{:ok, integration}`)
+  when nothing matches.
+  """
+  @spec remove_calendar_paths(CalendarIntegrationSchema.t(), [String.t()]) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def remove_calendar_paths(%CalendarIntegrationSchema{} = integration, paths) do
+    remaining = Enum.reject(integration.calendar_paths, &(&1 in paths))
+
+    integration
+    |> CalendarIntegrationSchema.changeset(%{calendar_paths: remaining})
+    |> Repo.update()
+  end
+
+  @doc """
   Deletes a calendar integration.
   """
   @spec delete(CalendarIntegrationSchema.t()) ::

@@ -96,6 +96,9 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
         :ok
 
+      {:error, :not_found, _message} ->
+        handle_booking_calendar_missing(integration)
+
       {:error, :circuit_open} ->
         Logger.warning("Google Calendar circuit breaker open; snoozing",
           calendar_integration_id: integration.id
@@ -137,6 +140,9 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         )
 
         :ok
+
+      {:error, :not_found, _message} ->
+        handle_booking_calendar_missing(integration)
 
       {:error, :circuit_open} ->
         Logger.warning("Google Calendar circuit breaker open during bootstrap; snoozing",
@@ -263,6 +269,28 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         )
 
         {:halt, {:error, reason}}
+    end
+  end
+
+  # A 404 on the booking calendar itself means the calendar the user books
+  # into was deleted on Google's side. Retrying cannot recover, and the
+  # fallback sweep would re-enqueue the job forever — so flag the integration
+  # for reconnection (which also removes it from the sweep) and discard.
+  defp handle_booking_calendar_missing(integration) do
+    Logger.warning(
+      "Google Calendar booking calendar no longer exists; flagging integration for reconnection",
+      calendar_integration_id: integration.id
+    )
+
+    case CalendarManagement.mark_needs_reauth(
+           integration,
+           "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
+         ) do
+      {:ok, _updated} ->
+        {:discard, "Booking calendar not found — user action required"}
+
+      {:error, _changeset} ->
+        {:error, "Failed to flag integration for missing booking calendar"}
     end
   end
 

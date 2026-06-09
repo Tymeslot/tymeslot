@@ -78,6 +78,10 @@ defmodule Tymeslot.DataCase do
       CalendarCircuitBreaker.reset(p)
     end)
 
+    # Host-keyed breakers are registered dynamically and are not covered by
+    # the per-provider reset above
+    CalendarCircuitBreaker.reset_all_hosts()
+
     # Reset other circuit breakers
     Enum.each([:email_service_breaker, :oauth_github_breaker, :oauth_google_breaker], fn name ->
       if Process.whereis(name), do: CircuitBreaker.reset(name)

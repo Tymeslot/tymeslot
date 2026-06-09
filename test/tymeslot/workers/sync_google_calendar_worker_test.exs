@@ -539,6 +539,53 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerTest do
     end
   end
 
+  describe "perform/1 - booking calendar no longer exists (HTTP 404)" do
+    test "flags the integration for reconnection and discards on incremental 404" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: "valid-token"
+        )
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :not_found, "Calendar not found"}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
+      assert refreshed.needs_reauth == true
+      assert refreshed.sync_error =~ "no longer exists"
+    end
+
+    test "flags the integration for reconnection and discards on bootstrap 404" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: nil
+        )
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :no_sync_token}
+      end)
+
+      expect(GoogleCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :not_found, "Calendar not found"}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
+      assert refreshed.needs_reauth == true
+    end
+  end
+
   describe "perform/1 - sync token expired (HTTP 410)" do
     test "re-bootstraps and persists events + fresh sync token when token is gone" do
       integration =
