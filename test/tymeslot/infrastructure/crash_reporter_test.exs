@@ -162,19 +162,30 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
       end
     end
 
-    test "a failure inside the alert path does not crash the handler or loop" do
+    setup do
+      # The handler must be live for re-entry to be possible at all — without it,
+      # a crash in the alert path cannot loop, so the test would prove nothing.
+      :ok = CrashReporter.attach()
+      on_exit(&CrashReporter.detach/0)
+      :ok
+    end
+
+    test "a real crash whose alert path fails does not re-enter the handler" do
       Application.put_env(:tymeslot, :admin_alerts_impl, RaisingAdminAlerts)
 
       ExUnit.CaptureLog.capture_log(fn ->
-        assert CrashReporter.log(crash_event({%RuntimeError{message: "x"}, []}), %{}) == :ok
-        # The offloaded task invokes the (raising) reporter exactly once...
-        assert_receive :reporter_invoked, 1_000
-        # ...and the rescued failure produces no new crash event, so no re-entry.
-        refute_receive :reporter_invoked, 200
+        # A genuine process crash flows through the attached :logger handler.
+        Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn -> raise "boom" end)
+
+        # The handler offloads and the (raising) reporter is invoked once...
+        assert_receive :reporter_invoked, 2_000
+        # ...and the failed alert path produces no new handled crash, so the
+        # reporter is never invoked again — no loop.
+        refute_receive :reporter_invoked, 300
       end)
 
-      # The raise never propagated into a successful alert.
-      refute_receive {:send_alert, :unhandled_crash, _}, 50
+      # The handler survived (was not removed by repeated failures).
+      assert {:ok, _config} = :logger.get_handler_config(:tymeslot_crash_reporter)
     end
   end
 end
