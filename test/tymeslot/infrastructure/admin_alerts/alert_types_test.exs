@@ -147,6 +147,34 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
     end
   end
 
+  describe "unhandled_crash" do
+    test "is registered as a System/error alert" do
+      assert %{category: "System", severity: :error} = AlertTypes.get(:unhandled_crash)
+    end
+
+    test "format_message/2 includes the kind and reason detail" do
+      msg =
+        AlertTypes.format_message(:unhandled_crash, %{
+          kind: :error,
+          reason_message: "** (RuntimeError) boom"
+        })
+
+      assert msg =~ "error"
+      assert msg =~ "boom"
+    end
+
+    test "format_message/2 falls back to summary when no reason_message" do
+      msg =
+        AlertTypes.format_message(:unhandled_crash, %{
+          kind: :exit,
+          summary: "Unhandled exit crash"
+        })
+
+      assert msg =~ "exit"
+      assert msg =~ "Unhandled exit crash"
+    end
+  end
+
   describe "format_message/2 — fallback" do
     test "unknown type returns generic message" do
       msg = AlertTypes.format_message(:totally_unknown, %{})

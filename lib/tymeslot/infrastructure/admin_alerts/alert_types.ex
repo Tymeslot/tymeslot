@@ -29,6 +29,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     oban_queue_stuck: %{category: "Queue", severity: :error},
     oban_jobs_accumulating: %{category: "Queue", severity: :warning},
     oban_job_failure: %{category: "Queue", severity: :error},
+    unhandled_crash: %{category: "System", severity: :error},
     reconciliation_discrepancies: %{category: "Payment", severity: :warning},
     subscription_not_in_database: %{category: "Payment", severity: :warning}
   }
@@ -132,6 +133,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     reason = Map.get(metadata, :reason, "unknown")
     event_id = Map.get(metadata, :event_id) || Map.get(metadata, :event_uid, "unknown")
     "Invalid #{provider} calendar event (event_id: #{event_id}): #{reason}"
+  end
+
+  def format_message(:unhandled_crash, metadata) do
+    kind = Map.get(metadata, :kind, "error")
+    detail = Map.get(metadata, :reason_message) || Map.get(metadata, :summary, "unknown")
+    "Unhandled #{kind} crash: #{detail}"
   end
 
   def format_message(type, _metadata) do
