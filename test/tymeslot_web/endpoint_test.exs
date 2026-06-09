@@ -6,6 +6,27 @@ defmodule TymeslotWeb.EndpointTest do
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.Infrastructure.CorrelationId
+  alias TymeslotWeb.Endpoint
+
+  describe "request_log_level/1" do
+    test "disables request logging for token-bearing paths" do
+      for path_info <- [
+            ["auth", "verify-complete", "secret-token"],
+            ["auth", "reset-password", "secret-token"],
+            ["email-change", "secret-token"]
+          ] do
+        conn = %Plug.Conn{path_info: path_info}
+        assert Endpoint.request_log_level(conn) == false
+      end
+    end
+
+    test "keeps :info logging for ordinary paths" do
+      for path_info <- [[], ["dashboard"], ["auth", "login"], ["email-change"]] do
+        conn = %Plug.Conn{path_info: path_info}
+        assert Endpoint.request_log_level(conn) == :info
+      end
+    end
+  end
 
   describe "correlation ID plug" do
     test "response includes x-correlation-id header", %{conn: conn} do

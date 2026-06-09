@@ -15,6 +15,10 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   `refresh_token`, `set_cookie`, `x_authorization`.
   """
 
+  # `calendar_id` and `calendar_path` are personal identifiers, not secrets:
+  # Google calendar ids are email addresses and CalDAV paths can embed the
+  # account username. Redacting by key keeps them out of structured logs;
+  # `calendar_integration_id` (not matched) remains for correlation.
   @sensitive_substrings ~w(
     password
     passcode
@@ -30,6 +34,8 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
     refresh_token
     access_token
     session_id
+    calendar_id
+    calendar_path
   )
 
   @redacted "[REDACTED]"

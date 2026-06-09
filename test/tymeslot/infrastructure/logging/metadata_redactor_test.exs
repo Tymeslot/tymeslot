@@ -60,6 +60,24 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
       assert filtered.meta[:note] == "kept"
     end
 
+    test "redacts calendar identifiers but keeps the integration id" do
+      filtered =
+        MetadataRedactor.filter(
+          event(%{
+            calendar_id: "user@example.com",
+            calendar_ids: ["a@example.com", "b@example.com"],
+            calendar_path: "/calendars/user@example.com/work/",
+            calendar_integration_id: 42
+          }),
+          []
+        )
+
+      assert filtered.meta.calendar_id == "[REDACTED]"
+      assert filtered.meta.calendar_ids == "[REDACTED]"
+      assert filtered.meta.calendar_path == "[REDACTED]"
+      assert filtered.meta.calendar_integration_id == 42
+    end
+
     test "leaves non-sensitive metadata untouched" do
       filtered =
         MetadataRedactor.filter(

@@ -127,7 +127,20 @@ defmodule TymeslotWeb.Endpoint do
   plug Tymeslot.Infrastructure.CorrelationId
   # Derive client IP from proxy headers (options pulled from config :remote_ip)
   plug RemoteIp
-  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+
+  plug Plug.Telemetry,
+    event_prefix: [:phoenix, :endpoint],
+    log: {__MODULE__, :request_log_level, []}
+
+  # Routes that carry a single-use credential in the path must not appear in
+  # request logs — Phoenix.Logger writes the raw request path, so logging them
+  # would persist the token. Controller and LiveView logs still fire.
+  @doc false
+  @spec request_log_level(Plug.Conn.t()) :: Logger.level() | false
+  def request_log_level(%Plug.Conn{path_info: ["auth", "verify-complete" | _rest]}), do: false
+  def request_log_level(%Plug.Conn{path_info: ["auth", "reset-password", _token]}), do: false
+  def request_log_level(%Plug.Conn{path_info: ["email-change", _token]}), do: false
+  def request_log_level(_conn), do: :info
 
   # Use custom body reader to cache raw body for webhooks needed for signature verification
   # Length reduced to 5MB for security; webhooks are typically much smaller.
