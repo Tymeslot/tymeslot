@@ -62,7 +62,7 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
       |> assert_has(css("button[phx-click='next_step']"))
       |> click(css("button[phx-click='next_step']"))
 
-    # Step 7: Ready — click "Create your first meeting type" to finish and go to dashboard
+    # Step 7: Ready — click "Go to dashboard" to finish onboarding
     session
     |> assert_has(css("button[phx-click='next_step']"))
     |> click(css("button[phx-click='next_step']"))
