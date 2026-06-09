@@ -152,4 +152,29 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
       end)
     end
   end
+
+  describe "loop prevention" do
+    defmodule RaisingAdminAlerts do
+      @spec send_alert(atom(), map()) :: no_return()
+      def send_alert(_type, _payload) do
+        send(Application.get_env(:tymeslot, :admin_alerts_test_pid), :reporter_invoked)
+        raise "reporter blew up"
+      end
+    end
+
+    test "a failure inside the alert path does not crash the handler or loop" do
+      Application.put_env(:tymeslot, :admin_alerts_impl, RaisingAdminAlerts)
+
+      ExUnit.CaptureLog.capture_log(fn ->
+        assert CrashReporter.log(crash_event({%RuntimeError{message: "x"}, []}), %{}) == :ok
+        # The offloaded task invokes the (raising) reporter exactly once...
+        assert_receive :reporter_invoked, 1_000
+        # ...and the rescued failure produces no new crash event, so no re-entry.
+        refute_receive :reporter_invoked, 200
+      end)
+
+      # The raise never propagated into a successful alert.
+      refute_receive {:send_alert, :unhandled_crash, _}, 50
+    end
+  end
 end
