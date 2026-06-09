@@ -43,6 +43,23 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   @spec get(atom()) :: %{category: String.t(), severity: :info | :warning | :error} | nil
   def get(type), do: Map.get(@registry, type)
 
+  @doc """
+  Returns a stable identity string used to deduplicate repeat alerts.
+
+  Defaults to the formatted message. Add a clause when the message embeds
+  per-occurrence detail (ids, error text) that would defeat deduplication —
+  a burst of permanently failed jobs from one broken worker should collapse
+  into a single alert per dedup window, not one email per job.
+  """
+  @spec dedup_key(atom(), map()) :: String.t()
+  def dedup_key(:oban_job_failure, metadata) do
+    worker = Map.get(metadata, :worker, "unknown")
+    queue = Map.get(metadata, :queue, "unknown")
+    "oban_job_failure:#{worker}:#{queue}"
+  end
+
+  def dedup_key(type, metadata), do: format_message(type, metadata)
+
   @doc "Formats a human-readable message for the given alert type and metadata."
   @spec format_message(atom(), map()) :: String.t()
   def format_message(:unhandled_webhook, metadata) do

@@ -41,7 +41,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     )
 
     if alerts_enabled?() do
-      maybe_enqueue_email(category, severity, message, scrubbed_metadata)
+      dedup_key = AlertTypes.dedup_key(type, scrubbed_metadata)
+      maybe_enqueue_email(category, severity, message, scrubbed_metadata, dedup_key)
     end
 
     :ok
@@ -51,12 +52,15 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     Application.get_env(:tymeslot, :admin_alerts_enabled, false) == true
   end
 
-  defp maybe_enqueue_email(category, severity, message, metadata) do
+  defp maybe_enqueue_email(category, severity, message, metadata, dedup_key) do
     recipient = Application.get_env(:tymeslot, :admin_alert_email)
 
     if AdminAlerts.valid_email?(recipient) do
       enriched = enrich_metadata(metadata)
-      EmailScheduler.schedule_admin_alert(recipient, category, severity, message, enriched)
+
+      EmailScheduler.schedule_admin_alert(recipient, category, severity, message, enriched,
+        dedup_key: dedup_key
+      )
     else
       Logger.debug("Admin alert email not delivered: no valid recipient configured",
         category: category

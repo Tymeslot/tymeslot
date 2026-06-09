@@ -153,4 +153,36 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       assert msg == "Alert: totally_unknown"
     end
   end
+
+  describe "dedup_key/2" do
+    test "oban_job_failure is stable across different failure reasons" do
+      base = %{worker: "Tymeslot.Workers.SyncWorker", queue: "calendar_events", job_id: 1}
+
+      key_a = AlertTypes.dedup_key(:oban_job_failure, Map.put(base, :reason_message, "boom 1"))
+
+      key_b =
+        AlertTypes.dedup_key(
+          :oban_job_failure,
+          base |> Map.put(:reason_message, "boom 2") |> Map.put(:job_id, 2)
+        )
+
+      assert key_a == key_b
+      assert key_a =~ "Tymeslot.Workers.SyncWorker"
+      assert key_a =~ "calendar_events"
+    end
+
+    test "oban_job_failure differs across workers" do
+      key_a = AlertTypes.dedup_key(:oban_job_failure, %{worker: "WorkerA", queue: "q"})
+      key_b = AlertTypes.dedup_key(:oban_job_failure, %{worker: "WorkerB", queue: "q"})
+
+      refute key_a == key_b
+    end
+
+    test "other types fall back to the formatted message" do
+      metadata = %{event_type: "invoice.paid", event_id: "evt_1"}
+
+      assert AlertTypes.dedup_key(:unhandled_webhook, metadata) ==
+               AlertTypes.format_message(:unhandled_webhook, metadata)
+    end
+  end
 end

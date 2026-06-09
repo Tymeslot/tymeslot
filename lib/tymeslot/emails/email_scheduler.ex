@@ -61,7 +61,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_integration_paused_notification(user, integration, type, cutoff_days),
     to: IntegrationScheduler
 
-  defdelegate schedule_admin_alert(recipient, category, severity, message, metadata),
+  defdelegate schedule_admin_alert(recipient, category, severity, message, metadata, opts \\ []),
     to: IntegrationScheduler
 
   # --- Changeset validation (used by EmailWorker's Oban callback) ---
