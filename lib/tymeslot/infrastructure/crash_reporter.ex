@@ -40,12 +40,43 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
 
   @own_domain [:tymeslot, :crash_reporter]
 
+  @handler_id :tymeslot_crash_reporter
+
   @rate_limit_bucket "crash_reporter:alerts"
   @throttle_notice_bucket "crash_reporter:throttle_notice"
 
   @stacktrace_max_lines 50
 
   @normal_exits [:normal, :shutdown]
+
+  @doc """
+  Installs the crash reporter as a global `:logger` handler.
+
+  Idempotent — safe to call on application restart inside the same BEAM.
+  """
+  @spec attach() :: :ok | {:error, term()}
+  def attach do
+    _removed = :logger.remove_handler(@handler_id)
+
+    :logger.add_handler(@handler_id, __MODULE__, %{
+      level: :error,
+      filter_default: :log,
+      filters: [
+        # Loop prevention: drop anything this module logs under its own domain.
+        own_logs: {&:logger_filters.domain/2, {:stop, :sub, @own_domain}},
+        # Belt-and-suspenders: Oban crashes are owned by ObanFailureAlerter and
+        # logged under [:oban]; never double-report them here.
+        oban_logs: {&:logger_filters.domain/2, {:stop, :sub, [:oban]}}
+      ]
+    })
+  end
+
+  @doc "Removes the handler if installed. Used by tests."
+  @spec detach() :: :ok
+  def detach do
+    _removed = :logger.remove_handler(@handler_id)
+    :ok
+  end
 
   @doc """
   Returns true if a crash of this kind/reason should raise an admin alert.

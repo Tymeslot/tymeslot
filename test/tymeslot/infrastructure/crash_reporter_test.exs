@@ -128,4 +128,28 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
       refute CrashReporter.within_rate_limit?()
     end
   end
+
+  describe "attach/0 integration" do
+    setup do
+      :ok = CrashReporter.attach()
+      on_exit(&CrashReporter.detach/0)
+      :ok
+    end
+
+    test "installs a :logger handler" do
+      assert {:ok, _config} = :logger.get_handler_config(:tymeslot_crash_reporter)
+    end
+
+    test "a genuinely crashing supervised task raises an unhandled_crash alert" do
+      ExUnit.CaptureLog.capture_log(fn ->
+        Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+          raise "integration boom"
+        end)
+
+        assert_receive {:send_alert, :unhandled_crash, payload}, 2_000
+        assert payload.kind == :error
+        assert payload.reason_message =~ "integration boom"
+      end)
+    end
+  end
 end

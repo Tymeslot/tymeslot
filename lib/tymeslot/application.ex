@@ -8,7 +8,7 @@ defmodule Tymeslot.Application do
 
   alias Phoenix.PubSub
   alias Tymeslot.Infrastructure.Logging.{FileSink, MetadataRedactor}
-  alias Tymeslot.Infrastructure.{Metrics, ObanFailureAlerter, ObanLogger}
+  alias Tymeslot.Infrastructure.{CrashReporter, Metrics, ObanFailureAlerter, ObanLogger}
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
   alias Tymeslot.Integrations.Shared.Lock
@@ -45,6 +45,13 @@ defmodule Tymeslot.Application do
 
     # Raise an admin alert when a job fails permanently (exhausts its retries).
     ObanFailureAlerter.attach()
+
+    # Forward every unhandled process crash (web, LiveView, GenServer, Task) to
+    # AdminAlerts. Skipped in test, where intentionally-crashed processes would
+    # otherwise generate alert noise; integration tests attach it explicitly.
+    unless Application.get_env(:tymeslot, :environment) == :test do
+      CrashReporter.attach()
+    end
 
     # Set up telemetry handlers for metrics
     Metrics.setup_handlers()
