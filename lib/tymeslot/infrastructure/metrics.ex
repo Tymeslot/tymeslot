@@ -247,13 +247,48 @@ defmodule Tymeslot.Infrastructure.Metrics do
   def handle_http_event(_event_name, measurements, metadata, _config) do
     # Only log errors or slow requests
     if metadata[:status_code] >= 400 or measurements[:duration] > 5000 do
+      %{host: host, path: path} = request_target(metadata[:url])
+
+      # Log host and path only — the query string carries calendar ids and
+      # time-range parameters that are noisy and needlessly identifying.
       Logger.warning("HTTP request issue",
         method: metadata[:method],
-        url: metadata[:url],
+        host: host,
+        path: path,
         status_code: metadata[:status_code],
         duration_ms: measurements[:duration]
       )
     end
+  end
+
+  defp request_target(url) when is_binary(url) do
+    uri = URI.parse(url)
+    %{host: uri.host, path: redact_path(uri.path)}
+  end
+
+  defp request_target(_url), do: %{host: nil, path: nil}
+
+  # Replace path segments that look like identifiers with `:id` so that
+  # calendar ids and email addresses are never written to structured logs.
+  # Two rules apply (in priority order):
+  #   1. Any segment immediately following a `calendars` segment is an id.
+  #   2. Any segment containing `@` is an email address / calendar identifier.
+  defp redact_path(nil), do: nil
+
+  defp redact_path(path) do
+    segments = String.split(path, "/")
+
+    redacted =
+      Enum.reduce(segments, {[], false}, fn segment, {acc, redact_next} ->
+        cond do
+          redact_next -> {acc ++ [":id"], false}
+          segment == "calendars" -> {acc ++ [segment], true}
+          String.contains?(segment, "@") -> {acc ++ [":id"], false}
+          true -> {acc ++ [segment], false}
+        end
+      end)
+
+    redacted |> elem(0) |> Enum.join("/")
   end
 
   @spec handle_circuit_breaker_event(
