@@ -63,10 +63,12 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
       filter_default: :log,
       filters: [
         # Loop prevention: drop anything this module logs under its own domain.
-        own_logs: {&:logger_filters.domain/2, {:stop, :sub, @own_domain}},
+        # Elixir's Logger prepends :elixir to custom domains, so the match domain
+        # is [:elixir | @own_domain], not @own_domain itself.
+        own_logs: {&:logger_filters.domain/2, {:stop, :sub, [:elixir | @own_domain]}},
         # Belt-and-suspenders: Oban crashes are owned by ObanFailureAlerter and
-        # logged under [:oban]; never double-report them here.
-        oban_logs: {&:logger_filters.domain/2, {:stop, :sub, [:oban]}}
+        # logged under [:oban] (→ [:elixir, :oban]); never double-report them here.
+        oban_logs: {&:logger_filters.domain/2, {:stop, :sub, [:elixir, :oban]}}
       ]
     })
   end
