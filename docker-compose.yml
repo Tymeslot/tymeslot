@@ -18,49 +18,30 @@ services:
     image: tymeslot:latest
     container_name: tymeslot
     restart: unless-stopped
+    # PORT is the listen port; it is published on the host and inside the
+    # container so changing it in .env works end-to-end.
     ports:
-      - "${PORT:-4000}:4000"
+      - "${PORT:-4000}:${PORT:-4000}"
+    # Forward every variable from .env into the container. start-docker.sh fills
+    # in sensible defaults for anything left unset, so the only thing pinned here
+    # is the deployment type.
+    env_file:
+      - .env
     environment:
-      # Required environment variables (MUST be set in .env file)
       DEPLOYMENT_TYPE: docker
-      PHX_HOST: ${PHX_HOST}
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
-      POSTGRES_DB: ${POSTGRES_DB:-tymeslot}
-      POSTGRES_USER: ${POSTGRES_USER:-tymeslot}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      
-      # Optional configurations
-      PORT: ${PORT:-4000}
-      DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-10}
-      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-true}
-      
-      # Email configuration (optional)
-      EMAIL_ADAPTER: ${EMAIL_ADAPTER:-test}
-      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Tymeslot}
-      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-hello@localhost}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USERNAME: ${SMTP_USERNAME:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      POSTMARK_API_KEY: ${POSTMARK_API_KEY:-}
-      
-      # OAuth providers (optional)
-      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
-      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-
-      # Calendar real-time push (optional; falls back to polling when unset)
-      WEBHOOK_BASE_URL: ${WEBHOOK_BASE_URL:-}
     volumes:
       - tymeslot_data:/app/data
-      - postgres_data:/var/lib/postgresql/data
+      - tymeslot_pg:/var/lib/postgresql/data
 
+# Volume names are pinned with `name:` so they match the `docker run` quick-start
+# (which uses `tymeslot_data` and `tymeslot_pg`) instead of being prefixed with
+# the Compose project name. This keeps a single set of volumes whether you start
+# Tymeslot with `docker run` or `docker compose`.
 volumes:
   tymeslot_data:
-    driver: local
-  postgres_data:
-    driver: local
+    name: tymeslot_data
+  tymeslot_pg:
+    name: tymeslot_pg
 
 networks:
   default:

@@ -22,11 +22,18 @@ Deploy Tymeslot using Docker with an embedded PostgreSQL database. This provides
 
 ---
 
-## Quick Start
+## Quick start
 
-### Pull and Run (Docker Hub Image)
+There are two ways to run Tymeslot, and both start a single self-contained container with PostgreSQL embedded:
 
-If you want the quickest setup, pull and run the published image directly:
+- **Option A — prebuilt image:** the fastest way to get going.
+- **Option B — build from source:** use Docker Compose to build and pin your own image.
+
+> 📖 For the complete, always-current configuration reference — every environment variable, plus SMTP, Postmark, OAuth/OIDC, reverse proxy, and backups — see the online docs at **<https://tymeslot.app/docs>**. This README is the self-contained quick path; the sections below link to the matching online articles.
+
+### Option A — Run the prebuilt image (fastest)
+
+Pull and run the published image directly:
 
 ```bash
 docker run -d \
@@ -46,20 +53,26 @@ docker run -d \
   luka1thb/tymeslot:latest
 ```
 
-This will pull the image automatically if it is not present locally. For a pinned version, use `luka1thb/tymeslot:<VERSION>` (e.g., `luka1thb/tymeslot:0.97`).
+This will pull the image automatically if it is not present locally. For a pinned version, use `luka1thb/tymeslot:<VERSION>` (e.g., `luka1thb/tymeslot:1.0.5`).
+
+The embedded PostgreSQL listens only on `localhost` inside the container and is never exposed, so its password is an internal detail — if you omit `POSTGRES_PASSWORD` it defaults to `tymeslot`, which is fine for the embedded database. Set a strong `POSTGRES_PASSWORD` when you point Tymeslot at an [external database](#using-an-external-database).
 
 > **Keep `tymeslot_pg:/var/lib/postgresql/data` as a named volume.** Swapping it for a host path (e.g. `./pgdata:/var/lib/postgresql/data`) can break first-run initialization on Docker Desktop, rootless Docker, userns-remap, or SELinux-enforcing hosts because the mount arrives with ownership the container can't change. If you need the database on a specific host path, use an [external PostgreSQL](#using-an-external-database) instead.
 
-**Note**: Email configuration is essential for production use (password resets, booking notifications, etc.). For development/testing only, you can omit email variables and the system will use a test adapter that logs emails to console instead of sending them.
+> ⚠️ **Email defaults to silent discard.** Without email configuration, `EMAIL_ADAPTER` defaults to `test`, which **drops every message** — password resets, booking confirmations and reminders all vanish with no error. Configure SMTP or Postmark (below) before going live. See **<https://tymeslot.app/docs/email-smtp>** and **<https://tymeslot.app/docs/email-postmark>**.
 
-### 1. Clone Repository
+### Option B — Build from source (Docker Compose)
+
+Clone the repository, configure `.env`, then build and run with Docker Compose.
+
+#### 1. Clone Repository
 
 ```bash
-git clone https://github.com/tymeslot/tymeslot.git
+git clone https://github.com/Tymeslot/tymeslot.git
 cd tymeslot
 ```
 
-### 2. Configure Environment
+#### 2. Configure Environment
 
 ```bash
 # Copy environment template
@@ -91,50 +104,49 @@ POSTGRES_PASSWORD=<paste_generated_password>
 PORT=4000
 ```
 
-### 3. Build and Run
+#### 3. Build and run
 
-#### Option A: Using the Build Script (Recommended)
-
-```bash
-# Run from project root
-./build-docker.sh
-```
-
-The script will:
-- Validate your `.env` configuration
-- Build the Docker image
-- Optionally start the container automatically
-
-#### Option B: Using Docker Compose
+**Method 1 — Docker Compose (recommended):**
 
 ```bash
 docker compose up -d --build
 ```
 
-#### Option C: Manual Docker Commands
+Compose reads your `.env`, builds the image, and starts the container with the `tymeslot_data` and `tymeslot_pg` volumes.
+
+**Method 2 — Build script:**
+
+```bash
+# Run from apps/tymeslot/
+./build-docker.sh
+```
+
+The script validates your `.env`, builds the image, and offers to start the container.
+
+**Method 3 — Manual Docker commands:**
 
 ```bash
 # Build image
-source .env
 docker build -f Dockerfile.docker -t tymeslot .
 
 # Run container
+source .env
 docker run -d \
   --name tymeslot \
-  -p ${PORT:-4000}:4000 \
+  -p ${PORT:-4000}:${PORT:-4000} \
   --env-file .env \
   -v tymeslot_data:/app/data \
-  -v postgres_data:/var/lib/postgresql/data \
+  -v tymeslot_pg:/var/lib/postgresql/data \
   tymeslot
 ```
 
-### 4. Access Your Installation
+#### 4. Access Your Installation
 
 Wait 30-60 seconds for initialization, then visit:
 
 - **URL**: `http://localhost:4000`
 
-For production deployment with SSL/HTTPS, configure your reverse proxy (Nginx, Caddy, Traefik, etc.) separately.
+For production deployment with SSL/HTTPS, configure your reverse proxy (Nginx, Caddy, Traefik, etc.) separately — see the [Reverse Proxy Setup](https://tymeslot.app/docs/reverse-proxy) guide for full Nginx and Caddy walkthroughs.
 
 ---
 
@@ -216,6 +228,8 @@ POSTMARK_API_KEY=your-postmark-api-key
 
 ### HTTP Proxy Configuration
 
+> Full details, including whitelist domains and troubleshooting: [HTTP Proxy](https://tymeslot.app/docs/http-proxy).
+
 If your environment requires outbound HTTP requests to go through a proxy (common in corporate/secured environments), Tymeslot supports standard proxy environment variables:
 
 **Standard Configuration (Recommended)**
@@ -281,7 +295,7 @@ All outbound HTTP/HTTPS requests including:
 
 ### Using an External Database
 
-By default, Tymeslot uses an embedded PostgreSQL database in the Docker container. To use an external database (e.g., from a cloud provider like AWS RDS, Azure Database, or DigitalOcean), set these variables:
+By default, Tymeslot uses an embedded PostgreSQL database in the Docker container. To use an external database (e.g., from a cloud provider like AWS RDS, Azure Database, or DigitalOcean), set the **discrete** connection variables below. Tymeslot's Docker deployment does **not** read a single `DATABASE_URL` — use `DATABASE_HOST` and friends instead:
 
 ```bash
 DATABASE_HOST=your-db-host.example.com
@@ -302,6 +316,8 @@ The database detection is automatic:
 - If `DATABASE_HOST` is any other value, uses external database
 
 ### Optional Environment Variables
+
+> The complete, annotated list of every supported variable lives in [`.env.example`](.env.example) and online at [Environment Variable Reference](https://tymeslot.app/docs/env-reference). The most common knobs are shown below.
 
 ```bash
 # Application
@@ -391,6 +407,8 @@ docker compose down
 docker compose up -d --build
 ```
 
+> **Upgrading an older install — database volume renamed to `tymeslot_pg`.** Earlier versions named the PostgreSQL volume `postgres_data` (build script / manual `docker run`) or `<project>_postgres_data` (Docker Compose). Both now use `tymeslot_pg`. If you started Tymeslot before this change, your existing data is in the old volume — re-point the new mount at it, e.g. `-v postgres_data:/var/lib/postgresql/data`, or migrate the data into `tymeslot_pg` once, so the upgrade doesn't start against an empty database.
+
 ---
 
 ## Troubleshooting
@@ -440,7 +458,9 @@ docker exec -it tymeslot ps aux | grep postgres
 docker exec -it tymeslot su - postgres -c "psql -U $POSTGRES_USER -d $POSTGRES_DB -c 'SELECT version();'"
 
 # Reset database (WARNING: Destroys all data)
-docker volume rm postgres_data
+# Stop and remove the container first — the volume can't be removed while in use.
+docker rm -f tymeslot
+docker volume rm tymeslot_pg
 ```
 
 ### `initdb: could not change permissions of directory … Operation not permitted`
@@ -474,7 +494,12 @@ PORT=8080  # Use a different port
 
 ## OAuth Provider Setup
 
-Tymeslot supports multiple OAuth providers for authentication and calendar/video integrations. Configure the providers you need by following the setup guides below.
+Tymeslot supports multiple OAuth providers for authentication and calendar/video integrations. Configure the providers you need by following the setup guides below. Each provider also has a dedicated online walkthrough with screenshots:
+
+- [Google OAuth](https://tymeslot.app/docs/google-oauth) · [Google Calendar](https://tymeslot.app/docs/google-calendar) · [Google Meet](https://tymeslot.app/docs/google-meet)
+- [Microsoft OAuth](https://tymeslot.app/docs/microsoft-oauth) · [Outlook Calendar](https://tymeslot.app/docs/outlook-calendar) · [Teams](https://tymeslot.app/docs/teams)
+- [GitHub login](https://tymeslot.app/docs/github-login) · [Generic OIDC / SSO](https://tymeslot.app/docs/oidc-sso)
+- [CalDAV](https://tymeslot.app/docs/caldav) (Nextcloud, Radicale, Zimbra, mailbox.org)
 
 ### Google OAuth Setup
 
@@ -609,6 +634,20 @@ Tymeslot supports multiple OAuth providers for authentication and calendar/video
 - [ ] **OAuth providers** configured (if needed)
 - [ ] **Firewall** configured appropriately
 - [ ] **Backups** scheduled for Docker volumes
+
+---
+
+## Further documentation
+
+The online docs at **<https://tymeslot.app/docs>** stay in lock-step with each release. The articles most relevant to self-hosting:
+
+- [Docker deployment](https://tymeslot.app/docs/docker) — this guide, online
+- [Environment Variable Reference](https://tymeslot.app/docs/env-reference) — every supported variable
+- [Reverse Proxy Setup](https://tymeslot.app/docs/reverse-proxy) — Nginx & Caddy with SSL
+- [Backup & Restore](https://tymeslot.app/docs/backup-restore) — protecting your data volumes
+- [Upgrading](https://tymeslot.app/docs/upgrading) — moving between versions safely
+- [SMTP](https://tymeslot.app/docs/email-smtp) / [Postmark](https://tymeslot.app/docs/email-postmark) — email delivery
+- [Generic OIDC / SSO](https://tymeslot.app/docs/oidc-sso) · [reCAPTCHA](https://tymeslot.app/docs/recaptcha) · [Telegram](https://tymeslot.app/docs/telegram)
 
 ---
 

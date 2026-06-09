@@ -160,10 +160,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     # -v: Mount Docker volumes for persistent data storage
     docker run -d \
         --name tymeslot \
-        -p ${PORT:-4000}:4000 \
+        -p ${PORT:-4000}:${PORT:-4000} \
         --env-file .env \
         -v tymeslot_data:/app/data \
-        -v postgres_data:/var/lib/postgresql/data \
+        -v tymeslot_pg:/var/lib/postgresql/data \
         tymeslot
     
     # Display startup information and helpful next steps
@@ -197,10 +197,10 @@ else
     echo ""
     echo "Using docker run:"
     echo "  docker run -d --name tymeslot \\"
-    echo "    -p ${PORT:-4000}:4000 \\"
+    echo "    -p ${PORT:-4000}:${PORT:-4000} \\"
     echo "    --env-file .env \\"
     echo "    -v tymeslot_data:/app/data \\"
-    echo "    -v postgres_data:/var/lib/postgresql/data \\"
+    echo "    -v tymeslot_pg:/var/lib/postgresql/data \\"
     echo "    tymeslot"
     echo ""
     echo "Or using docker-compose (recommended):"

@@ -77,16 +77,26 @@ echo "========================================"
 echo ""
 
 # ==================== SECTION 2B: Detect Database Configuration ====================
-# Check if using external database or embedded PostgreSQL
+# Check if using external database or embedded PostgreSQL.
+# External mode is selected solely by DATABASE_HOST pointing somewhere other than
+# this container. The app (config/runtime.exs) reads discrete variables
+# (DATABASE_HOST, DATABASE_PORT, POSTGRES_DB/USER/PASSWORD) — it does NOT read
+# DATABASE_URL, so we must not branch on it here or we would skip the embedded
+# database while the app still tries (and fails) to reach localhost.
 USING_EXTERNAL_DB=false
 if [ "$DATABASE_HOST" != "localhost" ] && [ "$DATABASE_HOST" != "127.0.0.1" ]; then
     USING_EXTERNAL_DB=true
     echo "✓ External database detected: $DATABASE_HOST:$DATABASE_PORT"
     echo "  Skipping embedded PostgreSQL initialization"
-elif [ -n "${DATABASE_URL:-}" ]; then
-    USING_EXTERNAL_DB=true
-    echo "✓ DATABASE_URL detected"
-    echo "  Skipping embedded PostgreSQL initialization"
+fi
+
+# Warn loudly if DATABASE_URL is set: it is silently ignored by this deployment,
+# so a user expecting it to point at an external database would otherwise get the
+# embedded database with no indication anything was wrong.
+if [ -n "${DATABASE_URL:-}" ] && [ "$USING_EXTERNAL_DB" = false ]; then
+    echo "⚠ DATABASE_URL is set but is NOT used by Tymeslot's Docker deployment."
+    echo "  To use an external database, set DATABASE_HOST (plus DATABASE_PORT,"
+    echo "  POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD) instead."
 fi
 
 echo ""
