@@ -102,4 +102,30 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
       refute_receive {:send_alert, :unhandled_crash, _payload}, 200
     end
   end
+
+  describe "within_rate_limit?/0" do
+    setup do
+      original_max = Application.get_env(:tymeslot, :crash_reporter_rate_limit_max)
+      Application.put_env(:tymeslot, :crash_reporter_rate_limit_max, 3)
+      Tymeslot.Security.RateLimiter.clear_bucket("crash_reporter:alerts")
+      Tymeslot.Security.RateLimiter.clear_bucket("crash_reporter:throttle_notice")
+
+      on_exit(fn ->
+        if original_max do
+          Application.put_env(:tymeslot, :crash_reporter_rate_limit_max, original_max)
+        else
+          Application.delete_env(:tymeslot, :crash_reporter_rate_limit_max)
+        end
+      end)
+
+      :ok
+    end
+
+    test "allows up to the configured max, then denies within the window" do
+      assert CrashReporter.within_rate_limit?()
+      assert CrashReporter.within_rate_limit?()
+      assert CrashReporter.within_rate_limit?()
+      refute CrashReporter.within_rate_limit?()
+    end
+  end
 end

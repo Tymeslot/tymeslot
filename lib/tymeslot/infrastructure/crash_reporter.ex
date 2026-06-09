@@ -34,10 +34,14 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   """
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Security.RateLimiter
 
   require Logger
 
   @own_domain [:tymeslot, :crash_reporter]
+
+  @rate_limit_bucket "crash_reporter:alerts"
+  @throttle_notice_bucket "crash_reporter:throttle_notice"
 
   @stacktrace_max_lines 50
 
@@ -86,7 +90,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   def log(_log_event, _config), do: :ok
 
   defp handle_crash(kind, reason, stacktrace) do
-    if reportable?(kind, reason) do
+    if reportable?(kind, reason) and within_rate_limit?() do
       offload(kind, reason, stacktrace)
     end
 
@@ -113,6 +117,43 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
     end)
 
     :ok
+  end
+
+  @doc false
+  @spec within_rate_limit?() :: boolean()
+  def within_rate_limit? do
+    case RateLimiter.check_rate(@rate_limit_bucket, rate_limit_window_ms(), rate_limit_max()) do
+      {:allow, _count} ->
+        true
+
+      {:deny, _limit} ->
+        maybe_log_throttle()
+        false
+    end
+  end
+
+  # Emit at most one throttle notice per window so a crash storm cannot itself
+  # become a logging storm. The notice is logged under our own domain so it can
+  # never re-enter the handler.
+  defp maybe_log_throttle do
+    case RateLimiter.check_rate(@throttle_notice_bucket, rate_limit_window_ms(), 1) do
+      {:allow, _count} ->
+        Logger.warning(
+          "CrashReporter rate limit exceeded — suppressing further crash alerts this window",
+          domain: @own_domain
+        )
+
+      {:deny, _limit} ->
+        :ok
+    end
+  end
+
+  defp rate_limit_max do
+    Application.get_env(:tymeslot, :crash_reporter_rate_limit_max, 20)
+  end
+
+  defp rate_limit_window_ms do
+    Application.get_env(:tymeslot, :crash_reporter_rate_limit_window_ms, 60_000)
   end
 
   defp format_stacktrace(stacktrace) when is_list(stacktrace) do
