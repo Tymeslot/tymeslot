@@ -220,14 +220,14 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
     do: "Prevents last-minute surprise bookings so you always have time to prepare."
 
   def step_description(:ready),
-    do: "Your account is ready — create your first meeting type and start scheduling."
+    do: "Your account is ready. Head to your dashboard to start scheduling."
 
   @doc """
   Returns the button text for the next step.
   """
   @spec next_button_text(step()) :: String.t()
   def next_button_text(:welcome), do: "Let's go"
-  def next_button_text(:ready), do: "Create your first meeting type"
+  def next_button_text(:ready), do: "Go to dashboard"
   def next_button_text(_step), do: "Continue"
 
   @doc """

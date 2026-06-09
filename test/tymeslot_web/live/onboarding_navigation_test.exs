@@ -68,7 +68,14 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
 
       # Verify ready step
       assert has_element?(view, ".onboarding-step-title")
-      assert has_element?(view, "button[phx-click='next_step']", "Create your first meeting type")
+
+      assert has_element?(
+               view,
+               ".onboarding-step-description",
+               "Your account is ready. Head to your dashboard to start scheduling."
+             )
+
+      assert has_element?(view, "button[phx-click='next_step']", "Go to dashboard")
     end
 
     test "next button shows correct text on each step", %{conn: conn} do
