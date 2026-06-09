@@ -3,18 +3,37 @@ defmodule Tymeslot.Infrastructure.ObanLoggerTest do
 
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
+
   @moduletag :infrastructure
 
   alias Tymeslot.Infrastructure.CorrelationId
   alias Tymeslot.Infrastructure.ObanLogger
 
-  describe "handle_event/4" do
+  defp job do
+    %Oban.Job{
+      id: 123,
+      args: %{"foo" => "bar"},
+      queue: "default",
+      worker: "MyApp.SomeWorker",
+      attempt: 1,
+      max_attempts: 3,
+      meta: %{},
+      tags: []
+    }
+  end
+
+  describe "handle_event/4 - correlation_id on job:start" do
     test "sets correlation_id in process dict and Logger metadata" do
-      # Run in a separate process to avoid polluting test process metadata
       result =
         Task.await(
           Task.async(fn ->
-            ObanLogger.handle_event([:oban, :job, :start], %{}, %{}, [])
+            ObanLogger.handle_event(
+              [:oban, :job, :start],
+              %{system_time: 0},
+              %{job: job()},
+              []
+            )
 
             {CorrelationId.get_from_process(), Logger.metadata()[:correlation_id]}
           end)
@@ -31,7 +50,7 @@ defmodule Tymeslot.Infrastructure.ObanLoggerTest do
         for _i <- 1..10 do
           Task.await(
             Task.async(fn ->
-              ObanLogger.handle_event([:oban, :job, :start], %{}, %{}, [])
+              ObanLogger.handle_event([:oban, :job, :start], %{system_time: 0}, %{job: job()}, [])
               CorrelationId.get_from_process()
             end)
           )
@@ -39,12 +58,47 @@ defmodule Tymeslot.Infrastructure.ObanLoggerTest do
 
       assert length(Enum.uniq(ids)) == 10
     end
+  end
 
-    test "does not crash on unexpected errors in metadata setup" do
-      # Passing invalid event name still executes the rescue path gracefully
-      # (the function only pattern-matches [:oban, :job, :start], so this tests
-      # that even if internal logic were to raise, the handler survives)
-      assert :ok = ObanLogger.handle_event([:oban, :job, :start], %{}, %{}, [])
+  describe "handle_event/4 - job:exception level" do
+    test "logs a retryable failure at :warning, not :error" do
+      meta = %{job: job(), state: :failure, kind: :error, reason: %RuntimeError{message: "boom"}}
+
+      at_error =
+        capture_log([level: :error], fn ->
+          ObanLogger.handle_event([:oban, :job, :exception], measurements(), meta, [])
+        end)
+
+      at_warning =
+        capture_log([level: :warning], fn ->
+          ObanLogger.handle_event([:oban, :job, :exception], measurements(), meta, [])
+        end)
+
+      assert at_error == ""
+      assert at_warning =~ "job:exception"
+    end
+
+    test "logs a terminal failure at :error" do
+      meta = %{job: job(), state: :discard, kind: :error, reason: %RuntimeError{message: "boom"}}
+
+      at_error =
+        capture_log([level: :error], fn ->
+          ObanLogger.handle_event([:oban, :job, :exception], measurements(), meta, [])
+        end)
+
+      assert at_error =~ "job:exception"
     end
   end
+
+  describe "handle_event/4 - resilience" do
+    test "never raises even on malformed telemetry payloads" do
+      capture_log(fn ->
+        assert :ok = ObanLogger.handle_event([:oban, :job, :start], %{}, %{}, [])
+        assert :ok = ObanLogger.handle_event([:oban, :job, :stop], %{}, %{}, [])
+        assert :ok = ObanLogger.handle_event([:oban, :job, :exception], %{}, %{}, [])
+      end)
+    end
+  end
+
+  defp measurements, do: %{duration: 1000, queue_time: 500}
 end

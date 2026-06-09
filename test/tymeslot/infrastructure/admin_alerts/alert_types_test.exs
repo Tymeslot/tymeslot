@@ -116,6 +116,19 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       assert msg =~ "100"
     end
 
+    test ":oban_job_failure includes worker, queue, and reason" do
+      msg =
+        AlertTypes.format_message(:oban_job_failure, %{
+          worker: "MyApp.SomeWorker",
+          queue: "calendar_events",
+          reason_message: "boom"
+        })
+
+      assert msg =~ "MyApp.SomeWorker"
+      assert msg =~ "calendar_events"
+      assert msg =~ "boom"
+    end
+
     test ":reconciliation_discrepancies includes count" do
       msg =
         AlertTypes.format_message(:reconciliation_discrepancies, %{discrepancies_count: 3})

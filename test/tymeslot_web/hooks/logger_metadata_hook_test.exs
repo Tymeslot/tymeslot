@@ -41,6 +41,23 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHookTest do
       assert Logger.metadata()[:correlation_id] == existing_id
     end
 
+    test "adopts the request correlation_id from the process dictionary (dead render)" do
+      # Simulates the initial HTTP render: the CorrelationId plug has already set
+      # an id in the process dictionary for this request. The hook must adopt it
+      # rather than minting a new one, so the request's start and stop log lines
+      # share a single correlation_id.
+      request_id = CorrelationId.generate()
+      CorrelationId.put_in_process(request_id)
+      socket = build_socket()
+
+      assert {:cont, updated_socket} =
+               LoggerMetadataHook.on_mount(:default, %{}, %{}, socket)
+
+      assert updated_socket.assigns[:correlation_id] == request_id
+      assert CorrelationId.get_from_process() == request_id
+      assert Logger.metadata()[:correlation_id] == request_id
+    end
+
     test "sets user_id in Logger metadata when current_user is assigned" do
       user = %{id: 42}
       socket = build_socket(%{current_user: user})

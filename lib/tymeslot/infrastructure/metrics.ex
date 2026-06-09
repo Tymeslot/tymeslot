@@ -247,14 +247,26 @@ defmodule Tymeslot.Infrastructure.Metrics do
   def handle_http_event(_event_name, measurements, metadata, _config) do
     # Only log errors or slow requests
     if metadata[:status_code] >= 400 or measurements[:duration] > 5000 do
+      %{host: host, path: path} = request_target(metadata[:url])
+
+      # Log host and path only — the query string carries calendar ids and
+      # time-range parameters that are noisy and needlessly identifying.
       Logger.warning("HTTP request issue",
         method: metadata[:method],
-        url: metadata[:url],
+        host: host,
+        path: path,
         status_code: metadata[:status_code],
         duration_ms: measurements[:duration]
       )
     end
   end
+
+  defp request_target(url) when is_binary(url) do
+    uri = URI.parse(url)
+    %{host: uri.host, path: uri.path}
+  end
+
+  defp request_target(_url), do: %{host: nil, path: nil}
 
   @spec handle_circuit_breaker_event(
           list(atom()),

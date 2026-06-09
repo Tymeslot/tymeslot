@@ -22,10 +22,21 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHook do
           {:cont, Phoenix.LiveView.Socket.t()}
   def on_mount(:default, _params, _session, socket) do
     # Reset per-mount keys so a reused LiveView process cannot inherit the
-    # previous mount's user_id or correlation_id.
+    # previous mount's user_id or correlation_id. This clears Logger metadata
+    # only, not the process dictionary, which the check below relies on.
     Logger.metadata(user_id: nil, correlation_id: nil)
 
-    {socket, correlation_id} = CorrelationId.ensure(socket)
+    # On the initial HTTP (dead) render the LiveView mounts in the same process
+    # as the Plug pipeline, where `CorrelationId` has already set a correlation
+    # id in the process dictionary. Adopt it so the request's start and stop log
+    # lines share one id. On a live WebSocket connection this runs in a fresh
+    # process with an empty dictionary, so we fall through to `ensure/1` and mint
+    # a new id for the connection.
+    {socket, correlation_id} =
+      case CorrelationId.get_from_process() do
+        nil -> CorrelationId.ensure(socket)
+        existing -> {CorrelationId.put_in_socket(socket, existing), existing}
+      end
 
     CorrelationId.put_in_process(correlation_id)
     CorrelationId.add_to_logger_metadata(correlation_id)

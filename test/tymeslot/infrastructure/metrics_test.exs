@@ -1,9 +1,21 @@
+defmodule Tymeslot.Infrastructure.MetricsTest.LogCapture do
+  @moduledoc false
+  # Minimal :logger handler that forwards each log event (with full metadata)
+  # to a test process, so assertions can inspect metadata the formatter omits.
+  @spec log(:logger.log_event(), :logger.handler_config()) :: :ok
+  def log(event, %{config: %{pid: pid}}) do
+    send(pid, {:captured_log, event})
+    :ok
+  end
+end
+
 defmodule Tymeslot.Infrastructure.MetricsTest do
   use ExUnit.Case, async: false
 
   @moduletag :infrastructure
 
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Infrastructure.MetricsTest.LogCapture
 
   setup do
     # Detach any handlers from previous test runs to avoid :already_exists errors
@@ -233,6 +245,31 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
         %{method: "GET", url: "https://example.com", status_code: 200},
         nil
       )
+    end
+
+    test "logs host and path but drops the URL query string on errors" do
+      handler_id = :metrics_http_capture
+
+      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
+      on_exit(fn -> :logger.remove_handler(handler_id) end)
+
+      Metrics.handle_http_event(
+        [:tymeslot, :http, :request],
+        %{duration: 100},
+        %{
+          method: "GET",
+          url:
+            "https://www.googleapis.com/calendar/v3/calendars/secret@import.calendar.google.com/events?maxResults=2500&timeMin=2025-06-07T18:15:04Z",
+          status_code: 404
+        },
+        nil
+      )
+
+      assert_receive {:captured_log, %{meta: %{status_code: 404} = meta}}
+      assert meta.host == "www.googleapis.com"
+      assert meta.path == "/calendar/v3/calendars/secret@import.calendar.google.com/events"
+      refute Map.has_key?(meta, :url)
+      refute meta.path =~ "maxResults"
     end
   end
 
