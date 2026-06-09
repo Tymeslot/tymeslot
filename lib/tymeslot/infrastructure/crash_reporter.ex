@@ -66,8 +66,10 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
         # Elixir's Logger prepends :elixir to custom domains, so the match domain
         # is [:elixir | @own_domain], not @own_domain itself.
         own_logs: {&:logger_filters.domain/2, {:stop, :sub, [:elixir | @own_domain]}},
-        # Belt-and-suspenders: Oban crashes are owned by ObanFailureAlerter and
-        # logged under [:oban] (→ [:elixir, :oban]); never double-report them here.
+        # Future-proofing: Oban job failures are owned by ObanFailureAlerter via
+        # telemetry and today carry no crash_reason, so they never reach this
+        # handler. Dropping Oban's [:oban] (→ [:elixir, :oban]) domain means a
+        # future Oban that logs crashes with crash_reason still can't double-report.
         oban_logs: {&:logger_filters.domain/2, {:stop, :sub, [:elixir, :oban]}}
       ]
     })
@@ -128,6 +130,14 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
     end
 
     :ok
+  rescue
+    # Runs in the logging process. A transient failure of a dependency (e.g. the
+    # rate-limiter ETS table or TaskSupervisor briefly unavailable after a crash)
+    # must degrade to "drop this alert", never propagate into the logging
+    # pipeline or count toward handler removal.
+    _exception -> :ok
+  catch
+    _kind, _reason -> :ok
   end
 
   defp offload(kind, reason, stacktrace) do
