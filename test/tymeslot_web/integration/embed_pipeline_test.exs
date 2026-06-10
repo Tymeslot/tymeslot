@@ -231,10 +231,13 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
       assert csp =~ "frame-ancestors"
     end
 
-    test "?embed=1 sets data-embed-layout=\"column\" on the root HTML element", %{conn: conn} do
-      # embed.js appends ?embed=1 to every iframe URL it generates; the server
-      # must respond with data-embed-layout="column" so the wide-canvas layout
-      # activates inside the iframe container.
+    test "?embed=1 without a layout sets data-embed-layout=\"default\" (back-compat)", %{
+      conn: conn
+    } do
+      # Legacy snippets carry no data-layout, so embed.js sends ?embed=1 with no
+      # ?layout=. The server must keep the centred :default layout for these so
+      # already-deployed embeds don't silently flip to the wide column layout on
+      # upgrade. Column is opt-in via ?layout=column (see the next two tests).
       user = insert(:user)
 
       insert(:profile,
@@ -248,12 +251,12 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
 
       response = conn |> get("/layoutembed?embed=1") |> html_response(200)
 
-      assert response =~ ~s(data-embed-layout="column")
+      assert response =~ ~s(data-embed-layout="default")
     end
 
-    test "?embed=1&layout=default opts back into data-embed-layout=\"default\"", %{conn: conn} do
-      # An explicit ?layout=default overrides the embed-default column layout,
-      # letting embed users opt into the centred standalone view.
+    test "?embed=1&layout=default sets data-embed-layout=\"default\"", %{conn: conn} do
+      # An explicit ?layout=default resolves to the centred view, same as the
+      # no-layout default.
       user = insert(:user)
 
       insert(:profile,

@@ -4,11 +4,12 @@
  * When the scheduling page is loaded inside an iframe (via embed.js),
  * this module:
  * 1. Adds a `data-embedded` attribute to <html> so CSS can adapt
- * 2. Sets `data-embed-mode` ("inline" or "modal") for mode-specific CSS
- * 3. Continuously posts the page's measured height to the parent on a
+ * 2. Continuously posts the page's measured height to the parent on a
  *    50ms loop so the parent iframe element can grow AND shrink to match
  *    content as it changes — no dead space at the bottom when the page
- *    shrinks between steps.
+ *    shrinks between steps. Both inline and modal embeds report height
+ *    continuously — the wrapper sizing differs (inline grows freely, modal
+ *    is capped) but the measurement protocol is identical.
  *
  * Measurement protocol:
  * - Every pass measures the SAME thing — ceil(getComputedStyle(main).height +
@@ -38,8 +39,6 @@
   document.documentElement.setAttribute("data-embedded", "");
 
   const params = new URLSearchParams(window.location.search);
-  const embedMode = params.get("embed-mode") || "modal";
-  document.documentElement.setAttribute("data-embed-mode", embedMode);
 
   // --- Derive the allowed parent origin ---
   // Prefer document.referrer (browser-provided, hard to spoof). Fall back

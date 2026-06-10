@@ -269,12 +269,13 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
     test "copies embed code with customisations applied", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
-      # Apply customisations — switch to the centred "default" layout so the
-      # override is emitted into the snippet (column is the embed default and
-      # produces a clean snippet without a data-layout attribute).
+      # Apply customisations — pick the "column" layout so the data-layout
+      # override is emitted into the snippet. The server now defaults embeds to
+      # centred :default (back-compat), so column is the opt-in that carries an
+      # explicit attribute; "default" produces a clean snippet with none.
       view
       |> form("form[phx-change='update_customisation']", %{
-        "customise" => %{"layout" => "default", "initial_height" => "500", "max_width" => "900"}
+        "customise" => %{"layout" => "column", "initial_height" => "500", "max_width" => "900"}
       })
       |> render_change()
 
@@ -283,7 +284,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       |> render_click()
 
       assert_push_event(view, "copy-to-clipboard", %{text: text})
-      assert text =~ ~s(data-layout="default")
+      assert text =~ ~s(data-layout="column")
       assert text =~ ~s(data-initial-height="500")
       assert text =~ ~s(data-max-width="900")
     end
@@ -402,25 +403,23 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       assert has_element?(view, "form[phx-change='update_customisation'] input#embed-max-width")
     end
 
-    test "embed snippets are clean by default (column is the embed default)", %{conn: conn} do
-      # Column is the new default because embed.js sets ?embed=1 on every
-      # iframe URL and the server picks :column for embedded contexts. Code
-      # snippets inside <pre><code> blocks are HTML-escaped, so a layout
-      # attribute would appear as `data-layout=&quot;column&quot;` —
-      # the live-preview hook's own data-layout attribute is unescaped, so
-      # we target the escaped form to focus the assertion on snippet copy.
-      #
-      # The link snippet is intentionally NOT covered here — it points to
-      # the standalone booking page (no ?embed=1), where :default is the
-      # server default, so picking "Column" in the dashboard correctly
-      # emits ?layout=column to override.
+    test "embed snippets carry the column override by default (dashboard default is column)", %{
+      conn: conn
+    } do
+      # The dashboard defaults the layout picker to "column" (assign_new
+      # :embed_layout → "column"). Because the server now defaults embeds to
+      # the centred :default (back-compat for legacy snippets that carry no
+      # data-layout), a column choice must emit an explicit override. Code
+      # snippets inside <pre><code> blocks are HTML-escaped, so the inline
+      # attribute appears as `data-layout=&quot;column&quot;` and the
+      # popup/floating JS as `layout: &#39;column&#39;`.
       {:ok, _view, html} = live(conn, "/dashboard/embed")
 
-      refute html =~ "data-layout=&quot;column&quot;"
-      refute html =~ "layout: &#39;column&#39;"
+      assert html =~ "data-layout=&quot;column&quot;"
+      assert html =~ "layout: &#39;column&#39;"
     end
 
-    test "switching to default layout emits the override on every snippet", %{conn: conn} do
+    test "switching to default layout produces clean snippets (no override)", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
       view
@@ -431,15 +430,15 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
       html = render(view)
 
-      # Inline snippet picks up data-layout="default" — HTML-escaped inside
-      # the <pre><code> block.
-      assert html =~ "data-layout=&quot;default&quot;"
-      # Popup/floating JS snippets emit `layout: 'default'`, with HTML-escaped
-      # apostrophes inside the <pre><code> code block.
-      assert html =~ "layout: &#39;default&#39;"
-      # Link snippet goes to the standalone page (no ?embed=1) where default
-      # is already the standalone default — no override needed.
+      # "Default" matches the server default, so no snippet carries an override.
+      refute html =~ "data-layout=&quot;default&quot;"
+      refute html =~ "layout: &#39;default&#39;"
+      refute html =~ "data-layout=&quot;column&quot;"
+      refute html =~ "layout: &#39;column&#39;"
+      # Link snippet goes to the standalone page where :default is also the
+      # default — no override needed there either.
       refute html =~ "?layout=default"
+      refute html =~ "?layout=column"
     end
 
     test "switching to column on the link snippet adds ?layout=column", %{conn: conn} do
@@ -468,12 +467,13 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       |> render_change(%{"customise" => %{"layout" => "mosaic"}})
 
       html = render(view)
-      # Invalid value falls back to "column" — clean snippet, no overrides.
-      # Check the HTML-escaped form so the assertions target snippet copy,
-      # not the live-preview hook's data-layout attribute.
-      # Positive confirmation that the fallback landed in column state: the
-      # link snippet emits ?layout=column (column overrides the standalone
-      # default, which is :default). Without this a silent no-op would pass.
+      # Invalid value falls back to "column". Check the HTML-escaped form so the
+      # assertions target snippet copy, not the live-preview hook's own
+      # data-layout attribute.
+      # Positive confirmation the fallback landed in column state: the inline
+      # snippet carries data-layout="column" and the link snippet emits
+      # ?layout=column. Without this a silent no-op would pass.
+      assert html =~ "data-layout=&quot;column&quot;"
       assert html =~ "?layout=column"
       refute html =~ "data-layout=&quot;default&quot;"
       refute html =~ "layout: &#39;default&#39;"

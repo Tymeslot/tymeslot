@@ -33,9 +33,17 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
 
   # The dashboard "Live Preview" iframe loads the booking page with
   # ?preview=true&embed=1 from tymeslot's own origin, so it is always
-  # same-origin. It is exempt from the third-party embed allowlist:
-  # SecurityHeadersPlug already pins framing to 'self' for preview requests,
-  # which prevents any cross-origin site from abusing the flag to embed.
+  # same-origin. It is exempt from the application-level third-party embed
+  # allowlist (`verify_embedding/2`) on the connected render.
+  #
+  # SECURITY — enforcement on preview requests rests SOLELY on CSP. When
+  # `?preview=true` is set, SecurityHeadersPlug pins `frame-ancestors 'self'`
+  # (and X-Frame-Options SAMEORIGIN), so the browser refuses to frame the page
+  # from any cross-origin site even though this hook skips the allowlist check.
+  # The flag cannot be abused to embed a profile's page on a disallowed origin.
+  # This CSP-only guarantee is locked in by the regression test
+  # "preview=true does NOT open framing to a disallowed third-party origin" in
+  # security_headers_plug_test.exs.
   defp preview?(params), do: params["preview"] in ["true", "1"]
 
   defp handle_embedded(embed_token, preview?, socket) do
