@@ -162,10 +162,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         # Persist the new UID so future updates target the correct event
         returned_uid = if is_map(result), do: Map.get(result, :uid), else: nil
 
-        case persist_calendar_mapping(meeting, returned_uid) do
-          :ok -> :ok
-          {:error, reason} -> {:error, reason}
-        end
+        persist_or_compensate(meeting, returned_uid, result)
 
       error ->
         error
@@ -202,15 +199,78 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       {:ok, returned_uid} ->
         Logger.info("Calendar event created successfully", meeting_id: meeting_id)
 
-        case persist_calendar_mapping(meeting, returned_uid) do
-          :ok -> :ok
-          {:error, reason} -> {:error, reason}
-        end
+        persist_or_compensate(meeting, returned_uid, returned_uid)
 
       {:error, error_type} ->
         handle_create_event_error(error_type, meeting, meeting_id, attempt)
     end
   end
+
+  # Persist the provider mapping after a successful create. If persistence
+  # fails, the provider event already exists but the meeting doesn't carry its
+  # UID/provider_event_id — so a worker retry of `create` would create a
+  # DUPLICATE (server-assigned-ID providers like Google/Outlook can't detect
+  # the orphan). To keep the operation idempotent we compensate by deleting the
+  # just-created event before surfacing the error, leaving the retry a clean
+  # slate. CalDAV PUTs are idempotent on the caller-supplied UID, so a failed
+  # delete there is harmless; the compensation primarily guards Google/Outlook.
+  defp persist_or_compensate(meeting, returned_uid, created_event) do
+    case persist_calendar_mapping(meeting, returned_uid) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        compensate_orphaned_event(meeting, created_event)
+        {:error, reason}
+    end
+  end
+
+  # Best-effort deletion of an event that was created on the provider but whose
+  # mapping could not be persisted. Uses the provider identifier returned by the
+  # create call so the delete targets the exact orphan, independent of whatever
+  # (stale, unpersisted) UID the meeting still carries.
+  defp compensate_orphaned_event(meeting, created_event) do
+    case orphan_identifier(created_event) do
+      nil ->
+        :ok
+
+      identifier ->
+        Logger.warning(
+          "Calendar mapping persistence failed after create; deleting orphaned event to keep retry idempotent",
+          meeting_id: meeting.id
+        )
+
+        delete_orphan(meeting, identifier)
+    end
+  end
+
+  defp delete_orphan(meeting, identifier) do
+    case calendar_module().delete_event(identifier, meeting) do
+      :ok ->
+        :ok
+
+      {:ok, :deleted} ->
+        :ok
+
+      {:error, :not_found} ->
+        :ok
+
+      other ->
+        Logger.error("Failed to delete orphaned calendar event after persistence failure",
+          meeting_id: meeting.id,
+          result: inspect(other)
+        )
+
+        :ok
+    end
+  end
+
+  defp orphan_identifier(uid) when is_binary(uid), do: uid
+  defp orphan_identifier(%{"id" => id}) when is_binary(id), do: id
+  defp orphan_identifier(%{id: id}) when is_binary(id), do: id
+  defp orphan_identifier(%{"uid" => uid}) when is_binary(uid), do: uid
+  defp orphan_identifier(%{uid: uid}) when is_binary(uid), do: uid
+  defp orphan_identifier(_other), do: nil
 
   defp handle_create_event_error(error_type, meeting, meeting_id, attempt) do
     case error_type do
