@@ -31,6 +31,20 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpersTest do
       assert states[:booking].step == 4
       assert states[:confirmation].step == 5
     end
+
+    test "5-state map includes awaiting_payment sharing the final step with confirmation" do
+      states = StateMachineHelpers.states_for(%{custom_fields: [%{}]})
+
+      assert states[:awaiting_payment]
+      assert states[:awaiting_payment].step == states[:confirmation].step
+      assert states[:awaiting_payment].prev == :booking
+    end
+
+    test "default 4-state map also includes awaiting_payment" do
+      states = StateMachineHelpers.default_states()
+      assert states[:awaiting_payment].step == states[:confirmation].step
+      assert states[:awaiting_payment].prev == :booking
+    end
   end
 
   describe "validate_state_transition/3 for the new questions state" do

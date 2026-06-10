@@ -261,23 +261,35 @@ defmodule Tymeslot.Payments.PaymentQueries do
   @doc """
   Anonymises payment transactions for a deleted host.
 
-  Nilifies user_id and stamps host_deleted_at so the row stands alone as
-  a tax record after the user is removed. host_email and host_name are
-  retained — they're the snapshotted counterparty identity required for
-  compliance and are not scrubbed here.
+  Snapshots the host's identity (email and name) from the `users` row into the
+  `host_email`/`host_name` columns *before* nilifying `user_id`, then stamps
+  `host_deleted_at` so the row stands alone as a tax record after the user is
+  removed.
+
+  The snapshot uses `COALESCE` so a value already captured at creation time is
+  never overwritten — it only fills columns that are still null. This closes a
+  retention gap: new rows are not guaranteed to have the snapshot written at
+  creation, so without this fill the counterparty identity would be lost the
+  moment `user_id` is set to nil. The fill mirrors the original backfill
+  migration (`host_email = u.email`, `host_name = u.name`).
   """
   @spec anonymise_for_host(integer(), DateTime.t()) :: {non_neg_integer(), nil}
   def anonymise_for_host(user_id, now) do
     query =
       from t in PaymentTransaction,
-        where: t.user_id == ^user_id and is_nil(t.host_deleted_at)
+        join: u in "users",
+        on: u.id == t.user_id,
+        where: t.user_id == ^user_id and is_nil(t.host_deleted_at),
+        update: [
+          set: [
+            host_email: fragment("COALESCE(?, ?)", t.host_email, u.email),
+            host_name: fragment("COALESCE(?, ?)", t.host_name, u.name),
+            host_deleted_at: ^now,
+            user_id: nil,
+            updated_at: ^now
+          ]
+        ]
 
-    Repo.update_all(query,
-      set: [
-        host_deleted_at: now,
-        user_id: nil,
-        updated_at: now
-      ]
-    )
+    Repo.update_all(query, [])
   end
 end

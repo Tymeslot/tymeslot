@@ -44,7 +44,9 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
 
   @spec retrieve_account(String.t()) :: {:ok, map()} | {:error, term()}
   def retrieve_account(id) do
-    Telemetry.span_stripe(:retrieve_account, id, fn -> impl().retrieve_account(id) end)
+    normalise_read(
+      Telemetry.span_stripe(:retrieve_account, id, fn -> impl().retrieve_account(id) end)
+    )
   end
 
   @spec create_account_link(map()) :: {:ok, map()} | {:error, term()}
@@ -63,23 +65,29 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
 
   @spec retrieve_checkout_session(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
   def retrieve_checkout_session(id, opts \\ []) do
-    Telemetry.span_stripe(:retrieve_checkout_session, opts[:connect_account], fn ->
-      impl().retrieve_checkout_session(id, opts)
-    end)
+    normalise_read(
+      Telemetry.span_stripe(:retrieve_checkout_session, opts[:connect_account], fn ->
+        impl().retrieve_checkout_session(id, opts)
+      end)
+    )
   end
 
   @spec retrieve_payment_intent(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
   def retrieve_payment_intent(id, opts \\ []) do
-    Telemetry.span_stripe(:retrieve_payment_intent, opts[:connect_account], fn ->
-      impl().retrieve_payment_intent(id, opts)
-    end)
+    normalise_read(
+      Telemetry.span_stripe(:retrieve_payment_intent, opts[:connect_account], fn ->
+        impl().retrieve_payment_intent(id, opts)
+      end)
+    )
   end
 
   @spec retrieve_charge(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
   def retrieve_charge(id, opts \\ []) do
-    Telemetry.span_stripe(:retrieve_charge, opts[:connect_account], fn ->
-      impl().retrieve_charge(id, opts)
-    end)
+    normalise_read(
+      Telemetry.span_stripe(:retrieve_charge, opts[:connect_account], fn ->
+        impl().retrieve_charge(id, opts)
+      end)
+    )
   end
 
   @spec expire_checkout_session(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
@@ -100,6 +108,37 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
           {:ok, map()} | {:error, term()}
   def construct_webhook_event(payload, signature, secret),
     do: impl().construct_webhook_event(payload, signature, secret)
+
+  # Normalise the success payload of a *read* response to a string-keyed map.
+  #
+  # Production stripity_stripe returns atom-keyed structs (`%Stripe.Account{}`,
+  # `%Stripe.Checkout.Session{}`, …) from `retrieve_*`/`list_*`, whereas every
+  # downstream consumer (workers, webhook handlers, `apply_account_event/2`)
+  # expects the same string-keyed shape that `construct_webhook_event/3`
+  # produces. Normalising here — at the single seam every read flows through —
+  # means the rest of the pipeline never has to care which adapter (real or
+  # Mox stub) produced the value. Normalisation is idempotent: a map that is
+  # already string-keyed passes through unchanged.
+  defp normalise_read({:ok, value}), do: {:ok, normalise(value)}
+  defp normalise_read({:error, _reason} = err), do: err
+
+  @doc false
+  @spec normalise(term()) :: term()
+  def normalise(value) when is_struct(value) do
+    value
+    |> Map.from_struct()
+    |> Enum.map(fn {k, v} -> {to_string(k), normalise(v)} end)
+    |> Map.new()
+  end
+
+  def normalise(value) when is_map(value) do
+    value
+    |> Enum.map(fn {k, v} -> {to_string(k), normalise(v)} end)
+    |> Map.new()
+  end
+
+  def normalise(value) when is_list(value), do: Enum.map(value, &normalise/1)
+  def normalise(value), do: value
 
   defp impl, do: Application.get_env(:tymeslot, :stripe_adapter, __MODULE__.Stripity)
 end
@@ -159,26 +198,11 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
   @impl StripeAdapter
   def construct_webhook_event(payload, signature, secret) do
     case Webhook.construct_event(payload, signature, secret) do
-      {:ok, event} -> {:ok, normalise_event(event)}
+      # Stripity returns a struct; normalise to a string-keyed map so the rest
+      # of the pipeline doesn't depend on stripity-internal layout. Shares the
+      # same recursive normaliser as the read responses.
+      {:ok, event} -> {:ok, StripeAdapter.normalise(event)}
       {:error, _reason} = err -> err
     end
   end
-
-  # Stripity returns a struct; normalise to a string-keyed map so the
-  # rest of the pipeline doesn't depend on stripity-internal layout.
-  defp normalise_event(value) when is_struct(value) do
-    value
-    |> Map.from_struct()
-    |> Enum.map(fn {k, v} -> {to_string(k), normalise_event(v)} end)
-    |> Map.new()
-  end
-
-  defp normalise_event(value) when is_map(value) do
-    value
-    |> Enum.map(fn {k, v} -> {to_string(k), normalise_event(v)} end)
-    |> Map.new()
-  end
-
-  defp normalise_event(value) when is_list(value), do: Enum.map(value, &normalise_event/1)
-  defp normalise_event(value), do: value
 end

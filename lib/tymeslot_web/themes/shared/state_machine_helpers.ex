@@ -16,6 +16,10 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
     schedule: %{step: 2, next: :questions, prev: :overview},
     questions: %{step: 3, next: :booking, prev: :schedule},
     booking: %{step: 4, next: :confirmation, prev: :questions},
+    # `awaiting_payment` shares the final step with `:confirmation` (here step
+    # 5) for the same reason it does in the default map: step navigation must
+    # not let the attendee jump back while a paid booking is mid-payment.
+    awaiting_payment: %{step: 5, prev: :booking},
     confirmation: %{step: 5, prev: :booking}
   }
 

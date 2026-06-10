@@ -27,6 +27,7 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
   alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Profiles
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
@@ -37,6 +38,7 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
   setup do
     setup_config(:tymeslot,
       feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
+      meeting_payments_enabled: true,
       payment_application_fee_bp: 50
     )
 
@@ -116,8 +118,11 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
       refute_enqueued(worker: VideoRoomWorker)
     end
 
-    test "rolls back meeting when Stripe checkout creation fails",
+    test "expires the meeting, frees the slot, and returns a payment-oriented message when Stripe checkout creation fails",
          %{user: user, meeting_type: meeting_type} do
+      # The Stripe call now runs outside the booking DB transaction, so the
+      # meeting is no longer rolled back. Instead the orchestrator expires it on
+      # checkout failure so the slot is released immediately.
       expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
         {:error, :stripe_unreachable}
       end)
@@ -138,7 +143,56 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
         }
       }
 
-      assert {:error, _reason} = Orchestrator.submit_booking(params)
+      assert {:error, message} = Orchestrator.submit_booking(params)
+
+      # The error message must be payment-oriented — never the DB-save fallback.
+      assert message =~ "payment"
+      refute message =~ "database"
+
+      # The just-created meeting is expired (slot released), not left dangling
+      # in awaiting_payment — so no awaiting_payment meeting remains for the host.
+      assert MeetingQueries.count_awaiting_payment_for_organizer(user.id) == 0
+    end
+
+    test "returns a payment-oriented message when Stripe returns a Stripe.Error struct",
+         %{user: user, meeting_type: meeting_type} do
+      # stripity_stripe returns {:error, %Stripe.Error{}} — a struct that is neither
+      # a known atom nor a binary, so without an explicit branch it would hit the
+      # catch-all and show "Failed to save meeting to database" (wrong).
+      expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
+        {:error,
+         %{
+           __struct__: Stripe.Error,
+           source: :network,
+           code: :network_error,
+           message: "Network timeout"
+         }}
+      end)
+
+      params = %{
+        form_data: %{
+          "name" => "Attendee",
+          "email" => "attendee@example.com",
+          "message" => ""
+        },
+        meeting_params: %{
+          date: Date.add(Date.utc_today(), 1),
+          time: "17:00",
+          duration: "30min",
+          user_timezone: "Europe/Berlin",
+          organizer_user_id: user.id,
+          meeting_type_id: meeting_type.id
+        }
+      }
+
+      assert {:error, message} = Orchestrator.submit_booking(params)
+
+      # The Stripe.Error internals must not be leaked to the booker.
+      assert message =~ "payment"
+      refute message =~ "database"
+      refute message =~ "Network timeout"
+
+      assert MeetingQueries.count_awaiting_payment_for_organizer(user.id) == 0
     end
   end
 end

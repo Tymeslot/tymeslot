@@ -292,25 +292,48 @@ defmodule Tymeslot.Bookings.Create do
   defp create_paid_booking(meeting_attrs) do
     paid_attrs = Map.put(meeting_attrs, :status, "awaiting_payment")
 
-    case run_paid_meeting_transaction(paid_attrs) do
-      {:ok, %{meeting: meeting, checkout_url: url}} ->
-        {:ok, :payment_required, %{meeting: meeting, checkout_url: url}}
-
-      {:error, reason} ->
-        {:error, map_error_to_message(reason)}
+    # The Stripe checkout call deliberately runs OUTSIDE any DB transaction:
+    # holding a pooled DB connection open across a network round-trip to Stripe
+    # risks pool exhaustion under Stripe slowness. The meeting is created (and
+    # conflict-checked) atomically first; the Stripe call follows.
+    #
+    # On checkout failure we expire the just-created meeting so its slot is
+    # released immediately rather than waiting on the reconciliation sweep —
+    # the sweeper remains the net for failures we cannot observe here (e.g. a
+    # crash between session creation and the client redirect).
+    with {:ok, meeting} <- create_meeting(paid_attrs),
+         {:ok, %{checkout_url: url}} <- create_checkout_or_expire(meeting) do
+      {:ok, :payment_required, %{meeting: meeting, checkout_url: url}}
+    else
+      {:error, reason} -> {:error, map_error_to_message(reason)}
     end
   end
 
-  defp run_paid_meeting_transaction(paid_attrs) do
-    Repo.transaction(fn ->
-      with {:ok, meeting} <- create_meeting(paid_attrs),
-           {:ok, %{checkout_url: url}} <-
-             MeetingPayments.create_checkout_session(meeting) do
-        %{meeting: meeting, checkout_url: url}
-      else
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+  defp create_checkout_or_expire(meeting) do
+    case MeetingPayments.create_checkout_session(meeting) do
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, reason} ->
+        expire_unpaid_meeting(meeting, reason)
+        {:error, {:checkout_failed, reason}}
+    end
+  end
+
+  defp expire_unpaid_meeting(meeting, reason) do
+    case Scheduling.update_meeting_with_conflict_check(meeting, %{status: "expired"}) do
+      {:ok, _expired} ->
+        :ok
+
+      {:error, expire_error} ->
+        Logger.warning("Failed to expire meeting after checkout failure",
+          meeting_id: meeting.id,
+          checkout_error: inspect(reason),
+          expire_error: inspect(expire_error)
+        )
+
+        :ok
+    end
   end
 
   defp run_meeting_transaction(meeting_attrs, opts) do
@@ -380,6 +403,9 @@ defmodule Tymeslot.Bookings.Create do
 
       {:custom_field_errors, _errors} ->
         "Please fill in all required fields before submitting."
+
+      {:checkout_failed, _reason} ->
+        "We couldn't start the payment process. Please try again."
 
       reason when is_binary(reason) ->
         reason

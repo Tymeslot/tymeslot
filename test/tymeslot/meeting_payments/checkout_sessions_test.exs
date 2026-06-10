@@ -1,5 +1,7 @@
 defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
-  use Tymeslot.DataCase, async: true
+  # async: false — this suite mutates the global :feature_access_checker and
+  # :meeting_payments_enabled application env, which must not race other tests.
+  use Tymeslot.DataCase, async: false
 
   @moduletag :database
   @moduletag :payments
@@ -15,6 +17,25 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
   setup :verify_on_exit!
 
   setup do
+    # Checkout enforces server-side :meeting_payments access. Pin Core's default
+    # checker (the umbrella test env otherwise merges in the SaaS subscription
+    # checker, which returns :pro_required for a bare user) and enable the Core
+    # opt-in flag so the host is permitted to take payments in these tests.
+    previous_checker = Application.get_env(:tymeslot, :feature_access_checker)
+
+    Application.put_env(
+      :tymeslot,
+      :feature_access_checker,
+      Tymeslot.Features.DefaultAccessChecker
+    )
+
+    Application.put_env(:tymeslot, :meeting_payments_enabled, true)
+
+    on_exit(fn ->
+      Application.put_env(:tymeslot, :meeting_payments_enabled, false)
+      Application.put_env(:tymeslot, :feature_access_checker, previous_checker)
+    end)
+
     user = insert(:user)
     {:ok, profile} = Profiles.get_or_create_profile(user.id)
     {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: "1"})
@@ -143,7 +164,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
       assert bp.application_fee_cents == 0
     end
 
-    test "rolls back booking_payment when Stripe Checkout fails",
+    test "leaves a pending booking_payment (no session id) when Stripe Checkout fails",
          %{user: user, meeting_type: mt} do
       meeting =
         insert(:meeting,
@@ -160,7 +181,34 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
       assert {:error, :stripe_unreachable} =
                CheckoutSessions.create_session_for_booking(meeting)
 
-      # No booking_payment row should exist after rollback
+      # The Stripe call now runs OUTSIDE any DB transaction, so the row inserted
+      # before it is NOT rolled back. It remains `pending` with no checkout
+      # session id — exactly the shape the ReconcileAwaitingPayments sweeper
+      # treats as stale and cleans up. The pre-Stripe insert is the deliberate
+      # trade-off for not holding a pooled DB connection across the network call.
+      bp = BookingPaymentQueries.by_meeting_id(meeting.id)
+      assert bp
+      assert bp.status == "pending"
+      assert is_nil(bp.stripe_checkout_session_id)
+    end
+
+    test "rejects checkout when the host lacks :meeting_payments access",
+         %{user: user, meeting_type: mt} do
+      # Forged/raced booking: the host's plan lapsed (feature disabled) even
+      # though Stripe still reports charges_enabled. No Stripe call must be made.
+      Application.put_env(:tymeslot, :meeting_payments_enabled, false)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          attendee_email: "alice@example.com",
+          status: "awaiting_payment"
+        )
+
+      assert {:error, :payments_unavailable} =
+               CheckoutSessions.create_session_for_booking(meeting)
+
       refute BookingPaymentQueries.by_meeting_id(meeting.id)
     end
 

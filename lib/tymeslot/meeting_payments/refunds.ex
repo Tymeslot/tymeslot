@@ -140,6 +140,12 @@ defmodule Tymeslot.MeetingPayments.Refunds do
 
   defp validate_amount(%{status: "refunded"}, _amount_cents), do: {:error, :already_refunded}
 
+  # A disputed charge cannot be refunded through the normal Refund API — Stripe
+  # rejects it, and the funds are already held pending the dispute outcome.
+  # Catch it during local validation so the host gets a meaningful message
+  # instead of a wasted Stripe round-trip that errors.
+  defp validate_amount(%{status: "disputed"}, _amount_cents), do: {:error, :under_dispute}
+
   defp validate_amount(
          %{amount_cents: amount, refunded_amount_cents: refunded},
          amount_cents
