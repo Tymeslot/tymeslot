@@ -1752,28 +1752,28 @@ msgstr "New feature"
 #: lib/tymeslot_web/themes/shared/booking_flow.ex:60
 #, elixir-autogen, elixir-format
 msgid "Booking submitted successfully! You'll receive a confirmation email shortly."
-msgstr ""
+msgstr "Booking submitted successfully! You'll receive a confirmation email shortly."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:201
 #, elixir-autogen, elixir-format
 msgid "Cannot disable this login provider while it is the only working sign-in path for admins. Enable password authentication or another credentialed SSO provider first."
-msgstr ""
+msgstr "Cannot disable this login provider while it is the only working sign-in path for admins. Enable password authentication or another credentialed SSO provider first."
 
 #: lib/tymeslot_web/themes/shared/info_handlers.ex:188
 #, elixir-autogen, elixir-format
 msgid "Payment was cancelled. Please try booking again."
-msgstr ""
+msgstr "Payment was cancelled. Please try booking again."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:406
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below before submitting."
-msgstr ""
+msgstr "Please correct the errors below before submitting."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:101
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:284
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below."
-msgstr ""
+msgstr "Please correct the errors below."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:53
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:57
@@ -1786,4 +1786,4 @@ msgstr "Select a time"
 #: lib/tymeslot_web/live/admin_live.ex:116
 #, elixir-autogen, elixir-format
 msgid "That change would lock everyone out and was not applied."
-msgstr ""
+msgstr "That change would lock everyone out and was not applied."
