@@ -41,6 +41,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
   setup do
     with_config(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
     with_config(:tymeslot, :req_test_plug, {Req.Test, :tymeslot_http})
+    # The test server runs on localhost — allow the SSRF guard to pass for this
+    # trusted in-process test while keeping the production default (false).
+    with_config(:tymeslot, :allow_private_ips_for_calendar, true)
 
     # A previous test may have tripped the breaker; reset both the named
     # breaker and the host-specific one so a prior 401 run doesn't

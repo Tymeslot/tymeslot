@@ -31,16 +31,29 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   `CalendarIntegrationSchema` (`block_private_ips: true`). An authenticated
   user must not be able to probe internal hosts via a provider's
   connection/discovery test any more than they can save such a URL.
+
+  The private-IP block can be lifted for trusted in-process callers (e.g.
+  integration tests against a local server) by either passing
+  `allow_private_ips: true` in `opts` or setting the application config key
+  `config :tymeslot, :allow_private_ips_for_calendar, true`. The production
+  default is `false` in both cases.
   """
   @spec validate_url(String.t(), keyword()) :: :ok | {:error, String.t()}
   def validate_url(url, opts \\ []) do
     invalid_message = Keyword.get(opts, :message, "Invalid URL format")
 
+    allow_private =
+      Keyword.get(
+        opts,
+        :allow_private_ips,
+        Application.get_env(:tymeslot, :allow_private_ips_for_calendar, false)
+      )
+
     UrlValidation.validate_http_url(url,
       invalid_message: invalid_message,
       disallowed_protocol_error: invalid_message,
       enforce_https_for_public: true,
-      block_private_ips: true,
+      block_private_ips: not allow_private,
       https_error_message: "Use HTTPS for non-local calendar servers",
       private_ip_error_message: "Private or local network addresses are not allowed"
     )
