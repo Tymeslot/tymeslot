@@ -5,36 +5,59 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.AnswerNormaliserTest do
 
   alias TymeslotWeb.Themes.Shared.CustomQuestions.AnswerNormaliser
 
-  test "string \"true\" coerces to boolean true" do
-    assert AnswerNormaliser.normalise("true") == true
+  describe "type-aware coercion" do
+    test "\"true\" coerces to boolean true for yes_no" do
+      assert AnswerNormaliser.normalise("true", "yes_no") == true
+    end
+
+    test "\"false\" coerces to boolean false for yes_no" do
+      assert AnswerNormaliser.normalise("false", "yes_no") == false
+    end
+
+    test "\"acknowledge\" produces a confirmed map with a UTC timestamp for note" do
+      result = AnswerNormaliser.normalise("acknowledge", "note")
+
+      assert %{"confirmed" => true, "confirmed_at" => confirmed_at} = result
+      assert {:ok, dt, _offset} = DateTime.from_iso8601(confirmed_at)
+      assert dt.time_zone == "Etc/UTC"
+    end
   end
 
-  test "string \"false\" coerces to boolean false" do
-    assert AnswerNormaliser.normalise("false") == false
+  describe "text-like questions keep token words verbatim" do
+    test "\"true\" typed into short_text passes through unchanged" do
+      assert AnswerNormaliser.normalise("true", "short_text") == "true"
+    end
+
+    test "\"false\" typed into a phone question passes through unchanged" do
+      assert AnswerNormaliser.normalise("false", "phone") == "false"
+    end
+
+    test "\"acknowledge\" typed into a url question passes through unchanged" do
+      assert AnswerNormaliser.normalise("acknowledge", "url") == "acknowledge"
+    end
+
+    test "tokens with no type given are not coerced" do
+      assert AnswerNormaliser.normalise("true", nil) == "true"
+      assert AnswerNormaliser.normalise("acknowledge", nil) == "acknowledge"
+    end
   end
 
-  test "\"acknowledge\" produces a confirmed map with a UTC confirmed_at timestamp" do
-    result = AnswerNormaliser.normalise("acknowledge")
+  describe "non-token values pass through unchanged" do
+    test "ordinary text" do
+      assert AnswerNormaliser.normalise("some text", "short_text") == "some text"
+    end
 
-    assert %{"confirmed" => true, "confirmed_at" => confirmed_at} = result
-    assert {:ok, dt, _offset} = DateTime.from_iso8601(confirmed_at)
-    assert dt.time_zone == "Etc/UTC"
-  end
+    test "nil" do
+      assert AnswerNormaliser.normalise(nil, "short_text") == nil
+    end
 
-  test "other string values pass through unchanged" do
-    assert AnswerNormaliser.normalise("some text") == "some text"
-  end
+    test "integer" do
+      assert AnswerNormaliser.normalise(42, "number") == 42
+    end
 
-  test "nil passes through unchanged" do
-    assert AnswerNormaliser.normalise(nil) == nil
-  end
-
-  test "integer passes through unchanged" do
-    assert AnswerNormaliser.normalise(42) == 42
-  end
-
-  test "map passes through unchanged" do
-    value = %{"confirmed" => true, "confirmed_at" => "2025-01-01T00:00:00Z"}
-    assert AnswerNormaliser.normalise(value) == value
+    test "map" do
+      value = %{"confirmed" => true, "confirmed_at" => "2025-01-01T00:00:00Z"}
+      assert AnswerNormaliser.normalise(value, "note") == value
+    end
   end
 end

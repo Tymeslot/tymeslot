@@ -50,4 +50,9 @@ defmodule Tymeslot.Security.FieldValidators.DateValidator do
         {:error, "Date range configuration is invalid"}
     end
   end
+
+  # A non-binary bound (e.g. a legacy integer from before date bounds were
+  # stored as ISO strings) can't express a date — treat it as no bound
+  # rather than crashing the booking flow.
+  defp check_bound(_date, _bound, _dir), do: :ok
 end

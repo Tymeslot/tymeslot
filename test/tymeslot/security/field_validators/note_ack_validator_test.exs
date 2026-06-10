@@ -34,8 +34,26 @@ defmodule Tymeslot.Security.FieldValidators.NoteAckValidatorTest do
                )
     end
 
-    test "nil value rejected" do
+    test "nil value rejected when required (default)" do
       assert {:error, _msg} = NoteAckValidator.validate(nil, %{})
+    end
+
+    test "nil value rejected when explicitly required" do
+      assert {:error, _msg} = NoteAckValidator.validate(nil, %{}, required: true)
+    end
+
+    test "nil value accepted when optional" do
+      # The editor exposes a Required toggle for notes; an optional note must
+      # not block bookers who leave it blank.
+      assert :ok = NoteAckValidator.validate(nil, %{}, required: false)
+    end
+
+    test "blank string accepted when optional" do
+      assert :ok = NoteAckValidator.validate("", %{}, required: false)
+    end
+
+    test "blank string rejected when required" do
+      assert {:error, _msg} = NoteAckValidator.validate("", %{}, required: true)
     end
 
     test "non-map rejected" do

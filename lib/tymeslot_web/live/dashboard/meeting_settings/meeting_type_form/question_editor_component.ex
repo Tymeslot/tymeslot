@@ -266,31 +266,31 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
               >
                 <:description>The notice the booker must read and confirm before they can continue.</:description>
               </CoreComponents.input>
-            <% t when t in ~w(number date) -> %>
+            <% t when t in ~w(number date time) -> %>
               <div class="grid grid-cols-2 gap-3">
                 <CoreComponents.input
                   name="definition[min]"
                   value={field_value(@changeset, :min)}
                   id="definition_min"
-                  type="number"
+                  type={bound_input_type(t)}
                   label="Min"
                   errors={FormValidationHelpers.field_errors(@field_errors, :min)}
                 >
-                  <:description>Lowest value the booker may enter.</:description>
+                  <:description>{bound_min_hint(t)}</:description>
                 </CoreComponents.input>
                 <CoreComponents.input
                   name="definition[max]"
                   value={field_value(@changeset, :max)}
                   id="definition_max"
-                  type="number"
+                  type={bound_input_type(t)}
                   label="Max"
                   errors={FormValidationHelpers.field_errors(@field_errors, :max)}
                 >
-                  <:description>Highest value the booker may enter.</:description>
+                  <:description>{bound_max_hint(t)}</:description>
                 </CoreComponents.input>
               </div>
             <% _ -> %>
-              <%!-- No type-specific fields for short_text, yes_no, phone, url, time --%>
+              <%!-- No type-specific fields for short_text, yes_no, phone, url --%>
           <% end %>
 
           <%= if @pending_type_change do %>
@@ -425,6 +425,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
   defp options_list(changeset) do
     Changeset.get_field(changeset, :options) || []
   end
+
+  # The min/max inputs must match the question type so the browser renders a
+  # native numeric/date/time picker and the stored bound is a value the
+  # matching validator can parse.
+  defp bound_input_type("number"), do: "number"
+  defp bound_input_type("date"), do: "date"
+  defp bound_input_type("time"), do: "time"
+
+  defp bound_min_hint("number"), do: "Lowest value the booker may enter."
+  defp bound_min_hint("date"), do: "Earliest date the booker may choose."
+  defp bound_min_hint("time"), do: "Earliest time the booker may choose."
+
+  defp bound_max_hint("number"), do: "Highest value the booker may enter."
+  defp bound_max_hint("date"), do: "Latest date the booker may choose."
+  defp bound_max_hint("time"), do: "Latest time the booker may choose."
 
   defp type_options do
     [

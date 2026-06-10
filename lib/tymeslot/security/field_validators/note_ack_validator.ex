@@ -17,5 +17,17 @@ defmodule Tymeslot.Security.FieldValidators.NoteAckValidator do
     end
   end
 
+  # A blank acknowledgement is acceptable when the host marked the note
+  # optional — the editor exposes a Required toggle for notes, so an
+  # optional note must not block bookers. Only a required note rejects nil.
+  def validate(nil, _definition, opts), do: blank(opts)
+  def validate("", _definition, opts), do: blank(opts)
+
   def validate(_value, _definition, _opts), do: {:error, "Please acknowledge to continue"}
+
+  defp blank(opts) do
+    if Keyword.get(opts, :required, true),
+      do: {:error, "Please acknowledge to continue"},
+      else: :ok
+  end
 end
