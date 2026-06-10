@@ -307,6 +307,60 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       assert {:ok, _room} = TeamsProvider.create_meeting_room(config)
     end
 
+    test "flags the integration as needs_reauth on a 401 from Graph" do
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Teams",
+          provider: "teams",
+          tenant_id: "t1",
+          teams_user_id: "u1",
+          access_token: "valid_token",
+          refresh_token: "refresh",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+          oauth_scope: "Calendars.ReadWrite"
+        })
+
+      config = %{
+        access_token: "valid_token",
+        refresh_token: "refresh",
+        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+        integration_id: integration.id,
+        user_id: user.id,
+        oauth_scope: "Calendars.ReadWrite"
+      }
+
+      expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 401,
+           body: Jason.encode!(%{"error" => %{"code" => "InvalidAuthenticationToken"}})
+         }}
+      end)
+
+      assert {:error, _message} = TeamsProvider.create_meeting_room(config)
+
+      flagged = Repo.get(VideoIntegrationSchema, integration.id)
+      assert flagged.needs_reauth == true
+      assert flagged.sync_error =~ "reconnect"
+    end
+
+    test "does not crash on a 401 when integration_id/user_id are absent" do
+      config = valid_config()
+
+      expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: Jason.encode!(%{"error" => %{"code" => "X"}})}}
+      end)
+
+      assert {:error, _message} = TeamsProvider.create_meeting_room(config)
+    end
+
     test "returns error when API response is malformed JSON" do
       config = valid_config()
 

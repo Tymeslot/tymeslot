@@ -80,11 +80,20 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
 
   See the module docs for the full state machine. Returns whatever the
   provider's `:refresh`/`:already_refreshed` hooks return.
+
+  ## Options
+
+    * `:force` (default `false`) — bypass the validity double-check and always
+      run the provider's `:refresh` hook, still under the per-integration lock.
+      Use this on a post-401 path: the access token was *server-side* rejected,
+      so the DB expiry buffer can't be trusted and an `:already_refreshed`
+      short-circuit would just replay the same rejected token.
   """
-  @spec refresh_with_lock(config(), hooks()) :: result()
-  def refresh_with_lock(config, hooks) do
+  @spec refresh_with_lock(config(), hooks(), keyword()) :: result()
+  def refresh_with_lock(config, hooks, opts \\ []) do
     integration_id = Map.get(config, :integration_id)
     user_id = Map.get(config, :user_id)
+    force? = Keyword.get(opts, :force, false)
 
     if is_nil(integration_id) or is_nil(user_id) do
       fallback = Map.get(hooks, :fallback_refresh, hooks.refresh)
@@ -92,13 +101,47 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
     else
       Lock.with_lock(
         {hooks.provider, integration_id},
-        fn -> check_and_refresh(config, integration_id, user_id, hooks) end,
+        fn -> check_and_refresh(config, integration_id, user_id, hooks, force?) end,
         mode: :blocking
       )
     end
   end
 
-  defp check_and_refresh(config, integration_id, user_id, hooks) do
+  defp check_and_refresh(config, integration_id, user_id, hooks, true) do
+    # Forced path: the caller proved the access token is rejected server-side,
+    # so we skip the validity short-circuit — but we still re-read the DB under
+    # the lock. If a sibling process already rotated the token (the stored access
+    # token differs from the one that triggered the 401), return the fresh token
+    # without hitting OAuth again. Otherwise refresh with the DB-fresh credentials
+    # so we never use a stale pre-rotation refresh token (Zoom rotates on every
+    # refresh call).
+    case Video.fetch_integration_for_user(integration_id, user_id) do
+      {:ok, fresh_integration} ->
+        decrypted = VideoIntegrationSchema.decrypt_credentials(fresh_integration)
+        stale_access_token = Map.get(config, :access_token)
+
+        if decrypted.access_token != stale_access_token do
+          # A sibling already refreshed — hand back the fresh token without
+          # another OAuth round-trip.
+          hooks.already_refreshed.(config, build_decrypted(fresh_integration, decrypted))
+        else
+          # Token is still the rejected one; refresh using the latest credentials
+          # from the DB so we use the most recent refresh token.
+          fresh_config =
+            Map.merge(config, %{
+              access_token: decrypted.access_token,
+              refresh_token: decrypted.refresh_token
+            })
+
+          hooks.refresh.(fresh_config)
+        end
+
+      {:error, :not_found} ->
+        hooks.refresh.(config)
+    end
+  end
+
+  defp check_and_refresh(config, integration_id, user_id, hooks, false) do
     case Video.fetch_integration_for_user(integration_id, user_id) do
       {:ok, fresh_integration} ->
         decrypted = VideoIntegrationSchema.decrypt_credentials(fresh_integration)

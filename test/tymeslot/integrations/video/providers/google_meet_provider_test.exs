@@ -3,10 +3,14 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
   @moduletag :integrations
 
   import Mox
+  import Tymeslot.Factory
 
   alias Tymeslot.GoogleOAuthHelperMock
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.Providers.GoogleMeetProvider
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Repo
 
   setup :verify_on_exit!
 
@@ -375,6 +379,52 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       assert metadata[:room_id] == "xyz-abcd-efg"
       assert metadata[:meeting_url] == "https://meet.google.com/xyz-abcd-efg"
       assert metadata[:provider_name] == "Google Meet"
+    end
+  end
+
+  describe "create_meeting_room/1 reauth flagging" do
+    test "flags the integration as needs_reauth on a 401 from the Calendar API" do
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Google Meet",
+          provider: "google_meet",
+          access_token: "valid_token",
+          refresh_token: "refresh_token",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+          oauth_scope: "https://www.googleapis.com/auth/calendar"
+        })
+
+      config = %{
+        access_token: "valid_token",
+        refresh_token: "refresh_token",
+        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+        integration_id: integration.id,
+        user_id: user.id,
+        oauth_scope: "https://www.googleapis.com/auth/calendar"
+      }
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: "Unauthorized"}}
+      end)
+
+      assert {:error, _message} = GoogleMeetProvider.create_meeting_room(config)
+
+      flagged = Repo.get(VideoIntegrationSchema, integration.id)
+      assert flagged.needs_reauth == true
+      assert flagged.sync_error =~ "reconnect"
+    end
+
+    test "does not crash on a 401 when integration_id/user_id are absent" do
+      config = valid_token_config()
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: "Unauthorized"}}
+      end)
+
+      assert {:error, _message} = GoogleMeetProvider.create_meeting_room(config)
     end
   end
 

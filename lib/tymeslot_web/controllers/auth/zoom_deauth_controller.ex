@@ -27,6 +27,13 @@ defmodule TymeslotWeb.ZoomDeauthController do
   @signature_header "x-zm-signature"
   @timestamp_header "x-zm-request-timestamp"
 
+  # Reject requests whose signing timestamp is more than five minutes away from
+  # now (in either direction, to tolerate small clock skew). Without this, a
+  # captured-but-valid request could be replayed forever — long enough for a
+  # user to reconnect Zoom, then have the replay silently delete the fresh
+  # integration. Mirrors the 300s tolerance used for Stripe webhooks.
+  @timestamp_tolerance_seconds 300
+
   @spec deauthorize(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def deauthorize(conn, params) do
     with :ok <- RateLimiter.check_webhook_rate_limit(ClientIP.get(conn)),
@@ -46,6 +53,10 @@ defmodule TymeslotWeb.ZoomDeauthController do
       {:error, :missing_body} ->
         Logger.warning("Zoom deauth webhook missing raw body — webhook_paths config?")
         send_json(conn, 400, %{error: "bad_request"})
+
+      {:error, :stale_timestamp} ->
+        Logger.warning("Zoom deauth webhook rejected: timestamp outside freshness window")
+        send_json(conn, 401, %{error: "invalid_signature"})
 
       {:error, :invalid_signature} ->
         Logger.warning("Zoom deauth webhook signature invalid")
@@ -110,7 +121,8 @@ defmodule TymeslotWeb.ZoomDeauthController do
 
   defp verify_signature(conn, raw_body, secret) do
     with [signature] <- Conn.get_req_header(conn, @signature_header),
-         [timestamp] <- Conn.get_req_header(conn, @timestamp_header) do
+         [timestamp] <- Conn.get_req_header(conn, @timestamp_header),
+         :ok <- verify_timestamp_fresh(timestamp) do
       expected =
         "v0=" <>
           (:hmac
@@ -121,7 +133,25 @@ defmodule TymeslotWeb.ZoomDeauthController do
         do: :ok,
         else: {:error, :invalid_signature}
     else
+      {:error, :stale_timestamp} = error -> error
       _missing -> {:error, :invalid_signature}
+    end
+  end
+
+  # Zoom sends the signing timestamp as Unix epoch seconds. Reject anything more
+  # than the tolerance window away from now so a captured request can't be
+  # replayed indefinitely. A non-integer timestamp is treated as invalid.
+  defp verify_timestamp_fresh(timestamp) when is_binary(timestamp) do
+    case Integer.parse(timestamp) do
+      {seconds, _rest} ->
+        skew = abs(System.system_time(:second) - seconds)
+
+        if skew <= @timestamp_tolerance_seconds,
+          do: :ok,
+          else: {:error, :stale_timestamp}
+
+      :error ->
+        {:error, :invalid_signature}
     end
   end
 
