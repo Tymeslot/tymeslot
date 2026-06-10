@@ -16,11 +16,21 @@ defmodule Tymeslot.Announcements do
 
   @docs_base_url_default "https://tymeslot.app/docs"
 
-  @spec mark_seen!(UserSchema.t(), String.t()) :: :ok
+  @doc """
+  Records that the given user has seen an announcement.
+
+  Best-effort and always returns `:ok`. A `nil` user (e.g. a modal event
+  arriving on a socket with no `current_user`) is a no-op rather than a
+  crash, and the underlying query swallows DB/constraint errors — this is a
+  non-critical dashboard side effect that must never take down the LiveView.
+  """
+  @spec mark_seen!(UserSchema.t() | nil, String.t()) :: :ok
   def mark_seen!(%UserSchema{id: user_id}, announcement_key)
       when is_binary(announcement_key) do
     AnnouncementQueries.mark_seen!(user_id, announcement_key)
   end
+
+  def mark_seen!(nil, announcement_key) when is_binary(announcement_key), do: :ok
 
   @doc """
   Returns the unseen, unexpired announcements a user should be shown.
@@ -36,15 +46,31 @@ defmodule Tymeslot.Announcements do
   """
   @spec list_for(UserSchema.t()) :: [Announcement.t()]
   def list_for(%UserSchema{} = user) do
-    seen = MapSet.new(AnnouncementQueries.seen_keys_for(user.id))
     user_inserted_at = to_utc_datetime(user.inserted_at)
     now = DateTime.utc_now()
 
-    catalogs()
-    |> Enum.flat_map(&safe_list/1)
-    |> Enum.reject(&hidden?(&1, seen, now))
-    |> Enum.filter(&visible_to?(&1, user, user_inserted_at))
-    |> Enum.sort_by(& &1.published_at, DateTime)
+    # Evaluate the in-memory catalog first (expiry + signup/admin
+    # visibility) — these checks need no database access. Only if some
+    # candidate survives do we pay for the per-user seen-keys query. Once
+    # every catalogue entry has expired this short-circuits, so a mount can
+    # no longer trigger a guaranteed-empty `user_seen_announcements` read.
+    candidates =
+      catalogs()
+      |> Enum.flat_map(&safe_list/1)
+      |> Enum.reject(&expired?(&1, now))
+      |> Enum.filter(&visible_to?(&1, user, user_inserted_at))
+
+    case candidates do
+      [] ->
+        []
+
+      candidates ->
+        seen = MapSet.new(AnnouncementQueries.seen_keys_for(user.id))
+
+        candidates
+        |> Enum.reject(&MapSet.member?(seen, &1.key))
+        |> Enum.sort_by(& &1.published_at, DateTime)
+    end
   end
 
   @doc """
@@ -58,11 +84,6 @@ defmodule Tymeslot.Announcements do
   def docs_url(slug) when is_binary(slug) do
     base = Application.get_env(:tymeslot, :docs_base_url, @docs_base_url_default)
     "#{String.trim_trailing(base, "/")}/#{slug}"
-  end
-
-  # An announcement is hidden when the user has seen it or it has expired.
-  defp hidden?(announcement, seen, now) do
-    MapSet.member?(seen, announcement.key) or expired?(announcement, now)
   end
 
   defp expired?(%Announcement{expires_at: nil}, _now), do: false
