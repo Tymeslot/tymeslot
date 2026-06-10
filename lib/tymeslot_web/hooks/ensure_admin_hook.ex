@@ -10,9 +10,10 @@ defmodule TymeslotWeb.Hooks.EnsureAdminHook do
   missing, treat that as "not admin" — defence in depth.
 
   In addition to the mount-time check, a per-event hook re-fetches the user
-  from the database on every `handle_event` call. This ensures that a session
-  whose admin status was revoked in another session cannot continue to perform
-  privileged operations on the already-connected socket.
+  from the database on every `handle_event` *and* `handle_params` call. This
+  ensures that a session whose admin status was revoked in another session
+  cannot continue to perform privileged operations — nor re-read admin data
+  via a `live_patch` between tabs — on the already-connected socket.
   """
 
   import Phoenix.Component, only: [assign: 3]
@@ -27,7 +28,9 @@ defmodule TymeslotWeb.Hooks.EnsureAdminHook do
     case socket.assigns[:current_user] do
       %UserSchema{is_admin: true} ->
         socket =
-          attach_hook(socket, :ensure_admin_per_event, :handle_event, &reauthorize/3)
+          socket
+          |> attach_hook(:ensure_admin_per_event, :handle_event, &reauthorize/3)
+          |> attach_hook(:ensure_admin_per_params, :handle_params, &reauthorize/3)
 
         {:cont, socket}
 
@@ -36,7 +39,11 @@ defmodule TymeslotWeb.Hooks.EnsureAdminHook do
     end
   end
 
-  defp reauthorize(_event, _params, socket) do
+  # Shared by both the `:handle_event` and `:handle_params` hooks. The first
+  # two positional arguments differ between the two lifecycle stages
+  # (event/params vs params/uri) but are irrelevant here — both ignore them
+  # and re-check admin status against the database.
+  defp reauthorize(_arg1, _arg2, socket) do
     user_id = socket.assigns.current_user.id
 
     case Auth.get_user(user_id) do

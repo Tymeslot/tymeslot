@@ -89,6 +89,27 @@ defmodule TymeslotWeb.AdminLiveTest do
 
       assert redirect_to =~ "/dashboard"
     end
+
+    test "live_patch between tabs is halted after the actor's admin status is revoked", %{
+      conn: conn
+    } do
+      admin_a = insert(:user, is_admin: true)
+      admin_b = insert(:user, is_admin: true)
+      conn = log_in_user(conn, admin_a)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+
+      # Revoke admin_a while their socket is still open.
+      {:ok, _demoted} = Auth.demote_admin(admin_b, admin_a.id)
+
+      # A live_patch to the users tab runs handle_params → load_data, which
+      # would re-query admin-only data for the just-revoked admin unless the
+      # per-params re-auth hook halts first.
+      assert {:error, {:live_redirect, %{to: redirect_to}}} =
+               render_patch(lv, ~p"/admin/users")
+
+      assert redirect_to =~ "/dashboard"
+    end
   end
 
   describe "settings tab" do
@@ -332,6 +353,50 @@ defmodule TymeslotWeb.AdminLiveTest do
       # The setting did not actually change.
       assert Application.get_env(:tymeslot, :password_auth_enabled) == true
     end
+
+    test "rejecting an SSO toggle surfaces the SSO lock reason, not the password one",
+         %{conn: conn} do
+      # Credentialed OIDC is the only usable path (password auth off), so
+      # disabling it would lock everyone out. The rejection flash must use the
+      # SSO-specific copy rather than the hardcoded password-auth message.
+      original_social_auth = Application.get_env(:tymeslot, :social_auth)
+      original_oauth = Application.get_env(:tymeslot, :oauth_provider)
+      original_password = Application.get_env(:tymeslot, :password_auth_enabled)
+
+      on_exit(fn ->
+        restore_env(:social_auth, original_social_auth)
+        restore_env(:oauth_provider, original_oauth)
+        restore_env(:password_auth_enabled, original_password)
+      end)
+
+      Application.put_env(:tymeslot, :social_auth,
+        google_enabled: false,
+        github_enabled: false,
+        oauth_enabled: true
+      )
+
+      Application.put_env(:tymeslot, :oauth_provider,
+        client_id: "oidc-id",
+        client_secret: "oidc-secret"
+      )
+
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+
+      render_click(lv, "set_setting", %{"key" => "oauth_auth_enabled", "state" => "false"})
+
+      # Scope the assertions to the flash itself: the static page always carries
+      # the phrase "email and password" in the password-auth toggle description
+      # and lock title, so only the flash region distinguishes which lock reason
+      # was surfaced.
+      flash = lv |> element("#app-flash-group-error") |> render()
+
+      assert flash =~ "only working sign-in path"
+      refute flash =~ "email and password"
+      # The toggle did not change.
+      assert Keyword.get(Application.get_env(:tymeslot, :social_auth), :oauth_enabled) == true
+    end
   end
 
   describe "users tab" do
@@ -515,6 +580,9 @@ defmodule TymeslotWeb.AdminLiveTest do
       ~s|button[phx-click="set_setting"][phx-value-key="#{key}"][phx-value-state="#{state}"]|
     )
   end
+
+  defp restore_env(key, nil), do: Application.delete_env(:tymeslot, key)
+  defp restore_env(key, value), do: Application.put_env(:tymeslot, key, value)
 
   # Forces `:social_auth` to all-disabled and restores the original on exit.
   # Without this, shell vars like `ENABLE_GOOGLE_AUTH=true` leak through

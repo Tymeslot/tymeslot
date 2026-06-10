@@ -185,6 +185,10 @@ defmodule TymeslotWeb.AdminLive.Formatters do
     )
   end
 
+  def lock_reason(:google_auth_enabled, false), do: sso_lock_reason()
+  def lock_reason(:github_auth_enabled, false), do: sso_lock_reason()
+  def lock_reason(:oauth_auth_enabled, false), do: sso_lock_reason()
+
   def lock_reason(:meeting_payments_enabled, true) do
     gettext(
       "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
@@ -192,4 +196,10 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   end
 
   def lock_reason(_key, _state), do: nil
+
+  defp sso_lock_reason do
+    gettext(
+      "Cannot disable this login provider while it is the only working sign-in path for admins. Enable password authentication or another credentialed SSO provider first."
+    )
+  end
 end

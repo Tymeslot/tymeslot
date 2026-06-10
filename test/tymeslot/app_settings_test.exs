@@ -5,6 +5,7 @@ defmodule Tymeslot.AppSettingsTest do
   @moduletag :infrastructure
 
   import Tymeslot.Factory
+  import Tymeslot.AppSettingsEnvHelpers
 
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
@@ -13,48 +14,7 @@ defmodule Tymeslot.AppSettingsTest do
   alias Tymeslot.Infrastructure.Config, as: InfraConfig
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
 
-  setup do
-    # AppSettings.load!/0 runs on application boot. The tests below toggle
-    # Application env directly, so restore it after each one.
-    originals =
-      Map.new(AppSettings.keys(), fn key -> {key, Application.get_env(:tymeslot, key)} end)
-
-    # `AppSettings.keys()` only enumerates leaf setting keys; the parent
-    # `:social_auth` keyword list (mutated indirectly via update/1 and by
-    # `clamp_sso_disabled/0`) needs its own snapshot/restore so a single
-    # test can't leak SSO state into the next.
-    original_social_auth = Application.get_env(:tymeslot, :social_auth)
-
-    on_exit(fn ->
-      # Clear any DB override that a test may have applied for every editable key.
-      clear_attrs = Map.new(AppSettings.keys(), fn key -> {key, nil} end)
-      {:ok, _settings} = AppSettings.update(clear_attrs)
-
-      # Restore the Application env snapshot captured before the test ran.
-      Enum.each(originals, fn
-        {key, nil} -> Application.delete_env(:tymeslot, key)
-        {key, value} -> Application.put_env(:tymeslot, key, value)
-      end)
-
-      case original_social_auth do
-        nil -> Application.delete_env(:tymeslot, :social_auth)
-        value -> Application.put_env(:tymeslot, :social_auth, value)
-      end
-    end)
-
-    :ok
-  end
-
-  # Forces every SSO provider off for the current test. The outer `setup`
-  # snapshots `:social_auth` and restores it on exit, so tests that call
-  # this don't need their own cleanup.
-  defp clamp_sso_disabled do
-    Application.put_env(:tymeslot, :social_auth,
-      google_enabled: false,
-      github_enabled: false,
-      oauth_enabled: false
-    )
-  end
+  setup :restore_app_settings_env
 
   describe "update/1 + load!/0" do
     test "applying a DB override flows through Application.get_env" do
@@ -424,58 +384,6 @@ defmodule Tymeslot.AppSettingsTest do
                AppSettings.update(%{recaptcha_booking_min_score: -0.1})
 
       assert {_msg, _meta} = changeset.errors[:recaptcha_booking_min_score]
-    end
-  end
-
-  # Lockout protection: disabling password auth while at least one admin
-  # signs in with email + password would lock that admin out of their own
-  # account — having OAuth configured globally does not help if their
-  # personal account has no OAuth identity linked. update/1 must refuse the
-  # change in that situation.
-  describe "lockout protection" do
-    test "refuses to disable password_auth_enabled while a password-auth admin exists" do
-      # Default factory user has a password_hash → counts as using password auth.
-      # Force SSO off so the guard sees no alternative auth path.
-      clamp_sso_disabled()
-      insert(:user, is_admin: true)
-
-      assert {:error, :would_lock_out} =
-               AppSettings.update(%{password_auth_enabled: false})
-
-      # And the side effect did not happen — runtime value is still true.
-      assert Application.get_env(:tymeslot, :password_auth_enabled) == true
-    end
-
-    test "allows disabling password_auth_enabled when no admin uses password auth" do
-      # OAuth-only admin: password auth is not their sign-in path, so disabling
-      # it does not lock them out.
-      insert(:user, is_admin: true, password_hash: nil, google_user_id: "google-123")
-
-      # Non-admin password users do not block the toggle.
-      insert(:user, is_admin: false)
-
-      assert {:ok, _settings} = AppSettings.update(%{password_auth_enabled: false})
-      assert Application.get_env(:tymeslot, :password_auth_enabled) == false
-    end
-
-    test "allows updates to unrelated settings even with a password-auth admin" do
-      insert(:user, is_admin: true)
-
-      assert {:ok, _settings} = AppSettings.update(%{registration_enabled: false})
-    end
-
-    test "allows re-enabling password_auth_enabled from an already locked-out state" do
-      # Force the system into a locked-out state without going through update/1
-      # (mirrors what could happen if env vars + DB were misconfigured at boot).
-      Application.put_env(:tymeslot, :password_auth_enabled, false)
-
-      # Admin recovers via a still-valid session — re-enabling must succeed
-      # even though a password-auth admin exists (re-enabling can't lock anyone
-      # out; it restores their sign-in path).
-      insert(:user, is_admin: true)
-
-      assert {:ok, _settings} = AppSettings.update(%{password_auth_enabled: true})
-      assert Application.get_env(:tymeslot, :password_auth_enabled) == true
     end
   end
 end
