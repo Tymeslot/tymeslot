@@ -89,9 +89,46 @@ defmodule CredoChecks.RepoCallBoundary do
       []
     else
       issue_meta = IssueMeta.for(source_file, params)
-      Credo.Code.prewalk(source_file, &traverse(&1, &2, issue_meta))
+      # First collect any `alias X.Y.Repo, as: DB` mappings so calls on the
+      # renamed alias (`DB.get(...)`) are still recognised as Repo calls.
+      repo_aliases = collect_repo_aliases(source_file)
+      Credo.Code.prewalk(source_file, &traverse(&1, &2, issue_meta, repo_aliases))
     end
   end
+
+  # Builds the set of single-segment alias names (e.g. `:DB`) introduced by an
+  # `alias Some.Path.Repo, as: DB` that point at a repo module.
+  defp collect_repo_aliases(source_file) do
+    aliases = Credo.Code.prewalk(source_file, &collect_alias(&1, &2), [])
+
+    MapSet.new(aliases)
+  end
+
+  defp collect_alias(
+         {:alias, _, [{:__aliases__, _, target_parts}, opts]} = ast,
+         acc
+       )
+       when is_list(opts) do
+    with {:ok, {:__aliases__, _, [alias_atom]}} <- Keyword.fetch(opts, :as),
+         true <- repo_module?(target_parts) do
+      {ast, [alias_atom | acc]}
+    else
+      _other -> {ast, acc}
+    end
+  end
+
+  defp collect_alias(ast, acc), do: {ast, acc}
+
+  # A module reference points at a repo when its last segment ends in "Repo"
+  # (e.g. `Repo`, `Tymeslot.SaasRepo`).
+  defp repo_module?(parts) when is_list(parts) do
+    case List.last(parts) do
+      segment when is_atom(segment) -> String.ends_with?(Atom.to_string(segment), "Repo")
+      _other -> false
+    end
+  end
+
+  defp repo_module?(_other), do: false
 
   defp excluded?(filename) do
     basename = Path.basename(filename)
@@ -114,13 +151,17 @@ defmodule CredoChecks.RepoCallBoundary do
 
   # Match Repo.function_name(...) calls in the AST.
   # The AST shape is: {{:., _, [{:__aliases__, _, aliases}, func_name]}, meta, args}
-  # We check that the last alias segment is :Repo and func_name is in the flagged list.
+  # A call is flagged when func_name is in the flagged list AND the module
+  # reference is a repo — either its last segment ends in "Repo"
+  # (`Repo`, `Tymeslot.SaasRepo`) or it is a single-segment alias introduced by
+  # `alias ...Repo, as: DB`.
   defp traverse(
          {{:., _, [{:__aliases__, _, aliases}, func_name]}, meta, _args} = ast,
          issues,
-         issue_meta
+         issue_meta,
+         repo_aliases
        ) do
-    if List.last(aliases) == :Repo and func_name in @flagged_functions do
+    if func_name in @flagged_functions and repo_reference?(aliases, repo_aliases) do
       module_prefix = aliases |> Enum.map(&Atom.to_string/1) |> Enum.join(".")
 
       issue =
@@ -138,5 +179,14 @@ defmodule CredoChecks.RepoCallBoundary do
     end
   end
 
-  defp traverse(ast, issues, _issue_meta), do: {ast, issues}
+  defp traverse(ast, issues, _issue_meta, _repo_aliases), do: {ast, issues}
+
+  defp repo_reference?(aliases, repo_aliases) do
+    repo_module?(aliases) or renamed_repo_alias?(aliases, repo_aliases)
+  end
+
+  defp renamed_repo_alias?([single_segment], repo_aliases),
+    do: MapSet.member?(repo_aliases, single_segment)
+
+  defp renamed_repo_alias?(_aliases, _repo_aliases), do: false
 end

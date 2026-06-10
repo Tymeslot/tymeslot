@@ -18,7 +18,10 @@ defmodule CredoChecks.LargeModules do
   use Credo.Check,
     base_priority: :low,
     category: :design,
-    exit_status: 0,
+    # Non-zero so the cap is actually enforced — a violation fails
+    # `mix credo --strict` rather than being merely advisory. `2` matches the
+    # `:design` category default that the other enforced custom checks rely on.
+    exit_status: 2,
     param_defaults: [max_lines: 650],
     explanations: [
       check: """
