@@ -15,8 +15,10 @@ defmodule Tymeslot.Slack.InputValidation do
   are required:
 
     * `:webhook_url` — name, `webhook_url`, events (create)
-    * `:webhook_url_existing` — name, `webhook_url`, events (update; URL is
-      pre-filled with the current value)
+    * `:webhook_url_existing` — name, events; `webhook_url` is *optional* on
+      update. The stored secret is never round-tripped into the form, so a
+      blank field means "keep the current webhook URL". A non-blank value is
+      still format-validated and replaces the stored one.
     * `:oauth_pending` — `channel_id`, events
     * `:oauth_existing` — name, `channel_id`, events
   """
@@ -31,7 +33,9 @@ defmodule Tymeslot.Slack.InputValidation do
     {extra, errors} =
       case mode do
         webhook when webhook in [:webhook_url, :webhook_url_existing] ->
-          {webhook_url, errors} = validate_webhook_url(params["webhook_url"], errors)
+          {webhook_url, errors} =
+            webhook_url_validator(webhook).(params["webhook_url"], errors)
+
           {channel_hint, errors} = validate_channel_hint(params["webhook_channel_hint"], errors)
           {%{webhook_url: webhook_url, webhook_channel_hint: channel_hint}, errors}
 
@@ -55,6 +59,12 @@ defmodule Tymeslot.Slack.InputValidation do
 
   defp name_required?(:oauth_pending), do: false
   defp name_required?(_mode), do: true
+
+  # On update the webhook URL is never pre-filled into the form (we don't leak
+  # the stored secret), so a blank field means "keep current" rather than an
+  # error. On create it remains required.
+  defp webhook_url_validator(:webhook_url_existing), do: &validate_webhook_url_optional/2
+  defp webhook_url_validator(_mode), do: &validate_webhook_url/2
 
   @spec validate_name(String.t() | nil, map(), boolean()) :: {String.t() | nil, map()}
   def validate_name(nil, errors, false), do: {nil, errors}
@@ -108,6 +118,21 @@ defmodule Tymeslot.Slack.InputValidation do
       {trimmed, errors}
     else
       {nil, Map.put(errors, :webhook_url, "must look like https://hooks.slack.com/services/...")}
+    end
+  end
+
+  # Update-mode variant: a blank URL is allowed and means "keep the stored
+  # value" (we never pre-fill the secret). A non-blank value is still
+  # format-validated exactly like create.
+  @spec validate_webhook_url_optional(String.t() | nil, map()) :: {String.t() | nil, map()}
+  def validate_webhook_url_optional(nil, errors), do: {nil, errors}
+  def validate_webhook_url_optional("", errors), do: {nil, errors}
+
+  def validate_webhook_url_optional(url, errors) when is_binary(url) do
+    if String.trim(url) == "" do
+      {nil, errors}
+    else
+      validate_webhook_url(url, errors)
     end
   end
 

@@ -29,7 +29,6 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
           channel_name: String.t() | nil,
           authed_user_id: String.t() | nil,
           scope: String.t() | nil,
-          link_token: String.t() | nil,
           webhook_url: String.t() | nil,
           webhook_url_encrypted: binary() | nil,
           webhook_channel_hint: String.t() | nil,
@@ -60,7 +59,6 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
     field(:channel_name, :string)
     field(:authed_user_id, :string)
     field(:scope, :string)
-    field(:link_token, :string)
 
     field(:webhook_url, :string, virtual: true)
     field(:webhook_url_encrypted, :binary)
@@ -90,7 +88,6 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
     :channel_name,
     :authed_user_id,
     :scope,
-    :link_token,
     :webhook_url,
     :webhook_channel_hint,
     :events,
@@ -138,7 +135,6 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
       :team_name,
       :authed_user_id,
       :scope,
-      :link_token,
       :events
     ])
     |> validate_required([:user_id, :name, :app_mode, :bot_token, :team_id, :events])

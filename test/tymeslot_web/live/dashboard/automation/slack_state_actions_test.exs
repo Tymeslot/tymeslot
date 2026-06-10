@@ -203,6 +203,23 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
 
       refute html =~ "Reconnect"
     end
+
+    test "hides Reconnect on pending integrations when OAuth is unavailable",
+         %{conn: conn, user: user} do
+      # Without OAuth available, restarting the install flow would 500, so the
+      # button must not be offered.
+      ConfigTestHelpers.setup_config(:tymeslot,
+        slack_oauth_available: false,
+        slack_client_id: nil
+      )
+
+      _integration = oauth_integration(user, %{channel_id: nil, channel_name: nil})
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      html = open_slack_tab(view)
+
+      refute html =~ "Reconnect"
+    end
   end
 
   # ---------------------------------------------------------------------------
