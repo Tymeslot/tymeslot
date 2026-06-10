@@ -174,8 +174,11 @@ defmodule TymeslotWeb.Themes.Core.Validator do
   defp test_component_loading(component_module) do
     case Code.ensure_loaded(component_module) do
       {:module, ^component_module} ->
-        # Test that it's a valid LiveComponent
-        if function_exported?(component_module, :update, 2) do
+        # Test that it's a valid LiveComponent. `update/2` is an optional
+        # callback, so check the `__live__/0` marker that
+        # `use Phoenix.LiveComponent` defines instead.
+        if function_exported?(component_module, :__live__, 0) &&
+             match?(%{kind: :component}, component_module.__live__()) do
           :ok
         else
           {:error, "Component does not implement LiveComponent behavior"}
