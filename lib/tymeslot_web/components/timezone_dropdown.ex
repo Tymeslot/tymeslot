@@ -49,6 +49,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         target={@target}
         position={:top_start}
         role="dialog"
+        panel_label="Select timezone"
         trigger_class="group relative cursor-pointer z-50 w-full text-left"
         class="right-0 max-h-64 brand-card rounded-xl shadow-lg border border-white/30 overflow-hidden"
         aria-label="Select timezone"

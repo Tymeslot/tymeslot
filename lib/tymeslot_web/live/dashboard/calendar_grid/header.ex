@@ -113,8 +113,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
       on_close="close_calendar_list"
       target={@myself}
       role="dialog"
+      panel_label="My Calendars"
       trigger_class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-turquoise-400"
-      class="z-30 bg-white border border-tymeslot-200 rounded-xl shadow-lg p-3 w-60"
+      class="bg-white border border-tymeslot-200 rounded-xl shadow-lg p-3 w-60"
       aria-label="Toggle calendars"
     >
       <:trigger>
@@ -167,7 +168,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         on_close="close_view_menu"
         target={@myself}
         trigger_class="min-w-[40px] min-h-[40px] px-2 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-turquoise-400"
-        class="z-30 bg-white border border-tymeslot-200 rounded-xl shadow-lg py-1 w-36"
+        class="bg-white border border-tymeslot-200 rounded-xl shadow-lg py-1 w-36"
         aria-label="Switch view"
       >
         <:trigger>

@@ -84,11 +84,11 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
   defp switcher_button_class(_arg), do: switcher_button_class("quill")
 
   defp dropdown_panel_class("quill") do
-    "mt-2 w-48 rounded-lg shadow-xl language-dropdown-quill"
+    "w-48 rounded-lg shadow-xl language-dropdown-quill"
   end
 
   defp dropdown_panel_class("rhythm") do
-    "mt-2 w-48 rounded-lg shadow-xl language-dropdown-rhythm"
+    "w-48 rounded-lg shadow-xl language-dropdown-rhythm"
   end
 
   defp dropdown_panel_class(_arg), do: dropdown_panel_class("quill")

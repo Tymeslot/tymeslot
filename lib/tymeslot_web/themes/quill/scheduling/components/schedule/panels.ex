@@ -49,12 +49,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
           on_toggle="toggle_timezone_dropdown"
           on_close="close_timezone_dropdown"
           target={@target}
-          position={:bottom_start}
           role="dialog"
+          panel_label={gettext("Select timezone")}
           trigger_class="timezone-trigger"
           class="timezone-dropdown"
           unstyled={true}
-          aria-label="Select timezone"
+          aria-label={gettext("Select timezone")}
         >
         <:trigger>
           <div class="timezone-trigger-row">
