@@ -1136,40 +1136,41 @@ msgstr "Open Stripe Checkout"
 msgid "We opened Stripe Checkout in a new browser tab. Once your payment is confirmed, this page updates automatically."
 msgstr "We opened Stripe Checkout in a new browser tab. Once your payment is confirmed, this page updates automatically."
 
-#: lib/tymeslot_web/components/announcement_modal_component.ex:93
+#: lib/tymeslot_web/components/announcement_modal_component.ex:103
 #, elixir-autogen, elixir-format
 msgid "%{current} / %{total}"
 msgstr "%{current} / %{total}"
 
-#: lib/tymeslot_web/components/announcement_modal_component.ex:85
+#: lib/tymeslot_web/components/announcement_modal_component.ex:95
 #: lib/tymeslot_web/components/tour_overlay.ex:50
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Back"
 msgstr "Back"
 
-#: lib/tymeslot_web/components/announcement_modal_component.ex:108
+#: lib/tymeslot_web/components/announcement_modal_component.ex:117
+#: lib/tymeslot_web/components/announcement_modal_component.ex:121
 #, elixir-autogen, elixir-format
 msgid "Got it"
 msgstr "Got it"
 
-#: lib/tymeslot_web/components/announcement_modal_component.ex:115
-#: lib/tymeslot_web/components/announcement_modal_component.ex:119
+#: lib/tymeslot_web/components/announcement_modal_component.ex:128
+#: lib/tymeslot_web/components/announcement_modal_component.ex:132
 #: lib/tymeslot_web/components/tour_overlay.ex:58
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Next"
 msgstr "Next"
 
-#: lib/tymeslot_web/live/admin_live.ex:128
+#: lib/tymeslot_web/live/admin_live.ex:135
 #, elixir-autogen, elixir-format
 msgid "%{name} disabled."
 msgstr "%{name} disabled."
 
-#: lib/tymeslot_web/live/admin_live.ex:125
+#: lib/tymeslot_web/live/admin_live.ex:132
 #, elixir-autogen, elixir-format
 msgid "%{name} enabled."
 msgstr "%{name} enabled."
 
-#: lib/tymeslot_web/live/admin_live.ex:135
+#: lib/tymeslot_web/live/admin_live.ex:142
 #, elixir-autogen, elixir-format
 msgid "%{name} updated."
 msgstr "%{name} updated."
@@ -1195,7 +1196,7 @@ msgstr "Actions"
 msgid "Admin"
 msgstr "Admin"
 
-#: lib/tymeslot_web/live/admin_live.ex:289
+#: lib/tymeslot_web/live/admin_live.ex:296
 #, elixir-autogen, elixir-format
 msgid "Admin UI is disabled."
 msgstr "Admin UI is disabled."
@@ -1256,7 +1257,7 @@ msgstr "Booking slug"
 msgid "Cancel"
 msgstr "Cancelling..."
 
-#: lib/tymeslot_web/live/admin_live.ex:292
+#: lib/tymeslot_web/live/admin_live.ex:299
 #, elixir-autogen, elixir-format
 msgid "Cannot demote the last admin. Promote someone else first."
 msgstr "Cannot demote the last admin. Promote someone else first."
@@ -1276,23 +1277,23 @@ msgstr "Changes here take effect immediately and override the matching environme
 msgid "Common tasks"
 msgstr "Common tasks"
 
-#: lib/tymeslot_web/live/admin_live.ex:298
+#: lib/tymeslot_web/live/admin_live.ex:305
 #, elixir-autogen, elixir-format
 msgid "Could not demote user."
 msgstr "Could not demote user."
 
-#: lib/tymeslot_web/live/admin_live.ex:295
+#: lib/tymeslot_web/live/admin_live.ex:302
 #, elixir-autogen, elixir-format
 msgid "Could not promote user."
 msgstr "Could not promote user."
 
 #: lib/tymeslot_web/live/admin_live.ex:53
 #: lib/tymeslot_web/live/admin_live.ex:71
-#: lib/tymeslot_web/live/admin_live.ex:108
-#: lib/tymeslot_web/live/admin_live.ex:143
-#: lib/tymeslot_web/live/admin_live.ex:188
-#: lib/tymeslot_web/live/admin_live.ex:192
-#: lib/tymeslot_web/live/admin_live.ex:204
+#: lib/tymeslot_web/live/admin_live.ex:107
+#: lib/tymeslot_web/live/admin_live.ex:150
+#: lib/tymeslot_web/live/admin_live.ex:195
+#: lib/tymeslot_web/live/admin_live.ex:199
+#: lib/tymeslot_web/live/admin_live.ex:211
 #, elixir-autogen, elixir-format
 msgid "Could not update setting."
 msgstr "Could not update setting."
@@ -1372,12 +1373,12 @@ msgstr "Enable generic OAuth 2.0 / OIDC single sign-on (Keycloak, Authentik, Lem
 msgid "Enabled"
 msgstr "Enabled"
 
-#: lib/tymeslot_web/live/admin_live.ex:186
+#: lib/tymeslot_web/live/admin_live.ex:193
 #, elixir-autogen, elixir-format
 msgid "Enter a number between 0.0 and 1.0."
 msgstr "Enter a number between 0.0 and 1.0."
 
-#: lib/tymeslot_web/live/admin_live.ex:187
+#: lib/tymeslot_web/live/admin_live.ex:194
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr "Enter a valid email address."
@@ -1407,13 +1408,13 @@ msgstr "Go create your first event type — and let people book you."
 msgid "Google login"
 msgstr "Google login"
 
-#: lib/tymeslot_web/live/admin_live.ex:221
+#: lib/tymeslot_web/live/admin_live.ex:228
 #, elixir-autogen, elixir-format
 msgid "Invalid request."
 msgstr "Invalid request."
 
-#: lib/tymeslot_web/live/admin_live.ex:216
-#: lib/tymeslot_web/live/admin_live.ex:227
+#: lib/tymeslot_web/live/admin_live.ex:223
+#: lib/tymeslot_web/live/admin_live.ex:234
 #, elixir-autogen, elixir-format
 msgid "Invalid user id."
 msgstr "Invalid user id."
@@ -1567,17 +1568,17 @@ msgstr "Two modes"
 msgid "User"
 msgstr "User"
 
-#: lib/tymeslot_web/live/admin_live.ex:275
+#: lib/tymeslot_web/live/admin_live.ex:282
 #, elixir-autogen, elixir-format
 msgid "User demoted from admin."
 msgstr "User demoted from admin."
 
-#: lib/tymeslot_web/live/admin_live.ex:286
+#: lib/tymeslot_web/live/admin_live.ex:293
 #, elixir-autogen, elixir-format
 msgid "User not found."
 msgstr "User not found."
 
-#: lib/tymeslot_web/live/admin_live.ex:246
+#: lib/tymeslot_web/live/admin_live.ex:253
 #, elixir-autogen, elixir-format
 msgid "User promoted to admin."
 msgstr "User promoted to admin."
@@ -1592,7 +1593,7 @@ msgstr "Users"
 msgid "Welcome to your Tymeslot dashboard"
 msgstr "Welcome to your Tymeslot dashboard"
 
-#: lib/tymeslot_web/live/admin_live.ex:268
+#: lib/tymeslot_web/live/admin_live.ex:275
 #, elixir-autogen, elixir-format
 msgid "You have been demoted from admin."
 msgstr "You have been demoted from admin."
@@ -1721,7 +1722,7 @@ msgstr "Return to booking"
 msgid "Select…"
 msgstr "Select…"
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:189
+#: lib/tymeslot_web/live/admin_live/formatters.ex:193
 #, elixir-autogen, elixir-format
 msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
 msgstr "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
@@ -1747,3 +1748,42 @@ msgstr "✓ Acknowledged (%{at})"
 #, elixir-autogen, elixir-format
 msgid "New feature"
 msgstr "New feature"
+
+#: lib/tymeslot_web/themes/shared/booking_flow.ex:60
+#, elixir-autogen, elixir-format
+msgid "Booking submitted successfully! You'll receive a confirmation email shortly."
+msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:201
+#, elixir-autogen, elixir-format
+msgid "Cannot disable this login provider while it is the only working sign-in path for admins. Enable password authentication or another credentialed SSO provider first."
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/info_handlers.ex:188
+#, elixir-autogen, elixir-format
+msgid "Payment was cancelled. Please try booking again."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:406
+#, elixir-autogen, elixir-format
+msgid "Please correct the errors below before submitting."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:101
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:284
+#, elixir-autogen, elixir-format
+msgid "Please correct the errors below."
+msgstr ""
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:53
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:57
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:118
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:122
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Select timezone"
+msgstr "Select a time"
+
+#: lib/tymeslot_web/live/admin_live.ex:116
+#, elixir-autogen, elixir-format
+msgid "That change would lock everyone out and was not applied."
+msgstr ""
