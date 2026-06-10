@@ -61,6 +61,8 @@ defmodule Tymeslot.Analytics.Contract do
         if strict?() do
           raise ArgumentError, message
         else
+          # Static message; the offending KEY names go to keyword metadata
+          # (rendered by logger_json in prod). Prop VALUES are never logged.
           Logger.warning("analytics event dropped: contract violation",
             event: name,
             keys: offending_keys

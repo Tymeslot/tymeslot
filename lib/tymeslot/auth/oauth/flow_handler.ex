@@ -98,6 +98,13 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   defp create_user_session(conn, user, provider) do
     case Session.create_session(conn, %{id: user.id}) do
       {:ok, conn, _token} ->
+        # Funnel: count OAuth logins alongside password logins. Categorical only
+        # (method + provider) — never any user identifier.
+        :telemetry.execute([:tymeslot, :auth, :login_completed], %{count: 1}, %{
+          method: "oauth",
+          provider: to_string(provider)
+        })
+
         {:ok, conn, provider}
 
       {:error, reason, _message} ->

@@ -19,18 +19,32 @@ defmodule TymeslotWeb.Analytics do
 
   @spec push(Phoenix.LiveView.Socket.t(), String.t(), map()) :: Phoenix.LiveView.Socket.t()
   def push(socket, name, props \\ %{}) when is_binary(name) and is_map(props) do
+    # Validation runs OUTSIDE the rescue so strict mode (dev/test) actually raises
+    # on a PII/malformed event — the whole point of strict mode is to catch it at
+    # source. In non-strict mode (prod) it returns {:error, _} and we drop quietly.
     case Contract.validate!(name, props) do
       :ok ->
         :telemetry.execute([:tymeslot, :analytics, :emitted], %{count: 1}, %{name: name})
-        push_event(socket, "ts:analytics", %{name: name, props: props})
+        emit(socket, name, props)
 
       {:error, _reason} ->
-        # Non-strict mode: validation logged and signalled drop; skip emit.
+        # Non-strict mode: validation already logged the violation (key names only)
+        # and signalled drop; skip emit.
         socket
     end
+  end
+
+  # Only the emit side-effect is wrapped: an unexpected failure here must never
+  # crash a live user flow. No prop values are ever logged.
+  defp emit(socket, name, props) do
+    push_event(socket, "ts:analytics", %{name: name, props: props})
   rescue
     error ->
-      Logger.warning("analytics push failed unexpectedly", event: name, error: inspect(error))
+      Logger.warning("analytics push failed unexpectedly",
+        event: name,
+        error: error.__struct__
+      )
+
       socket
   end
 end
