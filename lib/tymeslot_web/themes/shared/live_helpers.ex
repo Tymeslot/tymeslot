@@ -45,8 +45,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       |> ThemeUtils.assign_user_timezone(params)
       |> ThemeUtils.assign_theme_with_preview(params)
 
-    # Then handle username context (which sets meeting_types)
-    socket = OrganizerHelpers.handle_username_resolution(socket, params["username"])
+    # Resolve the username context (which sets meeting_types) unless the
+    # dispatcher already resolved it before delegating to this mount
+    socket =
+      if socket.assigns[:organizer_profile] do
+        socket
+      else
+        OrganizerHelpers.handle_username_resolution(socket, params["username"])
+      end
 
     # Apply theme customization after organizer is resolved
     socket = maybe_assign_customization(socket)
@@ -57,10 +63,15 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     # Finally setup initial state
     socket = setup_initial_state_fun.(socket, initial_state, params)
 
-    # Pre-fetch month availability regardless of initial state so it's ready for the schedule step
-    socket = AvailabilityHelpers.fetch_month_availability_async(socket)
-
-    socket
+    # Pre-fetch month availability so it's ready for the schedule step. Only on
+    # the connected mount — the static render would throw the result away, and
+    # the calendar degrades gracefully to business-hours availability until the
+    # socket connects.
+    if connected?(socket) do
+      AvailabilityHelpers.fetch_month_availability_async(socket)
+    else
+      socket
+    end
   end
 
   @doc """

@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
   Shared initialization helpers for scheduling themes.
   """
 
-  import Phoenix.Component, only: [assign: 3]
+  import Phoenix.Component, only: [assign: 3, assign_new: 3]
 
   alias Phoenix.LiveView
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
@@ -34,21 +34,26 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:availability_task, nil)
     |> assign(:availability_task_ref, nil)
     |> OrganizerHelpers.setup_form_state(%{}, as: :booking)
-    |> assign(:client_ip, nil)
+    |> assign_new(:client_ip, fn -> nil end)
     |> assign(:submission_token, nil)
-    |> assign(:meeting_types, [])
+    |> assign_new(:meeting_types, fn -> [] end)
     # Engine starts empty; it is re-initialised with the meeting type's custom
     # field snapshot in maybe_assign_meeting_type/2 once the organiser is resolved.
     |> assign(:engine, QEngine.init([]))
   end
 
+  # The organizer context (username_context, organizer_profile,
+  # organizer_user_id, meeting_types, client_ip) may already have been
+  # resolved by the theme dispatcher before it delegates to the theme
+  # mount — use assign_new for those keys so the resolved values are
+  # passed through instead of being reset and resolved a second time.
   @spec assign_base_state(LiveView.Socket.t()) :: LiveView.Socket.t()
   def assign_base_state(socket) do
     socket
     |> assign(:current_state, :overview)
-    |> assign(:username_context, nil)
-    |> assign(:organizer_profile, nil)
-    |> assign(:organizer_user_id, nil)
+    |> assign_new(:username_context, fn -> nil end)
+    |> assign_new(:organizer_profile, fn -> nil end)
+    |> assign_new(:organizer_user_id, fn -> nil end)
     |> assign(:selected_duration, nil)
     |> assign(:selected_date, nil)
     |> assign(:selected_time, nil)
