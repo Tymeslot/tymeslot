@@ -147,4 +147,21 @@ defmodule TymeslotWeb.DashboardTourTest do
       assert is_nil(Repo.reload!(user).dashboard_tour_seen_at)
     end
   end
+
+  describe "unknown tour events" do
+    test "an unrecognised tour:* event is a no-op and does not crash the LiveView",
+         %{conn: conn} do
+      user = insert_fresh_dashboard_user(dashboard_tour_seen_at: nil)
+
+      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/dashboard")
+
+      # A client pushing an unknown action must not raise FunctionClauseError.
+      render_hook(view, "tour:bogus-action", %{})
+
+      # The view is still alive and the tour is untouched.
+      assert has_element?(view, "#dashboard-tour")
+      assert view |> element("#dashboard-tour") |> render() =~ "data-step-index=\"0\""
+      assert is_nil(Repo.reload!(user).dashboard_tour_seen_at)
+    end
+  end
 end

@@ -47,6 +47,13 @@ defmodule TymeslotWeb.Dashboard.TourEventHandlers do
     {:noreply, assign(socket, :tour_active, false)}
   end
 
+  # Catch-all for unknown `tour:*` actions. A client pushing an unrecognised
+  # event must never crash the user's own LiveView, so we no-op rather than
+  # raise FunctionClauseError.
+  def handle_event(_action, _params, socket) do
+    {:noreply, socket}
+  end
+
   @doc """
   Initialises tour assigns for the current action. Only the `:overview`
   action activates the tour, and only for users who haven't seen it yet.

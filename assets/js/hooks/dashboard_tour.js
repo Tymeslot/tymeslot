@@ -83,10 +83,10 @@ export const DashboardTour = {
 
     if (!anchor) {
       this.applyCenteredLayout();
-      return;
+      return Promise.resolve();
     }
 
-    this.findAnchor(anchor)
+    return this.findAnchor(anchor)
       .then((target) => this.applySpotlightLayout(target, placement, scroll))
       .catch(() => this.pushEvent("tour:skip-step", {}));
   },
@@ -129,6 +129,13 @@ export const DashboardTour = {
     tooltip.style.left = "50%";
     tooltip.style.top = "50%";
     tooltip.style.transform = "translate(-50%, -50%)";
+
+    // Record that we are now on a centered (anchorless) step. Without this the
+    // cache keeps the previous anchored step's anchor/placement, so navigating
+    // Back to centered then forward to the *same* anchored step would trip the
+    // early-return in updated() and leave the spotlight unpositioned.
+    this.lastAnchor = this.el.dataset.anchor;
+    this.lastPlacement = this.el.dataset.placement || "bottom";
   },
 
   applySpotlightLayout(target, placement, scroll) {

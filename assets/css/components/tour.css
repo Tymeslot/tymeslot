@@ -15,6 +15,18 @@
   z-index: 9999;
 }
 
+/* The tour is desktop-only. The server renders the overlay on the initial
+   (static) response because it can't know the viewport yet; the JS hook then
+   pushes `tour:viewport-too-small` to dismiss it below 1024px. Hiding the
+   overlay in CSS below that same breakpoint prevents a flash of a dimmed
+   dashboard on small viewports before the websocket round-trip completes.
+   The breakpoint matches MIN_VIEWPORT_PX in hooks/dashboard_tour.js. */
+@media (max-width: 1023px) {
+  .dashboard-tour {
+    display: none;
+  }
+}
+
 .dashboard-tour__backdrop {
   /* Visible by default so the welcome step (first paint) shows a dimmed
      dashboard immediately. The JS hook hides it for spotlit steps where
