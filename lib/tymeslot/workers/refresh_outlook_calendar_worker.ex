@@ -1,18 +1,18 @@
 defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
   @moduledoc """
-  Oban worker that performs an on-demand refresh of a single Outlook Calendar
-  integration in response to a user-initiated "Refresh now" click.
+  Oban worker that refreshes a single Outlook Calendar integration.
 
   Outlook syncs are normally event-driven via Microsoft Graph webhooks; this
-  worker is the manual escape hatch when a notification was missed, delayed, or
-  never delivered (e.g. WEBHOOK_BASE_URL not configured).
+  worker covers the cases where that is not enough: a user-initiated
+  "Refresh now" click, and the periodic `FallbackSyncSweepWorker`, which
+  enqueues one of these jobs per Outlook integration to catch missed,
+  delayed, or never-delivered notifications (e.g. WEBHOOK_BASE_URL not
+  configured).
 
-  Mirrors the per-integration logic of
-  `FallbackSyncSweepWorker.process_outlook/1`: if the integration has a
-  `graph_delta_link`, delta-sync via `OutlookDeltaSync.fetch_and_apply/1`;
-  otherwise bootstrap a fresh delta baseline via
-  `OutlookCalendarAPI.bootstrap_sync/1` and opportunistically register a
-  webhook subscription.
+  If the integration has a `graph_delta_link`, delta-syncs via
+  `OutlookDeltaSync.fetch_and_apply/1`; otherwise bootstraps a fresh delta
+  baseline via `OutlookCalendarAPI.bootstrap_sync/1` and opportunistically
+  registers a webhook subscription.
 
   Broadcasts `SyncBroadcast.broadcast_sync_complete/2` on success so the
   dashboard's progress counter clears.

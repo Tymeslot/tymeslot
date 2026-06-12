@@ -33,12 +33,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   so Oban retries and takes another shot at recording the flag. The
   `is_active` flag is left unchanged so the integration remains visible in the
   dashboard.
-
-  ## Jitter (first run)
-
-  When `caldav_sync_tier` is nil (first-ever sync), the worker sleeps 0–30 s
-  before making any HTTP requests. This prevents a thunderstorm when many CalDAV
-  integrations are enqueued simultaneously by the fallback sweep.
   """
 
   use Oban.Worker,
