@@ -3,7 +3,7 @@
  *
  * Covers the continuous resize protocol:
  * - Embedded context detection (window.self !== window.top)
- * - data-embedded and data-embed-mode attributes on <html>
+ * - data-embedded attribute on <html>
  * - Consistent height = computed main + margins every pass (no first-pass lurch)
  * - Grow immediately, settle a shrink for one tick, skip sub-pixel jitter
  * - Origin derivation from document.referrer / parent-origin param
@@ -134,16 +134,12 @@ describe('embedded context detection', () => {
     expect(document.documentElement.hasAttribute('data-embedded')).toBe(true)
   })
 
-  test('sets data-embed-mode from URL params (default "modal")', () => {
-    runScript({ isEmbedded: true })
-
-    expect(document.documentElement.getAttribute('data-embed-mode')).toBe('modal')
-  })
-
-  test('sets data-embed-mode="inline" when ?embed-mode=inline is present', () => {
+  test('does not set the dead data-embed-mode attribute', () => {
+    // The embed-mode protocol was removed: both inline and modal embeds report
+    // height continuously and no CSS consumes data-embed-mode.
     runScript({ isEmbedded: true, search: '?embed-mode=inline' })
 
-    expect(document.documentElement.getAttribute('data-embed-mode')).toBe('inline')
+    expect(document.documentElement.hasAttribute('data-embed-mode')).toBe(false)
   })
 
   test('does not set data-embedded when not inside an iframe', () => {

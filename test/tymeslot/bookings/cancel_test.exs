@@ -15,6 +15,7 @@ defmodule Tymeslot.Bookings.CancelTest do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.VideoSyncWorker
   alias Tymeslot.ZoomOAuthHelperMock
   import Tymeslot.MeetingTestHelpers
 
@@ -221,7 +222,7 @@ defmodule Tymeslot.Bookings.CancelTest do
   end
 
   describe "Zoom video room cleanup" do
-    test "deletes the Zoom meeting via the Zoom REST API when cancelling" do
+    test "enqueues a video-sync delete job that calls the Zoom REST API" do
       %{user: user} = create_user_with_profile()
       integration = insert_zoom_integration(user)
 
@@ -233,6 +234,17 @@ defmodule Tymeslot.Bookings.CancelTest do
           video_room_id: "987654321"
         })
 
+      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert cancelled.status == "cancelled"
+
+      # The provider call is deferred to a supervised, retrying Oban job rather
+      # than made inline — so a transient Zoom failure no longer orphans the
+      # meeting. The cancellation itself does not touch the Zoom API.
+      assert_enqueued(
+        worker: VideoSyncWorker,
+        args: %{"meeting_id" => cancelled.id, "action" => "delete"}
+      )
+
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
       expect(HTTPClientMock, :request, fn :delete, url, _body, headers, _opts ->
@@ -242,11 +254,11 @@ defmodule Tymeslot.Bookings.CancelTest do
         {:ok, %Req.Response{status: 204, body: ""}}
       end)
 
-      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
-      assert cancelled.status == "cancelled"
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => cancelled.id, "action" => "delete"})
     end
 
-    test "still cancels successfully when Zoom delete fails" do
+    test "still cancels successfully and the job retries when Zoom delete fails" do
       %{user: user} = create_user_with_profile()
       integration = insert_zoom_integration(user)
 
@@ -258,12 +270,6 @@ defmodule Tymeslot.Bookings.CancelTest do
           video_room_id: "555"
         })
 
-      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
-
-      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
-        {:error, :timeout}
-      end)
-
       assert {:ok, cancelled} = Cancel.execute(meeting.uid)
       assert cancelled.status == "cancelled"
 
@@ -271,9 +277,25 @@ defmodule Tymeslot.Bookings.CancelTest do
         worker: EmailWorker,
         args: %{"action" => "send_cancellation_emails", "meeting_id" => cancelled.id}
       )
+
+      assert_enqueued(
+        worker: VideoSyncWorker,
+        args: %{"meeting_id" => cancelled.id, "action" => "delete"}
+      )
+
+      # A transient Zoom failure returns {:error, _} from the job so Oban retries
+      # it — the meeting is not permanently desynced.
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:error, :timeout}
+      end)
+
+      assert {:error, _reason} =
+               perform_job(VideoSyncWorker, %{"meeting_id" => cancelled.id, "action" => "delete"})
     end
 
-    test "treats Zoom 404 as success so cancellation is idempotent" do
+    test "the delete job treats Zoom 404 as success so cancellation is idempotent" do
       %{user: user} = create_user_with_profile()
       integration = insert_zoom_integration(user)
 
@@ -285,17 +307,20 @@ defmodule Tymeslot.Bookings.CancelTest do
           video_room_id: "gone"
         })
 
+      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert cancelled.status == "cancelled"
+
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
       expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 404, body: ""}}
       end)
 
-      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
-      assert cancelled.status == "cancelled"
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => cancelled.id, "action" => "delete"})
     end
 
-    test "skips Zoom call when meeting has no video_room_id" do
+    test "does not enqueue a video-sync job when meeting has no video_room_id" do
       %{user: user} = create_user_with_profile()
       integration = insert_zoom_integration(user)
 
@@ -307,9 +332,10 @@ defmodule Tymeslot.Bookings.CancelTest do
           video_room_id: nil
         })
 
-      # HTTPClientMock not expected — Mox verify_on_exit! catches stray calls.
       assert {:ok, cancelled} = Cancel.execute(meeting.uid)
       assert cancelled.status == "cancelled"
+
+      refute_enqueued(worker: VideoSyncWorker)
     end
   end
 

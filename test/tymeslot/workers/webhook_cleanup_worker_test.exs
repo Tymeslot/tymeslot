@@ -7,6 +7,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Slack.SlackDeliverySchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookEventSchema
   alias Tymeslot.Workers.WebhookCleanupWorker
@@ -190,6 +191,32 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
 
       refute Repo.get(WebhookDeliverySchema, old_delivery.id)
       refute Repo.get(WebhookEventSchema, old_event_id)
+    end
+  end
+
+  describe "perform/1 - Slack delivery log cleanup" do
+    test "removes Slack delivery rows older than 60 days, keeps recent ones" do
+      integration = insert(:slack_integration)
+      old_date = DateTime.add(DateTime.utc_now(), -61, :day)
+      recent_date = DateTime.add(DateTime.utc_now(), -10, :day)
+
+      old = insert(:slack_delivery, integration: integration, inserted_at: old_date)
+      recent = insert(:slack_delivery, integration: integration, inserted_at: recent_date)
+
+      assert :ok = perform_job(WebhookCleanupWorker, %{})
+
+      refute Repo.get(SlackDeliverySchema, old.id)
+      assert Repo.get(SlackDeliverySchema, recent.id)
+    end
+
+    test "respects the slack_delivery_retention_days argument" do
+      integration = insert(:slack_integration)
+      date_45 = DateTime.add(DateTime.utc_now(), -45, :day)
+
+      delivery = insert(:slack_delivery, integration: integration, inserted_at: date_45)
+
+      assert :ok = perform_job(WebhookCleanupWorker, %{"slack_delivery_retention_days" => 30})
+      refute Repo.get(SlackDeliverySchema, delivery.id)
     end
   end
 end

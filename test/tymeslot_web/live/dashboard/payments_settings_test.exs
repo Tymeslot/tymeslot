@@ -368,6 +368,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       |> form("#refund-form", %{"refund_type" => "full"})
       |> render_submit()
 
+      # The Stripe refund runs in start_async; await it before asserting.
+      render_async(view)
+
       reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.status == "refunded"
       assert reloaded.refunded_amount_cents == 5000
@@ -401,6 +404,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       view
       |> form("#refund-form", %{"refund_type" => "partial", "amount" => "15.00"})
       |> render_submit()
+
+      # The Stripe refund runs in start_async; await it before asserting.
+      render_async(view)
 
       reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.status == "partially_refunded"

@@ -151,19 +151,16 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
       html = view |> element("button[phx-click='toggle_language_dropdown']") |> render_click()
       assert html =~ "role=\"menu\""
 
-      # phx-click-away must always be present so the binding is registered on the
-      # already-mounted element — not only after the dropdown opens via a DOM patch.
-      # A conditional phx-click-away on an existing element is never picked up by
-      # LiveView's JS, which is why clickaway silently breaks in the browser.
+      # phx-click-away is wired only while the dropdown is open — the component
+      # conditionally renders it as `@open && @on_close` so it is absent when closed.
       assert html =~ ~s(phx-click-away="close_language_dropdown")
 
       # Close via the click-away event (simulates clicking outside)
       render_click(view, "close_language_dropdown", %{})
       refute render(view) =~ "role=\"menu\""
 
-      # phx-click-away must still be present when the dropdown is closed so the
-      # binding remains registered for the next open cycle
-      assert render(view) =~ ~s(phx-click-away="close_language_dropdown")
+      # phx-click-away is absent when the dropdown is closed
+      refute render(view) =~ ~s(phx-click-away="close_language_dropdown")
     end
 
     test "shows current language as active in dropdown", %{conn: conn, username: username} do

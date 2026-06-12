@@ -55,6 +55,33 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccountTest do
       assert reloaded.details_submitted == true
     end
 
+    test "applies the event when Stripe returns a real stripity struct" do
+      # Regression: production stripity_stripe returns an atom-keyed
+      # %Stripe.Account{} struct. Before the adapter-seam normalisation, feeding
+      # it into ConnectAccounts.apply_account_event/2 (which only matches
+      # %{"id" => _}) raised FunctionClauseError on every onboarding return.
+      {user, _account} = insert_active_account("acct_STRUCT")
+
+      expect(StripeAdapterMock, :retrieve_account, fn "acct_STRUCT" ->
+        {:ok,
+         %Stripe.Account{
+           id: "acct_STRUCT",
+           charges_enabled: true,
+           payouts_enabled: true,
+           details_submitted: true,
+           requirements: %{disabled_reason: nil}
+         }}
+      end)
+
+      assert :ok =
+               perform_job(ResyncConnectAccount, %{"stripe_account_id" => "acct_STRUCT"})
+
+      reloaded = ConnectAccountQueries.live_for_user(user.id)
+      assert reloaded.charges_enabled == true
+      assert reloaded.payouts_enabled == true
+      assert reloaded.details_submitted == true
+    end
+
     test "discards when stripe_account_id is missing from args" do
       assert {:discard, "missing stripe_account_id"} =
                perform_job(ResyncConnectAccount, %{})

@@ -62,6 +62,20 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
   @spec process_background_video_upload(Phoenix.LiveView.Socket.t(), map()) ::
           {:ok, String.t()} | {:error, String.t()}
   def process_background_video_upload(socket, profile) do
+    if transcoder_impl().available?() do
+      do_process_background_video_upload(socket, profile)
+    else
+      # ffmpeg is auto-detected at transcode time in the background worker, so
+      # without this guard the upload would report success and then silently
+      # fail when the Oban job cancels itself. Surface the missing dependency
+      # immediately instead of accepting an upload we cannot process.
+      {:error,
+       "Video processing is unavailable on this server because ffmpeg is not installed. " <>
+         "Install ffmpeg or use a background image instead."}
+    end
+  end
+
+  defp do_process_background_video_upload(socket, profile) do
     theme_id = get_theme_id(socket)
 
     uploaded_files =
@@ -114,6 +128,13 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
       _error ->
         {:error, "Upload failed"}
     end
+  end
+
+  # Resolved the same way as the VideoTranscoder worker so a test stub set via
+  # `config :tymeslot, :transcoder` is honoured on both the upload and the
+  # background-processing side.
+  defp transcoder_impl do
+    Application.get_env(:tymeslot, :transcoder, Tymeslot.Media.Transcoder)
   end
 
   @spec get_theme_id(Phoenix.LiveView.Socket.t()) :: String.t()

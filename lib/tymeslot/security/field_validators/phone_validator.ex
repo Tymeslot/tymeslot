@@ -19,6 +19,12 @@ defmodule Tymeslot.Security.FieldValidators.PhoneValidator do
   @max_digits 17
   @min_digits 4
 
+  # Total raw length cap. The digit count is bounded above, but cosmetic
+  # filler (spaces, dashes, parens) is not — without this, a crafted value
+  # like a valid number padded with thousands of spaces would be accepted
+  # and persisted. 40 chars comfortably fits any real formatted number.
+  @max_length 40
+
   @spec validate(any(), keyword()) :: :ok | {:error, String.t()}
   def validate(value, opts \\ [])
 
@@ -32,6 +38,12 @@ defmodule Tymeslot.Security.FieldValidators.PhoneValidator do
     main = Regex.replace(~r/\s*(ext\.?|x|extension)\s*\d+\s*$/i, trimmed, "")
 
     cond do
+      # Cap the raw value, not the trimmed one — the raw answer is what gets
+      # persisted, so a number padded with hundreds of cosmetic spaces would
+      # otherwise survive (trim hides the bloat) and bloat the stored JSONB.
+      String.length(value) > @max_length ->
+        {:error, "Phone number is too long"}
+
       Regex.match?(~r/[A-Za-z]/, main) ->
         {:error, "Phone number contains invalid characters"}
 

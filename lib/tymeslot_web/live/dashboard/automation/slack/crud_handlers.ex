@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Slack
   alias Tymeslot.Slack.InputValidation, as: SlackInputValidation
-  alias Tymeslot.Slack.SlackIntegrationSchema
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Dashboard.Automation.Slack.FormHandlers
   alias TymeslotWeb.Live.Shared.Flash
@@ -197,11 +196,14 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
     }
   end
 
+  # Never round-trip the stored webhook URL into the form — that would render
+  # the decrypted secret as a value in the DOM and LiveView diffs. Leave the
+  # field blank; the validator treats a blank field as "keep current".
   defp edit_form_values(integration, :webhook_url_existing) do
     %{
       "name" => integration.name,
       "events" => integration.events,
-      "webhook_url" => SlackIntegrationSchema.webhook_url(integration) || "",
+      "webhook_url" => "",
       "webhook_channel_hint" => integration.webhook_channel_hint || ""
     }
   end

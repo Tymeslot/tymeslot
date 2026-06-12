@@ -370,6 +370,16 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
       assert {:error, :not_paid} = Refunds.issue_refund(payment, 100)
     end
+
+    test "rejects a disputed payment with :under_dispute and makes no Stripe call" do
+      # A disputed charge cannot be refunded via the Refund API. Local
+      # validation must short-circuit so the host gets a meaningful error
+      # instead of a wasted Stripe round-trip — Mox verify_on_exit! enforces
+      # that no create_refund call is made.
+      payment = paid_booking_payment(%{status: "disputed"})
+
+      assert {:error, :under_dispute} = Refunds.issue_refund(payment, 100)
+    end
   end
 
   describe "issue_refund/3 — application fee handling" do

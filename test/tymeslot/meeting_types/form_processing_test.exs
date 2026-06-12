@@ -5,10 +5,23 @@ defmodule Tymeslot.MeetingTypes.FormProcessingTest do
   CalDAV paths, reminder configs, and other form-specific logic.
   """
 
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :meeting_types
 
+  import Tymeslot.ConfigTestHelpers
+
   alias Tymeslot.MeetingTypes
+
+  setup do
+    # Pin the access checker to Core's default and enable meeting payments so
+    # that paid-meeting-type tests represent a host with full access. Without
+    # this, SaaS config (when compiled alongside Core) would override the
+    # checker and gate these tests behind a subscription check.
+    setup_config(:tymeslot,
+      feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
+      meeting_payments_enabled: true
+    )
+  end
 
   # =====================================
   # Creating Meeting Types from Form

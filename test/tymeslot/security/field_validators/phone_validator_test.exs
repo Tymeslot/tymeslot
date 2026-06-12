@@ -59,5 +59,13 @@ defmodule Tymeslot.Security.FieldValidators.PhoneValidatorTest do
     test "non-binary value returns error" do
       assert {:error, _msg} = PhoneValidator.validate(12_345)
     end
+
+    test "rejects a valid number padded with cosmetic filler" do
+      # Digit count stays within bounds, but the total length is enormous —
+      # this would otherwise pass the digit check and bloat the stored JSONB.
+      flooded = "+1 415 555 0100" <> String.duplicate(" ", 500)
+      assert {:error, msg} = PhoneValidator.validate(flooded)
+      assert msg =~ "too long"
+    end
   end
 end

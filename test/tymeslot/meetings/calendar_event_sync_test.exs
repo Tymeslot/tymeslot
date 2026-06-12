@@ -183,7 +183,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       assert updated.uid == "caldav-uid-123"
     end
 
-    test "surfaces {:error, _} when mapping persistence fails" do
+    test "surfaces {:error, _} and compensates by deleting the orphaned event when mapping persistence fails" do
       %{integration: integration, meeting: meeting} = setup_calendar_scenario_with_paths()
       external_uid = "collides-#{System.unique_integer([:positive])}"
       original_uid = meeting.uid
@@ -200,11 +200,42 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
 
       expect_calendar_create_success(integration.id, external_uid)
 
+      # The provider event was created but the mapping write collides on the
+      # UID unique constraint. The orphaned provider event must be deleted so a
+      # retry of `create` doesn't produce a duplicate.
+      expect(Tymeslot.CalendarMock, :delete_event, fn ^external_uid, _ctx -> :ok end)
+
       assert {:error, :calendar_mapping_persistence_failed} =
                CalendarEventSync.create(meeting.id, 1)
 
       unchanged = Repo.get!(MeetingSchema, meeting.id)
       assert unchanged.uid == original_uid
+    end
+
+    test "tolerates a failed compensation delete and still surfaces the persistence error" do
+      %{integration: integration, meeting: meeting} = setup_calendar_scenario_with_paths()
+      external_uid = "collides-#{System.unique_integer([:positive])}"
+
+      colliding_start = DateTime.add(meeting.start_time, 1, :hour)
+
+      insert(:meeting,
+        uid: external_uid,
+        calendar_integration_id: integration.id,
+        organizer_user_id: meeting.organizer_user_id,
+        start_time: colliding_start,
+        end_time: DateTime.add(colliding_start, 60, :minute)
+      )
+
+      expect_calendar_create_success(integration.id, external_uid)
+
+      # Even if the compensating delete itself errors, the persistence error is
+      # still surfaced for retry (best-effort compensation must not mask it).
+      expect(Tymeslot.CalendarMock, :delete_event, fn ^external_uid, _ctx ->
+        {:error, :connection_failed}
+      end)
+
+      assert {:error, :calendar_mapping_persistence_failed} =
+               CalendarEventSync.create(meeting.id, 1)
     end
   end
 end

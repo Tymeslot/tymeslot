@@ -140,7 +140,6 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
         team_name: "Acme",
         authed_user_id: "U7",
         scope: "chat:write,channels:read",
-        link_token: "linktok",
         events: ["meeting.created"]
       }
 

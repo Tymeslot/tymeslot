@@ -244,23 +244,51 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     end
   end
 
+  # Run the blocking Stripe refund call in an async task so the
+  # `refund_submitting` spinner actually paints — assigning it and then making
+  # the synchronous call in the same handle_event would never yield a render
+  # between the two. We re-assert host ownership inside the task closure so a
+  # forged/raced request still cannot refund another host's payment, and
+  # `issue_refund/2` itself re-locks and re-validates the row under FOR UPDATE.
   defp process_refund(socket, payment, amount_cents) do
-    user = socket.assigns.current_user
+    user_id = socket.assigns.current_user.id
+    payment_id = payment.id
 
-    case MeetingPayments.issue_refund(payment, amount_cents) do
-      {:ok, _payment} ->
-        Flash.info("Refund issued. The attendee will receive a confirmation email.")
+    {:noreply,
+     start_async(socket, :issue_refund, fn ->
+       issue_refund_authorized(payment_id, user_id, amount_cents)
+     end)}
+  end
 
-        {:noreply,
-         socket
-         |> assign(:refund_modal_payment, nil)
-         |> assign(:refund_submitting, false)
-         |> assign_payments_state(user)}
+  defp issue_refund_authorized(payment_id, user_id, amount_cents) do
+    case MeetingPayments.get_payment(payment_id) do
+      %{host_user_id: ^user_id} = fresh_payment ->
+        MeetingPayments.issue_refund(fresh_payment, amount_cents)
 
-      {:error, reason} ->
-        Flash.error(refund_error_message(reason))
-        {:noreply, assign(socket, :refund_submitting, false)}
+      _missing_or_not_owner ->
+        {:error, :not_authorized}
     end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_async(:issue_refund, {:ok, {:ok, _payment}}, socket) do
+    Flash.info("Refund issued. The attendee will receive a confirmation email.")
+
+    {:noreply,
+     socket
+     |> assign(:refund_modal_payment, nil)
+     |> assign(:refund_submitting, false)
+     |> assign_payments_state(socket.assigns.current_user)}
+  end
+
+  def handle_async(:issue_refund, {:ok, {:error, reason}}, socket) do
+    Flash.error(refund_error_message(reason))
+    {:noreply, assign(socket, :refund_submitting, false)}
+  end
+
+  def handle_async(:issue_refund, {:exit, reason}, socket) do
+    Flash.error(refund_error_message(reason))
+    {:noreply, assign(socket, :refund_submitting, false)}
   end
 
   defp assign_payments_state(socket, user) do
@@ -282,6 +310,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
 
   defp refund_error_message(:already_refunded),
     do: "This payment has already been fully refunded."
+
+  defp refund_error_message(:under_dispute),
+    do: "This payment is under dispute and must be handled in your Stripe dashboard."
 
   defp refund_error_message(:invalid_amount),
     do: "Refund amount must be greater than zero and within the remaining balance."

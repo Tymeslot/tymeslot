@@ -162,15 +162,39 @@ defmodule Tymeslot.Slack.SlackQueriesTest do
     end
   end
 
-  describe "find_by_link_token/1" do
-    test "returns the integration for a known token" do
-      integration = insert(:slack_integration, link_token: "abc123")
-      assert {:ok, found} = SlackQueries.find_by_link_token("abc123")
-      assert found.id == integration.id
+  describe "cleanup_old_deliveries/1" do
+    test "deletes deliveries older than the retention window, keeps recent ones" do
+      integration = insert(:slack_integration)
+      now = DateTime.utc_now()
+
+      old =
+        insert(:slack_delivery,
+          integration: integration,
+          inserted_at: DateTime.add(now, -90, :day)
+        )
+
+      recent =
+        insert(:slack_delivery,
+          integration: integration,
+          inserted_at: DateTime.add(now, -10, :day)
+        )
+
+      assert {1, nil} = SlackQueries.cleanup_old_deliveries(60)
+
+      refute Repo.get(SlackDeliverySchema, old.id)
+      assert Repo.get(SlackDeliverySchema, recent.id)
     end
 
-    test "returns not_found for unknown token" do
-      assert {:error, :not_found} = SlackQueries.find_by_link_token("nope")
+    test "treats a negative retention as a no-op so the table can never be wiped" do
+      integration = insert(:slack_integration)
+
+      insert(:slack_delivery,
+        integration: integration,
+        inserted_at: DateTime.add(DateTime.utc_now(), -365, :day)
+      )
+
+      assert {0, nil} = SlackQueries.cleanup_old_deliveries(-1)
+      assert Repo.aggregate(SlackDeliverySchema, :count) == 1
     end
   end
 

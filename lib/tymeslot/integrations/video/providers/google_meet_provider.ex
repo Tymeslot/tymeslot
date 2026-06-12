@@ -381,6 +381,19 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
           {:error, _decode_error} -> {:error, "Invalid JSON response from Google Calendar API"}
         end
 
+      {:ok, %Req.Response{status: 401, body: body}} ->
+        Logger.error("Google Calendar API error in Google Meet provider",
+          status: 401,
+          body: Redactor.redact_and_truncate(body)
+        )
+
+        # The access token was rejected even though it had survived token
+        # validation/refresh — this indicates server-side revocation or consent
+        # withdrawal at Google. Flag the integration so the dashboard shows the
+        # "Reconnect required" badge immediately. Mirrors Zoom's flag_revoked_token/1.
+        flag_revoked_token(config)
+        {:error, "Google Calendar API error: HTTP 401 (see logs for details)"}
+
       {:ok, %Req.Response{status: status, body: body}} ->
         Logger.error("Google Calendar API error in Google Meet provider",
           status: status,
@@ -391,6 +404,37 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
       {:error, reason} ->
         {:error, "HTTP error: #{inspect(reason)}"}
+    end
+  end
+
+  # Flags the integration as needing reauthentication after a 401 from Google —
+  # i.e. the credentials are no longer accepted server-side. The dashboard
+  # surfaces this via the "Reconnect required" badge on the video row. Purely
+  # additive: it does not touch token validation or the OAuthTokenManager flow.
+  defp flag_revoked_token(config) do
+    integration_id = Map.get(config, :integration_id)
+    user_id = Map.get(config, :user_id)
+
+    if is_nil(integration_id) or is_nil(user_id) do
+      Logger.warning("Google Meet token appears revoked but no integration_id to flag",
+        event: "google_meet_token_revoked"
+      )
+    else
+      Logger.warning("Google Meet token revoked; flagging integration for reauth",
+        event: "google_meet_token_revoked",
+        integration_id: integration_id
+      )
+
+      case Video.fetch_integration_for_user(integration_id, user_id) do
+        {:ok, integration} ->
+          VideoIntegrationQueries.mark_needs_reauth(
+            integration,
+            "Google Meet access was revoked. Please reconnect your Google account."
+          )
+
+        {:error, :not_found} ->
+          :ok
+      end
     end
   end
 

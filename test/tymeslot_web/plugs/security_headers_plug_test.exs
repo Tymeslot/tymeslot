@@ -290,6 +290,38 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       assert [csp] = get_resp_header(conn, "content-security-policy")
       assert csp =~ "frame-ancestors 'self'"
     end
+
+    test "preview=true does NOT open framing to a disallowed third-party origin", %{conn: conn} do
+      # Defense-in-depth regression: EmbedAuthHook skips the application-level
+      # allowlist check on a preview render, so CSP frame-ancestors is the ONLY
+      # thing stopping a disallowed origin from framing a preview URL. This test
+      # locks that in — preview=true must keep frame-ancestors at 'self' (same
+      # origin only) and must NOT echo any arbitrary cross-origin host. A
+      # disallowed embedder (https://evil.com) therefore cannot frame the page
+      # at all, regardless of the hook's preview exemption.
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: "previewguard", allowed_embed_domains: [])
+
+      conn =
+        conn
+        |> Map.put(:request_path, "/#{profile.username}")
+        |> Map.put(:query_params, %{"preview" => "true"})
+        |> SecurityHeadersPlug.call(allow_embedding: true)
+
+      assert [csp] = get_resp_header(conn, "content-security-policy")
+      refute csp =~ "evil.com"
+
+      # Isolate the frame-ancestors directive — other directives (script-src,
+      # etc.) legitimately carry https origins, so the assertion must target
+      # only the framing directive.
+      [frame_ancestors] =
+        csp
+        |> String.split("; ")
+        |> Enum.filter(&String.starts_with?(&1, "frame-ancestors"))
+
+      # 'self' is the whole allowance — no third-party origin is permitted.
+      assert frame_ancestors == "frame-ancestors 'self'"
+    end
   end
 
   describe "username extraction" do

@@ -2,15 +2,19 @@ defmodule TymeslotWeb.Themes.Core.ContextLayoutTest do
   @moduledoc """
   Covers the layout resolution rules in `Themes.Core.Context.from_params/2`.
 
-  Three signals can pick the layout:
+  Layout is opt-in:
 
-  1. Explicit `?layout=column` always wins.
-  2. Otherwise, `?embed=1` (the marker embed.js puts on every iframe URL)
-     defaults the layout to `:column` — wide canvas adapts to any container.
-  3. Otherwise, the struct's zero value (`:default`, centred) applies.
+  1. Explicit `?layout=column` selects the wide-canvas `:column` layout.
+  2. Everything else — no params, `?embed=1` with no layout, `?layout=default`,
+     or any invalid value — resolves to the struct's zero value (`:default`,
+     centred).
 
-  An explicit `?layout=default` opts back into the centred view even when
-  `?embed=1` would have selected column.
+  Crucially, `?embed=1` does NOT imply column. This is back-compat: embed
+  snippets deployed before the column layout shipped carry no `data-layout`, so
+  embed.js generates their iframe URL with `?embed=1` but no `?layout=`.
+  Defaulting those to column would silently flip every already-embedded booking
+  page to the wide layout on upgrade. Column is reached only when a newly
+  generated snippet emits `data-layout="column"` → `?layout=column`.
   """
   use ExUnit.Case, async: true
   @moduletag :themes
@@ -42,42 +46,42 @@ defmodule TymeslotWeb.Themes.Core.ContextLayoutTest do
   end
 
   describe "from_params/2 — embedded (?embed=1)" do
-    test "defaults to :column when embed=1 is present and no layout is set" do
+    test "defaults to :default when embed=1 is present and no layout is set (back-compat)" do
+      # Legacy snippets carry no data-layout, so embed.js sends ?embed=1 with no
+      # ?layout=. These must keep the old centred default on upgrade — not flip
+      # to column.
       context = Context.from_params(%{"embed" => "1"})
 
-      assert %Context{layout: :column} = context
+      assert %Context{layout: :default} = context
     end
 
-    test "explicit layout=column with embed=1 stays :column" do
+    test "explicit layout=column with embed=1 selects :column" do
       context = Context.from_params(%{"embed" => "1", "layout" => "column"})
 
       assert %Context{layout: :column} = context
     end
 
-    test "explicit layout=default with embed=1 opts back into :default" do
+    test "explicit layout=default with embed=1 stays :default" do
       context = Context.from_params(%{"embed" => "1", "layout" => "default"})
 
       assert %Context{layout: :default} = context
     end
 
-    test "invalid layout with embed=1 still falls back to :default" do
-      # The explicit-layout clause matches before the embed clause, and any
-      # non-"column" string falls through to the struct default. This keeps
-      # the contract predictable for clients sending malformed values.
+    test "invalid layout with embed=1 falls back to :default" do
+      # Any non-"column" string (including malformed values) resolves to the
+      # struct default. Predictable contract for clients sending junk.
       context = Context.from_params(%{"embed" => "1", "layout" => "mosaic"})
 
       assert %Context{layout: :default} = context
     end
 
-    test "embed=0 does not activate column layout" do
-      # Only the literal value "1" matches the embed clause — any other value
-      # must not silently enable column layout, matching EmbedTokenPlug semantics.
+    test "embed=0 keeps :default" do
       context = Context.from_params(%{"embed" => "0"})
 
       assert %Context{layout: :default} = context
     end
 
-    test "embed with empty string does not activate column layout" do
+    test "embed with empty string keeps :default" do
       context = Context.from_params(%{"embed" => ""})
 
       assert %Context{layout: :default} = context

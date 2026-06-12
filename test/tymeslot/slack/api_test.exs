@@ -62,6 +62,25 @@ defmodule Tymeslot.Slack.APITest do
                API.post_message_via_token("xoxb", "C0", [])
     end
 
+    test "maps a real HTTP 429 with Retry-After to a rate_limited tuple" do
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %{status: 429, body: "", headers: %{"retry-after" => ["17"]}}}
+      end)
+
+      assert {:error, {:rate_limited, 17}} =
+               API.post_message_via_token("xoxb", "C0", [
+                 %{"type" => "section", "text" => %{"text" => "hi"}}
+               ])
+    end
+
+    test "maps a 429 without Retry-After to a rate_limited tuple with nil interval" do
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %{status: 429, body: ""}}
+      end)
+
+      assert {:error, {:rate_limited, nil}} = API.post_message_via_token("xoxb", "C0", [])
+    end
+
     test "uses the first header/section block text as the fallback text" do
       expect(Tymeslot.HTTPClientMock, :post, fn _url, body, _headers, _opts ->
         decoded = Jason.decode!(body)
@@ -107,6 +126,15 @@ defmodule Tymeslot.Slack.APITest do
       end)
 
       assert {:error, {:transport_error, _reason}} =
+               API.post_message_via_webhook("https://hooks.slack.com/services/T/B/abc", [])
+    end
+
+    test "maps a webhook HTTP 429 with Retry-After to a rate_limited tuple" do
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %{status: 429, body: "rate_limited", headers: %{"retry-after" => ["8"]}}}
+      end)
+
+      assert {:error, {:rate_limited, 8}} =
                API.post_message_via_webhook("https://hooks.slack.com/services/T/B/abc", [])
     end
   end

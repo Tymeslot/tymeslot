@@ -226,6 +226,7 @@ defmodule Tymeslot.MeetingTypes do
   def create_meeting_type_from_form(user_id, form_params, ui_state) do
     with {:ok, attrs} <- build_meeting_type_attrs(form_params, ui_state),
          :ok <- gate_custom_fields_change(user_id, attrs),
+         :ok <- gate_payment_change(user_id, attrs),
          :ok <- validate_video_integration(attrs, user_id),
          :ok <- validate_calendar_integration(attrs, user_id) do
       create_meeting_type(Map.put(attrs, :user_id, user_id), payment_opts(user_id))
@@ -240,6 +241,7 @@ defmodule Tymeslot.MeetingTypes do
   def update_meeting_type_from_form(meeting_type, form_params, ui_state) do
     with {:ok, attrs} <- build_meeting_type_attrs(form_params, ui_state),
          :ok <- gate_custom_fields_change(meeting_type.user_id, attrs),
+         :ok <- gate_payment_change(meeting_type.user_id, attrs),
          :ok <- validate_video_integration(attrs, meeting_type.user_id),
          :ok <- validate_calendar_integration(attrs, meeting_type.user_id) do
       update_meeting_type(meeting_type, attrs, payment_opts(meeting_type.user_id))
@@ -430,6 +432,27 @@ defmodule Tymeslot.MeetingTypes do
       _non_empty -> Features.check_access(user_id, :custom_questions_allowed)
     end
   end
+
+  # Paid meeting types are gated behind the :meeting_payments feature. The form
+  # hides the price controls when the host lacks access, but a forged save with
+  # `payment_required=true` must not slip a paid type through — and on SaaS it
+  # must not bypass the Pro-plan requirement. Only a write that *enables*
+  # payment is gated; turning payment off is always allowed so a downgraded
+  # host can still disable a previously paid type.
+  #
+  # `:stripe_required` is treated as allowed at this layer: the host has the
+  # plan but no charges-enabled Connect account yet. The schema changeset
+  # (driven by `payment_opts/1`'s `host_charges_enabled`) is the authority on
+  # whether a price may actually be persisted without a live account.
+  defp gate_payment_change(user_id, %{payment_required: true}) do
+    case Features.check_access(user_id, :meeting_payments) do
+      :ok -> :ok
+      {:error, :stripe_required} -> :ok
+      {:error, _reason} = error -> error
+    end
+  end
+
+  defp gate_payment_change(_user_id, _attrs), do: :ok
 
   defp validate_video_integration(%{allow_video: true, video_integration_id: nil}, _user_id) do
     {:error, :video_integration_required}

@@ -134,6 +134,36 @@ defmodule Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPaymentsTest do
                perform_job(ReconcileAwaitingPayments, %{})
     end
 
+    test "reconciles a paid session when Stripe returns a real stripity struct" do
+      # Regression: production stripity_stripe returns an atom-keyed
+      # %Stripe.Checkout.Session{} struct, not a string-keyed map. Before the
+      # adapter-seam normalisation, no dispatch clause matched and stale rows
+      # never recovered. Feeding the real struct shape proves the worker now
+      # reconciles regardless of adapter.
+      {meeting, bp} = insert_stale_pending(session_id: "cs_STRUCT_PAID")
+
+      expect(StripeAdapterMock, :retrieve_checkout_session, fn "cs_STRUCT_PAID", _opts ->
+        {:ok,
+         %Stripe.Checkout.Session{
+           id: "cs_STRUCT_PAID",
+           payment_status: "paid",
+           status: "complete",
+           client_reference_id: meeting.id,
+           payment_intent: "pi_STRUCT_PAID"
+         }}
+      end)
+
+      assert {:ok, %{reconciled: 1, skipped: 0}} =
+               perform_job(ReconcileAwaitingPayments, %{})
+
+      reloaded = BookingPaymentQueries.get(bp.id)
+      assert reloaded.status == "paid"
+      assert reloaded.stripe_payment_intent_id == "pi_STRUCT_PAID"
+
+      {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
+      assert reloaded_meeting.status == "confirmed"
+    end
+
     test "tolerates Stripe errors and reports them in the result" do
       {_meeting, bp} = insert_stale_pending(session_id: "cs_ERR")
 

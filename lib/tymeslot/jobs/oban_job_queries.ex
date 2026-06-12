@@ -9,13 +9,18 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
 
   @doc """
   Counts maintenance worker jobs in active states.
+
+  `suspended` is treated as active: a suspended job has not reached a terminal
+  state and may resume, so it must count as pending to keep this manual
+  duplicate-prevention check in agreement with Oban's `unique: [states: ...]`
+  guards on the workers.
   """
   @spec count_active_maintenance_jobs(String.t()) :: non_neg_integer()
   def count_active_maintenance_jobs(worker_name) do
     query =
       from(j in Job,
         where: j.worker == ^worker_name,
-        where: j.state in ["available", "scheduled", "executing"],
+        where: j.state in ["available", "scheduled", "executing", "suspended"],
         select: count(j.id)
       )
 
@@ -25,7 +30,11 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   @doc """
   Returns distinct `user_id` values from `args` for jobs of the given worker
   whose `args["action"]` is in `actions` and whose state is not yet terminal
-  (`available`, `scheduled`, `executing`, or `retryable`).
+  (`available`, `scheduled`, `executing`, `retryable`, or `suspended`).
+
+  `suspended` jobs are included so this check agrees with the workers' Oban
+  `unique: [states: ...]` guards — a suspended job is still pending and must
+  not allow a duplicate to be enqueued.
 
   Useful for workers that must avoid enqueueing additional actions for a user
   while any related action is still pending.
@@ -35,7 +44,7 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
     Repo.all(
       from(j in Job,
         where: j.worker == ^worker_name,
-        where: j.state in ["available", "scheduled", "executing", "retryable"],
+        where: j.state in ["available", "scheduled", "executing", "retryable", "suspended"],
         where: fragment("?->>'action' = ANY(?)", j.args, ^actions),
         distinct: true,
         select: fragment("(?->>'user_id')::bigint", j.args)

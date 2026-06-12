@@ -53,6 +53,48 @@ defmodule Tymeslot.MeetingPayments.DataRetentionTest do
       refute ConnectAccountQueries.live_for_user(user.id)
     end
 
+    test "snapshots host identity onto payment_transactions rows created without it" do
+      # Regression: new payment_transactions rows are created without
+      # host_email/host_name (only the backfill migration set them). Without a
+      # snapshot at anonymisation time, nilifying user_id would lose the
+      # counterparty identity required for the standalone tax record.
+      user = insert(:user, email: "newhost@example.com", name: "New Host")
+
+      pt =
+        insert(:payment_transaction,
+          user: user,
+          host_email: nil,
+          host_name: nil
+        )
+
+      assert :ok = DataRetention.anonymise_host(user.id)
+
+      pt = Repo.reload(pt)
+      assert pt.user_id == nil
+      assert pt.host_email == "newhost@example.com"
+      assert pt.host_name == "New Host"
+      assert pt.host_deleted_at != nil
+    end
+
+    test "does not overwrite an existing payment_transactions host snapshot" do
+      # A row that already captured a snapshot (e.g. when the host's email later
+      # changed) must keep its original value — COALESCE fills nulls only.
+      user = insert(:user, email: "changed@example.com", name: "Changed Name")
+
+      pt =
+        insert(:payment_transaction,
+          user: user,
+          host_email: "original@example.com",
+          host_name: "Original Name"
+        )
+
+      assert :ok = DataRetention.anonymise_host(user.id)
+
+      pt = Repo.reload(pt)
+      assert pt.host_email == "original@example.com"
+      assert pt.host_name == "Original Name"
+    end
+
     test "is idempotent — re-running does not re-stamp already anonymised rows" do
       user = insert(:user)
       insert(:connect_account, user: user)

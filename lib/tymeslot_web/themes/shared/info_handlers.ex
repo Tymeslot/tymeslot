@@ -2,6 +2,8 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   @moduledoc """
   Shared handle_info handlers for theme scheduling LiveViews.
   """
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3]
   require Logger
@@ -183,7 +185,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
       |> assign(:awaiting_payment_meeting, nil)
       |> assign(:awaiting_payment_checkout_url, nil)
       |> assign(:submission_processed, false)
-      |> put_flash(:error, "Payment was cancelled. Please try booking again.")
+      |> put_flash(:error, gettext("Payment was cancelled. Please try booking again."))
 
     {:noreply, transition_fun.(socket, :booking, %{})}
   end

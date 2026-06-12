@@ -95,6 +95,113 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
       assert String.contains?(message, "Invalid access token")
     end
 
+    test "forces a real refresh on 401 even when the DB token is within the buffer, then retries" do
+      # Regression: previously the post-401 refresh went through the validity
+      # double-check, which — seeing the DB token still inside the 300s buffer —
+      # returned the SAME rejected token and the retry 401'd again, wrongly
+      # forcing the user to reconnect. The forced path must hit OAuth and retry
+      # with the genuinely-new token.
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Zoom",
+          provider: "zoom",
+          access_token: "server-side-revoked-token",
+          refresh_token: "valid_refresh",
+          # Comfortably valid by the buffer's reckoning — the bug's trigger.
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+          oauth_scope: "meeting:write:meeting"
+        })
+
+      config = %{
+        access_token: "server-side-revoked-token",
+        refresh_token: "valid_refresh",
+        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+        oauth_scope: "meeting:write:meeting",
+        integration_id: integration.id,
+        user_id: user.id,
+        meeting_topic: "Test Meeting",
+        meeting_start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
+        meeting_end_time: DateTime.add(DateTime.utc_now(), 5400, :second)
+      }
+
+      expect(ZoomOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
+
+      # First PATCH with the revoked token returns 401.
+      expect(HTTPClientMock, :request, fn :patch, _url, _body, headers, _opts ->
+        assert {"Authorization", "Bearer server-side-revoked-token"} in headers
+
+        {:ok,
+         %Req.Response{
+           status: 401,
+           body: Jason.encode!(%{"code" => 124, "message" => "Invalid access token"})
+         }}
+      end)
+
+      # The forced refresh MUST call OAuth despite the DB token looking valid.
+      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "valid_refresh", nil ->
+        {:ok,
+         %{
+           access_token: "genuinely_new_token",
+           refresh_token: "new_refresh",
+           expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+           scope: "meeting:write:meeting"
+         }}
+      end)
+
+      # Retry with the fresh token succeeds.
+      expect(HTTPClientMock, :request, fn :patch, _url, _body, headers, _opts ->
+        assert {"Authorization", "Bearer genuinely_new_token"} in headers
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok = ZoomProvider.update_meeting_room("123456789", config)
+    end
+
+    test "returns :meeting_not_found when retry after 401 receives 404" do
+      # Regression: if the meeting was deleted on Zoom between the first PATCH
+      # attempt (401) and the post-refresh retry, the retry's 404 must map to
+      # :meeting_not_found — not a generic error that causes Oban retries.
+      config = valid_config()
+
+      expect(ZoomOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
+
+      # First PATCH returns 401 — token rejected server-side.
+      expect(HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 401,
+           body: Jason.encode!(%{"code" => 124, "message" => "Invalid access token"})
+         }}
+      end)
+
+      # Token refresh succeeds.
+      expect(ZoomOAuthHelperMock, :refresh_access_token, fn _refresh, nil ->
+        {:ok,
+         %{
+           access_token: "refreshed_token",
+           refresh_token: "new_refresh",
+           expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+         }}
+      end)
+
+      # Retry PATCH with fresh token — meeting was deleted on Zoom in the
+      # meantime, so Zoom returns 404.
+      expect(HTTPClientMock, :request, fn :patch, _url, _body, headers, _opts ->
+        assert {"Authorization", "Bearer refreshed_token"} in headers
+
+        {:ok,
+         %Req.Response{
+           status: 404,
+           body: Jason.encode!(%{"code" => 3001, "message" => "Meeting does not exist"})
+         }}
+      end)
+
+      assert {:error, :meeting_not_found} = ZoomProvider.update_meeting_room("123", config)
+    end
+
     test "returns error on network failure" do
       config = valid_config()
 

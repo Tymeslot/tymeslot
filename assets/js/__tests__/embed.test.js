@@ -94,8 +94,18 @@ describe('open()', () => {
 })
 
 describe('modal sizing', () => {
-  test('uses default max-width of 1000px for the modal container', () => {
+  test('uses legacy default max-width of 640px when no layout is set', () => {
+    // Back-compat: a popup snippet that predates the column layout carries no
+    // layout, so it must keep the original 640px modal default rather than
+    // silently widening to 1000px on upgrade.
     window.TymeslotBooking.open('alice')
+
+    const container = document.querySelector('#tymeslot-modal [data-tymeslot-container]')
+    expect(container.style.maxWidth).toContain('640px')
+  })
+
+  test('uses 1000px default max-width when layout=column', () => {
+    window.TymeslotBooking.open('alice', { layout: 'column' })
 
     const container = document.querySelector('#tymeslot-modal [data-tymeslot-container]')
     expect(container.style.maxWidth).toContain('1000px')
@@ -470,7 +480,10 @@ describe('postMessage resize handler', () => {
     expect(wrapper.style.height).toBe('2000px')
   })
 
-  test('applies default maxWidth of 1000px and centering margins when no attribute set', () => {
+  test('applies legacy default maxWidth of 640px and centering margins when no layout set', () => {
+    // Back-compat: an inline snippet predating the column layout carries no
+    // data-layout, so it keeps the original 640px default — not the wider
+    // 1000px column default.
     const container = document.createElement('div')
     container.id = 'max-width-default-test'
     document.body.appendChild(container)
@@ -480,9 +493,25 @@ describe('postMessage resize handler', () => {
     const iframe = document.querySelector('#max-width-default-test iframe[title="Booking Widget"]')
     const wrapper = iframe.parentNode
 
-    expect(wrapper.style.maxWidth).toBe('1000px')
+    expect(wrapper.style.maxWidth).toBe('640px')
     expect(wrapper.style.marginLeft).toBe('auto')
     expect(wrapper.style.marginRight).toBe('auto')
+  })
+
+  test('applies 1000px default maxWidth when layout=column and no max-width attribute', () => {
+    const container = document.createElement('div')
+    container.id = 'max-width-column-default-test'
+    container.setAttribute('data-layout', 'column')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#max-width-column-default-test', 'alice', { layout: 'column' })
+
+    const iframe = document.querySelector(
+      '#max-width-column-default-test iframe[title="Booking Widget"]'
+    )
+    const wrapper = iframe.parentNode
+
+    expect(wrapper.style.maxWidth).toBe('1000px')
   })
 
   test('respects custom data-max-width attribute', () => {
@@ -583,6 +612,189 @@ describe('postMessage resize handler', () => {
       })
     )
     expect(wrapper.style.height).toBe('500px')
+  })
+})
+
+describe('layout back-compat (no data-layout = legacy default)', () => {
+  test('no data-layout keeps the legacy 640px max-width default', () => {
+    const container = document.createElement('div')
+    container.id = 'legacy-no-layout-width'
+    document.body.appendChild(container)
+
+    // No layout option at all — simulates a snippet deployed before column.
+    window.TymeslotBooking.embed('#legacy-no-layout-width', 'alice')
+
+    const iframe = document.querySelector('#legacy-no-layout-width iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    expect(wrapper.style.maxWidth).toBe('640px')
+  })
+
+  test('no data-layout treats data-min-height as a persistent floor — does not shrink below it', () => {
+    const container = document.createElement('div')
+    container.id = 'legacy-floor-test'
+    container.setAttribute('data-min-height', '500')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#legacy-floor-test', 'alice')
+
+    const iframe = document.querySelector('#legacy-floor-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    // Initial placeholder reflects the min-height
+    expect(wrapper.style.height).toBe('500px')
+
+    // A posted height below the floor must be clamped UP to the floor
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: 300 }
+      })
+    )
+    expect(wrapper.style.height).toBe('500px')
+
+    // A posted height above the floor grows normally
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: 720 }
+      })
+    )
+    expect(wrapper.style.height).toBe('720px')
+  })
+
+  test('data-layout=column uses the 1000px max-width default', () => {
+    const container = document.createElement('div')
+    container.id = 'column-width-test'
+    container.setAttribute('data-layout', 'column')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#column-width-test', 'alice', { layout: 'column' })
+
+    const iframe = document.querySelector('#column-width-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    expect(wrapper.style.maxWidth).toBe('1000px')
+  })
+
+  test('data-layout=column ignores data-min-height as a floor — shrinks below it', () => {
+    const container = document.createElement('div')
+    container.id = 'column-no-floor-test'
+    container.setAttribute('data-layout', 'column')
+    container.setAttribute('data-min-height', '500')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#column-no-floor-test', 'alice', { layout: 'column' })
+
+    const iframe = document.querySelector('#column-no-floor-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    // Column embeds track content height exactly — a posted height below the
+    // (former) floor is applied verbatim.
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: 300 }
+      })
+    )
+    expect(wrapper.style.height).toBe('300px')
+    expect(parseInt(wrapper.style.minHeight || '0', 10)).toBe(0)
+  })
+
+  test('explicit data-max-width overrides the layout default (legacy)', () => {
+    const container = document.createElement('div')
+    container.id = 'legacy-explicit-width'
+    container.setAttribute('data-max-width', '900')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#legacy-explicit-width', 'alice')
+
+    const iframe = document.querySelector('#legacy-explicit-width iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    expect(wrapper.style.maxWidth).toBe('900px')
+  })
+})
+
+describe('ensureScrollable — max-height container caps at the max-height, not the placeholder', () => {
+  test('a max-height-only container caps the wrapper at the max-height value', async () => {
+    // Regression: ensureScrollable previously read container.clientHeight (the
+    // 400px placeholder) and pinned the embed there, so it could never grow to
+    // the embedder's max-height. It must read the computed max-height instead.
+    const container = document.createElement('div')
+    container.id = 'max-height-cap-test'
+    container.style.maxHeight = '800px'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#max-height-cap-test', 'alice')
+
+    const iframe = document.querySelector('#max-height-cap-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    // ensureScrollable runs inside requestAnimationFrame — flush it.
+    await new Promise((resolve) => requestAnimationFrame(() => resolve()))
+
+    expect(wrapper.dataset.constrained).toBe('true')
+    expect(wrapper.dataset.constraintHeight).toBe('800')
+
+    // A posted height up to the 800px max-height is honoured (not capped at 400)
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: 750 }
+      })
+    )
+    expect(wrapper.style.height).toBe('750px')
+
+    // Beyond the max-height it caps at 800
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: 1200 }
+      })
+    )
+    expect(wrapper.style.height).toBe('800px')
+  })
+})
+
+describe('modal resize re-applies the cap on window shrink', () => {
+  test('shrinking the viewport clamps the wrapper height down to the new max', () => {
+    vi.useFakeTimers()
+
+    window.TymeslotBooking.open('alice')
+
+    const iframe = document.querySelector('#tymeslot-modal iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    // Simulate the iframe reporting a tall content height first.
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: 700 }
+      })
+    )
+
+    // jsdom innerHeight defaults to 768 → modalContentMaxHeight = 668, so 700
+    // is already capped to 668 by the resize handler.
+    expect(wrapper.style.height).toBe('668px')
+
+    // Shrink the window. iframe_embed.js would NOT re-post (height unchanged),
+    // so the modal resize handler must re-apply the cap itself.
+    window.innerHeight = 400
+    window.dispatchEvent(new Event('resize'))
+    vi.runAllTimers()
+
+    // New cap = 400 - 100 = 300; the wrapper must be clamped down to it.
+    expect(wrapper.dataset.constraintHeight).toBe('300')
+    expect(wrapper.style.height).toBe('300px')
+
+    vi.useRealTimers()
   })
 })
 

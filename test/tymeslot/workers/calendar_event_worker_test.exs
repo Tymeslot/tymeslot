@@ -456,6 +456,11 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
 
       expect_calendar_create_success(integration.id, external_uid)
 
+      # The provider event was created but mapping persistence fails on the UID
+      # unique constraint. The orphaned provider event must be deleted before the
+      # error is surfaced so a retry doesn't produce a duplicate.
+      expect(Tymeslot.CalendarMock, :delete_event, fn ^external_uid, _ctx -> :ok end)
+
       assert {:error, :calendar_mapping_persistence_failed} =
                perform_job(CalendarEventWorker, %{
                  "action" => "create",

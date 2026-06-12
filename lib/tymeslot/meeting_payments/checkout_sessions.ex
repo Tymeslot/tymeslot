@@ -14,6 +14,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   """
 
   alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Features
 
   alias Tymeslot.MeetingPayments.{
     ApplicationFee,
@@ -24,9 +25,8 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
 
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Profiles
-  alias Tymeslot.Repo
+  alias Tymeslot.Themes.Catalog, as: ThemeCatalog
   alias TymeslotWeb.Endpoint
-  alias TymeslotWeb.Themes.Core.Registry, as: ThemeRegistry
 
   @session_expiry_seconds 30 * 60
 
@@ -38,20 +38,31 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   @spec create_session_for_booking(Tymeslot.Meetings.MeetingSchema.t()) ::
           {:ok, create_result()} | {:error, term()}
   def create_session_for_booking(meeting) do
-    Repo.transaction(fn ->
-      with {:ok, context} <- build_context(meeting),
-           {:ok, booking_payment} <- BookingPaymentQueries.insert(context.snapshot),
-           {:ok, session} <- create_stripe_session(meeting, context),
-           {:ok, booking_payment} <- attach_session_details(booking_payment, session) do
-        %{checkout_url: session.url, booking_payment: booking_payment}
-      else
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+    # The Stripe checkout call is deliberately NOT wrapped in a DB transaction.
+    # Holding a pooled connection open across a network round-trip to Stripe
+    # risks pool exhaustion when Stripe is slow. Instead we:
+    #
+    #   1. Insert the booking_payment row (status `pending`).
+    #   2. Call Stripe to create the checkout session — outside any transaction.
+    #   3. Attach the returned session id to the row.
+    #
+    # If step 2 or 3 fails the row stays `pending` with no session id; the
+    # `ReconcileAwaitingPayments` sweeper is the cleanup net (a `pending` row
+    # past its grace period with no session id is treated as stale and the
+    # meeting expires). Idempotency on the Stripe side is preserved by the
+    # `checkout:<meeting_id>` idempotency key, so a retried booking for the same
+    # meeting collapses to a single Stripe session.
+    with {:ok, context} <- build_context(meeting),
+         {:ok, booking_payment} <- BookingPaymentQueries.insert(context.snapshot),
+         {:ok, session} <- create_stripe_session(meeting, context),
+         {:ok, booking_payment} <- attach_session_details(booking_payment, session) do
+      {:ok, %{checkout_url: session.url, booking_payment: booking_payment}}
+    end
   end
 
   defp build_context(meeting) do
     with {:ok, host} <- fetch_host(meeting.organizer_user_id),
+         :ok <- check_payments_access(host.id),
          {:ok, account} <- fetch_connect_account(host.id),
          {:ok, meeting_type} <- fetch_meeting_type(meeting.meeting_type_id) do
       theme_id = resolve_theme_id(host.id)
@@ -108,6 +119,19 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
     BookingPaymentQueries.update(booking_payment, attrs)
   end
 
+  # Server-side plan enforcement on the money path. The booking UI never offers
+  # a paid slot to a host who has lost access, but a direct booking request must
+  # not be able to take a payment for a host whose plan lapsed even if Stripe
+  # still reports charges_enabled. Unlike the onboarding/save paths, checkout
+  # requires the *full* :meeting_payments grant — a :stripe_required result here
+  # means the host genuinely cannot accept a charge, so it is a hard failure.
+  defp check_payments_access(host_user_id) do
+    case Features.check_access(host_user_id, :meeting_payments) do
+      :ok -> :ok
+      {:error, _reason} -> {:error, :payments_unavailable}
+    end
+  end
+
   defp fetch_host(nil), do: {:error, :host_missing}
 
   defp fetch_host(user_id) do
@@ -135,14 +159,14 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   defp resolve_theme_id(user_id) do
     case Profiles.get_profile(user_id) do
       %{booking_theme: theme_id} when is_binary(theme_id) -> theme_id
-      _missing_or_default -> ThemeRegistry.default_theme_id()
+      _missing_or_default -> ThemeCatalog.default_id()
     end
   end
 
   defp theme_slug_for(theme_id) do
-    case ThemeRegistry.id_to_key(theme_id) do
+    case ThemeCatalog.id_to_key(theme_id) do
       {:ok, key} -> Atom.to_string(key)
-      {:error, :invalid_theme_id} -> Atom.to_string(ThemeRegistry.default_theme_key())
+      {:error, :invalid_theme_id} -> Atom.to_string(ThemeCatalog.default_key())
     end
   end
 

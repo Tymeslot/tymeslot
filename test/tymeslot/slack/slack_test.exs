@@ -381,6 +381,16 @@ defmodule Tymeslot.SlackTest do
       cs = %Ecto.Changeset{errors: [{:user_id, {"workspace already connected", []}}]}
       assert Slack.translate_error(cs) =~ "already connected"
     end
+
+    test "renders human-readable text for plan/feature atoms instead of leaking them" do
+      assert Slack.translate_error(:insufficient_plan) =~ "plan does not include Slack"
+      refute Slack.translate_error(:insufficient_plan) =~ ":insufficient_plan"
+
+      assert Slack.translate_error(:feature_disabled) =~ "not enabled on this deployment"
+      refute Slack.translate_error(:feature_disabled) =~ ":feature_disabled"
+
+      assert Slack.translate_error(:feature_access_checker_failed) =~ "try again"
+    end
   end
 
   describe "end-to-end booking pipeline" do

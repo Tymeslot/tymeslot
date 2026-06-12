@@ -432,6 +432,40 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
     end
   end
 
+  describe "direct visit to the thank-you page" do
+    @tag :capture_log
+    test "renders without crashing when no booking data is present (Quill)",
+         %{conn: conn, profile: profile} do
+      # A direct GET to /:username/thank-you mounts the :confirmation state
+      # without going through the booking submission handler, so the
+      # custom_fields_snapshot / custom_field_answers assigns are never set by
+      # that path. Safe defaults must keep the confirmation component from
+      # raising a KeyError.
+      {:ok, view, html} =
+        live(conn, "/#{profile.username}/thank-you?timezone=#{profile.timezone}")
+
+      assert html =~ "meeting" or html =~ "Meeting"
+      socket = :sys.get_state(view.pid).socket
+      assert socket.assigns.custom_fields_snapshot == []
+      assert socket.assigns.custom_field_answers == %{}
+    end
+
+    @tag :capture_log
+    test "renders without crashing when no booking data is present (Rhythm)",
+         %{conn: conn, profile: profile} do
+      profile
+      |> Changeset.change(booking_theme: "2")
+      |> Repo.update!()
+
+      {:ok, view, _html} =
+        live(conn, "/#{profile.username}/thank-you?timezone=#{profile.timezone}")
+
+      socket = :sys.get_state(view.pid).socket
+      assert socket.assigns.custom_fields_snapshot == []
+      assert socket.assigns.custom_field_answers == %{}
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Helpers
   # ---------------------------------------------------------------------------

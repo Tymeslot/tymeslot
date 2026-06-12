@@ -311,6 +311,11 @@ defmodule TymeslotWeb.Components.CoreComponents do
 
   attr :role, :string, default: "menu"
   attr :aria_orientation, :string, default: "vertical"
+
+  attr :panel_label, :string,
+    default: nil,
+    doc: "Accessible name for the panel; required when role is \"dialog\""
+
   attr :trigger_class, :string, default: nil
   attr :class, :string, default: nil
   attr :unstyled, :boolean, default: false

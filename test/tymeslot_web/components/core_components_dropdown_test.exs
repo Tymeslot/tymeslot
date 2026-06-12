@@ -61,11 +61,11 @@ defmodule TymeslotWeb.Components.CoreComponents.DropdownTest do
     assert html =~ "Items"
   end
 
-  test "phx-click-away is always wired so the binding is registered at mount" do
+  test "phx-click-away is wired only when open" do
     open_html = render_dropdown(%{open: true})
     closed_html = render_dropdown(%{open: false})
     assert open_html =~ ~s(phx-click-away="close")
-    assert closed_html =~ ~s(phx-click-away="close")
+    refute closed_html =~ "phx-click-away"
   end
 
   test "panel has id derived from dropdown id" do
@@ -116,6 +116,46 @@ defmodule TymeslotWeb.Components.CoreComponents.DropdownTest do
         }
       )
 
+    assert html =~ ~s(role="dialog")
+  end
+
+  test "dialog panel receives an accessible name from panel_label" do
+    html =
+      render_component(
+        fn assigns ->
+          ~H"""
+          <Dropdown.dropdown
+            id={@id}
+            open={true}
+            on_toggle={@on_toggle}
+            on_close={@on_close}
+            target={@target}
+            position={@position}
+            trigger_class={@trigger_class}
+            class={@class}
+            role="dialog"
+            panel_label="My Calendars"
+          >
+            <:trigger>Open</:trigger>
+            <:panel>Items</:panel>
+          </Dropdown.dropdown>
+          """
+        end,
+        %{
+          id: "test-dd",
+          open: true,
+          on_toggle: "toggle",
+          on_close: "close",
+          target: nil,
+          position: :bottom_end,
+          trigger_class: nil,
+          class: nil
+        }
+      )
+
+    # The accessible name lands on the panel element, alongside role="dialog".
+    assert html =~ ~s(id="test-dd-panel")
+    assert html =~ ~s(aria-label="My Calendars")
     assert html =~ ~s(role="dialog")
   end
 

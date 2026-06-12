@@ -122,5 +122,68 @@ defmodule Tymeslot.Bookings.BookingZoomIntegrationTest do
       assert updated.video_room_id =~ "12345678901"
       assert updated.meeting_url =~ "zoom.us"
     end
+
+    test "the Zoom create POST carries the booking's real start time, duration and topic", %{
+      user: user,
+      meeting_type: meeting_type
+    } do
+      params = %{
+        form_data: %{
+          "name" => "Attendee",
+          "email" => "attendee@example.com",
+          "message" => "Looking forward to it"
+        },
+        meeting_params: %{
+          date: Date.add(Date.utc_today(), 1),
+          time: "14:00",
+          duration: "30min",
+          user_timezone: "America/New_York",
+          organizer_user_id: user.id,
+          meeting_type_id: meeting_type.id,
+          with_video_room: true
+        }
+      }
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      assert {:ok, meeting} = Orchestrator.submit_booking(params, organizer_user_id: user.id)
+
+      # Capture the create POST body and assert it reflects the *booking*, not
+      # the old utc_now()+1h / 30min / "Scheduled Meeting" defaults.
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn
+        :post, _url, body, _headers, _opts ->
+          decoded = Jason.decode!(body)
+
+          # Duration comes from the booking (30 min), not the hardcoded default.
+          assert decoded["duration"] == 30
+
+          # Topic comes from the meeting's summary/title, never "Scheduled Meeting".
+          refute decoded["topic"] == "Scheduled Meeting"
+          assert is_binary(decoded["topic"]) and decoded["topic"] != ""
+
+          # Start time matches the persisted booking start, not utc_now()+1h.
+          {:ok, sent_start, _offset} = DateTime.from_iso8601(decoded["start_time"])
+          assert DateTime.compare(sent_start, meeting.start_time) == :eq
+
+          {:ok,
+           %Req.Response{
+             status: 201,
+             body: Jason.encode!(%{"id" => 12_345_678_901, "join_url" => "https://zoom.us/j/123"})
+           }}
+
+        :get, _url, _body, _headers, _opts ->
+          {:ok,
+           %Req.Response{
+             status: 200,
+             body: Jason.encode!(%{"id" => 12_345_678_901, "status" => "waiting"})
+           }}
+      end)
+
+      assert :ok =
+               perform_job(VideoRoomWorker, %{
+                 "meeting_id" => meeting.id,
+                 "send_emails" => true
+               })
+    end
   end
 end

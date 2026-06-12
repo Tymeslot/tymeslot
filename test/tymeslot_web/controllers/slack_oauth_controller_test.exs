@@ -21,6 +21,7 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
     setup_config(:tymeslot,
       feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
       slack_notifications_allowed: true,
+      slack_oauth_available: true,
       slack_client_id: "slack-test-client-id",
       slack_client_secret: "slack-test-client-secret",
       http_client_module: Tymeslot.HTTPClientMock,
@@ -49,6 +50,33 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
     test "redirects unauthenticated requests to the login page", %{conn: conn} do
       conn = get(conn, ~p"/api/slack/oauth/start")
       assert redirected_to(conn) == "/auth/login"
+    end
+
+    test "flashes a friendly message instead of 500ing when OAuth is unavailable",
+         %{conn: conn} do
+      # No Slack client id / oauth flag — previously raised a 500 in authorize_url/2.
+      with_config(:tymeslot, :slack_oauth_available, false)
+      with_config(:tymeslot, :slack_client_id, nil)
+
+      user = insert(:user)
+      conn = conn |> log_in_user(user) |> get(~p"/api/slack/oauth/start")
+
+      assert redirected_to(conn) == "/dashboard/automation"
+      assert Flash.get(conn.assigns.flash, :error) =~ "not available on this deployment"
+    end
+
+    test "rejects before redirecting to Slack when the plan lacks access", %{conn: conn} do
+      with_config(
+        :tymeslot,
+        :feature_access_checker,
+        TymeslotWeb.SlackOAuthControllerTest.DenyAccessChecker
+      )
+
+      user = insert(:user)
+      conn = conn |> log_in_user(user) |> get(~p"/api/slack/oauth/start")
+
+      assert redirected_to(conn) == "/dashboard/automation"
+      assert Flash.get(conn.assigns.flash, :error) =~ "plan does not include Slack"
     end
   end
 
@@ -163,4 +191,11 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
   defp sign_state(user_id) do
     Token.sign(Endpoint, "slack_oauth_state", user_id)
   end
+end
+
+defmodule TymeslotWeb.SlackOAuthControllerTest.DenyAccessChecker do
+  @moduledoc false
+
+  @spec check_access(any(), atom()) :: {:error, :insufficient_plan}
+  def check_access(_user_id, _feature), do: {:error, :insufficient_plan}
 end

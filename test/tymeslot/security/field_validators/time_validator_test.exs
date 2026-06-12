@@ -29,5 +29,30 @@ defmodule Tymeslot.Security.FieldValidators.TimeValidatorTest do
       assert {:error, _msg} = TimeValidator.validate("14:30:00Z")
       assert {:error, _msg} = TimeValidator.validate("14:30:00-05:00")
     end
+
+    test "within min/max bounds ok" do
+      assert :ok = TimeValidator.validate("12:00", min: "09:00", max: "17:00")
+    end
+
+    test "before min rejected" do
+      assert {:error, _msg} = TimeValidator.validate("08:00", min: "09:00")
+    end
+
+    test "after max rejected" do
+      assert {:error, _msg} = TimeValidator.validate("18:00", max: "17:00")
+    end
+
+    test "boundary values are inclusive" do
+      assert :ok = TimeValidator.validate("09:00", min: "09:00", max: "17:00")
+      assert :ok = TimeValidator.validate("17:00", min: "09:00", max: "17:00")
+    end
+
+    test "unparseable bound is ignored rather than crashing" do
+      assert {:error, _msg} = TimeValidator.validate("12:00", min: "not-a-time")
+    end
+
+    test "legacy integer bound is treated as no bound" do
+      assert :ok = TimeValidator.validate("12:00", min: 9)
+    end
   end
 end

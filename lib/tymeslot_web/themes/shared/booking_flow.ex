@@ -3,6 +3,8 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
   Shared booking orchestration for all scheduling themes.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3]
 
@@ -55,7 +57,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
            put_flash(
              socket,
              :info,
-             "Booking submitted successfully! You'll receive a confirmation email shortly."
+             gettext(
+               "Booking submitted successfully! You'll receive a confirmation email shortly."
+             )
            )}
 
         {:error, socket} ->

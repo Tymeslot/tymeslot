@@ -70,5 +70,13 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:email, "")
     |> assign(:submitting, false)
     |> assign(:submission_processed, false)
+    # Safe defaults so the confirmation components can always render
+    # `@custom_fields_snapshot`/`@custom_field_answers`. The booking
+    # submission handler overrides these with the real snapshot/answers on a
+    # successful booking; a direct visit to `/:username/thank-you` mounts the
+    # confirmation state without going through that handler, so without these
+    # defaults the render raises a KeyError.
+    |> assign(:custom_fields_snapshot, [])
+    |> assign(:custom_field_answers, %{})
   end
 end

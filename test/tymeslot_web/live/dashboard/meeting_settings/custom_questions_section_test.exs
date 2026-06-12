@@ -471,6 +471,41 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       assert html =~ ~s(data-id="#{id2}" data-index="0")
       assert html =~ ~s(data-id="#{id1}" data-index="1")
     end
+
+    test "tampered reorder ids (duplicate / missing) are ignored", %{conn: conn, user: user} do
+      id1 = UUID.generate()
+      id2 = UUID.generate()
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          custom_fields: [
+            %{id: id1, type: "short_text", label: "Alpha", required: false, position: 0},
+            %{id: id2, type: "short_text", label: "Beta", required: false, position: 1}
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      list_id = "custom-questions-list-meeting-type-form-edit-#{meeting_type.id}"
+
+      # A list with a duplicated id and a dropped id is not a permutation of the
+      # existing ids — it must be rejected, leaving the original list intact
+      # (no duplicated or vanished questions).
+      view
+      |> element("##{list_id}")
+      |> render_hook("reorder", %{"ids" => [id1, id1]})
+
+      html = render(view)
+      assert html =~ ~s(data-id="#{id1}" data-index="0")
+      assert html =~ ~s(data-id="#{id2}" data-index="1")
+      # The first question's list row appears exactly once — the tampered id
+      # list did not duplicate it. (Counting the bare label "Alpha" is unsafe:
+      # it also occurs in the row's label input value.)
+      assert length(String.split(html, ~s(data-id="#{id1}"))) == 2
+    end
   end
 
   describe "cancelling the question editor" do

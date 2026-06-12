@@ -214,5 +214,81 @@ defmodule CredoChecks.RepoCallBoundaryTest do
       |> run_check(RepoCallBoundary)
       |> assert_issue(fn issue -> assert issue.trigger == "Tymeslot.Repo.get" end)
     end
+
+    test "SaasRepo call is flagged (any module ending in Repo)" do
+      """
+      defmodule Tymeslot.Legal do
+        alias Tymeslot.SaasRepo
+
+        def get_acceptance(id), do: SaasRepo.get(Acceptance, id)
+      end
+      """
+      |> to_source_file("lib/tymeslot/legal.ex")
+      |> run_check(RepoCallBoundary)
+      |> assert_issue(fn issue -> assert issue.trigger == "SaasRepo.get" end)
+    end
+
+    test "fully qualified Tymeslot.SaasRepo.all is flagged" do
+      """
+      defmodule Tymeslot.Legal do
+        def list, do: Tymeslot.SaasRepo.all(Acceptance)
+      end
+      """
+      |> to_source_file("lib/tymeslot/legal.ex")
+      |> run_check(RepoCallBoundary)
+      |> assert_issue(fn issue -> assert issue.trigger == "Tymeslot.SaasRepo.all" end)
+    end
+
+    test "Repo renamed via `as:` is flagged" do
+      """
+      defmodule Tymeslot.Users do
+        alias Tymeslot.Repo, as: DB
+
+        def get_user(id), do: DB.get(User, id)
+      end
+      """
+      |> to_source_file("lib/tymeslot/users.ex")
+      |> run_check(RepoCallBoundary)
+      |> assert_issue(fn issue -> assert issue.trigger == "DB.get" end)
+    end
+
+    test "SaasRepo renamed via `as:` is flagged" do
+      """
+      defmodule Tymeslot.Legal do
+        alias Tymeslot.SaasRepo, as: DB
+
+        def list, do: DB.all(Acceptance)
+      end
+      """
+      |> to_source_file("lib/tymeslot/legal.ex")
+      |> run_check(RepoCallBoundary)
+      |> assert_issue(fn issue -> assert issue.trigger == "DB.all" end)
+    end
+  end
+
+  describe "no false positives for non-repo aliases" do
+    test "a non-repo single-segment alias is not flagged" do
+      """
+      defmodule Tymeslot.Users do
+        alias Tymeslot.Cache, as: DB
+
+        def fetch(id), do: DB.get(id)
+      end
+      """
+      |> to_source_file("lib/tymeslot/users.ex")
+      |> run_check(RepoCallBoundary)
+      |> refute_issues()
+    end
+
+    test "a non-repo qualified module call is not flagged" do
+      """
+      defmodule Tymeslot.Users do
+        def fetch(id), do: Tymeslot.Cache.get(id)
+      end
+      """
+      |> to_source_file("lib/tymeslot/users.ex")
+      |> run_check(RepoCallBoundary)
+      |> refute_issues()
+    end
   end
 end

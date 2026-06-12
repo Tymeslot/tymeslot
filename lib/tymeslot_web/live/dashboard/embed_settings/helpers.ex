@@ -149,14 +149,16 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
     end
   end
 
-  # For embed snippets (inline + popup + floating), :column is the new server
-  # default whenever ?embed=1 is present in the iframe URL — embed.js adds
-  # that automatically. So the snippet only needs to emit a layout override
-  # when the user explicitly picked "Default" (centred-with-cap). "Column"
-  # produces clean snippets that rely on the embed default.
+  # For embed snippets (inline + popup + floating), the server defaults every
+  # embed to the centred `:default` layout (back-compat: snippets predating the
+  # column layout carry no `data-layout`, and must keep the old centred default
+  # on upgrade — see `Context.apply_layout/2`). So column is the value that
+  # needs an explicit override: only a `data-layout="column"` snippet opts into
+  # the wide canvas. "Default" matches the server default and produces a clean
+  # snippet with no layout attribute.
   defp layout_override_for_embed(value) do
     case sanitize_layout(value) do
-      "default" -> "default"
+      "column" -> "column"
       _other -> nil
     end
   end

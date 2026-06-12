@@ -9,23 +9,32 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.AnswerNormaliser do
   """
 
   @doc """
-  Normalises a raw answer value coming from a LiveView event.
+  Normalises a raw answer value coming from a LiveView event for a given
+  question `type`.
+
+  Coercion is type-aware: the wire tokens are only meaningful for the
+  question types that emit them, so a booker who literally types `"true"`,
+  `"false"` or `"acknowledge"` into a text/phone/url question keeps that
+  verbatim string. Without this, those words were silently rewritten to a
+  boolean/map and then rejected by the text validator.
 
   ## Conversions
 
-  - `"true"` → `true`
-  - `"false"` → `false`
-  - `"acknowledge"` → `%{"confirmed" => true, "confirmed_at" => <ISO8601 UTC>}`
-  - anything else → unchanged
+  - `yes_no`: `"true"` → `true`, `"false"` → `false`
+  - `note`: `"acknowledge"` → `%{"confirmed" => true, "confirmed_at" => <ISO8601 UTC>}`
+  - everything else (including text answers that happen to read like a token)
+    → unchanged
 
   """
-  @spec normalise(any()) :: any()
-  def normalise("true"), do: true
-  def normalise("false"), do: false
+  @spec normalise(any(), String.t() | nil) :: any()
+  def normalise(value, type \\ nil)
 
-  def normalise("acknowledge") do
+  def normalise("true", "yes_no"), do: true
+  def normalise("false", "yes_no"), do: false
+
+  def normalise("acknowledge", "note") do
     %{"confirmed" => true, "confirmed_at" => DateTime.to_iso8601(DateTime.utc_now())}
   end
 
-  def normalise(value), do: value
+  def normalise(value, _type), do: value
 end
