@@ -3,6 +3,8 @@ defmodule TymeslotWeb.EndpointTest do
 
   @moduletag :infrastructure
 
+  import Tymeslot.ConfigTestHelpers
+
   alias Tymeslot.Infrastructure.CorrelationId
 
   describe "correlation ID plug" do
@@ -36,6 +38,19 @@ defmodule TymeslotWeb.EndpointTest do
       assert conn.status == 200
       assert hd(get_resp_header(conn, "content-type")) =~ "text/plain"
       assert byte_size(conn.resp_body) > 0
+    end
+
+    test "resolves an {otp_app, file} tuple in :robots_file", %{conn: conn} do
+      # Safe in an async module: the tuple points at the same file the
+      # string default resolves to, so concurrent readers see no difference.
+      with_config(:tymeslot, :robots_file, {:tymeslot, "robots.core.txt"})
+
+      conn = get(conn, "/robots.txt")
+
+      assert conn.status == 200
+
+      assert conn.resp_body ==
+               File.read!(Path.join(:code.priv_dir(:tymeslot), "static/robots.core.txt"))
     end
   end
 

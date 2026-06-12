@@ -54,6 +54,13 @@ config :tymeslot,
   # Theme protection plugs - empty by default (external layers can add restrictions)
   extra_theme_protection_plugs: [],
 
+  # Additional Plug.Static sources served after Core's own static files.
+  # Each entry is a Plug.Static options keyword list, e.g.
+  #   [at: "/", from: {:other_app, "priv/static"}, gzip: true, only: ["images"]]
+  # Empty by default - external layers can serve their own static assets
+  # without those files living in Core's priv/static.
+  extra_static_sources: [],
+
   # Theme extensions - empty by default (external layers can add overlays/branding)
   theme_extensions: [],
 

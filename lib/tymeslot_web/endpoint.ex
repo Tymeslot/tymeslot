@@ -85,12 +85,20 @@ defmodule TymeslotWeb.Endpoint do
     # without over-matching unrelated paths like /embeddings/... or /embed-anything.
     only_matching: ["embed-"]
 
+  # Static sources contributed by external layers via the
+  # :extra_static_sources config key. Empty by default — see the plug.
+  plug TymeslotWeb.Plugs.ExtraStatic
+
   defp serve_robots(%{request_path: "/robots.txt"} = conn, _opts) do
-    file = Application.get_env(:tymeslot, :robots_file, "robots.core.txt")
+    {app, file} =
+      case Application.get_env(:tymeslot, :robots_file, "robots.core.txt") do
+        {app, file} when is_atom(app) and is_binary(file) -> {app, file}
+        file when is_binary(file) -> {:tymeslot, file}
+      end
 
     conn
     |> put_resp_content_type("text/plain")
-    |> send_file(200, Path.join(:code.priv_dir(:tymeslot), "static/#{file}"))
+    |> send_file(200, Path.join(:code.priv_dir(app), "static/#{file}"))
     |> halt()
   end
 
