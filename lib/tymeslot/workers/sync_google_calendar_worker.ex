@@ -26,7 +26,6 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
@@ -250,18 +249,9 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   end
 
   defp process_cancelled_event(integration, event) do
-    uid = event["iCalUID"]
-    provider_event_id = event["id"]
-
-    Sync.reconcile(integration.id, provider_event_id, uid, :deleted)
-
-    if uid do
-      ProviderCalendarEventQueries.delete_by_uid(integration.id, uid)
-    else
-      ProviderCalendarEventQueries.delete_by_provider_event_id(integration.id, provider_event_id)
-    end
-
-    :ok
+    Sync.reconcile_deletions(integration, [
+      %{provider_event_id: event["id"], uid: event["iCalUID"]}
+    ])
   end
 
   defp persist_sync_state(integration, next_sync_token) do

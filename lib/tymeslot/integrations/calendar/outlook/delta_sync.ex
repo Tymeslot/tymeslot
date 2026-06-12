@@ -142,33 +142,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   end
 
   defp process_removed(removed, integration) do
-    Enum.flat_map(removed, fn event ->
-      graph_id = event["id"]
-      ical_uid = event["iCalUId"]
-      uid_for_cache = ical_uid || graph_id
+    refs =
+      for event <- removed,
+          event["iCalUId"] || event["id"],
+          do: %{provider_event_id: event["id"], uid: event["iCalUId"]}
 
-      if uid_for_cache do
-        ProviderCalendarEventQueries.delete_by_uid(integration.id, uid_for_cache)
-        log_reconcile_failures(integration, graph_id, ical_uid, uid_for_cache)
-        [uid_for_cache]
-      else
-        []
-      end
-    end)
-  end
+    Sync.reconcile_deletions(integration, refs)
 
-  defp log_reconcile_failures(integration, graph_id, ical_uid, uid_for_cache) do
-    case Sync.reconcile(integration.id, graph_id, ical_uid, :deleted) do
-      :ok ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Reconcile failed for deleted event",
-          uid: uid_for_cache,
-          integration_id: integration.id,
-          reason: inspect(reason)
-        )
-    end
+    Enum.map(refs, fn ref -> ref.uid || ref.provider_event_id end)
   end
 
   defp fetch_delta_page(token, url, accumulated, page \\ 0)

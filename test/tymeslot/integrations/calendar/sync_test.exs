@@ -341,4 +341,87 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
       assert {:error, _reason} = Sync.persist_normalised_events(bad_integration, [event])
     end
   end
+
+  describe "reconcile_deletions/3" do
+    alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+
+    test "deletes the cache row by uid and reconciles the linked meeting" do
+      integration = insert(:calendar_integration)
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "del-uid-1",
+        provider_event_id: "del-evt-1"
+      )
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "del-evt-1"
+        )
+
+      assert :ok =
+               Sync.reconcile_deletions(integration, [
+                 %{provider_event_id: "del-evt-1", uid: "del-uid-1"}
+               ])
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "del-uid-1")
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == "externally_deleted"
+      assert updated.status == "cancelled"
+    end
+
+    test "falls back to provider_event_id for the cache delete when uid is nil" do
+      integration = insert(:calendar_integration)
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "del-uid-2",
+        provider_event_id: "del-evt-2"
+      )
+
+      assert :ok =
+               Sync.reconcile_deletions(integration, [
+                 %{provider_event_id: "del-evt-2", uid: nil}
+               ])
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "del-uid-2")
+    end
+
+    test "delete_cache: false reconciles without touching the cache row" do
+      integration = insert(:calendar_integration)
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "del-uid-3",
+        provider_event_id: "del-evt-3"
+      )
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "del-evt-3"
+        )
+
+      assert :ok =
+               Sync.reconcile_deletions(
+                 integration,
+                 [%{provider_event_id: "del-evt-3", uid: "del-uid-3"}],
+                 delete_cache: false
+               )
+
+      assert {:ok, _event} = ProviderCalendarEventQueries.get_by_uid(integration.id, "del-uid-3")
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == "externally_deleted"
+    end
+
+    test "returns :ok for an empty ref list" do
+      integration = insert(:calendar_integration)
+      assert :ok = Sync.reconcile_deletions(integration, [])
+    end
+  end
 end

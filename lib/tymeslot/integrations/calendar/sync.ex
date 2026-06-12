@@ -28,6 +28,16 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   @typep integration_id :: integer()
   @typep signal :: :deleted | :modified
 
+  @typedoc """
+  Identifies an externally deleted provider event by `:provider_event_id`
+  and/or `:uid` — whichever identifiers the provider's deletion signal
+  carries. At least one should be non-nil for the deletion to have effect.
+  """
+  @type deletion_ref :: %{
+          optional(:provider_event_id) => String.t() | nil,
+          optional(:uid) => String.t() | nil
+        }
+
   @doc """
   Persists a batch of normalised calendar events to the local cache and
   performs downstream side effects.
@@ -181,6 +191,69 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
       DateTime.truncate(event_start, :second)
     ) != :eq
   end
+
+  @doc """
+  Removes externally deleted provider events from the local cache and
+  reconciles any linked Tymeslot meetings.
+
+  This is the deletion-side counterpart of `persist_normalised_events/2` —
+  the single primitive all sync workers use when a provider reports deleted
+  events. For each ref:
+
+  1. The cache row is deleted — by `:uid` when present, falling back to
+     `:provider_event_id`. Pass `delete_cache: false` when the cache rows
+     were already deleted inside an enclosing `Repo.transaction` (e.g. the
+     CalDAV atomic reconciler) and only the post-commit reconciliation
+     side effects remain.
+  2. The linked meeting (if any) is reconciled with `:deleted`. Reconcile
+     failures are logged as warnings and do not abort the remaining refs —
+     a failed auto-cancellation reverts its own sync status and is retried
+     by the next sync run.
+
+  Always returns `:ok`.
+  """
+  @spec reconcile_deletions(CalendarIntegrationSchema.t(), [deletion_ref()], keyword()) :: :ok
+  def reconcile_deletions(integration, refs, opts \\ [])
+
+  def reconcile_deletions(_integration, [], _opts), do: :ok
+
+  def reconcile_deletions(%CalendarIntegrationSchema{} = integration, refs, opts)
+      when is_list(refs) do
+    delete_cache? = Keyword.get(opts, :delete_cache, true)
+
+    Enum.each(refs, fn ref ->
+      provider_event_id = Map.get(ref, :provider_event_id)
+      uid = Map.get(ref, :uid)
+
+      if delete_cache?, do: delete_cached_event(integration.id, provider_event_id, uid)
+
+      case reconcile(integration.id, provider_event_id, uid, :deleted) do
+        :ok ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("Reconcile failed for deleted event",
+            calendar_integration_id: integration.id,
+            provider_event_id: provider_event_id,
+            uid: uid,
+            reason: inspect(reason)
+          )
+      end
+    end)
+
+    :ok
+  end
+
+  defp delete_cached_event(integration_id, _provider_event_id, uid) when is_binary(uid) do
+    ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)
+  end
+
+  defp delete_cached_event(integration_id, provider_event_id, _uid)
+       when is_binary(provider_event_id) do
+    ProviderCalendarEventQueries.delete_by_provider_event_id(integration_id, provider_event_id)
+  end
+
+  defp delete_cached_event(_integration_id, _provider_event_id, _uid), do: :ok
 
   @doc """
   Main reconciliation entry point.

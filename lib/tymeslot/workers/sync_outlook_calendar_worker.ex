@@ -24,7 +24,6 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.CalendarManagement
@@ -176,8 +175,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
       graph_resource_id: graph_resource_id
     )
 
-    ProviderCalendarEventQueries.delete_by_provider_event_id(integration.id, graph_resource_id)
-    Sync.reconcile(integration.id, graph_resource_id, nil, :deleted)
+    Sync.reconcile_deletions(integration, [%{provider_event_id: graph_resource_id, uid: nil}])
     update_last_sync_at(integration)
     :ok
   end
