@@ -20,7 +20,6 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   require Logger
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
-  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
@@ -28,10 +27,6 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck
-
-  @base_url "https://graph.microsoft.com/v1.0"
-
-  @select_fields "id,subject,start,end,iCalUId,location,bodyPreview,attendees,recurrence,seriesMasterId,type,isAllDay,showAs"
 
   # CalendarGrid enqueues Outlook jobs with only calendar_integration_id (no graph_resource_id).
   # Outlook syncs are event-driven via Microsoft Graph webhooks — there is no full-sync path yet.
@@ -81,25 +76,32 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   defp sync_event(integration, graph_resource_id) do
     result =
       AccessToken.with_access_token(integration, &OutlookCalendarAPI.refresh_token/1, fn token ->
-        # Check for 404 (deleted event) BEFORE the circuit breaker so that
-        # deleted events don't count as failures and trip the breaker.
-        case fetch_event_raw(token, graph_resource_id) do
-          {:ok, :not_found} ->
+        # Check for 404 (deleted event) and 401 BEFORE the circuit breaker so
+        # that deleted events and auth failures don't count as failures and
+        # trip the breaker.
+        case OutlookCalendarAPI.get_event_raw(token, graph_resource_id) do
+          {:error, :not_found, _message} ->
             {:ok, :not_found}
 
-          {:ok, :unauthorized} ->
-            {:error, :unauthorized, "Token expired or invalid"}
+          {:error, :unauthorized, message} ->
+            {:error, :unauthorized, message}
 
           preflight_result ->
             CalendarCircuitBreaker.call(:outlook, fn ->
+              # The circuit breaker only counts 2-tuple errors as failures,
+              # so flatten the client's {:error, type, message} shape.
               case preflight_result do
                 {:ok, event} -> {:ok, event}
-                {:error, reason} -> {:error, reason}
+                {:error, type, message} -> {:error, {type, message}}
               end
             end)
         end
       end)
 
+    handle_sync_result(result, integration, graph_resource_id)
+  end
+
+  defp handle_sync_result(result, integration, graph_resource_id) do
     case result do
       {:ok, :not_found} ->
         handle_event_deleted(integration, graph_resource_id)
@@ -122,6 +124,13 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
 
         {:snooze, 120}
 
+      {:error, {:rate_limited, message}} ->
+        Logger.warning("Outlook Calendar sync rate limited; snoozing",
+          calendar_integration_id: integration.id
+        )
+
+        {:snooze, retry_after_seconds(message)}
+
       {:error, reason} ->
         Logger.error("Outlook Calendar sync failed",
           calendar_integration_id: integration.id,
@@ -132,42 +141,16 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
     end
   end
 
-  defp fetch_event_raw(token, graph_resource_id) do
-    path = "/me/events/#{graph_resource_id}"
-
-    params = %{
-      "$select" => @select_fields,
-      "$expand" =>
-        "singleValueExtendedProperties($filter=id eq '#{OutlookCalendarAPI.tymeslot_property_id()}')"
-    }
-
-    headers = [{"Prefer", "outlook.timezone=\"UTC\""}]
-
-    case http_get(token, path, params, headers) do
-      {:ok, %{status: status, body: body}} when status in [200, 201] ->
-        case Jason.decode(body) do
-          {:ok, event} -> {:ok, event}
-          {:error, _reason} -> {:error, :invalid_json}
-        end
-
-      {:ok, %{status: 401}} ->
-        {:ok, :unauthorized}
-
-      {:ok, %{status: 404}} ->
-        {:ok, :not_found}
-
-      {:ok, %{status: status, body: body}} ->
-        Logger.error("Outlook Graph API unexpected status",
-          status: status,
-          body: String.slice(body, 0, 500)
-        )
-
-        {:error, {:http_error, status}}
-
-      {:error, reason} ->
-        {:error, {:network_error, reason}}
+  # The canonical client encodes a server-provided Retry-After as
+  # "retry_after:N" in the rate-limit error message.
+  defp retry_after_seconds("retry_after:" <> seconds) do
+    case Integer.parse(seconds) do
+      {n, _rest} when n > 0 -> min(n, 600)
+      _no_parse -> 120
     end
   end
+
+  defp retry_after_seconds(_message), do: 120
 
   defp handle_event_deleted(integration, graph_resource_id) do
     Logger.info("Outlook Calendar event deleted; removing from cache",
@@ -224,26 +207,5 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
 
         :ok
     end
-  end
-
-  defp http_get(token, path, params, extra_headers) do
-    url =
-      if map_size(params) > 0 do
-        @base_url <> path <> "?" <> URI.encode_query(params)
-      else
-        @base_url <> path
-      end
-
-    headers =
-      [
-        {"Authorization", "Bearer #{token}"},
-        {"Content-Type", "application/json"}
-      ] ++ extra_headers
-
-    http_client().request(:get, url, "", headers, [])
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
   end
 end

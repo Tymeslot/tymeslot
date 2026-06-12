@@ -205,4 +205,38 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
       assert Enum.empty?(remaining)
     end
   end
+
+  describe "perform/1 - rate limited (429)" do
+    test "snoozes for the server-provided Retry-After duration" do
+      integration = outlook_integration()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 429, body: "", headers: %{"retry-after" => ["45"]}}}
+      end)
+
+      assert {:snooze, 45} =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "event-throttled-1"
+               })
+
+      CalendarCircuitBreaker.reset(:outlook)
+    end
+
+    test "snoozes with the default delay when no Retry-After header is present" do
+      integration = outlook_integration()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 429, body: ""}}
+      end)
+
+      assert {:snooze, 120} =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "event-throttled-2"
+               })
+
+      CalendarCircuitBreaker.reset(:outlook)
+    end
+  end
 end

@@ -18,7 +18,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   require Logger
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
-  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
@@ -159,52 +158,35 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   end
 
   defp fetch_delta_page(token, url, accumulated, page) do
-    uri = url |> strip_unsupported_delta_params() |> URI.parse()
-    path = uri.path <> if(uri.query, do: "?#{uri.query}", else: "")
+    # The circuit breaker wrapping this loop only counts 2-tuple errors as
+    # failures, so the client's {:error, type, message} shape is flattened.
+    case OutlookCalendarAPI.get_delta_page(token, strip_unsupported_delta_params(url)) do
+      {:ok, response} ->
+        collect_delta_page(response, token, accumulated, page)
 
-    headers = [
-      {"Authorization", "Bearer #{token}"},
-      {"Content-Type", "application/json"},
-      {"Prefer", "outlook.timezone=\"UTC\""}
-    ]
-
-    case http_client().request(:get, "https://graph.microsoft.com" <> path, "", headers, []) do
-      {:ok, %{status: status, body: body}} when status in [200, 201] ->
-        decode_delta_page(body, token, accumulated, page)
-
-      {:ok, %{status: 401}} ->
+      {:error, :unauthorized, _message} ->
         {:error, :unauthorized}
 
-      {:ok, %{status: 410}} ->
+      {:error, :delta_link_expired, _message} ->
         {:error, :delta_link_expired}
 
-      {:ok, %{status: status}} ->
-        {:error, {:http_error, status}}
-
-      {:error, reason} ->
-        {:error, {:network_error, reason}}
+      {:error, type, message} ->
+        {:error, {type, message}}
     end
   end
 
-  defp decode_delta_page(body, token, accumulated, page) do
-    case Jason.decode(body) do
-      {:error, _reason} ->
-        Logger.warning("Invalid JSON in Outlook delta response")
-        {:error, :invalid_json}
+  defp collect_delta_page(response, token, accumulated, page) do
+    events = [response["value"] || [] | accumulated]
 
-      {:ok, response} ->
-        events = [response["value"] || [] | accumulated]
+    cond do
+      new_delta_link = response["@odata.deltaLink"] ->
+        {:ok, List.flatten(events), new_delta_link}
 
-        cond do
-          new_delta_link = response["@odata.deltaLink"] ->
-            {:ok, List.flatten(events), new_delta_link}
+      next_link = response["@odata.nextLink"] ->
+        fetch_delta_page(token, next_link, events, page + 1)
 
-          next_link = response["@odata.nextLink"] ->
-            fetch_delta_page(token, next_link, events, page + 1)
-
-          true ->
-            {:ok, List.flatten(events), nil}
-        end
+      true ->
+        {:ok, List.flatten(events), nil}
     end
   end
 
@@ -279,9 +261,5 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
 
   defp outlook_calendar_api do
     Application.get_env(:tymeslot, :outlook_calendar_api_module, OutlookCalendarAPI)
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
   end
 end

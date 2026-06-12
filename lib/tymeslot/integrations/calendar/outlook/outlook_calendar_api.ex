@@ -27,6 +27,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   ]
   @token_url "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 
+  # Fields the event-driven sync workers need to normalise a single event.
+  @event_sync_select_fields "id,subject,start,end,iCalUId,location,bodyPreview,attendees,recurrence,seriesMasterId,type,isAllDay,showAs"
+
   @type calendar_event :: %{
           id: String.t(),
           summary: String.t() | nil,
@@ -298,6 +301,51 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec tymeslot_property_id() :: String.t()
   def tymeslot_property_id, do: @outlook_tymeslot_property_id
 
+  @doc """
+  Fetches a single raw Graph event by its provider event ID.
+
+  Returns the raw decoded JSON map (not converted to common format), with
+  the Tymeslot extended property expanded. Takes a bare token because the
+  callers (sync workers) manage token refresh and circuit-breaking around
+  their own preflight logic.
+  """
+  @spec get_event_raw(String.t(), String.t()) :: {:ok, map()} | api_error()
+  def get_event_raw(token, event_id) do
+    params = %{
+      "$select" => @event_sync_select_fields,
+      "$expand" =>
+        "singleValueExtendedProperties($filter=id eq '#{@outlook_tymeslot_property_id}')"
+    }
+
+    make_request(:get, "/me/events/#{event_id}", token, params)
+  end
+
+  @doc """
+  Fetches one page of a Graph delta query.
+
+  `url` is the full delta or next link exactly as returned by Graph
+  (delta links are absolute URLs, not paths). Returns the decoded page map
+  (`"value"`, `"@odata.nextLink"`, `"@odata.deltaLink"`), or
+  `{:error, :delta_link_expired, message}` when Graph reports 410 Gone and
+  the stored link must be re-bootstrapped.
+  """
+  @spec get_delta_page(String.t(), String.t()) ::
+          {:ok, map()} | api_error() | {:error, :delta_link_expired, String.t()}
+  def get_delta_page(token, url) do
+    uri = URI.parse(url)
+    path = uri.path <> if(uri.query, do: "?" <> uri.query, else: "")
+
+    headers = [
+      {"Content-Type", "application/json"},
+      {"Prefer", "outlook.timezone=\"UTC\""}
+    ]
+
+    HTTP.request(:get, "https://graph.microsoft.com", path, token,
+      headers: headers,
+      response_handler: &handle_delta_response/1
+    )
+  end
+
   # HTTP plumbing — used internally and by GraphSubscription
 
   @doc false
@@ -368,8 +416,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     {:error, :not_found, "Calendar not found"}
   end
 
-  defp handle_response({:ok, %{status: 429}}) do
-    {:error, :rate_limited, "Too many requests"}
+  defp handle_response({:ok, %{status: 429} = resp}) do
+    case parse_retry_after(resp) do
+      retry_after when is_integer(retry_after) ->
+        {:error, :rate_limited, "retry_after:" <> Integer.to_string(retry_after)}
+
+      nil ->
+        {:error, :rate_limited, "Too many requests"}
+    end
   end
 
   defp handle_response({:ok, %{status: status, body: body}}) do
@@ -384,6 +438,15 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   defp handle_response({:error, reason}) do
     {:error, :network_error, "Network error: #{inspect(reason)}"}
   end
+
+  # Delta queries share the standard response handling but additionally map
+  # 410 Gone — Graph's signal that the delta token is no longer valid and the
+  # caller must re-bootstrap.
+  defp handle_delta_response({:ok, %{status: 410}}) do
+    {:error, :delta_link_expired, "Delta link expired"}
+  end
+
+  defp handle_delta_response(response), do: handle_response(response)
 
   defp classify_outlook_403(msg, code) do
     m = msg |> to_string() |> String.downcase()
