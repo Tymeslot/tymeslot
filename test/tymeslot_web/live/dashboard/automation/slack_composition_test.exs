@@ -87,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCompositionTest do
     @secret_url "https://hooks.slack.com/services/TSECRET/BSECRET/topsecrettoken123"
 
     test "never renders the decrypted webhook URL into the edit form", %{conn: conn, user: user} do
-      integration =
+      _integration =
         insert(:slack_integration,
           user: user,
           app_mode: "webhook_url",
