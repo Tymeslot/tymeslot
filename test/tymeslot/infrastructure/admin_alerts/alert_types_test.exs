@@ -147,6 +147,34 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
     end
   end
 
+  describe "unhandled_crash" do
+    test "is registered as a System/error alert" do
+      assert %{category: "System", severity: :error} = AlertTypes.get(:unhandled_crash)
+    end
+
+    test "format_message/2 includes the kind and reason detail" do
+      msg =
+        AlertTypes.format_message(:unhandled_crash, %{
+          kind: :error,
+          reason_message: "** (RuntimeError) boom"
+        })
+
+      assert msg =~ "error"
+      assert msg =~ "boom"
+    end
+
+    test "format_message/2 falls back to summary when no reason_message" do
+      msg =
+        AlertTypes.format_message(:unhandled_crash, %{
+          kind: :exit,
+          summary: "Unhandled exit crash"
+        })
+
+      assert msg =~ "exit"
+      assert msg =~ "Unhandled exit crash"
+    end
+  end
+
   describe "format_message/2 — fallback" do
     test "unknown type returns generic message" do
       msg = AlertTypes.format_message(:totally_unknown, %{})
@@ -183,6 +211,81 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
 
       assert AlertTypes.dedup_key(:unhandled_webhook, metadata) ==
                AlertTypes.format_message(:unhandled_webhook, metadata)
+    end
+
+    test "unhandled_crash is stable across messages with the same reason_code and top frame" do
+      stacktrace =
+        "    (myapp 1.0.0) lib/myapp/worker.ex:42: MyApp.Worker.run/1\n    (oban 2.0.0) lib/oban/queue/executor.ex:10: Oban.Queue.Executor.call/2"
+
+      key_a =
+        AlertTypes.dedup_key(:unhandled_crash, %{
+          reason_code: Postgrex.Error,
+          stacktrace: stacktrace,
+          reason_message: "could not process user_id=1"
+        })
+
+      key_b =
+        AlertTypes.dedup_key(:unhandled_crash, %{
+          reason_code: Postgrex.Error,
+          stacktrace: stacktrace,
+          reason_message: "could not process user_id=9999"
+        })
+
+      assert key_a == key_b
+    end
+
+    test "unhandled_crash differs across reason_codes" do
+      stacktrace = "    (myapp 1.0.0) lib/myapp/worker.ex:42: MyApp.Worker.run/1"
+
+      key_a =
+        AlertTypes.dedup_key(:unhandled_crash, %{reason_code: KeyError, stacktrace: stacktrace})
+
+      key_b =
+        AlertTypes.dedup_key(:unhandled_crash, %{
+          reason_code: ArgumentError,
+          stacktrace: stacktrace
+        })
+
+      refute key_a == key_b
+    end
+
+    test "unhandled_crash differs across top stacktrace frames" do
+      key_a =
+        AlertTypes.dedup_key(:unhandled_crash, %{
+          reason_code: RuntimeError,
+          stacktrace: "    lib/myapp/foo.ex:10: Foo.bar/1"
+        })
+
+      key_b =
+        AlertTypes.dedup_key(:unhandled_crash, %{
+          reason_code: RuntimeError,
+          stacktrace: "    lib/myapp/baz.ex:99: Baz.qux/2"
+        })
+
+      refute key_a == key_b
+    end
+
+    test "unhandled_crash without reason_code or stacktrace falls back to the formatted message" do
+      metadata = %{kind: :error, reason_message: "boom"}
+
+      assert AlertTypes.dedup_key(:unhandled_crash, metadata) ==
+               AlertTypes.format_message(:unhandled_crash, metadata)
+    end
+
+    test "unhandled_crash with a reason_code but no stacktrace falls back to the message" do
+      key_a =
+        AlertTypes.dedup_key(:unhandled_crash, %{
+          reason_code: RuntimeError,
+          reason_message: "msg A"
+        })
+
+      key_b =
+        AlertTypes.dedup_key(:unhandled_crash, %{
+          reason_code: RuntimeError,
+          reason_message: "msg B"
+        })
+
+      refute key_a == key_b
     end
   end
 end

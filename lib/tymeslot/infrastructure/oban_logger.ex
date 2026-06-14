@@ -88,8 +88,8 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
     })
   end
 
-  # A job that can still retry logs at :warning; a discarded job (terminal,
-  # retries exhausted) logs at :error so it stands out and can be alerted on.
+  # A job that can still retry logs at :warning; a terminal failure (discarded,
+  # cancelled) logs at :error so it stands out and can be alerted on.
   defp exception_level(:failure), do: :warning
   defp exception_level(_state), do: :error
 

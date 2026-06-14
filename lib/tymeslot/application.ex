@@ -9,8 +9,8 @@ defmodule Tymeslot.Application do
   alias Phoenix.PubSub
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth.AdminBootstrap
+  alias Tymeslot.Infrastructure.{CrashReporter, Metrics, ObanFailureAlerter, ObanLogger}
   alias Tymeslot.Infrastructure.Logging.{FileSink, MetadataRedactor}
-  alias Tymeslot.Infrastructure.{Metrics, ObanFailureAlerter, ObanLogger}
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
   alias Tymeslot.Integrations.Shared.Lock
@@ -142,8 +142,20 @@ defmodule Tymeslot.Application do
         # has all nils on a fresh test DB, so load!/0 is effectively a no-op).
         AppSettings.load!()
 
-        # Schedule periodic jobs after application startup (only in non-test environments)
+        # Forward every unhandled process crash (web, LiveView, GenServer, Task)
+        # to AdminAlerts. Attached only after the supervision tree is up, since
+        # the handler depends on Tymeslot.Security.RateLimit (ETS) and
+        # Tymeslot.TaskSupervisor. Skipped in test, where intentionally-crashed
+        # processes would otherwise generate alert noise; tests attach it
+        # explicitly. Also skipped when admin alerts are disabled — the handler's
+        # only purpose is forwarding to AdminAlerts, so attaching it when alerts
+        # are off wastes per-crash work (rate-limit ETS writes, task spawns,
+        # formatting) and emits spurious "ADMIN ALERT" log lines.
         if Application.get_env(:tymeslot, :environment) != :test do
+          if Application.get_env(:tymeslot, :admin_alerts_enabled, false) do
+            CrashReporter.attach()
+          end
+
           schedule_periodic_jobs()
           AdminBootstrap.warn_if_orphaned_install()
         end

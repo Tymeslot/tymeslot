@@ -742,5 +742,26 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerTest do
                  "calendar_integration_id" => integration.id
                })
     end
+
+    test "bootstrap returns error on bare 2-tuple from token layer without crashing" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: nil
+        )
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :no_sync_token}
+      end)
+
+      expect(GoogleCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :lock_timeout}
+      end)
+
+      assert {:error, :lock_timeout} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+    end
   end
 end

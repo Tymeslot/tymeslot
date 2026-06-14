@@ -236,15 +236,20 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
   end
 
   describe "handle_http_event/4" do
-    # Smoke test: verifies the handler completes without raising for non-alerting inputs.
-    # Log-level correctness is validated via telemetry event assertions above.
     test "does not log for successful fast requests" do
+      handler_id = :metrics_http_no_log
+
+      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
+      on_exit(fn -> :logger.remove_handler(handler_id) end)
+
       Metrics.handle_http_event(
         [:tymeslot, :http, :request],
         %{duration: 100},
         %{method: "GET", url: "https://example.com", status_code: 200},
         nil
       )
+
+      refute_receive {:captured_log, _}, 100
     end
 
     test "logs host and redacted path but drops the URL query string on errors" do
@@ -275,26 +280,38 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
   end
 
   describe "handle_pool_event/4" do
-    # Smoke test: see handle_http_event/4 note above.
     test "does not log when pool is not under stress" do
+      handler_id = :metrics_pool_no_log
+
+      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
+      on_exit(fn -> :logger.remove_handler(handler_id) end)
+
       Metrics.handle_pool_event(
         [:tymeslot, :connection_pool, :usage],
         %{in_use: 3, free: 5, queue: 0},
         %{pool: :test},
         nil
       )
+
+      refute_receive {:captured_log, _}, 100
     end
   end
 
   describe "handle_parser_event/4" do
-    # Smoke test: see handle_http_event/4 note above.
     test "does not log for fast operations" do
+      handler_id = :metrics_parser_no_log
+
+      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
+      on_exit(fn -> :logger.remove_handler(handler_id) end)
+
       Metrics.handle_parser_event(
         [:tymeslot, :parser, :performance],
         %{duration: 50, size: 100, event_count: 10},
         %{parser: :ical},
         nil
       )
+
+      refute_receive {:captured_log, _}, 100
     end
   end
 

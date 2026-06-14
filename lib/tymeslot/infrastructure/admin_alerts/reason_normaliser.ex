@@ -18,11 +18,16 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.ReasonNormaliser do
 
   @type normalised :: %{code: atom() | nil, message: String.t()}
 
+  # Cap reason messages at 500 characters. Exception.message/1 and inspect/1 can
+  # both embed large per-occurrence data (Postgrex.Error query results, big Ecto
+  # graphs, etc.). Unbounded strings bloat Oban job args (JSONB) and JSON logs.
+  @max_message_length 500
+
   @spec normalise(term()) :: normalised() | nil
   def normalise(nil), do: nil
 
   def normalise(exception) when is_exception(exception) do
-    %{code: exception.__struct__, message: Exception.message(exception)}
+    %{code: exception.__struct__, message: exception |> Exception.message() |> cap_message()}
   end
 
   def normalise(%Changeset{} = changeset) do
@@ -30,11 +35,11 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.ReasonNormaliser do
   end
 
   def normalise({code, message}) when is_atom(code) and is_binary(message) do
-    %{code: code, message: message}
+    %{code: code, message: cap_message(message)}
   end
 
   def normalise({code, detail}) when is_atom(code) do
-    %{code: code, message: inspect(detail)}
+    %{code: code, message: bounded_inspect(detail)}
   end
 
   def normalise(atom) when is_atom(atom) do
@@ -42,11 +47,11 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.ReasonNormaliser do
   end
 
   def normalise(binary) when is_binary(binary) do
-    %{code: nil, message: binary}
+    %{code: nil, message: cap_message(binary)}
   end
 
   def normalise(term) do
-    %{code: nil, message: inspect(term)}
+    %{code: nil, message: bounded_inspect(term)}
   end
 
   defp format_changeset(%Changeset{} = changeset) do
@@ -59,5 +64,20 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.ReasonNormaliser do
     |> Enum.map_join("; ", fn {field, errors} ->
       "#{field}: #{Enum.join(errors, ", ")}"
     end)
+    |> cap_message()
+  end
+
+  defp bounded_inspect(term) do
+    term
+    |> inspect(limit: 50, printable_limit: 200)
+    |> cap_message()
+  end
+
+  defp cap_message(message) when is_binary(message) do
+    if String.length(message) > @max_message_length do
+      String.slice(message, 0, @max_message_length) <> "…"
+    else
+      message
+    end
   end
 end
