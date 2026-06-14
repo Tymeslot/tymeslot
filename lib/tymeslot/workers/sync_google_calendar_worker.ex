@@ -153,6 +153,14 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         )
 
         {:error, reason}
+
+      {:error, reason} ->
+        Logger.error("Google Calendar bootstrap failed",
+          calendar_integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        {:error, reason}
     end
   end
 
