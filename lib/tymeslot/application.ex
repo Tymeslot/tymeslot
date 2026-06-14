@@ -140,9 +140,15 @@ defmodule Tymeslot.Application do
         # the handler depends on Tymeslot.Security.RateLimit (ETS) and
         # Tymeslot.TaskSupervisor. Skipped in test, where intentionally-crashed
         # processes would otherwise generate alert noise; tests attach it
-        # explicitly.
+        # explicitly. Also skipped when admin alerts are disabled — the handler's
+        # only purpose is forwarding to AdminAlerts, so attaching it when alerts
+        # are off wastes per-crash work (rate-limit ETS writes, task spawns,
+        # formatting) and emits spurious "ADMIN ALERT" log lines.
         if Application.get_env(:tymeslot, :environment) != :test do
-          CrashReporter.attach()
+          if Application.get_env(:tymeslot, :admin_alerts_enabled, false) do
+            CrashReporter.attach()
+          end
+
           schedule_periodic_jobs()
         end
 

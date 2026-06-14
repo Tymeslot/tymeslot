@@ -127,6 +127,30 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
       assert CrashReporter.within_rate_limit?()
       refute CrashReporter.within_rate_limit?()
     end
+
+    test "throttle notice is logged exactly once across multiple denials in the same window" do
+      # Exhaust the main bucket.
+      assert CrashReporter.within_rate_limit?()
+      assert CrashReporter.within_rate_limit?()
+      assert CrashReporter.within_rate_limit?()
+
+      # Three denials in the same window — the warning must appear exactly once.
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          refute CrashReporter.within_rate_limit?()
+          refute CrashReporter.within_rate_limit?()
+          refute CrashReporter.within_rate_limit?()
+        end)
+
+      occurrences =
+        log
+        |> String.split("suppressing further crash alerts")
+        |> length()
+        |> Kernel.-(1)
+
+      assert occurrences == 1,
+             "Expected throttle notice exactly once, got #{occurrences} occurrences in log:\n#{log}"
+    end
   end
 
   describe "attach/0 integration" do
@@ -162,6 +186,14 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
       end
     end
 
+    defmodule ExitingAdminAlerts do
+      @spec send_alert(atom(), map()) :: no_return()
+      def send_alert(_type, _payload) do
+        send(Application.get_env(:tymeslot, :admin_alerts_test_pid), :reporter_invoked)
+        exit(:reporter_blew_up)
+      end
+    end
+
     setup do
       # The handler must be live for re-entry to be possible at all — without it,
       # a crash in the alert path cannot loop, so the test would prove nothing.
@@ -181,6 +213,24 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
         assert_receive :reporter_invoked, 2_000
         # ...and the failed alert path produces no new handled crash, so the
         # reporter is never invoked again — no loop.
+        refute_receive :reporter_invoked, 300
+      end)
+
+      # The handler survived (was not removed by repeated failures).
+      assert {:ok, _config} = :logger.get_handler_config(:tymeslot_crash_reporter)
+    end
+
+    test "a real crash whose alert path exits does not re-enter the handler" do
+      Application.put_env(:tymeslot, :admin_alerts_impl, ExitingAdminAlerts)
+
+      ExUnit.CaptureLog.capture_log(fn ->
+        # A genuine process crash flows through the attached :logger handler.
+        Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn -> raise "boom" end)
+
+        # The handler offloads and the (exiting) reporter is invoked once...
+        assert_receive :reporter_invoked, 2_000
+        # ...and the exit is caught by the task body, not propagated as a new
+        # crash event, so the reporter is never invoked again — no loop.
         refute_receive :reporter_invoked, 300
       end)
 

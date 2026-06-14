@@ -156,6 +156,12 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
             error: Exception.message(exception),
             domain: @own_domain
           )
+      catch
+        kind, reason ->
+          Logger.error("CrashReporter failed to report a crash",
+            error: inspect({kind, reason}),
+            domain: @own_domain
+          )
       end
     end)
 
