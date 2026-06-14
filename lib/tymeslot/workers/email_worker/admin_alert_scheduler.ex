@@ -33,7 +33,7 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
       "severity" => to_string(severity),
       "message" => message,
       "metadata" => serialize_metadata(metadata),
-      "alert_hash" => compute_alert_hash(category, message)
+      "alert_hash" => compute_alert_hash(category, message, metadata)
     }
   end
 
@@ -97,8 +97,30 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
     {:error, "Failed to schedule job"}
   end
 
-  defp compute_alert_hash(category, message) do
-    "#{category}:#{message}"
+  # For alerts that carry stable crash-identity fields (reason_code + stacktrace),
+  # fingerprint on those rather than the rendered message. This collapses "same
+  # bug, different inputs" into a single dedup key per 24h window, preventing a
+  # crash storm with per-occurrence data (e.g. Postgrex.Error, KeyError) from
+  # generating a distinct hash — and a distinct email — for every occurrence.
+  #
+  # Metadata keys arrive as atoms at this point (PIIScrubber preserves key types).
+  # The stacktrace value is a multi-line string; we take only the first line to
+  # pinpoint the crash site without including frame counts that change over time.
+  defp compute_alert_hash(category, message, metadata) when is_map(metadata) do
+    reason_code = Map.get(metadata, :reason_code)
+    stacktrace = Map.get(metadata, :stacktrace)
+
+    fingerprint =
+      if reason_code && stacktrace do
+        top_frame =
+          stacktrace |> to_string() |> String.split("\n") |> List.first("") |> String.trim()
+
+        "#{category}:#{reason_code}:#{top_frame}"
+      else
+        "#{category}:#{message}"
+      end
+
+    fingerprint
     |> then(&:crypto.hash(:sha256, &1))
     |> Base.encode16()
   end

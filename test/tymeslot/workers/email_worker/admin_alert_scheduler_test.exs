@@ -73,6 +73,121 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertSchedulerTest do
 
       refute args1["alert_hash"] == args2["alert_hash"]
     end
+
+    test "crash alerts with same reason_code and top stacktrace frame produce the same hash regardless of message" do
+      stacktrace =
+        "    (myapp 1.0.0) lib/myapp/worker.ex:42: MyApp.Worker.run/1\n    (oban 2.0.0) lib/oban/queue/executor.ex:10: Oban.Queue.Executor.call/2"
+
+      args1 =
+        AdminAlertScheduler.build_args(
+          "ops@example.com",
+          "System",
+          :error,
+          "Unhandled error crash: could not process user_id=1",
+          %{reason_code: Postgrex.Error, kind: :error, stacktrace: stacktrace}
+        )
+
+      args2 =
+        AdminAlertScheduler.build_args(
+          "ops@example.com",
+          "System",
+          :error,
+          "Unhandled error crash: could not process user_id=9999",
+          %{reason_code: Postgrex.Error, kind: :error, stacktrace: stacktrace}
+        )
+
+      assert args1["alert_hash"] == args2["alert_hash"]
+    end
+
+    test "crash alerts with different reason_code produce different hashes" do
+      stacktrace = "    (myapp 1.0.0) lib/myapp/worker.ex:42: MyApp.Worker.run/1"
+
+      args1 =
+        AdminAlertScheduler.build_args(
+          "ops@example.com",
+          "System",
+          :error,
+          "Unhandled error crash: boom",
+          %{reason_code: KeyError, kind: :error, stacktrace: stacktrace}
+        )
+
+      args2 =
+        AdminAlertScheduler.build_args(
+          "ops@example.com",
+          "System",
+          :error,
+          "Unhandled error crash: boom",
+          %{reason_code: ArgumentError, kind: :error, stacktrace: stacktrace}
+        )
+
+      refute args1["alert_hash"] == args2["alert_hash"]
+    end
+
+    test "crash alerts with different top stacktrace frame produce different hashes" do
+      args1 =
+        AdminAlertScheduler.build_args(
+          "ops@example.com",
+          "System",
+          :error,
+          "Unhandled error crash: boom",
+          %{
+            reason_code: RuntimeError,
+            kind: :error,
+            stacktrace: "    lib/myapp/foo.ex:10: Foo.bar/1"
+          }
+        )
+
+      args2 =
+        AdminAlertScheduler.build_args(
+          "ops@example.com",
+          "System",
+          :error,
+          "Unhandled error crash: boom",
+          %{
+            reason_code: RuntimeError,
+            kind: :error,
+            stacktrace: "    lib/myapp/baz.ex:99: Baz.qux/2"
+          }
+        )
+
+      refute args1["alert_hash"] == args2["alert_hash"]
+    end
+
+    test "alerts without reason_code or stacktrace fall back to category+message hash" do
+      args1 =
+        AdminAlertScheduler.build_args("ops@example.com", "Queue", :warning, "Queue stuck", %{
+          affected_queues: ["default"]
+        })
+
+      args2 =
+        AdminAlertScheduler.build_args("ops@example.com", "Queue", :warning, "Queue stuck", %{
+          affected_queues: ["mailer"]
+        })
+
+      assert args1["alert_hash"] == args2["alert_hash"]
+    end
+
+    test "alerts with only reason_code but no stacktrace fall back to category+message hash" do
+      args1 =
+        AdminAlertScheduler.build_args(
+          "ops@example.com",
+          "System",
+          :error,
+          "Unhandled error crash: msg A",
+          %{reason_code: RuntimeError}
+        )
+
+      args2 =
+        AdminAlertScheduler.build_args(
+          "ops@example.com",
+          "System",
+          :error,
+          "Unhandled error crash: msg B",
+          %{reason_code: RuntimeError}
+        )
+
+      refute args1["alert_hash"] == args2["alert_hash"]
+    end
   end
 
   describe "build_args/5" do

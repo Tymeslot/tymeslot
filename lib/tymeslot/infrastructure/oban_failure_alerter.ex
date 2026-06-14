@@ -67,8 +67,15 @@ defmodule Tymeslot.Infrastructure.ObanFailureAlerter do
         queue: Map.get(job, :queue),
         job_id: Map.get(job, :id),
         attempt: Map.get(job, :attempt),
-        max_attempts: Map.get(job, :max_attempts)
+        max_attempts: Map.get(job, :max_attempts),
+        stacktrace: format_stacktrace(metadata[:stacktrace])
       }
     )
   end
+
+  defp format_stacktrace(stacktrace) when is_list(stacktrace) do
+    Exception.format_stacktrace(stacktrace)
+  end
+
+  defp format_stacktrace(_other), do: nil
 end
