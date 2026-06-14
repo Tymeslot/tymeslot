@@ -5,36 +5,11 @@ defmodule Tymeslot.Infrastructure.ObanFailureAlerterTest do
 
   @moduletag :infrastructure
 
+  import Tymeslot.AdminAlertsCaptureHelpers
+
   alias Tymeslot.Infrastructure.ObanFailureAlerter
 
-  defmodule TestAdminAlerts do
-    @spec send_alert(atom(), map()) :: :ok
-    def send_alert(event_type, payload) do
-      pid = Application.get_env(:tymeslot, :admin_alerts_test_pid)
-      send(pid, {:send_alert, event_type, payload})
-      :ok
-    end
-  end
-
-  setup do
-    original_impl = Application.get_env(:tymeslot, :admin_alerts_impl)
-    original_pid = Application.get_env(:tymeslot, :admin_alerts_test_pid)
-
-    Application.put_env(:tymeslot, :admin_alerts_impl, TestAdminAlerts)
-    Application.put_env(:tymeslot, :admin_alerts_test_pid, self())
-
-    on_exit(fn ->
-      Application.put_env(:tymeslot, :admin_alerts_impl, original_impl)
-
-      if original_pid do
-        Application.put_env(:tymeslot, :admin_alerts_test_pid, original_pid)
-      else
-        Application.delete_env(:tymeslot, :admin_alerts_test_pid)
-      end
-    end)
-
-    :ok
-  end
+  setup :capture_admin_alerts
 
   defp exception_meta(state) do
     %{
