@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsControllerTest do
   setup :verify_on_exit!
 
   setup do
+    previous_payments = Application.get_env(:tymeslot, :meeting_payments_enabled)
     Application.put_env(:tymeslot, :meeting_payments_enabled, true)
 
     previous_checker = Application.get_env(:tymeslot, :feature_access_checker)
@@ -25,7 +26,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsControllerTest do
     )
 
     on_exit(fn ->
-      Application.put_env(:tymeslot, :meeting_payments_enabled, false)
+      Application.put_env(:tymeslot, :meeting_payments_enabled, previous_payments)
 
       if previous_checker do
         Application.put_env(:tymeslot, :feature_access_checker, previous_checker)

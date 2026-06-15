@@ -48,14 +48,17 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
   end
 
   defp enable_payments do
+    previous = Application.get_env(:tymeslot, :meeting_payments_enabled)
     Application.put_env(:tymeslot, :meeting_payments_enabled, true)
-    on_exit(fn -> Application.put_env(:tymeslot, :meeting_payments_enabled, false) end)
+    on_exit(fn -> Application.put_env(:tymeslot, :meeting_payments_enabled, previous) end)
     :ok
   end
 
   describe "/dashboard/payments — when feature disabled" do
     setup do
+      previous = Application.get_env(:tymeslot, :meeting_payments_enabled)
       Application.put_env(:tymeslot, :meeting_payments_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :meeting_payments_enabled, previous) end)
       :ok
     end
 
