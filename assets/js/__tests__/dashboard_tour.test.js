@@ -102,3 +102,73 @@ describe('DashboardTour layout cache', () => {
     expect(positionSpy).toHaveBeenCalled();
   });
 });
+
+describe('DashboardTour per-step fade', () => {
+  beforeEach(() => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true });
+    vi.stubGlobal('requestAnimationFrame', (cb) => {
+      cb();
+      return 1;
+    });
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  test('a step change fades the card in', () => {
+    const el = buildOverlay(null, null);
+    el.dataset.stepIndex = '1';
+    const hook = makeHook(el);
+    hook.lastStepIndex = '0';
+
+    const beginSpy = vi.spyOn(hook, 'beginStepEnter');
+    hook.updated();
+
+    // The step changed, so the fade was kicked off and the cache advanced.
+    expect(beginSpy).toHaveBeenCalled();
+    expect(hook.lastStepIndex).toBe('1');
+    // With rAF running synchronously, the card has already been released back
+    // to fully visible after positioning.
+    const tooltip = el.querySelector('.dashboard-tour__tooltip');
+    expect(tooltip.classList.contains('is-entering')).toBe(false);
+  });
+
+  test('beginStepEnter hides the card until the next frame releases it', () => {
+    // Do NOT run rAF callbacks: the card must stay hidden until repositioned.
+    vi.stubGlobal('requestAnimationFrame', () => 1);
+    const el = buildOverlay(null, null);
+    const hook = makeHook(el);
+    const tooltip = el.querySelector('.dashboard-tour__tooltip');
+
+    hook.beginStepEnter();
+    expect(tooltip.classList.contains('is-entering')).toBe(true);
+
+    // finishStepEnter only schedules the release for the next frame, so the
+    // card is still hidden until that frame actually runs.
+    hook.finishStepEnter();
+    expect(tooltip.classList.contains('is-entering')).toBe(true);
+  });
+
+  test('an unrelated patch with no step change does not re-fade', async () => {
+    const el = buildOverlay('meetings', 'right');
+    el.dataset.stepIndex = '2';
+    const target = document.createElement('div');
+    target.dataset.tour = 'meetings';
+    document.body.appendChild(target);
+
+    const hook = makeHook(el);
+    await hook.position({ scroll: false });
+    hook.lastStepIndex = '2';
+
+    const beginSpy = vi.spyOn(hook, 'beginStepEnter');
+    const positionSpy = vi.spyOn(hook, 'position');
+    hook.updated();
+
+    expect(beginSpy).not.toHaveBeenCalled();
+    expect(positionSpy).not.toHaveBeenCalled();
+  });
+});
