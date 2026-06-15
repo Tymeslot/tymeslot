@@ -165,8 +165,8 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
       network_bits = ip_to_bits(network)
 
       # Compare the first prefix_len bits
-      <<ip_prefix::size(prefix_len), _rest_ip::bitstring>> = ip_bits
-      <<network_prefix::size(prefix_len), _rest_net::bitstring>> = network_bits
+      <<ip_prefix::size(^prefix_len), _rest_ip::bitstring>> = ip_bits
+      <<network_prefix::size(^prefix_len), _rest_net::bitstring>> = network_bits
 
       ip_prefix == network_prefix
     end
