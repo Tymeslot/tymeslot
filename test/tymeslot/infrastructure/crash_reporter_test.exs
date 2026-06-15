@@ -5,36 +5,13 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
 
   @moduletag :infrastructure
 
+  import Tymeslot.AdminAlertsCaptureHelpers
+
+  alias ExUnit.CaptureLog
   alias Tymeslot.Infrastructure.CrashReporter
+  alias Tymeslot.Security.RateLimiter
 
-  defmodule TestAdminAlerts do
-    @spec send_alert(atom(), map()) :: :ok
-    def send_alert(event_type, payload) do
-      pid = Application.get_env(:tymeslot, :admin_alerts_test_pid)
-      send(pid, {:send_alert, event_type, payload})
-      :ok
-    end
-  end
-
-  setup do
-    original_impl = Application.get_env(:tymeslot, :admin_alerts_impl)
-    original_pid = Application.get_env(:tymeslot, :admin_alerts_test_pid)
-
-    Application.put_env(:tymeslot, :admin_alerts_impl, TestAdminAlerts)
-    Application.put_env(:tymeslot, :admin_alerts_test_pid, self())
-
-    on_exit(fn ->
-      Application.put_env(:tymeslot, :admin_alerts_impl, original_impl)
-
-      if original_pid do
-        Application.put_env(:tymeslot, :admin_alerts_test_pid, original_pid)
-      else
-        Application.delete_env(:tymeslot, :admin_alerts_test_pid)
-      end
-    end)
-
-    :ok
-  end
+  setup :capture_admin_alerts
 
   defp crash_event(crash_reason) do
     %{level: :error, msg: {:string, "crash"}, meta: %{crash_reason: crash_reason}}
@@ -107,8 +84,8 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
     setup do
       original_max = Application.get_env(:tymeslot, :crash_reporter_rate_limit_max)
       Application.put_env(:tymeslot, :crash_reporter_rate_limit_max, 3)
-      Tymeslot.Security.RateLimiter.clear_bucket("crash_reporter:alerts")
-      Tymeslot.Security.RateLimiter.clear_bucket("crash_reporter:throttle_notice")
+      RateLimiter.clear_bucket("crash_reporter:alerts")
+      RateLimiter.clear_bucket("crash_reporter:throttle_notice")
 
       on_exit(fn ->
         if original_max do
@@ -136,7 +113,7 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
 
       # Three denials in the same window — the warning must appear exactly once.
       log =
-        ExUnit.CaptureLog.capture_log(fn ->
+        CaptureLog.capture_log(fn ->
           refute CrashReporter.within_rate_limit?()
           refute CrashReporter.within_rate_limit?()
           refute CrashReporter.within_rate_limit?()
@@ -165,7 +142,7 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
     end
 
     test "a genuinely crashing supervised task raises an unhandled_crash alert" do
-      ExUnit.CaptureLog.capture_log(fn ->
+      CaptureLog.capture_log(fn ->
         Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
           raise "integration boom"
         end)
@@ -205,7 +182,7 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
     test "a real crash whose alert path fails does not re-enter the handler" do
       Application.put_env(:tymeslot, :admin_alerts_impl, RaisingAdminAlerts)
 
-      ExUnit.CaptureLog.capture_log(fn ->
+      CaptureLog.capture_log(fn ->
         # A genuine process crash flows through the attached :logger handler.
         Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn -> raise "boom" end)
 
@@ -223,7 +200,7 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
     test "a real crash whose alert path exits does not re-enter the handler" do
       Application.put_env(:tymeslot, :admin_alerts_impl, ExitingAdminAlerts)
 
-      ExUnit.CaptureLog.capture_log(fn ->
+      CaptureLog.capture_log(fn ->
         # A genuine process crash flows through the attached :logger handler.
         Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn -> raise "boom" end)
 

@@ -37,8 +37,10 @@ defmodule Tymeslot.Emails.EmailScheduler do
 
   # Auth emails
 
-  defdelegate schedule_email_verification(user_id, verification_url), to: AuthScheduler
-  defdelegate schedule_password_reset(user_id, reset_url), to: AuthScheduler
+  defdelegate schedule_email_verification(user_id, verification_url, token_hash),
+    to: AuthScheduler
+
+  defdelegate schedule_password_reset(user_id, reset_url, token_hash), to: AuthScheduler
 
   # Account emails
 

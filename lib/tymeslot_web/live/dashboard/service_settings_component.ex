@@ -5,13 +5,13 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   use TymeslotWeb, :live_component
 
   alias Tymeslot.Dashboard.DashboardContext
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Utils.SanitizeMerge
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent
   require Logger
@@ -50,8 +50,24 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       |> assign(:meeting_types, data.meeting_types)
       |> assign(:video_integrations, data.video_integrations)
       |> assign(:calendar_integrations, data.calendar_integrations)
+      |> assign(:payment_currency, host_currency(data.meeting_types, user_id))
 
     {:ok, socket}
+  end
+
+  # The host's pricing currency, used only to format the price token on paid
+  # meeting type cards. Resolved from the Stripe Connect account, and only
+  # when at least one meeting type is actually paid — unpaid lists skip the
+  # extra query and fall back to the first allowed currency.
+  defp host_currency(meeting_types, user_id) do
+    if Enum.any?(meeting_types, & &1.payment_required) do
+      case MeetingPayments.get_connect_account_for_user(user_id) do
+        %{default_currency: currency} when is_binary(currency) and currency != "" -> currency
+        _other -> "eur"
+      end
+    else
+      "eur"
+    end
   end
 
   @impl Phoenix.LiveComponent
@@ -105,6 +121,11 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   def handle_event("close_edit_overlay", _params, socket) do
+    # Edits auto-save as they happen, so closing only tears down the overlay.
+    # Refresh the list view from the database so it reflects the saved state
+    # — the data is already persisted regardless of how the user leaves.
+    send(self(), {:meeting_type_changed})
+
     {:noreply,
      socket
      |> assign(:editing_type, nil)
@@ -251,58 +272,20 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     socket = assign(socket, :saving, true)
     metadata = Helpers.get_security_metadata(socket)
 
-    # First validate the meeting type form input
-    case MeetingSettingsInputValidation.validate_meeting_type_form(params, metadata: metadata) do
-      {:ok, sanitized_params} ->
-        ui_state = %{
-          meeting_mode: Map.get(sanitized_params, "meeting_mode", "personal"),
-          selected_icon: Map.get(sanitized_params, "icon", "none"),
-          selected_video_integration_id:
-            case Map.get(params, "video_integration_id") do
-              nil ->
-                nil
-
-              "" ->
-                nil
-
-              id when is_integer(id) ->
-                id
-
-              id when is_binary(id) ->
-                case Integer.parse(id) do
-                  {int, _value} -> int
-                  :error -> nil
-                end
-            end
-        }
-
-        # Merge sanitized params with original params (keeping other fields).
-        # SanitizeMerge preserves user-provided values when the sanitiser
-        # returns a blank for an optional field.
-        validated_params = SanitizeMerge.merge(params, sanitized_params)
-
-        result =
-          if socket.assigns.editing_type do
-            MeetingTypes.update_meeting_type_from_form(
-              socket.assigns.editing_type,
-              validated_params,
-              ui_state
-            )
-          else
-            MeetingTypes.create_meeting_type_from_form(
-              socket.assigns.current_user.id,
-              validated_params,
-              ui_state
-            )
-          end
-
-        Helpers.handle_meeting_type_save_result(result, socket)
-
-      {:error, validation_errors} ->
+    case Submission.persist(
+           params,
+           metadata,
+           socket.assigns.editing_type,
+           socket.assigns.current_user
+         ) do
+      {:error, {:invalid_form, validation_errors}} ->
         {:noreply,
          socket
          |> assign(:form_errors, validation_errors)
          |> assign(:saving, false)}
+
+      result ->
+        Helpers.handle_meeting_type_save_result(result, socket)
     end
   end
 
@@ -369,6 +352,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
               meeting_types={@meeting_types}
               show_add_form={@show_add_form}
               editing_type={@editing_type}
+              currency={@payment_currency}
               parent_myself={@myself}
             />
           </div>

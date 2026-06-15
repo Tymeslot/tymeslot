@@ -10,6 +10,7 @@ defmodule Tymeslot.Auth.UserTokenQueries do
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.IPNormaliser
+  alias Tymeslot.Security.Token
 
   @doc """
   Sets verification token for a user.
@@ -18,7 +19,7 @@ defmodule Tymeslot.Auth.UserTokenQueries do
           {:ok, UserSchema.t()} | {:error, Changeset.t()}
   def set_verification_token(%UserSchema{} = user, token, ip_address \\ nil) do
     normalized_ip = IPNormaliser.normalize_for_storage(ip_address)
-    token_hash = Base.encode16(:crypto.hash(:sha256, token), case: :lower)
+    token_hash = Token.hash_token(token)
 
     changes = %{
       verification_token: token_hash,
@@ -41,7 +42,7 @@ defmodule Tymeslot.Auth.UserTokenQueries do
   """
   @spec get_user_by_verification_token(String.t()) :: {:ok, UserSchema.t()} | {:error, :not_found}
   def get_user_by_verification_token(token) when is_binary(token) do
-    token_hash = Base.encode16(:crypto.hash(:sha256, token), case: :lower)
+    token_hash = Token.hash_token(token)
 
     case UserSchema
          |> where(
@@ -61,7 +62,7 @@ defmodule Tymeslot.Auth.UserTokenQueries do
           {:ok, UserSchema.t()} | {:error, Changeset.t()}
   # Set a new reset token (issue new link): clear any previous used_at marker
   def set_reset_token(%UserSchema{} = user, token) when is_binary(token) do
-    token_hash = Base.encode16(:crypto.hash(:sha256, token), case: :lower)
+    token_hash = Token.hash_token(token)
 
     result =
       user
@@ -119,7 +120,7 @@ defmodule Tymeslot.Auth.UserTokenQueries do
   """
   @spec get_user_by_reset_token(String.t()) :: {:ok, UserSchema.t()} | {:error, :not_found}
   def get_user_by_reset_token(token) when is_binary(token) do
-    token_hash = Base.encode16(:crypto.hash(:sha256, token), case: :lower)
+    token_hash = Token.hash_token(token)
 
     case UserSchema
          |> where([u], u.reset_token_hash == ^token_hash and is_nil(u.reset_token_used_at))
@@ -137,7 +138,7 @@ defmodule Tymeslot.Auth.UserTokenQueries do
   @spec get_user_by_reset_token_for_update(String.t()) ::
           {:ok, UserSchema.t()} | {:error, :not_found}
   def get_user_by_reset_token_for_update(token) when is_binary(token) do
-    token_hash = Base.encode16(:crypto.hash(:sha256, token), case: :lower)
+    token_hash = Token.hash_token(token)
 
     case UserSchema
          |> where([u], u.reset_token_hash == ^token_hash and is_nil(u.reset_token_used_at))
@@ -155,7 +156,7 @@ defmodule Tymeslot.Auth.UserTokenQueries do
   @spec request_email_change(UserSchema.t(), String.t(), String.t()) ::
           {:ok, UserSchema.t()} | {:error, Changeset.t()}
   def request_email_change(%UserSchema{} = user, new_email, token_raw) do
-    token_hash = Base.encode16(:crypto.hash(:sha256, token_raw), case: :lower)
+    token_hash = Token.hash_token(token_raw)
 
     user
     |> UserSchema.email_change_request_changeset(%{
@@ -172,7 +173,7 @@ defmodule Tymeslot.Auth.UserTokenQueries do
   @spec get_user_by_email_change_token(String.t()) ::
           {:ok, UserSchema.t()} | {:error, :not_found}
   def get_user_by_email_change_token(token_raw) when is_binary(token_raw) do
-    token_hash = Base.encode16(:crypto.hash(:sha256, token_raw), case: :lower)
+    token_hash = Token.hash_token(token_raw)
 
     case UserSchema
          |> where([u], u.email_change_token_hash == ^token_hash)

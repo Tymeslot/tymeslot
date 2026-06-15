@@ -67,6 +67,19 @@ defmodule Tymeslot.Security.Token do
   end
 
   @doc """
+  Hashes a raw token for storage and comparison (SHA-256, lowercase hex).
+
+  Single source of truth for token hashing: both persistence
+  (`Tymeslot.Auth.UserTokenQueries`) and the email worker's staleness guard
+  rely on this producing identical output, so the hash must only ever be
+  computed here.
+  """
+  @spec hash_token(String.t()) :: String.t()
+  def hash_token(token) when is_binary(token) do
+    Base.encode16(:crypto.hash(:sha256, token), case: :lower)
+  end
+
+  @doc """
   Verifies a token against an expiry datetime.
   Returns {:ok, token} if valid, {:error, :token_expired} if expired.
   """

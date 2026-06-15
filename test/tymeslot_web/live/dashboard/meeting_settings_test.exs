@@ -87,19 +87,91 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
 
       assert render(view) =~ "Edit Meeting Type"
 
-      # Same reminder-removal workaround as the create test (see that test for explanation).
-      view |> element("button[aria-label='Remove reminder']") |> render_click()
-
+      # Editing a field auto-saves immediately — there is no submit button.
       view
-      |> form("form[phx-submit='save_meeting_type']", %{
-        "meeting_type" => %{"name" => "Renamed Type", "duration" => "30"}
-      })
-      |> render_submit()
+      |> element(~s|input[name="meeting_type[name]"]|)
+      |> render_change(%{"meeting_type" => %{"name" => "Renamed Type"}})
+
+      # Persisted before any "Done"/close action: nothing depends on it.
+      assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).name == "Renamed Type"
+      assert render(view) =~ "All changes saved"
+
+      # Done only tears down the overlay; the list reflects the saved state.
+      view |> element("button", "Done") |> render_click()
 
       html = render(view)
       assert html =~ "Renamed Type"
-      assert html =~ "Meeting type updated"
       refute html =~ "Old Name"
+    end
+  end
+
+  # ===========================================================================
+  # Auto-saving edits
+  # ===========================================================================
+
+  describe "Auto-saving edits" do
+    test "changing a field persists immediately without a submit", %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 30)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      view
+      |> element(~s|input[name="meeting_type[duration]"]|)
+      |> render_change(%{"meeting_type" => %{"duration" => "45"}})
+
+      assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).duration_minutes == 45
+      assert render(view) =~ "All changes saved"
+    end
+
+    test "an invalid change is not persisted and is flagged unsaved", %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, user: user, name: "Keep Me")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      html =
+        view
+        |> element(~s|input[name="meeting_type[name]"]|)
+        |> render_change(%{"meeting_type" => %{"name" => ""}})
+
+      # The last valid value stays in the database; the editor flags it unsaved.
+      assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).name == "Keep Me"
+      assert html =~ "Unsaved changes"
+    end
+
+    test "a name collision with another meeting type is not persisted and shows the error indicator",
+         %{conn: conn, user: user} do
+      # Insert two meeting types for the same user; we will try to rename type_b
+      # to the name already taken by type_a. The DB unique constraint on
+      # (user_id, name) turns this into a genuine changeset error — not one of
+      # the :incomplete companion-field cases — so apply_result/2 must set
+      # save_status: :error.
+      _type_a = insert(:meeting_type, user: user, name: "Taken Name")
+      type_b = insert(:meeting_type, user: user, name: "Original Name")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{type_b.id}']")
+      |> render_click()
+
+      view
+      |> element(~s|input[name="meeting_type[name]"]|)
+      |> render_change(%{"meeting_type" => %{"name" => "Taken Name"}})
+
+      # The original name must be intact in the database.
+      assert MeetingTypes.get_meeting_type(type_b.id, user.id).name == "Original Name"
+
+      # The editor must show the error indicator, not the success or incomplete
+      # copy. HEEx escapes the apostrophe, so match the rendered entity form.
+      assert render(view) =~ "Couldn&#39;t save changes"
     end
   end
 

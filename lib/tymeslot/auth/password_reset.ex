@@ -105,14 +105,46 @@ defmodule Tymeslot.Auth.PasswordReset do
 
   defp process_regular_user_reset(user) do
     {token, _expiry} = Token.generate_password_reset_token()
+    reset_url = UrlBuilder.password_reset_url(token)
+    token_hash = Token.hash_token(token)
 
+    # Persist the token first so it is valid in the database before the job runs.
+    # The job carries the token's hash; the worker discards it at send time if a
+    # newer request has since rotated the stored token, so an in-flight or
+    # retrying job can never deliver an invalidated link.
+    with {:ok, updated_user} <- persist_reset_token_and_log(user, token),
+         {:ok, _status} <- schedule_reset_email(updated_user, reset_url, token_hash) do
+      {:ok, :email_sent, "Password reset instructions have been sent to your email."}
+    else
+      {:error, :token_storage_failed} ->
+        {:error, :server_error, "Unable to send password reset email. Please try again later."}
+
+      {:error, reason} ->
+        Logger.error("Failed to send password reset email",
+          user_id: user.id,
+          email: user.email,
+          reason: inspect(reason),
+          event: :password_reset_email_failed
+        )
+
+        {:error, :server_error, "Unable to send password reset email. Please try again later."}
+    end
+  end
+
+  defp persist_reset_token_and_log(user, token) do
     case Config.user_token_queries_module().set_reset_token(user, token) do
       {:ok, updated_user} ->
-        reset_url = UrlBuilder.password_reset_url(token)
-        send_reset_email_and_log(updated_user, reset_url)
+        # Logged at persist time — the email is scheduled separately afterwards, so
+        # this records token storage only, not delivery (mirrors the verification flow).
+        Logger.info("Password reset token stored",
+          user_id: updated_user.id,
+          email: updated_user.email,
+          event: :password_reset_token_persisted
+        )
+
         AccountLogging.log_password_reset(updated_user, "initiated")
 
-        {:ok, :email_sent, "Password reset instructions have been sent to your email."}
+        {:ok, updated_user}
 
       {:error, _error_reason} ->
         AccountLogging.log_operation_failure(
@@ -122,26 +154,33 @@ defmodule Tymeslot.Auth.PasswordReset do
           %{user_id: user.id}
         )
 
-        {:error, :server_error, "Unable to send password reset email. Please try again later."}
+        {:error, :token_storage_failed}
     end
   end
 
-  defp send_reset_email_and_log(user, reset_url) do
-    case EmailScheduler.schedule_password_reset(user.id, reset_url) do
-      :ok ->
-        Logger.info("Password reset email sent",
+  defp schedule_reset_email(user, reset_url, token_hash) do
+    case EmailScheduler.schedule_password_reset(user.id, reset_url, token_hash) do
+      {:ok, :scheduled} ->
+        {:ok, :scheduled}
+
+      {:ok, :duplicate} ->
+        Logger.info("Password reset email already queued; updated with fresh token",
           user_id: user.id,
           email: user.email,
-          event: :password_reset_email_sent
+          event: :password_reset_email_deduplicated
         )
 
+        {:ok, :duplicate}
+
       {:error, reason} ->
-        Logger.error("Failed to send password reset email",
+        Logger.error("Failed to schedule password reset email",
           user_id: user.id,
           email: user.email,
           reason: inspect(reason),
           event: :password_reset_email_failed
         )
+
+        {:error, reason}
     end
   end
 

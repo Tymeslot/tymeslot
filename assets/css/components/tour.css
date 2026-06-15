@@ -13,6 +13,18 @@
   inset: 0;
   pointer-events: none;
   z-index: 9999;
+
+  /* Slow entrance for the whole overlay on first paint. The per-step fades
+     below are driven by the JS hook since the component stays mounted across
+     steps; this animation only runs once, when the tour opens. */
+  animation: fadeIn var(--duration-700) ease-out;
+  transition: opacity var(--duration-700) ease;
+}
+
+/* Slow exit. Applied by `phx-remove` (JS.transition) when the tour is
+   dismissed, so the overlay fades out before LiveView removes it from the DOM. */
+.dashboard-tour.dashboard-tour--leaving {
+  opacity: 0;
 }
 
 /* The tour is desktop-only. The server renders the overlay on the initial
@@ -44,11 +56,12 @@
   border-radius: var(--radius-xl);
   box-shadow: 0 0 0 9999px rgba(20, 20, 40, 0.55);
   pointer-events: none;
+  /* Slow, smooth glide as the spotlight moves between anchors step to step. */
   transition:
-    top var(--duration-200) ease,
-    left var(--duration-200) ease,
-    width var(--duration-200) ease,
-    height var(--duration-200) ease;
+    top var(--duration-500) ease,
+    left var(--duration-500) ease,
+    width var(--duration-500) ease,
+    height var(--duration-500) ease;
 }
 
 .dashboard-tour__tooltip {
@@ -67,6 +80,17 @@
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
   font-family: var(--font-family-sans);
+
+  /* Each step's card fades in as it settles into its new position. The JS hook
+     adds `is-entering` (opacity 0, no transition) the instant the step changes,
+     then removes it once the card is repositioned — letting this transition
+     animate the fade-in without a visible slide. */
+  transition: opacity var(--duration-500) ease;
+}
+
+.dashboard-tour__tooltip.is-entering {
+  opacity: 0;
+  transition: none;
 }
 
 .dashboard-tour__progress {

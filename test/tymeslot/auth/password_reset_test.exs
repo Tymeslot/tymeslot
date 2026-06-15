@@ -1,12 +1,15 @@
 defmodule Tymeslot.Auth.PasswordResetTest do
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :auth
 
   alias Tymeslot.Auth.PasswordReset
   alias Tymeslot.Auth.{UserSchema, UserSessionQueries, UserTokenQueries}
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, Token}
+  alias Tymeslot.Workers.EmailWorker
 
   import Tymeslot.Factory
 
@@ -46,6 +49,38 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       result = PasswordReset.initiate_reset(oauth_user.email)
 
       assert {:error, :oauth_user, _message} = result
+    end
+  end
+
+  describe "initiate_reset/1 token rotation" do
+    test "a duplicate request within the dedup window rotates the token and updates the queued job" do
+      user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+
+      # Simulate the first request: store the reset token and queue its email.
+      {original_token, _value} = Token.generate_password_reset_token()
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, original_token)
+
+      assert {:ok, :scheduled} =
+               EmailScheduler.schedule_password_reset(
+                 user.id,
+                 "https://example.com/reset",
+                 Token.hash_token(original_token)
+               )
+
+      # A second request arrives while that first email is still within the dedup window.
+      # The token is rotated unconditionally; the scheduler replaces the queued job's
+      # args with the new URL so job payload and DB token remain in lock-step.
+      assert {:ok, :reset_initiated, _message} = PasswordReset.initiate_reset(user.email)
+
+      # The original token is now invalid — a fresh token was persisted.
+      assert {:error, :invalid_token, _message} = PasswordReset.verify_token(original_token)
+
+      # The single queued job now carries the rotated hash, matching the stored token,
+      # so the worker's staleness guard will deliver (not discard) it — the new link
+      # is genuinely deliverable end to end.
+      updated = Repo.get!(UserSchema, user.id)
+      assert [job] = all_enqueued(worker: EmailWorker)
+      assert job.args["token_hash"] == updated.reset_token_hash
     end
   end
 
