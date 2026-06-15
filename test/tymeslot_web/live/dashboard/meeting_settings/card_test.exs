@@ -36,7 +36,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
 
   describe "paid token" do
     test "renders the formatted price for a paid meeting type" do
-      html = render_card(build_type(%{payment_required: true, price_cents: 900}), %{currency: "eur"})
+      html =
+        render_card(build_type(%{payment_required: true, price_cents: 900}), %{currency: "eur"})
 
       assert html =~ "€9.00"
     end
