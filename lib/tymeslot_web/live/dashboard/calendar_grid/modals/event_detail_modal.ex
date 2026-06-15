@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <form :if={@editable} phx-change="update_event_title" phx-target={@myself} phx-submit="update_event_title" class="pr-8">
+        <form id="event-title-form" :if={@editable} phx-change="update_event_title" phx-target={@myself} phx-submit="update_event_title" class="pr-8">
           <input
             type="text"
             id="event-title-input"
@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         <div class="flex-1">
           <% start_parts = Helpers.datetime_to_local_parts(@selected_event.start_at, @user_timezone) %>
           <% end_parts = Helpers.datetime_to_local_parts(@selected_event.end_at, @user_timezone) %>
-          <form :if={@editable and not @selected_event.all_day} phx-change="update_event_time" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm">
+          <form id="event-time-form" :if={@editable and not @selected_event.all_day} phx-change="update_event_time" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm">
             <input
               type="date"
               id="event-start-date"
@@ -258,7 +258,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
                 </button>
               </span>
             </div>
-            <form phx-submit="add_event_attendee" phx-target={@myself} class="flex gap-2">
+            <form id="event-add-attendee-form" phx-submit="add_event_attendee" phx-target={@myself} class="flex gap-2">
               <input
                 type="email"
                 id="edit-attendee-email"

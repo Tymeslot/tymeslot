@@ -184,6 +184,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
         <.form
           for={@changeset}
           as={:definition}
+          id="custom-question-editor-form"
           phx-change="validate"
           phx-submit="save"
           phx-target={@myself}

@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
         Stripe redirect is being prepared, preventing rage-clicks on a slow open.
       --%>
       <form
+        id="stripe-connect-continue-form"
         :if={@state == :incomplete}
         action={~p"/dashboard/payments/connect"}
         method="post"

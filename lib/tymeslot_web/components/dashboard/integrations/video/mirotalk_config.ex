@@ -40,7 +40,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
         </div>
       </div>
 
-      <form phx-submit="add_integration" phx-change="track_form_change" phx-target={@target} class="space-y-5">
+      <form id="mirotalk-integration-form" phx-submit="add_integration" phx-change="track_form_change" phx-target={@target} class="space-y-5">
         <input type="hidden" name="integration[provider]" value="mirotalk" />
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

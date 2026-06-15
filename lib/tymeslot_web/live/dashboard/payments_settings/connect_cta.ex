@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.ConnectCta do
         redirect). `data-submit-loading` lets the global submit handler show a
         spinner and disable the button so a slow redirect cannot be rage-clicked.
       --%>
-      <form action={~p"/dashboard/payments/connect"} method="post" data-submit-loading>
+      <form id="stripe-connect-form" action={~p"/dashboard/payments/connect"} method="post" data-submit-loading>
         <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
         <.action_button type="submit" variant={:primary}>
           <span data-submit-spinner class="hidden items-center gap-2">

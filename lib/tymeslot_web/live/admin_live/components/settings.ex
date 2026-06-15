@@ -157,6 +157,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   defp setting_control(%{kind: :score} = assigns) do
     ~H"""
     <form
+      id={"admin-setting-form-#{@key}"}
       phx-change="save_setting"
       phx-submit="save_setting"
       class="flex items-center gap-2 flex-shrink-0"
@@ -182,6 +183,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   defp setting_control(%{kind: :email} = assigns) do
     ~H"""
     <form
+      id={"admin-setting-form-#{@key}"}
       phx-submit="save_setting"
       class="flex items-center gap-2 flex-shrink-0 max-w-full"
       aria-label={gettext("Set %{name}", name: Formatters.humanise(@key))}

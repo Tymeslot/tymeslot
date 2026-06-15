@@ -98,6 +98,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     ~H"""
     <div id={"meeting-type-form-wrapper-#{@id}"}>
     <form
+      id={"meeting-type-form-#{@id}"}
       phx-submit={if @is_edit, do: "flush_autosave", else: "save_meeting_type"}
       phx-target={if @is_edit, do: @myself, else: @parent_myself}
       class="space-y-4"

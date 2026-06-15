@@ -227,6 +227,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
       <.form
         for={%{}}
         as={:customise}
+        id="embed-customisation-form"
         phx-change="update_customisation"
         phx-target={@myself}
         class="grid grid-cols-1 md:grid-cols-3 gap-4"

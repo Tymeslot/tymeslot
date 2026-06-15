@@ -34,6 +34,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
     <div class="space-y-6">
       <%= if @show_calendar_selection do %>
         <form
+          id={"calendar-integration-form-#{@provider}"}
           phx-submit="add_integration"
           phx-change="track_form_change"
           phx-target={@target}
@@ -69,6 +70,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
         </form>
       <% else %>
         <form
+          id={"calendar-discovery-form-#{@provider}"}
           phx-submit="discover_calendars"
           phx-change="track_form_change"
           phx-target={@target}

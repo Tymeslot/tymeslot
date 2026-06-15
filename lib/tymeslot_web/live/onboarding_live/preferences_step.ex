@@ -23,7 +23,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   @spec buffer_time_step(map()) :: Phoenix.LiveView.Rendered.t()
   def buffer_time_step(assigns) do
     ~H"""
-    <form phx-change="update_scheduling_preferences" phx-debounce="300" class="onboarding-form">
+    <form id="onboarding-buffer-time-form" phx-change="update_scheduling_preferences" phx-debounce="300" class="onboarding-form">
       <p class="onboarding-preference-example">
         If someone books you at 2:00 PM and your buffer is 15 min, the next available slot starts at 2:15 PM.
       </p>
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   @spec booking_window_step(map()) :: Phoenix.LiveView.Rendered.t()
   def booking_window_step(assigns) do
     ~H"""
-    <form phx-change="update_scheduling_preferences" phx-debounce="300" class="onboarding-form">
+    <form id="onboarding-booking-window-form" phx-change="update_scheduling_preferences" phx-debounce="300" class="onboarding-form">
       <p class="onboarding-preference-example">
         With a 2-week window, someone visiting your page today can only book up to 2 weeks ahead.
       </p>
@@ -129,7 +129,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   @spec minimum_notice_step(map()) :: Phoenix.LiveView.Rendered.t()
   def minimum_notice_step(assigns) do
     ~H"""
-    <form phx-change="update_scheduling_preferences" phx-debounce="300" class="onboarding-form">
+    <form id="onboarding-min-notice-form" phx-change="update_scheduling_preferences" phx-debounce="300" class="onboarding-form">
       <p class="onboarding-preference-example">
         With 3 hours' notice, nobody can book a slot that starts sooner than 3 hours from now.
       </p>
