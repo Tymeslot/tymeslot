@@ -575,7 +575,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
   end
 
   describe "end-to-end persistence" do
-    test "custom question is persisted to the database after submitting the meeting type form", %{
+    test "adding a custom question auto-saves it to the database", %{
       conn: conn,
       user: user
     } do
@@ -585,7 +585,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
 
       open_edit_form(view, meeting_type)
 
-      # Add a custom question in-memory via the editor
+      # Add a custom question via the editor
       view |> element("button", "Add question") |> render_click()
       assert render(view) =~ "Add question"
 
@@ -597,20 +597,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
 
       assert render(view) =~ "Company"
 
-      # Submit the outer meeting type form to persist everything to the DB.
-      # The hidden inputs serialising custom_fields are auto-collected by
-      # render_submit/1 from the current rendered HTML.
-      view
-      |> form("form[phx-submit='save_meeting_type']", %{
-        "meeting_type" => %{
-          "name" => meeting_type.name,
-          "duration" => to_string(meeting_type.duration_minutes)
-        }
-      })
-      |> render_submit()
-
-      assert render(view) =~ "Meeting type updated"
-
+      # Adding the question auto-saves it — no outer form submit is involved.
       reloaded = Repo.reload!(meeting_type)
       assert [%{label: "Company"}] = reloaded.custom_fields
     end

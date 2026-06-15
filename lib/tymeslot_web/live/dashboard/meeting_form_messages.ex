@@ -55,4 +55,19 @@ defmodule TymeslotWeb.Dashboard.MeetingFormMessages do
 
     {:noreply, socket}
   end
+
+  @doc """
+  Triggers a deferred autosave retry on the form after a rate-limit throttle.
+
+  Sends a `send_update` carrying `trigger_autosave: true`, which `MeetingTypeForm.update/2`
+  detects and re-invokes `Autosave.maybe_run/1`. If the rate limit is still
+  active the retry simply reschedules itself; once the window clears the save
+  proceeds normally.
+  """
+  @spec handle_retry_autosave(String.t(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_retry_autosave(form_id, socket) do
+    send_update(MeetingTypeForm, id: form_id, trigger_autosave: true)
+    {:noreply, socket}
+  end
 end

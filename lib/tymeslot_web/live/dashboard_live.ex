@@ -334,6 +334,9 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_info({:calendar_list_refreshed, form_id, _integration_id, calendars}, socket),
     do: MeetingFormMessages.handle_calendar_list_refreshed(form_id, calendars, socket)
 
+  def handle_info({:retry_autosave, form_id}, socket),
+    do: MeetingFormMessages.handle_retry_autosave(form_id, socket)
+
   # Generic external redirect message from components.
   # Only HTTPS URLs are allowed to prevent open-redirect attacks from
   # malicious or buggy extension components.

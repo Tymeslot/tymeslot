@@ -72,6 +72,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
           step="0.01"
           placeholder="0.00"
           phx-change="change_payment_price"
+          phx-debounce="500"
           phx-target={@myself}
           errors={
             FormValidationHelpers.field_errors(@form_errors, :price_cents)

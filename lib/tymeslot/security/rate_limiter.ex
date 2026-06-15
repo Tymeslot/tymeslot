@@ -366,6 +366,21 @@ defmodule Tymeslot.Security.RateLimiter do
     do: Dashboard.check_meeting_type_write(user_id)
 
   @doc """
+  Rate limit meeting type auto-save writes from the meeting type editor.
+
+  Auto-save persists on every change, so this bucket is far more permissive
+  than the manual write limit — it must never trip during a legitimate
+  editing session while still capping a runaway or scripted client.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 600 writes per 30 minutes per user.
+  """
+  @spec check_meeting_type_autosave_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_meeting_type_autosave_rate_limit(user_id),
+    do: Dashboard.check_meeting_type_autosave(user_id)
+
+  @doc """
   Rate limit avatar upload and delete operations from the dashboard.
   Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
 

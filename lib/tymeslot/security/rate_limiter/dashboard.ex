@@ -90,6 +90,21 @@ defmodule Tymeslot.Security.RateLimiter.Dashboard do
   def check_meeting_type_write(user_id),
     do: Helpers.invalid_user_id("meeting type write", user_id)
 
+  @spec check_meeting_type_autosave(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_meeting_type_autosave(user_id) when is_integer(user_id) and user_id > 0 do
+    Helpers.check_with_logging(
+      "meeting_type_autosave:#{user_id}",
+      600,
+      1_800_000,
+      "meeting type autosave",
+      to_string(user_id)
+    )
+  end
+
+  def check_meeting_type_autosave(user_id),
+    do: Helpers.invalid_user_id("meeting type autosave", user_id)
+
   @spec check_avatar_upload(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_avatar_upload(user_id) when is_integer(user_id) and user_id > 0 do

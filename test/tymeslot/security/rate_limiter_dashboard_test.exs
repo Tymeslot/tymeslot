@@ -336,6 +336,46 @@ defmodule Tymeslot.Security.RateLimiterDashboardTest do
   end
 
   # ---------------------------------------------------------------------------
+  # check_meeting_type_autosave_rate_limit/1 — 600 per 30 minutes
+  # ---------------------------------------------------------------------------
+
+  describe "check_meeting_type_autosave_rate_limit/1" do
+    test "is far more permissive than the manual write limit" do
+      user_id = 11_551
+
+      # Comfortably past the 60-write manual limit without tripping.
+      for _i <- 1..120 do
+        assert :ok = RateLimiter.check_meeting_type_autosave_rate_limit(user_id)
+      end
+    end
+
+    test "blocks requests exceeding the limit" do
+      user_id = 11_552
+
+      for _i <- 1..600, do: RateLimiter.check_meeting_type_autosave_rate_limit(user_id)
+
+      assert {:error, :rate_limited, message} =
+               RateLimiter.check_meeting_type_autosave_rate_limit(user_id)
+
+      assert message =~ "600"
+      assert message =~ "30 minutes"
+      assert message =~ "meeting type autosave"
+    end
+
+    test "is scoped per user" do
+      user_id_1 = 11_553
+      user_id_2 = 11_554
+
+      for _i <- 1..600, do: RateLimiter.check_meeting_type_autosave_rate_limit(user_id_1)
+
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check_meeting_type_autosave_rate_limit(user_id_1)
+
+      assert :ok = RateLimiter.check_meeting_type_autosave_rate_limit(user_id_2)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # check_avatar_upload_rate_limit/1 — 20 per hour
   # ---------------------------------------------------------------------------
 
