@@ -12,6 +12,14 @@ defmodule TymeslotWeb.SessionController do
 
   require Logger
 
+  # Shown when a verification link's token is no longer in the database — most
+  # commonly because a newer verification email was requested (each request
+  # rotates the token), but also for already-used or malformed links.
+  @link_superseded_message "This verification link is no longer valid. If you've requested a newer verification email, please open the link in the most recent one."
+
+  # Shown when the token is still on record but its 24-hour validity window lapsed.
+  @link_expired_message "This verification link has expired. Please request a new verification email to continue."
+
   @doc """
   Creates a new session for the user after authentication.
   This is called by LiveView after successful authentication to establish HTTP session.
@@ -101,7 +109,7 @@ defmodule TymeslotWeb.SessionController do
     case Config.user_token_queries_module().get_user_by_verification_token(token) do
       {:error, :not_found} ->
         conn
-        |> put_flash(:error, "The email verification link is invalid or has expired.")
+        |> put_flash(:error, @link_superseded_message)
         |> redirect(to: ~p"/auth/login")
 
       {:ok, user_before_verification} ->
@@ -119,11 +127,18 @@ defmodule TymeslotWeb.SessionController do
               current_ip
             )
 
+          {:error, :token_expired} ->
+            Logger.warning("Email verification token expired")
+
+            conn
+            |> put_flash(:error, @link_expired_message)
+            |> redirect(to: ~p"/auth/login")
+
           {:error, reason} ->
             Logger.error("Invalid email verification token", reason: inspect(reason))
 
             conn
-            |> put_flash(:error, "The email verification link is invalid or has expired.")
+            |> put_flash(:error, @link_superseded_message)
             |> redirect(to: ~p"/auth/login")
         end
     end
