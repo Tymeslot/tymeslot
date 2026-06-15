@@ -106,7 +106,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   def validate(domain, type, config) do
     case get(domain, type) do
       %Descriptor{provider_module: mod} when is_atom(mod) and mod != nil ->
-        if function_exported?(mod, :validate_config, 1) do
+        if callback_exported?(mod, :validate_config, 1) do
           # credo:disable-for-next-line Credo.Check.Refactor.Apply
           apply(mod, :validate_config, [config])
         else
@@ -132,7 +132,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   def test_connection(:calendar, type, config) do
     case Tymeslot.Integrations.Calendar.Providers.ProviderRegistry.get_provider(type) do
       {:ok, mod} ->
-        if function_exported?(mod, :test_connection, 1) do
+        if callback_exported?(mod, :test_connection, 1) do
           mod.test_connection(config)
         else
           {:error, :not_supported}
@@ -156,6 +156,14 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   end
 
   # Internal helpers
+
+  # function_exported?/3 returns false for modules that haven't been loaded yet,
+  # which would silently fall back to defaults (or skip validation) for a
+  # provider whose module simply hasn't been touched in this runtime yet.
+  # Force-load first so the check reflects what the module actually exports.
+  defp callback_exported?(module, fun, arity) do
+    Code.ensure_loaded?(module) and function_exported?(module, fun, arity)
+  end
 
   defp domain_provider_types(:video) do
     Tymeslot.Integrations.Video.ProviderConfig.all_providers_with_dev()
@@ -202,7 +210,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   end
 
   defp display_name(:video, type, mod) do
-    if function_exported?(mod, :display_name, 0) do
+    if callback_exported?(mod, :display_name, 0) do
       mod.display_name()
     else
       Tymeslot.Integrations.Video.ProviderConfig.display_name(type)
@@ -210,7 +218,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   end
 
   defp display_name(:calendar, type, mod) do
-    if function_exported?(mod, :display_name, 0) do
+    if callback_exported?(mod, :display_name, 0) do
       mod.display_name()
     else
       Tymeslot.Integrations.Calendar.ProviderConfig.display_name(type)
@@ -218,7 +226,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   end
 
   defp schema_for(mod) do
-    if function_exported?(mod, :config_schema, 0) do
+    if callback_exported?(mod, :config_schema, 0) do
       mod.config_schema()
     else
       %{}
@@ -226,7 +234,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   end
 
   defp capabilities_for(mod) do
-    if function_exported?(mod, :capabilities, 0) do
+    if callback_exported?(mod, :capabilities, 0) do
       mod.capabilities()
     else
       %{}
@@ -234,7 +242,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   end
 
   defp oauth_flag(:video, type, mod) do
-    if function_exported?(mod, :oauth?, 0) do
+    if callback_exported?(mod, :oauth?, 0) do
       mod.oauth?()
     else
       type in Tymeslot.Integrations.Video.ProviderConfig.oauth_providers()
@@ -242,7 +250,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   end
 
   defp oauth_flag(:calendar, type, mod) do
-    if function_exported?(mod, :oauth?, 0) do
+    if callback_exported?(mod, :oauth?, 0) do
       mod.oauth?()
     else
       type in Tymeslot.Integrations.Calendar.ProviderConfig.oauth_providers()
@@ -250,7 +258,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   end
 
   defp setup_component_for(mod) do
-    if function_exported?(mod, :setup_component, 0) do
+    if callback_exported?(mod, :setup_component, 0) do
       mod.setup_component()
     else
       nil
