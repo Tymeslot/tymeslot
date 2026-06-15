@@ -88,13 +88,11 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     end
   end
 
-  # Dialyzer: :inet.gethostname/0 is typed {:ok, hostname()} but the Erlang
-  # docs allow {:error, posix()} — keep the fallback for hostile environments.
-  @dialyzer {:nowarn_function, hostname: 0}
+  # :inet.gethostname/0 is contractually {:ok, hostname()} — every backend path
+  # falls back to {:ok, "nohost.nodomain"} rather than erroring, so there is no
+  # {:error, _} clause to handle (the posix() error belongs to the /1 arity).
   defp hostname do
-    case :inet.gethostname() do
-      {:ok, name} -> to_string(name)
-      {:error, _reason} -> "unknown"
-    end
+    {:ok, name} = :inet.gethostname()
+    to_string(name)
   end
 end
