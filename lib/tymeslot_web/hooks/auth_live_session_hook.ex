@@ -27,8 +27,6 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
 
   alias Tymeslot.Auth.Authentication
 
-  require Logger
-
   @doc """
   Handle the on_mount callback for the given hook.
 

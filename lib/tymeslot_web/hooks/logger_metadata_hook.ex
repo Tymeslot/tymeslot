@@ -13,8 +13,6 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHook do
 
   alias Tymeslot.Infrastructure.CorrelationId
 
-  require Logger
-
   @doc """
   Sets `correlation_id` and `user_id` in Logger metadata for the LiveView process.
 

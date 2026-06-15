@@ -19,8 +19,6 @@ defmodule Mix.Tasks.MirotalkProdSmoke do
 
   use Mix.Task
 
-  require Logger
-
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
 
   @shortdoc "Create MiroTalk room + probe organizer/participant join links"

@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
     router: TymeslotWeb.Router,
     statics: TymeslotWeb.static_paths()
 
-  require Logger
   import Phoenix.LiveView
   import Phoenix.Component
   alias Tymeslot.Auth

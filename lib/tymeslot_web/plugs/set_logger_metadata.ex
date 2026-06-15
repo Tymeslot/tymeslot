@@ -3,8 +3,6 @@ defmodule TymeslotWeb.Plugs.SetLoggerMetadata do
 
   @behaviour Plug
 
-  require Logger
-
   @impl Plug
   @spec init(keyword()) :: keyword()
   def init(opts), do: opts

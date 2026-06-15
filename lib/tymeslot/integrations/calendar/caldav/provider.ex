@@ -18,8 +18,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
   alias Tymeslot.Security.RateLimiter
 
-  require Logger
-
   @impl Tymeslot.Integrations.Calendar.Provider
   def provider_type, do: :caldav
 

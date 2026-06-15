@@ -9,8 +9,6 @@ defmodule Tymeslot.Auth.OAuth.GenericOAuth do
 
   @behaviour Tymeslot.Auth.OAuth.ProviderBehaviour
 
-  require Logger
-
   alias OAuth2.Client
   alias Tymeslot.Auth.OAuth.Helper
 
