@@ -3,8 +3,6 @@ defmodule Tymeslot.Payments.Webhooks.WebhookRegistry do
   Registry for webhook event handlers.
   """
 
-  require Logger
-
   @webhook_handlers [
     Tymeslot.Payments.Webhooks.CheckoutSessionHandler,
     Tymeslot.Payments.Webhooks.CheckoutSessionExpiredHandler,

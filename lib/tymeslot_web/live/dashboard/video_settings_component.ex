@@ -23,8 +23,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
-  require Logger
-
   @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,

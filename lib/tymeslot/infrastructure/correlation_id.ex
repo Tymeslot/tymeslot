@@ -6,8 +6,6 @@ defmodule Tymeslot.Infrastructure.CorrelationId do
   making debugging and monitoring significantly easier.
   """
 
-  require Logger
-
   alias Phoenix.Component
   alias Phoenix.LiveView.Socket
   alias Plug.Conn

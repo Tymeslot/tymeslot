@@ -9,8 +9,6 @@ defmodule Tymeslot.Auth.Authentication do
   alias Tymeslot.Infrastructure.StructuredLogger
   alias Tymeslot.Security.{InputProcessor, Password, RateLimiter, SecurityLogger}
 
-  require Logger
-
   @type conn :: Plug.Conn.t()
 
   @doc """

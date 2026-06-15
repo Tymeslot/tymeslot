@@ -3,8 +3,6 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   Internal handlers for EmailWorker actions.
   """
 
-  require Logger
-
   alias Tymeslot.Workers.EmailWorkerHandlers.AdminEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.AuthEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails

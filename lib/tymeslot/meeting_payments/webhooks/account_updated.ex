@@ -13,8 +13,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdated do
   end state.
   """
 
-  require Logger
-
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.Telemetry
 

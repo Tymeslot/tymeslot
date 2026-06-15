@@ -6,7 +6,6 @@ defmodule Tymeslot.Infrastructure.ValidationHelpers do
   across different bounded contexts in the application.
   """
 
-  require Logger
   alias Phoenix.Component
   alias Phoenix.LiveView.Socket
   alias Plug.Conn

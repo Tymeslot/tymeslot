@@ -4,7 +4,6 @@ defmodule Tymeslot.Infrastructure.ResilientCall do
   """
 
   alias Tymeslot.Infrastructure.{CircuitBreaker, Retry}
-  require Logger
 
   @doc """
   Executes a function with both circuit breaker and retry logic.

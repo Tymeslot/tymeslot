@@ -4,7 +4,6 @@ defmodule Tymeslot.Security.Token do
   Utilities for generating secure tokens for authentication (session, verification, etc).
   """
 
-  require Logger
   alias Plug.Crypto
 
   @session_token_validity_hours 24

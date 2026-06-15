@@ -11,8 +11,6 @@ defmodule Tymeslot.Auth.AuthActions do
   alias Tymeslot.Infrastructure.Config
   alias TymeslotWeb.Helpers.ClientIP
 
-  require Logger
-
   @type signup_params :: Tymeslot.Auth.Validation.signup_params()
 
   @registration_disabled_message "Registration is currently disabled."

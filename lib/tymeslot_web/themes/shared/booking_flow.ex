@@ -13,8 +13,6 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
   alias TymeslotWeb.Live.Scheduling.BookingConfig
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
-  require Logger
-
   @type transition_fun :: (Phoenix.LiveView.Socket.t(), atom(), map() ->
                              Phoenix.LiveView.Socket.t())
 
