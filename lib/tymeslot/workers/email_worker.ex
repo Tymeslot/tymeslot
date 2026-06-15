@@ -25,8 +25,8 @@ defmodule Tymeslot.Workers.EmailWorker do
   require Logger
 
   # Configuration
-  # 30 seconds
-  @email_timeout_ms 30_000
+  # 30 seconds — overridable via config (e.g. lowered in tests)
+  @default_email_timeout_ms 30_000
   # 1 second base for exponential backoff
   @backoff_base_ms 1_000
 
@@ -113,25 +113,34 @@ defmodule Tymeslot.Workers.EmailWorker do
   end
 
   defp execute_email_job_with_timeout(action, args, job) do
+    timeout_ms = email_timeout_ms()
+
     task =
       Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
         EmailWorkerHandlers.execute_email_action(action, args)
       end)
 
-    case Task.yield(task, @email_timeout_ms) || Task.shutdown(task) do
+    case Task.yield(task, timeout_ms) || Task.shutdown(task) do
       {:ok, result} ->
         handle_result(result, job)
 
       nil ->
-        Logger.error("Email job timed out",
+        # A hard timeout is ambiguous — the message may already be on the wire.
+        # Discard rather than letting Oban retry, which would re-send a possibly
+        # delivered email. A genuinely lost mail can be re-requested by the user.
+        Logger.warning("Email job timed out; discarding to avoid duplicate sends",
           action: action,
-          timeout_ms: @email_timeout_ms,
+          timeout_ms: timeout_ms,
           job_id: job.id,
           attempt: job.attempt
         )
 
-        {:error, "Email sending timed out"}
+        {:discard, "Email sending timed out"}
     end
+  end
+
+  defp email_timeout_ms do
+    Application.get_env(:tymeslot, :email_timeout_ms, @default_email_timeout_ms)
   end
 
   defp calculate_backoff(attempt) do

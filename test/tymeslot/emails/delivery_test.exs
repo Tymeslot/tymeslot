@@ -68,4 +68,24 @@ defmodule Tymeslot.Emails.DeliveryTest do
       assert {:ok, _result} = Delivery.deliver(email)
     end
   end
+
+  describe "timeout_error?/1" do
+    test "recognises a bare :timeout atom" do
+      assert Delivery.timeout_error?(:timeout)
+    end
+
+    test "recognises a string mentioning a timeout, case-insensitively" do
+      assert Delivery.timeout_error?("connection Timeout while sending")
+    end
+
+    test "recognises the nested tuple shapes gen_smtp produces" do
+      assert Delivery.timeout_error?({:retries_exceeded, {:network_failure, ~c"host", :timeout}})
+    end
+
+    test "does not classify unrelated failures as timeouts" do
+      refute Delivery.timeout_error?(:econnrefused)
+      refute Delivery.timeout_error?("550 mailbox unavailable")
+      refute Delivery.timeout_error?({:permanent_failure, ~c"host", ~c"rejected"})
+    end
+  end
 end
