@@ -281,36 +281,28 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
   end
 
   defp deliver_dispute_email(template_fun, data) do
-    admin_email = get_admin_email()
+    email = get_admin_email()
+    template = Application.get_env(:tymeslot, :dispute_alert_template)
 
-    case admin_email do
-      nil ->
-        Logger.warning("No admin email configured for dispute alerts")
-        :ok
+    if template && Code.ensure_loaded?(template) do
+      email_struct = apply(template, template_fun, [email, data])
 
-      email ->
-        template = Application.get_env(:tymeslot, :dispute_alert_template)
-
-        if template && Code.ensure_loaded?(template) do
-          email_struct = apply(template, template_fun, [email, data])
-
-          case Mailer.deliver(email_struct) do
-            {:ok, _result} ->
-              Logger.info("Dispute email sent", template: template_fun, email: email)
-              :ok
-
-            {:error, reason} ->
-              Logger.error("Failed to send dispute email",
-                template: template_fun,
-                reason: inspect(reason)
-              )
-
-              :ok
-          end
-        else
-          Logger.debug("Dispute alert template not configured (Standalone mode)")
+      case Mailer.deliver(email_struct) do
+        {:ok, _result} ->
+          Logger.info("Dispute email sent", template: template_fun, email: email)
           :ok
-        end
+
+        {:error, reason} ->
+          Logger.error("Failed to send dispute email",
+            template: template_fun,
+            reason: inspect(reason)
+          )
+
+          :ok
+      end
+    else
+      Logger.debug("Dispute alert template not configured (Standalone mode)")
+      :ok
     end
   end
 

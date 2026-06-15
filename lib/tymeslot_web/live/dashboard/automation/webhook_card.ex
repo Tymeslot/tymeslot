@@ -245,8 +245,6 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
     """
   end
 
-  defp format_datetime(nil), do: "Never"
-
   defp format_datetime(%DateTime{} = dt) do
     Calendar.strftime(dt, "%B %d, %Y at %I:%M %p")
   end

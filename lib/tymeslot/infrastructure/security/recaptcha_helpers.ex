@@ -140,7 +140,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
         # Checks disabled; allow signup
         :ok
 
-      enabled and not active ->
+      not active ->
         # Enabled but keys missing; log and allow signup
         log_signup_disabled_due_to_missing_keys(metadata)
         :ok
@@ -228,7 +228,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
         # Checks disabled; allow booking
         :ok
 
-      enabled and not active ->
+      not active ->
         # Enabled but keys missing; log and allow booking
         log_booking_disabled_due_to_missing_keys(metadata)
         :ok

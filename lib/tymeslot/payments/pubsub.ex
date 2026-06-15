@@ -139,11 +139,8 @@ defmodule Tymeslot.Payments.PubSub do
         :ok
 
       {:error, reason} ->
-        user_id = Map.get(message, :user_id)
-
         Logger.error("PubSub broadcast failed for payment_event",
           event: event_type,
-          user_id: user_id,
           reason: inspect(reason)
         )
 
@@ -153,8 +150,7 @@ defmodule Tymeslot.Payments.PubSub do
           context: %{
             event: :payment_event,
             topic: topic,
-            event_type: event_type,
-            user_id: user_id
+            event_type: event_type
           }
         )
 

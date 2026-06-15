@@ -132,14 +132,10 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
   defp maybe_put_reason(payload, nil), do: payload
 
   defp maybe_put_reason(payload, reason) do
-    case ReasonNormaliser.normalise(reason) do
-      nil ->
-        payload
+    %{code: code, message: message} = ReasonNormaliser.normalise(reason)
 
-      %{code: code, message: message} ->
-        payload
-        |> Map.put(:reason_code, code)
-        |> Map.put(:reason_message, message)
-    end
+    payload
+    |> Map.put(:reason_code, code)
+    |> Map.put(:reason_message, message)
   end
 end

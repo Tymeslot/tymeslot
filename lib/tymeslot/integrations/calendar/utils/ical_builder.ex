@@ -283,10 +283,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     "DTSTART:#{format_datetime(DateTime.shift_zone!(dt, "Etc/UTC"))}"
   end
 
-  defp build_dtstart(%{start_time: start_time}) do
-    "DTSTART:#{format_datetime(start_time)}"
-  end
-
   defp build_dtend(%{end_time: %Date{} = date}) do
     "DTEND;VALUE=DATE:#{format_date(date)}"
   end
@@ -302,10 +298,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp build_dtend(%{end_time: %DateTime{} = dt}) do
     "DTEND:#{format_datetime(DateTime.shift_zone!(dt, "Etc/UTC"))}"
-  end
-
-  defp build_dtend(%{end_time: end_time}) do
-    "DTEND:#{format_datetime(end_time)}"
   end
 
   defp build_transp(%{transparency: t}) when t in [:transparent, "transparent", "TRANSPARENT"],
@@ -520,10 +512,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp maybe_add_property(properties, :recurrence, %{recurrence: recurrence})
        when is_map(recurrence) do
-    case build_rrule(recurrence) do
-      nil -> properties
-      rrule -> properties ++ [rrule]
-    end
+    properties ++ [build_rrule(recurrence)]
   end
 
   defp maybe_add_property(properties, _key, _value), do: properties

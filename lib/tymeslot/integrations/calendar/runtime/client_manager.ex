@@ -182,8 +182,11 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
     with {:ok, provider} <- ProviderConfig.parse_known(integration.provider),
          provider_module when is_atom(provider_module) and provider_module != nil <-
            ProviderConfig.get_provider_module(provider),
-         true <- function_exported?(provider_module, :build_client_configs, 1) do
-      provider_module.build_client_configs(integration)
+         true <- callback_exported?(provider_module, :build_client_configs, 1) do
+      # Optional callback resolved at runtime via the guard above; apply/3
+      # keeps the static type checker from flagging providers that omit it.
+      # credo:disable-for-next-line Credo.Check.Refactor.Apply
+      apply(provider_module, :build_client_configs, [integration])
       |> Enum.map(&create_adapter_client(provider, &1))
       |> Enum.reject(&is_nil/1)
     else
@@ -206,12 +209,20 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
     with {:ok, provider} <- ProviderConfig.parse_known(integration.provider),
          provider_module when is_atom(provider_module) and provider_module != nil <-
            ProviderConfig.get_provider_module(provider),
-         true <- function_exported?(provider_module, :build_booking_client_config, 1),
-         %{} = config <- provider_module.build_booking_client_config(integration) do
+         true <- callback_exported?(provider_module, :build_booking_client_config, 1),
+         # credo:disable-for-next-line Credo.Check.Refactor.Apply
+         %{} = config <- apply(provider_module, :build_booking_client_config, [integration]) do
       create_adapter_client(provider, config)
     else
       _other -> nil
     end
+  end
+
+  # function_exported?/3 returns false for modules that haven't been loaded yet,
+  # which silently turns optional callbacks into no-ops. Force-load first so the
+  # check reflects what the module actually exports.
+  defp callback_exported?(module, fun, arity) do
+    Code.ensure_loaded?(module) and function_exported?(module, fun, arity)
   end
 
   defp create_adapter_client(provider_type, config) do
