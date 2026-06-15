@@ -29,10 +29,11 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
       Tymeslot.Features.DefaultAccessChecker
     )
 
+    previous_payments = Application.get_env(:tymeslot, :meeting_payments_enabled)
     Application.put_env(:tymeslot, :meeting_payments_enabled, true)
 
     on_exit(fn ->
-      Application.put_env(:tymeslot, :meeting_payments_enabled, false)
+      Application.put_env(:tymeslot, :meeting_payments_enabled, previous_payments)
       Application.put_env(:tymeslot, :feature_access_checker, previous_checker)
     end)
 
