@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
         <span class="block mt-1">{state_message(@account, @state)}</span>
       </.info_box>
 
-      <form :if={@state == :incomplete} action={~p"/dashboard/payments/connect"} method="post">
+      <form id="stripe-connect-continue-form" :if={@state == :incomplete} action={~p"/dashboard/payments/connect"} method="post">
         <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
         <.action_button type="submit" variant={:primary}>Continue onboarding</.action_button>
       </form>

@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.ConnectCta do
         Connect Stripe to start charging for meetings. Money goes directly
         to your Stripe account.
       </p>
-      <form action={~p"/dashboard/payments/connect"} method="post">
+      <form id="stripe-connect-form" action={~p"/dashboard/payments/connect"} method="post">
         <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
         <.action_button type="submit" variant={:primary}>Connect Stripe</.action_button>
       </form>

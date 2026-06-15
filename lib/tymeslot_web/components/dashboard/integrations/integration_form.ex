@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.IntegrationForm do
         </div>
       <% end %>
 
-      <form phx-submit={@submit_event} phx-target={@target} class="space-y-4">
+      <form id={"integration-form-#{@target}"} phx-submit={@submit_event} phx-target={@target} class="space-y-4">
         {render_slot(@inner_block)}
 
         <%= if @show_errors and FormValidationHelpers.field_errors(@form_errors, :base) != [] do %>

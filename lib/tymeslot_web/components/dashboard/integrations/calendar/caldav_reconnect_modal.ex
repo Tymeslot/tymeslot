@@ -192,7 +192,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
 
   defp credentials_form(assigns) do
     ~H"""
-    <form phx-submit="reconnect_caldav_discover" phx-target={@target} class="space-y-5">
+    <form id="caldav-reconnect-credentials-form" phx-submit="reconnect_caldav_discover" phx-target={@target} class="space-y-5">
       <p class="text-sm text-tymeslot-500">
         Confirm or update the server URL and credentials for this integration.
         You'll be able to review and adjust the synced calendars on the next step.
@@ -276,7 +276,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
 
   defp calendar_selection(assigns) do
     ~H"""
-    <form phx-submit="reconnect_caldav_submit" phx-target={@target} class="space-y-5">
+    <form id="caldav-reconnect-calendars-form" phx-submit="reconnect_caldav_submit" phx-target={@target} class="space-y-5">
       <p class="text-sm text-tymeslot-500">
         Select the calendars you want to sync for availability checks.
         Calendars you previously synced are already ticked — untick to stop

@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <div class="mb-3">
-        <form phx-change="update_create_time" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm text-tymeslot-600">
+        <form id="create-event-time-form" phx-change="update_create_time" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm text-tymeslot-600">
           <input
             type="date"
             id="create-event-start-date"
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               </button>
             </span>
           </div>
-          <form phx-submit="add_create_attendee" phx-target={@myself} class="flex gap-2">
+          <form id="create-add-attendee-form" phx-submit="add_create_attendee" phx-target={@myself} class="flex gap-2">
             <input
               type="email"
               id="create-attendee-email"

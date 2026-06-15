@@ -126,7 +126,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
     ~H"""
     <div id="username-form-container">
       <.section_header level={3} title="Custom URL" class="mb-4" />
-      <form phx-submit="update_username" phx-change="check_username_availability" phx-target={@myself} class="space-y-4">
+      <form id="username-form" phx-submit="update_username" phx-change="check_username_availability" phx-target={@myself} class="space-y-4">
         <div>
           <div class="flex flex-col sm:flex-row items-stretch gap-4">
             <div class="flex-1">
