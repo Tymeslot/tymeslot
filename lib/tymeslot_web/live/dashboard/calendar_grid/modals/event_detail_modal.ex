@@ -22,6 +22,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
   @spec event_detail_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def event_detail_modal(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :read_only_attendees,
+        List.wrap(Map.get(assigns.selected_event, :attendees))
+      )
+
     ~H"""
     <.modal
       id="event-detail-modal"
@@ -275,11 +282,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           </div>
           <%!-- Read-only attendee display --%>
           <div :if={!@editable}>
-            <div :for={attendee <- Enum.take(@selected_event.attendees || [], 5)} class="text-token-sm text-tymeslot-700 leading-snug">
+            <div :for={attendee <- Enum.take(@read_only_attendees, 5)} class="text-token-sm text-tymeslot-700 leading-snug">
               <%= attendee["name"] || attendee["email"] %>
               <span :if={attendee["name"] && attendee["email"] && attendee["name"] != attendee["email"]} class="text-token-xs text-tymeslot-400 ml-1"><%= attendee["email"] %></span>
             </div>
-            <p :if={length(@selected_event.attendees || []) > 5} class="text-token-xs text-tymeslot-400 mt-1">+<%= length(@selected_event.attendees || []) - 5 %> more</p>
+            <p :if={length(@read_only_attendees) > 5} class="text-token-xs text-tymeslot-400 mt-1">+<%= length(@read_only_attendees) - 5 %> more</p>
           </div>
         </div>
       </div>

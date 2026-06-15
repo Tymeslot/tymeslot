@@ -220,8 +220,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
     end
   end
 
-  defp calendar_display_name(%{calendar_integration: nil}), do: "Calendar"
-
   defp calendar_display_name(%{calendar_integration: integration} = type) do
     calendar =
       Enum.find(integration.calendar_list || [], fn cal ->

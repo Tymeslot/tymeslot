@@ -122,5 +122,4 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColorPi
   defp current_custom_hex(_customization), do: ThemeCustomizations.default_custom_palette_seed()
 
   defp preset_swatch?(value) when is_binary(value), do: String.downcase(value) in @swatches
-  defp preset_swatch?(_other), do: false
 end

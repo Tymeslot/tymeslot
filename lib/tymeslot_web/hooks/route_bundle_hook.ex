@@ -34,8 +34,18 @@ defmodule TymeslotWeb.Hooks.RouteBundleHook do
   # - "public" -> Public booking hooks (loaded via scheduling_root layout directly)
   # - nil -> Core hooks only
   #
-  # Security: Only returns allowlisted bundle names to prevent arbitrary script loading
+  # Security: Only returns allowlisted bundle names to prevent arbitrary script loading.
+  #
+  # @allowed_bundles deliberately lists more bundle names than determine_bundle/1
+  # currently returns ("public"/"saas" have no producing clause yet) so that any
+  # future bundle wired into the case below is validated against the allowlist
+  # automatically. OTP 28's dialyzer flags the resulting never-true comparisons as
+  # `:exact_compare`; the redundancy is intentional defence-in-depth, so the
+  # allowlist must not be narrowed to silence it. dialyxir 1.4.7 cannot pretty-print
+  # the `:exact_compare` subtype nor filter it via .dialyzer_ignore.exs, so we
+  # suppress it at the engine level here.
   @allowed_bundles ~w(auth dashboard public saas)
+  @dialyzer {:nowarn_function, determine_bundle: 1}
   defp determine_bundle(view_module) do
     bundle =
       case view_module do

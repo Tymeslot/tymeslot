@@ -477,8 +477,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
     """
   end
 
-  defp format_sync_age(nil), do: "never synced"
-
   defp format_sync_age(datetime) do
     diff = DateTime.diff(DateTime.utc_now(), datetime, :second)
 
