@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   Component for displaying meeting type cards with toggle and action buttons.
   """
   use Phoenix.Component
+  import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias TymeslotWeb.Components.Icons.ProviderIcon
 
@@ -11,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   """
   attr :type, :map, required: true
   attr :myself, :any, required: true
+  attr :currency, :string, default: "eur"
   attr :icon_size, :string, default: "mini", values: ["compact", "medium", "large", "mini"]
 
   @spec meeting_type_card(map()) :: Phoenix.LiveView.Rendered.t()
@@ -54,6 +56,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               </svg>
               {@type.duration_minutes} min
             </span>
+            <%= if paid?(@type) do %>
+              <span class="flex items-center flex-shrink-0 font-medium text-emerald-600">
+                <span class="hero-banknotes-mini w-3.5 h-3.5 mr-1" />
+                {format_amount(@type.price_cents, @currency)}
+              </span>
+            <% end %>
             <%= if @type.allow_video do %>
               <span class="flex items-center min-w-0">
                 <%= if @type.video_integration do %>
@@ -103,6 +111,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
                 <span class="ml-1 text-tymeslot-500 flex-shrink-0">
                   ({calendar_display_name(@type)})
                 </span>
+              </span>
+            <% end %>
+            <%= if custom_question_count(@type) > 0 do %>
+              <span class="flex items-center flex-shrink-0 text-tymeslot-500">
+                <span class="hero-question-mark-circle-mini w-3.5 h-3.5 mr-1" />
+                {custom_questions_label(@type)}
               </span>
             <% end %>
           </div>
@@ -191,6 +205,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
       </div>
     </div>
     """
+  end
+
+  defp paid?(%{payment_required: true, price_cents: cents}) when is_integer(cents), do: true
+  defp paid?(_type), do: false
+
+  defp custom_question_count(%{custom_fields: fields}) when is_list(fields), do: length(fields)
+  defp custom_question_count(_type), do: 0
+
+  defp custom_questions_label(type) do
+    case custom_question_count(type) do
+      1 -> "+1 custom question"
+      count -> "+#{count} custom questions"
+    end
   end
 
   defp calendar_display_name(%{calendar_integration: nil}), do: "Calendar"

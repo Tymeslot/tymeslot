@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   use TymeslotWeb, :live_component
 
   alias Tymeslot.Dashboard.DashboardContext
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
   alias Tymeslot.Security.RateLimiter
@@ -50,8 +51,24 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       |> assign(:meeting_types, data.meeting_types)
       |> assign(:video_integrations, data.video_integrations)
       |> assign(:calendar_integrations, data.calendar_integrations)
+      |> assign(:payment_currency, host_currency(data.meeting_types, user_id))
 
     {:ok, socket}
+  end
+
+  # The host's pricing currency, used only to format the price token on paid
+  # meeting type cards. Resolved from the Stripe Connect account, and only
+  # when at least one meeting type is actually paid — unpaid lists skip the
+  # extra query and fall back to the first allowed currency.
+  defp host_currency(meeting_types, user_id) do
+    if Enum.any?(meeting_types, & &1.payment_required) do
+      case MeetingPayments.get_connect_account_for_user(user_id) do
+        %{default_currency: currency} when is_binary(currency) and currency != "" -> currency
+        _other -> "eur"
+      end
+    else
+      "eur"
+    end
   end
 
   @impl Phoenix.LiveComponent
@@ -369,6 +386,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
               meeting_types={@meeting_types}
               show_add_form={@show_add_form}
               editing_type={@editing_type}
+              currency={@payment_currency}
               parent_myself={@myself}
             />
           </div>
