@@ -11,8 +11,5 @@ defmodule Tymeslot.Repo.Migrations.AddTrackingToMeetings do
       add :referrer_host, :string
       add :tracking_params, :map, default: %{}, null: false
     end
-
-    create index(:meetings, [:utm_source])
-    create index(:meetings, [:utm_campaign])
   end
 end

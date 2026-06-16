@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict fgOvFznF3h80d0g7kMBCd73tBexwbZF1R5JpvptfvFUYwogjcfumxeGqdnm8oq2
+\restrict Bw76cJM04ntpdMKnzVzJEXbxmVkfaKfaeQ37b0THuHN3bLjr5PVuzJ1aHXx2I4J
 
 -- Dumped from database version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
@@ -1898,6 +1898,20 @@ CREATE INDEX analytics_events_user_id_inserted_at_index ON public.analytics_even
 
 
 --
+-- Name: analytics_events_utm_campaign_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analytics_events_utm_campaign_index ON public.analytics_events USING btree (utm_campaign);
+
+
+--
+-- Name: analytics_events_utm_source_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX analytics_events_utm_source_index ON public.analytics_events USING btree (utm_source);
+
+
+--
 -- Name: analytics_events_visitor_hash_inserted_at_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2283,6 +2297,13 @@ CREATE INDEX meetings_organizer_user_id_index ON public.meetings USING btree (or
 
 
 --
+-- Name: meetings_organizer_utm_source_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX meetings_organizer_utm_source_index ON public.meetings USING btree (organizer_user_id, utm_source) WHERE (utm_source IS NOT NULL);
+
+
+--
 -- Name: meetings_reminder_email_sent_start_time_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2329,20 +2350,6 @@ CREATE INDEX meetings_status_start_time_index ON public.meetings USING btree (st
 --
 
 CREATE UNIQUE INDEX meetings_uid_index ON public.meetings USING btree (uid);
-
-
---
--- Name: meetings_utm_campaign_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX meetings_utm_campaign_index ON public.meetings USING btree (utm_campaign);
-
-
---
--- Name: meetings_utm_source_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX meetings_utm_source_index ON public.meetings USING btree (utm_source);
 
 
 --
@@ -3171,7 +3178,7 @@ ALTER TABLE ONLY public.weekly_availability
 -- PostgreSQL database dump complete
 --
 
-\unrestrict fgOvFznF3h80d0g7kMBCd73tBexwbZF1R5JpvptfvFUYwogjcfumxeGqdnm8oq2
+\unrestrict Bw76cJM04ntpdMKnzVzJEXbxmVkfaKfaeQ37b0THuHN3bLjr5PVuzJ1aHXx2I4J
 
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180112);
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180204);
@@ -3309,3 +3316,4 @@ INSERT INTO public."schema_migrations" (version) VALUES (20260516141548);
 INSERT INTO public."schema_migrations" (version) VALUES (20260519102624);
 INSERT INTO public."schema_migrations" (version) VALUES (20260527165324);
 INSERT INTO public."schema_migrations" (version) VALUES (20260527173402);
+INSERT INTO public."schema_migrations" (version) VALUES (20260616144719);
