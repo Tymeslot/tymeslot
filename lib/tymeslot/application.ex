@@ -69,13 +69,7 @@ defmodule Tymeslot.Application do
       {DNSCluster, query: Application.get_env(:tymeslot, :dns_cluster_query) || :ignore},
       {PubSub, name: Tymeslot.PubSub},
       # Start the Finch HTTP client (used by Req for all HTTP requests).
-      # pool_max_idle_time evicts connections that remote servers silently
-      # close after their keep-alive timeout, preventing "socket closed" errors.
-      # conn_opts timeout caps the TCP connect handshake at 10s, preventing
-      # OS-level TCP timeout (75-120s) from dominating when endpoints are unreachable.
-      {Finch,
-       name: Tymeslot.Finch,
-       pools: %{default: [pool_max_idle_time: 30_000, conn_opts: [timeout: 10_000]]}},
+      {Finch, name: Tymeslot.Finch, pools: %{default: finch_default_pool()}},
       # Start token refresh lock manager
       {Lock, []},
       # Task Supervisor for async operations
@@ -166,6 +160,25 @@ defmodule Tymeslot.Application do
         Logger.error("Failed to start Tymeslot application", reason: inspect(reason))
         error
     end
+  end
+
+  # Connection pool for all outbound HTTP (Req → Finch). `size`/`count` are read
+  # from config so deployments with more headroom (SaaS) can run a larger per-host
+  # pool than a small self-hosted Core box; the defaults below are the safe Core
+  # values and SaaS overrides them via `config :tymeslot, :finch_default_pool`.
+  #
+  # `conn_max_idle_time` (NOT `pool_max_idle_time`) evicts individual connections
+  # the remote silently closed after its keep-alive timeout, preventing "socket
+  # closed" errors. `pool_max_idle_time` would instead tear the whole pool down
+  # when idle and churn pool restarts — surfacing as transient
+  # `:pool_not_available` errors when traffic resumes — so it is left at its
+  # `:infinity` default. `conn_opts` caps the TCP connect handshake at 10s,
+  # preventing OS-level TCP timeouts (75-120s) from dominating when an endpoint
+  # is unreachable.
+  defp finch_default_pool do
+    [size: 50, count: 1, conn_max_idle_time: 30_000]
+    |> Keyword.merge(Application.get_env(:tymeslot, :finch_default_pool, []))
+    |> Keyword.put(:conn_opts, timeout: 10_000)
   end
 
   defp validate_config! do
