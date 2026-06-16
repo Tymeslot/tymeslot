@@ -173,6 +173,15 @@ defmodule TymeslotWeb.AuthLiveTest do
   end
 
   describe "Registration" do
+    setup do
+      # The signup form only renders the terms checkbox and enforces the
+      # "must be accepted" validation when legal agreements are enforced.
+      original = Application.get_env(:tymeslot, :enforce_legal_agreements)
+      Application.put_env(:tymeslot, :enforce_legal_agreements, true)
+      on_exit(fn -> Application.put_env(:tymeslot, :enforce_legal_agreements, original) end)
+      :ok
+    end
+
     test "renders signup page", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/auth/signup")
       assert has_element?(view, "#signup-form")

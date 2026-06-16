@@ -76,18 +76,16 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
     assert Repo.aggregate(UserSchema, :count, :id) == 0
 
     Enum.each(1..5, fn _iteration ->
-      html =
-        view
-        |> element("button", "Resend Verification Email")
-        |> render_click()
-
+      # The button enters a 60s cooldown after each resend and a click during the
+      # cooldown is ignored server-side, so trigger the event directly and drive the
+      # countdown back to zero before the next attempt reaches the rate limiter.
+      html = render_hook(view, "resend_verification", %{})
       assert html =~ "Verification email sent! Please check your inbox."
+
+      for _tick <- 1..60, do: send(view.pid, :resend_cooldown_tick)
     end)
 
-    html =
-      view
-      |> element("button", "Resend Verification Email")
-      |> render_click()
+    html = render_hook(view, "resend_verification", %{})
 
     assert html =~ "Too many email verification attempts. Please try again later."
   end
