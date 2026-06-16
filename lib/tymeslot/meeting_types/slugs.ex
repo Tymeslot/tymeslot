@@ -8,7 +8,6 @@ defmodule Tymeslot.MeetingTypes.Slugs do
   that reaches a single meeting type without exposing the rest of a public page.
   """
 
-  alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
 
   @doc """
@@ -21,9 +20,14 @@ defmodule Tymeslot.MeetingTypes.Slugs do
   """
   @spec find_by_slug(integer(), String.t()) :: Ecto.Schema.t() | nil
   def find_by_slug(user_id, slug) do
-    Enum.find(MeetingTypes.get_active_meeting_types(user_id), fn mt ->
-      effective_slug(mt) == slug
-    end)
+    active = MeetingTypeQueries.list_active_meeting_types(user_id)
+
+    # Prefer a type whose custom `slug` field is an exact match over one that
+    # only matches via its name-derived slug. This prevents a public type from
+    # shadowing a private type (or any other type with a custom slug) when both
+    # would yield the same effective slug.
+    Enum.find(active, fn mt -> mt.slug == slug end) ||
+      Enum.find(active, fn mt -> effective_slug(mt) == slug end)
   end
 
   @doc """
@@ -107,7 +111,7 @@ defmodule Tymeslot.MeetingTypes.Slugs do
   # excluding one, so a type doesn't conflict with itself on update).
   defp taken_slugs(user_id, exclude_id) do
     user_id
-    |> MeetingTypes.get_all_meeting_types()
+    |> MeetingTypeQueries.list_all_meeting_types()
     |> Enum.reject(fn mt -> exclude_id && mt.id == exclude_id end)
     |> Enum.map(&effective_slug/1)
     |> MapSet.new()
