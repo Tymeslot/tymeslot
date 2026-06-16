@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Endpoint do
     websocket: [
       connect_info: [
         :peer_data,
-        {:x_headers, ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "origin", "referer"]},
+        {:x_headers, ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "origin"]},
         :user_agent,
         session: @session_options
       ],
@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Endpoint do
     longpoll: [
       connect_info: [
         :peer_data,
-        {:x_headers, ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "origin", "referer"]},
+        {:x_headers, ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "origin"]},
         :user_agent,
         session: @session_options
       ]
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Endpoint do
     websocket: [
       connect_info: [
         :peer_data,
-        {:x_headers, ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "origin", "referer"]},
+        {:x_headers, ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "origin"]},
         :user_agent
       ],
       timeout: 60_000,
@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Endpoint do
     longpoll: [
       connect_info: [
         :peer_data,
-        {:x_headers, ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "origin", "referer"]},
+        {:x_headers, ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "origin"]},
         :user_agent
       ]
     ]

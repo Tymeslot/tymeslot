@@ -23,9 +23,13 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
     required: true,
     doc: "end Date (or DateTime) of the window — used to fill zero-visit days"
 
+  attr :time_zone, :string,
+    default: "Etc/UTC",
+    doc: "organizer time zone — window edges are filled in local days to match the query buckets"
+
   @spec chart(map()) :: Phoenix.LiveView.Rendered.t()
   def chart(assigns) do
-    full_series = build_series(assigns.points, assigns.from, assigns.to)
+    full_series = build_series(assigns.points, assigns.from, assigns.to, assigns.time_zone)
 
     assigns =
       assign(assigns,
@@ -74,13 +78,22 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
 
   # Build a contiguous series covering every day from `from` to `to`,
   # merging in any non-zero visit counts from the sparse `points` list.
-  defp build_series(points, from, to) do
+  defp build_series(points, from, to, time_zone) do
     visits_by_day = Map.new(points, fn p -> {p.day, p.visits} end)
 
-    Enum.map(Date.range(from, to), fn day ->
+    Enum.map(Date.range(local_date(from, time_zone), local_date(to, time_zone)), fn day ->
       %{day: day, visits: Map.get(visits_by_day, day, 0)}
     end)
   end
+
+  defp local_date(%DateTime{} = dt, time_zone) do
+    case DateTime.shift_zone(dt, time_zone) do
+      {:ok, local} -> DateTime.to_date(local)
+      {:error, _reason} -> DateTime.to_date(dt)
+    end
+  end
+
+  defp local_date(%Date{} = date, _time_zone), do: date
 
   defp max_visits([]), do: 1
   defp max_visits(series), do: max(1, Enum.max_by(series, & &1.visits).visits)

@@ -82,15 +82,30 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
         end_time: DateTime.add(base, 3600 + 60 * 60, :second)
       )
 
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      # Scope the assertions to the linkedin row so bare digits can't match
+      # unrelated markup (grid classes, SVG viewBox, padding, etc.).
+      row_html = view |> element("tr", "linkedin") |> render()
+
+      assert row_html =~ "linkedin"
+      # Cells in order: source, visits (4), bookings (2), conversion (66.7%)
+      assert row_html =~ ~r/>\s*4\s*</
+      assert row_html =~ ~r/>\s*2\s*</
+      # Conversion: 2 bookings / 3 unique visitors * 100 = 66.7%
+      assert row_html =~ "66.7%"
+    end
+  end
+
+  describe "empty / zero-data state" do
+    test "renders zeroed summary and empty-state messaging with no data", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/analytics")
 
-      assert html =~ "linkedin"
-      # 4 visits
-      assert html =~ "4"
-      # 2 bookings
-      assert html =~ "2"
-      # Conversion: 2 bookings / 3 unique visitors * 100 = 66.7%
-      assert html =~ "66.7"
+      assert html =~ "Analytics"
+      # Conversion with zero unique visitors is guarded to 0.0%
+      assert html =~ "0.0%"
+      # Both the chart and the sources table show the empty-state copy
+      assert html =~ "No traffic in this period yet."
     end
   end
 

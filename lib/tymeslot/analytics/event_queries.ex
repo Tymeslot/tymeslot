@@ -51,19 +51,32 @@ defmodule Tymeslot.Analytics.EventQueries do
     |> Repo.all()
   end
 
-  @spec visits_by_day(integer(), DateTime.t(), DateTime.t()) :: [
+  @spec visits_by_day(integer(), DateTime.t(), DateTime.t(), String.t()) :: [
           %{day: Date.t(), visits: non_neg_integer()}
         ]
-  def visits_by_day(user_id, from, to) do
+  def visits_by_day(user_id, from, to, time_zone) do
+    # Bucket by the organizer's local calendar day: `inserted_at` is UTC wall
+    # time, so reinterpret it as UTC then shift into the target zone before
+    # truncating. `selected_as/2` is required so GROUP BY/ORDER BY reference the
+    # aliased column rather than re-binding the `time_zone` parameter (which
+    # Postgres would treat as a distinct expression).
     EventSchema
     |> where([e], e.user_id == ^user_id)
     |> where([e], e.inserted_at >= ^from and e.inserted_at <= ^to)
-    |> group_by([e], fragment("date_trunc('day', ?)", e.inserted_at))
     |> select([e], %{
-      day: fragment("date_trunc('day', ?)::date", e.inserted_at),
+      day:
+        selected_as(
+          fragment(
+            "(date_trunc('day', (? AT TIME ZONE 'UTC') AT TIME ZONE ?))::date",
+            e.inserted_at,
+            ^time_zone
+          ),
+          :day
+        ),
       visits: count(e.id)
     })
-    |> order_by([e], fragment("date_trunc('day', ?)", e.inserted_at))
+    |> group_by([e], selected_as(:day))
+    |> order_by([e], selected_as(:day))
     |> Repo.all()
   end
 end

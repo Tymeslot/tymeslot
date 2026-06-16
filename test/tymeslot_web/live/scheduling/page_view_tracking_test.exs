@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
   @moduledoc """
-  Integration tests for the `Tymeslot.Analytics.PageViewHook` on_mount hook.
+  Integration tests for the `TymeslotWeb.Hooks.PageViewHook` on_mount hook.
 
   These tests exercise the full path: visiting a public scheduling URL
   triggers the LiveView mount, the hook spawns a supervised Task, and

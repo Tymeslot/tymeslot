@@ -1,4 +1,4 @@
-defmodule Tymeslot.Analytics.PageViewHook do
+defmodule TymeslotWeb.Hooks.PageViewHook do
   @moduledoc """
   LiveView `on_mount` hook that logs a `booking_page_view` event when
   a connected socket mounts on a public scheduling page.
@@ -12,37 +12,49 @@ defmodule Tymeslot.Analytics.PageViewHook do
   The actual write happens inside a supervised Task to avoid adding
   latency to the LiveView mount path. Any failure inside the Task
   is swallowed — analytics must never break the booking flow.
+
+  Only cheap, in-memory data (user agent, IP, socket ID, params,
+  session referrer) is captured before spawning the Task. The
+  database lookups for user and meeting-type context run inside the
+  Task, off the mount path.
   """
+  import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [connected?: 1, get_connect_info: 2]
 
   alias Tymeslot.Analytics
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
 
+  @scheduling_referrer_session_key "scheduling_referrer"
+
   @spec on_mount(:default, map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()}
-  def on_mount(:default, params, _session, socket) do
+  def on_mount(:default, params, session, socket) do
+    referrer = session[@scheduling_referrer_session_key]
+    socket = assign(socket, :scheduling_referrer, referrer)
+
     if connected?(socket) do
-      log_async(params, socket)
+      log_async(params, referrer, socket)
     end
 
     {:cont, socket}
   end
 
-  defp log_async(params, socket) do
+  defp log_async(params, referrer, socket) do
     user_agent = extract_user_agent(socket)
     ip = extract_peer_ip(socket)
-    referrer = extract_header(socket, "referer")
-    {user_id, meeting_type_id, path} = resolve_target(params)
+    session_id = socket.id
 
     Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      {user_id, meeting_type_id, path} = resolve_target(params)
+
       Analytics.log_page_view(%{
         path: path,
         user_id: user_id,
         meeting_type_id: meeting_type_id,
         ip: ip,
         user_agent: user_agent,
-        session_id: socket.id,
+        session_id: session_id,
         params: params,
         referrer: referrer
       })
@@ -97,8 +109,7 @@ defmodule Tymeslot.Analytics.PageViewHook do
     end
   end
 
-  defp resolve_target(params) do
-    username = params["username"]
+  defp resolve_target(%{"username" => username} = params) when is_binary(username) do
     slug = params["slug"]
 
     case {Profiles.get_profile_by_username(username), slug} do
@@ -119,7 +130,8 @@ defmodule Tymeslot.Analytics.PageViewHook do
     end
   end
 
-  defp build_path(nil, _slug), do: "/"
+  defp resolve_target(_params), do: {nil, nil, "/"}
+
   defp build_path(username, nil), do: "/#{username}"
   defp build_path(username, slug), do: "/#{username}/#{slug}"
 end

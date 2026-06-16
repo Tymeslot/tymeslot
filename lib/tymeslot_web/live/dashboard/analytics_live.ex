@@ -75,7 +75,12 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           bookings={@bookings}
         />
 
-        <VisitsChart.chart points={@visits_by_day} from={@from} to={@to} />
+        <VisitsChart.chart
+          points={@visits_by_day}
+          from={@from}
+          to={@to}
+          time_zone={@time_zone}
+        />
 
         <SourcesTable.table sources={@sources} />
       </div>
@@ -95,7 +100,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
       phx-value-range={@value}
       aria-pressed={@current == @value}
       class={[
-        "rounded-md px-3 py-1.5 text-sm font-semibold transition-colors",
+        "rounded-md px-3 py-1.5 text-token-sm font-semibold transition-colors",
         if(@current == @value,
           do: "bg-turquoise-500 text-white shadow-sm",
           else: "bg-tymeslot-50 text-tymeslot-700 hover:bg-tymeslot-100"
@@ -124,14 +129,23 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
     days = Map.get(@ranges, range, @ranges[@default_range])
     now = DateTime.utc_now()
     from = DateTime.add(now, -days * 86_400, :second)
-    assign(socket, from: from, to: now)
+    assign(socket, from: from, to: now, time_zone: organizer_time_zone(socket))
   end
 
-  defp load_data(%{assigns: %{current_user: user, from: from, to: to}} = socket) do
+  defp organizer_time_zone(socket) do
+    case socket.assigns do
+      %{profile: %{timezone: tz}} when is_binary(tz) and tz != "" -> tz
+      _assigns -> "Etc/UTC"
+    end
+  end
+
+  defp load_data(
+         %{assigns: %{current_user: user, from: from, to: to, time_zone: time_zone}} = socket
+       ) do
     visits = Analytics.count_visits(user.id, from, to)
     unique_visitors = Analytics.count_unique_visitors(user.id, from, to)
     bookings = Analytics.count_bookings(user.id, from, to)
-    visits_by_day = Analytics.visits_by_day(user.id, from, to)
+    visits_by_day = Analytics.visits_by_day(user.id, from, to, time_zone)
     sources = Analytics.attribution_table(user.id, from, to)
 
     assign(socket,

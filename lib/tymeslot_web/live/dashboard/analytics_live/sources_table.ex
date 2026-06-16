@@ -6,6 +6,8 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
   """
   use TymeslotWeb, :html
 
+  alias Tymeslot.Analytics
+
   attr :sources, :list, required: true
 
   @spec table(map()) :: Phoenix.LiveView.Rendered.t()
@@ -26,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
             <td class="px-4 py-3">{row.utm_source || "(direct / unknown)"}</td>
             <td class="px-4 py-3 text-right tabular-nums">{row.visits}</td>
             <td class="px-4 py-3 text-right tabular-nums">{row.bookings}</td>
-            <td class="px-4 py-3 text-right tabular-nums">{conversion(row)}%</td>
+            <td class="px-4 py-3 text-right tabular-nums">{Analytics.conversion_rate(row.bookings, row.unique_visitors)}%</td>
           </tr>
           <tr :if={@sources == []}>
             <td colspan="4" class="px-4 py-8 text-center text-tymeslot-400">
@@ -37,12 +39,5 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
       </table>
     </div>
     """
-  end
-
-  defp conversion(%{unique_visitors: 0}), do: "0.0"
-
-  defp conversion(%{unique_visitors: unique_visitors, bookings: bookings}) do
-    rate = min(100.0, bookings / unique_visitors * 100)
-    :erlang.float_to_binary(rate, decimals: 1)
   end
 end

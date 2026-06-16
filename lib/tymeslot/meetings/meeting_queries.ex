@@ -343,8 +343,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     Meeting
     |> where([m], m.organizer_user_id == ^organizer_user_id)
     |> where([m], m.inserted_at >= ^from and m.inserted_at <= ^to)
-    |> select([m], count(m.id))
-    |> Repo.one() || 0
+    |> Repo.aggregate(:count, :id)
   end
 
   @doc """

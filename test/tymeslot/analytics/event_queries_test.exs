@@ -107,7 +107,7 @@ defmodule Tymeslot.Analytics.EventQueriesTest do
     end
   end
 
-  describe "visits_by_day/3" do
+  describe "visits_by_day/4" do
     test "groups visits by day in ascending order", %{user: user} do
       today = DateTime.utc_now()
       yesterday = DateTime.add(today, -86_400, :second)
@@ -119,7 +119,7 @@ defmodule Tymeslot.Analytics.EventQueriesTest do
       from = DateTime.add(today, -2 * 86_400, :second)
       to = DateTime.add(today, 3600, :second)
 
-      result = EventQueries.visits_by_day(user.id, from, to)
+      result = EventQueries.visits_by_day(user.id, from, to, "Etc/UTC")
 
       assert length(result) == 2
       [first, second] = result
@@ -139,12 +139,28 @@ defmodule Tymeslot.Analytics.EventQueriesTest do
       from = DateTime.add(today, -3600, :second)
       to = DateTime.add(today, 3600, :second)
 
-      result = EventQueries.visits_by_day(user.id, from, to)
+      result = EventQueries.visits_by_day(user.id, from, to, "Etc/UTC")
 
       assert length(result) == 1
       [only] = result
       assert only.day == DateTime.to_date(today)
       assert only.visits == 1
+    end
+
+    test "buckets events by the organizer's local day, not UTC", %{user: user} do
+      # 02:00 UTC on 2026-06-15 is 22:00 on 2026-06-14 in America/New_York (UTC-4 in June).
+      utc_dt = DateTime.from_naive!(~N[2026-06-15 02:00:00.000000], "Etc/UTC")
+      insert_event_at(%{user_id: user.id}, utc_dt)
+
+      from = DateTime.from_naive!(~N[2026-06-10 00:00:00], "Etc/UTC")
+      to = DateTime.from_naive!(~N[2026-06-20 00:00:00], "Etc/UTC")
+
+      assert [%{day: ~D[2026-06-14], visits: 1}] =
+               EventQueries.visits_by_day(user.id, from, to, "America/New_York")
+
+      # The same instant buckets to 2026-06-15 under UTC.
+      assert [%{day: ~D[2026-06-15], visits: 1}] =
+               EventQueries.visits_by_day(user.id, from, to, "Etc/UTC")
     end
   end
 end

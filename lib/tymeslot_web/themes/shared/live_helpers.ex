@@ -9,9 +9,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     statics: TymeslotWeb.static_paths()
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [connected?: 1, get_connect_info: 2, put_flash: 3, redirect: 2]
+  import Phoenix.LiveView, only: [connected?: 1, put_flash: 3, redirect: 2]
 
-  alias Tymeslot.Analytics.UtmExtractor
+  alias Tymeslot.Analytics
   alias Tymeslot.Bookings.SubmissionToken
   alias Tymeslot.CustomFields
   alias Tymeslot.MeetingTypes
@@ -328,11 +328,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   """
   @spec assign_tracking(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_tracking(socket, params) do
-    tracking =
-      params
-      |> UtmExtractor.extract()
-      |> Map.put(:referrer_host, referrer_host_from_socket(socket))
-
+    referrer = raw_referrer_from_socket(socket)
+    tracking = Analytics.extract_attribution(params, referrer)
     assign(socket, :tracking, tracking)
   end
 
@@ -346,7 +343,6 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   """
   @spec tracking_path(String.t(), map() | nil) :: String.t()
   def tracking_path(path, nil), do: path
-  def tracking_path(path, tracking) when map_size(tracking) == 0, do: path
 
   def tracking_path(path, tracking) do
     query =
@@ -366,14 +362,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     end
   end
 
-  defp referrer_host_from_socket(socket) do
-    socket
-    |> get_connect_info(:x_headers)
-    |> List.wrap()
-    |> Enum.find_value(fn {k, v} ->
-      if String.downcase(to_string(k)) == "referer", do: v
-    end)
-    |> UtmExtractor.referrer_host()
+  defp raw_referrer_from_socket(socket) do
+    socket.assigns[:scheduling_referrer]
   end
 
   defp maybe_subscribe_to_calendar_events(socket) do
