@@ -50,12 +50,12 @@ defmodule Tymeslot.Emails.Templates.ConnectAccountRestricted do
 
   @spec render(RestrictionContext.t()) :: Swoosh.Email.t()
   def render(%RestrictionContext{} = context) do
-    host_name = context.host_name || "there"
+    greeting_name = context.host_name || "there"
     reason_label = humanise_reason(context.disabled_reason)
     dashboard_url = context.dashboard_url || "https://dashboard.stripe.com/"
 
     intro =
-      "Hi #{Sanitise.sanitize_for_email(host_name)} — Stripe has flagged your connected account as restricted. New paid bookings will continue to work only while charges remain enabled, so please act on this promptly."
+      "Hi #{Sanitise.sanitize_for_email(greeting_name)} — Stripe has flagged your connected account as restricted. New paid bookings will continue to work only while charges remain enabled, so please act on this promptly."
 
     mjml_content = """
     #{Text.centered_text(intro, padding: "8px 0 16px 0")}
@@ -69,29 +69,31 @@ defmodule Tymeslot.Emails.Templates.ConnectAccountRestricted do
     #{Text.system_footer_note("Once Stripe is satisfied, your account state updates automatically — no further action is needed on Tymeslot's side.")}
     """
 
-    organizer_details =
-      TemplateHelper.build_organizer_details(
-        %{
-          organizer_name: host_name,
-          organizer_email: context.host_email,
-          organizer_title: nil,
-          organizer_avatar_url: nil
-        },
+    # This is a platform-to-host operational alert, not a message from an
+    # organiser — use the system layout so no organiser strip is rendered.
+    html_body =
+      TemplateHelper.compile_system_template(
+        mjml_content,
+        "Stripe account restricted",
+        "Your Stripe account needs attention to keep taking payments.",
         intent: @intent,
         eyebrow: "Action required",
         stage_title: "Your Stripe account is restricted",
         stage_subtitle: reason_label
       )
 
-    html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
-
     MjmlEmail.base_email()
-    |> to({host_name, context.host_email})
+    |> to(recipient(context.host_name, context.host_email))
     |> subject("Stripe account restricted — action required")
     |> header("X-Priority", "1")
     |> html_body(html_body)
-    |> text_body(text_body(context, host_name, reason_label, dashboard_url))
+    |> text_body(text_body(context, greeting_name, reason_label, dashboard_url))
   end
+
+  # Only attach a display name when the host actually has one — otherwise a
+  # nil name would surface a placeholder as the recipient's name.
+  defp recipient(name, email) when is_binary(name) and name != "", do: {name, email}
+  defp recipient(_name, email), do: email
 
   defp restriction_card(context, reason_label) do
     label = Sanitise.sanitize_for_email("Account status")

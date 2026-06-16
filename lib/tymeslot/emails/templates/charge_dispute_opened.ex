@@ -61,10 +61,10 @@ defmodule Tymeslot.Emails.Templates.ChargeDisputeOpened do
   @spec render(DisputeContext.t()) :: Swoosh.Email.t()
   def render(%DisputeContext{} = context) do
     amount = Formatting.format_currency(context.amount_cents, context.currency)
-    host_name = context.host_name || "there"
+    greeting_name = context.host_name || "there"
 
     intro =
-      "Hi #{Sanitise.sanitize_for_email(host_name)} — Stripe has opened a dispute on a #{Sanitise.sanitize_for_email(amount)} payment for one of your bookings."
+      "Hi #{Sanitise.sanitize_for_email(greeting_name)} — Stripe has opened a dispute on a #{Sanitise.sanitize_for_email(amount)} payment for one of your bookings."
 
     mjml_content = """
     #{Text.centered_text(intro, padding: "8px 0 16px 0")}
@@ -78,29 +78,31 @@ defmodule Tymeslot.Emails.Templates.ChargeDisputeOpened do
     #{Text.system_footer_note("If the dispute is closed in your favour, the booking will reconcile automatically. If lost, the booking is marked refunded.")}
     """
 
-    organizer_details =
-      TemplateHelper.build_organizer_details(
-        %{
-          organizer_name: host_name,
-          organizer_email: context.host_email,
-          organizer_title: nil,
-          organizer_avatar_url: nil
-        },
+    # This is a platform-to-host operational alert, not a message from an
+    # organiser — use the system layout so no organiser strip is rendered.
+    html_body =
+      TemplateHelper.compile_system_template(
+        mjml_content,
+        "Stripe dispute opened",
+        "A cardholder has disputed one of your booking payments.",
         intent: @intent,
         eyebrow: "Action required",
         stage_title: "A dispute was opened",
         stage_subtitle: "#{amount} disputed by the cardholder"
       )
 
-    html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
-
     MjmlEmail.base_email()
-    |> to({host_name, context.host_email})
+    |> to(recipient(context.host_name, context.host_email))
     |> subject("Stripe dispute opened — #{amount}")
     |> header("X-Priority", "1")
     |> html_body(html_body)
-    |> text_body(text_body(context, amount, host_name))
+    |> text_body(text_body(context, amount, greeting_name))
   end
+
+  # Only attach a display name when the host actually has one — otherwise a
+  # nil name would surface a placeholder as the recipient's name.
+  defp recipient(name, email) when is_binary(name) and name != "", do: {name, email}
+  defp recipient(_name, email), do: email
 
   defp dispute_details_card(context, amount) do
     label = Sanitise.sanitize_for_email("Dispute details")

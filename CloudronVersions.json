@@ -47,6 +47,53 @@
       "publishState": "published",
       "ts": "Tue, 07 Apr 2026 16:11:20 GMT"
     },
+    "1.1.0": {
+      "creationDate": "Tue, 16 Jun 2026 07:46:12 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* core: Correct sender identity in host operational alert emails\n* core: Treat unfinished Stripe onboarding as incomplete, not restricted\n* core: Distinguish superseded from expired email verification links\n* core: Stop duplicate emails when SMTP delivery is slow\n* core: Keep verification and reset links valid after a resend\n* core: Repair custom-field min/max persisted as JSON numbers\n* core: Prevent Google Calendar sync crash on token-refresh failure\n* core: Harden crash reporter and skip it when admin alerts are disabled\n* core: Prevent admin-alert floods from repeated crashes and job failures\n* core: Attach crash reporter after the supervision tree is up\n* core: Correct crash reporter loop-prevention domain filters\n* core: Update final onboarding step CTA to go to dashboard\n* [BREAKING] core: Correct Docker Compose env forwarding, volumes, and DB config\n* core: Stop endless sync retries when a calendar is deleted on the provider side\n* core: Auto-deselect Google calendars deleted on the provider side\n* core: Make POSTGRES_PASSWORD optional when building the Docker image\n* core: Prevent admin alert email floods when many jobs fail at once\n* core: Redact calendar identifiers and token-bearing paths from logs\n* core: Keep password-reset and verification links out of job logs\n* core: Redact identifiers from request and LiveView logs\n* core: Update final onboarding step CTA to go to dashboard\n* [BREAKING] core: Correct Docker Compose env forwarding, volumes, and DB config\n* core: Make the calendar private-IP guard configurable\n* core: Fill missing English catalogue entries for new messages\n* core: Reject theme video uploads when transcoding is unavailable\n* core: Give dropdown dialogs accessible names\n* core: Improve the dashboard tour on small screens\n* core: Restore centred embed layout and make wide layout opt-in\n* core: Translate booking flash messages\n* core: Remove orphaned calendar events when booking sync fails\n* core: Block private-network addresses in calendar server URLs\n* core: Prevent a crash when dismissing an announcement twice\n* core: Prevent locking yourself out of sign-in settings\n* core: Validate custom question answers and bounds more strictly\n* core: Improve paid booking reliability and payment errors\n* core: Keep video meeting links in sync when bookings change\n* core: Protect Slack webhook secrets and handle rate limits\n* core: Validate LiveComponents via __live__/0 instead of optional update/2\n* core: Fill missing English translation for \"New feature\" label\n* core: Keep dashboard sidebar fixed while only the content scrolls\n* core: Preserve typed answers when navigating booking questions\n* core: Reject overly long phone numbers in booking questions\n* core: Keep Quill meeting-type cards a fixed size on hover and selection\n* core: Size Quill meeting-type step to match the calendar step\n* core: Remove clipped copy-link confirmation tooltip in dashboard sidebar\n* core: Stop false type-change warning when editing a custom question\n* core: Show embed live preview before embed domains are configured\n* core: Copy booking link to clipboard on onboarding ready step\n* core: Show a loading spinner while opening Stripe Connect onboarding\n* core: Auto-save meeting type edits as you change them\n* core: Show price and custom-question count on meeting type cards\n* core: Add slow fade animations to the dashboard tour\n* core: Add a cooldown to the resend verification email button\n* core: Attach global crash reporter at startup\n* core: Rate-limit crash alerts with one throttle notice per window\n* core: Classify and forward process crashes to AdminAlerts\n* core: Add CrashReporter crash-filtering predicate\n* core: Register unhandled_crash admin alert type\n* core: Add admin alerts for permanently failed Oban jobs\n* core: Add config-driven extra static sources to the endpoint\n* core: Announce custom questions, payments and Zoom in a what's-new modal\n* core: Support expiry, admin preview and docs links in announcements",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.1.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.1.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Tue, 16 Jun 2026 07:46:12 GMT"
+    },
     "0.100.1": {
       "creationDate": "Wed, 15 Apr 2026 20:13:06 GMT",
       "manifest": {

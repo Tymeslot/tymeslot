@@ -1,7 +1,374 @@
 
+[1.1.0]
+* core: Correct sender identity in host operational alert emails
+* core: Treat unfinished Stripe onboarding as incomplete, not restricted
+* core: Distinguish superseded from expired email verification links
+* core: Stop duplicate emails when SMTP delivery is slow
+* core: Keep verification and reset links valid after a resend
+* core: Repair custom-field min/max persisted as JSON numbers
+* core: Prevent Google Calendar sync crash on token-refresh failure
+* core: Harden crash reporter and skip it when admin alerts are disabled
+* core: Prevent admin-alert floods from repeated crashes and job failures
+* core: Attach crash reporter after the supervision tree is up
+* core: Correct crash reporter loop-prevention domain filters
+* core: Update final onboarding step CTA to go to dashboard
+* [BREAKING] core: Correct Docker Compose env forwarding, volumes, and DB config
+* core: Stop endless sync retries when a calendar is deleted on the provider side
+* core: Auto-deselect Google calendars deleted on the provider side
+* core: Make POSTGRES_PASSWORD optional when building the Docker image
+* core: Prevent admin alert email floods when many jobs fail at once
+* core: Redact calendar identifiers and token-bearing paths from logs
+* core: Keep password-reset and verification links out of job logs
+* core: Redact identifiers from request and LiveView logs
+* core: Update final onboarding step CTA to go to dashboard
+* [BREAKING] core: Correct Docker Compose env forwarding, volumes, and DB config
+* core: Make the calendar private-IP guard configurable
+* core: Fill missing English catalogue entries for new messages
+* core: Reject theme video uploads when transcoding is unavailable
+* core: Give dropdown dialogs accessible names
+* core: Improve the dashboard tour on small screens
+* core: Restore centred embed layout and make wide layout opt-in
+* core: Translate booking flash messages
+* core: Remove orphaned calendar events when booking sync fails
+* core: Block private-network addresses in calendar server URLs
+* core: Prevent a crash when dismissing an announcement twice
+* core: Prevent locking yourself out of sign-in settings
+* core: Validate custom question answers and bounds more strictly
+* core: Improve paid booking reliability and payment errors
+* core: Keep video meeting links in sync when bookings change
+* core: Protect Slack webhook secrets and handle rate limits
+* core: Validate LiveComponents via __live__/0 instead of optional update/2
+* core: Fill missing English translation for "New feature" label
+* core: Keep dashboard sidebar fixed while only the content scrolls
+* core: Preserve typed answers when navigating booking questions
+* core: Reject overly long phone numbers in booking questions
+* core: Keep Quill meeting-type cards a fixed size on hover and selection
+* core: Size Quill meeting-type step to match the calendar step
+* core: Remove clipped copy-link confirmation tooltip in dashboard sidebar
+* core: Stop false type-change warning when editing a custom question
+* core: Show embed live preview before embed domains are configured
+* core: Copy booking link to clipboard on onboarding ready step
+* core: Show a loading spinner while opening Stripe Connect onboarding
+* core: Auto-save meeting type edits as you change them
+* core: Show price and custom-question count on meeting type cards
+* core: Add slow fade animations to the dashboard tour
+* core: Add a cooldown to the resend verification email button
+* core: Attach global crash reporter at startup
+* core: Rate-limit crash alerts with one throttle notice per window
+* core: Classify and forward process crashes to AdminAlerts
+* core: Add CrashReporter crash-filtering predicate
+* core: Register unhandled_crash admin alert type
+* core: Add admin alerts for permanently failed Oban jobs
+* core: Add config-driven extra static sources to the endpoint
+* core: Announce custom questions, payments and Zoom in a what's-new modal
+* core: Support expiry, admin preview and docs links in announcements
 [1.0.5]
 * core: Repair payment-transactions user FK to cascade on delete
+* core: Show Rhythm booking meeting-type descriptions on wide screens
+* core: Show Quill booking meeting-type descriptions on wide screens
+* core: Keep Quill booking time-slot buttons a uniform size
+* core: Keep Quill booking time slots scrollable and free of overflow on small screens
+* core: Reflow the Quill booking overview to fit and use space across screen sizes
+* core: Prevent embedded booking from flickering and lurching on resize
+* core: Apply all Stripe Connect account updates, not just the first
+* core: Translate booker-facing booking and payment strings for de/fr/uk/it
+* core: Show payment confirmation time in the attendee's timezone
+* core: Let attendees return to booking after a cancelled payment
+* core: Stop admin alerts for benign Connect application_fee events
+* core: Record disputes and refunds that arrive before payment confirmation
+* core: Allow refunds when no reason is supplied
+* core: Record Stripe charge id to enable refunds and disputes
+* core: Fix checkout failure for paid bookings
+* core: Heal booking_payments attendee columns to nullable on stale databases
+* core: Pass event details when provisioning video room from calendar edit
+* core: Seed custom answers for embedded paid booking confirmation
+* core: Allow disconnecting a Slack OAuth integration
+* core: Harden DashboardTour hook against scroll-jack and resize
+* core: Persist dashboard tour completion across all dismissal paths
+* core: Make dashboard tour backfill irreversible
+* core: Preserve first-seen timestamp on dashboard tour mark
+* core: Anchor sidebar tour step on the real aside element
+* core: Dim page on welcome step of dashboard tour
+* core: Cancel stale anchor polling in DashboardTour hook
+* core: Accept both yes and no as valid answers to a yes/no question
+* core: Keep edit button visible on each custom-question list row
+* core: Assign empty custom-field defaults on honeypot path and tighten typespecs
+* core: Note acknowledgement not accepted in custom questions wizard
+* core: Persist custom_fields through the meeting type save path
+* core: Handle malformed step nav and single-question wizard skip
+* core: NoteAckValidator must reject non-UTC timestamps
+* core: Tighten TimeValidator and DateValidator strictness
+* core: Keep dropdown phx-click-away bound when closed
+* core: Show Zoom as an OAuth provider in the video integration list
+* core: Repair Zoom meeting creation and harden the OAuth flow
+* core: Prevent Zoom meeting creation crash on malformed datetime
+* core: Tighten Zoom provider stub edge cases and adapter dispatch
+* core: Align Slack channel picker dropdown with design tokens
+* core: Polish Slack integration form before launch
+* core: Tighten Slack integration lifecycle and error reporting
+* core: Correct Slack worker retry handling and rate-limit backoff
+* core: Allow disabling password auth when no admin auth path is currently active
+* core: Block password auth disable when any admin still uses it
+* core: Redirect non-admins to dashboard from admin page
+* core: Show Baikal in the dashboard calendar integration list
+* core: Remove jumping hover effect on action buttons
+* core: Enforce refund window in cancel-meeting modal
+* core: Correct refund and disconnect flow in host payments dashboard
+* core: Show Pro and Stripe-required automation gates as user flashes
+* core: Make Stripe Connect onboarding country configurable
+* core: Block default currency change when pending payments exist
+* core: Omit application_fee_amount when zero in Stripe Checkout sessions
+* core: Prevent duplicate payment notification emails on Oban retry
+* core: Return 503 when Stripe Connect webhook secret is missing
+* core: Serialise charge.refunded webhook against in-app refunds
+* core: Recover meeting state when paid checkout completes after expiry
+* core: Close TOCTOU race when host disconnects Stripe with pending bookings
+* core: Preserve booking payments past host deletion with nil attendee data
+* core: Use integer arithmetic for payment money math
+* core: Correct PaymentsLive dashboard correctness pass
+* core: Serialize concurrent refund attempts and block refunds on disputes
+* core: Correct Stripe Connect onboarding race and replay idempotency
+* core: Persist Stripe charge id on checkout completion
+* core: Widen Webhooks @spec to cover full feature_access error union
+* core: Drop the literal "there" salutation on anonymous refund emails
+* core: Include awaiting_payment in slot conflict queries
+* core: Add awaiting_payment and expired statuses to meeting state machine
+* core: Fix pixelated Cloudron dashboard icon
+* core: Show booker-facing emails in the recipient's language for de/fr/uk
 * core: Keep real-time calendar sync working for all connected calendars
+* core: Return bare access token from Teams OAuth fallback refresh
+* core: Show calendar reconnect prompt when event creation needs reauth
+* core: Allow disconnecting a Slack OAuth integration
+* core: Harden DashboardTour hook against scroll-jack and resize
+* core: Persist dashboard tour completion across all dismissal paths
+* core: Make dashboard tour backfill irreversible
+* core: Preserve first-seen timestamp on dashboard tour mark
+* core: Anchor sidebar tour step on the real aside element
+* core: Dim page on welcome step of dashboard tour
+* core: Cancel stale anchor polling in DashboardTour hook
+* core: Accept both yes and no as valid answers to a yes/no question
+* core: Keep edit button visible on each custom-question list row
+* core: Assign empty custom-field defaults on honeypot path and tighten typespecs
+* core: Note acknowledgement not accepted in custom questions wizard
+* core: Persist custom_fields through the meeting type save path
+* core: Handle malformed step nav and single-question wizard skip
+* core: NoteAckValidator must reject non-UTC timestamps
+* core: Tighten TimeValidator and DateValidator strictness
+* core: Keep dropdown phx-click-away bound when closed
+* core: Align Slack channel picker dropdown with design tokens
+* core: Polish Slack integration form before launch
+* core: Tighten Slack integration lifecycle and error reporting
+* core: Correct Slack worker retry handling and rate-limit backoff
+* core: Allow disabling password auth when no admin auth path is currently active
+* core: Block password auth disable when any admin still uses it
+* core: Redirect non-admins to dashboard from admin page
+* core: Show Baikal in the dashboard calendar integration list
+* core: Remove jumping hover effect on action buttons
+* core: Show Zoom as an OAuth provider in the video integration list
+* core: Repair Zoom meeting creation and harden the OAuth flow
+* core: Prevent Zoom meeting creation crash on malformed datetime
+* core: Tighten Zoom provider stub edge cases and adapter dispatch
+* core: Widen the Quill booking card on short, wide viewports
+* core: Trim trailing empty weeks so the booking calendar fits
+* core: Fit Quill and Rhythm booking pages to short viewports
+* core: Add a payments dashboard for Stripe Connect, currency, and refunds
+* core: Let hosts set a price on paid meeting types
+* core: Toggle meeting payments from the admin settings page
+* core: Show reconnect prompt for revoked video integrations
+* core: Default new embed snippets to column layout
+* core: Auto-fit embed height and add column layout option
+* core: Add Reconnect button to pending Slack OAuth integrations
+* core: Add post-onboarding dashboard tour
+* core: Add dashboard tour overlay styles
+* core: Add DashboardTour JS hook for spotlight positioning
+* core: Wire dashboard tour state into DashboardLive
+* core: Tag dashboard layout elements with data-tour anchors
+* core: Add TourOverlay LiveComponent
+* core: Add dashboard tour step catalog
+* core: Expose dashboard tour helpers from Auth context
+* core: Add mark_dashboard_tour_seen user query
+* core: Migrate users.dashboard_tour_seen_at with backfill
+* core: Add dashboard_tour_seen_at field to user schema
+* core: Gate custom booking questions behind a feature flag
+* core: Redesign custom questions step with in-brand answer controls
+* core: Edit custom question options as individual fields
+* core: Show custom-field answers on host booking cards
+* core: Include custom-field answers in ICS event description
+* core: Include custom-field answers in appointment emails
+* core: Show custom-field answers on Rhythm confirmation step
+* core: Show custom-field answers on Quill confirmation step
+* core: Confirm before clearing type-specific config on type change
+* core: Add custom questions builder to meeting type form
+* core: Persist custom-field snapshot and answers on booking submission
+* core: Add Rhythm CustomQuestionsComponent for booker custom fields
+* core: Wire :questions step into Quill scheduling LiveView
+* core: Add Quill CustomQuestionsComponent for booker custom fields
+* core: Insert :questions step into scheduling state machine
+* core: Add CustomQuestions.Engine state machine for the booker wizard
+* core: Add CustomFields context module
+* core: Add CustomFields.Snapshot for freezing field definitions onto bookings
+* core: Add CustomFields.Validator dispatching by field type
+* core: Add select, multi_select, yes_no, note_ack field validators
+* core: Add phone, url, date, time, number field validators
+* core: Persist custom_fields_snapshot and custom_field_answers on meetings
+* core: Embed custom_fields in MeetingTypeSchema
+* core: Add FieldDefinition embedded schema for custom-field definitions
+* core: Add FieldOption embedded schema for custom-field selects
+* core: Add custom_fields and custom_field_answers columns
+* core: Export dropdown helpers from CoreComponents
+* core: Add standardised dropdown component
+* core: Add dropdown design tokens
+* core: Sync Zoom meetings when bookings are rescheduled or cancelled
+* core: Remove Zoom integration automatically when uninstalled from Zoom
+* core: Add Zoom as a video meeting provider
+* core: Create real Zoom meetings via Zoom REST API v2
+* core: Add Zoom OAuth authorization-code flow
+* core: Register Zoom as a video provider
+* core: Allow refreshing Slack channel list without reopening the form
+* core: Notify Slack when meetings are booked, cancelled, or rescheduled
+* core: Configure Slack via runtime environment variables
+* core: Add Slack dashboard UI
+* core: Add Slack input validation helper
+* core: Make slack_oauth_available config gate OAuth UI
+* core: Add Slack OAuth start/callback controller
+* core: Add Slack.OAuth helper with signed state tokens
+* core: Clean stale pending OAuth stubs before new install
+* core: Auto-disable Slack integration when webhook URL is revoked
+* core: Register Slack runtime config defaults
+* core: Add Slack.Dispatcher event entry point
+* core: Add SlackWorker for async message delivery
+* core: Add Slack context module
+* core: Add Slack.SlackQueries data access module
+* core: Add Slack.MessageBuilder for Block Kit payloads
+* core: Add Slack.API HTTP client
+* core: Add oauth_init and set_channel changesets to SlackIntegrationSchema
+* core: Add SlackDeliverySchema and slack_integration factory
+* core: Add SlackIntegrationSchema with OAuth + webhook URL modes
+* core: Add slack_deliveries table
+* core: Add slack_integrations table
+* core: Add SSO, reCAPTCHA, and admin alert toggles to admin settings
+* core: Disable password-auth toggle when lockout would apply
+* core: Show display name and booking slug in admin users table
+* core: Protect admin panel from auth lockout and allow self-demotion
+* core: Add admin control panel for self-hosted installs
+* core: Group calendar providers into OAuth and CalDAV sections
+* core: Add Baikal CalDAV calendar integration
+* core: Show what's-new modal on dashboard for unseen feature announcements
+* core: Cancel in-flight bookings when host disconnects Stripe
+* core: Translate meeting payments into de/fr/it/uk
+* core: Retain payment records past user deletion for tax compliance
+* core: Support paid bookings inside embed iframes via window.open
+* core: Add telemetry events for payments operations
+* core: Refresh Connect account state on return from Stripe onboarding
+* core: Add reconciliation worker for awaiting_payment meetings
+* core: Email hosts when Stripe restricts their connected account
+* core: Email hosts when Stripe opens a dispute on their booking
+* core: Email attendees when their booking payment is refunded
+* core: Add received-amount summary to organiser confirmation email
+* core: Add receipt block to attendee confirmation email
+* core: Add refunds context and host dashboard refund flow
+* core: Handle account.updated Connect webhook to refresh host capability flags
+* core: Handle charge.dispute.closed Connect webhook to reconcile booking status
+* core: Handle charge.dispute.created Connect webhook to mark booking disputed
+* core: Handle charge.refunded Connect webhook to reconcile refunds
+* core: Handle checkout.session.expired Connect webhook to free held slots
+* core: Handle checkout.session.completed Connect webhook for paid bookings
+* core: Add Stripe Connect webhook endpoint with signature and replay protection
+* core: Add Rhythm theme payment-processing and payment-cancelled tests
+* core: Add Quill theme payment-processing and payment-cancelled return pages
+* core: Branch booking orchestrator on paid vs free event types
+* core: Add Checkout Session creation for paid bookings
+* core: Add currency selector with reset confirmation to payments dashboard
+* core: Add status card, payments table, stats, and disconnect to /dashboard/payments
+* core: Add Connect Stripe controller for the payments dashboard
+* core: Add /dashboard/payments LiveView skeleton
+* core: Add Stripe Connect onboarding context with placeholder-first persistence
+* core: Add StripeAdapter test seam for Stripe API calls
+* core: Retain payment_transactions past user deletion for tax compliance
+* core: Add booking_payments schema for paid bookings
+* core: Add connect_accounts schema for Stripe Connect
+* core: Add payment fields to meeting_types schema
+* core: Add :meeting_payments feature atom with default-off self-host gating
+* core: Show reconnect prompt for revoked video integrations
+* core: Default new embed snippets to column layout
+* core: Auto-fit embed height and add column layout option
+* core: Add Reconnect button to pending Slack OAuth integrations
+* core: Add post-onboarding dashboard tour
+* core: Add dashboard tour overlay styles
+* core: Add DashboardTour JS hook for spotlight positioning
+* core: Wire dashboard tour state into DashboardLive
+* core: Tag dashboard layout elements with data-tour anchors
+* core: Add TourOverlay LiveComponent
+* core: Add dashboard tour step catalog
+* core: Expose dashboard tour helpers from Auth context
+* core: Add mark_dashboard_tour_seen user query
+* core: Migrate users.dashboard_tour_seen_at with backfill
+* core: Add dashboard_tour_seen_at field to user schema
+* core: Gate custom booking questions behind a feature flag
+* core: Redesign custom questions step with in-brand answer controls
+* core: Edit custom question options as individual fields
+* core: Show custom-field answers on host booking cards
+* core: Include custom-field answers in ICS event description
+* core: Include custom-field answers in appointment emails
+* core: Show custom-field answers on Rhythm confirmation step
+* core: Show custom-field answers on Quill confirmation step
+* core: Confirm before clearing type-specific config on type change
+* core: Add custom questions builder to meeting type form
+* core: Persist custom-field snapshot and answers on booking submission
+* core: Add Rhythm CustomQuestionsComponent for booker custom fields
+* core: Wire :questions step into Quill scheduling LiveView
+* core: Add Quill CustomQuestionsComponent for booker custom fields
+* core: Insert :questions step into scheduling state machine
+* core: Add CustomQuestions.Engine state machine for the booker wizard
+* core: Add CustomFields context module
+* core: Add CustomFields.Snapshot for freezing field definitions onto bookings
+* core: Add CustomFields.Validator dispatching by field type
+* core: Add select, multi_select, yes_no, note_ack field validators
+* core: Add phone, url, date, time, number field validators
+* core: Persist custom_fields_snapshot and custom_field_answers on meetings
+* core: Embed custom_fields in MeetingTypeSchema
+* core: Add FieldDefinition embedded schema for custom-field definitions
+* core: Add FieldOption embedded schema for custom-field selects
+* core: Add custom_fields and custom_field_answers columns
+* core: Export dropdown helpers from CoreComponents
+* core: Add standardised dropdown component
+* core: Add dropdown design tokens
+* core: Allow refreshing Slack channel list without reopening the form
+* core: Notify Slack when meetings are booked, cancelled, or rescheduled
+* core: Configure Slack via runtime environment variables
+* core: Add Slack dashboard UI
+* core: Add Slack input validation helper
+* core: Make slack_oauth_available config gate OAuth UI
+* core: Add Slack OAuth start/callback controller
+* core: Add Slack.OAuth helper with signed state tokens
+* core: Clean stale pending OAuth stubs before new install
+* core: Auto-disable Slack integration when webhook URL is revoked
+* core: Register Slack runtime config defaults
+* core: Add Slack.Dispatcher event entry point
+* core: Add SlackWorker for async message delivery
+* core: Add Slack context module
+* core: Add Slack.SlackQueries data access module
+* core: Add Slack.MessageBuilder for Block Kit payloads
+* core: Add Slack.API HTTP client
+* core: Add oauth_init and set_channel changesets to SlackIntegrationSchema
+* core: Add SlackDeliverySchema and slack_integration factory
+* core: Add SlackIntegrationSchema with OAuth + webhook URL modes
+* core: Add slack_deliveries table
+* core: Add slack_integrations table
+* core: Add SSO, reCAPTCHA, and admin alert toggles to admin settings
+* core: Disable password-auth toggle when lockout would apply
+* core: Show display name and booking slug in admin users table
+* core: Protect admin panel from auth lockout and allow self-demotion
+* core: Add admin control panel for self-hosted installs
+* core: Group calendar providers into OAuth and CalDAV sections
+* core: Add Baikal CalDAV calendar integration
+* core: Show what's-new modal on dashboard for unseen feature announcements
+* core: Sync Zoom meetings when bookings are rescheduled or cancelled
+* core: Remove Zoom integration automatically when uninstalled from Zoom
+* core: Add Zoom as a video meeting provider
+* core: Create real Zoom meetings via Zoom REST API v2
+* core: Add Zoom OAuth authorization-code flow
+* core: Register Zoom as a video provider
 [1.0.4]
 * core: Restore clipped dropdown menus in the calendar grid toolbar
 * core: Refresh Outlook calendars on demand with a rolling sync window

@@ -21,16 +21,36 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCardTest do
       refute html =~ "Connected and ready"
     end
 
-    test "disabled_reason renders the restricted (error) state with the reason" do
+    test "disabled_reason on a submitted account renders the restricted (error) state with the reason" do
       html =
         render_card(%{
           deleted_at: nil,
           disabled_reason: "rejected.fraud",
+          details_submitted: true,
           default_currency: "eur"
         })
 
       assert html =~ "Restricted"
       assert html =~ "Reason: rejected.fraud"
+    end
+
+    test "disabled_reason on an unsubmitted account stays incomplete, not restricted" do
+      # A brand-new account Stripe stamps with `requirements.past_due` before the
+      # host finishes onboarding must read as :incomplete, not :restricted.
+      html =
+        render_card(%{
+          deleted_at: nil,
+          disabled_reason: "requirements.past_due",
+          charges_enabled: false,
+          payouts_enabled: false,
+          details_submitted: false,
+          default_currency: "eur"
+        })
+
+      assert html =~ "Finish connecting Stripe"
+      assert html =~ "Continue onboarding"
+      refute html =~ "Restricted"
+      refute html =~ "Reason: requirements.past_due"
     end
 
     test "charges and payouts enabled renders the connected (success) state" do
@@ -93,6 +113,15 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCardTest do
   describe "needs_onboarding?/1" do
     test "true only while onboarding is incomplete" do
       incomplete = %{deleted_at: nil, disabled_reason: nil, details_submitted: false}
+
+      # Past-due before submission is still onboarding, so the operational
+      # dashboard must stay hidden.
+      incomplete_past_due = %{
+        deleted_at: nil,
+        disabled_reason: "requirements.past_due",
+        details_submitted: false
+      }
+
       submitted = %{deleted_at: nil, disabled_reason: nil, details_submitted: true}
 
       ready = %{
@@ -104,6 +133,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCardTest do
       }
 
       assert StatusCard.needs_onboarding?(incomplete)
+      assert StatusCard.needs_onboarding?(incomplete_past_due)
       refute StatusCard.needs_onboarding?(submitted)
       refute StatusCard.needs_onboarding?(ready)
     end

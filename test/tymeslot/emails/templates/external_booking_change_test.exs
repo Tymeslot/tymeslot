@@ -90,7 +90,7 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
       assert email.subject =~ "Meeting"
     end
 
-    test "falls back to email when organizer_name is nil" do
+    test "delivers to the bare email when organizer_name is nil (no placeholder name)" do
       meeting = build_meeting(%{organizer_name: nil})
 
       email =
@@ -101,7 +101,7 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
           "UTC"
         )
 
-      assert [{"jane@example.com", "jane@example.com"}] = email.to
+      assert [{"", "jane@example.com"}] = email.to
     end
   end
 
