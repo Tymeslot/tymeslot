@@ -87,9 +87,10 @@ defmodule Tymeslot.Emails.Templates.ChargeDisputeOpenedTest do
       refute email.text_body =~ "Stripe charge:"
     end
 
-    test "falls back gracefully when host_name is nil" do
+    test "delivers to the bare email when host_name is nil (no placeholder name)" do
       email = ChargeDisputeOpened.render(build_context(%{host_name: nil}))
-      assert email.to == [{"there", "host@example.com"}]
+      assert email.to == [{"", "host@example.com"}]
+      assert email.html_body =~ "Hi there —"
     end
 
     test "omits attendee email line in both bodies when attendee_email is nil (anonymised payment)" do

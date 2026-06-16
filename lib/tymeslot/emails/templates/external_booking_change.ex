@@ -54,7 +54,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
       text_body = render_text(meeting, owner_time, discrepancy, locale)
 
       MjmlEmail.base_email()
-      |> to({meeting.organizer_name || organizer_email, organizer_email})
+      |> to(recipient(meeting.organizer_name, organizer_email))
       |> subject(
         Sanitise.sanitize_for_header(email_subject(discrepancy, meeting.title, date_short))
       )
@@ -62,6 +62,11 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
       |> text_body(text_body)
     end)
   end
+
+  # Only attach a display name when the organiser actually has one — otherwise
+  # a nil name would surface the bare email address as the recipient's name.
+  defp recipient(name, email) when is_binary(name) and name != "", do: {name, email}
+  defp recipient(_name, email), do: email
 
   # ---------------------------------------------------------------------------
   # HTML rendering
@@ -91,17 +96,18 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     #{Text.system_footer_note(dgettext("emails", "This notification was triggered automatically when a change was detected in your external calendar."))}
     """
 
-    organizer_details = %{
-      name: meeting.organizer_name,
-      email: meeting.organizer_email,
-      title: meeting.organizer_title || "Tymeslot",
+    # This is an automated alert to the organiser about their own booking,
+    # not a message from them — use the system layout so no organiser strip
+    # frames it as "Message from <organiser>".
+    TemplateHelper.compile_system_template(
+      mjml_content,
+      alert_title,
+      dgettext("emails", "A meeting changed in your external calendar."),
       intent: @intent,
       eyebrow: dgettext("emails", "Action required"),
       stage_title: alert_title,
       stage_subtitle: dgettext("emails", "Please review and update the booking in Tymeslot.")
-    }
-
-    TemplateHelper.compile_template(mjml_content, organizer_details)
+    )
   end
 
   defp alert_parts(:deleted, meeting) do

@@ -68,9 +68,10 @@ defmodule Tymeslot.Emails.Templates.ConnectAccountRestrictedTest do
       assert email.html_body =~ "Account restricted"
     end
 
-    test "falls back to placeholder name when host_name is nil" do
+    test "delivers to the bare email when host_name is nil (no placeholder name)" do
       email = ConnectAccountRestricted.render(build_context(%{host_name: nil}))
-      assert email.to == [{"there", "host@example.com"}]
+      assert email.to == [{"", "host@example.com"}]
+      assert email.html_body =~ "Hi there —"
     end
 
     test "omits charges/payouts lines when nil" do

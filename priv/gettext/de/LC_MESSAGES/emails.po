@@ -83,8 +83,8 @@ msgid "DETAILS:"
 msgstr "DETAILS:"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:24
-#: lib/tymeslot/emails/templates/external_booking_change.ex:174
-#: lib/tymeslot/emails/templates/external_booking_change.ex:199
+#: lib/tymeslot/emails/templates/external_booking_change.ex:175
+#: lib/tymeslot/emails/templates/external_booking_change.ex:200
 #: lib/tymeslot/emails/templates/reschedule_request.ex:113
 #, elixir-autogen, elixir-format
 msgid "Date:"
@@ -95,8 +95,8 @@ msgstr "Datum:"
 msgid "Duration"
 msgstr "Dauer"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:176
-#: lib/tymeslot/emails/templates/external_booking_change.ex:201
+#: lib/tymeslot/emails/templates/external_booking_change.ex:177
+#: lib/tymeslot/emails/templates/external_booking_change.ex:202
 #: lib/tymeslot/emails/templates/reschedule_request.ex:114
 #, elixir-autogen, elixir-format
 msgid "Duration:"
@@ -188,8 +188,8 @@ msgstr "Ort"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:194
 #: lib/tymeslot/emails/shared/text_body_helper.ex:217
-#: lib/tymeslot/emails/templates/external_booking_change.ex:177
-#: lib/tymeslot/emails/templates/external_booking_change.ex:202
+#: lib/tymeslot/emails/templates/external_booking_change.ex:178
+#: lib/tymeslot/emails/templates/external_booking_change.ex:203
 #: lib/tymeslot/emails/templates/reschedule_request.ex:115
 #, elixir-autogen, elixir-format
 msgid "Location:"
@@ -205,7 +205,7 @@ msgstr "Ich freue mich auf unseren Termin!"
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:214
 #: lib/tymeslot/emails/templates/calendar_invitation.ex:120
 #: lib/tymeslot/emails/templates/event_update_notification.ex:227
-#: lib/tymeslot/emails/templates/external_booking_change.ex:173
+#: lib/tymeslot/emails/templates/external_booking_change.ex:174
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
 msgstr "TERMIN-DETAILS:"
@@ -374,8 +374,8 @@ msgstr "Dieser Zeitblock ist nun wieder buchbar."
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:189
 #: lib/tymeslot/emails/shared/text_body_helper.ex:225
-#: lib/tymeslot/emails/templates/external_booking_change.ex:175
-#: lib/tymeslot/emails/templates/external_booking_change.ex:200
+#: lib/tymeslot/emails/templates/external_booking_change.ex:176
+#: lib/tymeslot/emails/templates/external_booking_change.ex:201
 #, elixir-autogen, elixir-format
 msgid "Time:"
 msgstr "Uhrzeit:"
@@ -690,19 +690,19 @@ msgstr "Kontoaktualisierung"
 msgid "Account Verification"
 msgstr "Kontobestätigung"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:99
+#: lib/tymeslot/emails/templates/external_booking_change.ex:102
 #, elixir-autogen, elixir-format
 msgid "Action required"
 msgstr "Handlung erforderlich"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:223
+#: lib/tymeslot/emails/templates/external_booking_change.ex:224
 #, elixir-autogen, elixir-format
 msgid "Action required: \"%{title}\" was deleted from your external calendar (%{date})"
 msgstr ""
 "Handlung erforderlich: „%{title}\" wurde aus Ihrem externen Kalender "
 "gelöscht (%{date})"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:232
+#: lib/tymeslot/emails/templates/external_booking_change.ex:233
 #, elixir-autogen, elixir-format
 msgid "Action required: \"%{title}\" was rescheduled in your external calendar (%{date})"
 msgstr ""
@@ -861,14 +861,14 @@ msgstr "Videoanruf als Gastgeber starten"
 msgid "I apologise for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
 msgstr "Bitte entschuldigen Sie die Unannehmlichkeiten. Ihr aktueller Termin wurde abgesagt, und ich helfe Ihnen gerne, möglichst bald einen neuen Termin zu finden."
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:179
+#: lib/tymeslot/emails/templates/external_booking_change.ex:180
 #, elixir-autogen, elixir-format
 msgid "If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up."
 msgstr ""
 "Falls der Termin nicht mehr stattfindet, sagen Sie ihn bitte in Tymeslot ab,"
 " damit der Teilnehmer benachrichtigt und das Zeitfenster freigegeben wird."
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:204
+#: lib/tymeslot/emails/templates/external_booking_change.ex:205
 #, elixir-autogen, elixir-format
 msgid "If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
 msgstr ""
@@ -929,14 +929,14 @@ msgstr "Lassen Sie uns eine neue Zeit finden"
 msgid "Let's get you scheduling in under a minute."
 msgstr "In weniger als einer Minute bereit zum Planen."
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:117
-#: lib/tymeslot/emails/templates/external_booking_change.ex:169
+#: lib/tymeslot/emails/templates/external_booking_change.ex:118
+#: lib/tymeslot/emails/templates/external_booking_change.ex:170
 #, elixir-autogen, elixir-format
 msgid "Meeting Deleted in External Calendar"
 msgstr "Termin im externen Kalender gelöscht"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:131
-#: lib/tymeslot/emails/templates/external_booking_change.ex:194
+#: lib/tymeslot/emails/templates/external_booking_change.ex:132
+#: lib/tymeslot/emails/templates/external_booking_change.ex:195
 #, elixir-autogen, elixir-format
 msgid "Meeting Rescheduled in External Calendar"
 msgstr "Termin im externen Kalender verschoben"
@@ -977,13 +977,13 @@ msgstr "Neue Buchung"
 msgid "New email address"
 msgstr "Neue E-Mail-Adresse"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:177
-#: lib/tymeslot/emails/templates/external_booking_change.ex:202
+#: lib/tymeslot/emails/templates/external_booking_change.ex:178
+#: lib/tymeslot/emails/templates/external_booking_change.ex:203
 #, elixir-autogen, elixir-format
 msgid "Not specified"
 msgstr "Nicht angegeben"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:198
+#: lib/tymeslot/emails/templates/external_booking_change.ex:199
 #, elixir-autogen, elixir-format
 msgid "ORIGINAL BOOKING DETAILS:"
 msgstr "URSPRÜNGLICHE BUCHUNGSDETAILS:"
@@ -1003,7 +1003,7 @@ msgstr "Unser Meeting beginnt bald!"
 msgid "Phone"
 msgstr "Telefon"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:101
+#: lib/tymeslot/emails/templates/external_booking_change.ex:104
 #, elixir-autogen, elixir-format
 msgid "Please review and update the booking in Tymeslot."
 msgstr "Bitte überprüfen und aktualisieren Sie die Buchung in Tymeslot."
@@ -1091,14 +1091,14 @@ msgstr "Sonntag"
 msgid "The change will only be completed after verification"
 msgstr "Die Änderung wird erst nach Bestätigung wirksam"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:171
+#: lib/tymeslot/emails/templates/external_booking_change.ex:172
 #, elixir-autogen, elixir-format
 msgid "The meeting \"%{title}\" was deleted from your external calendar but is still active in Tymeslot."
 msgstr ""
 "Der Termin „%{title}\" wurde aus Ihrem externen Kalender gelöscht, ist aber "
 "in Tymeslot weiterhin aktiv."
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:112
+#: lib/tymeslot/emails/templates/external_booking_change.ex:113
 #, elixir-autogen, elixir-format
 msgid "The meeting \"%{title}\" was deleted from your external calendar. Tymeslot still has this booking on record — please review and cancel it here if the meeting is no longer taking place."
 msgstr ""
@@ -1106,14 +1106,14 @@ msgstr ""
 "hat diese Buchung noch gespeichert — bitte überprüfen Sie sie und sagen Sie "
 "sie hier ab, falls der Termin nicht mehr stattfindet."
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:196
+#: lib/tymeslot/emails/templates/external_booking_change.ex:197
 #, elixir-autogen, elixir-format
 msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking shown below."
 msgstr ""
 "Der Termin „%{title}\" wurde in Ihrem externen Kalender verschoben. Tymeslot"
 " enthält weiterhin die ursprüngliche Buchung wie unten angezeigt."
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:126
+#: lib/tymeslot/emails/templates/external_booking_change.ex:127
 #, elixir-autogen, elixir-format
 msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking — please review the details and update or cancel it accordingly."
 msgstr ""
@@ -1155,7 +1155,7 @@ msgstr ""
 msgid "This link is valid for the next 2 hours."
 msgstr "Dieser Link ist für die nächsten 2 Stunden gültig."
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:140
+#: lib/tymeslot/emails/templates/external_booking_change.ex:141
 #, elixir-autogen, elixir-format
 msgid "This meeting was <strong>removed from your external calendar</strong> but is still active in Tymeslot. If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up."
 msgstr ""
@@ -1164,7 +1164,7 @@ msgstr ""
 " Sie ihn bitte in Tymeslot ab, damit der Teilnehmer benachrichtigt und das "
 "Zeitfenster freigegeben wird."
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:152
+#: lib/tymeslot/emails/templates/external_booking_change.ex:153
 #, elixir-autogen, elixir-format
 msgid "This meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above. If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
 msgstr ""
@@ -1174,8 +1174,8 @@ msgstr ""
 "Tymeslot, damit der Teilnehmer die aktuellen Details erhält."
 
 #: lib/tymeslot/emails/templates/external_booking_change.ex:91
-#: lib/tymeslot/emails/templates/external_booking_change.ex:184
-#: lib/tymeslot/emails/templates/external_booking_change.ex:209
+#: lib/tymeslot/emails/templates/external_booking_change.ex:185
+#: lib/tymeslot/emails/templates/external_booking_change.ex:210
 #, elixir-autogen, elixir-format
 msgid "This notification was triggered automatically when a change was detected in your external calendar."
 msgstr ""
@@ -1240,8 +1240,8 @@ msgstr "Videoanruf"
 msgid "View Meeting Details"
 msgstr "Termindetails ansehen"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:181
-#: lib/tymeslot/emails/templates/external_booking_change.ex:206
+#: lib/tymeslot/emails/templates/external_booking_change.ex:182
+#: lib/tymeslot/emails/templates/external_booking_change.ex:207
 #, elixir-autogen, elixir-format
 msgid "View meeting:"
 msgstr ""
@@ -1774,4 +1774,9 @@ msgstr ""
 #: lib/tymeslot/emails/shared/meeting/custom_answers.ex:54
 #, elixir-autogen, elixir-format
 msgid "Additional details"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex:100
+#, elixir-autogen, elixir-format
+msgid "A meeting changed in your external calendar."
 msgstr ""
