@@ -7,6 +7,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
 
   use TymeslotWeb, :controller
 
+  require Logger
+
   alias Tymeslot.Features
   alias Tymeslot.MeetingPayments
 
@@ -29,6 +31,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
       redirect(conn, external: url)
     else
       {:error, reason} ->
+        Logger.warning("Stripe Connect onboarding could not be started: #{inspect(reason)}",
+          user_id: user.id
+        )
+
         conn
         |> put_flash(:error, connect_error_message(reason))
         |> redirect(to: ~p"/dashboard/payments")
