@@ -68,6 +68,27 @@ defmodule TymeslotWeb.Dashboard.PaymentsControllerTest do
     assert Flash.get(conn.assigns.flash, :error) =~ "Could not start"
   end
 
+  test "POST /dashboard/payments/connect surfaces a try-later message when Stripe has restricted account creation",
+       %{conn: conn} do
+    user = insert(:user, onboarding_completed_at: DateTime.utc_now(:second))
+    insert(:profile, user: user)
+    conn = log_in_user(conn, user)
+
+    expect(StripeAdapterMock, :create_account, fn _params, _opts ->
+      {:error,
+       %Stripe.Error{
+         source: :stripe,
+         code: :invalid_request_error,
+         message:
+           "We've temporarily restricted your ability to create this type of connected account due to suspicious activity."
+       }}
+    end)
+
+    conn = post(conn, "/dashboard/payments/connect")
+    assert redirected_to(conn) == "/dashboard/payments"
+    assert Flash.get(conn.assigns.flash, :error) =~ "temporarily unavailable"
+  end
+
   test "POST /dashboard/payments/connect is rejected when the feature is disabled", %{conn: conn} do
     # Forged request: the UI hides the button, but a direct POST must not be
     # able to start onboarding when the operator toggle is off. No Stripe call
