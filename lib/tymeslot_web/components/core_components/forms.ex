@@ -322,7 +322,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
         <ul class="space-y-1">
           <li id="req-length" class="flex items-center text-tymeslot-600 font-medium">
             <svg
-              class="w-3.5 h-3.5 mr-1.5 flex-shrink-0"
+              class="w-3.5 h-3.5 mr-1.5 shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -333,7 +333,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
           </li>
           <li id="req-lowercase" class="flex items-center text-tymeslot-600 font-medium">
             <svg
-              class="w-3.5 h-3.5 mr-1.5 flex-shrink-0"
+              class="w-3.5 h-3.5 mr-1.5 shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -346,7 +346,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
         <ul class="space-y-1">
           <li id="req-uppercase" class="flex items-center text-tymeslot-600 font-medium">
             <svg
-              class="w-3.5 h-3.5 mr-1.5 flex-shrink-0"
+              class="w-3.5 h-3.5 mr-1.5 shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -357,7 +357,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
           </li>
           <li id="req-number" class="flex items-center text-tymeslot-600 font-medium">
             <svg
-              class="w-3.5 h-3.5 mr-1.5 flex-shrink-0"
+              class="w-3.5 h-3.5 mr-1.5 shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

@@ -4,7 +4,7 @@
 
 /* Base Button */
 .btn {
-  @apply inline-flex items-center justify-center font-bold transition-all duration-300 cursor-pointer border-none outline-none no-underline whitespace-nowrap select-none touch-manipulation;
+  @apply inline-flex items-center justify-center font-bold transition-all duration-300 cursor-pointer border-none outline-hidden no-underline whitespace-nowrap select-none touch-manipulation;
 }
 
 .btn:focus-visible {

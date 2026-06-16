@@ -177,7 +177,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
           </div>
 
           <div :if={@meeting.description && @meeting.description != ""} class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50 flex gap-4 items-start">
-            <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0 border border-tymeslot-100">
+            <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-tymeslot-100">
               <Icons.icon name={:pencil_square} class="w-4 h-4 text-tymeslot-400" />
             </div>
             <div class="flex-1">
@@ -199,7 +199,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50"
           >
             <div class="flex gap-4 items-start mb-4">
-              <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0 border border-tymeslot-100">
+              <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-tymeslot-100">
                 <Icons.icon name={:list_bullet} class="w-4 h-4 text-tymeslot-400" />
               </div>
               <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mt-2">
@@ -222,7 +222,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
           </div>
         </div>
 
-        <div class="flex lg:flex-col gap-3 flex-shrink-0 lg:w-[160px]">
+        <div class="flex lg:flex-col gap-3 shrink-0 lg:w-[160px]">
           <div :if={@meeting.status != "cancelled" && !Helpers.past_meeting?(@meeting)} class="contents">
             <a
               :if={@meeting.meeting_url}
@@ -231,7 +231,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               rel="noopener noreferrer"
               class="btn-primary py-3 px-4 text-token-sm w-full flex items-center justify-center whitespace-nowrap"
             >
-              <Icons.icon name={:video} class="w-4 h-4 mr-2 flex-shrink-0" /> Join Meeting
+              <Icons.icon name={:video} class="w-4 h-4 mr-2 shrink-0" /> Join Meeting
             </a>
 
             <button
@@ -244,7 +244,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                 if(!Helpers.can_reschedule?(@meeting), do: "opacity-50 cursor-not-allowed", else: "")
               ]}
             >
-              <Icons.icon name={:swap} class="w-4 h-4 mr-2 flex-shrink-0" /> Reschedule
+              <Icons.icon name={:swap} class="w-4 h-4 mr-2 shrink-0" /> Reschedule
             </button>
 
             <button
@@ -259,7 +259,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               ]}
             >
               <span :if={@cancelling_meeting == @meeting.id} class="flex items-center"><CoreComponents.spinner class="h-4 w-4 mr-2" /> Processing...</span>
-              <span :if={@cancelling_meeting != @meeting.id} class="flex items-center"><Icons.icon name={:x_mark} class="w-4 h-4 mr-2 flex-shrink-0" /> Cancel</span>
+              <span :if={@cancelling_meeting != @meeting.id} class="flex items-center"><Icons.icon name={:x_mark} class="w-4 h-4 mr-2 shrink-0" /> Cancel</span>
             </button>
           </div>
           <div :if={@meeting.status == "cancelled" or Helpers.past_meeting?(@meeting)} class="hidden lg:block">&nbsp;</div>
@@ -290,7 +290,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
         phx-value-id={@meeting.id}
         phx-target={@target}
         class={[
-          "flex-shrink-0 text-token-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-token-lg border transition-colors",
+          "shrink-0 text-token-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-token-lg border transition-colors",
           if(@meeting.calendar_sync_status == "externally_deleted",
             do: "border-red-300 hover:bg-red-100",
             else: "border-amber-300 hover:bg-amber-100"

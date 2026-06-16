@@ -188,7 +188,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
           step={@constraints.step}
           value={@current_value}
           name={@field_name}
-          class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-none rounded-l-xl"
+          class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-xl"
           placeholder={to_string(@constraints.min)}
         />
         <span class={"pr-3 py-2 text-token-sm font-black text-#{@constraints.color}-700"}>

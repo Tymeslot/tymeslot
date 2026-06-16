@@ -30,14 +30,14 @@ defmodule TymeslotWeb.Components.SiteComponents do
             href={logo_link(@current_user)}
             class="flex items-center text-tymeslot-900 hover:text-turquoise-600 transition-all transform hover:scale-105"
           >
-            <.logo mode={:full} img_class="h-12 flex-shrink-0" />
+            <.logo mode={:full} img_class="h-12 shrink-0" />
           </.link>
         <% else %>
           <.link
             navigate={logo_link(@current_user)}
             class="flex items-center text-tymeslot-900 hover:text-turquoise-600 transition-all transform hover:scale-105"
           >
-            <.logo mode={:full} img_class="h-12 flex-shrink-0" />
+            <.logo mode={:full} img_class="h-12 shrink-0" />
           </.link>
         <% end %>
         
@@ -245,7 +245,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
       <div class="container mx-auto px-6 py-16 max-w-7xl">
         <div class="flex flex-col lg:flex-row gap-12 mb-12">
           <%!-- Brand column --%>
-          <div class="lg:w-72 flex-shrink-0">
+          <div class="lg:w-72 shrink-0">
             <.link href={~p"/"} class="inline-block mb-5">
               <.logo mode={:full} img_class="h-10" />
             </.link>

@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Components.UI.CloseButton do
       class={[
         "group flex items-center gap-1 p-2 text-red-500 hover:text-red-700",
         "hover:bg-red-50 rounded-md transition-all duration-200",
-        "focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2",
+        "focus:outline-hidden focus:ring-2 focus:ring-red-500 focus:ring-offset-2",
         @class
       ]}
       title={@title}

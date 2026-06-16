@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
     ]}>
       <div class="flex items-center gap-3">
         <%!-- Drag Handle --%>
-        <div class="cursor-grab active:cursor-grabbing text-tymeslot-400 flex-shrink-0">
+        <div class="cursor-grab active:cursor-grabbing text-tymeslot-400 shrink-0">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
         </div>
 
         <%= if @type.icon && @type.icon != "none" do %>
-          <span class={[@type.icon, "w-5 h-5 text-tymeslot-600 flex-shrink-0"]} />
+          <span class={[@type.icon, "w-5 h-5 text-tymeslot-600 shrink-0"]} />
         <% end %>
 
         <%!-- Name + details --%>
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             {@type.name}
           </h3>
           <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-token-xs text-tymeslot-600">
-            <span class="flex items-center flex-shrink-0">
+            <span class="flex items-center shrink-0">
               <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               {@type.duration_minutes} min
             </span>
             <%= if paid?(@type) do %>
-              <span class="flex items-center flex-shrink-0 font-medium text-emerald-600">
+              <span class="flex items-center shrink-0 font-medium text-emerald-600">
                 <span class="hero-banknotes-mini w-3.5 h-3.5 mr-1" />
                 {format_amount(@type.price_cents, @currency)}
               </span>
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             <%= if @type.allow_video do %>
               <span class="flex items-center min-w-0">
                 <%= if @type.video_integration do %>
-                  <span class="mr-1.5 flex-shrink-0">
+                  <span class="mr-1.5 shrink-0">
                     <ProviderIcon.provider_icon
                       provider={@type.video_integration.provider}
                       size={@icon_size}
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
                   </span>
                 <% else %>
                   <svg
-                    class="w-3.5 h-3.5 mr-1 text-blue-400 flex-shrink-0"
+                    class="w-3.5 h-3.5 mr-1 text-blue-400 shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             <% end %>
             <%= if @type.calendar_integration do %>
               <span class="flex items-center min-w-0">
-                <span class="mr-1.5 flex-shrink-0">
+                <span class="mr-1.5 shrink-0">
                   <ProviderIcon.provider_icon
                     provider={@type.calendar_integration.provider}
                     size={@icon_size}
@@ -108,13 +108,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
                 <span class="truncate max-w-[8rem]">
                   {@type.calendar_integration.name}
                 </span>
-                <span class="ml-1 text-tymeslot-500 flex-shrink-0">
+                <span class="ml-1 text-tymeslot-500 shrink-0">
                   ({calendar_display_name(@type)})
                 </span>
               </span>
             <% end %>
             <%= if custom_question_count(@type) > 0 do %>
-              <span class="flex items-center flex-shrink-0 text-tymeslot-500">
+              <span class="flex items-center shrink-0 text-tymeslot-500">
                 <span class="hero-question-mark-circle-mini w-3.5 h-3.5 mr-1" />
                 {custom_questions_label(@type)}
               </span>
@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
         </div>
 
         <%!-- Actions --%>
-        <div class="flex items-center gap-1.5 flex-shrink-0">
+        <div class="flex items-center gap-1.5 shrink-0">
           <button
             phx-click="edit_type"
             phx-value-id={@type.id}
@@ -163,7 +163,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             phx-value-id={@type.id}
             phx-target={@myself}
             class={[
-              "relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2",
+              "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:ring-offset-2",
               if(@type.is_active,
                 do: "bg-teal-500 border-teal-500",
                 else: "bg-tymeslot-300 border-tymeslot-300"

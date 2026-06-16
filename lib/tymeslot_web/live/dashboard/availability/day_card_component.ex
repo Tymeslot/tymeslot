@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
             phx-value-day={@day_availability.day_of_week}
             phx-target={@myself}
             class={[
-              "relative inline-flex h-9 w-16 flex-shrink-0 cursor-pointer rounded-full border-2 transition-all duration-300 ease-in-out focus:outline-none",
+              "relative inline-flex h-9 w-16 shrink-0 cursor-pointer rounded-full border-2 transition-all duration-300 ease-in-out focus:outline-hidden",
               if(@day_availability.is_available,
                 do: "bg-turquoise-600 border-turquoise-600",
                 else: "bg-tymeslot-300 border-tymeslot-300"

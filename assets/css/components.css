@@ -268,7 +268,7 @@
 
 .form-field__input {
   @apply w-full px-4 py-3 rounded-token-2xl border-2 border-tymeslot-100 bg-tymeslot-50/50 transition-glass font-medium;
-  @apply focus:outline-none focus:border-turquoise-400 focus:bg-white focus:shadow-lg focus:shadow-turquoise-500/10;
+  @apply focus:outline-hidden focus:border-turquoise-400 focus:bg-white focus:shadow-lg focus:shadow-turquoise-500/10;
 }
 
 .form-field__input--error {

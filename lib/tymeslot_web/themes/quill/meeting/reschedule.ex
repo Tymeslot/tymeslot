@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
                 >
                   <span>{gettext("Choose New Time")}</span>
                   <svg
-                    class="ml-2 h-5 w-5 flex-shrink-0"
+                    class="ml-2 h-5 w-5 shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"

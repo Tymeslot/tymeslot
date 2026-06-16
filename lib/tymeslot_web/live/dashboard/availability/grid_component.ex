@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
             icon={:grid}
             title="Weekly Visual Grid"
           />
-          <div class="flex-shrink-0">
+          <div class="shrink-0">
             <Helpers.timezone_display timezone_display={@timezone_display} country_code={@country_code} />
           </div>
         </div>

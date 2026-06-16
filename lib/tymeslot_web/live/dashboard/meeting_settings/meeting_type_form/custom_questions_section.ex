@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
               draggable="true"
             >
               <%!-- Drag handle --%>
-              <span class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 flex-shrink-0">
+              <span class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 shrink-0">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"
@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
               </div>
 
               <%!-- Actions --%>
-              <div class="flex items-center gap-1 flex-shrink-0">
+              <div class="flex items-center gap-1 shrink-0">
                 <CoreComponents.action_button
                   type="button"
                   variant={:secondary}

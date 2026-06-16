@@ -41,7 +41,7 @@ body {
 
 /* Focus Visible */
 :focus-visible {
-  @apply outline-none ring-2 ring-turquoise-500 ring-offset-2;
+  @apply outline-hidden ring-2 ring-turquoise-500 ring-offset-2;
 }
 
 /* Scrollbar Styling */

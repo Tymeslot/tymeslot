@@ -113,7 +113,7 @@ window.addEventListener("tymeslot:clip-copy", (e) => {
 
   toast.innerHTML = `
     <div class="relative z-10 flex items-start gap-4">
-      <div class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border ${
+      <div class="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border ${
         isError ? "bg-white border-red-100 text-red-500" : "bg-turquoise-50 border-turquoise-100 text-turquoise-600"
       }">
         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

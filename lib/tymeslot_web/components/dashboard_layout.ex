@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
       />
 
       <%!-- Top Navigation --%>
-      <div class="flex-shrink-0">
+      <div class="shrink-0">
         <.top_navigation
           current_user={@current_user}
           profile={@profile}
@@ -105,7 +105,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
               <%= if @show_sidebar_toggle do %>
                 <%!-- Mobile Menu Button --%>
                 <button
-                  class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all flex-shrink-0"
+                  class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all shrink-0"
                   phx-click={
                     JS.toggle_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
                     |> JS.toggle_class("hidden", to: "#dashboard-sidebar-overlay")
@@ -133,13 +133,13 @@ defmodule TymeslotWeb.Components.DashboardLayout do
               <div class="flex items-center space-x-3 min-w-0">
                 <TymeslotWeb.Components.CoreComponents.logo
                   mode={:full}
-                  img_class="h-10 sm:h-16 flex-shrink min-w-0"
+                  img_class="h-10 sm:h-16 shrink min-w-0"
                 />
               </div>
             </div>
 
     <%!-- Right side: User dropdown --%>
-            <div class="relative flex-shrink-0" data-tour="user-menu">
+            <div class="relative shrink-0" data-tour="user-menu">
               <.live_component
                 module={UserDropdownComponent}
                 id="user-dropdown"

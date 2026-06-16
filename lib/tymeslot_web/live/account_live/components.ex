@@ -210,7 +210,7 @@ defmodule TymeslotWeb.AccountLive.Components do
     ~H"""
     <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
       <div class="flex items-start">
-        <div class="flex-shrink-0">
+        <div class="shrink-0">
           <svg class="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
             <path
               fill-rule="evenodd"

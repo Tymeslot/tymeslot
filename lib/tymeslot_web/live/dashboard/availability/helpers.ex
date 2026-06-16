@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.Availability.Helpers do
     <div class="flex items-center space-x-2 text-token-sm text-tymeslot-600">
       <.safe_flag
         country_code={@country_code}
-        class="w-4 h-3 flex-shrink-0 rounded-sm shadow-sm"
+        class="w-4 h-3 shrink-0 rounded-sm shadow-sm"
         fallback_icon="🌐"
         show_fallback={true}
       />

@@ -316,7 +316,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
             <button
               phx-click={if @editing_type, do: "close_edit_overlay", else: "toggle_add_form"}
               phx-target={@myself}
-              class="flex-shrink-0 p-2 rounded-lg text-tymeslot-500 hover:text-tymeslot-700 hover:bg-tymeslot-100 transition-colors"
+              class="shrink-0 p-2 rounded-lg text-tymeslot-500 hover:text-tymeslot-700 hover:bg-tymeslot-100 transition-colors"
               title="Close"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
