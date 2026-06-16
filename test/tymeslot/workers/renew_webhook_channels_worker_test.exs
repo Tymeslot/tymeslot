@@ -186,6 +186,47 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
                  "provider" => "outlook"
                })
     end
+
+    test "surfaces Google three-element {:error, type, reason} responses so Oban retries" do
+      # Transport/network failures surface as a three-element tuple
+      # (e.g. `{:error, :network_error, "…"}`). The worker must collapse these
+      # to `{:error, reason}` rather than crashing with a CaseClauseError.
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_channel_id: "network-failing-channel",
+          google_channel_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
+        )
+
+      expect(GoogleCalendarAPIMock, :register_push_channel, fn _integration ->
+        {:error, :network_error, "HTTP 503 (see logs for details)"}
+      end)
+
+      assert {:error, "HTTP 503 (see logs for details)"} =
+               perform_job(RenewWebhookChannelsWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "provider" => "google"
+               })
+    end
+
+    test "surfaces Outlook three-element {:error, type, reason} responses so Oban retries" do
+      integration =
+        insert(:calendar_integration,
+          provider: "outlook",
+          graph_subscription_id: "network-failing-sub",
+          graph_subscription_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
+        )
+
+      expect(OutlookCalendarAPIMock, :register_graph_subscription, fn _integration ->
+        {:error, :network_error, "HTTP 503 (see logs for details)"}
+      end)
+
+      assert {:error, "HTTP 503 (see logs for details)"} =
+               perform_job(RenewWebhookChannelsWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "provider" => "outlook"
+               })
+    end
   end
 
   describe "perform/1 - push registration backfill (WEBHOOK_BASE_URL set)" do
