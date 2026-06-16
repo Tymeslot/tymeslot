@@ -74,7 +74,7 @@ defmodule Tymeslot.Analytics.UtmExtractor do
       if map_size(params) >= @max_tracking_keys do
         params
       else
-        Map.put(params, key, value)
+        Map.put(params, truncate(key), value)
       end
     end)
   end

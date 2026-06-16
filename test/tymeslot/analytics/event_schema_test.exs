@@ -49,5 +49,41 @@ defmodule Tymeslot.Analytics.EventSchemaTest do
       assert changeset.valid?
       assert get_change(changeset, :tracking_params) == %{"ref" => "newsletter", "promo" => "x"}
     end
+
+    test "accepts tracking_params within the 16-key and 255-byte bounds" do
+      params = Map.new(1..16, fn i -> {"key#{i}", "value#{i}"} end)
+      changeset = EventSchema.changeset(%EventSchema{}, %{@valid_attrs | tracking_params: params})
+      assert changeset.valid?
+    end
+
+    test "rejects tracking_params with more than 16 keys" do
+      params = Map.new(1..17, fn i -> {"key#{i}", "val"} end)
+      changeset = EventSchema.changeset(%EventSchema{}, %{@valid_attrs | tracking_params: params})
+      refute changeset.valid?
+      assert %{tracking_params: [_msg]} = errors_on(changeset)
+    end
+
+    test "rejects tracking_params with a value exceeding 255 bytes" do
+      long_value = String.duplicate("v", 256)
+      params = %{"ref" => long_value}
+      changeset = EventSchema.changeset(%EventSchema{}, %{@valid_attrs | tracking_params: params})
+      refute changeset.valid?
+      assert %{tracking_params: [_msg]} = errors_on(changeset)
+    end
+
+    test "rejects tracking_params with a key exceeding 255 bytes" do
+      long_key = String.duplicate("k", 256)
+      params = %{long_key => "value"}
+      changeset = EventSchema.changeset(%EventSchema{}, %{@valid_attrs | tracking_params: params})
+      refute changeset.valid?
+      assert %{tracking_params: [_msg]} = errors_on(changeset)
+    end
+
+    test "rejects tracking_params with non-string values" do
+      params = %{"ref" => 42}
+      changeset = EventSchema.changeset(%EventSchema{}, %{@valid_attrs | tracking_params: params})
+      refute changeset.valid?
+      assert %{tracking_params: [_msg]} = errors_on(changeset)
+    end
   end
 end

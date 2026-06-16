@@ -57,6 +57,14 @@ defmodule Tymeslot.Analytics.UtmExtractorTest do
       assert String.length(result.utm_source) == 255
     end
 
+    test "truncates tracking_param keys longer than 255 bytes" do
+      long_key = String.duplicate("k", 1000)
+      result = UtmExtractor.extract(%{long_key => "value"})
+      [{stored_key, stored_val}] = Map.to_list(result.tracking_params)
+      assert byte_size(stored_key) == 255
+      assert stored_val == "value"
+    end
+
     test "handles nil and empty maps" do
       assert UtmExtractor.extract(nil) == empty_result()
       assert UtmExtractor.extract(%{}) == empty_result()

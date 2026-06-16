@@ -8,6 +8,8 @@ defmodule Tymeslot.Analytics.EventSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.ChangesetValidators.TrackingParams
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           event_type: String.t() | nil,
@@ -62,6 +64,7 @@ defmodule Tymeslot.Analytics.EventSchema do
     |> validate_length(:path, max: 255)
     |> validate_length(:session_id, max: 255)
     |> validate_length(:referrer_host, max: 255)
+    |> TrackingParams.validate_tracking_params(:tracking_params)
   end
 
   @spec valid_event_types() :: [String.t()]

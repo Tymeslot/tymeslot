@@ -9,6 +9,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
   alias Tymeslot.ChangesetValidators.TimeOrder
+  alias Tymeslot.ChangesetValidators.TrackingParams
   alias Tymeslot.Locales
 
   @type t :: %__MODULE__{
@@ -265,6 +266,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> validate_length(:utm_content, max: 255)
     |> validate_length(:utm_term, max: 255)
     |> validate_length(:referrer_host, max: 255)
+    |> TrackingParams.validate_tracking_params(:tracking_params)
     |> calculate_duration()
     |> unique_constraint(:uid)
     |> unique_constraint([:organizer_user_id, :start_time],
