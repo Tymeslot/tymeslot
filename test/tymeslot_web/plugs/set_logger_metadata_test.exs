@@ -5,8 +5,6 @@ defmodule TymeslotWeb.Plugs.SetLoggerMetadataTest do
 
   @moduletag :plugs
 
-  require Logger
-
   alias Tymeslot.Factory
   alias TymeslotWeb.Plugs.SetLoggerMetadata
 

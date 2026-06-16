@@ -165,7 +165,8 @@ defmodule Tymeslot.Auth.VerificationTest do
   # --- Helpers for the tamper suite ---
 
   defp flip_last_char(token) do
-    <<prefix::binary-size(byte_size(token) - 1), last::utf8>> = token
+    prefix_size = byte_size(token) - 1
+    <<prefix::binary-size(prefix_size), last::utf8>> = token
     flipped = if last == ?A, do: ?B, else: ?A
     <<prefix::binary, flipped::utf8>>
   end

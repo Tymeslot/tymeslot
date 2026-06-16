@@ -8,7 +8,7 @@ defmodule Tymeslot.Themes.CatalogTest do
   test "exposes theme facts as the domain source of truth" do
     assert is_map(Catalog.all())
     assert is_map(Catalog.active())
-    assert Catalog.default() != nil
+    assert is_map(Catalog.default())
     assert Catalog.valid_id?(Catalog.default_id())
   end
 end

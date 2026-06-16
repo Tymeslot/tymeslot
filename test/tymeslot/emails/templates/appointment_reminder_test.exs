@@ -247,7 +247,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
 
       # Should include substantial content with time information
       assert String.length(email.html_body) > 1000
-      assert email.html_body != nil
     end
   end
 

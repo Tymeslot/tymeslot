@@ -287,7 +287,6 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
 
   describe "logging" do
     import ExUnit.CaptureLog
-    require Logger
 
     @tag :capture_log
     test "logs SMTP configuration at startup" do

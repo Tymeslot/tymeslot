@@ -15,8 +15,6 @@ defmodule TymeslotWeb.Plugs.LoggerMetadataIsolationTest do
 
   @moduletag :plugs
 
-  require Logger
-
   alias Phoenix.LiveView.Socket
   alias Plug.Conn
   alias Plug.Test, as: PlugTest

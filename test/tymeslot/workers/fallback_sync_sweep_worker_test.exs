@@ -8,7 +8,6 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
   import ExUnit.CaptureLog
   import Mox
   import Tymeslot.Factory
-  require Logger
 
   alias Ecto.Query
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
