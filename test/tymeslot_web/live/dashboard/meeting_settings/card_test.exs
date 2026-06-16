@@ -36,9 +36,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
 
   describe "paid token" do
     test "renders the formatted price for a paid meeting type" do
-      html =
-        build_type(%{payment_required: true, price_cents: 900})
-        |> render_card(%{currency: "eur"})
+      html = render_card(build_type(%{payment_required: true, price_cents: 900}), %{currency: "eur"})
 
       assert html =~ "€9.00"
     end
@@ -59,9 +57,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
 
   describe "custom questions token" do
     test "pluralises the count when there are multiple questions" do
-      html =
-        build_type(%{custom_fields: [%FieldDefinition{}, %FieldDefinition{}]})
-        |> render_card()
+      html = render_card(build_type(%{custom_fields: [%FieldDefinition{}, %FieldDefinition{}]}))
 
       assert html =~ "+2 custom questions"
     end

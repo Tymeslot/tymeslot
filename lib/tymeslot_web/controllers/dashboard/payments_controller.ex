@@ -31,8 +31,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
       redirect(conn, external: url)
     else
       {:error, reason} ->
-        Logger.warning("Stripe Connect onboarding could not be started: #{inspect(reason)}",
-          user_id: user.id
+        Logger.warning("Stripe Connect onboarding could not be started",
+          user_id: user.id,
+          reason: inspect(reason)
         )
 
         conn
