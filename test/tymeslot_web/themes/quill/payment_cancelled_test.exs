@@ -54,6 +54,36 @@ defmodule TymeslotWeb.Themes.Quill.PaymentCancelledTest do
     assert html =~ "Return to booking"
   end
 
+  test "rebook link uses the custom slug when the meeting type has one set", %{
+    conn: conn,
+    user: user
+  } do
+    {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
+    {:ok, _profile} = Profiles.update_profile(profile, %{username: "hosttester"})
+
+    # The name-derived slug would be "paid-consultation"; the custom slug
+    # overrides it in the rebook path.
+    meeting_type =
+      insert(:meeting_type, user: user, name: "Paid Consultation", slug: "vip-consult")
+
+    meeting =
+      insert(:meeting,
+        organizer_user_id: user.id,
+        meeting_type_id: meeting_type.id,
+        status: "awaiting_payment"
+      )
+
+    {:ok, _view, html} =
+      live(conn, ~p"/themes/quill/payment-cancelled/#{meeting.id}")
+
+    assert html =~ ~s(href="/hosttester/vip-consult"), "rebook link must use the custom slug"
+
+    refute html =~ ~s(href="/hosttester/paid-consultation"),
+           "rebook link must NOT use the stale name-derived slug"
+
+    assert html =~ "Return to booking"
+  end
+
   test "redirects to / when meeting belongs to a different theme", %{conn: conn, user: user} do
     {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
     {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: "2"})
