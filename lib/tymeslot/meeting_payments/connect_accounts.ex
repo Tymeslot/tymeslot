@@ -212,8 +212,18 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   # a different value — nil → non-nil, or between two different non-nil
   # values. This mirrors the spec's "transition only" rule and keeps repeated
   # account.updated events for the same restriction state silent.
+  #
+  # `details_submitted: true` gates the whole thing: an account still mid-
+  # onboarding carries `requirements.past_due` as a matter of course, and
+  # alarming the host that they are "restricted" before they have even finished
+  # signing up is a false alarm. A genuine restriction only applies once Stripe
+  # has something to act on, i.e. after details were submitted.
   defp maybe_notify_restriction(
-         %ConnectAccountSchema{user_id: user_id, disabled_reason: new_reason} = account,
+         %ConnectAccountSchema{
+           user_id: user_id,
+           disabled_reason: new_reason,
+           details_submitted: true
+         } = account,
          previous_reason
        )
        when is_integer(user_id) and is_binary(new_reason) and new_reason != "" and

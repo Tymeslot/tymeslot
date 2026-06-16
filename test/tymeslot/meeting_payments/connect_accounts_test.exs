@@ -205,6 +205,32 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       )
     end
 
+    test "does not enqueue a restriction email while onboarding is still unsubmitted" do
+      user = insert(:user)
+      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      {:ok, _updated} =
+        ConnectAccountQueries.update(account, %{
+          stripe_account_id: "acct_UNSUBMITTED",
+          status: "active",
+          disabled_reason: nil
+        })
+
+      # Stripe stamps a brand-new account with past_due before the host finishes
+      # onboarding — that is not a restriction the host should be emailed about.
+      stripe_account = %{
+        "id" => "acct_UNSUBMITTED",
+        "charges_enabled" => false,
+        "payouts_enabled" => false,
+        "details_submitted" => false,
+        "requirements" => %{"disabled_reason" => "requirements.past_due"}
+      }
+
+      assert :ok = ConnectAccounts.apply_account_event(stripe_account, DateTime.utc_now(:second))
+
+      refute_enqueued(worker: SendConnectAccountRestricted)
+    end
+
     test "does not enqueue a restriction email when disabled_reason is unchanged" do
       user = insert(:user)
       {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")

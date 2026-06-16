@@ -71,10 +71,17 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   # ── Status state machine ──────────────────────────────────────────
 
   defp status_state(%{deleted_at: dt}) when is_struct(dt, DateTime), do: :deleted
-  defp status_state(%{disabled_reason: reason}) when is_binary(reason), do: :restricted
-  defp status_state(%{charges_enabled: true, payouts_enabled: true}), do: :ready
-  defp status_state(%{details_submitted: true}), do: :pending_review
+  # Onboarding that hasn't been submitted is always :incomplete. Stripe stamps a
+  # brand-new account with `requirements.past_due` simply because the flow isn't
+  # finished — so `disabled_reason` must not be read until `details_submitted`,
+  # otherwise an unfinished account is mislabelled :restricted (and the parent
+  # then wrongly reveals the operational dashboard).
+  defp status_state(%{details_submitted: true} = account), do: submitted_state(account)
   defp status_state(_account), do: :incomplete
+
+  defp submitted_state(%{disabled_reason: reason}) when is_binary(reason), do: :restricted
+  defp submitted_state(%{charges_enabled: true, payouts_enabled: true}), do: :ready
+  defp submitted_state(_account), do: :pending_review
 
   defp status_variant(:ready), do: :success
   defp status_variant(:pending_review), do: :warning
