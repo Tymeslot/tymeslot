@@ -80,7 +80,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
 
       {:ok, _pid} = Workflows.refresh_calendar_list_async(integration.id, user.id, component_id)
 
-      assert_receive {:calendar_list_refreshed, ^component_id, _, calendars}
+      assert_receive {:calendar_list_refreshed, ^component_id, _, calendars}, 5000
       # Should return existing list on error
       assert length(calendars) == 1
       assert List.first(calendars)["id"] == "old"
