@@ -17,9 +17,19 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.ConnectCta do
         Connect Stripe to start charging for meetings. Money goes directly
         to your Stripe account.
       </p>
-      <form action={~p"/dashboard/payments/connect"} method="post">
+      <%!--
+        Opening Stripe takes a moment (two Stripe API calls before the
+        redirect). `data-submit-loading` lets the global submit handler show a
+        spinner and disable the button so a slow redirect cannot be rage-clicked.
+      --%>
+      <form action={~p"/dashboard/payments/connect"} method="post" data-submit-loading>
         <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
-        <.action_button type="submit" variant={:primary}>Connect Stripe</.action_button>
+        <.action_button type="submit" variant={:primary}>
+          <span data-submit-spinner class="hidden items-center gap-2">
+            <.spinner /> Connecting…
+          </span>
+          <span data-submit-label>Connect Stripe</span>
+        </.action_button>
       </form>
     </.detail_card>
     """

@@ -37,9 +37,23 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
         <span class="block mt-1">{state_message(@account, @state)}</span>
       </.info_box>
 
-      <form :if={@state == :incomplete} action={~p"/dashboard/payments/connect"} method="post">
+      <%!--
+        `data-submit-loading` shows a spinner and disables the button while the
+        Stripe redirect is being prepared, preventing rage-clicks on a slow open.
+      --%>
+      <form
+        :if={@state == :incomplete}
+        action={~p"/dashboard/payments/connect"}
+        method="post"
+        data-submit-loading
+      >
         <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
-        <.action_button type="submit" variant={:primary}>Continue onboarding</.action_button>
+        <.action_button type="submit" variant={:primary}>
+          <span data-submit-spinner class="hidden items-center gap-2">
+            <.spinner /> Connecting…
+          </span>
+          <span data-submit-label>Continue onboarding</span>
+        </.action_button>
       </form>
     </div>
     """
