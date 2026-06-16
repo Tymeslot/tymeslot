@@ -74,7 +74,11 @@ defmodule Tymeslot.Infrastructure.ObanLoggerTest do
           ObanLogger.handle_event([:oban, :job, :exception], measurements(), meta, [])
         end)
 
-      assert at_error == ""
+      # Assert ObanLogger did not emit its own message at :error level. We can't
+      # assert the whole capture is empty: capture_log is VM-global, so under
+      # concurrent async tests it also picks up unrelated error logs from other
+      # tests (e.g. circuit breakers tripping).
+      refute at_error =~ "job:exception"
       assert at_warning =~ "job:exception"
     end
 
