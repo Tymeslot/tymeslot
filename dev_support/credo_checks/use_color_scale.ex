@@ -72,7 +72,6 @@ defmodule CredoChecks.UseColorScale do
 
   defp skip_file?(filename) do
     String.contains?(filename, "use_color_scale.ex") or
-      String.contains?(filename, "tailwind.config") or
       String.contains?(filename, "/assets/")
   end
 

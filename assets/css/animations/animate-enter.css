@@ -9,13 +9,20 @@
    output values. They drive the shared `@keyframes enter`
    (animations/keyframes.css) through CSS variables.
 
-   `duration-*` and `ease-*` used alongside `animate-in` are standard Tailwind
-   utilities and still work in v4; they are not redefined here.
+   Duration control: the original plugin redefined `duration-*` to set
+   `animation-duration`. In Tailwind v4, the built-in `duration-*` utilities
+   only set `transition-duration`; they have no effect on `animation-duration`.
+   To restore the `animate-in duration-500` pattern, `.animate-in` reads
+   `--tw-animate-duration` (defaulting to 150ms), and the compound-selector
+   rules below wire each `duration-N` class to that variable when both classes
+   are present on the same element. Plain `duration-*` usage (for transitions)
+   is unaffected because those rules target a different CSS property.
    =========================================================================== */
 
 /* Base trigger. Resets the enter variables to their no-op defaults and starts
    the `enter` keyframe; modifiers below override individual variables. The
-   plugin defaults to a 150ms duration. */
+   default duration is 150ms (matching the original plugin), overridable by
+   pairing with a `duration-*` class (see compound rules at the bottom). */
 .animate-in {
   --tw-enter-opacity: initial;
   --tw-enter-scale: initial;
@@ -23,7 +30,7 @@
   --tw-enter-translate-x: initial;
   --tw-enter-translate-y: initial;
   animation-name: enter;
-  animation-duration: 150ms;
+  animation-duration: var(--tw-animate-duration, 150ms);
 }
 
 /* Fade: opacity from 0. `fade-in` and `fade-in-0` are equivalent (0% opacity). */
@@ -57,3 +64,14 @@
     animation: none;
   }
 }
+
+/* Duration wiring — compound selectors that restore the `animate-in duration-*`
+   pattern broken by Tailwind v4's `duration-*` change (v4 built-ins set
+   transition-duration only). These rules are outside any @layer so they take
+   cascade precedence over the layered transition utilities and apply only when
+   both classes appear on the same element. Add entries here if new `duration-N`
+   values are used alongside `animate-in` in the future. */
+.animate-in.duration-200 { --tw-animate-duration: 200ms; animation-duration: 200ms; }
+.animate-in.duration-300 { --tw-animate-duration: 300ms; animation-duration: 300ms; }
+.animate-in.duration-500 { --tw-animate-duration: 500ms; animation-duration: 500ms; }
+.animate-in.duration-700 { --tw-animate-duration: 700ms; animation-duration: 700ms; }
