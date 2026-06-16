@@ -128,7 +128,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                           </div>
                         <% @username_context && length(@meeting_types) > 0 -> %>
                           <%= for meeting_type <- @meeting_types do %>
-                            <% slug = MeetingTypes.to_slug(meeting_type) %>
+                            <% slug = MeetingTypes.effective_slug(meeting_type) %>
                             <.duration_card
                               duration={slug}
                               title={meeting_type.name}

@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   Component for displaying meeting type cards with toggle and action buttons.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
   import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias TymeslotWeb.Components.Icons.ProviderIcon
@@ -41,9 +42,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
 
         <%!-- Name + details --%>
         <div class="flex-1 min-w-0">
-          <h3 class="text-token-base font-medium text-tymeslot-800 truncate">
-            {@type.name}
-          </h3>
+          <div class="flex items-center gap-2 min-w-0">
+            <h3 class="text-token-base font-medium text-tymeslot-800 truncate">
+              {@type.name}
+            </h3>
+            <span
+              :if={@type.is_private}
+              class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-token-full bg-tymeslot-100 text-tymeslot-600 text-token-xs font-medium"
+              title={gettext("Hidden from your public booking page; reachable only by its direct link")}
+            >
+              <span class="hero-eye-slash-mini w-3 h-3" />{gettext("Unlisted")}
+            </span>
+          </div>
           <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-token-xs text-tymeslot-600">
             <span class="flex items-center shrink-0">
               <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

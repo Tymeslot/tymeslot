@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
             <% else %>
               <div class="duration-grid">
                 <%= for meeting_type <- @meeting_types do %>
-                  <% slug = MeetingTypes.to_slug(meeting_type) %>
+                  <% slug = MeetingTypes.effective_slug(meeting_type) %>
                   <div class={"duration-card #{if @selected_duration == slug, do: "selected", else: ""}"}>
                     <button
                       phx-click="select_duration"

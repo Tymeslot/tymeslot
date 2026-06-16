@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
 
@@ -270,6 +271,110 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
 
       assert render(view) =~ "Stays Around"
       assert MeetingTypes.get_meeting_type(meeting_type.id, user.id) != nil
+    end
+  end
+
+  # ===========================================================================
+  # Booking link & visibility
+  # ===========================================================================
+
+  describe "Booking link and visibility" do
+    setup %{profile: profile} do
+      # The link/visibility controls only appear once the profile has a username.
+      %{profile: Repo.update!(Changeset.change(profile, username: "linkhost"))}
+    end
+
+    test "toggling a type private persists the flag and badges it unlisted", %{
+      conn: conn,
+      user: user
+    } do
+      meeting_type =
+        insert(:meeting_type, user: user, name: "Strategy Session", is_private: false)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      view
+      |> element("[phx-click='toggle_private'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      assert render(view) =~ "Visibility updated"
+      assert Repo.reload!(meeting_type).is_private == true
+
+      # The list view marks the now-private type as unlisted.
+      view |> element("button", "Done") |> render_click()
+      assert render(view) =~ "Unlisted"
+    end
+
+    test "changing the booking link persists the new slug after confirmation", %{
+      conn: conn,
+      user: user
+    } do
+      meeting_type = insert(:meeting_type, user: user, name: "Strategy Session")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      view |> element("[phx-click='open_slug_modal']") |> render_click()
+
+      view
+      |> form("#booking-link-modal form", %{"slug" => "vip-call"})
+      |> render_change()
+
+      view |> element("#booking-link-modal button", "Save link") |> render_click()
+
+      assert render(view) =~ "Booking link updated"
+      assert Repo.reload!(meeting_type).slug == "vip-call"
+    end
+
+    test "randomising mints an unguessable link different from the name slug", %{
+      conn: conn,
+      user: user
+    } do
+      meeting_type = insert(:meeting_type, user: user, name: "Strategy Session")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      view |> element("[phx-click='open_slug_modal']") |> render_click()
+      view |> element("#booking-link-modal [phx-click='randomise_slug']") |> render_click()
+      view |> element("#booking-link-modal button", "Save link") |> render_click()
+
+      assert render(view) =~ "Booking link updated"
+      reloaded = Repo.reload!(meeting_type)
+      assert reloaded.slug
+      assert reloaded.slug != "strategy-session"
+    end
+
+    test "a booking link already taken by another type is rejected", %{conn: conn, user: user} do
+      _taken = insert(:meeting_type, user: user, name: "Coffee Chat")
+      other = insert(:meeting_type, user: user, name: "Other Session")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{other.id}']")
+      |> render_click()
+
+      view |> element("[phx-click='open_slug_modal']") |> render_click()
+
+      view
+      |> form("#booking-link-modal form", %{"slug" => "coffee-chat"})
+      |> render_change()
+
+      view |> element("#booking-link-modal button", "Save link") |> render_click()
+
+      assert render(view) =~ "already taken"
+      assert Repo.reload!(other).slug == nil
     end
   end
 

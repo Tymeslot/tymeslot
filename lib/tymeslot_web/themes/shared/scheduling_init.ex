@@ -51,6 +51,12 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
   def assign_base_state(socket) do
     socket
     |> assign(:current_state, :overview)
+    # Records how the booker entered: only when they landed on the overview do
+    # they get a "back to all appointments" control on the schedule step. A
+    # direct link (e.g. a private booking link) enters at :schedule and must not
+    # expose the organiser's other meeting types. live_action is fixed for the
+    # life of the LiveView, so this entry signal is stable across step patches.
+    |> assign(:entered_via_overview, socket.assigns[:live_action] == :overview)
     |> assign_new(:username_context, fn -> nil end)
     |> assign_new(:organizer_profile, fn -> nil end)
     |> assign_new(:organizer_user_id, fn -> nil end)

@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   defp meeting_type_slug(%{meeting_type_id: id, organizer_user_id: user_id})
        when is_integer(id) and is_integer(user_id) do
     case MeetingTypes.get_meeting_type(id, user_id) do
-      %{} = meeting_type -> MeetingTypes.to_slug(meeting_type)
+      %{} = meeting_type -> MeetingTypes.effective_slug(meeting_type)
       _missing -> nil
     end
   end
