@@ -1,0 +1,59 @@
+/* ===========================================================================
+   tailwindcss-animate — minimal entrance utilities
+   ---------------------------------------------------------------------------
+   The `tailwindcss-animate` plugin is a third-party JS plugin that the Tailwind
+   v4 standalone binary cannot load (the build stays dependency-free, no
+   node_modules). These plain-CSS utilities reproduce exactly the classes the
+   templates use — `animate-in`, `fade-in`/`fade-in-0`, `zoom-in`/`zoom-in-95`,
+   `slide-in-from-bottom-4`, `slide-in-from-top-2` — matching the plugin's own
+   output values. They drive the shared `@keyframes enter`
+   (animations/keyframes.css) through CSS variables.
+
+   `duration-*` and `ease-*` used alongside `animate-in` are standard Tailwind
+   utilities and still work in v4; they are not redefined here.
+   =========================================================================== */
+
+/* Base trigger. Resets the enter variables to their no-op defaults and starts
+   the `enter` keyframe; modifiers below override individual variables. The
+   plugin defaults to a 150ms duration. */
+.animate-in {
+  --tw-enter-opacity: initial;
+  --tw-enter-scale: initial;
+  --tw-enter-rotate: initial;
+  --tw-enter-translate-x: initial;
+  --tw-enter-translate-y: initial;
+  animation-name: enter;
+  animation-duration: 150ms;
+}
+
+/* Fade: opacity from 0. `fade-in` and `fade-in-0` are equivalent (0% opacity). */
+.fade-in,
+.fade-in-0 {
+  --tw-enter-opacity: 0;
+}
+
+/* Zoom: scale from the given factor. `zoom-in` = 0, `zoom-in-95` = .95. */
+.zoom-in {
+  --tw-enter-scale: 0;
+}
+
+.zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+
+/* Slide: translate from the given offset. spacing-4 = 1rem, spacing-2 = 0.5rem. */
+.slide-in-from-bottom-4 {
+  --tw-enter-translate-y: 1rem;
+}
+
+.slide-in-from-top-2 {
+  --tw-enter-translate-y: -0.5rem;
+}
+
+/* Respect reduced-motion, matching the project's other animations: skip the
+   entrance animation entirely so content appears in its final state. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in {
+    animation: none;
+  }
+}

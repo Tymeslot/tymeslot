@@ -13,6 +13,7 @@
 
 /* Import animations */
 @import "./animations/keyframes.css";
+@import "./animations/animate-enter.css";
 
 /* Import components */
 @import "./components.css";
