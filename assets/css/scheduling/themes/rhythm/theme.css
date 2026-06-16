@@ -1,9 +1,70 @@
 /* Rhythm Theme - Self-Contained Video Background with Sliding Interface */
 
+/* Tailwind v4: the framework import must come before every other rule, so it
+   leads the file (the shared layout.css no longer carries @tailwind). */
+@import "tailwindcss";
+
 /* Import only the minimal shared utilities */
 @import "../../shared/reset.css";
 @import "../../shared/layout.css";
 @import "../../shared/utilities.css";
+
+/* ===========================================================================
+   Tailwind v4 CSS-first configuration
+   ---------------------------------------------------------------------------
+   The standalone v4 CLI cannot load a legacy JS config via @config, so the
+   theme-template needs (heroicons + LiveView loading variants + content
+   sources) are expressed CSS-first here. The themes are self-contained: they
+   carry their own token system, so none of the core's custom @theme tokens
+   (turquoise / token-* / glass) are needed — the theme TEMPLATES only consume
+   standard utilities, hero-* icons, and the phx-*-loading variants.
+   Paths are relative to this file (assets/heroicons.js is four levels up).
+   =========================================================================== */
+
+/* Heroicons mask-image plugin. @tailwindcss/forms is not needed — the theme
+   templates use no forms utilities. */
+@plugin "../../../../heroicons.js";
+
+/* LiveView state variants — the theme schedule components use
+   phx-click-loading:animate-pulse; the other two are kept for parity. The block
+   form (with @slot) is required: the inline array form `([".sel&", ".sel &"])`
+   is emitted verbatim as a literal selector by the v4 standalone CLI instead of
+   being expanded, so the rule never matches. The block form below compiles to
+   the v3-equivalent `.phx-click-loading.phx-…, .phx-click-loading .phx-…` pair. */
+@custom-variant phx-click-loading {
+  .phx-click-loading& { @slot; }
+  .phx-click-loading & { @slot; }
+}
+@custom-variant phx-submit-loading {
+  .phx-submit-loading& { @slot; }
+  .phx-submit-loading & { @slot; }
+}
+@custom-variant phx-change-loading {
+  .phx-change-loading& { @slot; }
+  .phx-change-loading & { @slot; }
+}
+
+/* Content sources (formerly tailwind.config.js `content`). Paths are relative
+   to this file; mirror the v3 globs that scanned the web layer + JS. */
+@source "../../../../js";
+@source "../../../../../lib/tymeslot_web.ex";
+@source "../../../../../lib/tymeslot_web";
+
+/* Meeting-type icons are chosen per booking by host config and rendered via
+   runtime string interpolation, so static scanning cannot see them (formerly
+   the shared config safelist). The booking page must carry them. */
+@source inline("hero-bolt hero-chat-bubble-left-right hero-hand-raised hero-chart-bar hero-flag hero-clock hero-phone hero-light-bulb hero-wrench-screwdriver hero-book-open hero-rocket-launch hero-beaker hero-clipboard-document-check hero-presentation-chart-line hero-calendar hero-user hero-video-camera hero-link");
+
+/* v4 compatibility: restore v3's gray-200 default border colour. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+}
 
 /* Import Rhythm Theme Modules */
 @import "./modules/variables.css";

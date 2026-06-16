@@ -51,7 +51,7 @@
 
 /* Button States */
 .btn:disabled {
-  @apply opacity-50 cursor-not-allowed transform-none !important;
+  @apply opacity-50! cursor-not-allowed! transform-none!;
 }
 
 /* Primary button carries its own hover affordances (lift, shadow, colour shift)

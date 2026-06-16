@@ -85,7 +85,7 @@ defmodule CredoChecks.UseColorScale do
   defp issue_for(issue_meta, line_no, trigger) do
     format_issue(issue_meta,
       message:
-        "Use `tymeslot-*` instead of `#{trigger}`. See color scales in tailwind.config.js.",
+        "Use `tymeslot-*` instead of `#{trigger}`. See color scales in the @theme block of assets/css/app.css.",
       line_no: line_no,
       trigger: trigger
     )
