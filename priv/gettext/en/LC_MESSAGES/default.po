@@ -1051,7 +1051,7 @@ msgid "Late Night"
 msgstr "Late Night"
 
 #: lib/tymeslot_web/components/step_navigation.ex:48
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Confirmation"
 msgstr "Confirmation"
 
@@ -1143,7 +1143,7 @@ msgstr "%{current} / %{total}"
 
 #: lib/tymeslot_web/components/announcement_modal_component.ex:95
 #: lib/tymeslot_web/components/tour_overlay.ex:50
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Back"
 msgstr "Back"
 
@@ -1156,7 +1156,7 @@ msgstr "Got it"
 #: lib/tymeslot_web/components/announcement_modal_component.ex:128
 #: lib/tymeslot_web/components/announcement_modal_component.ex:132
 #: lib/tymeslot_web/components/tour_overlay.ex:58
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Next"
 msgstr "Next"
 
@@ -1253,9 +1253,9 @@ msgid "Booking slug"
 msgstr "Booking slug"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:68
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Cancel"
-msgstr "Cancelling..."
+msgstr "Cancel"
 
 #: lib/tymeslot_web/live/admin_live.ex:299
 #, elixir-autogen, elixir-format
@@ -1348,7 +1348,7 @@ msgid "Display name"
 msgstr "Display name"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:33
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "Email"
 
@@ -1504,9 +1504,9 @@ msgstr "Save"
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:134
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:163
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:187
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Set %{name}"
-msgstr "with %{name}"
+msgstr "Set %{name}"
 
 #: lib/tymeslot_web/live/admin_live/components/layout.ex:62
 #, elixir-autogen, elixir-format
@@ -1604,9 +1604,9 @@ msgid "You will lose access to admin settings and user management, and be return
 msgstr "You will lose access to admin settings and user management, and be returned to your dashboard."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:74
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You're set"
-msgstr "You're All Set!"
+msgstr "You're set"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:130
 #, elixir-autogen, elixir-format
@@ -1670,7 +1670,7 @@ msgstr "%{day} %{month} %{year} at %{time} %{timezone}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex:85
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex:85
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Continue"
 msgstr "Continue"
 
@@ -1690,9 +1690,9 @@ msgid "Let hosts on this instance take payment from bookers via Stripe Connect. 
 msgstr "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment — without them the toggle stays locked."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:24
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Meeting payments"
-msgstr "Meeting Details"
+msgstr "Meeting payments"
 
 #: lib/tymeslot/custom_fields/answer_renderer.ex:15
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/yes_no.ex:68
@@ -1779,9 +1779,9 @@ msgstr "Please correct the errors below."
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:57
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:118
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:122
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Select timezone"
-msgstr "Select a time"
+msgstr "Select timezone"
 
 #: lib/tymeslot_web/live/admin_live.ex:116
 #, elixir-autogen, elixir-format
