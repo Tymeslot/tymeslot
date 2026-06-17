@@ -55,18 +55,16 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
          }}
       end)
 
-      # Also mock the HTTP client for the actual meeting creation
+      # Also mock the HTTP client for the actual space creation (Meet REST API)
       stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
         {:ok,
          %Req.Response{
            status: 200,
            body:
              Jason.encode!(%{
-               "conferenceData" => %{
-                 "entryPoints" => [
-                   %{"entryPointType" => "video", "uri" => "https://meet.google.com/abc-defg-hij"}
-                 ]
-               }
+               "name" => "spaces/NgPxrxVDQF8B",
+               "meetingUri" => "https://meet.google.com/abc-defg-hij",
+               "meetingCode" => "abc-defg-hij"
              })
          }}
       end)

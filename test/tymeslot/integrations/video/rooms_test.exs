@@ -82,25 +82,24 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
          }}
       end)
 
-      # Mock Google API call
+      # Mock Google Meet REST API call (space creation)
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
          %Req.Response{
            status: 200,
            body:
              Jason.encode!(%{
-               "conferenceData" => %{
-                 "entryPoints" => [
-                   %{"entryPointType" => "video", "uri" => "https://meet.google.com/abc-defg-hij"}
-                 ]
-               }
+               "name" => "spaces/NgPxrxVDQF8B",
+               "meetingUri" => "https://meet.google.com/abc-defg-hij",
+               "meetingCode" => "abc-defg-hij"
              })
          }}
       end)
 
       assert {:ok, context} = Rooms.create_meeting_room(user.id, integration_id: integration.id)
       assert context.provider_type == :google_meet
-      assert context.room_data.room_id == "abc-defg-hij"
+      assert context.room_data.room_id == "NgPxrxVDQF8B"
+      assert context.room_data.meeting_url == "https://meet.google.com/abc-defg-hij"
 
       # Verify token was updated in DB
       updated = Repo.get(VideoIntegrationSchema, integration.id)
@@ -234,11 +233,9 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
            status: 200,
            body:
              Jason.encode!(%{
-               "conferenceData" => %{
-                 "entryPoints" => [
-                   %{"entryPointType" => "video", "uri" => "https://meet.google.com/abc-defg-hij"}
-                 ]
-               }
+               "name" => "spaces/NgPxrxVDQF8B",
+               "meetingUri" => "https://meet.google.com/abc-defg-hij",
+               "meetingCode" => "abc-defg-hij"
              })
          }}
       end)

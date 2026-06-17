@@ -153,6 +153,14 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
 
         :ok
 
+      {:error, _type, reason} ->
+        Logger.error("Failed to renew Google Calendar push channel",
+          calendar_integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        {:error, reason}
+
       {:error, reason} ->
         Logger.error("Failed to renew Google Calendar push channel",
           calendar_integration_id: integration.id,
@@ -175,6 +183,14 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
         )
 
         :ok
+
+      {:error, _type, reason} ->
+        Logger.error("Failed to renew Outlook Graph subscription",
+          calendar_integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        {:error, reason}
 
       {:error, reason} ->
         Logger.error("Failed to renew Outlook Graph subscription",
