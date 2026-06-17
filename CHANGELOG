@@ -1,4 +1,10 @@
 
+[1.1.1]
+* core: Stop Zoom video integration falsely reporting connection issues
+* core: Create Google Meet links without a duplicate calendar event
+* core: Harden Finch HTTP pool against transient pool_not_available errors
+* core: Prevent calendar webhook renewal crash on provider network errors
+* core: Show try-later message when Stripe payment setup is temporarily unavailable
 [1.1.0]
 * core: Correct sender identity in host operational alert emails
 * core: Treat unfinished Stripe onboarding as incomplete, not restricted
