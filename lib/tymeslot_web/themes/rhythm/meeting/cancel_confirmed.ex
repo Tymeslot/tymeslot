@@ -46,11 +46,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                   </div>
 
                   <h1 class="confirmation-headline">
-                    {gettext("Meeting Cancelled")}
+                    {dgettext("booking", "Meeting Cancelled")}
                   </h1>
 
                   <p class="confirmation-message">
-                    {gettext("Your meeting has been successfully cancelled.")}
+                    {dgettext("booking", "Your meeting has been successfully cancelled.")}
                   </p>
                 </div>
                 
@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                         />
                       </svg>
                       <span>
-                        <strong>{gettext("Cancellation emails have been sent to all participants.")}</strong>
+                        <strong>{dgettext("booking", "Cancellation emails have been sent to all participants.")}</strong>
                       </span>
                     </div>
                   </div>
@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                     class="action-button-primary action-button-full-width"
                     type="button"
                   >
-                    {gettext("Schedule a New Meeting")}
+                    {dgettext("booking", "Schedule a New Meeting")}
                   </button>
                 </div>
               </div>

@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Note do
           event="answer"
           myself={@myself}
         >
-          {gettext("I acknowledge the above")}
+          {dgettext("booking", "I acknowledge the above")}
         </OptionCard.render>
       </div>
     </div>

@@ -171,12 +171,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                         class="mb-1"
                         title_class="section-header schedule-title"
                       >
-                        {gettext("Select a Date & Time")}
+                        {dgettext("booking", "Select a Date & Time")}
                       </.section_header>
 
                       <%= if @organizer_profile do %>
                         <p class="schedule-advance-notice text-glass-primary">
-                          {gettext("Bookings available up to %{advance}", advance: Panels.format_advance_booking_days(
+                          {dgettext("booking", "Bookings available up to %{advance}", advance: Panels.format_advance_booking_days(
                             @organizer_profile.advance_booking_days
                           ))}
                         </p>
@@ -184,9 +184,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
                       <p class="schedule-duration-label text-glass-primary">
                         <%= if @meeting_type do %>
-                          {gettext("Duration: %{duration}", duration: LocalizationHelpers.format_duration(@meeting_type.duration_minutes))}
+                          {dgettext("booking", "Duration: %{duration}", duration: LocalizationHelpers.format_duration(@meeting_type.duration_minutes))}
                         <% else %>
-                          {gettext("Duration: %{duration}", duration: Duration.format(@duration))}
+                          {dgettext("booking", "Duration: %{duration}", duration: Duration.format(@duration))}
                         <% end %>
                       </p>
                     </div>
@@ -256,7 +256,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       <div class="calendar-monthly">
                         <div class="calendar-month-header">
                           <h2 class="calendar-month-title font-bold text-glass-primary">
-                            {gettext("Select a Date")}
+                            {dgettext("booking", "Select a Date")}
                             <.loading_spinner show={@availability_status == :loading} />
                           </h2>
                           <div class="calendar-nav-cluster">
@@ -265,7 +265,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                 </svg>
-                                {gettext("Calendar is loading slowly")}
+                                {dgettext("booking", "Calendar is loading slowly")}
                               </div>
                             <% end %>
                             <button
@@ -307,7 +307,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                         <div class="calendar-grid-container flex-1">
                           <div class="grid grid-cols-7 gap-0.5 text-center mb-1">
                             <div
-                              :for={day <- [gettext("Sun"), gettext("Mon"), gettext("Tue"), gettext("Wed"), gettext("Thu"), gettext("Fri"), gettext("Sat")]}
+                              :for={day <- [dgettext("booking", "Sun"), dgettext("booking", "Mon"), dgettext("booking", "Tue"), dgettext("booking", "Wed"), dgettext("booking", "Thu"), dgettext("booking", "Fri"), dgettext("booking", "Sat")]}
                               class="calendar-weekday text-xs font-medium"
                             >
                               {String.slice(day, 0, 3)}
@@ -351,7 +351,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       variant={:secondary}
                       class="flex-1"
                     >
-                      ← {gettext("back")}
+                      ← {dgettext("booking", "back")}
                     </.action_button>
 
                     <.action_button
@@ -361,7 +361,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       disabled={!(@selected_date && @selected_time)}
                       class="flex-1"
                     >
-                      {gettext("next_step")} →
+                      {dgettext("booking", "next_step")} →
                     </.action_button>
                   </div>
                 </div>

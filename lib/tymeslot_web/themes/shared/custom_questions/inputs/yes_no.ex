@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
             <polyline points="4 12 10 18 20 6" />
           </svg>
         </span>
-        <span class="custom-question-yes-no-label">{gettext("Yes")}</span>
+        <span class="custom-question-yes-no-label">{dgettext("booking", "Yes")}</span>
       </label>
 
       <label class={[
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.YesNo do
             <line x1="18" y1="6" x2="6" y2="18" />
           </svg>
         </span>
-        <span class="custom-question-yes-no-label">{gettext("No")}</span>
+        <span class="custom-question-yes-no-label">{dgettext("booking", "No")}</span>
       </label>
     </fieldset>
     """

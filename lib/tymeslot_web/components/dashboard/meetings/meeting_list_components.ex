@@ -203,7 +203,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                 <Icons.icon name={:list_bullet} class="w-4 h-4 text-tymeslot-400" />
               </div>
               <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mt-2">
-                {gettext("Custom answers")}
+                {dgettext("dashboard", "Custom answers")}
               </p>
             </div>
             <dl class="space-y-3">

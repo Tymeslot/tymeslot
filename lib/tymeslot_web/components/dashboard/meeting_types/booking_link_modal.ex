@@ -42,20 +42,20 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
       <:header>
         <div class="flex items-center gap-2">
           <CoreComponents.icon name="hero-link" class="w-5 h-5 text-turquoise-500" />
-          <span>{gettext("Change booking link")}</span>
+          <span>{dgettext("dashboard", "Change booking link")}</span>
         </div>
       </:header>
 
       <div :if={@meeting_type} class="space-y-5">
         <CoreComponents.info_box variant={:warning}>
-          {gettext(
+          {dgettext("dashboard", 
             "Changing this link will stop any links you have already shared for this meeting type from working."
           )}
         </CoreComponents.info_box>
 
         <form phx-change="slug_draft_changed" phx-submit="confirm_slug_change" phx-target={@myself} class="space-y-2">
           <label for="booking-link-slug" class="block font-medium text-tymeslot-700">
-            {gettext("Link address")}
+            {dgettext("dashboard", "Link address")}
           </label>
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-token-sm text-tymeslot-500 whitespace-nowrap">{@base_url}/</span>
@@ -74,11 +74,11 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
               phx-click="randomise_slug"
               phx-target={@myself}
             >
-              {gettext("Randomise")}
+              {dgettext("dashboard", "Randomise")}
             </CoreComponents.action_button>
           </div>
           <p class="text-token-sm text-tymeslot-500">
-            {gettext(
+            {dgettext("dashboard", 
               "Use lowercase letters, numbers and hyphens. Randomise creates an unguessable link."
             )}
           </p>
@@ -91,13 +91,13 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
             variant={:secondary}
             phx-click={JS.push("close_slug_modal", target: @myself)}
           >
-            {gettext("Cancel")}
+            {dgettext("dashboard", "Cancel")}
           </CoreComponents.action_button>
           <CoreComponents.action_button
             variant={:primary}
             phx-click={JS.push("confirm_slug_change", target: @myself)}
           >
-            {gettext("Save link")}
+            {dgettext("dashboard", "Save link")}
           </CoreComponents.action_button>
         </div>
       </:footer>

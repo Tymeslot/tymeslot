@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
               d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          {gettext("Your timezone")}
+          {dgettext("booking", "Your timezone")}
         </div>
       </label>
 
@@ -50,11 +50,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
           on_close="close_timezone_dropdown"
           target={@target}
           role="dialog"
-          panel_label={gettext("Select timezone")}
+          panel_label={dgettext("booking", "Select timezone")}
           trigger_class="timezone-trigger"
           class="timezone-dropdown"
           unstyled={true}
-          aria-label={gettext("Select timezone")}
+          aria-label={dgettext("booking", "Select timezone")}
         >
         <:trigger>
           <div class="timezone-trigger-row">
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                   {Timezones.format(@user_timezone)}
                 </div>
                 <div class="timezone-time-display timezone-time-inline">
-                  {gettext("%{time} local time",
+                  {dgettext("booking", "%{time} local time",
                     time: TimezoneHelpers.format_local_time(@user_timezone)
                   )}
                 </div>
@@ -101,7 +101,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
               phx-target={@target}
               name="search"
               value={@timezone_search}
-              placeholder={gettext("Search cities, countries, or timezones...")}
+              placeholder={dgettext("booking", "Search cities, countries, or timezones...")}
               autocomplete="off"
               phx-hook="AutoFocus"
             />
@@ -147,14 +147,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
     <div class="time-slots-panel flex flex-col" id="slots-container" phx-hook="AutoScrollToSlots">
       <% normalized_slots = MeetingUtils.normalize_slot_list(@available_slots) %>
       <h2 class="slots-heading font-bold text-glass-primary">
-        {gettext("Available Times")}
+        {dgettext("booking", "Available Times")}
       </h2>
       <div class="slots-box flex-1">
         <%= if @selected_date do %>
           <%= if @loading_slots do %>
             <div class="h-full flex items-center justify-center">
               <.spinner />
-              <span class="ml-3 text-white">{gettext("Loading available times...")}</span>
+              <span class="ml-3 text-white">{dgettext("booking", "Loading available times...")}</span>
             </div>
           <% else %>
             <%= if @calendar_error do %>
@@ -189,8 +189,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
             <% else %>
               <%= if !@calendar_error do %>
                 <.empty_state
-                  message={gettext("This date is fully booked")}
-                  secondary_message={gettext("Please select another date")}
+                  message={dgettext("booking", "This date is fully booked")}
+                  secondary_message={dgettext("booking", "Please select another date")}
                 >
                   <:icon>
                     <path
@@ -208,7 +208,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
         <% else %>
           <div class="h-full flex items-center justify-center">
             <p class="text-quill-secondary text-sm">
-              {gettext("Please select a date to see available times")}
+              {dgettext("booking", "Please select a date to see available times")}
             </p>
           </div>
         <% end %>
@@ -263,33 +263,35 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
   """
   @spec format_advance_booking_days(term()) :: String.t()
   def format_advance_booking_days(days) when is_integer(days) and days <= 0,
-    do: gettext("same day only")
+    do: dgettext("booking", "same day only")
 
-  def format_advance_booking_days(1), do: gettext("1 day in advance")
+  def format_advance_booking_days(1), do: dgettext("booking", "1 day in advance")
 
   def format_advance_booking_days(days) when is_integer(days) and days < 7,
-    do: gettext("%{days} days in advance", days: days)
+    do: dgettext("booking", "%{days} days in advance", days: days)
 
-  def format_advance_booking_days(7), do: gettext("1 week in advance")
+  def format_advance_booking_days(7), do: dgettext("booking", "1 week in advance")
 
   def format_advance_booking_days(days) when is_integer(days) and days < 30,
     do: format_weeks_advance(days)
 
-  def format_advance_booking_days(30), do: gettext("1 month in advance")
+  def format_advance_booking_days(30), do: dgettext("booking", "1 month in advance")
 
   def format_advance_booking_days(days) when is_integer(days) and days < 365,
     do: format_months_advance(days)
 
-  def format_advance_booking_days(365), do: gettext("1 year in advance")
+  def format_advance_booking_days(365), do: dgettext("booking", "1 year in advance")
   def format_advance_booking_days(days) when is_integer(days), do: format_years_advance(days)
-  def format_advance_booking_days(_arg), do: gettext("90 days in advance")
+  def format_advance_booking_days(_arg), do: dgettext("booking", "90 days in advance")
 
   # ========== PRIVATE HELPERS ==========
 
-  defp format_weeks_advance(days), do: gettext("%{weeks} weeks in advance", weeks: div(days, 7))
+  defp format_weeks_advance(days),
+    do: dgettext("booking", "%{weeks} weeks in advance", weeks: div(days, 7))
 
   defp format_months_advance(days),
-    do: gettext("%{months} months in advance", months: div(days, 30))
+    do: dgettext("booking", "%{months} months in advance", months: div(days, 30))
 
-  defp format_years_advance(days), do: gettext("%{years} years in advance", years: div(days, 365))
+  defp format_years_advance(days),
+    do: dgettext("booking", "%{years} years in advance", years: div(days, 365))
 end

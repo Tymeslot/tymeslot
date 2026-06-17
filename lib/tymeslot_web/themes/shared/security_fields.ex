@@ -84,13 +84,14 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
 
     privacy_link =
       ~s(<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" class="#{link_class}">) <>
-        gettext("Privacy Policy") <> "</a>"
+        dgettext("booking", "Privacy Policy") <> "</a>"
 
     terms_link =
       ~s(<a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" class="#{link_class}">) <>
-        gettext("Terms of Service") <> "</a>"
+        dgettext("booking", "Terms of Service") <> "</a>"
 
-    gettext(
+    dgettext(
+      "booking",
       "This site is protected by reCAPTCHA and the Google %{privacy_link} and %{terms_link} apply.",
       privacy_link: privacy_link,
       terms_link: terms_link

@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
             socket
             |> assign(:form, Component.to_form(booking_params))
             |> assign(:validation_errors, errors)
-            |> Flash.put_flash(:error, gettext("Please correct the errors below."))
+            |> Flash.put_flash(:error, dgettext("booking", "Please correct the errors below."))
 
           {:error, socket}
       end
@@ -281,7 +281,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         socket =
           socket
           |> assign(:validation_errors, %{custom_fields: field_errors})
-          |> Flash.put_flash(:error, gettext("Please correct the errors below."))
+          |> Flash.put_flash(:error, dgettext("booking", "Please correct the errors below."))
 
         {:error, socket}
 
@@ -403,7 +403,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
           |> assign(:submission_processed, false)
           |> Flash.put_flash(
             :error,
-            gettext("Please correct the errors below before submitting.")
+            dgettext("booking", "Please correct the errors below before submitting.")
           )
 
         {:error, socket}

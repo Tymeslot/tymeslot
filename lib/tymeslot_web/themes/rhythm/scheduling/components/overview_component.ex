@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
         <div class="slide active">
           <div class="slide-content">
             <h1 class="slide-title">
-              {gettext("Schedule with %{name}", name: display_name(@organizer_profile))}
+              {dgettext("booking", "Schedule with %{name}", name: display_name(@organizer_profile))}
             </h1>
 
             <div class="organizer-profile">
@@ -61,18 +61,18 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
               </div>
               <div class="organizer-info">
                 <p class="organizer-greeting">
-                  {gettext("Hi! I'm %{name}.", name: display_name(@organizer_profile))}
+                  {dgettext("booking", "Hi! I'm %{name}.", name: display_name(@organizer_profile))}
                 </p>
                 <p class="organizer-instruction">
-                  {gettext("Pick a meeting duration below.")}
+                  {dgettext("booking", "Pick a meeting duration below.")}
                 </p>
               </div>
             </div>
 
             <%= if @username_context && @meeting_types == [] do %>
               <div class="overview-empty-state">
-                <p class="overview-empty-title">{gettext("No meeting types available")}</p>
-                <p class="overview-empty-subtitle">{gettext("Please contact the organizer")}</p>
+                <p class="overview-empty-title">{dgettext("booking", "No meeting types available")}</p>
+                <p class="overview-empty-subtitle">{dgettext("booking", "Please contact the organizer")}</p>
               </div>
             <% else %>
               <div class="duration-grid">
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                 data-testid="next-step"
                 disabled={is_nil(@selected_duration)}
               >
-                {gettext("next")} →
+                {dgettext("booking", "next")} →
               </button>
             </div>
           </div>

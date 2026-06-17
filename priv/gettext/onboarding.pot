@@ -1,0 +1,136 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:103
+#, elixir-autogen, elixir-format
+msgid "%{current} / %{total}"
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:76
+#, elixir-autogen, elixir-format
+msgid "Account settings and log out are here in the top-right."
+msgstr ""
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:95
+#: lib/tymeslot_web/components/tour_overlay.ex:53
+#, elixir-autogen, elixir-format
+msgid "Back"
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:64
+#, elixir-autogen, elixir-format
+msgid "Common tasks"
+msgstr ""
+
+#: lib/tymeslot_web/components/step_navigation.ex:48
+#, elixir-autogen, elixir-format
+msgid "Confirmation"
+msgstr ""
+
+#: lib/tymeslot_web/components/step_navigation.ex:30
+#, elixir-autogen, elixir-format
+msgid "Date & Time"
+msgstr ""
+
+#: lib/tymeslot_web/components/step_navigation.ex:39
+#, elixir-autogen, elixir-format
+msgid "Details"
+msgstr ""
+
+#: lib/tymeslot_web/components/step_navigation.ex:21
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr ""
+
+#: lib/tymeslot_web/components/tour_overlay.ex:69
+#, elixir-autogen, elixir-format
+msgid "Finish"
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:83
+#, elixir-autogen, elixir-format
+msgid "Go create your first event type — and let people book you."
+msgstr ""
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:117
+#: lib/tymeslot_web/components/announcement_modal_component.ex:121
+#, elixir-autogen, elixir-format
+msgid "Got it"
+msgstr ""
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:62
+#, elixir-autogen, elixir-format
+msgid "New feature"
+msgstr ""
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:128
+#: lib/tymeslot_web/components/announcement_modal_component.ex:132
+#: lib/tymeslot_web/components/tour_overlay.ex:61
+#, elixir-autogen, elixir-format
+msgid "Next"
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:55
+#, elixir-autogen, elixir-format
+msgid "Profile, availability, integrations, and automation — all one click away."
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:66
+#, elixir-autogen, elixir-format
+msgid "Quick links to set up your profile, availability, and meeting types. Start here."
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:53
+#, elixir-autogen, elixir-format
+msgid "Settings live in the sidebar"
+msgstr ""
+
+#: lib/tymeslot_web/components/tour_overlay.ex:47
+#, elixir-autogen, elixir-format
+msgid "Skip"
+msgstr ""
+
+#: lib/tymeslot_web/components/tour_overlay.ex:40
+#, elixir-autogen, elixir-format
+msgid "Step %{n} of %{total}"
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:44
+#, elixir-autogen, elixir-format
+msgid "Switch between Scheduling (your event types) and Calendar (your bookings)."
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:36
+#, elixir-autogen, elixir-format
+msgid "Take 30 seconds to learn where everything lives."
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:42
+#, elixir-autogen, elixir-format
+msgid "Two modes"
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:35
+#, elixir-autogen, elixir-format
+msgid "Welcome to your Tymeslot dashboard"
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:82
+#, elixir-autogen, elixir-format
+msgid "You're set"
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:75
+#, elixir-autogen, elixir-format
+msgid "Your account"
+msgstr ""

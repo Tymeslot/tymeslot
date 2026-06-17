@@ -1,0 +1,136 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: uk\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:103
+#, elixir-autogen, elixir-format
+msgid "%{current} / %{total}"
+msgstr "%{current} / %{total}"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:76
+#, elixir-autogen, elixir-format
+msgid "Account settings and log out are here in the top-right."
+msgstr "Налаштування облікового запису та вихід знаходяться тут, у верхньому правому куті."
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:95
+#: lib/tymeslot_web/components/tour_overlay.ex:53
+#, elixir-autogen, elixir-format
+msgid "Back"
+msgstr "Назад"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:64
+#, elixir-autogen, elixir-format
+msgid "Common tasks"
+msgstr "Поширені завдання"
+
+#: lib/tymeslot_web/components/step_navigation.ex:48
+#, elixir-autogen, elixir-format
+msgid "Confirmation"
+msgstr "Підтвердження"
+
+#: lib/tymeslot_web/components/step_navigation.ex:30
+#, elixir-autogen, elixir-format
+msgid "Date & Time"
+msgstr "Дата та час"
+
+#: lib/tymeslot_web/components/step_navigation.ex:39
+#, elixir-autogen, elixir-format
+msgid "Details"
+msgstr "Деталі"
+
+#: lib/tymeslot_web/components/step_navigation.ex:21
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr "Тривалість"
+
+#: lib/tymeslot_web/components/tour_overlay.ex:69
+#, elixir-autogen, elixir-format
+msgid "Finish"
+msgstr "Завершити"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:83
+#, elixir-autogen, elixir-format
+msgid "Go create your first event type — and let people book you."
+msgstr "Створіть свій перший тип події — і дайте людям змогу бронювати у вас зустрічі."
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:117
+#: lib/tymeslot_web/components/announcement_modal_component.ex:121
+#, elixir-autogen, elixir-format
+msgid "Got it"
+msgstr "Зрозуміло"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:62
+#, elixir-autogen, elixir-format
+msgid "New feature"
+msgstr "Нова функція"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:128
+#: lib/tymeslot_web/components/announcement_modal_component.ex:132
+#: lib/tymeslot_web/components/tour_overlay.ex:61
+#, elixir-autogen, elixir-format
+msgid "Next"
+msgstr "Далі"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:55
+#, elixir-autogen, elixir-format
+msgid "Profile, availability, integrations, and automation — all one click away."
+msgstr "Профіль, доступність, інтеграції та автоматизація — усе за один клік."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:66
+#, elixir-autogen, elixir-format
+msgid "Quick links to set up your profile, availability, and meeting types. Start here."
+msgstr "Швидкі посилання для налаштування вашого профілю, доступності та типів зустрічей. Почніть тут."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:53
+#, elixir-autogen, elixir-format
+msgid "Settings live in the sidebar"
+msgstr "Налаштування розташовані в бічній панелі"
+
+#: lib/tymeslot_web/components/tour_overlay.ex:47
+#, elixir-autogen, elixir-format
+msgid "Skip"
+msgstr "Пропустити"
+
+#: lib/tymeslot_web/components/tour_overlay.ex:40
+#, elixir-autogen, elixir-format
+msgid "Step %{n} of %{total}"
+msgstr "Крок %{n} з %{total}"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:44
+#, elixir-autogen, elixir-format
+msgid "Switch between Scheduling (your event types) and Calendar (your bookings)."
+msgstr "Перемикайтеся між Плануванням (ваші типи подій) та Календарем (ваші бронювання)."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:36
+#, elixir-autogen, elixir-format
+msgid "Take 30 seconds to learn where everything lives."
+msgstr "Витратьте 30 секунд, щоб дізнатися, де що знаходиться."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:42
+#, elixir-autogen, elixir-format
+msgid "Two modes"
+msgstr "Два режими"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:35
+#, elixir-autogen, elixir-format
+msgid "Welcome to your Tymeslot dashboard"
+msgstr "Ласкаво просимо до вашого Tymeslot dashboard"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:82
+#, elixir-autogen, elixir-format
+msgid "You're set"
+msgstr "Все готово"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:75
+#, elixir-autogen, elixir-format
+msgid "Your account"
+msgstr "Ваш обліковий запис"

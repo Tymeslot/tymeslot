@@ -54,10 +54,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
                   class="text-3xl font-bold mb-2"
                   style="color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.1);"
                 >
-                  {gettext("Meeting Cancelled")}
+                  {dgettext("booking", "Meeting Cancelled")}
                 </h1>
                 <p class="text-lg mb-8" style="color: rgba(255,255,255,0.9);">
-                  {gettext("Your meeting has been successfully cancelled.")}
+                  {dgettext("booking", "Your meeting has been successfully cancelled.")}
                 </p>
                 
                 <div
@@ -79,7 +79,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
                     />
                   </svg>
                   <div class="text-sm" style="color: rgba(255,255,255,0.85);">
-                    <strong>{gettext("Cancellation emails have been sent to all participants.")}</strong>
+                    <strong>{dgettext("booking", "Cancellation emails have been sent to all participants.")}</strong>
                   </div>
                 </div>
                 
@@ -90,7 +90,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
                     variant={:primary}
                     class="w-full"
                   >
-                    {gettext("Schedule a New Meeting")}
+                    {dgettext("booking", "Schedule a New Meeting")}
                   </.action_button>
                 </div>
               </div>

@@ -18,7 +18,7 @@ defmodule TymeslotWeb.StepNavigation do
       <.step_item
         step={1}
         current_step={@current_step}
-        label={gettext("Duration")}
+        label={dgettext("onboarding", "Duration")}
         clickable={@current_step > 1}
       />
 
@@ -27,7 +27,7 @@ defmodule TymeslotWeb.StepNavigation do
       <.step_item
         step={2}
         current_step={@current_step}
-        label={gettext("Date & Time")}
+        label={dgettext("onboarding", "Date & Time")}
         clickable={@current_step > 2 && @slug != nil}
       />
 
@@ -36,7 +36,7 @@ defmodule TymeslotWeb.StepNavigation do
       <.step_item
         step={3}
         current_step={@current_step}
-        label={gettext("Details")}
+        label={dgettext("onboarding", "Details")}
         clickable={@current_step > 3 && @slug != nil}
       />
 
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.StepNavigation do
       <.step_item
         step={4}
         current_step={@current_step}
-        label={gettext("Confirmation")}
+        label={dgettext("onboarding", "Confirmation")}
         clickable={false}
       />
     </div>

@@ -37,10 +37,10 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingLive do
             <div class="payment-page-card-body">
               <%= if !@loading && @payment.status == "paid" do %>
                 <h1 class="payment-page-heading">
-                  {gettext("Booking confirmed")}
+                  {dgettext("booking", "Booking confirmed")}
                 </h1>
                 <p class="payment-page-body">
-                  {gettext("Thank you, your booking is confirmed for %{date}.",
+                  {dgettext("booking", "Thank you, your booking is confirmed for %{date}.",
                     date:
                       LocalizationHelpers.format_meeting_datetime(
                         @meeting.start_time,
@@ -50,10 +50,10 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingLive do
                 </p>
               <% else %>
                 <h1 class="payment-page-heading">
-                  {gettext("Confirming your payment…")}
+                  {dgettext("booking", "Confirming your payment…")}
                 </h1>
                 <p class="payment-page-body">
-                  {gettext("Please wait while we confirm your booking.")}
+                  {dgettext("booking", "Please wait while we confirm your booking.")}
                 </p>
               <% end %>
             </div>
