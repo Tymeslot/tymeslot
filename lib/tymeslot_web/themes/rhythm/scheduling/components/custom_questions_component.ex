@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
               <div
                 class="rhythm-progress-dots"
                 role="progressbar"
-                aria-label={gettext("Question %{n} of %{m}", n: @index + 1, m: @total)}
+                aria-label={dgettext("booking", "Question %{n} of %{m}", n: @index + 1, m: @total)}
                 aria-valuenow={@index + 1}
                 aria-valuemin={1}
                 aria-valuemax={@total}
@@ -71,7 +71,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
                 phx-click="back"
                 phx-target={@myself}
               >
-                <span class="custom-question-cta-nowrap">← {gettext("back")}</span>
+                <span class="custom-question-cta-nowrap">← {dgettext("booking", "back")}</span>
               </button>
 
               <button
@@ -82,9 +82,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
               >
                 <span class="custom-question-cta-nowrap">
                   <%= if @last? do %>
-                    {gettext("Continue")} →
+                    {dgettext("booking", "Continue")} →
                   <% else %>
-                    {gettext("next")} →
+                    {dgettext("booking", "next")} →
                   <% end %>
                 </span>
               </button>

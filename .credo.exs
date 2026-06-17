@@ -119,6 +119,7 @@
           {CredoChecks.NoMapMetadataInLogger, [priority: :high]},
           {CredoChecks.MigrationConstraintSafety, [priority: :high, enforce_after: "20260329"]},
           {CredoChecks.RepoCallBoundary, [priority: :normal]},
+          {CredoChecks.GettextDomainBoundary, [priority: :high]},
           {CredoChecks.AttendeeNotificationsBoundary, []},
 
           #

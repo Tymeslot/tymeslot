@@ -11,8 +11,8 @@ defmodule Tymeslot.CustomFields.AnswerRenderer do
   use Gettext, backend: TymeslotWeb.Gettext
 
   @spec render(map(), any()) :: String.t()
-  def render(%{"type" => "yes_no"}, true), do: gettext("Yes")
-  def render(%{"type" => "yes_no"}, _other), do: gettext("No")
+  def render(%{"type" => "yes_no"}, true), do: dgettext("common", "Yes")
+  def render(%{"type" => "yes_no"}, _other), do: dgettext("common", "No")
 
   def render(%{"type" => "multi_select", "options" => opts}, values) when is_list(values) do
     opts
@@ -28,7 +28,7 @@ defmodule Tymeslot.CustomFields.AnswerRenderer do
   end
 
   def render(%{"type" => "note"}, %{"confirmed" => true, "confirmed_at" => at}) do
-    gettext("✓ Acknowledged (%{at})", at: at)
+    dgettext("common", "✓ Acknowledged (%{at})", at: at)
   end
 
   def render(_d, nil), do: ""

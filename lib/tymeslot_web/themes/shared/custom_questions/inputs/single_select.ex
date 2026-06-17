@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelect do
       name="value"
       value={@value}
       options={Enum.map(@definition["options"], &{&1["label"], &1["key"]})}
-      prompt={gettext("Select…")}
+      prompt={dgettext("booking", "Select…")}
       aria-label={@definition["label"]}
       phx-change="answer"
       phx-target={@myself}

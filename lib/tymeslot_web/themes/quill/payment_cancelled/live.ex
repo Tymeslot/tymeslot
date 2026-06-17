@@ -38,15 +38,15 @@ defmodule TymeslotWeb.Themes.Quill.PaymentCancelledLive do
           <div class="payment-page-card">
             <div class="payment-page-card-body">
               <h1 class="payment-page-heading">
-                {gettext("Payment cancelled")}
+                {dgettext("booking", "Payment cancelled")}
               </h1>
               <p class="payment-page-body">
-                {gettext(
+                {dgettext("booking", 
                   "Your booking is not confirmed. You can return and try again at any time."
                 )}
               </p>
               <a :if={@rebook_path} href={@rebook_path} class="payment-page-link">
-                {gettext("Return to booking")}
+                {dgettext("booking", "Return to booking")}
               </a>
             </div>
           </div>

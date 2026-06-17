@@ -72,16 +72,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                         title_class="section-header confirmation-title"
                       >
                         <%= if @is_rescheduling do %>
-                          {gettext("Meeting Rescheduled!")}
+                          {dgettext("booking", "Meeting Rescheduled!")}
                         <% else %>
-                          {gettext("meeting_confirmed")}
+                          {dgettext("booking", "meeting_confirmed")}
                         <% end %>
                       </.section_header>
                       <p class="confirmation-subtitle text-quill-primary">
                         <%= if @is_rescheduling do %>
-                          {gettext("%{name}, your meeting %{organizer} has been rescheduled.", name: @name, organizer: get_organizer_text(@organizer_profile))}
+                          {dgettext("booking", "%{name}, your meeting %{organizer} has been rescheduled.", name: @name, organizer: get_organizer_text(@organizer_profile))}
                         <% else %>
-                          {gettext("%{name}, your meeting %{organizer} is all set.", name: @name, organizer: get_organizer_text(@organizer_profile))}
+                          {dgettext("booking", "%{name}, your meeting %{organizer} is all set.", name: @name, organizer: get_organizer_text(@organizer_profile))}
                         <% end %>
                       </p>
                     </div>
@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           </svg>
                         </div>
                         <p class="text-sm text-white">
-                          {gettext("Confirmation sent to")}
+                          {dgettext("booking", "Confirmation sent to")}
                           <span class="confirmation-email-link font-semibold">
                             {@email}
                           </span>
@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
                   <%= if length(@custom_fields_snapshot) > 0 do %>
                     <section class="custom-answers-section">
-                      <h3 class="custom-answers-heading">{gettext("Your answers")}</h3>
+                      <h3 class="custom-answers-heading">{dgettext("booking", "Your answers")}</h3>
                       <dl class="custom-answers-list">
                         <%= for d <- @custom_fields_snapshot do %>
                           <div class="custom-answer-row">
@@ -141,12 +141,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       data-testid="schedule-another"
                       class="inline-block"
                     >
-                      {gettext("Schedule Another Meeting")}
+                      {dgettext("booking", "Schedule Another Meeting")}
                     </.action_button>
                   </div>
 
                   <p class="confirmation-help-text mt-3 text-xs">
-                    {gettext("Need to reschedule? Check your confirmation email.")}
+                    {dgettext("booking", "Need to reschedule? Check your confirmation email.")}
                   </p>
                 </div>
               </.glass_morphism_card>
@@ -190,10 +190,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
     assigns =
       assigns
       |> assign(:grid_class, grid_class)
-      |> assign_new(:date_label, fn -> gettext("Date") end)
-      |> assign_new(:time_label, fn -> gettext("Time") end)
-      |> assign_new(:duration_label, fn -> gettext("Duration") end)
-      |> assign_new(:timezone_label, fn -> gettext("Timezone") end)
+      |> assign_new(:date_label, fn -> dgettext("booking", "Date") end)
+      |> assign_new(:time_label, fn -> dgettext("booking", "Time") end)
+      |> assign_new(:duration_label, fn -> dgettext("booking", "Duration") end)
+      |> assign_new(:timezone_label, fn -> dgettext("booking", "Timezone") end)
       |> assign_new(:formatted_date, fn -> LocalizationHelpers.format_date(assigns.date) end)
       |> assign_new(:formatted_duration, fn ->
         LocalizationHelpers.format_duration(assigns.duration)
@@ -229,7 +229,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   defp get_organizer_text(organizer_profile) do
     case Profiles.display_name(organizer_profile) do
       nil -> ""
-      name -> gettext("with %{name}", name: name)
+      name -> dgettext("booking", "with %{name}", name: name)
     end
   end
 end

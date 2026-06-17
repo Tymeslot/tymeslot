@@ -314,18 +314,18 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   defp do_toggle_private(socket, type_id, user_id) do
     case MeetingTypes.get_meeting_type(type_id, user_id) do
       nil ->
-        Flash.error(gettext("Meeting type not found"))
+        Flash.error(dgettext("dashboard", "Meeting type not found"))
         {:noreply, socket}
 
       type ->
         case MeetingTypes.set_private(type, !type.is_private) do
           {:ok, _updated} ->
             send(self(), {:meeting_type_changed})
-            Flash.info(gettext("Visibility updated"))
+            Flash.info(dgettext("dashboard", "Visibility updated"))
             {:noreply, reload_editing_type(socket, type_id, user_id)}
 
           {:error, _reason} ->
-            Flash.error(gettext("Failed to update visibility"))
+            Flash.error(dgettext("dashboard", "Failed to update visibility"))
             {:noreply, socket}
         end
     end
@@ -337,7 +337,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     case MeetingTypes.update_slug(type, socket.assigns.slug_draft) do
       {:ok, _updated} ->
         send(self(), {:meeting_type_changed})
-        Flash.info(gettext("Booking link updated"))
+        Flash.info(dgettext("dashboard", "Booking link updated"))
 
         {:noreply,
          socket
@@ -345,11 +345,16 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
          |> hide_slug_modal()}
 
       {:error, :slug_taken} ->
-        Flash.error(gettext("That link is already taken. Please choose another."))
+        Flash.error(dgettext("dashboard", "That link is already taken. Please choose another."))
         {:noreply, socket}
 
       {:error, %Ecto.Changeset{}} ->
-        Flash.error(gettext("That link isn't valid. Use lowercase letters, numbers and hyphens."))
+        Flash.error(
+          dgettext(
+            "dashboard",
+            "That link isn't valid. Use lowercase letters, numbers and hyphens."
+          )
+        )
 
         {:noreply, socket}
     end
@@ -476,13 +481,13 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
             <div class="flex items-center gap-2">
               <.icon name="hero-link" class="w-5 h-5 text-turquoise-500" />
               <h3 class="font-semibold text-tymeslot-700 text-token-lg">
-                {gettext("Booking link & visibility")}
+                {dgettext("dashboard", "Booking link & visibility")}
               </h3>
             </div>
 
             <div class="space-y-2">
               <label class="block font-medium text-tymeslot-700 text-token-sm">
-                {gettext("Direct booking link")}
+                {dgettext("dashboard", "Direct booking link")}
               </label>
               <div class="flex flex-wrap items-center gap-2">
                 <input
@@ -496,10 +501,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
                   id={"copy-booking-link-#{@editing_type.id}"}
                   phx-hook="CopyOnClick"
                   data-copy-text={"#{booking_base_url(@profile)}/#{MeetingTypes.effective_slug(@editing_type)}"}
-                  data-copy-feedback={gettext("Booking link copied!")}
+                  data-copy-feedback={dgettext("dashboard", "Booking link copied!")}
                   class="whitespace-nowrap px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
                 >
-                  {gettext("Copy")}
+                  {dgettext("dashboard", "Copy")}
                 </button>
                 <.action_button
                   type="button"
@@ -507,11 +512,11 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
                   phx-click="open_slug_modal"
                   phx-target={@myself}
                 >
-                  {gettext("Change link")}
+                  {dgettext("dashboard", "Change link")}
                 </.action_button>
               </div>
               <p class="text-token-sm text-tymeslot-500">
-                {gettext(
+                {dgettext("dashboard", 
                   "Anyone with this link can book this meeting type directly, without seeing your other meeting types."
                 )}
               </p>
@@ -520,10 +525,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
             <div class="flex items-center justify-between gap-4 pt-2 border-t-2 border-tymeslot-50">
               <div>
                 <p class="font-medium text-tymeslot-700">
-                  {gettext("Hide from public booking page")}
+                  {dgettext("dashboard", "Hide from public booking page")}
                 </p>
                 <p class="text-token-sm text-tymeslot-500">
-                  {gettext("When on, this meeting type is reachable only through its direct link.")}
+                  {dgettext("dashboard", "When on, this meeting type is reachable only through its direct link.")}
                 </p>
               </div>
               <button
@@ -533,7 +538,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
                 phx-target={@myself}
                 role="switch"
                 aria-checked={@editing_type.is_private}
-                aria-label={gettext("Hide from public booking page")}
+                aria-label={dgettext("dashboard", "Hide from public booking page")}
                 class={[
                   "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-hidden focus:ring-2 focus:ring-turquoise-500 focus:ring-offset-2",
                   if(@editing_type.is_private,

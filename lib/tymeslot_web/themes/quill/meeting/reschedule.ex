@@ -59,10 +59,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
                   class="text-3xl font-bold mb-2"
                   style="color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.1);"
                 >
-                  {gettext("Reschedule Appointment")}
+                  {dgettext("booking", "Reschedule Appointment")}
                 </h1>
                 <p class="text-lg" style="color: rgba(255,255,255,0.9);">
-                  {gettext("Select a new time for your meeting")}
+                  {dgettext("booking", "Select a new time for your meeting")}
                 </p>
               </div>
 
@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
                 <div class="p-6">
                   <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-semibold" style="color: rgba(255,255,255,0.95);">
-                      {gettext("Current Meeting")}
+                      {dgettext("booking", "Current Meeting")}
                     </h3>
                     <span
                       class="px-3 py-1 rounded-full text-sm font-medium"
@@ -94,7 +94,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
 
               <div class="text-center">
                 <p class="mb-6" style="color: rgba(255,255,255,0.85);">
-                  {gettext("Ready to pick a new time? Let's find one that works better for you.")}
+                  {dgettext("booking", "Ready to pick a new time? Let's find one that works better for you.")}
                 </p>
 
                 <.action_button
@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
                   phx-click={JS.navigate(PathHandlers.organizer_scheduling_path(assigns))}
                   variant={:primary}
                 >
-                  <span>{gettext("Choose New Time")}</span>
+                  <span>{dgettext("booking", "Choose New Time")}</span>
                   <svg
                     class="ml-2 h-5 w-5 shrink-0"
                     fill="none"

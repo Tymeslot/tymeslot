@@ -107,15 +107,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                     <h1
                       class="section-header overview-title"
                     >
-                      {gettext("Let's Connect!")}
+                      {dgettext("booking", "Let's Connect!")}
                     </h1>
                     <p
                       class="overview-description text-glass-primary"
                     >
                       <%= if display_name = Profiles.display_name(@organizer_profile) do %>
-                        {gettext("Hi, I'm %{name}. Select how much time you need for our conversation.", name: display_name)}
+                        {dgettext("booking", "Hi, I'm %{name}. Select how much time you need for our conversation.", name: display_name)}
                       <% else %>
-                        {gettext("Select how much time you need for our conversation.")}
+                        {dgettext("booking", "Select how much time you need for our conversation.")}
                       <% end %>
                     </p>
 
@@ -123,8 +123,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                       <%= cond do %>
                         <% @username_context && @meeting_types == [] -> %>
                           <div class="text-center py-8 text-purple-300">
-                            <p class="text-lg font-medium">{gettext("No meeting types available")}</p>
-                            <p class="text-sm mt-1">{gettext("Please contact the organizer")}</p>
+                            <p class="text-lg font-medium">{dgettext("booking", "No meeting types available")}</p>
+                            <p class="text-sm mt-1">{dgettext("booking", "Please contact the organizer")}</p>
                           </div>
                         <% @username_context && length(@meeting_types) > 0 -> %>
                           <%= for meeting_type <- @meeting_types do %>
@@ -142,9 +142,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                         <% true -> %>
                           <.duration_card
                             duration="15-minutes"
-                            title={gettext("15 Minutes")}
+                            title={dgettext("booking", "15 Minutes")}
                             badge={LocalizationHelpers.format_duration(15)}
-                            description={gettext("Quick chat or brief consultation")}
+                            description={dgettext("booking", "Quick chat or brief consultation")}
                             icon="hero-bolt"
                             selected={assigns[:selected_duration] == "15-minutes"}
                             target={@myself}
@@ -152,9 +152,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
 
                           <.duration_card
                             duration="30-minutes"
-                            title={gettext("30 Minutes")}
+                            title={dgettext("booking", "30 Minutes")}
                             badge={LocalizationHelpers.format_duration(30)}
-                            description={gettext("In-depth discussion or detailed review")}
+                            description={dgettext("booking", "In-depth discussion or detailed review")}
                             icon="hero-rocket-launch"
                             selected={assigns[:selected_duration] == "30-minutes"}
                             target={@myself}
@@ -170,11 +170,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                         disabled={!assigns[:selected_duration]}
                         title={
                           unless assigns[:selected_duration],
-                            do: gettext("Please select a meeting duration first")
+                            do: dgettext("booking", "Please select a meeting duration first")
                         }
                         class="w-full"
                       >
-                        {gettext("next")} →
+                        {dgettext("booking", "next")} →
                       </.action_button>
                     </div>
                   </div>

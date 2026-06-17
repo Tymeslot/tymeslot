@@ -29,11 +29,11 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
     ~H"""
     <div>
       <h2 class="text-token-2xl font-black text-tymeslot-900 tracking-tight mb-4">
-        {gettext("Environment / config")}
+        {dgettext("dashboard", "Environment / config")}
       </h2>
 
       <.info_box variant={:info}>
-        {gettext(
+        {dgettext("dashboard", 
           "Changes here take effect immediately and override the matching environment variables and application configuration (e.g. REGISTRATION_ENABLED, PASSWORD_AUTH_ENABLED) for this install."
         )}
       </.info_box>
@@ -131,13 +131,13 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
     ~H"""
     <div
       role="group"
-      aria-label={gettext("Set %{name}", name: Formatters.humanise(@key))}
+      aria-label={dgettext("dashboard", "Set %{name}", name: Formatters.humanise(@key))}
       class="inline-flex p-1 bg-white border-2 border-tymeslot-100 rounded-token-xl shadow-sm gap-1 shrink-0"
     >
       <.setting_tag
         key={@key}
         state="true"
-        label={gettext("Enabled")}
+        label={dgettext("dashboard", "Enabled")}
         active={@effective.value == true}
         locked={true in @effective.locked_states}
         lock_reason={Formatters.lock_reason(@key, true)}
@@ -145,7 +145,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       <.setting_tag
         key={@key}
         state="false"
-        label={gettext("Disabled")}
+        label={dgettext("dashboard", "Disabled")}
         active={@effective.value == false}
         locked={false in @effective.locked_states}
         lock_reason={Formatters.lock_reason(@key, false)}
@@ -161,7 +161,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       phx-change="save_setting"
       phx-submit="save_setting"
       class="flex items-center gap-2 shrink-0"
-      aria-label={gettext("Set %{name}", name: Formatters.humanise(@key))}
+      aria-label={dgettext("dashboard", "Set %{name}", name: Formatters.humanise(@key))}
     >
       <input type="hidden" name="key" value={Atom.to_string(@key)} />
       <input
@@ -186,7 +186,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       id={"admin-setting-form-#{@key}"}
       phx-submit="save_setting"
       class="flex items-center gap-2 shrink-0 max-w-full"
-      aria-label={gettext("Set %{name}", name: Formatters.humanise(@key))}
+      aria-label={dgettext("dashboard", "Set %{name}", name: Formatters.humanise(@key))}
     >
       <input type="hidden" name="key" value={Atom.to_string(@key)} />
       <input
@@ -194,7 +194,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         type="email"
         name="value"
         value={@effective.value || ""}
-        placeholder={gettext("admin@example.com")}
+        placeholder={dgettext("dashboard", "admin@example.com")}
         disabled={@disabled}
         class={text_input_classes("w-64 max-w-full", @disabled)}
       />
@@ -204,7 +204,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         class="!py-1.5 !px-3 !text-token-xs"
         disabled={@disabled}
       >
-        {gettext("Save")}
+        {dgettext("dashboard", "Save")}
       </.action_button>
     </form>
     """
@@ -231,7 +231,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
     <div class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-token-lg bg-turquoise-50 border border-turquoise-100">
       <.icon name="hero-check-badge-mini" class="w-4 h-4 text-turquoise-600" />
       <span class="text-token-xs font-bold text-turquoise-700">
-        {gettext("Recommended:")} {Formatters.recommended_label(@value)}
+        {dgettext("dashboard", "Recommended:")} {Formatters.recommended_label(@value)}
       </span>
     </div>
     """

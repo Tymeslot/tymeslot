@@ -502,11 +502,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
 
   defp guest_badge_title(%{accepted: accepted, total: total, declined: declined}) do
     base =
-      gettext("%{accepted} of %{total} guests going", accepted: accepted, total: total)
+      dgettext("dashboard", "%{accepted} of %{total} guests going",
+        accepted: accepted,
+        total: total
+      )
 
     if declined > 0 do
       declined_fragment =
-        ngettext(", %{count} declined", ", %{count} declined", declined, count: declined)
+        dngettext("dashboard", ", %{count} declined", ", %{count} declined", declined,
+          count: declined
+        )
 
       base <> declined_fragment
     else

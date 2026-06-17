@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader do
         class="avatar-image-small"
       />
       <div class="organizer-info-small">
-        <div class="organizer-name">{gettext("Schedule with")}</div>
+        <div class="organizer-name">{dgettext("booking", "Schedule with")}</div>
         <div class="organizer-name-full">
           {Profiles.display_name(@organizer_profile) || ""}
         </div>

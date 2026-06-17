@@ -93,23 +93,24 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   defp validate(email, emails, socket) do
     cond do
       length(emails) >= Guests.max_guests() ->
-        {:error, gettext("You can add up to %{count} guests.", count: Guests.max_guests())}
+        {:error,
+         dgettext("booking", "You can add up to %{count} guests.", count: Guests.max_guests())}
 
       email in emails ->
-        {:error, gettext("%{email} has already been added.", email: email)}
+        {:error, dgettext("booking", "%{email} has already been added.", email: email)}
 
       primary_email?(socket, email) ->
-        {:error, gettext("You don't need to add your own email as a guest.")}
+        {:error, dgettext("booking", "You don't need to add your own email as a guest.")}
 
       EmailValidator.validate(email) != :ok ->
-        {:error, gettext("Enter a valid email address.")}
+        {:error, dgettext("booking", "Enter a valid email address.")}
 
       true ->
         :ok
     end
   end
 
-  defp blank_message, do: gettext("Enter a valid email address.")
+  defp blank_message, do: dgettext("booking", "Enter a valid email address.")
 
   defp primary_email?(socket, email) do
     case socket.assigns[:form] do

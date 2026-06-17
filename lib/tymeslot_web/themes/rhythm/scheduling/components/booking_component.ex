@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                   <.icon name="hero-calendar" class="summary-icon hero-icon hero-icon--md" />
                   <div>
                     <div class="summary-value">{LocalizationHelpers.format_date(@selected_date)}</div>
-                    <div class="summary-label">{@selected_time || gettext("No time selected")}</div>
+                    <div class="summary-label">{@selected_time || dgettext("booking", "No time selected")}</div>
                   </div>
                 </div>
                 <div class="summary-item">
@@ -103,9 +103,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                     </div>
                     <div class="summary-label">
                       <%= if @meeting_type do %>
-                        {LocalizationHelpers.format_duration(@meeting_type.duration_minutes)} {gettext("meeting")}
+                        {LocalizationHelpers.format_duration(@meeting_type.duration_minutes)} {dgettext("booking", "meeting")}
                       <% else %>
-                        {LocalizationHelpers.format_duration(@selected_duration)} {gettext("meeting")}
+                        {LocalizationHelpers.format_duration(@selected_duration)} {dgettext("booking", "meeting")}
                       <% end %>
                     </div>
                   </div>
@@ -129,8 +129,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
               <.input
                 field={f[:name]}
-                label={gettext("name")}
-                placeholder={gettext("enter_full_name")}
+                label={dgettext("booking", "name")}
+                placeholder={dgettext("booking", "enter_full_name")}
                 errors={FormValidationHelpers.field_errors(@validation_errors, :name)}
                 phx-debounce="blur"
                 phx-blur="field_blur"
@@ -140,9 +140,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
               <.input
                 field={f[:email]}
-                label={gettext("email")}
+                label={dgettext("booking", "email")}
                 type="email"
-                placeholder={gettext("enter_email")}
+                placeholder={dgettext("booking", "enter_email")}
                 errors={FormValidationHelpers.field_errors(@validation_errors, :email)}
                 phx-debounce="blur"
                 phx-blur="field_blur"
@@ -153,8 +153,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               <.input
                 field={f[:message]}
                 type="textarea"
-                label={gettext("message_optional")}
-                placeholder={gettext("add_details")}
+                label={dgettext("booking", "message_optional")}
+                placeholder={dgettext("booking", "add_details")}
                 errors={FormValidationHelpers.field_errors(@validation_errors, :message)}
                 rows={4}
                 phx-debounce="blur"
@@ -185,7 +185,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 data-testid="back-step"
                 disabled={@submitting}
               >
-                ← {gettext("back")}
+                ← {dgettext("booking", "back")}
               </button>
               <button
                 type="submit"
@@ -217,9 +217,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                       >
                       </path>
                     </svg>
-                    <span>{gettext("Verifying...")}</span>
+                    <span>{dgettext("booking", "Verifying...")}</span>
                   <% else %>
-                    {if @is_rescheduling, do: gettext("reschedule_meeting"), else: gettext("submit")}
+                    {if @is_rescheduling, do: dgettext("booking", "reschedule_meeting"), else: dgettext("booking", "submit")}
                   <% end %>
                 </button>
             </div>

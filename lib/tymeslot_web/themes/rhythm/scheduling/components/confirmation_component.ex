@@ -49,21 +49,21 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
                     <h1 class="confirmation-headline" data-testid="confirmation-heading">
                       <%= if @is_rescheduling do %>
-                        {gettext("Successfully Rescheduled!")}
+                        {dgettext("booking", "Successfully Rescheduled!")}
                       <% else %>
-                        {gettext("You're All Set!")}
+                        {dgettext("booking", "You're All Set!")}
                       <% end %>
                     </h1>
                   </div>
 
                   <p class="confirmation-message">
-                    {gettext("%{name}, your meeting %{organizer} is confirmed", name: @name, organizer: get_organizer_text(@organizer_profile))}
+                    {dgettext("booking", "%{name}, your meeting %{organizer} is confirmed", name: @name, organizer: get_organizer_text(@organizer_profile))}
                   </p>
                 </div>
                 
                 <div class="meeting-ticket">
                   <div class="ticket-header">
-                    <span class="ticket-label">{gettext("Meeting Details")}</span>
+                    <span class="ticket-label">{dgettext("booking", "Meeting Details")}</span>
                     <span class="ticket-badge">
                       <%= if @meeting_type, do: @meeting_type.duration_minutes, else: @duration %> min
                     </span>
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                       </div>
                       <div class="ticket-info">
                         <span class="ticket-value">{LocalizationHelpers.format_date(@selected_date)}</span>
-                        <span class="ticket-sublabel">{gettext("Date")}</span>
+                        <span class="ticket-sublabel">{dgettext("booking", "Date")}</span>
                       </div>
                     </div>
 
@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                           <span class="ticket-value">
                             {Profiles.display_name(@organizer_profile)}
                           </span>
-                          <span class="ticket-sublabel">{gettext("Appointment host")}</span>
+                          <span class="ticket-sublabel">{dgettext("booking", "Appointment host")}</span>
                         </div>
                       </div>
                     <% end %>
@@ -115,14 +115,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                           d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                         />
                       </svg>
-                      <span>{gettext("Sent to")} <strong>{@email}</strong></span>
+                      <span>{dgettext("booking", "Sent to")} <strong>{@email}</strong></span>
                     </div>
                   </div>
                 </div>
                 
                 <%= if @custom_fields_snapshot && length(@custom_fields_snapshot) > 0 do %>
                   <section class="custom-answers-section">
-                    <h3 class="custom-answers-heading">{gettext("Your answers")}</h3>
+                    <h3 class="custom-answers-heading">{dgettext("booking", "Your answers")}</h3>
                     <dl class="custom-answers-list">
                       <%= for d <- @custom_fields_snapshot do %>
                         <div class="custom-answer-row">
@@ -143,11 +143,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     data-testid="schedule-another"
                     class="action-button-primary"
                   >
-                    {gettext("Schedule Another Meeting")}
+                    {dgettext("booking", "Schedule Another Meeting")}
                   </button>
 
                   <p class="help-text">
-                    {gettext("Need to make changes? Check your email for reschedule options")}
+                    {dgettext("booking", "Need to make changes? Check your email for reschedule options")}
                   </p>
                 </div>
               </div>
@@ -164,7 +164,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   defp get_organizer_text(organizer_profile) do
     case Profiles.display_name(organizer_profile) do
       nil -> ""
-      name -> gettext("with %{name}", name: name)
+      name -> dgettext("booking", "with %{name}", name: name)
     end
   end
 end

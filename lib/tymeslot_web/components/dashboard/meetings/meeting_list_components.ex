@@ -187,7 +187,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                   <CoreComponents.icon name="hero-user-group" class="w-4 h-4 text-tymeslot-400" />
                 </div>
                 <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest">
-                  {gettext("Guests")}
+                  {dgettext("dashboard", "Guests")}
                 </p>
               </div>
               <span class="text-token-sm font-bold text-tymeslot-500">
@@ -239,7 +239,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                 <Icons.icon name={:list_bullet} class="w-4 h-4 text-tymeslot-400" />
               </div>
               <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mt-2">
-                {gettext("Custom answers")}
+                {dgettext("dashboard", "Custom answers")}
               </p>
             </div>
             <dl class="space-y-3">
@@ -480,9 +480,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   defp guest_badge_icon("declined"), do: "hero-x-circle-mini"
   defp guest_badge_icon(_pending), do: "hero-clock-mini"
 
-  defp guest_status_label("accepted"), do: gettext("Going")
-  defp guest_status_label("declined"), do: gettext("Declined")
-  defp guest_status_label(_pending), do: gettext("Pending")
+  defp guest_status_label("accepted"), do: dgettext("dashboard", "Going")
+  defp guest_status_label("declined"), do: dgettext("dashboard", "Declined")
+  defp guest_status_label(_pending), do: dgettext("dashboard", "Pending")
 
   defp guest_list(%{guests: guests}) when is_list(guests), do: guests
   defp guest_list(_meeting), do: []
@@ -497,6 +497,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
   defp guest_summary_label(meeting) do
     summary = Meetings.guest_rsvp_summary(guest_list(meeting))
-    gettext("%{going} of %{total} going", going: summary.accepted, total: summary.total)
+
+    dgettext("dashboard", "%{going} of %{total} going",
+      going: summary.accepted,
+      total: summary.total
+    )
   end
 end

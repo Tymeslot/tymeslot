@@ -1,6 +1,17 @@
 /* ===================================
    TYPOGRAPHY SYSTEM
-   =================================== */
+   ===================================
+
+   Base element typography (body, h1–h6) plus a set of legacy text/font helper
+   classes. These live in the `base` cascade layer so that component classes
+   (e.g. `.display-xl` in `design-tokens.css`, which sits in `@layer components`)
+   and Tailwind utilities take precedence over bare element styling — matching
+   the pre-Tailwind-v4 cascade. Without this, the unlayered `h1`/`h2` element
+   rules below would override the `.display-*` heading classes and shrink/lighten
+   every heading that uses them (700/48px instead of 900/72px). The duplicated
+   `.text-*` / `.font-*` helpers are token-equivalent to Tailwind's utilities, so
+   demoting them to `base` changes no rendered values. */
+@layer base {
 
 /* Base Typography */
 body {
@@ -130,3 +141,5 @@ h6, .h6 {
 .font-semibold { font-weight: var(--font-weight-semibold); }
 .font-bold { font-weight: var(--font-weight-bold); }
 .font-extrabold { font-weight: var(--font-weight-extrabold); }
+
+}

@@ -185,7 +185,10 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
       |> assign(:awaiting_payment_meeting, nil)
       |> assign(:awaiting_payment_checkout_url, nil)
       |> assign(:submission_processed, false)
-      |> put_flash(:error, gettext("Payment was cancelled. Please try booking again."))
+      |> put_flash(
+        :error,
+        dgettext("booking", "Payment was cancelled. Please try booking again.")
+      )
 
     {:noreply, transition_fun.(socket, :booking, %{})}
   end

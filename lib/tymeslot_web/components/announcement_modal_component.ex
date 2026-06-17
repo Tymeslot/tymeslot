@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
           <span class="flex flex-col gap-2">
             <span class="inline-flex items-center gap-1.5 self-start rounded-full bg-turquoise-600 px-3 py-1 text-token-sm font-bold uppercase tracking-wide text-white shadow-sm">
               <.icon name="hero-sparkles-mini" class="h-4 w-4" />
-              {gettext("New feature")}
+              {dgettext("onboarding", "New feature")}
             </span>
             <span>{@current.title}</span>
           </span>
@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
               phx-click="back"
               phx-target={@myself}
             >
-              {gettext("Back")}
+              {dgettext("onboarding", "Back")}
             </button>
 
             <span
@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
               class="text-token-xs text-tymeslot-400"
               data-test="step-indicator"
             >
-              {gettext("%{current} / %{total}",
+              {dgettext("onboarding", "%{current} / %{total}",
                 current: @current_index + 1,
                 total: @total
               )}
@@ -114,22 +114,22 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
                     {@current.cta_label}
                   </.action_button>
                   <.action_button variant={:primary} phx-click="next" phx-target={@myself}>
-                    {gettext("Got it")}
+                    {dgettext("onboarding", "Got it")}
                   </.action_button>
                 <% @on_last? -> %>
                   <.action_button variant={:primary} phx-click="next" phx-target={@myself}>
-                    {gettext("Got it")}
+                    {dgettext("onboarding", "Got it")}
                   </.action_button>
                 <% @has_cta? -> %>
                   <.action_button variant={:secondary} phx-click="cta" phx-target={@myself}>
                     {@current.cta_label}
                   </.action_button>
                   <.action_button variant={:primary} phx-click="next" phx-target={@myself}>
-                    {gettext("Next")}
+                    {dgettext("onboarding", "Next")}
                   </.action_button>
                 <% true -> %>
                   <.action_button variant={:primary} phx-click="next" phx-target={@myself}>
-                    {gettext("Next")}
+                    {dgettext("onboarding", "Next")}
                   </.action_button>
               <% end %>
             </div>

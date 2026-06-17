@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.MeetingTicket do
           </div>
           <div class="ticket-info">
             <span class="ticket-value">{@date_value}</span>
-            <span class="ticket-sublabel">{gettext("Date")}</span>
+            <span class="ticket-sublabel">{dgettext("booking", "Date")}</span>
           </div>
         </div>
 
@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.MeetingTicket do
             </div>
             <div class="ticket-info">
               <span class="ticket-value">{@organizer_name}</span>
-              <span class="ticket-sublabel">{gettext("Meeting with")}</span>
+              <span class="ticket-sublabel">{dgettext("booking", "Meeting with")}</span>
             </div>
           </div>
         <% end %>

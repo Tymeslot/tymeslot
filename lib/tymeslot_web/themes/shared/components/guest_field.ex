@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
     <div class="guest-field" data-testid="guest-field">
       <%= if @guests_open or @guest_emails != [] do %>
         <div class="guest-field__header">
-          <span class="guest-field__label">{gettext("Guests")}</span>
+          <span class="guest-field__label">{dgettext("booking", "Guests")}</span>
           <span class="guest-field__count">{length(@guest_emails)}/{@max_guests}</span>
         </div>
 
@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
               phx-click="remove_guest"
               phx-value-email={email}
               phx-target={@target}
-              aria-label={gettext("Remove guest %{email}", email: email)}
+              aria-label={dgettext("booking", "Remove guest %{email}", email: email)}
             >
               ×
             </button>
@@ -66,14 +66,14 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
             name="guest_email"
             class="guest-add__input"
             value={@guest_input}
-            placeholder={gettext("guest@example.com")}
+            placeholder={dgettext("booking", "guest@example.com")}
             autocomplete="off"
             phx-debounce="blur"
-            aria-label={gettext("Guest email address")}
+            aria-label={dgettext("booking", "Guest email address")}
             data-testid="guest-input"
           />
           <button type="submit" class="guest-add__button" data-testid="guest-add">
-            {gettext("Add")}
+            {dgettext("booking", "Add")}
           </button>
         </form>
 
@@ -86,7 +86,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
           phx-target={@target}
           data-testid="guest-toggle"
         >
-          {gettext("+ Add guests")}
+          {dgettext("booking", "+ Add guests")}
         </button>
       <% end %>
     </div>

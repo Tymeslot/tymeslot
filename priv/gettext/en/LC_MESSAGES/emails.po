@@ -635,9 +635,9 @@ msgid "Event Updated"
 msgstr ""
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:213
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Title:"
-msgstr "Time:"
+msgstr "Title:"
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:102
 #, elixir-autogen, elixir-format
@@ -702,9 +702,9 @@ msgid "Active"
 msgstr ""
 
 #: lib/tymeslot/emails/shared/meeting/calendar_links.ex:40
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Add to your calendar"
-msgstr "Add to your calendar:"
+msgstr "Add to your calendar"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:45
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:121
@@ -724,9 +724,9 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:65
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:106
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Cancelled"
-msgstr "Cancel"
+msgstr "Cancelled"
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex:52
 #, elixir-autogen, elixir-format
@@ -766,9 +766,9 @@ msgid "Didn't request this change? You can safely ignore this email — nothing 
 msgstr ""
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex:125
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Email"
-msgstr "Email:"
+msgstr "Email"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:65
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:107
@@ -788,9 +788,9 @@ msgid "Email change requested to: %{new_email}"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:75
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Event updated"
-msgstr ""
+msgstr "Event updated"
 
 #: lib/tymeslot/emails/templates/email_verification.ex:51
 #, elixir-autogen, elixir-format
@@ -823,9 +823,9 @@ msgid "Hi %{name} — our appointment has been cancelled. I'm sorry for the inco
 msgstr ""
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex:81
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Hi %{name}, I need to reschedule our upcoming meeting."
-msgstr "Hi %{name}, I need to reschedule our upcoming meeting. Could you please select a new time that works for you?"
+msgstr "Hi %{name}, I need to reschedule our upcoming meeting."
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:113
 #, elixir-autogen, elixir-format
@@ -833,9 +833,9 @@ msgid "Host video call"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex:56
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "I apologise for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
-msgstr "I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
+msgstr "I apologise for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
 
 #: lib/tymeslot/emails/templates/external_booking_change.ex:185
 #, elixir-autogen, elixir-format
@@ -908,14 +908,14 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:66
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:107
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Meeting cancelled"
-msgstr "Meeting Cancelled"
+msgstr "Meeting cancelled"
 
 #: lib/tymeslot/emails/shared/meeting/hero.ex:151
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Meeting type"
-msgstr "Meeting"
+msgstr "Meeting type"
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex:95
 #, elixir-autogen, elixir-format
@@ -928,9 +928,9 @@ msgid "Monday"
 msgstr ""
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex:49
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Name"
-msgstr "Name:"
+msgstr "Name"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:220
 #, elixir-autogen, elixir-format
@@ -959,14 +959,14 @@ msgid "One click and the switch is done."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:68
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Our meeting is coming up"
-msgstr "Our meeting is coming up!"
+msgstr "Our meeting is coming up"
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex:51
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Phone"
-msgstr ""
+msgstr "Phone"
 
 #: lib/tymeslot/emails/templates/external_booking_change.ex:109
 #, elixir-autogen, elixir-format
@@ -974,14 +974,14 @@ msgid "Please review and update the booking in Tymeslot."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:117
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Quick actions"
-msgstr ""
+msgstr "Quick actions"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:61
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "REQUEST DETAILS:"
-msgstr "MEETING DETAILS:"
+msgstr "REQUEST DETAILS:"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:72
 #, elixir-autogen, elixir-format
@@ -989,9 +989,9 @@ msgid "Ready to join when it's time?"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:67
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reminder"
-msgstr "Reminders Scheduled"
+msgstr "Reminder"
 
 #: lib/tymeslot/emails/templates/password_reset.ex:43
 #, elixir-autogen, elixir-format
@@ -1030,9 +1030,9 @@ msgid "Start Meeting"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:70
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Starting %{time_until}"
-msgstr ""
+msgstr "Starting %{time_until}"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:125
 #, elixir-autogen, elixir-format
@@ -1127,9 +1127,9 @@ msgid "Thursday"
 msgstr ""
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex:53
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Timezone"
-msgstr "Timezone:"
+msgstr "Timezone"
 
 #: lib/tymeslot/emails/templates/email_change_verification.ex:106
 #, elixir-autogen, elixir-format
@@ -1169,9 +1169,9 @@ msgid "Verify your new email address"
 msgstr ""
 
 #: lib/tymeslot/emails/shared/meeting/video_section.ex:68
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Video call"
-msgstr "Video Call"
+msgstr "Video call"
 
 #: lib/tymeslot/emails/templates/external_booking_change.ex:94
 #, elixir-autogen, elixir-format
@@ -1180,9 +1180,9 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/external_booking_change.ex:187
 #: lib/tymeslot/emails/templates/external_booking_change.ex:212
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "View meeting:"
-msgstr "Video meeting:"
+msgstr "View meeting:"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:67
 #, elixir-autogen, elixir-format
@@ -1279,9 +1279,9 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:68
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:109
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "with %{name}"
-msgstr "Hi %{name},"
+msgstr "with %{name}"
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:203
 #, elixir-autogen, elixir-format
@@ -1289,9 +1289,9 @@ msgid "(previous)"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:204
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "(updated)"
-msgstr ""
+msgstr "(updated)"
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:185
 #, elixir-autogen, elixir-format
@@ -1304,34 +1304,34 @@ msgid "Before"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Change details"
-msgstr ""
+msgstr "Change details"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Changed at"
-msgstr ""
+msgstr "Changed at"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:116
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Changed at:"
-msgstr ""
+msgstr "Changed at:"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:26
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Current email"
-msgstr ""
+msgstr "Current email"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:63
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Current email:"
-msgstr ""
+msgstr "Current email:"
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:203
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Description"
-msgstr ""
+msgstr "Description"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:50
 #, elixir-autogen, elixir-format
@@ -1344,9 +1344,9 @@ msgid "Didn't request this?"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:39
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Email change completed successfully."
-msgstr ""
+msgstr "Email change completed successfully."
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:183
 #, elixir-autogen, elixir-format
@@ -1355,58 +1355,58 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:49
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:94
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "If you did not authorise this change, please contact support immediately. You will no longer receive emails at this address."
-msgstr ""
+msgstr "If you did not authorise this change, please contact support immediately. You will no longer receive emails at this address."
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:33
 #: lib/tymeslot/emails/templates/email_change_notification.ex:73
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "If you did not request this change, your account may be compromised. Please sign in to your account immediately and change your password."
-msgstr ""
+msgstr "If you did not request this change, your account may be compromised. Please sign in to your account immediately and change your password."
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
 #: lib/tymeslot/emails/templates/email_change_notification.ex:26
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "New email"
-msgstr "Email:"
+msgstr "New email"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:115
 #: lib/tymeslot/emails/templates/email_change_notification.ex:62
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "New email:"
-msgstr "Email:"
+msgstr "New email:"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:26
 #: lib/tymeslot/emails/templates/email_change_notification.ex:65
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Pending verification"
-msgstr ""
+msgstr "Pending verification"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Previous email"
-msgstr ""
+msgstr "Previous email"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:114
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Previous email:"
-msgstr ""
+msgstr "Previous email:"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:26
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Request details"
-msgstr ""
+msgstr "Request details"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:26
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Requested at"
-msgstr ""
+msgstr "Requested at"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:64
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Requested at:"
-msgstr ""
+msgstr "Requested at:"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:41
 #, elixir-autogen, elixir-format
@@ -1420,34 +1420,34 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
 #: lib/tymeslot/emails/templates/email_change_notification.ex:26
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Status"
-msgstr ""
+msgstr "Status"
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:208
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Time"
-msgstr "Time:"
+msgstr "Time"
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:196
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Title"
-msgstr "Time:"
+msgstr "Title"
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:179
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "What changed"
-msgstr ""
+msgstr "What changed"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:28
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "What happens next"
-msgstr ""
+msgstr "What happens next"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:43
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "What you need to know"
-msgstr ""
+msgstr "What you need to know"
 
 #: lib/tymeslot/emails/shared/layouts.ex:152
 #: lib/tymeslot/emails/shared/mjml_email.ex:326
@@ -1631,9 +1631,9 @@ msgstr "Hi, your payment of %{amount} has been refunded in full."
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:19
 #: lib/tymeslot/emails/templates/email_change_notification.ex:58
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "A request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you."
-msgstr ""
+msgstr "A request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you."
 
 #: lib/tymeslot/emails/shared/greeting.ex:26
 #: lib/tymeslot/emails/shared/greeting.ex:37
@@ -1642,9 +1642,9 @@ msgid "Hi there,"
 msgstr ""
 
 #: dev_support/email_testing/helpers.ex:80
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "I'll send you a reminder 24 hours before our appointment."
-msgstr "I'll send you a reminder %{label} before our appointment."
+msgstr "I'll send you a reminder 24 hours before our appointment."
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:28
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:85
@@ -1654,9 +1654,9 @@ msgstr ""
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:23
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:80
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened."
-msgstr ""
+msgstr "Your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened."
 
 #: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:126
 #, elixir-autogen, elixir-format
@@ -1673,14 +1673,14 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: dev_support/email_testing/helpers.ex:77
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "in %{time_until}"
-msgstr ""
+msgstr "in %{time_until}"
 
 #: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:132
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "today"
-msgstr ""
+msgstr "today"
 
 #: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:129
 #, elixir-autogen, elixir-format
@@ -1758,7 +1758,7 @@ msgid "You can change your response any time using the links above."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:167
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You're invited"
 msgstr ""
 
@@ -1768,7 +1768,7 @@ msgid "You're invited - %{date} with %{name}"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:295
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You're invited!"
 msgstr ""
 
