@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
         <div class="flex items-start gap-4 sm:gap-5">
           <%!-- Slack Icon --%>
           <div class={[
-            "p-3 rounded-token-2xl transition-colors duration-300 flex-shrink-0",
+            "p-3 rounded-token-2xl transition-colors duration-300 shrink-0",
             icon_bg(@status)
           ]}>
             <svg class={["w-6 h-6", icon_color(@status)]} viewBox="0 0 24 24" fill="currentColor">
@@ -78,12 +78,12 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
             <% else %>
               <%= if @integration.last_triggered_at do %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
-                  <.icon name="hero-clock" class="w-4 h-4 flex-shrink-0" />
+                  <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
                   <span>Last triggered: <%= AutomationHelpers.format_datetime(@integration.last_triggered_at) %></span>
                 </div>
               <% else %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-400 italic">
-                  <.icon name="hero-clock" class="w-4 h-4 flex-shrink-0" />
+                  <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
                   <span>Never triggered</span>
                 </div>
               <% end %>
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
           </div>
 
           <%!-- Status Toggle (active/paused only) --%>
-          <div class="flex-shrink-0 ml-2">
+          <div class="shrink-0 ml-2">
             <%= if @status in [:active, :paused] do %>
               <StatusSwitch.status_switch
                 id={"slack-toggle-#{@integration.id}"}
@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
         </div>
 
         <%!-- Bottom: Actions --%>
-        <div class="flex items-center gap-2 flex-shrink-0 border-t border-tymeslot-100 pt-3">
+        <div class="flex items-center gap-2 shrink-0 border-t border-tymeslot-100 pt-3">
           <%!-- Pick a channel (pending_oauth only) --%>
           <%= if @status == :pending_oauth && @on_pick_channel do %>
             <button

@@ -374,7 +374,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             />
             <button
               type="button"
-              class="flex-shrink-0 p-1 rounded text-tymeslot-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              class="shrink-0 p-1 rounded text-tymeslot-400 hover:text-red-500 hover:bg-red-50 transition-colors"
               phx-click="remove_option"
               phx-value-index={index}
               phx-target={@myself}

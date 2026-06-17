@@ -132,7 +132,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
     <div
       role="group"
       aria-label={gettext("Set %{name}", name: Formatters.humanise(@key))}
-      class="inline-flex p-1 bg-white border-2 border-tymeslot-100 rounded-token-xl shadow-sm gap-1 flex-shrink-0"
+      class="inline-flex p-1 bg-white border-2 border-tymeslot-100 rounded-token-xl shadow-sm gap-1 shrink-0"
     >
       <.setting_tag
         key={@key}
@@ -160,7 +160,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       id={"admin-setting-form-#{@key}"}
       phx-change="save_setting"
       phx-submit="save_setting"
-      class="flex items-center gap-2 flex-shrink-0"
+      class="flex items-center gap-2 shrink-0"
       aria-label={gettext("Set %{name}", name: Formatters.humanise(@key))}
     >
       <input type="hidden" name="key" value={Atom.to_string(@key)} />
@@ -185,7 +185,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
     <form
       id={"admin-setting-form-#{@key}"}
       phx-submit="save_setting"
-      class="flex items-center gap-2 flex-shrink-0 max-w-full"
+      class="flex items-center gap-2 shrink-0 max-w-full"
       aria-label={gettext("Set %{name}", name: Formatters.humanise(@key))}
     >
       <input type="hidden" name="key" value={Atom.to_string(@key)} />
@@ -215,7 +215,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   # styling so disabled controls are visually unambiguous.
   defp text_input_classes(size_classes, disabled?) do
     [
-      "px-3 py-1.5 rounded-token-lg border-2 text-token-sm font-bold focus:outline-none focus:ring-2 focus:ring-turquoise-500 focus:border-turquoise-500",
+      "px-3 py-1.5 rounded-token-lg border-2 text-token-sm font-bold focus:outline-hidden focus:ring-2 focus:ring-turquoise-500 focus:border-turquoise-500",
       size_classes,
       if(disabled?,
         do: "bg-tymeslot-50 border-tymeslot-100 text-tymeslot-300 cursor-not-allowed",

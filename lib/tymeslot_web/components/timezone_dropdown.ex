@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                   <.timezone_flag
                     country_code={country_code}
                     safe_mode={@safe_flags}
-                    class="w-6 h-4 flex-shrink-0 rounded-sm shadow-sm"
+                    class="w-6 h-4 shrink-0 rounded-sm shadow-sm"
                   />
                 <% end %>
                 <div class="flex-1 min-w-0">
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                 name="value"
                 value={@timezone_search || ""}
                 placeholder="Search cities, countries, or timezones..."
-                class="w-full px-4 py-2 rounded-lg text-sm border-0 pr-10 focus:outline-none focus:ring-2 focus:ring-teal-400/30 bg-white/90 text-tymeslot-800"
+                class="w-full px-4 py-2 rounded-lg text-sm border-0 pr-10 focus:outline-hidden focus:ring-2 focus:ring-teal-400/30 bg-white/90 text-tymeslot-800"
                 autocomplete="off"
                 phx-hook="AutoFocus"
               />
@@ -141,7 +141,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                       <.timezone_flag
                         country_code={country_code}
                         safe_mode={@safe_flags}
-                        class="w-5 h-3 flex-shrink-0 rounded-sm shadow-sm"
+                        class="w-5 h-3 shrink-0 rounded-sm shadow-sm"
                       />
                     <% end %>
                     <div class="flex-1 min-w-0">

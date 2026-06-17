@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Components.UI.Toggle do
         <span class={["text-sm font-medium text-tymeslot-700", get_label_classes(@size)]}>{@label}</span>
       <% end %>
       <div class={[
-        "flex bg-white/5 backdrop-blur-sm border border-purple-200/30 rounded-lg",
+        "flex bg-white/5 backdrop-blur-xs border border-purple-200/30 rounded-lg",
         get_container_classes(@size),
         if(@disabled, do: "opacity-50 cursor-not-allowed", else: "")
       ]}>

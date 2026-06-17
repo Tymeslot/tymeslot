@@ -87,7 +87,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                       data-testid="duration-option"
                       data-duration={slug}
                     >
-                      <div class="duration-icon flex-shrink-0">
+                      <div class="duration-icon shrink-0">
                         {render_icon(meeting_type.icon || get_default_icon(meeting_type))}
                       </div>
                       <div class="duration-info">

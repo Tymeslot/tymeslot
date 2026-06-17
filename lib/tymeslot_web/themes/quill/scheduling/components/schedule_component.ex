@@ -341,7 +341,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                     />
                   </div>
 
-                  <div class="schedule-actions flex-shrink-0">
+                  <div class="schedule-actions shrink-0">
                     <.action_button
                       type="button"
                       phx-click="back_step"

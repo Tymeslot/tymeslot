@@ -20,7 +20,7 @@
 
 /* OAuth button icon styling */
 .btn-oauth svg {
-  @apply w-5 h-5 flex-shrink-0 transition-transform duration-300;
+  @apply w-5 h-5 shrink-0 transition-transform duration-300;
 }
 
 .btn-oauth:hover svg {

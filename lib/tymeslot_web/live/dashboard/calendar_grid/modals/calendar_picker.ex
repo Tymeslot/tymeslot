@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
         <% is_active_integration = integration.id == @selected_integration_id %>
         <%!-- Integration header --%>
         <div class="flex items-center gap-1.5 mb-1.5">
-          <div class={"w-2 h-2 rounded-full flex-shrink-0 #{Helpers.color_dot(%{integration_colors: @integration_colors}, integration)}"}></div>
+          <div class={"w-2 h-2 rounded-full shrink-0 #{Helpers.color_dot(%{integration_colors: @integration_colors}, integration)}"}></div>
           <ProviderIcon.provider_icon provider={integration.provider} type="calendar" size="mini" />
           <span class="text-token-xs font-semibold text-tymeslot-500 uppercase tracking-wide truncate">
             <%= integration.name %>
@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
             class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_selected.(cal), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
             title={cal_name.(cal)}
           >
-            <div :if={cal["color"] || cal[:color]} class="w-2 h-2 rounded-full flex-shrink-0" style={"background-color: #{cal["color"] || cal[:color]}"}></div>
+            <div :if={cal["color"] || cal[:color]} class="w-2 h-2 rounded-full shrink-0" style={"background-color: #{cal["color"] || cal[:color]}"}></div>
             <span class="truncate max-w-[10rem]"><%= cal_name.(cal) %></span>
             <span :if={cal["primary"] || cal[:primary]} class="text-token-xs font-bold bg-tymeslot-200 px-1 py-0.5 rounded text-tymeslot-500 uppercase">Primary</span>
           </button>

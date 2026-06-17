@@ -8,6 +8,7 @@ FROM hexpm/elixir:1.19.5-erlang-28.3.3-debian-bookworm-20260223-slim AS builder
 
 ARG MIX_ENV=prod
 ENV MIX_ENV=${MIX_ENV} \
+    NODE_ENV=production \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
 
@@ -35,9 +36,10 @@ COPY . .
 RUN rm -rf priv/static/assets/
 RUN mix compile
 RUN mix assets.setup
-# Install node_modules for tailwind plugins (tailwindcss-animate) — the
-# standalone tailwind binary bundles @tailwindcss/forms but not third-party
-# plugins, so it resolves them from the assets dir's node_modules.
+# Install node_modules for the heroicons plugin — the standalone tailwind
+# binary bundles @tailwindcss/forms but not the tailwindcss runtime that
+# assets/heroicons.js needs via require("tailwindcss/plugin"), so it resolves
+# them from the assets dir's node_modules.
 RUN npm ci --prefix assets
 RUN mix assets.deploy
 

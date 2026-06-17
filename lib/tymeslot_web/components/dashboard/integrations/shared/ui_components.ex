@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
         @class,
         "group flex items-center gap-1 p-2 text-red-500 hover:text-red-700",
         "hover:bg-red-50 rounded-md transition-all duration-200",
-        "focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+        "focus:outline-hidden focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
       ]}
       title="Close"
     >
@@ -139,7 +139,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   def health_warning_badge(assigns) do
     ~H"""
     <span class={@class}>
-      <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           stroke-linecap="round"
           stroke-linejoin="round"
@@ -168,7 +168,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   def no_calendars_badge(assigns) do
     ~H"""
     <span class={@class} title="No calendars selected — nothing will sync until you pick at least one.">
-      <.icon name="hero-calendar-mini" class="w-3 h-3 flex-shrink-0" /> No calendars selected
+      <.icon name="hero-calendar-mini" class="w-3 h-3 shrink-0" /> No calendars selected
     </span>
     """
   end

@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
     >
       <div class="relative z-10 flex items-start gap-4">
         <div class={[
-          "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border",
+          "shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border",
           icon_bg_color(@kind)
         ]}>
           <svg :if={@kind == :info} class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
         <button
           :if={@close}
           type="button"
-          class="flex-shrink-0 text-current opacity-40 hover:opacity-100 transition-opacity"
+          class="shrink-0 text-current opacity-40 hover:opacity-100 transition-opacity"
           aria-label="Close"
         >
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
