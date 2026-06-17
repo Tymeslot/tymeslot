@@ -56,6 +56,24 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
     end
   end
 
+  describe "get_allow_guests/1" do
+    test "returns false for nil" do
+      assert Init.get_allow_guests(nil) == false
+    end
+
+    test "returns true when allow_guests is true" do
+      assert Init.get_allow_guests(%{allow_guests: true}) == true
+    end
+
+    test "returns false when allow_guests is false" do
+      assert Init.get_allow_guests(%{allow_guests: false}) == false
+    end
+
+    test "returns false when allow_guests key is absent" do
+      assert Init.get_allow_guests(%{}) == false
+    end
+  end
+
   describe "get_meeting_mode/1" do
     test "returns personal for nil" do
       assert Init.get_meeting_mode(nil) == "personal"
