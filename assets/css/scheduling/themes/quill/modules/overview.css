@@ -5,14 +5,51 @@
   background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
 }
 
-/* ============================================================================
-   SEMANTIC CLASSES — replacing responsive Tailwind prefixes in overview_component
-   (dissolved from glass-components.css — width queries → @container scheduling)
-   ============================================================================ */
+/* ===== Base Styles ===== */
+/* Semantic classes that replace the responsive Tailwind prefixes the
+   overview_component used to carry; width adaptations are @container queries below. */
 
 /* overview-content-area: replaces px-4 py-2 md:py-4 */
 .overview-content-area {
   padding: var(--space-xs) var(--space-md);
+}
+
+/* The overview box sizes to the number of meeting types rather than always
+   sprawling full-width. With one or two it matches the schedule/booking box
+   width (--container-lg, the same cap the calendar card uses on ultra-wide — see
+   glass-card.css) and the meeting types read as a single stacked column, so
+   slide 1 has the same footprint as the calendar slide instead of a shrunken
+   one. As more meeting types are added the box grows in tiers (the :has quantity
+   queries below), giving the grid room to tile several across. Scoped to the
+   overview via :has so other steps (which the same .container wraps) keep their
+   own width caps.
+
+   At this width the container query that drives tiling (640px) is already met,
+   so the single-vs-multi-column switch is gated on card count instead: the grid
+   only tiles once a third card appears (see the @container rule below). */
+.container:has(.overview-content-area) {
+  max-width: var(--container-lg);
+}
+
+/* Three or four meeting types: widen enough for the grid to tile a couple of
+   columns across. */
+.container:has(.overview-duration-list .duration-card:nth-child(3)) {
+  max-width: var(--container-xl);
+}
+
+/* Five or more: grow to full width, tiling as many cards across as fit. Bounded
+   at 1536px so it never sprawls edge-to-edge on ultra-wide monitors. */
+.container:has(.overview-duration-list .duration-card:nth-child(5)) {
+  max-width: 1536px;
+}
+
+/* The glass card fills whatever width the container caps above allow — it would
+   otherwise be centred at --container-lg on ultra-wide screens (see
+   glass-card.css), too narrow once the overview widens to tile. The more
+   specific selector wins over that min-width:1440px cap, leaving the container
+   caps as the single source of the overview's width. */
+.overview-content-area .glass-morphism-card {
+  max-width: 100%;
 }
 
 /* overview-card-body: replaces p-3 sm:p-6 md:p-8 lg:p-10 */
@@ -45,16 +82,18 @@
   margin-right: 0;
 }
 
-/* overview-avatar: compact default (80px) */
+/* overview-avatar: a compact header element at every size. Uses the fluid
+   --avatar-size-lg token (clamp 96–128px, scaling with container width) so the
+   photo never grows to dominate the content box. */
 .overview-avatar {
-  width: 5rem;
-  height: 5rem;
+  width: var(--avatar-size-lg);
+  height: var(--avatar-size-lg);
 }
 
 /* overview-success-badge positioning: compact default */
 .overview-success-badge {
-  bottom: -4px;
-  right: -4px;
+  bottom: calc(-1 * var(--space-3xs));
+  right: calc(-1 * var(--space-3xs));
   width: 1.75rem;
   height: 1.75rem;
 }
@@ -77,11 +116,17 @@
   text-align: left;
 }
 
-/* overview-duration-list: replaces space-y-2 md:space-y-4 */
+/* overview-duration-list: a single full-width column by default (narrow/mobile).
+   It becomes a multi-column card grid once the card is wide enough to tile — see
+   the @container rule below. Descriptions show in both layouts; they collapse
+   only when vertical space is tight (short-viewport rule at the bottom of this
+   file). The clear drops the list below the floated avatar header. */
 .overview-duration-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: var(--space-xs);
+  align-content: start;
+  clear: both;
 }
 
 /* overview-next-action: replaces mt-4 md:mt-8 */
@@ -98,12 +143,12 @@
 .duration-card--selected {
   background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
   box-shadow: 0 10px 30px color-mix(in srgb, var(--theme-primary) 40%, transparent);
-  border: 2px solid var(--theme-primary);
+  border: var(--border-width-medium) solid var(--theme-primary);
 }
 
 .duration-card--unselected {
   background: var(--surface-medium);
-  border: 2px solid var(--border-medium);
+  border: var(--border-width-medium) solid var(--border-medium);
 }
 
 .duration-card--unselected:hover {
@@ -149,20 +194,16 @@
     padding: var(--space-lg);
   }
 
-  .overview-avatar {
-    width: 8rem;
-    height: 8rem;
-  }
-
-  .overview-success-badge {
-    bottom: -0.5rem;
-    right: -0.5rem;
-    width: 3rem;
-    height: 3rem;
-  }
-
-  .overview-success-badge-emoji {
-    font-size: var(--theme-font-size-xl);
+  /* Three or more meeting types: lay them across in as many columns as fit
+     (auto-fill). With only one or two the list stays a single stacked column
+     even though the box is wide — gating on the third card keeps the default
+     two-type slide reading as a calendar-width column rather than splitting.
+     Descriptions stay visible here — a laptop has the vertical room for them, and
+     grid rows align to the tallest card so uneven text lengths don't break the
+     layout. They're only collapsed when vertical space is tight (see the
+     short-viewport rule at the bottom of this file). */
+  .overview-duration-list:has(.duration-card:nth-child(3)) {
+    grid-template-columns: repeat(auto-fill, minmax(var(--container-xs), 1fr));
   }
 
   .overview-title {
@@ -205,45 +246,9 @@
     padding: var(--space-2xl);
   }
 
-  /* Switch from floated layout to 2-col grid */
-  .overview-layout {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-2xl);
-    align-items: center;
-  }
-
-  .overview-layout::after {
-    display: none;
-  }
-
-  .overview-avatar-section {
-    float: none;
-    margin: 0;
-    text-align: center;
-  }
-
-  .overview-avatar-wrapper {
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .overview-avatar {
-    width: 16rem;
-    height: 16rem;
-  }
-
-  .overview-success-badge {
-    bottom: -1rem;
-    right: -1rem;
-    width: 6rem;
-    height: 6rem;
-  }
-
-  .overview-success-badge-emoji {
-    font-size: var(--theme-font-size-4xl);
-  }
-
+  /* The avatar stays a compact floated header at every size (see base rules);
+     wide containers only grow the typography and card padding, never switch to
+     a photo-dominated 2-column split. */
   .overview-title {
     font-size: var(--theme-font-size-3xl);
     text-align: left;
@@ -290,17 +295,27 @@
     padding: var(--space-3xl);
   }
 
-  .overview-avatar {
-    width: 20rem;
-    height: 20rem;
-  }
-
   .overview-title {
     font-size: var(--theme-font-size-4xl);
   }
 
   .overview-description {
     font-size: var(--theme-font-size-xl);
+  }
+}
+
+/* ===== Short-viewport fitting ===== */
+/* When vertical space is tight (short windows, embedded iframes), collapse the
+   meeting-type descriptions so the compact card grid fits more rows without
+   scrolling. The text is kept in the DOM and the accessibility tree — only
+   visually collapsed — so the name + duration carry the choice while screen
+   readers still reach the full description. Tall viewports keep descriptions.
+   (The card grid and the wider box apply at every height — see the base rules.) */
+@media (max-height: 600px) {
+  .duration-card-description {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
   }
 }
 

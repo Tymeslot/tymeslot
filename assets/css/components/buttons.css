@@ -4,7 +4,7 @@
 
 /* Base Button */
 .btn {
-  @apply inline-flex items-center justify-center font-bold transition-all duration-300 cursor-pointer border-none outline-none no-underline whitespace-nowrap select-none touch-manipulation;
+  @apply inline-flex items-center justify-center font-bold transition-all duration-300 cursor-pointer border-none outline-hidden no-underline whitespace-nowrap select-none touch-manipulation;
 }
 
 .btn:focus-visible {
@@ -51,7 +51,18 @@
 
 /* Button States */
 .btn:disabled {
-  @apply opacity-50 cursor-not-allowed transform-none !important;
+  @apply opacity-50! cursor-not-allowed! transform-none!;
+}
+
+/* Primary button carries its own hover affordances (lift, shadow, colour shift)
+   without the base .btn class, so it needs an explicit disabled treatment:
+   grey it out and strip every hover effect to signal it is inert. */
+.btn-primary:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+.btn-primary:disabled:hover {
+  @apply from-turquoise-600 to-cyan-600 shadow-lg transform-none;
 }
 
 .btn-auth {

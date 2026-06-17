@@ -43,39 +43,51 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   @spec fetch_events(Base.client(), String.t(), DateTime.t(), DateTime.t(), keyword()) ::
           {:ok, list(XmlHandler.parsed_event())} | {:error, Base.error_reason()}
   def fetch_events(client, calendar_path, start_time, end_time, opts \\ []) do
-    with_events_breaker(client, opts, fn ->
-      url = UrlBuilder.build_calendar_url(client.base_url, calendar_path)
-      report_body = XmlHandler.build_calendar_query(start_time, end_time)
+    result =
+      with_events_breaker(client, opts, fn ->
+        url = UrlBuilder.build_calendar_url(client.base_url, calendar_path)
+        report_body = XmlHandler.build_calendar_query(start_time, end_time)
 
-      retry_opts = Keyword.get(opts, :retry_opts, Base.default_retry_opts())
+        retry_opts = Keyword.get(opts, :retry_opts, Base.default_retry_opts())
 
-      report_opts =
-        Keyword.put(opts, :timeout, Keyword.get(opts, :timeout, Base.report_timeout_ms()))
+        report_opts =
+          Keyword.put(opts, :timeout, Keyword.get(opts, :timeout, Base.report_timeout_ms()))
 
-      case RetryLogic.with_retry(
-             fn ->
-               Http.report(url, client.username, client.password, report_body, report_opts)
-             end,
-             retry_opts
-           ) do
-        {:ok, %Req.Response{status: 207, body: body}} ->
-          XmlHandler.parse_calendar_query(body)
+        case RetryLogic.with_retry(
+               fn ->
+                 Http.report(url, client.username, client.password, report_body, report_opts)
+               end,
+               retry_opts
+             ) do
+          {:ok, %Req.Response{status: 207, body: body}} ->
+            XmlHandler.parse_calendar_query(body)
 
-        {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
-          # Some servers return 200 instead of the CalDAV-mandated 207 Multi-Status
-          Logger.warning("CalDAV REPORT returned unexpected status",
-            status: status,
-            expected: 207,
-            url: url,
-            provider: Map.get(client, :provider, :caldav)
-          )
+          {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+            # Some servers return 200 instead of the CalDAV-mandated 207 Multi-Status
+            Logger.warning("CalDAV REPORT returned unexpected status",
+              status: status,
+              expected: 207,
+              url: url,
+              provider: Map.get(client, :provider, :caldav)
+            )
 
-          XmlHandler.parse_calendar_query(body)
+            XmlHandler.parse_calendar_query(body)
 
-        {:error, reason} ->
-          {:error, reason}
-      end
-    end)
+          {:error, :not_found} ->
+            # A missing calendar collection is a per-resource condition, not a
+            # host outage — pass it through as success so it doesn't count
+            # towards opening the host circuit breaker.
+            {:ok, :calendar_not_found}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+      end)
+
+    case result do
+      {:ok, :calendar_not_found} -> {:error, :not_found}
+      other -> other
+    end
   end
 
   @doc """

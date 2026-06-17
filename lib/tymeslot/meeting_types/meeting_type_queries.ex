@@ -22,6 +22,23 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
+  Gets the publicly listed meeting types for a user (active and not private),
+  ordered by sort_order. Private types are reachable only by their direct link,
+  so they are excluded from the public overview this query feeds.
+  """
+  @spec list_public_meeting_types(integer()) :: [MeetingTypeSchema.t()]
+  def list_public_meeting_types(user_id) do
+    query =
+      from(mt in MeetingTypeSchema,
+        where: mt.user_id == ^user_id and mt.is_active == true and mt.is_private == false,
+        order_by: [asc: mt.sort_order, asc: mt.name],
+        preload: [:video_integration, :calendar_integration]
+      )
+
+    Repo.all(query)
+  end
+
+  @doc """
   Gets all meeting types for a user (active and inactive), ordered by sort_order.
   """
   @spec list_all_meeting_types(integer()) :: [MeetingTypeSchema.t()]
@@ -65,22 +82,30 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
 
   @doc """
   Creates a new meeting type.
+
+  `opts` are forwarded to `MeetingTypeSchema.changeset/3` so callers can
+  thread payment-validation context (`:host_charges_enabled`,
+  `:currency_minimum_cents`) into the changeset.
   """
-  @spec create_meeting_type(map()) :: {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
-  def create_meeting_type(attrs) do
+  @spec create_meeting_type(map(), keyword()) ::
+          {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
+  def create_meeting_type(attrs, opts \\ []) do
     %MeetingTypeSchema{}
-    |> MeetingTypeSchema.changeset(attrs)
+    |> MeetingTypeSchema.changeset(attrs, opts)
     |> Repo.insert()
   end
 
   @doc """
   Updates a meeting type.
+
+  `opts` are forwarded to `MeetingTypeSchema.changeset/3` (see
+  `create_meeting_type/2`).
   """
-  @spec update_meeting_type(MeetingTypeSchema.t(), map()) ::
+  @spec update_meeting_type(MeetingTypeSchema.t(), map(), keyword()) ::
           {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_meeting_type(meeting_type, attrs) do
+  def update_meeting_type(meeting_type, attrs, opts \\ []) do
     meeting_type
-    |> MeetingTypeSchema.changeset(attrs)
+    |> MeetingTypeSchema.changeset(attrs, opts)
     |> Repo.update()
   end
 
@@ -93,6 +118,28 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   def toggle_meeting_type_status(meeting_type, attrs) do
     meeting_type
     |> MeetingTypeSchema.toggle_active_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Updates a meeting type's private visibility using a focused changeset.
+  """
+  @spec set_visibility(MeetingTypeSchema.t(), map()) ::
+          {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
+  def set_visibility(meeting_type, attrs) do
+    meeting_type
+    |> MeetingTypeSchema.visibility_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Updates a meeting type's custom booking slug using a focused changeset.
+  """
+  @spec update_slug(MeetingTypeSchema.t(), map()) ::
+          {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_slug(meeting_type, attrs) do
+    meeting_type
+    |> MeetingTypeSchema.slug_changeset(attrs)
     |> Repo.update()
   end
 
@@ -134,6 +181,24 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
           select: mt.name
         )
       )
+    )
+  end
+
+  @doc """
+  Resets `payment_required` and `price_cents` on every meeting type owned
+  by the given user. Used when the host changes their Stripe Connect
+  default currency — paid prices recorded in the old currency must not
+  silently re-bill at the new one.
+  """
+  @spec clear_payments_for_user(integer()) :: {non_neg_integer(), nil}
+  def clear_payments_for_user(user_id) when is_integer(user_id) do
+    Repo.update_all(
+      from(mt in MeetingTypeSchema, where: mt.user_id == ^user_id),
+      set: [
+        payment_required: false,
+        price_cents: nil,
+        updated_at: NaiveDateTime.utc_now(:second)
+      ]
     )
   end
 

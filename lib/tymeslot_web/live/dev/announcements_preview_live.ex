@@ -78,10 +78,10 @@ defmodule TymeslotWeb.Dev.AnnouncementsPreviewLive do
   end
 
   @impl Phoenix.LiveView
-  def handle_info({:announcement_cta_navigate, path}, socket) when is_binary(path) do
+  def handle_info({:external_redirect, url}, socket) when is_binary(url) do
     {:noreply,
      socket
-     |> put_flash(:info, "Preview mode: CTA would navigate to #{path}")
+     |> put_flash(:info, "Preview mode: CTA would open #{url}")
      |> update(:reopen_token, &(&1 + 1))}
   end
 

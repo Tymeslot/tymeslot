@@ -4,23 +4,31 @@
  * When the scheduling page is loaded inside an iframe (via embed.js),
  * this module:
  * 1. Adds a `data-embedded` attribute to <html> so CSS can adapt
- * 2. Sets `data-embed-mode` ("inline" or "modal") for mode-specific CSS
- * 3. Continuously posts the page's measured height to the parent on a
+ * 2. Continuously posts the page's measured height to the parent on a
  *    50ms loop so the parent iframe element can grow AND shrink to match
  *    content as it changes — no dead space at the bottom when the page
- *    shrinks between steps.
+ *    shrinks between steps. Both inline and modal embeds report height
+ *    continuously — the wrapper sizing differs (inline grows freely, modal
+ *    is capped) but the measurement protocol is identical.
  *
- * Measurement protocol (mirrors Cal.com's embed-core approach):
- * - First pass: document.documentElement.scrollHeight (generous; prevents
- *   internal scrollbars before layout settles)
- * - Subsequent passes: ceil(getComputedStyle(main).height + marginTop
- *   + marginBottom) on the booker's outermost flex container. This value
- *   can decrease, which is the whole point.
- * - Diff-checked: same value as the previous post is skipped.
+ * Measurement protocol:
+ * - Every pass measures the SAME thing — ceil(getComputedStyle(main).height +
+ *   marginTop + marginBottom) on the booker's outermost flex container (falling
+ *   back to documentElement.scrollHeight only when that height is unresolved).
+ *   Using one method every time avoids the first-paint "lurch" an earlier version
+ *   had, where the iframe jumped from a generous first scrollHeight down to the
+ *   smaller computed height.
+ * - Growth is posted immediately (so the iframe never flashes an internal
+ *   scrollbar mid-expansion); a shrink is posted only once the height has held
+ *   steady for one tick, collapsing the transient frames of a step reflow into a
+ *   single resize instead of a flicker.
+ * - Sub-pixel jitter is suppressed naturally by Math.ceil in measureHeight — the
+ *   stored height is always an integer, so equal consecutive measurements are
+ *   exact duplicates and are skipped. postMessage is wrapped so a closed/cross-origin
+ *   parent can't kill the loop.
  *
- * `setTimeout` (not ResizeObserver/requestAnimationFrame) is used
- * deliberately: Safari and iframe-hidden contexts have well-known issues
- * with the latter — cal.com chose setTimeout for the same reason.
+ * `setTimeout` (not ResizeObserver/requestAnimationFrame) is used deliberately:
+ * Safari and iframe-hidden contexts have well-known issues with the latter.
  */
 (function () {
   "use strict";
@@ -31,8 +39,6 @@
   document.documentElement.setAttribute("data-embedded", "");
 
   const params = new URLSearchParams(window.location.search);
-  const embedMode = params.get("embed-mode") || "modal";
-  document.documentElement.setAttribute("data-embed-mode", embedMode);
 
   // --- Derive the allowed parent origin ---
   // Prefer document.referrer (browser-provided, hard to spoof). Fall back
@@ -74,8 +80,10 @@
 
   // --- Continuous height measurement loop ---
   const POLL_INTERVAL_MS = 50;
+
   let lastPostedHeight = null;
-  let isFirstPass = true;
+  let lastMeasuredHeight = null;
+  let hasPosted = false;
 
   function findMainElement() {
     return (
@@ -85,32 +93,46 @@
     );
   }
 
+  // One consistent measurement every pass — the booker's outermost container
+  // height + margins. Falls back to scrollHeight only when the height is
+  // unresolved (e.g. computes to `auto`), so the loop never posts NaN.
   function measureHeight() {
-    if (isFirstPass) {
-      // Generous initial measurement — prevents an internal scrollbar
-      // flashing before the first computed-height tick lands.
-      return document.documentElement.scrollHeight;
-    }
     const main = findMainElement();
     const styles = window.getComputedStyle(main);
-    return Math.ceil(
-      parseFloat(styles.height) +
-      parseFloat(styles.marginTop) +
-      parseFloat(styles.marginBottom)
-    );
+    const h = parseFloat(styles.height);
+    if (Number.isFinite(h)) {
+      const mt = parseFloat(styles.marginTop) || 0;
+      const mb = parseFloat(styles.marginBottom) || 0;
+      return Math.ceil(h + mt + mb);
+    }
+    return document.documentElement.scrollHeight;
   }
 
   function postHeight() {
     const height = measureHeight();
     if (!Number.isFinite(height) || height < 1) return;
-    if (height === lastPostedHeight) return;
+
+    const grew = lastPostedHeight === null || height > lastPostedHeight;
+    const steady = height === lastMeasuredHeight;
+    lastMeasuredHeight = height;
+
+    // Grow immediately (no transient scrollbar); shrink only once the height has
+    // settled for a tick (no flicker from a reflow's intermediate frames).
+    if (!grew && !steady) return;
+    // Skip posting an identical height (steady state with no change).
+    if (lastPostedHeight !== null && height === lastPostedHeight) return;
 
     lastPostedHeight = height;
-    window.parent.postMessage(
-      { type: "tymeslot-resize", height: height, isFirstTime: isFirstPass },
-      targetOrigin
-    );
-    isFirstPass = false;
+    const isFirstTime = !hasPosted;
+    hasPosted = true;
+    try {
+      window.parent.postMessage(
+        { type: "tymeslot-resize", height: height, isFirstTime: isFirstTime },
+        targetOrigin
+      );
+    } catch (_) {
+      // Parent unreachable (closed tab / cross-origin race) — keep looping.
+    }
   }
 
   function loop() {

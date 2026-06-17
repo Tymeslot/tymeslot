@@ -14,6 +14,7 @@ import topbar from "../../vendor/topbar.cjs"
 import { ConfirmDelete, PageReload } from "../ui_interaction_hooks"
 import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick } from "../utility_hooks"
 import { ClipboardCopy } from "../clipboard_hook"
+import { installAnalytics, installEventBridge } from "../analytics"
 
 // CSRF token
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
@@ -112,7 +113,7 @@ window.addEventListener("tymeslot:clip-copy", (e) => {
 
   toast.innerHTML = `
     <div class="relative z-10 flex items-start gap-4">
-      <div class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border ${
+      <div class="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border ${
         isError ? "bg-white border-red-100 text-red-500" : "bg-turquoise-50 border-turquoise-100 text-turquoise-600"
       }">
         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,6 +147,28 @@ window.addEventListener("tymeslot:clip-copy", (e) => {
   setTimeout(removeToast, 5000);
 });
 
+// Loading state for plain (non-LiveView) form submits that navigate away —
+// e.g. the Stripe Connect onboarding POST, which makes two Stripe API calls
+// before redirecting, so the page can sit for a second or two. Opt in with
+// `data-submit-loading` on the <form>; the button reveals `[data-submit-spinner]`
+// and hides `[data-submit-label]`, then disables so it can't be rage-clicked.
+document.addEventListener("submit", (e) => {
+  const form = e.target;
+  if (!form || !form.matches || !form.matches("form[data-submit-loading]")) return;
+
+  const spinner = form.querySelector("[data-submit-spinner]");
+  if (spinner) spinner.classList.replace("hidden", "inline-flex");
+
+  const label = form.querySelector("[data-submit-label]");
+  if (label) label.classList.add("hidden");
+
+  // Defer disabling: a button disabled synchronously inside its own submit
+  // handler can cancel the submission in some browsers. A 0ms timeout lets the
+  // navigation start first, then locks the button against further clicks.
+  const button = form.querySelector("button[type=submit]");
+  if (button) setTimeout(() => { button.disabled = true; }, 0);
+}, true);
+
 // OAuth disconnect suppression
 document.addEventListener("click", (e) => {
   const link = e.target && e.target.closest
@@ -155,6 +178,11 @@ document.addEventListener("click", (e) => {
   if (!link) return;
   window.__tymeslot_suppress_lv_disconnect_until = Date.now() + 2500;
 }, true);
+
+// Vendor-neutral analytics: facade (no-op unless an analytics script is loaded)
+// plus the bridge that forwards server-pushed `ts:analytics` events to it.
+installAnalytics();
+installEventBridge();
 
 // Export for route bundles to extend
 window.liveSocket = liveSocket;

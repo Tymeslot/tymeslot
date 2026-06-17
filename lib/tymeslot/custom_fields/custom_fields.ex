@@ -10,7 +10,22 @@ defmodule Tymeslot.CustomFields do
 
   alias Tymeslot.CustomFields.{Snapshot, Validator}
 
-  @doc "Builds a frozen snapshot of a meeting type's custom-field definitions."
+  # Hard ceiling on a raw binary answer before any type-specific validation
+  # runs. Type validators apply tighter, type-appropriate caps; this is a
+  # defensive backstop so a single crafted field can't bloat the persisted
+  # JSONB regardless of type.
+  @max_raw_answer_length 5_000
+
+  @doc """
+  Builds a frozen snapshot of a meeting type's custom-field definitions.
+
+  Intentionally ungated by plan. The booker flow keeps collecting answers
+  even if the host has since downgraded — this is a deliberate
+  data-retention choice so existing booking links don't silently start
+  dropping questions. The plan gate is enforced at *write* time, when a
+  host attaches custom fields to a meeting type
+  (`Tymeslot.MeetingTypes.gate_custom_fields_change/2`), not at booking time.
+  """
   @spec snapshot_for(map()) :: [map()]
   defdelegate snapshot_for(meeting_type), to: Snapshot, as: :from_meeting_type
 
@@ -34,7 +49,7 @@ defmodule Tymeslot.CustomFields do
       Enum.reduce(snapshot, {%{}, %{}}, fn defn, {ok_acc, err_acc} ->
         raw = Map.get(answers, defn["id"])
 
-        case Validator.validate(raw, defn) do
+        case validate_raw(raw, defn) do
           {:ok, normalised} -> {Map.put(ok_acc, defn["id"], normalised), err_acc}
           {:error, msg} -> {ok_acc, Map.put(err_acc, defn["id"], msg)}
         end
@@ -42,4 +57,11 @@ defmodule Tymeslot.CustomFields do
 
     if map_size(errs) == 0, do: {:ok, ok}, else: {:error, errs}
   end
+
+  defp validate_raw(raw, _defn)
+       when is_binary(raw) and byte_size(raw) > @max_raw_answer_length do
+    {:error, "Answer is too long"}
+  end
+
+  defp validate_raw(raw, defn), do: Validator.validate(raw, defn)
 end

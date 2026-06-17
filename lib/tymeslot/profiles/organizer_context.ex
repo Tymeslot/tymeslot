@@ -28,7 +28,7 @@ defmodule Tymeslot.Profiles.OrganizerContext do
   end
 
   defp load_active_meeting_types(user_id) do
-    MeetingTypes.get_active_meeting_types(user_id)
+    MeetingTypes.get_public_meeting_types(user_id)
   end
 
   defp build_organizer_context(profile, username) do
@@ -51,7 +51,7 @@ defmodule Tymeslot.Profiles.OrganizerContext do
     if meeting_types != [] do
       meeting_types
     else
-      if user_id, do: MeetingTypes.get_active_meeting_types(user_id), else: []
+      if user_id, do: MeetingTypes.get_public_meeting_types(user_id), else: []
     end
   end
 end

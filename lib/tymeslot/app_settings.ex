@@ -29,12 +29,20 @@ defmodule Tymeslot.AppSettings do
   Settings are intentionally typed columns rather than a generic key/value
   store: it keeps the migration path explicit, makes the Settings API
   type-safe, and lets the LiveView render each setting with the right control.
+
+  Note: `Application.put_env/3` is node-local. On a multi-node deployment an
+  override applied via `update/1` only takes effect immediately on the node
+  that handled the request; other nodes pick it up at their next `load!/0`
+  (restart). This is acceptable for the single-node self-hosted target this
+  module serves.
   """
 
   require Logger
 
+  alias Ecto.Changeset
   alias Tymeslot.AppSettings.{AppSettingsQueries, AppSettingsSchema}
   alias Tymeslot.Auth
+  alias Tymeslot.MeetingPayments
 
   @type setting_key ::
           :registration_enabled
@@ -48,6 +56,7 @@ defmodule Tymeslot.AppSettings do
           | :recaptcha_booking_min_score
           | :admin_alerts_enabled
           | :admin_alert_email
+          | :meeting_payments_enabled
 
   @type effective_source :: :db | :config | :default
   @type effective_value :: %{
@@ -120,40 +129,98 @@ defmodule Tymeslot.AppSettings do
   and fall back to the config/default. The new values are pushed to
   `Application.put_env` on success so the change takes effect immediately.
 
-  Returns `{:error, :would_lock_out}` if the update would transition
-  `password_auth_enabled` from true to false while at least one admin still
-  signs in via email + password. Whether the install has OAuth configured
-  globally is irrelevant — an admin whose own account has no linked OAuth
-  identity would still be locked out. The acting admin must demote those
-  password-auth admins (or have them link an OAuth identity) before the
-  toggle can flip. Updates from an already locked-out state (e.g. an admin
-  recovering via a still-valid session) are allowed through unchanged.
+  Returns `{:error, :would_lock_out}` if the update would leave the install
+  with no usable auth path while at least one admin exists — e.g. disabling
+  `password_auth_enabled` while an admin still signs in via email + password
+  and no SSO provider is both enabled *and* has client credentials
+  configured. An SSO provider that is toggled on but has no client id/secret
+  set does not count as a usable path (the login button cannot complete a
+  sign-in), so enabling a credential-less provider does not unlock the
+  password-auth toggle. The acting admin must demote password-auth admins
+  (or configure/keep a credentialed SSO provider) before the toggle can flip.
+  Updates from an already locked-out state (e.g. an admin recovering via a
+  still-valid session) are allowed through unchanged.
+
+  String keys are accepted and normalised against `keys/0`; an unrecognised
+  key returns an `{:error, %Ecto.Changeset{}}` rather than silently applying.
+
+  The lockout guard is evaluated inside the row-locked update transaction,
+  against the merged row about to be committed — so two concurrent saves
+  cannot each pass the check and jointly disable the last auth path.
   """
   @spec update(map()) ::
-          {:ok, AppSettingsSchema.t()} | {:error, Ecto.Changeset.t() | :would_lock_out}
+          {:ok, AppSettingsSchema.t()} | {:error, Changeset.t() | :would_lock_out}
   def update(attrs) when is_map(attrs) do
-    if would_cause_lockout?(attrs) do
-      Logger.warning("App settings update blocked: would lock out all users",
-        keys: Map.keys(attrs)
-      )
-
-      {:error, :would_lock_out}
-    else
-      apply_update(attrs)
+    case normalise_keys(attrs) do
+      {:ok, normalised} -> apply_update(normalised)
+      {:error, changeset} -> {:error, changeset}
     end
   end
 
+  # Normalise incoming attribute keys to the atom whitelist before any guard
+  # runs. The schema cast accepts string keys, so without this an admin call
+  # like `update(%{"password_auth_enabled" => false})` would skip the
+  # atom-keyed lockout guard yet still apply through the cast. We map every
+  # known string key to its atom equivalent and reject any unknown key.
+  defp normalise_keys(attrs) do
+    Enum.reduce_while(attrs, {:ok, %{}}, fn {key, value}, {:ok, acc} ->
+      case normalise_key(key) do
+        {:ok, atom_key} -> {:cont, {:ok, Map.put(acc, atom_key, value)}}
+        :error -> {:halt, {:error, unknown_key_changeset(key)}}
+      end
+    end)
+  end
+
+  defp normalise_key(key) when is_atom(key) do
+    if key in keys(), do: {:ok, key}, else: :error
+  end
+
+  defp normalise_key(key) when is_binary(key) do
+    case Enum.find(keys(), fn k -> Atom.to_string(k) == key end) do
+      nil -> :error
+      atom_key -> {:ok, atom_key}
+    end
+  end
+
+  defp normalise_key(_key), do: :error
+
+  defp unknown_key_changeset(key) do
+    %AppSettingsSchema{}
+    |> Changeset.change()
+    |> Changeset.add_error(:base, "unknown setting key: #{inspect(key)}")
+  end
+
+  # The lockout guard runs *inside* the FOR-UPDATE transaction
+  # (`update_settings/3`), evaluated against the merged, about-to-be-committed
+  # row rather than against the live Application env. Evaluating against the
+  # locked DB state closes the TOCTOU window: two concurrent admin saves
+  # serialise on the row lock, so the second one sees the first one's effect
+  # and cannot also disable the last remaining auth path.
   defp apply_update(attrs) do
-    case AppSettingsQueries.update_settings(attrs) do
+    case AppSettingsQueries.update_settings(attrs, &lockout_guard(&1, attrs)) do
       {:ok, settings} ->
         flush_overrides(settings)
         Logger.info("App settings updated", keys: Map.keys(attrs))
         {:ok, settings}
 
+      {:error, :would_lock_out} = error ->
+        Logger.warning("App settings update blocked: would lock out all users",
+          keys: Map.keys(attrs)
+        )
+
+        error
+
       {:error, changeset} = error ->
         Logger.warning("App settings update failed", errors: inspect(changeset.errors))
         error
     end
+  end
+
+  # Guard callback invoked under the row lock with the merged settings row
+  # (the exact state that is about to be committed). Returns `:ok` to allow
+  # the commit or `{:error, :would_lock_out}` to roll it back.
+  defp lockout_guard(merged_row, attrs) do
+    if would_cause_lockout?(merged_row, attrs), do: {:error, :would_lock_out}, else: :ok
   end
 
   # Applies all setting overrides from `settings` to the Application env in a
@@ -213,11 +280,11 @@ defmodule Tymeslot.AppSettings do
   # account exists at all the guard vacuously passes — there is no admin to
   # be locked out — which is also the only way a fresh install can disable
   # everything before its first admin signs in.
-  defp would_cause_lockout?(attrs) do
+  defp would_cause_lockout?(merged_row, attrs) do
     Auth.any_admin?() and
       currently_has_usable_path?() and
-      not password_usable_after?(attrs) and
-      not sso_usable_after?(attrs)
+      not password_usable_after?(merged_row, attrs) and
+      not sso_usable_after?(merged_row, attrs)
   end
 
   defp currently_has_usable_path? do
@@ -229,45 +296,118 @@ defmodule Tymeslot.AppSettings do
   end
 
   defp sso_currently_usable? do
-    read_config(:google_auth_enabled) == true or
-      read_config(:github_auth_enabled) == true or
-      read_config(:oauth_auth_enabled) == true
+    sso_path_usable?(:google_auth_enabled, read_config(:google_auth_enabled)) or
+      sso_path_usable?(:github_auth_enabled, read_config(:github_auth_enabled)) or
+      sso_path_usable?(:oauth_auth_enabled, read_config(:oauth_auth_enabled))
   end
 
-  defp password_usable_after?(attrs) do
-    next_effective_value(:password_auth_enabled, attrs) == true and
+  defp password_usable_after?(merged_row, attrs) do
+    next_effective_value(:password_auth_enabled, merged_row, attrs) == true and
       Auth.any_admin_uses_password_auth?()
   end
 
-  defp sso_usable_after?(attrs) do
-    next_effective_value(:google_auth_enabled, attrs) == true or
-      next_effective_value(:github_auth_enabled, attrs) == true or
-      next_effective_value(:oauth_auth_enabled, attrs) == true
+  defp sso_usable_after?(merged_row, attrs) do
+    sso_path_usable?(
+      :google_auth_enabled,
+      next_effective_value(:google_auth_enabled, merged_row, attrs)
+    ) or
+      sso_path_usable?(
+        :github_auth_enabled,
+        next_effective_value(:github_auth_enabled, merged_row, attrs)
+      ) or
+      sso_path_usable?(
+        :oauth_auth_enabled,
+        next_effective_value(:oauth_auth_enabled, merged_row, attrs)
+      )
   end
+
+  # An SSO provider only counts as a usable auth path when it is BOTH enabled
+  # AND has its client credentials configured. Enabling e.g. generic OIDC with
+  # no OAUTH_CLIENT_ID/OAUTH_CLIENT_SECRET set produces a login button that
+  # cannot complete a sign-in, so it must not satisfy the lockout guard — an
+  # admin could otherwise enable a credential-less provider, disable password
+  # auth, and brick the install. Mirrors the `MeetingPayments.platform_configured?()`
+  # pattern used for the meeting-payments lock.
+  defp sso_path_usable?(_key, enabled?) when enabled? != true, do: false
+  defp sso_path_usable?(key, _enabled?), do: sso_credentials_present?(key)
+
+  @doc """
+  Returns `true` when the OAuth provider behind `key` has both a client id and
+  client secret configured. Used by the lockout guard so a credential-less
+  SSO toggle is not mistaken for a working sign-in path.
+  """
+  @spec sso_credentials_present?(setting_key()) :: boolean()
+  def sso_credentials_present?(:google_auth_enabled) do
+    env_present?("GOOGLE_CLIENT_ID") and env_present?("GOOGLE_CLIENT_SECRET")
+  end
+
+  def sso_credentials_present?(:github_auth_enabled) do
+    env_present?("GITHUB_CLIENT_ID") and env_present?("GITHUB_CLIENT_SECRET")
+  end
+
+  def sso_credentials_present?(:oauth_auth_enabled) do
+    config = Application.get_env(:tymeslot, :oauth_provider, [])
+
+    value_present?(Keyword.get(config, :client_id)) and
+      value_present?(Keyword.get(config, :client_secret))
+  end
+
+  def sso_credentials_present?(_key), do: false
+
+  defp env_present?(var), do: value_present?(System.get_env(var))
+
+  defp value_present?(nil), do: false
+  defp value_present?(value) when is_binary(value), do: String.trim(value) != ""
+  defp value_present?(_value), do: false
 
   # The set of state values that `update/1` would currently reject for a
   # given setting. Mirrors the same checks `apply_update/1` enforces so the
   # admin UI can grey out the matching toggle in advance rather than
   # surfacing the rejection after the click.
   defp locked_states_for(:password_auth_enabled) do
-    if would_cause_lockout?(%{password_auth_enabled: false}), do: [false], else: []
+    if would_lock_out_attrs?(%{password_auth_enabled: false}), do: [false], else: []
   end
 
   defp locked_states_for(key)
        when key in [:google_auth_enabled, :github_auth_enabled, :oauth_auth_enabled] do
-    if would_cause_lockout?(%{key => false}), do: [false], else: []
+    if would_lock_out_attrs?(%{key => false}), do: [false], else: []
+  end
+
+  defp locked_states_for(:meeting_payments_enabled) do
+    if MeetingPayments.platform_configured?(), do: [], else: [true]
   end
 
   defp locked_states_for(_key), do: []
 
+  # Read-path evaluation of the lockout guard for the admin UI, used to grey
+  # out controls in advance. Unlike the commit-path guard (which runs against
+  # the row-locked, merged DB row inside the transaction), this evaluates
+  # against the current settings row plus the proposed `attrs`. There is no
+  # consistency risk here — the authoritative check still runs under the lock
+  # on commit; this only decides which toggles to disable up front.
+  defp would_lock_out_attrs?(attrs) do
+    would_cause_lockout?(get!(), attrs)
+  end
+
   # Computes what the effective value of `key` would be after applying `attrs`,
-  # without performing any side effects. Mirrors the same precedence rules
-  # `apply_override/2` and `restore_baseline/1` enforce on commit.
-  defp next_effective_value(key, attrs) do
+  # without performing any side effects. Precedence: an explicit value in the
+  # update wins; clearing an override (`nil`) falls back to the captured
+  # baseline; an absent key falls back to the value already persisted in the
+  # merged row (DB override) or, failing that, the config layer. Evaluating
+  # absent keys against `merged_row` rather than the live Application env is
+  # what makes the commit-path guard see concurrent writes.
+  defp next_effective_value(key, merged_row, attrs) do
     case Map.fetch(attrs, key) do
       {:ok, nil} -> baseline_or_default(key)
       {:ok, value} -> value
-      :error -> read_config(key)
+      :error -> row_value_or_config(key, merged_row)
+    end
+  end
+
+  defp row_value_or_config(key, merged_row) do
+    case Map.get(merged_row, key) do
+      nil -> read_config(key)
+      value -> value
     end
   end
 
@@ -283,7 +423,7 @@ defmodule Tymeslot.AppSettings do
   built-in default. Convenience wrapper over `update/1`.
   """
   @spec reset(setting_key()) ::
-          {:ok, AppSettingsSchema.t()} | {:error, Ecto.Changeset.t() | :would_lock_out}
+          {:ok, AppSettingsSchema.t()} | {:error, Changeset.t() | :would_lock_out}
   def reset(key) when is_atom(key), do: update(%{key => nil})
 
   @doc """
@@ -302,6 +442,7 @@ defmodule Tymeslot.AppSettings do
   def default_for(:recaptcha_booking_min_score), do: 0.3
   def default_for(:admin_alerts_enabled), do: false
   def default_for(:admin_alert_email), do: nil
+  def default_for(:meeting_payments_enabled), do: false
 
   # Projection from setting key to its location in the Application env.
   # Single-atom paths live at the top level; two-atom paths live nested

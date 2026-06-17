@@ -160,7 +160,7 @@
     aspect-ratio: auto;
     min-height: auto;
     padding: var(--space-3xs) var(--space-2xs);
-    gap: 1px;
+    gap: var(--space-hairline);
   }
 
   .calendar-header {
@@ -168,14 +168,14 @@
   }
 
   .calendar-grid {
-    gap: 3px;
+    gap: var(--space-hairline);
   }
 }
 
 /* Extremely short screens — minimal calendar chrome */
 @media (max-height: 400px) {
   .calendar-day {
-    padding: var(--space-3xs) 2px;
+    padding: var(--space-3xs) var(--space-hairline);
     border-radius: var(--radius-sm);
   }
 }

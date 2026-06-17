@@ -18,7 +18,7 @@ defmodule Tymeslot.AnnouncementsMidCtaTestCatalog do
         body: "First test announcement",
         image_path: nil,
         cta_label: nil,
-        cta_path: nil,
+        cta_docs_slug: nil,
         published_at: ~U[2026-01-01 00:00:00Z]
       },
       %Announcement{
@@ -27,7 +27,7 @@ defmodule Tymeslot.AnnouncementsMidCtaTestCatalog do
         body: "Middle test announcement with a CTA",
         image_path: nil,
         cta_label: "Try Gamma",
-        cta_path: "/dashboard/gamma",
+        cta_docs_slug: "gamma",
         published_at: ~U[2026-01-15 00:00:00Z]
       },
       %Announcement{
@@ -36,7 +36,7 @@ defmodule Tymeslot.AnnouncementsMidCtaTestCatalog do
         body: "Second test announcement",
         image_path: "/images/announcements/test_beta.svg",
         cta_label: "Try Beta",
-        cta_path: "/dashboard/beta",
+        cta_docs_slug: "beta",
         published_at: ~U[2026-02-01 00:00:00Z]
       }
     ]

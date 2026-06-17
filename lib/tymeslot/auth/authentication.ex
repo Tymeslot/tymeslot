@@ -9,8 +9,6 @@ defmodule Tymeslot.Auth.Authentication do
   alias Tymeslot.Infrastructure.StructuredLogger
   alias Tymeslot.Security.{InputProcessor, Password, RateLimiter, SecurityLogger}
 
-  require Logger
-
   @type conn :: Plug.Conn.t()
 
   @doc """
@@ -91,6 +89,11 @@ defmodule Tymeslot.Auth.Authentication do
 
       verify_password(user, password) ->
         log_auth_attempt(user, :success, opts)
+
+        :telemetry.execute([:tymeslot, :auth, :login_completed], %{count: 1}, %{
+          method: "password"
+        })
+
         RateLimiter.record_auth_attempt(user.email, true)
         {:ok, user, "Login successful."}
 

@@ -233,6 +233,26 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
   def reset_for_url(_provider, _url), do: :ok
 
   @doc """
+  Resets every host-keyed calendar circuit breaker.
+
+  `reset/1` only covers the named provider-level breakers; host breakers are
+  registered dynamically per host and would otherwise retain their failure
+  counts. Primarily used by tests, where breaker state must not leak between
+  cases.
+  """
+  @spec reset_all_hosts() :: :ok
+  def reset_all_hosts do
+    Tymeslot.Infrastructure.DynamicCircuitBreakerSupervisor
+    |> DynamicSupervisor.which_children()
+    |> Enum.each(fn
+      {_id, pid, :worker, _modules} when is_pid(pid) -> CircuitBreaker.reset(pid)
+      _other -> :ok
+    end)
+
+    :ok
+  end
+
+  @doc """
   Gets the configuration for a specific provider.
   """
   @spec get_config(atom()) :: map()

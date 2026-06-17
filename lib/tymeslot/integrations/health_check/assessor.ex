@@ -7,8 +7,6 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
   configurations, and record telemetry.
   """
 
-  require Logger
-
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Diagnostics
   alias Tymeslot.Integrations.HealthCheck.ProviderHelpers

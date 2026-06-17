@@ -6,11 +6,20 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.MeetingTypes
 
+  # `awaiting_payment` is a transitional state used by embedded paid
+  # bookings: Stripe Checkout opens in a new tab and the iframe waits for
+  # the webhook to broadcast `:paid` (→ `:confirmation`) or `:expired`
+  # (→ `:booking`). It shares step 4 with `:confirmation` so step
+  # navigation does not let the attendee jump back during payment.
   @states_with_questions %{
     overview: %{step: 1, next: :schedule, prev: nil},
     schedule: %{step: 2, next: :questions, prev: :overview},
     questions: %{step: 3, next: :booking, prev: :schedule},
     booking: %{step: 4, next: :confirmation, prev: :questions},
+    # `awaiting_payment` shares the final step with `:confirmation` (here step
+    # 5) for the same reason it does in the default map: step navigation must
+    # not let the attendee jump back while a paid booking is mid-payment.
+    awaiting_payment: %{step: 5, prev: :booking},
     confirmation: %{step: 5, prev: :booking}
   }
 
@@ -18,6 +27,7 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
     overview: %{step: 1, next: :schedule, prev: nil},
     schedule: %{step: 2, next: :booking, prev: :overview},
     booking: %{step: 3, next: :confirmation, prev: :schedule},
+    awaiting_payment: %{step: 4, prev: :booking},
     confirmation: %{step: 4, prev: :booking}
   }
 
@@ -90,7 +100,7 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
   def validate_step_requirements(socket, :schedule) do
     MeetingTypes.validate_duration_selection(
       socket.assigns[:selected_duration],
-      socket.assigns[:meeting_types]
+      validatable_meeting_types(socket)
     )
   end
 
@@ -104,5 +114,17 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
       socket.assigns[:selected_time],
       socket.assigns[:available_slots]
     )
+  end
+
+  # The booker's selection is authoritative once resolved. A private type is
+  # reached by its direct link and is absent from the public `:meeting_types`
+  # list, so include the resolved `:meeting_type` to validate against.
+  defp validatable_meeting_types(socket) do
+    list = socket.assigns[:meeting_types] || []
+
+    case socket.assigns[:meeting_type] do
+      nil -> list
+      meeting_type -> [meeting_type | list]
+    end
   end
 end

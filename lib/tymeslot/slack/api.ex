@@ -130,6 +130,12 @@ defmodule Tymeslot.Slack.API do
   defp maybe_put_cursor(params, ""), do: params
   defp maybe_put_cursor(params, cursor), do: params ++ [{"cursor", cursor}]
 
+  # Slack rate-limits `chat.postMessage` with an HTTP 429 plus a `Retry-After`
+  # header — not a 200/`ok:false` body. Route it to the snooze path so the
+  # worker waits the requested interval instead of fast-retrying.
+  defp parse_web_api_response({:ok, %{status: 429} = response}),
+    do: {:error, {:rate_limited, extract_retry_after(response)}}
+
   # Slack Web API: 200 with `{"ok": true, ...}` or `{"ok": false, "error": "..."}`.
   defp parse_web_api_response({:ok, %{status: 200, body: body} = response}) do
     case decode_body(body) do
@@ -159,6 +165,11 @@ defmodule Tymeslot.Slack.API do
   # Webhook URL: 200 with body "ok" on success, 4xx with body like "no_text" / "invalid_payload"
   # on failure.
   defp parse_webhook_response({:ok, %{status: 200}}), do: {:ok, %{}}
+
+  # hooks.slack.com rate-limits with HTTP 429 + `Retry-After`, exactly like the
+  # Web API. Route it to the snooze path rather than treating it as a 4xx error.
+  defp parse_webhook_response({:ok, %{status: 429} = response}),
+    do: {:error, {:rate_limited, extract_retry_after(response)}}
 
   defp parse_webhook_response({:ok, %{status: status, body: body}}) when status in 400..499,
     do: {:error, {:webhook_error, status, to_string(body)}}

@@ -12,6 +12,7 @@ defmodule TymeslotWeb.SlackOAuthController do
 
   require Logger
 
+  alias Tymeslot.Features
   alias Tymeslot.Slack
   alias Tymeslot.Slack.OAuth
   alias TymeslotWeb.Endpoint
@@ -21,10 +22,40 @@ defmodule TymeslotWeb.SlackOAuthController do
   @spec start(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def start(conn, _params) do
     user_id = conn.assigns.current_user.id
-    redirect_uri = callback_url()
 
-    redirect(conn, external: OAuth.authorize_url(user_id, redirect_uri))
+    with :ok <- check_oauth_available(),
+         :ok <- check_plan_access(user_id) do
+      redirect(conn, external: OAuth.authorize_url(user_id, callback_url()))
+    else
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, start_error_message(reason))
+        |> redirect(to: ~p"/dashboard/automation")
+    end
   end
+
+  # Guards the OAuth start endpoint. Without these, a missing client id makes
+  # `OAuth.authorize_url/2` raise (500), and the plan/feature gate would only
+  # be enforced after the full Slack round-trip in `callback/2`.
+  defp check_oauth_available do
+    if Slack.oauth_mode_available?(), do: :ok, else: {:error, :oauth_unavailable}
+  end
+
+  defp check_plan_access(user_id) do
+    case Features.check_access(user_id, :automations_allowed) do
+      :ok -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp start_error_message(:oauth_unavailable),
+    do: "Slack app install is not available on this deployment. Use a webhook URL instead."
+
+  defp start_error_message(:insufficient_plan),
+    do: "Your plan does not include Slack notifications. Upgrade to connect Slack."
+
+  defp start_error_message(_reason),
+    do: "Slack connection could not be started. Please try again."
 
   @spec callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def callback(conn, %{"error" => error}) do

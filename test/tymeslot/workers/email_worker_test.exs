@@ -8,7 +8,9 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Security.Token
   alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
@@ -181,45 +183,196 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
     end
   end
 
-  describe "schedule_email_verification/2" do
-    test "creates high priority job" do
+  describe "schedule_email_verification/3" do
+    test "creates high priority job carrying the token hash" do
       user = insert(:user)
       url = "https://example.com/verify"
 
-      assert :ok = EmailScheduler.schedule_email_verification(user.id, url)
+      assert {:ok, :scheduled} =
+               EmailScheduler.schedule_email_verification(user.id, url, "hash-abc")
 
       assert_enqueued(
         worker: EmailWorker,
         args: %{
           "action" => "send_email_verification",
           "user_id" => user.id,
-          "verification_url" => url
+          "verification_url" => url,
+          "token_hash" => "hash-abc"
         }
       )
 
       job = List.first(all_enqueued(worker: EmailWorker))
       assert job.priority == 0
     end
+
+    test "reports a duplicate and replaces args when a job is already queued in the window" do
+      user = insert(:user)
+
+      assert {:ok, :scheduled} =
+               EmailScheduler.schedule_email_verification(
+                 user.id,
+                 "https://example.com/verify-1",
+                 "hash-1"
+               )
+
+      # A second send for the same user within the dedup window is coalesced — even
+      # with a different URL, since uniqueness is keyed on action + user_id only.
+      assert {:ok, :duplicate} =
+               EmailScheduler.schedule_email_verification(
+                 user.id,
+                 "https://example.com/verify-2",
+                 "hash-2"
+               )
+
+      assert [job] = all_enqueued(worker: EmailWorker)
+      # replace: [:args] updates the still-pending job to carry the fresh token.
+      assert job.args["verification_url"] == "https://example.com/verify-2"
+      assert job.args["token_hash"] == "hash-2"
+    end
   end
 
-  describe "schedule_password_reset/2" do
-    test "creates high priority job" do
+  describe "schedule_password_reset/3" do
+    test "creates high priority job carrying the token hash" do
       user = insert(:user)
       url = "https://example.com/reset"
 
-      assert :ok = EmailScheduler.schedule_password_reset(user.id, url)
+      assert {:ok, :scheduled} =
+               EmailScheduler.schedule_password_reset(user.id, url, "hash-abc")
 
       assert_enqueued(
         worker: EmailWorker,
         args: %{
           "action" => "send_password_reset",
           "user_id" => user.id,
-          "reset_url" => url
+          "reset_url" => url,
+          "token_hash" => "hash-abc"
         }
       )
 
       job = List.first(all_enqueued(worker: EmailWorker))
       assert job.priority == 0
+    end
+
+    test "reports a duplicate and replaces args when a job is already queued in the window" do
+      user = insert(:user)
+
+      assert {:ok, :scheduled} =
+               EmailScheduler.schedule_password_reset(
+                 user.id,
+                 "https://example.com/reset-1",
+                 "hash-1"
+               )
+
+      assert {:ok, :duplicate} =
+               EmailScheduler.schedule_password_reset(
+                 user.id,
+                 "https://example.com/reset-2",
+                 "hash-2"
+               )
+
+      assert [job] = all_enqueued(worker: EmailWorker)
+      assert job.args["reset_url"] == "https://example.com/reset-2"
+      assert job.args["token_hash"] == "hash-2"
+    end
+  end
+
+  describe "token staleness guard" do
+    test "delivers a verification email whose token hash still matches the stored token" do
+      user = insert(:unverified_user)
+      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      {:ok, _user} = UserTokenQueries.set_verification_token(user, token)
+
+      expect(Tymeslot.EmailServiceMock, :send_email_verification, fn _user, _url ->
+        {:ok, :sent}
+      end)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_email_verification",
+                 "user_id" => user.id,
+                 "verification_url" => "https://example.com/verify",
+                 "token_hash" => Token.hash_token(token)
+               })
+    end
+
+    test "discards a verification email whose token has since been rotated" do
+      user = insert(:unverified_user)
+      {_old_token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      {new_token, _expiry2, _purpose2} = Token.generate_email_verification_token(user.id)
+      # The user row now holds the newer token; the job was queued with the old one.
+      {:ok, _user} = UserTokenQueries.set_verification_token(user, new_token)
+
+      # No send expectation — a discarded job must not call the email service.
+      assert {:discard, _reason} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_email_verification",
+                 "user_id" => user.id,
+                 "verification_url" => "https://example.com/verify-old",
+                 "token_hash" => "stale-hash-that-no-longer-matches"
+               })
+    end
+
+    test "delivers a password reset email whose token hash still matches the stored token" do
+      user = insert(:user)
+      {token, _expiry} = Token.generate_password_reset_token()
+      {:ok, _user} = UserTokenQueries.set_reset_token(user, token)
+
+      expect(Tymeslot.EmailServiceMock, :send_password_reset, fn _user, _url -> {:ok, :sent} end)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_password_reset",
+                 "user_id" => user.id,
+                 "reset_url" => "https://example.com/reset",
+                 "token_hash" => Token.hash_token(token)
+               })
+    end
+
+    test "discards a password reset email whose token has since been rotated" do
+      user = insert(:user)
+      {new_token, _expiry} = Token.generate_password_reset_token()
+      {:ok, _user} = UserTokenQueries.set_reset_token(user, new_token)
+
+      assert {:discard, _reason} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_password_reset",
+                 "user_id" => user.id,
+                 "reset_url" => "https://example.com/reset-old",
+                 "token_hash" => "stale-hash-that-no-longer-matches"
+               })
+    end
+
+    test "delivers a legacy verification job that carries no token hash" do
+      user = insert(:unverified_user)
+      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      {:ok, _user} = UserTokenQueries.set_verification_token(user, token)
+
+      expect(Tymeslot.EmailServiceMock, :send_email_verification, fn _user, _url ->
+        {:ok, :sent}
+      end)
+
+      # No "token_hash" key — a job enqueued before hash tracking existed must still deliver.
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_email_verification",
+                 "user_id" => user.id,
+                 "verification_url" => "https://example.com/verify"
+               })
+    end
+
+    test "delivers a legacy password reset job that carries no token hash" do
+      user = insert(:user)
+      {token, _expiry} = Token.generate_password_reset_token()
+      {:ok, _user} = UserTokenQueries.set_reset_token(user, token)
+
+      expect(Tymeslot.EmailServiceMock, :send_password_reset, fn _user, _url -> {:ok, :sent} end)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_password_reset",
+                 "user_id" => user.id,
+                 "reset_url" => "https://example.com/reset"
+               })
     end
   end
 end

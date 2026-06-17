@@ -71,5 +71,37 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.ReasonNormaliserTest do
                message: "[:a, :b, :c]"
              }
     end
+
+    test "truncates long binary reason to 500 characters with ellipsis" do
+      long_message = String.duplicate("x", 600)
+      %{code: nil, message: result} = ReasonNormaliser.normalise(long_message)
+      assert String.length(result) == 501
+      assert String.ends_with?(result, "…")
+      assert String.starts_with?(result, String.duplicate("x", 500))
+    end
+
+    test "does not truncate reason messages at or below 500 characters" do
+      exact_500 = String.duplicate("y", 500)
+      assert %{code: nil, message: ^exact_500} = ReasonNormaliser.normalise(exact_500)
+    end
+
+    test "truncates long exception messages to 500 characters with ellipsis" do
+      long_exception = %RuntimeError{message: String.duplicate("e", 600)}
+      %{code: RuntimeError, message: result} = ReasonNormaliser.normalise(long_exception)
+      assert String.length(result) == 501
+      assert String.ends_with?(result, "…")
+    end
+
+    test "truncates long tagged-tuple detail inspections to 500 characters with ellipsis" do
+      big_map = Map.new(1..200, fn i -> {i, String.duplicate("v", 10)} end)
+      %{code: :db_error, message: result} = ReasonNormaliser.normalise({:db_error, big_map})
+      assert String.length(result) <= 501
+    end
+
+    test "truncates arbitrary large terms to 500 characters with ellipsis" do
+      big_list = Enum.to_list(1..10_000)
+      %{code: nil, message: result} = ReasonNormaliser.normalise(big_list)
+      assert String.length(result) <= 501
+    end
   end
 end

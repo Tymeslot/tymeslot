@@ -244,7 +244,15 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :tracking_params
   ]
 
-  @valid_statuses ["pending", "confirmed", "cancelled", "completed", "reschedule_requested"]
+  @valid_statuses [
+    "pending",
+    "confirmed",
+    "cancelled",
+    "completed",
+    "reschedule_requested",
+    "awaiting_payment",
+    "expired"
+  ]
 
   @doc false
   @spec changeset(t(), map()) :: Ecto.Changeset.t()

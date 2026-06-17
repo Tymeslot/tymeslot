@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
               draggable="true"
             >
               <%!-- Drag handle --%>
-              <span class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 flex-shrink-0">
+              <span class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 shrink-0">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"
@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
               </div>
 
               <%!-- Actions --%>
-              <div class="flex items-center gap-1 flex-shrink-0">
+              <div class="flex items-center gap-1 shrink-0">
                 <CoreComponents.action_button
                   type="button"
                   variant={:secondary}
@@ -205,27 +205,33 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("reorder", %{"ids" => ids}, socket) do
-    by_id = Map.new(socket.assigns.custom_fields, &{&1.id, &1})
+  def handle_event("reorder", %{"ids" => ids}, socket) when is_list(ids) do
+    fields = socket.assigns.custom_fields
+    existing_ids = Enum.map(fields, & &1.id)
 
-    updated =
-      ids
-      |> Enum.with_index()
-      |> Enum.flat_map(fn {id, i} ->
-        case Map.fetch(by_id, id) do
-          {:ok, field} -> [%{field | position: i}]
-          :error -> []
-        end
-      end)
+    # The client supplies the new order. Only accept it when it is a genuine
+    # permutation of the current ids — same set, no dupes, none missing.
+    # A tampered list could otherwise duplicate questions (repeated id) or
+    # silently drop them (missing id).
+    if MapSet.new(ids) == MapSet.new(existing_ids) and length(ids) == length(existing_ids) do
+      by_id = Map.new(fields, &{&1.id, &1})
 
-    LiveView.send_update(MeetingTypeForm,
-      id: socket.assigns.form_id,
-      custom_fields: updated,
-      editing_question: nil
-    )
+      updated =
+        ids
+        |> Enum.with_index()
+        |> Enum.map(fn {id, i} -> %{Map.fetch!(by_id, id) | position: i} end)
+
+      LiveView.send_update(MeetingTypeForm,
+        id: socket.assigns.form_id,
+        custom_fields: updated,
+        editing_question: nil
+      )
+    end
 
     {:noreply, socket}
   end
+
+  def handle_event("reorder", _params, socket), do: {:noreply, socket}
 
   defp human_type("short_text"), do: "Short text"
   defp human_type("number"), do: "Number"

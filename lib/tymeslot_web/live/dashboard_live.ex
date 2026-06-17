@@ -151,6 +151,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
   alias TymeslotWeb.Dashboard.ComponentDispatch
   alias TymeslotWeb.Dashboard.MeetingFormMessages
+  alias TymeslotWeb.Dashboard.PaymentsHandlers
   alias TymeslotWeb.Dashboard.ScheduleSettingsComponent
   alias TymeslotWeb.Dashboard.ServiceSettingsComponent
   alias TymeslotWeb.Dashboard.TourEventHandlers
@@ -190,6 +191,8 @@ defmodule TymeslotWeb.DashboardLive do
       |> assign(:params, params)
       |> TourEventHandlers.assign_tour_state(action)
 
+    socket = if action == :payments, do: PaymentsHandlers.handle(params, socket), else: socket
+
     socket = if connected?(socket), do: load_dashboard_data(socket), else: socket
 
     {:noreply, socket}
@@ -220,6 +223,7 @@ defmodule TymeslotWeb.DashboardLive do
       current_action={@live_action}
       integration_status={@integration_status}
       automations_allowed={@automations_allowed}
+      payments_allowed={@payments_allowed}
       full_width={@live_action == :calendar}
       sidebar_extensions={@sidebar_extensions}
       unseen_announcements={@unseen_announcements}
@@ -330,6 +334,9 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_info({:calendar_list_refreshed, form_id, _integration_id, calendars}, socket),
     do: MeetingFormMessages.handle_calendar_list_refreshed(form_id, calendars, socket)
 
+  def handle_info({:retry_autosave, form_id}, socket),
+    do: MeetingFormMessages.handle_retry_autosave(form_id, socket)
+
   # Generic external redirect message from components.
   # Only HTTPS URLs are allowed to prevent open-redirect attacks from
   # malicious or buggy extension components.
@@ -348,12 +355,6 @@ defmodule TymeslotWeb.DashboardLive do
 
         {:noreply, put_flash(socket, :error, "Invalid redirect URL")}
     end
-  end
-
-  @spec handle_info({:announcement_cta_navigate, String.t()}, Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info({:announcement_cta_navigate, path}, socket) when is_binary(path) do
-    {:noreply, push_navigate(socket, to: path)}
   end
 
   @spec handle_info({:reload_schedule}, Phoenix.LiveView.Socket.t()) ::

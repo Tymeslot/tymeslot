@@ -24,6 +24,11 @@ defmodule TymeslotWeb.AuthLive do
 
   require Logger
 
+  # How long the "resend verification email" button stays disabled after a click,
+  # to stop users from hammering it. Server-side rate limiting remains the real
+  # security boundary; this is purely a UX guard with a live countdown.
+  @resend_cooldown_seconds 60
+
   @impl Phoenix.LiveView
   def mount(_params, session, socket) do
     csrf_token = Controller.get_csrf_token()
@@ -34,6 +39,7 @@ defmodule TymeslotWeb.AuthLive do
     socket =
       socket
       |> assign(:loading, false)
+      |> assign(:resend_cooldown, 0)
       |> assign(:errors, %{})
       |> assign(:flash_messages, %{})
       |> assign(:current_year, DateTime.utc_now().year)
@@ -62,6 +68,18 @@ defmodule TymeslotWeb.AuthLive do
     Logger.info("AuthLive: handle_params completed", current_state: socket.assigns.current_state)
 
     {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveView
+  def handle_info(:resend_cooldown_tick, socket) do
+    case socket.assigns.resend_cooldown - 1 do
+      remaining when remaining > 0 ->
+        Process.send_after(self(), :resend_cooldown_tick, 1000)
+        {:noreply, assign(socket, :resend_cooldown, remaining)}
+
+      _elapsed ->
+        {:noreply, assign(socket, :resend_cooldown, 0)}
+    end
   end
 
   @impl Phoenix.LiveView
@@ -305,7 +323,20 @@ defmodule TymeslotWeb.AuthLive do
     end
   end
 
+  def handle_event("resend_verification", _params, socket)
+      when socket.assigns.resend_cooldown > 0 do
+    # The button is disabled client-side during the cooldown, but a fast double-click
+    # can deliver a second event before the DOM patch lands. Ignore it server-side so
+    # we never spawn a duplicate timer chain (which would drain the countdown early)
+    # or trigger a redundant resend.
+    {:noreply, socket}
+  end
+
   def handle_event("resend_verification", _params, socket) do
+    # Start the cooldown on every click — success, rate-limited or error — so the
+    # button can't be hammered while the (possibly deduplicated) email is in flight.
+    socket = start_resend_cooldown(socket)
+
     if socket.assigns[:honeypot_signup] do
       metadata = SecurityHelper.extract_client_metadata(socket)
       ip = normalize_ip_for_security(metadata.ip)
@@ -425,6 +456,11 @@ defmodule TymeslotWeb.AuthLive do
       end
 
     if map_size(errors) == 0, do: {:ok, params}, else: {:error, errors}
+  end
+
+  defp start_resend_cooldown(socket) do
+    Process.send_after(self(), :resend_cooldown_tick, 1000)
+    assign(socket, :resend_cooldown, @resend_cooldown_seconds)
   end
 
   defp normalize_ip_for_security(ip) when ip in [nil, ""] do

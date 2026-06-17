@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   attr :current_action, :atom, required: true
   attr :integration_status, :map, default: %{}
   attr :automations_allowed, :boolean, default: true
+  attr :payments_allowed, :boolean, default: false
   attr :full_width, :boolean, default: false
   attr :sidebar_extensions, :list, default: []
   attr :unseen_announcements, :list, default: []
@@ -27,7 +28,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   def dashboard_layout(assigns) do
     ~H"""
     <div
-      class={["flex flex-col", if(@full_width, do: "h-screen overflow-hidden")]}
+      class="flex flex-col h-screen overflow-hidden"
       id="dashboard-root"
       phx-hook="ClipboardCopy"
     >
@@ -41,7 +42,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
       />
 
       <%!-- Top Navigation --%>
-      <div class={if @full_width, do: "flex-shrink-0"}>
+      <div class="shrink-0">
         <.top_navigation
           current_user={@current_user}
           profile={@profile}
@@ -53,13 +54,14 @@ defmodule TymeslotWeb.Components.DashboardLayout do
       <.mode_tabs current_action={@current_action} />
 
       <%!-- Main Layout Area --%>
-      <div class={["flex lg:gap-8", if(@full_width, do: "flex-1 overflow-hidden")]}>
+      <div class="flex lg:gap-8 flex-1 overflow-hidden min-h-0">
         <%= if mode(@current_action) == :scheduling do %>
           <DashboardSidebar.sidebar
             current_action={@current_action}
             integration_status={@integration_status}
             profile={@profile}
             automations_allowed={@automations_allowed}
+            payments_allowed={@payments_allowed}
             sidebar_extensions={@sidebar_extensions}
           />
         <% end %>
@@ -67,7 +69,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
         <%!-- Main Content Area --%>
         <div
           id="dashboard-content-container"
-          class={["flex-1 min-w-0 w-full lg:ml-0", if(@full_width, do: "flex flex-col overflow-hidden")]}
+          class={["flex-1 min-w-0 w-full lg:ml-0", if(@full_width, do: "flex flex-col overflow-hidden", else: "overflow-y-auto")]}
           phx-hook="ScrollReset"
           data-action={@current_action}
         >
@@ -103,7 +105,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
               <%= if @show_sidebar_toggle do %>
                 <%!-- Mobile Menu Button --%>
                 <button
-                  class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all flex-shrink-0"
+                  class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all shrink-0"
                   phx-click={
                     JS.toggle_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
                     |> JS.toggle_class("hidden", to: "#dashboard-sidebar-overlay")
@@ -131,13 +133,13 @@ defmodule TymeslotWeb.Components.DashboardLayout do
               <div class="flex items-center space-x-3 min-w-0">
                 <TymeslotWeb.Components.CoreComponents.logo
                   mode={:full}
-                  img_class="h-10 sm:h-16 flex-shrink min-w-0"
+                  img_class="h-10 sm:h-16 shrink min-w-0"
                 />
               </div>
             </div>
 
     <%!-- Right side: User dropdown --%>
-            <div class="relative flex-shrink-0" data-tour="user-menu">
+            <div class="relative shrink-0" data-tour="user-menu">
               <.live_component
                 module={UserDropdownComponent}
                 id="user-dropdown"

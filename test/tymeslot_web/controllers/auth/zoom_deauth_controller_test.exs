@@ -49,7 +49,7 @@ defmodule TymeslotWeb.ZoomDeauthControllerTest do
     test "rejects requests with a tampered body", %{conn: conn} do
       original = ~s({"event":"app_deauthorized","payload":{"user_id":"abc"}})
       tampered = ~s({"event":"app_deauthorized","payload":{"user_id":"hacked"}})
-      timestamp = "1700000000"
+      timestamp = fresh_timestamp()
       signature = sign(original, timestamp)
 
       conn =
@@ -62,6 +62,23 @@ defmodule TymeslotWeb.ZoomDeauthControllerTest do
 
       assert %{"error" => "invalid_signature"} = json_response(conn, 401)
     end
+
+    test "rejects a correctly-signed request whose timestamp is stale (replay)", %{conn: conn} do
+      payload = ~s({"event":"app_deauthorized","payload":{"user_id":"abc"}})
+      # Well outside the 300s freshness window — a captured replay.
+      timestamp = Integer.to_string(System.system_time(:second) - 3600)
+      signature = sign(payload, timestamp)
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("x-zm-signature", signature)
+        |> put_req_header("x-zm-request-timestamp", timestamp)
+        |> assign(:raw_body, payload)
+        |> post(@path, payload)
+
+      assert %{"error" => "invalid_signature"} = json_response(conn, 401)
+    end
   end
 
   describe "POST /auth/zoom/deauthorize — URL validation challenge" do
@@ -71,7 +88,7 @@ defmodule TymeslotWeb.ZoomDeauthControllerTest do
       payload =
         Jason.encode!(%{event: "endpoint.url_validation", payload: %{plainToken: plain_token}})
 
-      timestamp = "1700000000"
+      timestamp = fresh_timestamp()
       signature = sign(payload, timestamp)
 
       conn =
@@ -115,7 +132,7 @@ defmodule TymeslotWeb.ZoomDeauthControllerTest do
           }
         })
 
-      timestamp = "1700000000"
+      timestamp = fresh_timestamp()
       signature = sign(payload, timestamp)
 
       conn =
@@ -143,7 +160,7 @@ defmodule TymeslotWeb.ZoomDeauthControllerTest do
           }
         })
 
-      timestamp = "1700000000"
+      timestamp = fresh_timestamp()
       signature = sign(payload, timestamp)
 
       conn =
@@ -179,7 +196,7 @@ defmodule TymeslotWeb.ZoomDeauthControllerTest do
           }
         })
 
-      timestamp = "1700000000"
+      timestamp = fresh_timestamp()
       signature = sign(payload, timestamp)
 
       conn =
@@ -203,4 +220,9 @@ defmodule TymeslotWeb.ZoomDeauthControllerTest do
 
     "v0=" <> digest
   end
+
+  # A current Unix-epoch-seconds timestamp, inside the controller's freshness
+  # window, so signature verification is exercised rather than the freshness
+  # guard.
+  defp fresh_timestamp, do: Integer.to_string(System.system_time(:second))
 end

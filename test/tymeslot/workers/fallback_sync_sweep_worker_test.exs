@@ -8,12 +8,12 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
   import ExUnit.CaptureLog
   import Mox
   import Tymeslot.Factory
-  require Logger
 
   alias Ecto.Query
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.SyncGating
   alias Tymeslot.Workers.FallbackSyncSweepWorker
+  alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
@@ -378,8 +378,13 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
     end
   end
 
-  describe "perform/1 - Outlook integration without delta link" do
-    test "calls bootstrap_sync to seed the integration and then attempts subscription registration" do
+  describe "perform/1 - Outlook integrations" do
+    # The per-integration delta-sync/bootstrap behaviour itself is covered by
+    # RefreshOutlookCalendarWorkerTest — the sweep only fans out jobs and must
+    # not perform any provider I/O inline (Mox raises on any unexpected
+    # OutlookCalendarAPIMock call).
+
+    test "enqueues a RefreshOutlookCalendarWorker job for an integration without a delta link" do
       integration =
         insert(:calendar_integration,
           provider: "outlook",
@@ -387,71 +392,28 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
           graph_delta_link: nil
         )
 
-      expect(OutlookCalendarAPIMock, :bootstrap_sync, fn received ->
-        assert received.id == integration.id
-        {:ok, %{integration | graph_delta_link: "fresh-delta-link"}}
-      end)
-
-      expect(OutlookCalendarAPIMock, :register_graph_subscription, fn _integration ->
-        {:ok, integration}
-      end)
-
       assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+
+      assert_enqueued(
+        worker: RefreshOutlookCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
     end
 
-    test "bootstrap_sync runs even when subscription registration is skipped without webhook URL" do
-      insert(:calendar_integration,
-        provider: "outlook",
-        is_active: true,
-        graph_delta_link: nil
-      )
-
-      expect(OutlookCalendarAPIMock, :bootstrap_sync, fn integration ->
-        {:ok, %{integration | graph_delta_link: "bootstrap-delta-link"}}
-      end)
-
-      expect(OutlookCalendarAPIMock, :register_graph_subscription, fn _integration ->
-        {:error, :webhook_base_url_not_configured}
-      end)
+    test "enqueues a RefreshOutlookCalendarWorker job for an integration with a delta link" do
+      integration =
+        insert(:calendar_integration,
+          provider: "outlook",
+          is_active: true,
+          graph_delta_link: "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=x"
+        )
 
       assert :ok = perform_job(FallbackSyncSweepWorker, %{})
-    end
 
-    test "reports the integration as errored when bootstrap_sync itself fails" do
-      insert(:calendar_integration,
-        provider: "outlook",
-        is_active: true,
-        graph_delta_link: nil
+      assert_enqueued(
+        worker: RefreshOutlookCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
       )
-
-      expect(OutlookCalendarAPIMock, :bootstrap_sync, fn _integration ->
-        {:error, :circuit_open}
-      end)
-
-      # register_graph_subscription must NOT be called when bootstrap failed —
-      # Mox will raise if it is.
-      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
-    end
-
-    test "logs and continues when bootstrap_sync returns an api_error 3-tuple" do
-      insert(:calendar_integration,
-        provider: "outlook",
-        is_active: true,
-        graph_delta_link: nil
-      )
-
-      expect(OutlookCalendarAPIMock, :bootstrap_sync, fn _integration ->
-        {:error, :network_error, "HTTP 400 (see logs for details)"}
-      end)
-
-      # Without the 3-tuple fix, this raises CaseClauseError and crashes the
-      # entire sweep — `perform_job` would return `{:error, exception}`.
-      log =
-        capture_log(fn ->
-          assert :ok = perform_job(FallbackSyncSweepWorker, %{})
-        end)
-
-      assert log =~ "Outlook bootstrap delta fetch failed in fallback sweep"
     end
   end
 end

@@ -100,9 +100,17 @@
         if (!cap || cap <= 0) return;
         wrapper.style.height = Math.min(h, cap) + 'px';
       } else {
-        // Unconstrained inline embed — match content height exactly.
-        wrapper.style.height = h + 'px';
-        wrapper.style.minHeight = '0';
+        // Unconstrained inline embed. Legacy snippets (no data-layout) keep
+        // their data-min-height as a persistent floor — the wrapper grows with
+        // content but never shrinks below the floor the embedder reserved.
+        // Column snippets opt into shrink-to-content (no floor).
+        var floor = parseInt(wrapper.dataset.minHeightFloor, 10);
+        if (floor > 0) {
+          wrapper.style.height = Math.max(h, floor) + 'px';
+        } else {
+          wrapper.style.height = h + 'px';
+          wrapper.style.minHeight = '0';
+        }
       }
     });
   });
@@ -136,14 +144,6 @@
     // Signal embedded context to the server for token generation
     url.searchParams.append('embed', '1');
 
-    // Inline embeds use a fixed viewport — the embedded page fills the iframe
-    // exactly (height: 100%, overflow: hidden) so content adapts to the
-    // available space rather than causing iframe-level scrolling.
-    // Modal embeds omit this so the page can report its content height.
-    if (options._mode !== 'modal') {
-      url.searchParams.append('embed-mode', 'inline');
-    }
-
     // Pass parent origin so iframe_embed.js can post resize messages
     // even when the embedding page strips the Referrer header.
     url.searchParams.append('parent-origin', window.location.origin);
@@ -160,14 +160,27 @@
     iframe.setAttribute('scrolling', 'auto');
     iframe.setAttribute('title', 'Booking Widget');
 
+    // Column snippets opt into the new wide-canvas behaviour; everything else
+    // (no layout, or an explicit "default") keeps the legacy defaults so that
+    // snippets deployed before the column layout shipped behave exactly as
+    // they did before the upgrade — a 640px max-width and data-min-height as a
+    // persistent floor rather than a one-shot placeholder.
+    const isColumn = options.layout === 'column';
+    const defaultMaxWidth = isColumn ? 1000 : 640;
+
     // Create wrapper. The wrapper starts at `initialHeight` as a
     // placeholder shown before iframe_embed.js posts its first
     // measurement; thereafter the resize handler grows/shrinks the
     // wrapper to match content. `data-min-height` is still accepted
     // as a legacy alias for `data-initial-height`.
+    //
+    // For legacy (non-column) embeds, `data-min-height` ALSO acts as a
+    // persistent floor the wrapper never shrinks below (see the resize
+    // handler). For column embeds there is no floor — the wrapper tracks
+    // content height exactly.
     const rawInitial = options.initialHeight || options.minHeight;
     const initialHeight = Math.min(Math.max(parseInt(rawInitial, 10) || 400, 200), 2000);
-    const maxWidth = Math.min(Math.max(parseInt(options.maxWidth, 10) || 1000, 200), 2000);
+    const maxWidth = Math.min(Math.max(parseInt(options.maxWidth, 10) || defaultMaxWidth, 200), 2000);
     const wrapper = document.createElement('div');
     wrapper.style.position = 'relative';
     wrapper.style.width = '100%';
@@ -175,6 +188,18 @@
     wrapper.style.marginLeft = 'auto';
     wrapper.style.marginRight = 'auto';
     wrapper.style.height = initialHeight + 'px';
+
+    // Persist the min-height floor for legacy embeds so the resize handler can
+    // enforce it. `options.minHeight` is the legacy `data-min-height` value;
+    // for column embeds we never set a floor.
+    if (!isColumn) {
+      const rawFloor = parseInt(options.minHeight, 10);
+      if (rawFloor > 0) {
+        const floor = Math.min(Math.max(rawFloor, 200), 2000);
+        wrapper.dataset.minHeightFloor = String(floor);
+        wrapper.style.minHeight = floor + 'px';
+      }
+    }
 
     const loader = document.createElement('div');
     loader.className = 'tymeslot-loader';
@@ -463,6 +488,10 @@
         initialHeight:
           container.getAttribute('data-initial-height') ||
           container.getAttribute('data-min-height'),
+        // Preserve the raw data-min-height separately — for legacy (non-column)
+        // embeds it doubles as a persistent height floor, not just the initial
+        // placeholder.
+        minHeight: container.getAttribute('data-min-height'),
         maxWidth: container.getAttribute('data-max-width')
       };
       
@@ -491,12 +520,23 @@
 
     if (hasMaxHeight || hasInlineHeight) {
       requestAnimationFrame(function() {
-        var actualHeight = container.clientHeight;
+        // For a max-height-only container, the cap is the *max-height* value —
+        // NOT container.clientHeight, which at this point is just the wrapper's
+        // initial placeholder (e.g. 400px). Capping at the placeholder would
+        // pin the embed there forever, so it could never grow to the
+        // embedder's e.g. 800px max-height. When the container has an explicit
+        // inline height, clientHeight is the right (fixed) value.
+        var cap;
+        if (hasInlineHeight) {
+          cap = container.clientHeight;
+        } else {
+          cap = parseInt(maxHeight, 10) || container.clientHeight;
+        }
         if (wrapper) {
-          wrapper.style.height = actualHeight + 'px';
+          wrapper.style.height = cap + 'px';
           wrapper.style.minHeight = '0';
           wrapper.dataset.constrained = 'true';
-          wrapper.dataset.constraintHeight = String(actualHeight);
+          wrapper.dataset.constraintHeight = String(cap);
         }
       });
     }
@@ -549,7 +589,13 @@
         }
       }
 
-      const contentMaxWidth = Math.min(Math.max(parseInt(options.maxWidth, 10) || 1000, 200), 2000);
+      // Column popups opt into the wider 1000px canvas; legacy popups (no
+      // layout) keep the original 640px default for back-compat.
+      const modalDefaultMaxWidth = options.layout === 'column' ? 1000 : 640;
+      const contentMaxWidth = Math.min(
+        Math.max(parseInt(options.maxWidth, 10) || modalDefaultMaxWidth, 200),
+        2000
+      );
       const { modal, container, closeButton } = createModal(contentMaxWidth);
       const wrapper = createBookingIframe(username, Object.assign({}, options, { _mode: 'modal' }));
       const iframe = wrapper.querySelector('iframe');
@@ -587,6 +633,16 @@
             var newMax = modalContentMaxHeight();
             if (wrapper.dataset.constrained) {
               wrapper.dataset.constraintHeight = String(newMax);
+              // Re-apply the new cap immediately. iframe_embed.js skips posting
+              // an unchanged height, so on a window *shrink* no fresh resize
+              // message arrives — without this the wrapper stays at its old
+              // (too-tall) height and the modal's overflow:hidden clips the
+              // bottom. Clamp the current height down to the new max; a later
+              // grow is handled by the next posted resize message.
+              var currentHeight = parseInt(wrapper.style.height, 10);
+              if (currentHeight > 0) {
+                wrapper.style.height = Math.min(currentHeight, newMax) + 'px';
+              }
             }
           });
         }
@@ -683,6 +739,11 @@
           container.getAttribute('data-initial-height') ||
           container.getAttribute('data-min-height');
         if (attr) options.initialHeight = attr;
+      }
+      // Preserve the raw data-min-height separately — for legacy (non-column)
+      // embeds it doubles as a persistent height floor.
+      if (!options.minHeight && container.getAttribute('data-min-height')) {
+        options.minHeight = container.getAttribute('data-min-height');
       }
       if (!options.maxWidth && container.getAttribute('data-max-width')) {
         options.maxWidth = container.getAttribute('data-max-width');

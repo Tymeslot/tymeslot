@@ -7,9 +7,18 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
   import ExUnit.CaptureLog
 
   setup do
-    VideoCircuitBreaker.reset(:google_meet)
-    VideoCircuitBreaker.reset(:teams)
-    VideoCircuitBreaker.reset(:mirotalk)
+    # These breakers are global named processes shared across the whole test
+    # run. Reset before each test for a clean slate, and on_exit so the last
+    # test in this module doesn't leave a breaker open for other modules
+    # (e.g. CircuitBreakerSupervisorTest, which asserts they start closed).
+    reset_breakers = fn ->
+      VideoCircuitBreaker.reset(:google_meet)
+      VideoCircuitBreaker.reset(:teams)
+      VideoCircuitBreaker.reset(:mirotalk)
+    end
+
+    reset_breakers.()
+    on_exit(reset_breakers)
     :ok
   end
 

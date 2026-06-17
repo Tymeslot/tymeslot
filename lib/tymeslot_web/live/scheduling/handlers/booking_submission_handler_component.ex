@@ -25,9 +25,12 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   - `check_duplicate_submission/1` - Check for duplicate submissions
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Phoenix.Component
+  alias Phoenix.LiveView
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.CustomFields
   alias Tymeslot.Demo
@@ -50,15 +53,30 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   3. Calls the booking orchestrator
   4. Handles success/error responses
 
+  Returns:
+    * `{:ok, socket}` — booking confirmed, theme should advance to confirmation
+    * `{:redirect, socket}` — paid booking awaiting payment, socket already
+      carries an external redirect to the Stripe Checkout URL (top-level
+      booker only — Stripe blocks framing, so this branch never fires
+      from inside an embed iframe)
+    * `{:awaiting_payment, socket}` — paid booking inside an embed iframe;
+      the socket has been told to open Stripe Checkout in a new tab and
+      carries the meeting + checkout URL for the in-iframe wait screen
+    * `{:error, socket}` — validation or persistence failure
+
   ## Examples
 
       case BookingSubmissionHandlerComponent.submit_booking(socket, booking_params) do
         {:ok, updated_socket} -> {:noreply, updated_socket}
+        {:redirect, redirect_socket} -> {:noreply, redirect_socket}
+        {:awaiting_payment, awaiting_socket} -> {:noreply, awaiting_socket}
         {:error, error_socket} -> {:noreply, error_socket}
       end
   """
   @spec submit_booking(Phoenix.LiveView.Socket.t(), map()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
+          | {:redirect, Phoenix.LiveView.Socket.t()}
+          | {:awaiting_payment, Phoenix.LiveView.Socket.t()}
           | {:honeypot, Phoenix.LiveView.Socket.t()}
           | {:error, Phoenix.LiveView.Socket.t()}
   def submit_booking(socket, booking_params) do
@@ -80,7 +98,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
             socket
             |> assign(:form, Component.to_form(booking_params))
             |> assign(:validation_errors, errors)
-            |> Flash.put_flash(:error, "Please correct the errors below.")
+            |> Flash.put_flash(:error, gettext("Please correct the errors below."))
 
           {:error, socket}
       end
@@ -263,7 +281,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         socket =
           socket
           |> assign(:validation_errors, %{custom_fields: field_errors})
-          |> Flash.put_flash(:error, "Please correct the errors below.")
+          |> Flash.put_flash(:error, gettext("Please correct the errors below."))
 
         {:error, socket}
 
@@ -370,6 +388,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     orchestrator = Demo.get_orchestrator(socket)
 
     case orchestrator.submit_booking(params, opts) do
+      {:ok, :payment_required, %{meeting: meeting, checkout_url: url}} ->
+        handle_payment_required(socket, meeting, url, sanitized_params)
+
       {:ok, meeting} ->
         handle_booking_success(socket, meeting, sanitized_params)
 
@@ -382,13 +403,65 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
           |> assign(:validation_errors, error_map)
           |> assign(:submitting, false)
           |> assign(:submission_processed, false)
-          |> Flash.put_flash(:error, "Please correct the errors below before submitting.")
+          |> Flash.put_flash(
+            :error,
+            gettext("Please correct the errors below before submitting.")
+          )
 
         {:error, socket}
 
       {:error, reason} ->
         handle_booking_error(socket, reason)
     end
+  end
+
+  defp handle_payment_required(socket, meeting, url, sanitized_params) do
+    if socket.assigns[:embedded] do
+      handle_payment_required_embedded(socket, meeting, url, sanitized_params)
+    else
+      handle_payment_required_top_level(socket, url)
+    end
+  end
+
+  defp handle_payment_required_top_level(socket, url) do
+    Logger.info("Booking redirecting to Stripe Checkout for payment", checkout_url: url)
+
+    socket =
+      socket
+      |> assign(:submitting, false)
+      |> LiveView.redirect(external: url)
+
+    {:redirect, socket}
+  end
+
+  # Stripe Checkout cannot render inside an iframe, so embedded bookers
+  # open Checkout in a new tab and stay on a "complete in new tab" screen.
+  # The iframe LiveView subscribes to `meeting_payment:<id>` and flips to
+  # the confirmation view when the webhook broadcasts `:paid`, or back to
+  # the booking form on `:expired`.
+  defp handle_payment_required_embedded(socket, meeting, url, sanitized_params) do
+    Logger.info("Embedded booking awaiting payment in new tab",
+      meeting_id: meeting.id,
+      checkout_url: url
+    )
+
+    if LiveView.connected?(socket) do
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "meeting_payment:#{meeting.id}")
+    end
+
+    # Seed the custom-answer assigns now so the confirmation view can render
+    # when the `:paid` webhook flips this socket to `:confirmation` — that
+    # transition carries no params, unlike the synchronous success path.
+    socket =
+      socket
+      |> assign(:submitting, false)
+      |> assign(:awaiting_payment_meeting, meeting)
+      |> assign(:awaiting_payment_checkout_url, url)
+      |> assign(:custom_fields_snapshot, Map.get(sanitized_params, "custom_fields_snapshot", []))
+      |> assign(:custom_field_answers, Map.get(sanitized_params, "custom_field_answers", %{}))
+      |> LiveView.push_event("payment_redirect_open_tab", %{url: url})
+
+    {:awaiting_payment, socket}
   end
 
   defp resolve_duration_minutes(socket) do

@@ -26,6 +26,10 @@ export const DashboardTour = {
 
     this.pushEvent("tour:shown", {});
 
+    // Seed the step cache so the first real step change (not the initial paint,
+    // which the overlay's CSS fade-in already covers) triggers a per-step fade.
+    this.lastStepIndex = this.el.dataset.stepIndex;
+
     this.onResize = () => {
       if (this.viewportTooSmall()) {
         this.pushEvent("tour:viewport-too-small", {});
@@ -43,10 +47,37 @@ export const DashboardTour = {
   updated() {
     const anchor = this.el.dataset.anchor;
     const placement = this.el.dataset.placement || "bottom";
+    const stepIndex = this.el.dataset.stepIndex;
 
-    if (anchor === this.lastAnchor && placement === this.lastPlacement) return;
+    const stepChanged = stepIndex !== this.lastStepIndex;
+    const layoutUnchanged = anchor === this.lastAnchor && placement === this.lastPlacement;
+
+    // Ignore unrelated LiveView patches: neither the step nor its anchor moved.
+    if (!stepChanged && layoutUnchanged) return;
+
+    if (stepChanged) {
+      this.lastStepIndex = stepIndex;
+      this.beginStepEnter();
+    }
 
     this.position({ scroll: true });
+  },
+
+  // Hide the card instantly (no transition) so the new step's content does not
+  // flash in at the old position. finishStepEnter() releases it once positioned.
+  beginStepEnter() {
+    this.stepEntering = true;
+    const tooltip = this.el.querySelector(".dashboard-tour__tooltip");
+    if (tooltip) tooltip.classList.add("is-entering");
+  },
+
+  finishStepEnter() {
+    if (!this.stepEntering) return;
+    this.stepEntering = false;
+    const tooltip = this.el.querySelector(".dashboard-tour__tooltip");
+    if (!tooltip) return;
+    // Next frame: drop `is-entering` so the opacity transition fades the card in.
+    requestAnimationFrame(() => tooltip.classList.remove("is-entering"));
   },
 
   destroyed() {
@@ -83,10 +114,10 @@ export const DashboardTour = {
 
     if (!anchor) {
       this.applyCenteredLayout();
-      return;
+      return Promise.resolve();
     }
 
-    this.findAnchor(anchor)
+    return this.findAnchor(anchor)
       .then((target) => this.applySpotlightLayout(target, placement, scroll))
       .catch(() => this.pushEvent("tour:skip-step", {}));
   },
@@ -129,6 +160,14 @@ export const DashboardTour = {
     tooltip.style.left = "50%";
     tooltip.style.top = "50%";
     tooltip.style.transform = "translate(-50%, -50%)";
+
+    // Record that we are now on a centered (anchorless) step. Without this the
+    // cache keeps the previous anchored step's anchor/placement, so navigating
+    // Back to centered then forward to the *same* anchored step would trip the
+    // early-return in updated() and leave the spotlight unpositioned.
+    this.lastAnchor = this.el.dataset.anchor;
+    this.lastPlacement = this.el.dataset.placement || "bottom";
+    this.finishStepEnter();
   },
 
   applySpotlightLayout(target, placement, scroll) {
@@ -158,6 +197,7 @@ export const DashboardTour = {
       this.placeTooltip(tooltip, rect, placement);
       this.lastAnchor = this.el.dataset.anchor;
       this.lastPlacement = this.el.dataset.placement || "bottom";
+      this.finishStepEnter();
     });
   },
 

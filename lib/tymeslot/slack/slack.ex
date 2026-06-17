@@ -340,6 +340,16 @@ defmodule Tymeslot.Slack do
     SlackQueries.get_delivery_stats(integration_id, opts)
   end
 
+  @doc """
+  Prunes Slack delivery log rows older than `days` (default 60). Called by the
+  shared `WebhookCleanupWorker` so the per-attempt delivery log does not grow
+  unbounded. Returns the `{deleted_count, nil}` tuple from `delete_all`.
+  """
+  @spec prune_deliveries(integer()) :: {non_neg_integer(), nil}
+  def prune_deliveries(days \\ 60) do
+    SlackQueries.cleanup_old_deliveries(days)
+  end
+
   # ============================================================================
   # Events & feature checks
   # ============================================================================
@@ -428,6 +438,15 @@ defmodule Tymeslot.Slack do
   def translate_error(code) when is_binary(code), do: translate_error_code(code)
   def translate_error(:no_token), do: "Slack credentials are missing. Reconnect to continue."
   def translate_error(:no_webhook_url), do: "Webhook URL is missing. Add it again to continue."
+
+  def translate_error(:insufficient_plan),
+    do: "Your plan does not include Slack notifications. Upgrade to connect Slack."
+
+  def translate_error(:feature_access_checker_failed),
+    do: "Could not verify your plan right now. Please try again in a moment."
+
+  def translate_error(:feature_disabled),
+    do: "Slack notifications are not enabled on this deployment."
 
   def translate_error(:missing_bot_token),
     do:

@@ -91,7 +91,7 @@ defmodule TymeslotWeb.StepNavigation do
   end
 
   defp step_class(_step, _current) do
-    "w-8 h-8 rounded-full bg-tymeslot-700/90 text-white flex items-center justify-center border border-tymeslot-500/40 backdrop-blur-sm transition-all duration-300"
+    "w-8 h-8 rounded-full bg-tymeslot-700/90 text-white flex items-center justify-center border border-tymeslot-500/40 backdrop-blur-xs transition-all duration-300"
   end
 
   defp connector_class(step, current) when step < current do

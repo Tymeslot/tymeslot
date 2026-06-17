@@ -8,9 +8,10 @@ defmodule TymeslotWeb.E2E.DashboardTourTest do
 
   # The tour overlay only mounts when the viewport is at least 1024px wide
   # (matched by the DashboardTour JS hook). On narrower viewports the hook
-  # pushes `tour:viewport-too-small`, which the server uses to mark the user
-  # seen and dismiss the overlay. These two scenarios exercise that branching
-  # end-to-end through ChromeDriver.
+  # pushes `tour:viewport-too-small`, which dismisses the overlay *without*
+  # marking the user seen — so a mobile visitor still gets the tour the next
+  # time they open the dashboard on a large enough screen. These two scenarios
+  # exercise that branching end-to-end through ChromeDriver.
 
   feature "desktop viewport: tour appears, Next advances the step, Skip dismisses",
           %{session: session} do
@@ -30,7 +31,7 @@ defmodule TymeslotWeb.E2E.DashboardTourTest do
     assert %DateTime{} = Repo.reload!(user).dashboard_tour_seen_at
   end
 
-  feature "mobile viewport: hook reports too small, overlay is dismissed and user marked seen",
+  feature "mobile viewport: hook reports too small, overlay is dismissed without marking seen",
           %{session: session} do
     session = resize_window(session, 390, 844)
 
@@ -42,6 +43,8 @@ defmodule TymeslotWeb.E2E.DashboardTourTest do
     # `tour:viewport-too-small`. refute_has retries until the element is gone.
     refute_has(session, css("#dashboard-tour"))
 
-    assert %DateTime{} = Repo.reload!(user).dashboard_tour_seen_at
+    # The seen flag is intentionally NOT persisted on a too-small viewport, so
+    # the user still gets the tour on their next desktop visit.
+    assert is_nil(Repo.reload!(user).dashboard_tour_seen_at)
   end
 end

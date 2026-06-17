@@ -17,9 +17,10 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Events do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("answer", params, socket) do
     %Engine{} = engine = socket.assigns.engine
-    id = Engine.current_definition(engine)["id"]
+    definition = Engine.current_definition(engine)
+    id = definition["id"]
     raw = Map.get(params, "value", params)
-    value = AnswerNormaliser.normalise(raw)
+    value = AnswerNormaliser.normalise(raw, definition["type"])
     send(self(), {:step_event, :questions, :answer, {id, value}})
     {:noreply, socket}
   end

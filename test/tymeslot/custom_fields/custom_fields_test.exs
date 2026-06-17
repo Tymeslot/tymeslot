@@ -65,6 +65,33 @@ defmodule Tymeslot.CustomFieldsTest do
       refute Map.has_key?(normalised, "extra")
     end
 
+    test "rejects an answer that exceeds the defensive raw length cap" do
+      snapshot = [
+        %{"id" => "a", "type" => "short_text", "label" => "Notes", "required" => false}
+      ]
+
+      huge = String.duplicate("x", 6_000)
+      assert {:error, errs} = CustomFields.validate_answers(snapshot, %{"a" => huge})
+      assert Map.has_key?(errs, "a")
+    end
+
+    test "multi_select answers are stored deduped and canonicalised" do
+      snapshot = [
+        %{
+          "id" => "m",
+          "type" => "multi_select",
+          "label" => "Pick",
+          "required" => true,
+          "options" => [%{"key" => "a", "label" => "A"}, %{"key" => "b", "label" => "B"}]
+        }
+      ]
+
+      assert {:ok, normalised} =
+               CustomFields.validate_answers(snapshot, %{"m" => ["a", "a", "b"]})
+
+      assert Enum.sort(normalised["m"]) == ["a", "b"]
+    end
+
     test "aggregates multiple errors" do
       snapshot = [
         %{"id" => "a", "type" => "short_text", "label" => "Company", "required" => true},

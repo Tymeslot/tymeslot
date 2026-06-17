@@ -1,0 +1,176 @@
+defmodule TymeslotWeb.Themes.Quill.PaymentProcessingTest do
+  @moduledoc """
+  Covers the Quill `payment-processing` return page reached after a
+  successful Stripe Checkout redirect.
+
+  Locks in:
+    * the processing UI when the payment is still pending,
+    * the confirmed UI once the webhook has marked the row paid,
+    * authorisation: rejecting a session_id that doesn't match the
+      stored Checkout Session id (cross-meeting probing),
+    * authorisation: rejecting a request whose URL slug doesn't match
+      the host's configured booking_theme.
+  """
+
+  use TymeslotWeb.ConnCase, async: false
+
+  @moduletag :payments
+  @moduletag :integration
+
+  import Phoenix.ConnTest
+  import Phoenix.LiveViewTest
+  import Tymeslot.Factory
+
+  alias Phoenix.PubSub
+  alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.Profiles
+
+  setup do
+    user = insert(:user)
+    {:ok, profile} = Profiles.get_or_create_profile(user.id)
+    {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: "1"})
+
+    %{user: user, profile: profile}
+  end
+
+  test "renders processing UI when payment still pending", %{conn: conn, user: user} do
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      stripe_checkout_session_id: "cs_TEST"
+    )
+
+    {:ok, _view, html} =
+      live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    assert html =~ "Confirming your payment"
+  end
+
+  test "flips to confirmation UI when broadcast says paid", %{conn: conn, user: user} do
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+
+    bp =
+      insert(:booking_payment,
+        meeting: meeting,
+        host_user_id: user.id,
+        status: "pending",
+        stripe_checkout_session_id: "cs_TEST"
+      )
+
+    {:ok, view, _html} =
+      live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    # Flip the row to paid (simulating the webhook side effect) and broadcast
+    {:ok, _bp} =
+      BookingPaymentQueries.update(bp, %{
+        status: "paid",
+        paid_at: DateTime.utc_now(:second)
+      })
+
+    PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting.id}", :paid)
+
+    assert render(view) =~ "Booking confirmed"
+  end
+
+  test "confirmation shows the time in the attendee's timezone", %{conn: conn, user: user} do
+    # 14:00 UTC in June is 10:00 in New York (EDT, UTC-4).
+    meeting =
+      insert(:meeting,
+        organizer_user_id: user.id,
+        status: "awaiting_payment",
+        start_time: ~U[2026-06-15 14:00:00Z],
+        attendee_timezone: "America/New_York"
+      )
+
+    bp =
+      insert(:booking_payment,
+        meeting: meeting,
+        host_user_id: user.id,
+        status: "pending",
+        stripe_checkout_session_id: "cs_TEST"
+      )
+
+    {:ok, view, _html} =
+      live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    {:ok, _bp} =
+      BookingPaymentQueries.update(bp, %{status: "paid", paid_at: DateTime.utc_now(:second)})
+
+    PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting.id}", :paid)
+
+    html = render(view)
+    assert html =~ "10:00"
+    refute html =~ "14:00"
+  end
+
+  test "rejects mismatched session_id", %{conn: conn, user: user} do
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      stripe_checkout_session_id: "cs_REAL"
+    )
+
+    assert {:error, {:redirect, %{to: "/"}}} =
+             live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_FAKE")
+  end
+
+  test "rejects mismatched theme slug (host uses Rhythm)", %{conn: conn, user: user} do
+    {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
+    {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: "2"})
+
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      stripe_checkout_session_id: "cs_TEST"
+    )
+
+    assert {:error, {:redirect, _info}} =
+             live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
+  end
+
+  test "dead render does not load page data", %{conn: conn, user: user} do
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      stripe_checkout_session_id: "cs_TEST"
+    )
+
+    ref = make_ref()
+    parent = self()
+    handler_id = "quill-payment-processing-dead-render-#{inspect(ref)}"
+    data_sources = ~w(meetings booking_payments)
+
+    :telemetry.attach(
+      handler_id,
+      [:tymeslot, :repo, :query],
+      fn _event, _measurements, %{source: source}, _config ->
+        if source in data_sources, do: send(parent, {:db_query, ref, source})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
+
+    get(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    received_sources =
+      Enum.flat_map(1..50, fn _iteration ->
+        receive do
+          {:db_query, ^ref, source} -> [source]
+        after
+          0 -> []
+        end
+      end)
+
+    assert received_sources == [],
+           "Data-loading queries fired during dead render: #{inspect(received_sources)}"
+  end
+end

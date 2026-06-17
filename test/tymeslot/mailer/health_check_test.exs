@@ -26,10 +26,12 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
         ]
       ]
 
-      # Structure validation passes, but connection test will fail
-      # (which is expected in test environment without real SMTP server)
-      # However, validate_startup_config now logs errors instead of raising
-      assert :ok = HealthCheck.validate_startup_config(config)
+      # Structure validation passes, but connection test fails in CI (no real SMTP
+      # server). capture_log prevents the expected error from leaking into concurrent
+      # async tests that assert log == "".
+      capture_log(fn ->
+        assert :ok = HealthCheck.validate_startup_config(config)
+      end)
     end
 
     test "logs error but returns :ok when SMTP host (relay) is missing" do

@@ -116,6 +116,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
          |> Component.assign(:form_errors, FormHelpers.format_context_error(:invalid_duration))
          |> Component.assign(:saving, false)}
 
+      {:error, :invalid_price} ->
+        Flash.error("Enter a valid price for this meeting type")
+
+        {:noreply,
+         socket
+         |> Component.assign(:form_errors, FormHelpers.format_context_error(:invalid_price))
+         |> Component.assign(:saving, false)}
+
       {:error, :insufficient_plan} ->
         Flash.error("Custom booking questions are available on Pro plans.")
         {:noreply, Component.assign(socket, :saving, false)}

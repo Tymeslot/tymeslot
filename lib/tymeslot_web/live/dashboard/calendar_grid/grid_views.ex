@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
             <div
               :for={{event, col_idx, total_cols} <- elem(Map.get(@day_layouts, day, {[], []}), 0)}
               id={"event-#{event.id}-#{day}"}
-              class={"absolute rounded px-1 py-0.5 #{if @view == :day, do: "text-token-sm", else: "text-token-xs"} font-medium text-white overflow-hidden cursor-pointer hover:brightness-90 focus:outline-none focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-1 group #{Helpers.color_for_event(assigns, event)}"}
+              class={"absolute rounded px-1 py-0.5 #{if @view == :day, do: "text-token-sm", else: "text-token-xs"} font-medium text-white overflow-hidden cursor-pointer hover:brightness-90 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-1 group #{Helpers.color_for_event(assigns, event)}"}
               style={"top: #{Helpers.top_rem(event.start_at, @user_timezone)}rem; height: #{Helpers.height_rem(event.start_at, event.end_at)}rem; left: #{Helpers.left_pct(col_idx, total_cols)}%; width: calc(#{Helpers.width_pct(total_cols)}% - 2px);"}
               phx-click="show_event"
               phx-value-event-id={event.id}
@@ -182,7 +182,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
           id="calendar-jump-to-now"
           type="button"
           phx-click={JS.dispatch("calendar:scroll-to-current", to: "#calendar-drag-zone")}
-          class="hidden fixed bottom-6 right-6 z-30 flex items-center gap-1.5 px-3 py-2 rounded-token-full bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-sm font-medium shadow-lg shadow-turquoise-500/30 focus:outline-none focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-2"
+          class="hidden fixed bottom-6 right-6 z-30 flex items-center gap-1.5 px-3 py-2 rounded-token-full bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-sm font-medium shadow-lg shadow-turquoise-500/30 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-2"
         >
           <IconComponents.icon name={:calendar} class="w-4 h-4" />
           Now
@@ -271,7 +271,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
       phx-click="show_event"
       phx-value-event-id={@first_event_id}
       phx-target={@myself}
-      class="absolute right-0.5 z-10 px-1.5 py-0.5 rounded-full bg-tymeslot-900/80 hover:bg-tymeslot-900 text-white text-token-xs font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-turquoise-400"
+      class="absolute right-0.5 z-10 px-1.5 py-0.5 rounded-full bg-tymeslot-900/80 hover:bg-tymeslot-900 text-white text-token-xs font-semibold shadow-sm focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
       style={"top: #{Helpers.top_rem(@cluster.start_at, @user_timezone)}rem;"}
       aria-label={"#{length(@cluster.events)} more events"}
     >
@@ -388,7 +388,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
 
     ~H"""
     <div
-      class={"min-h-16 sm:min-h-24 border-b border-r border-tymeslot-100 p-1 cursor-pointer hover:bg-tymeslot-50 focus:outline-none focus:ring-2 focus:ring-turquoise-400 focus:ring-inset #{Helpers.month_cell_class(@day, @assigns_ref)}"}
+      class={"min-h-16 sm:min-h-24 border-b border-r border-tymeslot-100 p-1 cursor-pointer hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-inset #{Helpers.month_cell_class(@day, @assigns_ref)}"}
       phx-click="navigate_to_day"
       phx-value-date={Date.to_iso8601(@day)}
       phx-target={@myself}
@@ -460,7 +460,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   defp status_banners(assigns) do
     ~H"""
     <div :if={@stale_integrations != [] and not @syncing} class="flex items-center gap-2 px-3 py-1.5 md:px-4 bg-amber-50 border-b border-amber-200 text-token-sm text-amber-700">
-      <.icon name="hero-exclamation-triangle" class="w-4 h-4 flex-shrink-0" />
+      <.icon name="hero-exclamation-triangle" class="w-4 h-4 shrink-0" />
       <span>
         <%= if @oldest_sync_at, do: "Calendar data may be outdated (last synced #{format_sync_age(@oldest_sync_at)}).", else: "Some calendars have never been synced." %>
       </span>
@@ -471,13 +471,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
       >Refresh now</button>
     </div>
     <div :if={@syncing} class="flex items-center gap-2 px-3 py-1.5 md:px-4 bg-turquoise-50 border-b border-turquoise-200 text-token-sm text-turquoise-700">
-      <IconComponents.icon name={:refresh} class="w-4 h-4 animate-spin flex-shrink-0" />
+      <IconComponents.icon name={:refresh} class="w-4 h-4 animate-spin shrink-0" />
       <span>Syncing calendars<%= if @sync_total > 1, do: " (#{@sync_completed}/#{@sync_total})", else: "" %>...</span>
     </div>
     """
   end
-
-  defp format_sync_age(nil), do: "never synced"
 
   defp format_sync_age(datetime) do
     diff = DateTime.diff(DateTime.utc_now(), datetime, :second)

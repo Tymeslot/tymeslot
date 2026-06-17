@@ -4,7 +4,6 @@ defmodule Tymeslot.Security.Token do
   Utilities for generating secure tokens for authentication (session, verification, etc).
   """
 
-  require Logger
   alias Plug.Crypto
 
   @session_token_validity_hours 24
@@ -64,6 +63,19 @@ defmodule Tymeslot.Security.Token do
 
   defp generate_strong_token do
     Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+  end
+
+  @doc """
+  Hashes a raw token for storage and comparison (SHA-256, lowercase hex).
+
+  Single source of truth for token hashing: both persistence
+  (`Tymeslot.Auth.UserTokenQueries`) and the email worker's staleness guard
+  rely on this producing identical output, so the hash must only ever be
+  computed here.
+  """
+  @spec hash_token(String.t()) :: String.t()
+  def hash_token(token) when is_binary(token) do
+    Base.encode16(:crypto.hash(:sha256, token), case: :lower)
   end
 
   @doc """

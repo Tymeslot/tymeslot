@@ -15,8 +15,6 @@ defmodule TymeslotWeb.Plugs.LoggerMetadataIsolationTest do
 
   @moduletag :plugs
 
-  require Logger
-
   alias Phoenix.LiveView.Socket
   alias Plug.Conn
   alias Plug.Test, as: PlugTest
@@ -87,16 +85,22 @@ defmodule TymeslotWeb.Plugs.LoggerMetadataIsolationTest do
       refute Logger.metadata()[:user_id]
     end
 
-    test "second mount generates a fresh correlation_id and does not inherit the first's" do
+    test "second connected mount generates a fresh correlation_id and does not inherit the first's" do
+      # A connected (WebSocket) channel process is reused across
+      # live_redirect/push_navigate, so the process dictionary still holds the
+      # previous mount's correlation_id. The hook must mint a fresh id each time
+      # rather than inherit it. (Dead renders deliberately adopt the request id
+      # the CorrelationId plug placed in the process dictionary, so they are not
+      # the reuse scenario this guards against.)
       assert {:cont, socket_a} =
-               LoggerMetadataHook.on_mount(:default, %{}, %{}, build_socket())
+               LoggerMetadataHook.on_mount(:default, %{}, %{}, build_connected_socket())
 
       correlation_a = socket_a.assigns[:correlation_id]
       assert is_binary(correlation_a)
 
       # Next mount on the same process must generate its own id.
       assert {:cont, socket_b} =
-               LoggerMetadataHook.on_mount(:default, %{}, %{}, build_socket())
+               LoggerMetadataHook.on_mount(:default, %{}, %{}, build_connected_socket())
 
       correlation_b = socket_b.assigns[:correlation_id]
 
@@ -108,6 +112,15 @@ defmodule TymeslotWeb.Plugs.LoggerMetadataIsolationTest do
 
   defp build_socket(assigns \\ %{}) do
     %Socket{
+      assigns: Map.merge(%{__changed__: %{}, flash: %{}}, assigns)
+    }
+  end
+
+  # A connected socket has a non-nil transport_pid, which is what
+  # Phoenix.LiveView.connected?/1 checks internally.
+  defp build_connected_socket(assigns \\ %{}) do
+    %Socket{
+      transport_pid: self(),
       assigns: Map.merge(%{__changed__: %{}, flash: %{}}, assigns)
     }
   end

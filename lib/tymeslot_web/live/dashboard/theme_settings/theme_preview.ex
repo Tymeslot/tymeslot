@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemePreview do
   """
   use TymeslotWeb, :html
 
-  alias Tymeslot.Themes.Theme
+  alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @doc """
   Renders a preview for a specific theme.
@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemePreview do
 
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
-    theme = Theme.get_theme(assigns.theme_id)
+    theme = ThemeInfo.get_theme(assigns.theme_id)
     assigns = assign(assigns, :theme, theme)
 
     ~H"""

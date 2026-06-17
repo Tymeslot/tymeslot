@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
   }
 
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper, as: RhythmThemeWrapper
+  alias TymeslotWeb.Themes.Shared.Components.AwaitingPayment
 
   @impl Phoenix.LiveView
   def render(assigns) do
@@ -47,6 +48,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
             <.live_component module={CustomQuestionsComponent} id="questions-step" {assigns} />
           <% :booking -> %>
             <.live_component module={BookingComponent} id="booking-step" {assigns} />
+          <% :awaiting_payment -> %>
+            <AwaitingPayment.awaiting_payment checkout_url={@awaiting_payment_checkout_url} />
           <% :confirmation -> %>
             <.live_component module={ConfirmationComponent} id="confirmation-step" {assigns} />
           <% _ -> %>

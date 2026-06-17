@@ -14,7 +14,13 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.PhoneTest do
   test "renders an HTML5 tel input" do
     html = render_input(%{"type" => "phone", "label" => "Mobile"})
     assert html =~ ~s(type="tel")
-    assert html =~ ~s(phx-blur="answer")
+    assert html =~ ~s(phx-change="answer")
+  end
+
+  test "wraps the input in a form that commits on submit so Enter saves the value" do
+    html = render_input(%{"type" => "phone", "label" => "Mobile"})
+    assert html =~ ~s(phx-submit="next")
+    assert html =~ "<form"
   end
 
   test "renders the provided value" do

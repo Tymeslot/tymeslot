@@ -17,10 +17,12 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCompositionTest do
 
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
+  import Tymeslot.Factory
   import Tymeslot.TestFixtures
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.ConfigTestHelpers
+  alias Tymeslot.Security.Encryption
 
   setup %{conn: conn} do
     user = create_user_fixture()
@@ -78,6 +80,38 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCompositionTest do
       {:ok, _view, html} = live(conn, "/dashboard/automation")
 
       refute html =~ ~s(<span>Slack</span>)
+    end
+  end
+
+  describe "webhook URL edit form" do
+    @secret_url "https://hooks.slack.com/services/TSECRET/BSECRET/topsecrettoken123"
+
+    test "never renders the decrypted webhook URL into the edit form", %{conn: conn, user: user} do
+      _integration =
+        insert(:slack_integration,
+          user: user,
+          app_mode: "webhook_url",
+          channel_id: nil,
+          channel_name: nil,
+          bot_token_encrypted: nil,
+          webhook_url_encrypted: Encryption.encrypt(@secret_url)
+        )
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      view |> element("button", "Slack") |> render_click()
+
+      # Open the edit form for the webhook integration via the card's Edit
+      # button (title="Edit"); its phx-click carries the JS push event.
+      html =
+        view
+        |> element("button[title='Edit']")
+        |> render_click()
+
+      # The edit form must render, but the stored secret must not appear in the
+      # DOM (no plaintext value, no value-attribute leak).
+      assert html =~ "Slack Webhook URL"
+      refute html =~ @secret_url
+      assert html =~ "Leave blank to keep"
     end
   end
 

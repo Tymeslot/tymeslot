@@ -10,7 +10,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
     case MeetingSettingsInputValidation.validate_field(:name, value, metadata) do
       {:ok, sanitized} -> {Map.put(acc_data, "name", sanitized), Map.delete(acc_errors, :name)}
       {:error, %{name: msg}} -> {acc_data, Map.put(acc_errors, :name, msg)}
-      {:error, _reason} -> {acc_data, acc_errors}
     end
   end
 
@@ -21,9 +20,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
 
       {:error, %{duration: msg}} ->
         {acc_data, Map.put(acc_errors, :duration, msg)}
-
-      {:error, _reason} ->
-        {acc_data, acc_errors}
     end
   end
 
@@ -34,9 +30,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
 
       {:error, %{description: msg}} ->
         {acc_data, Map.put(acc_errors, :description, msg)}
-
-      {:error, _reason} ->
-        {acc_data, acc_errors}
     end
   end
 

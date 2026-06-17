@@ -110,7 +110,7 @@ AES-encrypted credentials at rest, no third-party analytics or tracking pixels, 
 </tr>
 </table>
 
-Plus: two themes (Quill, Rhythm) with dark mode, five languages (English, German, Ukrainian, French, Italian), white-label option, Slack and Telegram notifications, drag-and-drop calendar dashboard, attendee-driven reschedule flow, integration health alerts.
+Plus: two themes (Quill, Rhythm) with dark mode, five languages (English, German, Ukrainian, French, Italian), white-label option, Slack and Telegram notifications, drag-and-drop calendar dashboard, attendee-driven reschedule flow, integration health alerts, and **optional paid bookings via Stripe Connect** (see [Meeting payments](#meeting-payments) below).
 
 ---
 
@@ -177,6 +177,29 @@ Webhooks (`meeting_created`, `meeting_cancelled`, `meeting_rescheduled`) plug in
 Full configuration reference (SMTP, OAuth, OIDC, reCAPTCHA, external Postgres, SSO-only mode): [Docker guide](README-Docker.md).
 
 The first user to register on a fresh install is automatically promoted to admin and gets access to `/admin`, where they can toggle runtime settings (registration on/off, password auth on/off, video transcoding) without redeploying. For promoting additional admins on each deployment target — Docker, Cloudron, Railway, source — see [`docs/ADMIN.md`](docs/ADMIN.md).
+
+---
+
+## Meeting payments
+
+Optional. Lets hosts charge attendees through Stripe at booking time. Off by default — self-hosters opt in by registering their own Stripe platform.
+
+**Prerequisites**
+
+1. Register a Stripe account for your instance and enable Stripe Connect.
+2. Add Tymeslot as a Connect platform — your instance becomes the platform that hosts' Stripe accounts connect to.
+3. Create a separate webhook endpoint in the Stripe dashboard for Connect events and copy its signing secret.
+
+**Environment variables**
+
+| Variable | Purpose |
+|---|---|
+| `STRIPE_SECRET_KEY` | Your platform's Stripe secret key (`sk_live_…` or `sk_test_…`). Required when `MEETING_PAYMENTS_ENABLED=true`. |
+| `STRIPE_CONNECT_WEBHOOK_SECRET` | Signing secret for the Connect webhook endpoint. Required to verify connected-account events. |
+| `MEETING_PAYMENTS_ENABLED` | Set to `true` to expose the payments dashboard and event-type payment toggle. Defaults to `false`. |
+| `MEETING_PAYMENTS_APPLICATION_FEE_BP` | Optional platform fee, in basis points (`100` = 1%). Defaults to `0` so self-host operators never take a cut unless they explicitly opt in. Range `0`–`10000`. |
+
+Once enabled, hosts connect their own Stripe account from **Dashboard → Payments**, pick a currency, and turn on `Require payment` on any event type. Direct charges flow into the host's Stripe balance on their existing payout schedule — Tymeslot never holds the funds.
 
 ---
 

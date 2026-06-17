@@ -13,11 +13,10 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
-  alias Tymeslot.Integrations.Shared.Lock
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
-  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def provider_type, do: :google_meet
@@ -252,56 +251,29 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
         _other -> nil
       end
 
-    if expiring_later_than_buffer?(expires_at) do
+    if OAuthTokenManager.token_still_valid?(expires_at) do
       {:ok, config}
     else
       refresh_config(config)
     end
   end
 
-  defp expiring_later_than_buffer?(nil), do: false
-
-  defp expiring_later_than_buffer?(expires_at) do
-    buffer_time = DateTime.add(DateTime.utc_now(), 300, :second)
-    DateTime.compare(expires_at, buffer_time) == :gt
-  end
-
   defp refresh_config(config) do
-    integration_id = Map.get(config, :integration_id)
-    user_id = Map.get(config, :user_id)
-
-    if is_nil(integration_id) or is_nil(user_id) do
-      # Fallback if we don't have enough info to lock/re-fetch
-      do_actual_refresh(config)
-    else
-      Lock.with_lock(
-        {:google_meet, integration_id},
-        fn ->
-          # Re-fetch from DB to see if another process refreshed it while we waited
-          case Video.fetch_integration_for_user(integration_id, user_id) do
-            {:ok, fresh_integration} ->
-              decrypted = VideoIntegrationSchema.decrypt_credentials(fresh_integration)
-
-              if expiring_later_than_buffer?(decrypted.token_expires_at) do
-                # Already refreshed by someone else
-                {:ok,
-                 Map.merge(config, %{
-                   access_token: decrypted.access_token,
-                   refresh_token: decrypted.refresh_token,
-                   token_expires_at: decrypted.token_expires_at,
-                   oauth_scope: fresh_integration.oauth_scope
-                 })}
-              else
-                do_actual_refresh(config)
-              end
-
-            {:error, :not_found} ->
-              do_actual_refresh(config)
-          end
-        end,
-        mode: :blocking
-      )
-    end
+    OAuthTokenManager.refresh_with_lock(config, %{
+      provider: :google_meet,
+      refresh: &do_actual_refresh/1,
+      already_refreshed: fn config, decrypted ->
+        # Another process already refreshed: merge the fresh credentials into
+        # the caller's config and return the merged map (Google's return shape).
+        {:ok,
+         Map.merge(config, %{
+           access_token: decrypted.access_token,
+           refresh_token: decrypted.refresh_token,
+           token_expires_at: decrypted.token_expires_at,
+           oauth_scope: decrypted.oauth_scope
+         })}
+      end
+    })
   end
 
   defp do_actual_refresh(config) do
@@ -409,6 +381,19 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
           {:error, _decode_error} -> {:error, "Invalid JSON response from Google Calendar API"}
         end
 
+      {:ok, %Req.Response{status: 401, body: body}} ->
+        Logger.error("Google Calendar API error in Google Meet provider",
+          status: 401,
+          body: Redactor.redact_and_truncate(body)
+        )
+
+        # The access token was rejected even though it had survived token
+        # validation/refresh — this indicates server-side revocation or consent
+        # withdrawal at Google. Flag the integration so the dashboard shows the
+        # "Reconnect required" badge immediately. Mirrors Zoom's flag_revoked_token/1.
+        flag_revoked_token(config)
+        {:error, "Google Calendar API error: HTTP 401 (see logs for details)"}
+
       {:ok, %Req.Response{status: status, body: body}} ->
         Logger.error("Google Calendar API error in Google Meet provider",
           status: status,
@@ -419,6 +404,37 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
       {:error, reason} ->
         {:error, "HTTP error: #{inspect(reason)}"}
+    end
+  end
+
+  # Flags the integration as needing reauthentication after a 401 from Google —
+  # i.e. the credentials are no longer accepted server-side. The dashboard
+  # surfaces this via the "Reconnect required" badge on the video row. Purely
+  # additive: it does not touch token validation or the OAuthTokenManager flow.
+  defp flag_revoked_token(config) do
+    integration_id = Map.get(config, :integration_id)
+    user_id = Map.get(config, :user_id)
+
+    if is_nil(integration_id) or is_nil(user_id) do
+      Logger.warning("Google Meet token appears revoked but no integration_id to flag",
+        event: "google_meet_token_revoked"
+      )
+    else
+      Logger.warning("Google Meet token revoked; flagging integration for reauth",
+        event: "google_meet_token_revoked",
+        integration_id: integration_id
+      )
+
+      case Video.fetch_integration_for_user(integration_id, user_id) do
+        {:ok, integration} ->
+          VideoIntegrationQueries.mark_needs_reauth(
+            integration,
+            "Google Meet access was revoked. Please reconnect your Google account."
+          )
+
+        {:error, :not_found} ->
+          :ok
+      end
     end
   end
 

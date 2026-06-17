@@ -3,16 +3,14 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   Oban worker that performs a sweep of all active calendar integrations every
   15 minutes as a fallback mechanism for missed or delayed webhook notifications.
 
-  For each provider the sweep takes the cheapest available action:
+  The sweep itself does no provider I/O — it only fans out per-integration
+  jobs:
 
   - **Google** — enqueues a `SyncGoogleCalendarWorker` job per integration.
-  - **Outlook (with delta link)** — delegates to `Outlook.DeltaSync.fetch_and_apply/1`,
-    which fetches the delta directly from the stored `graph_delta_link` URL,
-    upserts changed events into the cache, and stores the new delta link.
-    This avoids a full re-sync while keeping the integration current without
-    relying on webhook delivery.
-  - **Outlook (no delta link)** — re-registers the Graph subscription (which also
-    seeds an initial delta snapshot) so future sweeps can use the delta path.
+  - **Outlook** — enqueues a `RefreshOutlookCalendarWorker` job per
+    integration, which delta-syncs from the stored `graph_delta_link` or
+    bootstraps a fresh delta baseline (and opportunistically registers a
+    Graph webhook subscription) when no link is stored yet.
   - **CalDAV / Radicale / Nextcloud / Zimbra** — enqueues a `SyncCalDavCalendarWorker`
     job at a frequency determined by the integration's sync tier:
     - Tier 1 (sync-token delta): every 15 minutes
@@ -20,8 +18,9 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     - Tier 3 (full fetch): every hour
     - Undetected (nil): every 15 minutes (detect tier ASAP)
 
-  Integrations are processed in batches of 50 with a 1-second pause between
-  batches to avoid thundering-herd load on provider APIs and the database.
+  Jobs are enqueued in batches of 50, each batch scheduled one second after
+  the previous via `scheduled_at`, to avoid thundering-herd load on provider
+  APIs and the database without blocking the queue slot.
   """
 
   use Oban.Worker,
@@ -32,15 +31,14 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
-  alias Tymeslot.Integrations.Calendar.Outlook.DeltaSync, as: OutlookDeltaSync
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.HealthCheck.SyncGating
+  alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
   @batch_size 50
-  @batch_sleep_ms 1_000
+  @batch_stagger_seconds 1
 
   # Sync interval per CalDAV tier (in seconds).
   # Tier 1 and 2 are lightweight; Tier 3 does a full fetch every time.
@@ -69,8 +67,8 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
     google_count = enqueue_batched(Map.get(by_provider, "google", []), SyncGoogleCalendarWorker)
 
-    {outlook_delta_count, outlook_enqueued_count} =
-      process_outlook(Map.get(by_provider, "outlook", []))
+    outlook_count =
+      enqueue_batched(Map.get(by_provider, "outlook", []), RefreshOutlookCalendarWorker)
 
     caldav_providers = Enum.map(ProviderConfig.caldav_based_providers(), &Atom.to_string/1)
     caldav_integrations = Enum.flat_map(caldav_providers, &Map.get(by_provider, &1, []))
@@ -91,8 +89,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
     Logger.info("FallbackSyncSweep complete",
       google_scheduled: google_count,
-      outlook_delta_fetched: outlook_delta_count,
-      outlook_enqueued: outlook_enqueued_count,
+      outlook_scheduled: outlook_count,
       caldav_scheduled: caldav_count,
       caldav_skipped: caldav_skipped,
       caldav_forced_full_scheduled: forced_full_count,
@@ -145,11 +142,9 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     |> Enum.chunk_every(@batch_size)
     |> Enum.with_index()
     |> Enum.reduce({0, 0}, fn {batch, batch_index}, {total, conflicts} ->
-      if batch_index > 0, do: Process.sleep(@batch_sleep_ms)
-
       {batch_count, batch_conflicts} =
         Enum.reduce(batch, {0, 0}, fn item, {count, confl} ->
-          case per_item_fun.(item) do
+          case per_item_fun.(item, batch_index) do
             :ok -> {count + 1, confl}
             :conflict -> {count, confl + 1}
             :error -> {count, confl}
@@ -161,11 +156,23 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   end
 
   defp enqueue_batched(integrations, worker_module) do
+    now = DateTime.utc_now()
+
     {scheduled, _conflicts} =
-      process_in_batches(integrations, fn integration ->
+      process_in_batches(integrations, fn integration, batch_index ->
         args = %{"calendar_integration_id" => integration.id}
 
-        case Oban.insert(worker_module.new(args)) do
+        # Stagger each batch by scheduled_at offset instead of sleeping
+        # between batches — same thundering-herd pacing without blocking
+        # the sweep's queue slot.
+        opts =
+          if batch_index > 0 do
+            [scheduled_at: DateTime.add(now, batch_index * @batch_stagger_seconds, :second)]
+          else
+            []
+          end
+
+        case Oban.insert(worker_module.new(args, opts)) do
           {:ok, %Oban.Job{conflict?: true}} ->
             :conflict
 
@@ -208,7 +215,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     now = DateTime.utc_now()
     due = Enum.filter(integrations, &forced_full_fetch_due?(&1, now))
 
-    process_in_batches(due, fn integration ->
+    process_in_batches(due, fn integration, _batch_index ->
       delay_seconds = :rand.uniform(@forced_full_fetch_jitter_seconds)
       scheduled_at = DateTime.add(now, delay_seconds, :second)
 
@@ -241,77 +248,4 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     cutoff = DateTime.add(now, -@forced_full_fetch_interval_seconds, :second)
     DateTime.before?(last_full_sync_at, cutoff)
   end
-
-  # ---------------------------------------------------------------------------
-  # Outlook
-  # ---------------------------------------------------------------------------
-
-  defp process_outlook(integrations) do
-    {with_delta, without_delta} =
-      Enum.split_with(integrations, fn i -> not is_nil(i.graph_delta_link) end)
-
-    {delta_count, _delta_errors} =
-      process_in_batches(with_delta, &OutlookDeltaSync.fetch_and_apply/1)
-
-    {enqueued_count, _enqueued_errors} =
-      process_in_batches(without_delta, &seed_outlook_integration/1)
-
-    {delta_count, enqueued_count}
-  end
-
-  defp outlook_calendar_api do
-    Application.get_env(:tymeslot, :outlook_calendar_api_module, OutlookCalendarAPI)
-  end
-
-  # Seed path runs whenever an Outlook integration has no `graph_delta_link`.
-  # Uses `bootstrap_sync` so the delta baseline + cache land on every
-  # deployment — webhook subscription is a separate, opportunistic step that
-  # only fires when `webhook_base_url` is configured.
-  defp seed_outlook_integration(integration) do
-    case outlook_calendar_api().bootstrap_sync(integration) do
-      {:ok, updated} ->
-        maybe_register_subscription(updated)
-        :ok
-
-      error ->
-        Logger.warning(
-          "Outlook bootstrap delta fetch failed in fallback sweep",
-          calendar_integration_id: integration.id,
-          error: format_error(error)
-        )
-
-        :error
-    end
-  end
-
-  defp maybe_register_subscription(integration) do
-    case outlook_calendar_api().register_graph_subscription(integration) do
-      {:ok, _updated} ->
-        :ok
-
-      {:error, :webhook_base_url_not_configured} ->
-        Logger.debug(
-          "Webhook base URL not configured; skipping Outlook subscription registration",
-          calendar_integration_id: integration.id
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.warning(
-          "Failed to register Outlook Graph subscription after bootstrap",
-          calendar_integration_id: integration.id,
-          error: inspect(reason)
-        )
-
-        :ok
-    end
-  end
-
-  defp format_error({:error, type, reason}) when is_atom(type),
-    do: "#{type}: #{inspect(reason)}"
-
-  defp format_error({:error, reason}), do: inspect(reason)
-
-  defp format_error(other), do: inspect(other)
 end

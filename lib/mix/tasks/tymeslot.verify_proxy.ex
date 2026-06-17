@@ -42,7 +42,6 @@ defmodule Mix.Tasks.Tymeslot.VerifyProxy do
   """
 
   use Mix.Task
-  require Logger
 
   alias Tymeslot.Infrastructure.ProxyVerifier
 

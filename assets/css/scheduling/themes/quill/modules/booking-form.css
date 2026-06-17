@@ -1,0 +1,380 @@
+/* Booking Form — the name/email/message form and its layout.
+   The step-indicator band lives in steps.css; the organiser-defined questions
+   screen lives in custom-questions.css. */
+
+/* ===== Form Fields ===== */
+
+/* Form field styling for glassmorphism theme - Override global styles */
+.form-field__label {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-opacity-medium-high);
+}
+
+.form-field__input,
+.form-field textarea {
+  width: 100%;
+  padding: var(--input-padding);
+  border: var(--border-width-thin) solid var(--input-border-glass);
+  border-radius: var(--input-border-radius);
+  background: var(--input-bg-glass);
+  backdrop-filter: blur(var(--glass-blur-md));
+  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  font-size: var(--theme-font-size-sm);
+  transition: var(--transition-normal);
+  box-shadow: 0 2px 8px var(--input-shadow-base), inset 0 1px 0 var(--input-inset-highlight);
+}
+
+/* Fallback for browsers without backdrop-filter support */
+@supports not (backdrop-filter: blur(var(--glass-blur-md))) {
+  .form-field__input,
+  .form-field textarea {
+    background: var(--surface-dark-very-intense);
+  }
+}
+
+.form-field__input:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  background: var(--input-bg-glass-focus);
+  box-shadow: 0 0 0 3px var(--theme-primary-focus), 0 4px 12px var(--input-shadow-focus), inset 0 1px 0 var(--input-inset-highlight-focus);
+}
+
+.form-field__input::placeholder,
+.form-field textarea::placeholder {
+  color: var(--input-placeholder-glass);
+}
+
+.form-field__input--error {
+  border-color: var(--input-error-border);
+  background: var(--input-error-bg);
+}
+
+.form-field__input--error:focus {
+  border-color: var(--input-error-border-focus);
+  box-shadow: 0 0 0 3px var(--input-error-focus-ring), 0 4px 12px var(--input-shadow-focus);
+}
+
+.form-field__error {
+  display: block;
+  margin-top: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-danger);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Override CoreComponents .input class for Quill theme glassmorphism */
+.quill-theme-wrapper .input,
+.quill-theme-wrapper input.input,
+.quill-theme-wrapper textarea.input,
+.quill-theme-wrapper select.input {
+  width: 100%;
+  max-width: 100%;
+  padding: var(--input-padding);
+  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--input-border-radius);
+  background: rgba(255, 255, 255, 0.92);
+  color: rgb(15, 23, 42);
+  font-size: var(--theme-font-size-base);
+  transition: var(--transition-normal);
+  box-sizing: border-box;
+}
+
+.quill-theme-wrapper .input::placeholder,
+.quill-theme-wrapper input.input::placeholder,
+.quill-theme-wrapper textarea.input::placeholder {
+  color: rgba(15, 23, 42, 0.45);
+}
+
+.quill-theme-wrapper .input:hover,
+.quill-theme-wrapper input.input:hover,
+.quill-theme-wrapper textarea.input:hover,
+.quill-theme-wrapper select.input:hover {
+  background: white;
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.quill-theme-wrapper .input:focus,
+.quill-theme-wrapper input.input:focus,
+.quill-theme-wrapper textarea.input:focus,
+.quill-theme-wrapper select.input:focus {
+  outline: none;
+  background: white;
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 3px var(--theme-primary-focus);
+}
+
+/* Keyboard-only focus indicator for better accessibility */
+.quill-theme-wrapper .input:focus-visible,
+.quill-theme-wrapper input.input:focus-visible,
+.quill-theme-wrapper textarea.input:focus-visible,
+.quill-theme-wrapper select.input:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+
+.quill-theme-wrapper .input::placeholder,
+.quill-theme-wrapper input.input::placeholder,
+.quill-theme-wrapper textarea.input::placeholder {
+  color: var(--input-placeholder-glass);
+}
+
+.quill-theme-wrapper .input:disabled,
+.quill-theme-wrapper input.input:disabled,
+.quill-theme-wrapper textarea.input:disabled,
+.quill-theme-wrapper select.input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--input-bg-glass-disabled);
+  border-color: var(--input-border-glass-disabled);
+}
+
+.quill-theme-wrapper .input-error,
+.quill-theme-wrapper input.input-error,
+.quill-theme-wrapper textarea.input-error {
+  border-color: var(--input-error-border);
+  background: var(--input-error-bg);
+}
+
+.quill-theme-wrapper .input-error:focus,
+.quill-theme-wrapper input.input-error:focus,
+.quill-theme-wrapper textarea.input-error:focus {
+  border-color: var(--input-error-border-focus);
+  box-shadow: 0 0 0 3px var(--input-error-focus-ring), 0 4px 12px var(--input-shadow-focus);
+}
+
+/* Override label styling for Quill theme */
+.quill-theme-wrapper .label {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-opacity-medium-high);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Ensure form field wrapper takes full width */
+.quill-theme-wrapper .form-field-wrapper {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Textarea specific styling for Quill theme */
+.quill-theme-wrapper textarea.input {
+  resize: vertical;
+  min-height: var(--textarea-min-height);
+  max-height: var(--textarea-max-height);
+}
+
+/* Textarea specific */
+.form-field textarea {
+  resize: vertical;
+  min-height: 4rem;
+}
+
+/* Booking container */
+.booking-container {
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Booking form layout - natural height */
+.glass-morphism-card:has(form[phx-change="validate"]) > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.glass-morphism-card form[phx-change="validate"] {
+  display: flex;
+  flex-direction: column;
+}
+
+.glass-morphism-card form[phx-change="validate"] .space-y-2 {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Comfortable spacing before the action buttons cluster */
+.glass-morphism-card form[phx-change="validate"] .booking-actions {
+  margin-top: var(--space-xl);
+}
+
+/* Side-by-side Name + Email — auto-stacks when too narrow */
+.booking-inline-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: var(--space-sm);
+}
+
+/* Recaptcha notice sits tight below the message field, never beside it */
+.glass-morphism-card form[phx-change="validate"] .recaptcha-notice {
+  margin-top: var(--space-xs);
+}
+
+/* Detail row helper */
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+/* Semantic classes replacing responsive Tailwind prefixes in booking_component */
+
+/* booking-card-body: replaces p-4 md:p-6 lg:p-8 */
+.booking-card-body {
+  padding: var(--space-md);
+}
+
+/* booking-heading-wrapper: replaces mb-2 md:mb-4 */
+.booking-heading-wrapper {
+  margin-bottom: var(--space-xs);
+}
+
+/* booking-heading: replaces text-xl md:text-3xl lg:text-4xl */
+.booking-heading {
+  font-size: var(--theme-font-size-xl);
+}
+
+/* booking-subtitle: replaces text-sm md:text-lg lg:text-xl mb-2 md:mb-4 */
+.booking-subtitle {
+  font-size: var(--theme-font-size-sm);
+  margin-bottom: var(--space-xs);
+}
+
+/* booking-datetime: replaces text-xs md:text-sm mb-2 md:mb-6 */
+.booking-datetime {
+  font-size: var(--theme-font-size-xs);
+  margin-bottom: var(--space-xs);
+}
+
+/* booking-actions: replaces cluster cluster-xs mt-3 */
+.booking-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+/* Booking card typography & spacing scale with the card's own width,
+   not the viewport — so the heading shrinks correctly in narrow embeds
+   even when the host page is wide. */
+@container scheduling (min-width: 768px) {
+  .booking-card-body {
+    padding: var(--space-lg);
+  }
+
+  .booking-heading-wrapper {
+    margin-bottom: var(--space-md);
+  }
+
+  .booking-heading {
+    font-size: var(--theme-font-size-3xl);
+  }
+
+  .booking-subtitle {
+    font-size: var(--theme-font-size-lg);
+    margin-bottom: var(--space-md);
+  }
+
+  .booking-datetime {
+    font-size: var(--theme-font-size-sm);
+    margin-bottom: var(--space-lg);
+  }
+}
+
+@container scheduling (min-width: 1024px) {
+  .booking-card-body {
+    padding: var(--space-2xl);
+  }
+
+  .booking-heading {
+    font-size: var(--theme-font-size-4xl);
+  }
+
+  .booking-subtitle {
+    font-size: var(--theme-font-size-xl);
+  }
+}
+
+/* ===== Container Queries ===== */
+
+/* Small containers: constrain form width */
+@container scheduling (max-width: 640px) {
+  form {
+    max-width: 100%;
+  }
+}
+
+/* Medium containers: comfortable textarea */
+@container scheduling (min-width: 768px) {
+  .form-field textarea[name="booking[message]"],
+  textarea[phx-value-field="message"] {
+    min-height: 8rem;
+    resize: vertical;
+  }
+}
+
+/* Large containers: taller textarea, card min-height */
+@container scheduling (min-width: 1024px) {
+  .glass-morphism-card.booking-form-card {
+    min-height: var(--card-height-sm);
+  }
+
+  .form-field textarea[name="booking[message]"],
+  textarea[phx-value-field="message"] {
+    min-height: 10rem;
+  }
+}
+
+/* Ultra-wide: constrain booking container width */
+@container scheduling (min-width: 1440px) {
+  .booking-container {
+    max-width: var(--container-md);
+  }
+}
+
+/* ===== Height & Aspect Queries ===== */
+/* Compact booking form on short viewports (height queries are not container-queryable). */
+
+/* Short screens — compact booking form */
+@media (max-height: 700px) {
+  /* Constrain textarea height (rows attribute sets intrinsic size,
+     min-height from variables.css must also be overridden) */
+  .booking-form-card textarea.input {
+    min-height: 0;
+    max-height: 5rem;
+  }
+
+  /* Tighter button cluster margin */
+  .glass-morphism-card form[phx-change="validate"] .booking-actions {
+    margin-top: var(--space-md);
+  }
+
+  /* Compact booking header */
+  .booking-form-card .section-header {
+    font-size: var(--theme-font-size-lg);
+    margin-bottom: var(--space-xs);
+  }
+}
+
+@media (max-height: 500px) {
+  /* Minimal textarea */
+  .booking-form-card textarea.input {
+    min-height: 0;
+    max-height: 3rem;
+  }
+
+  /* Minimal button cluster margin */
+  .glass-morphism-card form[phx-change="validate"] .booking-actions {
+    margin-top: var(--space-xs);
+  }
+}

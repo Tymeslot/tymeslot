@@ -44,6 +44,12 @@ defmodule Tymeslot.Slack.OAuth do
   Returns `{:ok, user_id}` on success or `{:error, :expired_state}` /
   `{:error, :invalid_state}` on failure.
   """
+  # The state token is single-use in practice but not enforced as such: within
+  # the 10-minute window it is technically replayable. This is harmless — the
+  # token is bound to a specific user id and the callback only runs on an
+  # authenticated route that re-checks the session user, and Slack's `code` is
+  # itself single-use, so a replayed state cannot complete a second exchange or
+  # act on behalf of another user. No behaviour change is needed here.
   @spec verify_state(String.t()) ::
           {:ok, integer()} | {:error, :expired_state | :invalid_state}
   def verify_state(state) do

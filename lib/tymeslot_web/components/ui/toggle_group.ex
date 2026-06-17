@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Components.UI.ToggleGroup do
       <% end %>
 
       <div class={[
-        "flex bg-white/5 backdrop-blur-sm border border-purple-200/30 rounded-lg p-1",
+        "flex bg-white/5 backdrop-blur-xs border border-purple-200/30 rounded-lg p-1",
         container_class(@size)
       ]}>
         <%= for option <- @options do %>

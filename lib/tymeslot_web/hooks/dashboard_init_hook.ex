@@ -8,11 +8,11 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
     router: TymeslotWeb.Router,
     statics: TymeslotWeb.static_paths()
 
-  require Logger
   import Phoenix.LiveView
   import Phoenix.Component
   alias Tymeslot.Auth
   alias Tymeslot.Dashboard.DashboardContext
+  alias Tymeslot.Features
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
 
@@ -71,6 +71,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
       socket
       |> assign(:profile, profile)
       |> assign(:integration_status, integration_status)
+      |> assign(:payments_allowed, payments_allowed?(user.id))
       |> assign_new(:saving, fn -> false end)
       |> assign_new(:saving_timer_ref, fn -> nil end)
       |> assign(
@@ -91,5 +92,16 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
       )
 
     {:cont, socket}
+  end
+
+  # Whether the host can reach the payments dashboard. Mirrors the gate in
+  # `PaymentsHandlers`: both `:ok` and `{:error, :stripe_required}` mean the
+  # feature is on (Stripe just isn't connected yet), so the sidebar link shows.
+  defp payments_allowed?(user_id) do
+    case Features.check_access(user_id, :meeting_payments) do
+      :ok -> true
+      {:error, :stripe_required} -> true
+      _other -> false
+    end
   end
 end

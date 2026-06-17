@@ -4,7 +4,16 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
 
   Centralizes the parallel fetching pattern used by multiple providers,
   ensuring consistent behavior and reducing duplication.
+
+  Calendars that return `:not_found` (deleted on the provider side) are
+  de-selected as a best-effort side effect so they are not fetched — and
+  404 — again on every subsequent availability check.
   """
+
+  require Logger
+
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
 
   @max_concurrency 20
 
@@ -24,7 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
         api_module.list_primary_events(integration, start_time, end_time)
 
       selected ->
-        {successes, failures} =
+        results =
           Tymeslot.TaskSupervisor
           |> Task.Supervisor.async_stream(
             selected,
@@ -35,21 +44,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
             max_concurrency: @max_concurrency,
             timeout: 30_000
           )
-          |> Enum.split_with(fn
-            {:ok, {:ok, _events}} -> true
-            _other -> false
-          end)
+          |> Enum.zip(selected)
 
-        if successes == [] and failures != [] do
-          {:error, :all_calendars_unavailable}
-        else
-          events =
-            successes
-            |> Enum.flat_map(fn {:ok, {:ok, evs}} -> evs end)
-            |> Enum.uniq_by(fn event -> event[:id] || event["id"] end)
-
-          {:ok, events}
-        end
+        deselect_missing_calendars(integration, results)
+        collect_events(results)
     end
   end
 
@@ -65,4 +63,56 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
   end
 
   def get_selected_calendars(_integration), do: []
+
+  defp collect_events(results) do
+    {successes, failures} =
+      Enum.split_with(results, fn
+        {{:ok, {:ok, _events}}, _calendar} -> true
+        _other -> false
+      end)
+
+    if successes == [] and failures != [] do
+      {:error, :all_calendars_unavailable}
+    else
+      events =
+        successes
+        |> Enum.flat_map(fn {{:ok, {:ok, evs}}, _calendar} -> evs end)
+        |> Enum.uniq_by(fn event -> event[:id] || event["id"] end)
+
+      {:ok, events}
+    end
+  end
+
+  defp deselect_missing_calendars(integration, results) do
+    missing_ids =
+      for {{:ok, {:error, :not_found, _message}}, calendar} <- results do
+        calendar[:id] || calendar["id"]
+      end
+
+    do_deselect(integration, missing_ids)
+  end
+
+  defp do_deselect(_integration, []), do: :ok
+
+  defp do_deselect(%CalendarIntegrationSchema{} = integration, missing_ids) do
+    Logger.warning("Selected calendars no longer exist on provider; de-selecting",
+      calendar_integration_id: integration.id,
+      missing_count: length(missing_ids)
+    )
+
+    case CalendarIntegrationQueries.deselect_calendars(integration, missing_ids) do
+      {:ok, _updated} ->
+        :ok
+
+      {:error, changeset} ->
+        Logger.error("Failed to de-select missing calendars",
+          calendar_integration_id: integration.id,
+          error: inspect(changeset.errors)
+        )
+
+        :ok
+    end
+  end
+
+  defp do_deselect(_integration, _missing_ids), do: :ok
 end

@@ -8,7 +8,6 @@ defmodule TymeslotWeb.AuthLive.SecurityHelper do
   alias Plug.Crypto
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
-  require Logger
 
   @doc """
   Validate CSRF token from form submission.

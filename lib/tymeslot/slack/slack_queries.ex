@@ -46,20 +46,6 @@ defmodule Tymeslot.Slack.SlackQueries do
     |> Enum.filter(&active_status?/1)
   end
 
-  @spec find_by_link_token(String.t()) ::
-          {:ok, SlackIntegrationSchema.t()} | {:error, :not_found}
-  def find_by_link_token(token) do
-    result =
-      SlackIntegrationSchema
-      |> where([i], i.link_token == ^token)
-      |> Repo.one()
-
-    case result do
-      nil -> {:error, :not_found}
-      integration -> {:ok, integration}
-    end
-  end
-
   @spec get_integration(integer(), integer()) ::
           {:ok, SlackIntegrationSchema.t()} | {:error, :not_found}
   def get_integration(id, user_id),
@@ -181,6 +167,23 @@ defmodule Tymeslot.Slack.SlackQueries do
     days_ago = Keyword.get(opts, :days, 7)
     IntegrationQueries.delivery_stats(SlackDeliverySchema, integration_id, days_ago)
   end
+
+  @doc """
+  Deletes Slack delivery log rows older than `days`. One row is written per
+  attempt, so this table grows unbounded without pruning. A negative or
+  non-integer retention is treated as a no-op so a misconfigured value can
+  never wipe the whole table.
+  """
+  @spec cleanup_old_deliveries(integer()) :: {non_neg_integer(), nil}
+  def cleanup_old_deliveries(days) when is_integer(days) and days >= 0 do
+    cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
+
+    SlackDeliverySchema
+    |> where([d], d.inserted_at < ^cutoff)
+    |> Repo.delete_all()
+  end
+
+  def cleanup_old_deliveries(_days), do: {0, nil}
 
   # ============================================================================
   # Private helpers

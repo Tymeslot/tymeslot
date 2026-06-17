@@ -217,6 +217,150 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       assert decrypted.access_token == "new_token"
     end
 
+    test "refresh path without integration_id/user_id bypasses persistence" do
+      config = %{
+        access_token: "expired",
+        refresh_token: "refresh",
+        token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
+        oauth_scope: "Calendars.ReadWrite"
+      }
+
+      expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :needs_refresh} end)
+
+      expect(TeamsOAuthHelperMock, :refresh_access_token, fn "refresh", _scope ->
+        {:ok,
+         %{
+           access_token: "fresh_token",
+           refresh_token: "fresh_refresh",
+           expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+           scope: "Calendars.ReadWrite"
+         }}
+      end)
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, headers, _opts ->
+        assert Enum.any?(headers, fn {k, v} ->
+                 String.downcase(k) == "authorization" and v == "Bearer fresh_token"
+               end)
+
+        {:ok,
+         %Req.Response{
+           status: 201,
+           body:
+             Jason.encode!(%{
+               "id" => "m3",
+               "onlineMeetingUrl" => "https://teams.microsoft.com/l/meetup-join/no-ids"
+             })
+         }}
+      end)
+
+      assert {:ok, room} = TeamsProvider.create_meeting_room(config)
+      assert room.room_id == "m3"
+    end
+
+    test "skips refresh and uses fresh DB token when token already refreshed concurrently" do
+      user = insert(:user)
+      fresh_expiry = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Teams",
+          provider: "teams",
+          tenant_id: "tenant1",
+          teams_user_id: "teams-user-1",
+          access_token: "fresh-token-from-other-process",
+          refresh_token: "fresh-refresh",
+          token_expires_at: fresh_expiry,
+          oauth_scope: "Calendars.ReadWrite"
+        })
+
+      config = %{
+        access_token: "stale-token-current-process",
+        refresh_token: "ref",
+        token_expires_at: DateTime.add(DateTime.utc_now(), -10, :second),
+        oauth_scope: "Calendars.ReadWrite",
+        integration_id: integration.id,
+        user_id: user.id
+      }
+
+      # Current process thinks the token needs refreshing; after acquiring the
+      # lock the DB re-fetch reveals a fresh token — no OAuth call should fire.
+      stub(TeamsOAuthHelperMock, :validate_token, fn _config -> {:ok, :needs_refresh} end)
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, headers, _opts ->
+        assert Enum.any?(headers, fn {k, v} ->
+                 String.downcase(k) == "authorization" and
+                   v == "Bearer fresh-token-from-other-process"
+               end)
+
+        {:ok,
+         %Req.Response{
+           status: 201,
+           body:
+             Jason.encode!(%{
+               "id" => "m4",
+               "onlineMeetingUrl" => "https://teams.microsoft.com/l/meetup-join/concurrent"
+             })
+         }}
+      end)
+
+      assert {:ok, _room} = TeamsProvider.create_meeting_room(config)
+    end
+
+    test "flags the integration as needs_reauth on a 401 from Graph" do
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Teams",
+          provider: "teams",
+          tenant_id: "t1",
+          teams_user_id: "u1",
+          access_token: "valid_token",
+          refresh_token: "refresh",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+          oauth_scope: "Calendars.ReadWrite"
+        })
+
+      config = %{
+        access_token: "valid_token",
+        refresh_token: "refresh",
+        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+        integration_id: integration.id,
+        user_id: user.id,
+        oauth_scope: "Calendars.ReadWrite"
+      }
+
+      expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 401,
+           body: Jason.encode!(%{"error" => %{"code" => "InvalidAuthenticationToken"}})
+         }}
+      end)
+
+      assert {:error, _message} = TeamsProvider.create_meeting_room(config)
+
+      flagged = Repo.get(VideoIntegrationSchema, integration.id)
+      assert flagged.needs_reauth == true
+      assert flagged.sync_error =~ "reconnect"
+    end
+
+    test "does not crash on a 401 when integration_id/user_id are absent" do
+      config = valid_config()
+
+      expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: Jason.encode!(%{"error" => %{"code" => "X"}})}}
+      end)
+
+      assert {:error, _message} = TeamsProvider.create_meeting_room(config)
+    end
+
     test "returns error when API response is malformed JSON" do
       config = valid_config()
 

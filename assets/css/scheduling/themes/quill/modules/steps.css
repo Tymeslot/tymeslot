@@ -1,0 +1,242 @@
+/* Step Indicator — the booking-flow progress band.
+   Self-contained: base styles + glass skin + container queries + height queries.
+   Gathers every rule that targets the step indicator, its labels, connectors,
+   and the navigation band that wraps them — previously split across base.css,
+   booking.css, and components.css.
+
+   Note on container context: the .step-navigation-card reuses .glass-morphism-card
+   for the glass pill look but overrides its `container-type: inline-size` back to
+   `normal` (see below). This file is imported AFTER glass.css so that override
+   wins by source order. */
+
+/* ===== Base Styles ===== */
+
+.step-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.step-indicator__step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3xs);
+}
+
+.step-indicator__circle {
+  width: var(--step-circle-size);
+  height: var(--step-circle-size);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  background: var(--surface-light);
+  border: var(--border-width-medium) solid var(--border-intense);
+  color: var(--text-opacity-subtle);
+  transition: var(--transition-smooth);
+}
+
+.step-indicator__step--active .step-indicator__circle {
+  background: var(--theme-primary);
+  border-color: var(--theme-primary);
+  color: white;
+}
+
+.step-indicator__step--completed .step-indicator__circle {
+  background: var(--theme-accent);
+  border-color: var(--theme-accent);
+  color: white;
+}
+
+.step-indicator__connector {
+  width: var(--step-connector-width);
+  height: var(--step-connector-height);
+  background: var(--border-medium);
+  transition: var(--transition-smooth);
+}
+
+.step-indicator__step--completed + .step-indicator__connector {
+  background: var(--theme-accent);
+}
+
+/* Step navigation card. It reuses .glass-morphism-card for the glass pill look
+   but must NOT inherit that rule's `container-type: inline-size`: as a centred
+   flex item with no explicit width, inline-size containment makes its width
+   independent of content, collapsing it to its 2px borders — a stray white
+   vertical line that hides the step indicator. `container-type: normal` lets it
+   size to its content again. (steps.css is imported after glass.css so this
+   equal-specificity override wins by source order.) */
+.step-navigation-card {
+  container-type: normal;
+  width: auto;
+  max-width: none;
+}
+
+/* ===== Glass Skin ===== */
+
+/* Glass morphism for the step navigation pill — high-specificity selector. */
+.quill-theme-wrapper .step-navigation-card {
+  background: linear-gradient(135deg, var(--surface-dark-strong) 0%, var(--surface-dark-medium) 100%);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: var(--border-width-thin) solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Step circles with glassmorphism effect */
+.quill-theme-wrapper .step-circle {
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  box-shadow:
+    var(--shadow-md),
+    var(--inset-highlight-subtle);
+}
+
+/* Active/completed step enhancement */
+.quill-theme-wrapper .step-circle--active {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  box-shadow:
+    var(--shadow-primary-md),
+    var(--inset-highlight-strong);
+  border-color: var(--theme-primary);
+}
+
+/* Step connectors with gradient */
+.quill-theme-wrapper .step-connector--active {
+  background: linear-gradient(90deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ===== Labels ===== */
+
+/* Step labels styling for glassmorphism theme */
+.quill-theme-wrapper .step-item-wrapper .step-label {
+  display: block;
+  margin-top: var(--space-xs);
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 1;
+}
+
+/* Active step label — matches step_label_class(step, current) when step == current */
+.quill-theme-wrapper .step-label.text-white.font-bold.drop-shadow-md {
+  color: var(--theme-text);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Completed step label — matches text-tymeslot-100 */
+.quill-theme-wrapper .step-label.text-tymeslot-100.drop-shadow-md {
+  color: var(--theme-text-secondary);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Upcoming step label — matches step-label--upcoming */
+.quill-theme-wrapper .step-label.step-label--upcoming {
+  color: var(--text-opacity-very-subtle);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Hover effects for clickable steps */
+.quill-theme-wrapper .step-circle.cursor-pointer:hover {
+  transform: scale(1.1);
+}
+
+.quill-theme-wrapper button .step-label {
+  transition: color var(--transition-smooth);
+}
+
+.quill-theme-wrapper button:hover .step-label {
+  color: var(--theme-primary);
+}
+
+/* ===== Container Queries ===== */
+
+/* Step indicators — compact layout on narrow cards */
+@container scheduling (max-width: 640px) {
+  .step-indicator-container {
+    gap: var(--space-md);
+  }
+
+  .step-item-wrapper .step-label {
+    font-size: var(--theme-font-size-2xs);
+    margin-top: var(--space-2xs);
+  }
+
+  .step-circle {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .step-connector {
+    width: 1rem;
+  }
+
+  .step-indicator {
+    padding: 0 var(--space-xs);
+  }
+}
+
+/* Hide step labels on very narrow cards — circles alone are sufficient.
+   Specificity boosted with html.quill-theme to beat the display: block rule
+   above (.quill-theme-wrapper .step-item-wrapper .step-label). */
+@container scheduling (max-width: 480px) {
+  html.quill-theme .step-item-wrapper .step-label {
+    display: none;
+  }
+}
+
+/* Hide step connectors on the narrowest cards */
+@container scheduling (max-width: 360px) {
+  .step-connector {
+    display: none;
+  }
+}
+
+/* ===== Height & Aspect Queries ===== */
+
+/* Short viewports (laptops / dragged-short windows): the step-indicator band is
+   ~110px of chrome above the content box. Below ~700px tall that space is better
+   spent on the calendar, so hide the whole band — the calendar then fits without
+   an internal scroll. Tall screens (large monitors) keep the progress indicator.
+   Specificity raised past the `.flex` utility the wrapper also carries. */
+@media (max-height: 700px) {
+  .quill-theme-wrapper .step-navigation-wrapper {
+    display: none;
+  }
+}
+
+/* On the schedule step, before the band is hidden, trim its vertical padding so
+   the calendar gets more room before it must scroll internally. Coordinated with
+   the matching 800px gutter/padding tiers in base.css and calendar.css. */
+@media (max-height: 800px) {
+  .step-navigation-wrapper {
+    padding-top: var(--space-2xs);
+    padding-bottom: var(--space-2xs);
+  }
+}
+
+/* Very short viewports — drop the step labels so the band stays compact.
+   Specificity boosted with html.quill-theme to beat the display: block base. */
+@media (max-height: 500px) {
+  html.quill-theme .step-item-wrapper .step-label {
+    display: none;
+  }
+}
+
+/* Extremely short / narrow viewports — hide the whole step navigation card. */
+@media (max-height: 400px) {
+  .step-navigation-card {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .step-navigation-card {
+    display: none;
+  }
+}

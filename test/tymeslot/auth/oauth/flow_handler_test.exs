@@ -120,6 +120,34 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
     assert {:ok, _conn, :github} = invoke_github_callback()
   end
 
+  test "emits an anonymous login_completed telemetry event on existing-user OAuth login" do
+    {_processed_user, _enhanced_user, _existing_user} = setup_existing_user_flow_mocks()
+    :meck.expect(Session, :create_session, fn conn, %{id: 987} -> {:ok, conn, "token"} end)
+
+    test_pid = self()
+    handler_id = {__MODULE__, :login_completed, System.unique_integer([:positive])}
+
+    :telemetry.attach(
+      handler_id,
+      [:tymeslot, :auth, :login_completed],
+      fn _event, measurements, meta, _config ->
+        send(test_pid, {:login_completed, measurements, meta})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
+
+    assert {:ok, _conn, :github} = invoke_github_callback()
+
+    assert_receive {:login_completed, %{count: 1}, meta}
+    assert meta.method == "oauth"
+    assert meta.provider == "github"
+    # No user identifier may ride along in the telemetry metadata.
+    refute Map.has_key?(meta, :user_id)
+    refute Map.has_key?(meta, :email)
+  end
+
   test "returns {:error, :session_failed, provider, conn} when session creation fails" do
     {_processed_user, _enhanced_user, _existing_user} = setup_existing_user_flow_mocks()
 

@@ -15,7 +15,7 @@ defmodule Tymeslot.AnnouncementsTestCatalog do
         body: "First test announcement",
         image_path: nil,
         cta_label: nil,
-        cta_path: nil,
+        cta_docs_slug: nil,
         published_at: ~U[2026-01-01 00:00:00Z]
       },
       %Announcement{
@@ -24,7 +24,7 @@ defmodule Tymeslot.AnnouncementsTestCatalog do
         body: "Second test announcement",
         image_path: "/images/announcements/test_beta.svg",
         cta_label: "Try Beta",
-        cta_path: "/dashboard/beta",
+        cta_docs_slug: "beta",
         published_at: ~U[2026-02-01 00:00:00Z]
       }
     ]

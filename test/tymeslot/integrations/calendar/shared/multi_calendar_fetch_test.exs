@@ -283,6 +283,40 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
       assert Enum.any?(events, fn e -> e["id"] == "cal2-1" end)
     end
 
+    test "tolerates a deleted calendar (404) on a plain-map integration without crashing" do
+      defmodule NotFoundAPI do
+        @spec list_events(any(), binary(), any(), any()) ::
+                {:error, atom(), binary()} | {:ok, list()}
+        def list_events(_integration, "deleted_cal", _start_time, _end_time) do
+          {:error, :not_found, "Calendar not found"}
+        end
+
+        def list_events(_integration, calendar_id, _start_time, _end_time) do
+          {:ok, [%{"id" => "#{calendar_id}-1", "summary" => "Event"}]}
+        end
+      end
+
+      integration = %{
+        calendar_list: [
+          %{"id" => "cal1", "selected" => true},
+          %{"id" => "deleted_cal", "selected" => true}
+        ]
+      }
+
+      start_time = DateTime.utc_now()
+      end_time = DateTime.add(start_time, 3600, :second)
+
+      assert {:ok, events} =
+               MultiCalendarFetch.list_events_with_selection(
+                 integration,
+                 start_time,
+                 end_time,
+                 NotFoundAPI
+               )
+
+      assert Enum.map(events, & &1["id"]) == ["cal1-1"]
+    end
+
     test "respects max concurrency limit" do
       # Create integration with many calendars
       calendar_list =

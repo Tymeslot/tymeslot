@@ -9,9 +9,9 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHook do
   `CorrelationId` and `SetLoggerMetadata`.
   """
 
-  alias Tymeslot.Infrastructure.CorrelationId
+  import Phoenix.LiveView, only: [connected?: 1]
 
-  require Logger
+  alias Tymeslot.Infrastructure.CorrelationId
 
   @doc """
   Sets `correlation_id` and `user_id` in Logger metadata for the LiveView process.
@@ -22,10 +22,30 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHook do
           {:cont, Phoenix.LiveView.Socket.t()}
   def on_mount(:default, _params, _session, socket) do
     # Reset per-mount keys so a reused LiveView process cannot inherit the
-    # previous mount's user_id or correlation_id.
+    # previous mount's user_id or correlation_id. This clears Logger metadata
+    # only, not the process dictionary, which the check below relies on.
     Logger.metadata(user_id: nil, correlation_id: nil)
 
-    {socket, correlation_id} = CorrelationId.ensure(socket)
+    # On the initial HTTP (dead) render the LiveView mounts in the same process
+    # as the Plug pipeline, where `CorrelationId` has already set a correlation
+    # id in the process dictionary. Adopt it so the request's start and stop log
+    # lines share one id.
+    #
+    # On a live (connected) WebSocket mount we always mint a fresh id — even if
+    # the process dictionary already holds one from a prior mount. The channel
+    # process is reused across live_redirect/push_navigate, so the process-dict
+    # value would be the *previous* mount's id, causing two navigations to share
+    # a single correlation_id (tracing noise). Generating fresh per connected
+    # mount matches the module's documented intent.
+    {socket, correlation_id} =
+      if connected?(socket) do
+        CorrelationId.ensure(socket)
+      else
+        case CorrelationId.get_from_process() do
+          nil -> CorrelationId.ensure(socket)
+          existing -> {CorrelationId.put_in_socket(socket, existing), existing}
+        end
+      end
 
     CorrelationId.put_in_process(correlation_id)
     CorrelationId.add_to_logger_metadata(correlation_id)

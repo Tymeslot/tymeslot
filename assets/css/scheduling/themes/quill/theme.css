@@ -1,21 +1,104 @@
 /* Quill Theme - Self-Contained Glassmorphism Theme for Scheduling */
 
+/* Tailwind v4: the framework import must come before every other rule, so it
+   leads the file (the shared layout.css no longer carries @tailwind). */
+@import "tailwindcss";
+
 /* Import shared utilities */
 @import "../../shared/reset.css";
 @import "../../shared/layout.css";
 @import "../../shared/utilities.css";
+@import "../../shared/brand-tokens.css";
 
-/* Import theme modules in dependency order */
+/* ===========================================================================
+   Tailwind v4 CSS-first configuration
+   ---------------------------------------------------------------------------
+   The standalone v4 CLI cannot load a legacy JS config via @config, so the
+   theme-template needs (heroicons + LiveView loading variants + content
+   sources) are expressed CSS-first here. The themes are self-contained: they
+   carry their own token system, so none of the core's custom @theme tokens
+   (turquoise / token-* / glass) are needed — the theme TEMPLATES only consume
+   standard utilities, hero-* icons, and the phx-*-loading variants.
+   Paths are relative to this file (assets/heroicons.js is four levels up).
+   =========================================================================== */
+
+/* Heroicons mask-image plugin. @tailwindcss/forms is not needed — the theme
+   templates use no forms utilities. */
+@plugin "../../../../heroicons.js";
+
+/* LiveView state variants — the theme schedule components use
+   phx-click-loading:animate-pulse; the other two are kept for parity. The block
+   form (with @slot) is required: the inline array form `([".sel&", ".sel &"])`
+   is emitted verbatim as a literal selector by the v4 standalone CLI instead of
+   being expanded, so the rule never matches. The block form below compiles to
+   the v3-equivalent `.phx-click-loading.phx-…, .phx-click-loading .phx-…` pair. */
+@custom-variant phx-click-loading {
+  .phx-click-loading& { @slot; }
+  .phx-click-loading & { @slot; }
+}
+@custom-variant phx-submit-loading {
+  .phx-submit-loading& { @slot; }
+  .phx-submit-loading & { @slot; }
+}
+@custom-variant phx-change-loading {
+  .phx-change-loading& { @slot; }
+  .phx-change-loading & { @slot; }
+}
+
+/* Content sources (formerly tailwind.config.js `content`). Paths are relative
+   to this file; mirror the v3 globs that scanned the web layer + JS. */
+@source "../../../../js";
+@source "../../../../../lib/tymeslot_web.ex";
+@source "../../../../../lib/tymeslot_web";
+
+/* Meeting-type icons are chosen per booking by host config and rendered via
+   runtime string interpolation, so static scanning cannot see them (formerly
+   the shared config safelist). The booking page must carry them. */
+@source inline("hero-bolt hero-chat-bubble-left-right hero-hand-raised hero-chart-bar hero-flag hero-clock hero-phone hero-light-bulb hero-wrench-screwdriver hero-book-open hero-rocket-launch hero-beaker hero-clipboard-document-check hero-presentation-chart-line hero-calendar hero-user hero-video-camera hero-link");
+
+/* v4 compatibility: restore v3's gray-200 default border colour. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+}
+
+/* Import theme modules in dependency order.
+   Foundation → primitives/controls → per-feature modules → embed/delivery.
+   Ordering notes that matter for the cascade:
+   - glass-card before steps: .step-navigation-card overrides .glass-morphism-card's
+     container-type at equal specificity, so it must come later.
+   - typography before the controls/feature modules: each component sets its own
+     font-size, which is meant to win over the generic type clamps. */
+
+/* Foundation */
 @import "./modules/variables.css";
 @import "./modules/base.css";
 @import "./modules/iframe.css";
 @import "./modules/video.css";
 @import "./modules/typography.css";
-@import "./modules/components.css";
+
+/* Primitives & controls */
+@import "./modules/animations.css";
+@import "./modules/glass-card.css";
+@import "./modules/buttons.css";
+@import "./modules/spinner.css";
+@import "./modules/meeting-details.css";
+@import "./modules/text-utilities.css";
+
+/* Per-feature modules */
+@import "./modules/steps.css";
 @import "./modules/schedule-header.css";
+@import "./modules/timezone.css";
 @import "./modules/calendar.css";
 @import "./modules/time-slots.css";
-@import "./modules/booking.css";
+@import "./modules/booking-form.css";
+@import "./modules/custom-questions.css";
 @import "./modules/overview.css";
 @import "./modules/confirmation.css";
+@import "./modules/payment-pages.css";
 @import "./modules/language-switcher.css";

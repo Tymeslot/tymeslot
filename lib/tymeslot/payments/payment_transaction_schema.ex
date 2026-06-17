@@ -28,6 +28,9 @@ defmodule Tymeslot.Payments.PaymentTransactionSchema do
           billing_address: map() | nil,
           payment_method: String.t() | nil,
           metadata: map(),
+          host_email: String.t() | nil,
+          host_name: String.t() | nil,
+          host_deleted_at: DateTime.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -57,6 +60,12 @@ defmodule Tymeslot.Payments.PaymentTransactionSchema do
     # Generic metadata
     field :metadata, :map, default: %{}
 
+    # Retention snapshot — preserved when the user is deleted so the row
+    # remains a complete tax record. host_deleted_at marks anonymisation.
+    field :host_email, :string
+    field :host_name, :string
+    field :host_deleted_at, :utc_datetime
+
     timestamps(type: :utc_datetime)
   end
 
@@ -83,7 +92,10 @@ defmodule Tymeslot.Payments.PaymentTransactionSchema do
       :country_code,
       :billing_address,
       :payment_method,
-      :metadata
+      :metadata,
+      :host_email,
+      :host_name,
+      :host_deleted_at
     ])
     |> validate_required([:user_id, :amount, :status])
     |> validate_inclusion(:status, ~w(pending completed failed pending_reconciliation))

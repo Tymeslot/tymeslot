@@ -156,10 +156,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
           Logger.error("Template URL requires non-empty meeting_id", url: mask_url(url))
           {:error, "meeting_id is required for template URLs but was empty"}
         end
-
-      nil ->
-        Logger.error("Template URL requires meeting_id", url: mask_url(url))
-        {:error, "meeting_id is required for template URLs"}
     end
   end
 

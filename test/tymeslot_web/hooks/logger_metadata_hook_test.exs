@@ -15,6 +15,15 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHookTest do
     }
   end
 
+  # A connected socket has a non-nil transport_pid, which is what
+  # Phoenix.LiveView.connected?/1 checks internally.
+  defp build_connected_socket(assigns \\ %{}) do
+    %Socket{
+      transport_pid: self(),
+      assigns: Map.merge(%{__changed__: %{}, flash: %{}}, assigns)
+    }
+  end
+
   describe "on_mount(:default, ...)" do
     test "generates correlation_id and sets it in socket assigns, process dict, and Logger metadata" do
       socket = build_socket()
@@ -39,6 +48,42 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHookTest do
       assert updated_socket.assigns[:correlation_id] == existing_id
       assert CorrelationId.get_from_process() == existing_id
       assert Logger.metadata()[:correlation_id] == existing_id
+    end
+
+    test "adopts the request correlation_id from the process dictionary (dead render)" do
+      # Simulates the initial HTTP render: the CorrelationId plug has already set
+      # an id in the process dictionary for this request. The hook must adopt it
+      # rather than minting a new one, so the request's start and stop log lines
+      # share a single correlation_id.
+      request_id = CorrelationId.generate()
+      CorrelationId.put_in_process(request_id)
+      socket = build_socket()
+
+      assert {:cont, updated_socket} =
+               LoggerMetadataHook.on_mount(:default, %{}, %{}, socket)
+
+      assert updated_socket.assigns[:correlation_id] == request_id
+      assert CorrelationId.get_from_process() == request_id
+      assert Logger.metadata()[:correlation_id] == request_id
+    end
+
+    test "mints a fresh correlation_id on a connected mount even when process dict holds a stale id" do
+      # Simulates a live_redirect or push_navigate: the channel process is reused,
+      # so the process dictionary still contains the previous mount's correlation_id.
+      # The hook must ignore it and generate a new id for this mount.
+      stale_id = CorrelationId.generate()
+      CorrelationId.put_in_process(stale_id)
+      socket = build_connected_socket()
+
+      assert {:cont, updated_socket} =
+               LoggerMetadataHook.on_mount(:default, %{}, %{}, socket)
+
+      fresh_id = updated_socket.assigns[:correlation_id]
+
+      assert is_binary(fresh_id)
+      refute fresh_id == stale_id
+      assert CorrelationId.get_from_process() == fresh_id
+      assert Logger.metadata()[:correlation_id] == fresh_id
     end
 
     test "sets user_id in Logger metadata when current_user is assigned" do

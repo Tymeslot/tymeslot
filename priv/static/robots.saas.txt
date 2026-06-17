@@ -1,6 +1,0 @@
-User-agent: *
-Allow: /
-# Block all auth routes from indexing
-Disallow: /auth/
-
-Sitemap: https://tymeslot.app/sitemap.xml

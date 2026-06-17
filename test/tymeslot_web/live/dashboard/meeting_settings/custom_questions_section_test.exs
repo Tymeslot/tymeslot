@@ -365,6 +365,42 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
 
       refute render(view) =~ "Changing the type will clear the configuration"
     end
+
+    test "configuring a freshly-chosen type does not show banner", %{conn: conn, user: user} do
+      # Regression: when adding a new question, switching to a config-bearing
+      # type and then editing that config (without touching the type again)
+      # must not falsely trip the type-change confirmation.
+      meeting_type = insert(:meeting_type, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      view |> element("button", "Add question") |> render_click()
+      assert render(view) =~ "Add question"
+
+      # Switch from the default short_text to single_select — nothing defined
+      # yet, so this is not destructive.
+      view
+      |> form("form[phx-change='validate']", %{"definition" => %{"type" => "single_select"}})
+      |> render_change()
+
+      refute render(view) =~ "Changing the type will clear the configuration"
+
+      # Add the two required options for the choice question.
+      view |> element("button[phx-click='add_option']") |> render_click()
+      view |> element("button[phx-click='add_option']") |> render_click()
+
+      # Continue configuring the SAME question (edit the label) — the type is
+      # unchanged, so no confirmation dialog should appear.
+      view
+      |> form("form[phx-change='validate']", %{
+        "definition" => %{"type" => "single_select", "label" => "Favourite colour"}
+      })
+      |> render_change()
+
+      refute render(view) =~ "Changing the type will clear the configuration"
+    end
   end
 
   describe "reordering custom questions" do
@@ -435,6 +471,41 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       assert html =~ ~s(data-id="#{id2}" data-index="0")
       assert html =~ ~s(data-id="#{id1}" data-index="1")
     end
+
+    test "tampered reorder ids (duplicate / missing) are ignored", %{conn: conn, user: user} do
+      id1 = UUID.generate()
+      id2 = UUID.generate()
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          custom_fields: [
+            %{id: id1, type: "short_text", label: "Alpha", required: false, position: 0},
+            %{id: id2, type: "short_text", label: "Beta", required: false, position: 1}
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      list_id = "custom-questions-list-meeting-type-form-edit-#{meeting_type.id}"
+
+      # A list with a duplicated id and a dropped id is not a permutation of the
+      # existing ids — it must be rejected, leaving the original list intact
+      # (no duplicated or vanished questions).
+      view
+      |> element("##{list_id}")
+      |> render_hook("reorder", %{"ids" => [id1, id1]})
+
+      html = render(view)
+      assert html =~ ~s(data-id="#{id1}" data-index="0")
+      assert html =~ ~s(data-id="#{id2}" data-index="1")
+      # The first question's list row appears exactly once — the tampered id
+      # list did not duplicate it. (Counting the bare label "Alpha" is unsafe:
+      # it also occurs in the row's label input value.)
+      assert length(String.split(html, ~s(data-id="#{id1}"))) == 2
+    end
   end
 
   describe "cancelling the question editor" do
@@ -504,7 +575,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
   end
 
   describe "end-to-end persistence" do
-    test "custom question is persisted to the database after submitting the meeting type form", %{
+    test "adding a custom question auto-saves it to the database", %{
       conn: conn,
       user: user
     } do
@@ -514,7 +585,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
 
       open_edit_form(view, meeting_type)
 
-      # Add a custom question in-memory via the editor
+      # Add a custom question via the editor
       view |> element("button", "Add question") |> render_click()
       assert render(view) =~ "Add question"
 
@@ -526,20 +597,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
 
       assert render(view) =~ "Company"
 
-      # Submit the outer meeting type form to persist everything to the DB.
-      # The hidden inputs serialising custom_fields are auto-collected by
-      # render_submit/1 from the current rendered HTML.
-      view
-      |> form("form[phx-submit='save_meeting_type']", %{
-        "meeting_type" => %{
-          "name" => meeting_type.name,
-          "duration" => to_string(meeting_type.duration_minutes)
-        }
-      })
-      |> render_submit()
-
-      assert render(view) =~ "Meeting type updated"
-
+      # Adding the question auto-saves it — no outer form submit is involved.
       reloaded = Repo.reload!(meeting_type)
       assert [%{label: "Company"}] = reloaded.custom_fields
     end

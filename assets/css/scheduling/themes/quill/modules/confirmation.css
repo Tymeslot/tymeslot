@@ -147,12 +147,10 @@
   font-size: var(--theme-font-size-xs);
 }
 
-/* ============================================================================
-   OUTER WRAPPERS — viewport-driven
+/* ===== Outer Wrappers — Viewport-Driven =====
    .confirmation-outer and .confirmation-container sit OUTSIDE the
    .glass-morphism-card, so they cannot be queried by @container scheduling.
-   Their padding/width remains a function of the iframe/page width.
-   ============================================================================ */
+   Their padding/width remains a function of the iframe/page width. */
 @media (min-width: 640px) {
   .confirmation-outer {
     padding: var(--space-xs) var(--space-md);
@@ -175,12 +173,10 @@
   }
 }
 
-/* ============================================================================
-   CARD INTERIOR — container-driven
+/* ===== Card Interior — Container-Driven =====
    Everything from .confirmation-content inward lives inside the card and
    scales with the card's own width, so the confirmation step adapts the
-   same way whether it's a wide standalone page or a narrow embed.
-   ============================================================================ */
+   same way whether it's a wide standalone page or a narrow embed. */
 @container scheduling (min-width: 640px) {
   .confirmation-heading-row {
     gap: var(--space-md);
@@ -275,10 +271,7 @@
   }
 }
 
-/* ============================================================================
-   EMBEDDED — Compact Confirmation
-   (dissolved from embedded.css Section 6)
-   ============================================================================ */
+/* ===== Embedded — Compact Confirmation ===== */
 
 html.quill-theme[data-embedded] .confirmation-outer {
   align-items: flex-start;
@@ -307,14 +300,12 @@ html.quill-theme[data-embedded] .confirmation-badge-dot svg {
   height: 10px;
 }
 
-/* ============================================================================
-   CUSTOM FIELD ANSWERS — "Your answers" section on the confirmation step
-   ============================================================================ */
+/* ===== Custom Field Answers — "Your answers" section ===== */
 
 .custom-answers-section {
   margin-top: var(--space-sm);
   padding-top: var(--space-sm);
-  border-top: 1px solid var(--border-medium);
+  border-top: var(--border-width-thin) solid var(--border-medium);
 }
 
 .custom-answers-heading {

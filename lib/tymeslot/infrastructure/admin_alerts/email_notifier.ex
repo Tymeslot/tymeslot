@@ -41,7 +41,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     )
 
     if alerts_enabled?() do
-      maybe_enqueue_email(category, severity, message, scrubbed_metadata)
+      dedup_key = AlertTypes.dedup_key(type, scrubbed_metadata)
+      maybe_enqueue_email(category, severity, message, scrubbed_metadata, dedup_key)
     end
 
     :ok
@@ -51,12 +52,15 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     Application.get_env(:tymeslot, :admin_alerts_enabled, false) == true
   end
 
-  defp maybe_enqueue_email(category, severity, message, metadata) do
+  defp maybe_enqueue_email(category, severity, message, metadata, dedup_key) do
     recipient = Application.get_env(:tymeslot, :admin_alert_email)
 
     if AdminAlerts.valid_email?(recipient) do
       enriched = enrich_metadata(metadata)
-      EmailScheduler.schedule_admin_alert(recipient, category, severity, message, enriched)
+
+      EmailScheduler.schedule_admin_alert(recipient, category, severity, message, enriched,
+        dedup_key: dedup_key
+      )
     else
       Logger.debug("Admin alert email not delivered: no valid recipient configured",
         category: category
@@ -84,13 +88,11 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     end
   end
 
-  # Dialyzer: :inet.gethostname/0 is typed {:ok, hostname()} but the Erlang
-  # docs allow {:error, posix()} — keep the fallback for hostile environments.
-  @dialyzer {:nowarn_function, hostname: 0}
+  # :inet.gethostname/0 is contractually {:ok, hostname()} — every backend path
+  # falls back to {:ok, "nohost.nodomain"} rather than erroring, so there is no
+  # {:error, _} clause to handle (the posix() error belongs to the /1 arity).
   defp hostname do
-    case :inet.gethostname() do
-      {:ok, name} -> to_string(name)
-      {:error, _reason} -> "unknown"
-    end
+    {:ok, name} = :inet.gethostname()
+    to_string(name)
   end
 end

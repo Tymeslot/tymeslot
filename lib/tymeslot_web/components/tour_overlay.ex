@@ -10,6 +10,8 @@ defmodule TymeslotWeb.Components.TourOverlay do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Phoenix.LiveView.JS
+
   @impl Phoenix.LiveComponent
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
@@ -18,6 +20,7 @@ defmodule TymeslotWeb.Components.TourOverlay do
       id="dashboard-tour"
       class="dashboard-tour"
       phx-hook="DashboardTour"
+      phx-remove={JS.transition("dashboard-tour--leaving", time: 700)}
       data-anchor={@step.anchor}
       data-placement={Atom.to_string(@step.placement)}
       data-step-index={@step_index}

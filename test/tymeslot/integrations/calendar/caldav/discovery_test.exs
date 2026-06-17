@@ -200,7 +200,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
   # discover_calendars/2 — URL validation (SSRF protection)
   # ---------------------------------------------------------------------------
 
-  describe "discover_calendars/2 URL validation" do
+  describe "discover_calendars/2 URL validation (SSRF protection)" do
     test "rejects plain HTTP URL pointing at a public host" do
       client = %{@caldav_client | base_url: "http://caldav.example.com"}
 
@@ -208,18 +208,55 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
                Discovery.discover_calendars(client, skip_breaker: true)
     end
 
-    test "allows plain HTTP URL for a local/private host (self-hosted)" do
-      ReqTest.stub(:tymeslot_http, fn conn ->
-        conn
-        |> Conn.put_resp_header("content-type", "application/xml")
-        |> Conn.send_resp(207, "<D:multistatus xmlns:D=\"DAV:\"/>")
-      end)
+    # Discovery now mirrors the persistence posture (block_private_ips: true):
+    # an authenticated user cannot drive server-side PROPFINDs at internal hosts
+    # any more than they can save such a base_url on the integration.
+    test "rejects loopback host (localhost)" do
+      client = %{@caldav_client | base_url: "https://localhost:5232"}
 
-      # localhost is a valid CalDAV target (e.g. a self-hosted Radicale instance)
-      client = %{@caldav_client | base_url: "http://localhost:5232"}
-
-      assert {:ok, _calendars} =
+      assert {:error, _reason} =
                Discovery.discover_calendars(client, skip_breaker: true)
+    end
+
+    test "rejects loopback IP (127.0.0.1)" do
+      client = %{@caldav_client | base_url: "https://127.0.0.1:5232"}
+
+      assert {:error, _reason} =
+               Discovery.discover_calendars(client, skip_breaker: true)
+    end
+
+    test "rejects link-local cloud metadata endpoint (169.254.169.254)" do
+      client = %{@caldav_client | base_url: "https://169.254.169.254"}
+
+      assert {:error, _reason} =
+               Discovery.discover_calendars(client, skip_breaker: true)
+    end
+
+    test "rejects RFC 1918 private host (10.x)" do
+      client = %{@caldav_client | base_url: "https://10.0.0.5"}
+
+      assert {:error, _reason} =
+               Discovery.discover_calendars(client, skip_breaker: true)
+    end
+  end
+
+  describe "test_connection/2 URL validation (SSRF protection)" do
+    test "rejects loopback IP before any network contact" do
+      client = %{@caldav_client | base_url: "https://127.0.0.1:5232"}
+
+      assert {:error, _reason} = Discovery.test_connection(client, ip_address: "127.0.0.1")
+    end
+
+    test "rejects link-local cloud metadata endpoint (169.254.169.254)" do
+      client = %{@caldav_client | base_url: "https://169.254.169.254"}
+
+      assert {:error, _reason} = Discovery.test_connection(client, ip_address: "127.0.0.1")
+    end
+
+    test "rejects RFC 1918 private host (10.x)" do
+      client = %{@caldav_client | base_url: "https://10.0.0.5"}
+
+      assert {:error, _reason} = Discovery.test_connection(client, ip_address: "127.0.0.1")
     end
   end
 end

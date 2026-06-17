@@ -1,0 +1,326 @@
+/* Timezone Selector — the booker's timezone dropdown in the schedule header.
+   Unified with Rhythm's dropdown pattern: phx-click-away, button options,
+   semantic flag rendering, and a fixed dark dropdown background.
+   Self-contained: base styles + container queries + embedded.
+   Container context: .glass-morphism-card (container-name: scheduling). */
+
+/* ===== Base Styles ===== */
+
+/* --- Label --- */
+
+.timezone-label {
+  display: none;
+  color: var(--text-opacity-medium-high);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--space-xs);
+}
+
+.timezone-label-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.timezone-label-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* --- Trigger button --- */
+
+.timezone-dropdown-wrapper {
+  position: relative;
+  width: min(100%, 14rem);
+}
+
+.timezone-trigger {
+  width: 100%;
+  background: linear-gradient(135deg, var(--surface-medium) 0%, var(--surface-subtle) 100%);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  color: var(--theme-text);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  padding: var(--space-xs);
+}
+
+.timezone-trigger:hover {
+  background: linear-gradient(135deg, var(--surface-intense) 0%, var(--surface-medium) 100%);
+  border-color: var(--border-intense);
+  transform: scale(1.01);
+  box-shadow: var(--shadow-lg);
+}
+
+.timezone-trigger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timezone-trigger-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+.timezone-trigger-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.timezone-name {
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timezone-time-display {
+  color: var(--text-opacity-low);
+  font-size: var(--theme-font-size-3xs);
+}
+
+.timezone-time-inline {
+  display: none;
+}
+
+.timezone-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: var(--space-xs);
+}
+
+.timezone-offset-badge {
+  display: none;
+  background: var(--surface-medium);
+  color: var(--text-opacity-medium-high);
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-3xs) var(--space-xs);
+  border-radius: 9999px;
+}
+
+.timezone-chevron {
+  color: var(--text-opacity-low);
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.timezone-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* --- Dropdown --- */
+
+.timezone-dropdown {
+  position: absolute;
+  top: 100%;
+  z-index: var(--z-dropdown);
+  margin-top: var(--space-2xs);
+  /* Fixed dark background — must not use --theme-background, which is
+     overridable by per-profile customizations and could produce a light
+     surface where white text becomes invisible. */
+  background: linear-gradient(135deg, rgba(20, 15, 45, 0.98) 0%, rgba(30, 20, 60, 0.97) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: var(--border-width-thin) solid var(--border-intense);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-height: var(--dropdown-max-height);
+}
+
+/* --- Search input --- */
+
+.timezone-search-wrapper {
+  padding: var(--space-sm);
+  border-bottom: var(--border-width-thin) solid var(--border-medium);
+}
+
+.timezone-search {
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--surface-medium);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-sm);
+  transition: border-color var(--transition-normal), background var(--transition-normal);
+}
+
+.timezone-search:focus {
+  outline: none;
+  background: var(--surface-medium);
+  border-color: var(--theme-primary);
+}
+
+.timezone-search::placeholder {
+  color: var(--theme-text-secondary);
+}
+
+/* --- Options list --- */
+
+.timezone-options {
+  /* Fill remaining space inside the flex-column .timezone-dropdown.
+     The outer container's max-height constrains the total; this element
+     shrinks to fit after the search wrapper takes its natural height. */
+  flex: 1;
+  min-height: 0;
+}
+
+/* --- Option items --- */
+
+.timezone-option {
+  width: 100%;
+  padding: var(--space-sm);
+  background: transparent;
+  border: none;
+  color: var(--theme-text);
+  cursor: pointer;
+  transition: background var(--transition-normal);
+  text-align: left;
+  border-bottom: var(--border-width-thin) solid var(--border-subtle);
+}
+
+.timezone-option:hover {
+  background: var(--surface-medium);
+}
+
+.timezone-option:last-child {
+  border-bottom: none;
+}
+
+.timezone-option-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.timezone-option-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+}
+
+.timezone-option-label {
+  color: var(--theme-text);
+}
+
+.timezone-option-offset {
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-xs);
+}
+
+/* --- Flag styling --- */
+
+.timezone-flag {
+  width: var(--icon-sm);
+  height: var(--flag-height);
+  flex-shrink: 0;
+  border-radius: var(--space-3xs);
+  object-fit: cover;
+}
+
+.timezone-option-flag {
+  width: var(--icon-sm);
+  height: var(--flag-height);
+  flex-shrink: 0;
+  border-radius: var(--space-3xs);
+  object-fit: cover;
+}
+
+/* ===== Container Queries ===== */
+
+/* Medium container — show expanded timezone controls */
+@container scheduling (min-width: 400px) {
+  .timezone-label {
+    display: block;
+  }
+
+  .timezone-trigger {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .timezone-name {
+    font-size: var(--theme-font-size-sm);
+  }
+
+  .timezone-time-inline {
+    display: block;
+  }
+
+  .timezone-meta {
+    margin-left: var(--space-sm);
+  }
+
+  .timezone-offset-badge {
+    display: block;
+    font-size: var(--theme-font-size-sm);
+    padding: var(--space-3xs) var(--space-sm);
+  }
+
+  .timezone-chevron {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .timezone-dropdown-wrapper {
+    width: 18rem;
+  }
+
+  .timezone-dropdown {
+    left: auto;
+    right: 0;
+    min-width: 16rem;
+    max-width: 24rem;
+  }
+}
+
+/* Narrow container — compact timezone on mobile */
+@container scheduling (max-width: 399px) {
+  .timezone-selector-wrapper {
+    max-width: calc(100cqi - 2rem);
+  }
+}
+
+/* ===== Embedded ===== */
+
+/* Compact timezone selector in iframes — hide verbose elements. */
+html.quill-theme[data-embedded] .timezone-label {
+  display: none;
+}
+
+html.quill-theme[data-embedded] .timezone-time-display {
+  display: none;
+}
+
+html.quill-theme[data-embedded] .timezone-offset-badge {
+  display: none;
+}
+
+html.quill-theme[data-embedded] .timezone-trigger {
+  padding: var(--space-xs) var(--space-sm);
+}
+
+/* Dropdown positioning in iframes — right-aligned with constrained width */
+html.quill-theme[data-embedded] .timezone-dropdown {
+  left: auto;
+  right: 0;
+  max-width: 16rem;
+}

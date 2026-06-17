@@ -101,12 +101,19 @@ defmodule TymeslotWeb.AdminLive do
          |> load_data()}
 
       {:error, :would_lock_out} ->
-        {:noreply,
-         put_flash(socket, :error, Formatters.lock_reason(:password_auth_enabled, false))}
+        {:noreply, put_flash(socket, :error, lock_out_message(atom_key, parsed))}
 
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, gettext("Could not update setting."))}
     end
+  end
+
+  # Picks the lock-reason copy that matches the specific key/value the admin
+  # tried to set. Falls back to a generic message if no tailored clause
+  # exists, so an SSO toggle rejection never shows a password-auth message.
+  defp lock_out_message(key, value) do
+    Formatters.lock_reason(key, value) ||
+      gettext("That change would lock everyone out and was not applied.")
   end
 
   # --- Settings helpers ---

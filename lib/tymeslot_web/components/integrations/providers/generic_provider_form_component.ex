@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
       type="text"
       name={@form[Atom.to_string(@field)].name}
       value={@form[Atom.to_string(@field)].value}
-      class="w-full px-3 py-2 input focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+      class="w-full px-3 py-2 input focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-transparent"
     />
     """
   end
@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
       type="datetime-local"
       name={@form[Atom.to_string(@field)].name}
       value={@form[Atom.to_string(@field)].value}
-      class="w-full px-3 py-2 input focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+      class="w-full px-3 py-2 input focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:border-transparent"
     />
     """
   end

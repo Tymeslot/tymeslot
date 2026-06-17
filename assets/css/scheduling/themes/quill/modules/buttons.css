@@ -1,0 +1,67 @@
+/* Action Button — the primary/secondary/danger CTA used across every booking
+   step (rendered by the core <.action_button> component, which emits these
+   classes). Self-contained: base styles + responsive. */
+
+/* ===== Base Styles ===== */
+
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--button-padding);
+  border-radius: var(--button-radius);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--theme-font-size-base);
+  transition: var(--transition-smooth);
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.action-button--primary {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  color: white;
+  box-shadow: var(--shadow-primary-sm);
+}
+
+.action-button--primary:hover {
+  transform: var(--button-hover-transform);
+  box-shadow: var(--shadow-primary-md);
+}
+
+.action-button--secondary {
+  background: var(--surface-light);
+  color: var(--theme-text);
+  border: var(--border-width-thin) solid var(--border-medium);
+}
+
+.action-button--secondary:hover {
+  background: var(--surface-strong);
+  border-color: var(--theme-primary);
+}
+
+.action-button--danger {
+  background: linear-gradient(135deg, var(--theme-danger) 0%, var(--theme-danger-dark) 100%);
+  color: white;
+}
+
+.action-button--danger:hover {
+  transform: var(--button-hover-transform);
+  box-shadow: var(--shadow-danger-md);
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ===== Height & Aspect Queries ===== */
+
+/* Very short viewports — tighten button padding. */
+@media (max-height: 500px) {
+  .action-button--primary,
+  .action-button--secondary {
+    padding: var(--space-xs) var(--space-sm);
+  }
+}

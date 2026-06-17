@@ -13,6 +13,8 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Payments.PaymentTransactionSchema
@@ -339,6 +341,39 @@ defmodule Tymeslot.Factory do
       status: "pending",
       metadata: %{},
       stripe_id: sequence(:stripe_id, &"sess_#{&1}")
+    }
+  end
+
+  @spec connect_account_factory() :: Tymeslot.MeetingPayments.ConnectAccountSchema.t()
+  def connect_account_factory do
+    %ConnectAccountSchema{
+      stripe_account_id: sequence(:stripe_account_id, &"acct_#{&1}"),
+      country: "ch",
+      default_currency: "chf",
+      charges_enabled: false,
+      payouts_enabled: false,
+      details_submitted: false,
+      status: "active",
+      user: build(:user)
+    }
+  end
+
+  @spec booking_payment_factory() :: Tymeslot.MeetingPayments.BookingPaymentSchema.t()
+  def booking_payment_factory do
+    %BookingPaymentSchema{
+      stripe_account_id: sequence(:bp_stripe_account_id, &"acct_#{&1}"),
+      host_user_id: sequence(:bp_host_user_id, & &1),
+      host_email: sequence(:bp_host_email, &"host#{&1}@test.com"),
+      host_name: "Host",
+      attendee_email: sequence(:bp_attendee_email, &"attendee#{&1}@test.com"),
+      attendee_name: "Attendee",
+      meeting_type_name: "Consult",
+      booking_theme_id: "1",
+      amount_cents: 5000,
+      currency: "eur",
+      application_fee_cents: 25,
+      status: "pending",
+      refunded_amount_cents: 0
     }
   end
 end

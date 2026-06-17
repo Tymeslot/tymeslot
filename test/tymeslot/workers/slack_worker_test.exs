@@ -266,6 +266,50 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
                })
     end
 
+    test "snoozes on a real HTTP 429 (oauth) without counting a failure",
+         %{user: user, meeting: meeting} do
+      integration = insert(:slack_integration, user: user)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %{status: 429, body: "", headers: %{"retry-after" => ["15"]}}}
+      end)
+
+      assert {:snooze, 15} =
+               perform_job(SlackWorker, %{
+                 "integration_id" => integration.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+
+      # Rate limiting must not erode the auto-disable failure budget.
+      assert Repo.get(SlackIntegrationSchema, integration.id).failure_count == 0
+    end
+
+    test "snoozes on a real HTTP 429 (webhook) without counting a failure",
+         %{user: user, meeting: meeting} do
+      integration =
+        insert(:slack_integration,
+          user: user,
+          app_mode: "webhook_url",
+          channel_id: nil,
+          bot_token_encrypted: nil,
+          webhook_url_encrypted: Encryption.encrypt("https://hooks.slack.com/services/T/B/abc")
+        )
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %{status: 429, body: "rate_limited", headers: %{"retry-after" => ["9"]}}}
+      end)
+
+      assert {:snooze, 9} =
+               perform_job(SlackWorker, %{
+                 "integration_id" => integration.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+
+      assert Repo.get(SlackIntegrationSchema, integration.id).failure_count == 0
+    end
+
     test "returns retry-worthy error for other Slack errors", %{user: user, meeting: meeting} do
       integration = insert(:slack_integration, user: user)
 
@@ -323,6 +367,61 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
 
       delivery = Repo.one(SlackDeliverySchema)
       assert delivery.error_message =~ "transport_error"
+    end
+  end
+
+  describe "perform/1 — final-attempt detection after snooze" do
+    setup do
+      user = insert(:user)
+      meeting = insert(:meeting, organizer_user_id: user.id)
+      %{user: user, meeting: meeting}
+    end
+
+    test "does not record a failure on a non-final attempt even past the static 5",
+         %{user: user, meeting: meeting} do
+      integration = insert(:slack_integration, user: user)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %{status: 200, body: ~s({"ok":false,"error":"internal_error"})}}
+      end)
+
+      # A snooze bumped max_attempts to 7; attempt 5 is no longer the last.
+      assert {:error, "internal_error"} =
+               perform_job(
+                 SlackWorker,
+                 %{
+                   "integration_id" => integration.id,
+                   "event_type" => "meeting.created",
+                   "meeting_id" => meeting.id
+                 },
+                 attempt: 5,
+                 max_attempts: 7
+               )
+
+      assert Repo.get(SlackIntegrationSchema, integration.id).failure_count == 0
+    end
+
+    test "records a failure exactly once, on the genuine final attempt (max_attempts)",
+         %{user: user, meeting: meeting} do
+      integration = insert(:slack_integration, user: user)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %{status: 200, body: ~s({"ok":false,"error":"internal_error"})}}
+      end)
+
+      assert {:error, "internal_error"} =
+               perform_job(
+                 SlackWorker,
+                 %{
+                   "integration_id" => integration.id,
+                   "event_type" => "meeting.created",
+                   "meeting_id" => meeting.id
+                 },
+                 attempt: 7,
+                 max_attempts: 7
+               )
+
+      assert Repo.get(SlackIntegrationSchema, integration.id).failure_count == 1
     end
   end
 

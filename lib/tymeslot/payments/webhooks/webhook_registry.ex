@@ -3,8 +3,6 @@ defmodule Tymeslot.Payments.Webhooks.WebhookRegistry do
   Registry for webhook event handlers.
   """
 
-  require Logger
-
   @webhook_handlers [
     Tymeslot.Payments.Webhooks.CheckoutSessionHandler,
     Tymeslot.Payments.Webhooks.CheckoutSessionExpiredHandler,
@@ -62,6 +60,16 @@ defmodule Tymeslot.Payments.Webhooks.WebhookRegistry do
     ]
   }
 
+  # Event types we deliberately receive but take no action on. Connect
+  # application-fee events fire on the platform account for every paid booking
+  # (the platform fee being collected or returned); they are expected and
+  # benign, so we acknowledge them silently rather than raising an
+  # unhandled-event admin alert for each one.
+  @ignored_event_types [
+    "application_fee.created",
+    "application_fee.refunded"
+  ]
+
   @doc """
   Finds a handler for the given event type.
 
@@ -82,6 +90,13 @@ defmodule Tymeslot.Payments.Webhooks.WebhookRegistry do
       module -> {:ok, module}
     end
   end
+
+  @doc """
+  Returns true for event types we intentionally receive but do not handle,
+  and which should not trigger an unhandled-event admin alert.
+  """
+  @spec ignored?(String.t()) :: boolean()
+  def ignored?(event_type), do: event_type in @ignored_event_types
 
   @doc """
   Returns a list of all event types handled by registered handlers.

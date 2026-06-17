@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
             phx-value-day={@day_availability.day_of_week}
             phx-target={@myself}
             class={[
-              "relative inline-flex h-9 w-16 flex-shrink-0 cursor-pointer rounded-full border-2 transition-all duration-300 ease-in-out focus:outline-none",
+              "relative inline-flex h-9 w-16 shrink-0 cursor-pointer rounded-full border-2 transition-all duration-300 ease-in-out focus:outline-hidden",
               if(@day_availability.is_available,
                 do: "bg-turquoise-600 border-turquoise-600",
                 else: "bg-tymeslot-300 border-tymeslot-300"
@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
       <%= if @day_availability.is_available do %>
         <%!-- Work Hours --%>
         <div class="mb-6 pb-6 border-b-2 border-tymeslot-50">
-          <form phx-change="update_day_hours" phx-target={@myself} phx-debounce="500">
+          <form id={"day-hours-form-#{@day_availability.day_of_week}"} phx-change="update_day_hours" phx-target={@myself} phx-debounce="500">
             <input type="hidden" name="day" value={@day_availability.day_of_week} />
             <div class="flex flex-col sm:flex-row sm:items-center gap-6">
               <div class="flex-1">
@@ -158,6 +158,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
           <%!-- Add Break Form --%>
           <%= if @show_add_break_form == @day_availability.day_of_week do %>
             <form
+              id={"add-break-form-#{@day_availability.day_of_week}"}
               phx-submit="add_break"
               phx-change="validate_break"
               phx-target={@myself}

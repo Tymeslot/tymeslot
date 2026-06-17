@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   attr :integration_status, :map, default: %{}
   attr :profile, :any, default: nil
   attr :automations_allowed, :boolean, default: true
+  attr :payments_allowed, :boolean, default: false
   attr :sidebar_extensions, :list, default: []
 
   @spec sidebar(map()) :: Phoenix.LiveView.Rendered.t()
@@ -24,7 +25,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     <%!-- Mobile Overlay --%>
     <div
       id="dashboard-sidebar-overlay"
-      class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30 dashboard-sidebar-overlay hidden"
+      class="lg:hidden fixed inset-0 bg-black/50 z-30 dashboard-sidebar-overlay hidden"
       phx-click={close_sidebar_js()}
     >
     </div>
@@ -32,7 +33,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     <aside
       id="dashboard-sidebar"
       data-tour="sidebar-nav"
-      class="dashboard-sidebar lg:w-64 w-80 h-screen lg:h-full overflow-y-auto lg:flex-shrink-0 lg:relative fixed top-0 left-0 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
+      class="dashboard-sidebar lg:w-64 w-80 h-screen lg:h-full overflow-y-auto lg:shrink-0 lg:relative fixed top-0 left-0 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
     >
       <div class="p-6">
         <%!-- Mobile Close Button --%>
@@ -74,17 +75,10 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             phx-hook="CopyOnClick"
             data-copy-text={"#{TymeslotWeb.Endpoint.url()}#{LinkAccessPolicy.scheduling_path(@profile)}"}
             data-copy-feedback="Scheduling link copied to clipboard!"
-            data-feedback-id="copy-feedback"
-            class="dashboard-nav-link px-4 py-4 rounded-2xl transition-all duration-300 bg-white border-2 border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 hover:translate-x-0 shadow-sm hover:shadow-md group relative"
+            class="dashboard-nav-link px-4 py-4 rounded-2xl transition-all duration-300 bg-white border-2 border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 hover:translate-x-0 shadow-sm hover:shadow-md group"
             title="Copy link to clipboard"
           >
             <IconComponents.icon name={:clipboard} class="w-5 h-5" />
-            <span
-              id="copy-feedback"
-              class="hidden absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-tymeslot-800 text-white text-xs rounded shadow-lg whitespace-nowrap"
-            >
-              Copied!
-            </span>
           </button>
           <button
             :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
@@ -214,6 +208,17 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
               </.nav_link>
 
               <.nav_link
+                :if={@payments_allowed}
+                patch={~p"/dashboard/payments"}
+                current={@current_action}
+                action={:payments}
+                data-testid="payments-nav-link"
+              >
+                <IconComponents.icon name={:credit_card} class="w-5 h-5" />
+                <span>Payments</span>
+              </.nav_link>
+
+              <.nav_link
                 :for={ext <- @sidebar_extensions}
                 navigate={ext.path}
                 current={@current_action}
@@ -245,6 +250,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   attr :show_notification, :boolean, default: false
   attr :notification_type, :string, default: "critical"
   attr :locked, :boolean, default: false
+  attr :rest, :global
   slot :inner_block, required: true
 
   @spec nav_link(map()) :: Phoenix.LiveView.Rendered.t()
@@ -254,6 +260,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
       patch={@patch}
       navigate={@navigate}
       phx-click={close_sidebar_js()}
+      {@rest}
       class={[
         "dashboard-nav-link flex items-center space-x-3 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200",
         if(@current == @action,

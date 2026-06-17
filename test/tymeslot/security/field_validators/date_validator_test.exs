@@ -42,5 +42,12 @@ defmodule Tymeslot.Security.FieldValidators.DateValidatorTest do
     test "returns error tuple on invalid max bound config" do
       assert {:error, _msg} = DateValidator.validate("2026-05-13", max: "13/05/2026")
     end
+
+    test "legacy integer bound is treated as no bound (does not crash)" do
+      # Before date bounds were stored as ISO strings the field stored an
+      # integer min/max. A leftover integer must not raise FunctionClauseError.
+      assert :ok = DateValidator.validate("2026-05-13", min: 5)
+      assert :ok = DateValidator.validate("2026-05-13", max: 5)
+    end
   end
 end

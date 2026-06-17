@@ -18,7 +18,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   require Logger
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
-  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
@@ -43,6 +42,25 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   @spec fetch_and_apply(map()) :: :ok | :error
   def fetch_and_apply(integration) do
     delta_link = integration.graph_delta_link
+
+    if obsolete_delta_link?(delta_link) do
+      # Older bootstraps wrote a `/me/events/delta` link whose `$deltatoken`
+      # froze a ~30-day window at the moment of bootstrap and never widened.
+      # Clearing the link forces the next sync to re-bootstrap via
+      # `calendarView/delta` with a rolling ±365-day window.
+      Logger.info(
+        "Outlook delta link uses obsolete /events/delta endpoint; clearing for re-bootstrap",
+        calendar_integration_id: integration.id
+      )
+
+      CalendarIntegrationWebhookQueries.update_delta_link(integration, nil)
+      :error
+    else
+      do_fetch_and_apply(integration, delta_link)
+    end
+  end
+
+  defp do_fetch_and_apply(integration, delta_link) do
     api_module = outlook_calendar_api()
 
     result =
@@ -55,6 +73,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
     handle_fetch_result(result, integration)
   end
 
+  defp obsolete_delta_link?(nil), do: false
+  defp obsolete_delta_link?(url) when is_binary(url), do: String.contains?(url, "/events/delta")
+  defp obsolete_delta_link?(_other), do: false
+
   defp handle_fetch_result({:ok, {:ok, events, new_delta_link}}, integration) do
     apply_delta(integration, events, new_delta_link)
   end
@@ -63,7 +85,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   # is open, and {:error, reason} for errors returned by the function it wraps.
   # The {:ok, {:error, ...}} shape never occurs — errors are not wrapped in {:ok}.
   defp handle_fetch_result({:error, :circuit_open}, integration) do
-    Logger.warning("Outlook circuit breaker open during fallback sweep",
+    Logger.warning("Outlook circuit breaker open during delta sync",
       calendar_integration_id: integration.id
     )
 
@@ -80,7 +102,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   end
 
   defp handle_fetch_result({:error, _reason} = fetch_error, integration) do
-    Logger.warning("Outlook delta fetch failed during fallback sweep",
+    Logger.warning("Outlook delta fetch failed",
       calendar_integration_id: integration.id,
       error: format_error(fetch_error)
     )
@@ -89,7 +111,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   end
 
   defp handle_fetch_result(refresh_error, integration) do
-    Logger.warning("Outlook token refresh failed during fallback sweep",
+    Logger.warning("Outlook token refresh failed",
       calendar_integration_id: integration.id,
       error: format_error(refresh_error)
     )
@@ -119,33 +141,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   end
 
   defp process_removed(removed, integration) do
-    Enum.flat_map(removed, fn event ->
-      graph_id = event["id"]
-      ical_uid = event["iCalUId"]
-      uid_for_cache = ical_uid || graph_id
+    refs =
+      for event <- removed,
+          event["iCalUId"] || event["id"],
+          do: %{provider_event_id: event["id"], uid: event["iCalUId"]}
 
-      if uid_for_cache do
-        ProviderCalendarEventQueries.delete_by_uid(integration.id, uid_for_cache)
-        log_reconcile_failures(integration, graph_id, ical_uid, uid_for_cache)
-        [uid_for_cache]
-      else
-        []
-      end
-    end)
-  end
+    Sync.reconcile_deletions(integration, refs)
 
-  defp log_reconcile_failures(integration, graph_id, ical_uid, uid_for_cache) do
-    case Sync.reconcile(integration.id, graph_id, ical_uid, :deleted) do
-      :ok ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Reconcile failed for deleted event",
-          uid: uid_for_cache,
-          integration_id: integration.id,
-          reason: inspect(reason)
-        )
-    end
+    Enum.map(refs, fn ref -> ref.uid || ref.provider_event_id end)
   end
 
   defp fetch_delta_page(token, url, accumulated, page \\ 0)
@@ -155,52 +158,35 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   end
 
   defp fetch_delta_page(token, url, accumulated, page) do
-    uri = url |> strip_unsupported_delta_params() |> URI.parse()
-    path = uri.path <> if(uri.query, do: "?#{uri.query}", else: "")
+    # The circuit breaker wrapping this loop only counts 2-tuple errors as
+    # failures, so the client's {:error, type, message} shape is flattened.
+    case OutlookCalendarAPI.get_delta_page(token, strip_unsupported_delta_params(url)) do
+      {:ok, response} ->
+        collect_delta_page(response, token, accumulated, page)
 
-    headers = [
-      {"Authorization", "Bearer #{token}"},
-      {"Content-Type", "application/json"},
-      {"Prefer", "outlook.timezone=\"UTC\""}
-    ]
-
-    case http_client().request(:get, "https://graph.microsoft.com" <> path, "", headers, []) do
-      {:ok, %{status: status, body: body}} when status in [200, 201] ->
-        decode_delta_page(body, token, accumulated, page)
-
-      {:ok, %{status: 401}} ->
+      {:error, :unauthorized, _message} ->
         {:error, :unauthorized}
 
-      {:ok, %{status: 410}} ->
+      {:error, :delta_link_expired, _message} ->
         {:error, :delta_link_expired}
 
-      {:ok, %{status: status}} ->
-        {:error, {:http_error, status}}
-
-      {:error, reason} ->
-        {:error, {:network_error, reason}}
+      {:error, type, message} ->
+        {:error, {type, message}}
     end
   end
 
-  defp decode_delta_page(body, token, accumulated, page) do
-    case Jason.decode(body) do
-      {:error, _reason} ->
-        Logger.warning("Invalid JSON in Outlook delta response")
-        {:error, :invalid_json}
+  defp collect_delta_page(response, token, accumulated, page) do
+    events = [response["value"] || [] | accumulated]
 
-      {:ok, response} ->
-        events = [response["value"] || [] | accumulated]
+    cond do
+      new_delta_link = response["@odata.deltaLink"] ->
+        {:ok, List.flatten(events), new_delta_link}
 
-        cond do
-          new_delta_link = response["@odata.deltaLink"] ->
-            {:ok, List.flatten(events), new_delta_link}
+      next_link = response["@odata.nextLink"] ->
+        fetch_delta_page(token, next_link, events, page + 1)
 
-          next_link = response["@odata.nextLink"] ->
-            fetch_delta_page(token, next_link, events, page + 1)
-
-          true ->
-            {:ok, List.flatten(events), nil}
-        end
+      true ->
+        {:ok, List.flatten(events), nil}
     end
   end
 
@@ -275,9 +261,5 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
 
   defp outlook_calendar_api do
     Application.get_env(:tymeslot, :outlook_calendar_api_module, OutlookCalendarAPI)
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
   end
 end

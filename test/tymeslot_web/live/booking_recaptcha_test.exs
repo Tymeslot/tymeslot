@@ -4,6 +4,7 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
   import Mox
   import Tymeslot.Factory
   import Tymeslot.BookingTestHelpers
+  import Tymeslot.TestHelpers.Eventually
 
   @moduletag backup_tests: true
 
@@ -223,13 +224,13 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
        }}
     )
 
-    # Wait for processing
-    Process.sleep(100)
+    # Poll until the async error state is rendered, rather than guessing a sleep.
+    eventually(fn ->
+      rendered = render(view)
+      assert rendered =~ "Security verification is currently unavailable"
+      assert rendered =~ "JavaScript being disabled"
+    end)
 
-    # Should show helpful error message
-    rendered = render(view)
-    assert rendered =~ "Security verification is currently unavailable"
-    assert rendered =~ "JavaScript being disabled"
     # No booking should be created
     assert Repo.aggregate(MeetingSchema, :count, :id) == 0
   end

@@ -22,6 +22,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
   @spec event_detail_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def event_detail_modal(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :read_only_attendees,
+        List.wrap(Map.get(assigns.selected_event, :attendees))
+      )
+
     ~H"""
     <.modal
       id="event-detail-modal"
@@ -59,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <form :if={@editable} phx-change="update_event_title" phx-target={@myself} phx-submit="update_event_title" class="pr-8">
+        <form id="event-title-form" :if={@editable} phx-change="update_event_title" phx-target={@myself} phx-submit="update_event_title" class="pr-8">
           <input
             type="text"
             id="event-title-input"
@@ -86,13 +93,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <%!-- Time --%>
       <div class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Time">
+        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Time">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <div class="flex-1">
           <% start_parts = Helpers.datetime_to_local_parts(@selected_event.start_at, @user_timezone) %>
           <% end_parts = Helpers.datetime_to_local_parts(@selected_event.end_at, @user_timezone) %>
-          <form :if={@editable and not @selected_event.all_day} phx-change="update_event_time" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm">
+          <form id="event-time-form" :if={@editable and not @selected_event.all_day} phx-change="update_event_time" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm">
             <input
               type="date"
               id="event-start-date"
@@ -141,7 +148,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <%!-- Location --%>
       <div :if={@editable} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Location">
+        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Location">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
@@ -158,7 +165,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         />
       </div>
       <div :if={!@editable and @selected_event.location} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
@@ -176,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <%!-- Description --%>
       <div :if={@editable} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Description">
+        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Description">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
         </svg>
         <textarea
@@ -192,7 +199,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         ><%= @selected_event.description || "" %></textarea>
       </div>
       <div :if={!@editable and @selected_event.description} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
         </svg>
         <div class="text-token-sm text-tymeslot-600 max-h-52 overflow-y-auto whitespace-pre-line break-words flex-1 leading-relaxed">
@@ -202,7 +209,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <%!-- Attendees --%>
       <div :if={@editable or not Enum.empty?(@selected_event.attendees || [])} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Attendees">
+        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Attendees">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
         <div class="flex-1">
@@ -251,7 +258,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
                 </button>
               </span>
             </div>
-            <form phx-submit="add_event_attendee" phx-target={@myself} class="flex gap-2">
+            <form id="event-add-attendee-form" phx-submit="add_event_attendee" phx-target={@myself} class="flex gap-2">
               <input
                 type="email"
                 id="edit-attendee-email"
@@ -275,18 +282,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           </div>
           <%!-- Read-only attendee display --%>
           <div :if={!@editable}>
-            <div :for={attendee <- Enum.take(@selected_event.attendees || [], 5)} class="text-token-sm text-tymeslot-700 leading-snug">
+            <div :for={attendee <- Enum.take(@read_only_attendees, 5)} class="text-token-sm text-tymeslot-700 leading-snug">
               <%= attendee["name"] || attendee["email"] %>
               <span :if={attendee["name"] && attendee["email"] && attendee["name"] != attendee["email"]} class="text-token-xs text-tymeslot-400 ml-1"><%= attendee["email"] %></span>
             </div>
-            <p :if={length(@selected_event.attendees || []) > 5} class="text-token-xs text-tymeslot-400 mt-1">+<%= length(@selected_event.attendees || []) - 5 %> more</p>
+            <p :if={length(@read_only_attendees) > 5} class="text-token-xs text-tymeslot-400 mt-1">+<%= length(@read_only_attendees) - 5 %> more</p>
           </div>
         </div>
       </div>
 
       <%!-- Video integration --%>
       <div :if={@editable and @video_integrations != []} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Video">
+        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Video">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
         </svg>
         <div class="flex-1">
@@ -302,7 +309,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <%!-- Calendar picker --%>
       <div :if={@editable} class="flex items-start gap-3 mb-3">
-        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Calendar">
+        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Calendar">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
         <div class="flex-1">

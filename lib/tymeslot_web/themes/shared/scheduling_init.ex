@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
   Shared initialization helpers for scheduling themes.
   """
 
-  import Phoenix.Component, only: [assign: 3]
+  import Phoenix.Component, only: [assign: 3, assign_new: 3]
 
   alias Phoenix.LiveView
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
@@ -34,21 +34,32 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:availability_task, nil)
     |> assign(:availability_task_ref, nil)
     |> OrganizerHelpers.setup_form_state(%{}, as: :booking)
-    |> assign(:client_ip, nil)
+    |> assign_new(:client_ip, fn -> nil end)
     |> assign(:submission_token, nil)
-    |> assign(:meeting_types, [])
+    |> assign_new(:meeting_types, fn -> [] end)
     # Engine starts empty; it is re-initialised with the meeting type's custom
     # field snapshot in maybe_assign_meeting_type/2 once the organiser is resolved.
     |> assign(:engine, QEngine.init([]))
   end
 
+  # The organizer context (username_context, organizer_profile,
+  # organizer_user_id, meeting_types, client_ip) may already have been
+  # resolved by the theme dispatcher before it delegates to the theme
+  # mount — use assign_new for those keys so the resolved values are
+  # passed through instead of being reset and resolved a second time.
   @spec assign_base_state(LiveView.Socket.t()) :: LiveView.Socket.t()
   def assign_base_state(socket) do
     socket
     |> assign(:current_state, :overview)
-    |> assign(:username_context, nil)
-    |> assign(:organizer_profile, nil)
-    |> assign(:organizer_user_id, nil)
+    # Records how the booker entered: only when they landed on the overview do
+    # they get a "back to all appointments" control on the schedule step. A
+    # direct link (e.g. a private booking link) enters at :schedule and must not
+    # expose the organiser's other meeting types. live_action is fixed for the
+    # life of the LiveView, so this entry signal is stable across step patches.
+    |> assign(:entered_via_overview, socket.assigns[:live_action] == :overview)
+    |> assign_new(:username_context, fn -> nil end)
+    |> assign_new(:organizer_profile, fn -> nil end)
+    |> assign_new(:organizer_user_id, fn -> nil end)
     |> assign(:selected_duration, nil)
     |> assign(:selected_date, nil)
     |> assign(:selected_time, nil)
@@ -65,5 +76,13 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:email, "")
     |> assign(:submitting, false)
     |> assign(:submission_processed, false)
+    # Safe defaults so the confirmation components can always render
+    # `@custom_fields_snapshot`/`@custom_field_answers`. The booking
+    # submission handler overrides these with the real snapshot/answers on a
+    # successful booking; a direct visit to `/:username/thank-you` mounts the
+    # confirmation state without going through that handler, so without these
+    # defaults the render raises a KeyError.
+    |> assign(:custom_fields_snapshot, [])
+    |> assign(:custom_field_answers, %{})
   end
 end

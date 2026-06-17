@@ -55,8 +55,9 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
 
       result = Connection.validate(integration, user.id)
 
-      # Will fail due to network error
-      assert {:error, :network_error} = result
+      # Localhost port failures can manifest as either network_error or timeout
+      # depending on OS/network timing and load (matches the sibling tests).
+      assert result == {:error, :network_error} or result == {:error, :timeout}
     end
 
     test "uses default timeout when not specified", %{user: user} do

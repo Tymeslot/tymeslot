@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings do
 
   alias Tymeslot.Meetings.{
     CalendarEvents,
+    ExternalCalendarChanges,
     MeetingCalendarQueries,
     MeetingQueries,
     MeetingSchema,
@@ -483,6 +484,42 @@ defmodule Tymeslot.Meetings do
   def dismiss_calendar_sync_status(meeting_id, user_id) do
     MeetingCalendarQueries.dismiss_calendar_sync_status(meeting_id, user_id)
   end
+
+  @doc """
+  Applies an externally detected calendar change (`:deleted` or `:modified`)
+  to the meeting linked to the given provider event, if any.
+
+  This is the entry point the Calendar context uses when a sync worker
+  detects that a provider event linked to a meeting changed externally.
+  Owns all meeting-side consequences: sync-status updates, auto-cancellation
+  on external deletion, and host notifications.
+  """
+  defdelegate apply_external_calendar_change(
+                calendar_integration_id,
+                provider_event_id,
+                uid,
+                signal
+              ),
+              to: ExternalCalendarChanges,
+              as: :apply_change
+
+  @doc """
+  Looks up a meeting linked to a calendar event by provider event ID or UID.
+
+  Returns `{:ok, meeting}` or `{:error, :not_found}`. Tries
+  `provider_event_id` first, falls back to `uid`.
+  """
+  defdelegate find_meeting_by_calendar_event(calendar_integration_id, provider_event_id, uid),
+    to: ExternalCalendarChanges,
+    as: :find_linked_meeting
+
+  @doc """
+  Returns a map from `provider_event_id` to meeting for all meetings linked
+  to the given integration whose `provider_event_id` is in the supplied list.
+  """
+  defdelegate list_meetings_by_provider_event_ids(calendar_integration_id, provider_event_ids),
+    to: MeetingCalendarQueries,
+    as: :list_by_provider_event_ids
 
   # =====================================
   # Analytics Query Functions

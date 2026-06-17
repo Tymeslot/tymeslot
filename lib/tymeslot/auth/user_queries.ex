@@ -6,6 +6,7 @@ defmodule Tymeslot.Auth.UserQueries do
 
   alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Repo
   alias Tymeslot.Security.Password
 
@@ -176,9 +177,16 @@ defmodule Tymeslot.Auth.UserQueries do
   Returns `true` if `user` is the only row in the `users` table.
 
   Accepts an optional `repo` argument for use within transactions — the call
-  site is expected to run this inside the same transaction as the insert it
-  is gating, to keep the "first user becomes admin" bootstrap race-free for a
-  single-instance install.
+  site runs this inside the same transaction as the insert it is gating, so
+  the visibility check happens against the just-inserted row.
+
+  Note: this does **not** make the "first user becomes admin" bootstrap fully
+  race-free. Under PostgreSQL's default READ COMMITTED isolation two signups
+  that commit concurrently on a brand-new install can each see only their own
+  row and both be promoted to admin. That outcome is accepted by design (see
+  `Tymeslot.Auth.AdminBootstrap`): both belong to the operator setting up the
+  instance. A stricter guarantee would require SERIALIZABLE isolation or an
+  advisory lock around the first insert.
   """
   @spec only_user?(UserSchema.t(), module()) :: boolean()
   def only_user?(%UserSchema{id: id}, repo \\ Repo) do
@@ -309,10 +317,24 @@ defmodule Tymeslot.Auth.UserQueries do
 
   @doc """
   Deletes a user.
+
+  Runs `Tymeslot.MeetingPayments.anonymise_host/1` before the
+  delete so booking-payment and payment-transaction rows are scrubbed and
+  marked retained — the FKs on those tables are `:nilify_all`, so the
+  rows survive the user delete and must be anonymised in the same
+  transaction. Required for tax-record retention under EU and Swiss
+  commercial law (GDPR Art. 17(3)(b) carve-out).
   """
-  @spec delete_user(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  @spec delete_user(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t() | term()}
   def delete_user(%UserSchema{} = user) do
-    Repo.delete(user)
+    Repo.transaction(fn ->
+      with :ok <- MeetingPayments.anonymise_host(user.id),
+           {:ok, deleted} <- Repo.delete(user) do
+        deleted
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   @doc """

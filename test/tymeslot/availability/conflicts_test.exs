@@ -12,7 +12,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
 
   @moduletag :availability
 
-  alias Tymeslot.Availability.{BusinessHours, Conflicts, Events}
+  alias Tymeslot.Availability.{Conflicts, Events}
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -89,7 +89,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
     end
 
     test "handles different timezones" do
-      date = Date.add(Date.utc_today(), 7)
+      date = get_future_weekday()
 
       result =
         Conflicts.date_has_slots_with_events?(
@@ -140,50 +140,52 @@ defmodule Tymeslot.Availability.ConflictsTest do
     end
 
     test "returns false for today if current time is after business hours" do
-      # 14 hours ahead of UTC
+      # Pinned: user is 14 hours ahead of UTC, owner business hours are
+      # 11:00–19:30 UTC. The user's Friday 2026-01-02 only overlaps the
+      # owner's Thursday hours (2026-01-01 11:00–19:30Z = 01:00–09:30 user
+      # time), so at 20:00 user time every slot for that date is in the past.
       user_tz = "Etc/GMT-14"
-      now_in_tz = DateTime.shift_zone!(DateTime.utc_now(), user_tz)
-      today_in_tz = DateTime.to_date(now_in_tz)
 
-      # Business hours end at 19:30 (default)
-      # If now_in_tz is after 19:30, it should be false.
-      if now_in_tz.hour >= 20 do
-        result =
-          Conflicts.date_has_slots_with_events?(
-            today_in_tz,
-            "Etc/UTC",
-            user_tz,
-            [],
-            DateTimeUtils.now_in_timezone(user_tz),
-            %{min_advance_hours: 0}
-          )
-
-        assert result == false,
-               "Should be unavailable when business hours have passed "
+      has_slots_at? = fn now_utc ->
+        Conflicts.date_has_slots_with_events?(
+          ~D[2026-01-02],
+          "Etc/UTC",
+          user_tz,
+          [],
+          DateTime.shift_zone!(now_utc, user_tz),
+          %{min_advance_hours: 0}
+        )
       end
+
+      # At 05:00 user time slots remain — proves the date is bookable at all,
+      # so the refusal below comes specifically from the hours having passed.
+      assert has_slots_at?.(~U[2026-01-01 15:00:00Z]) == true
+
+      # 20:00 user time — every slot for the date is in the past.
+      assert has_slots_at?.(~U[2026-01-02 06:00:00Z]) == false,
+             "Should be unavailable when business hours have passed"
     end
 
     test "returns true for today if current time is before business hours end" do
-      # 12 hours behind UTC
+      # Pinned: user is 12 hours behind UTC, owner business hours are
+      # 11:00–19:30 UTC. At 03:00 user time on Friday 2026-01-02 (15:00Z),
+      # the owner's remaining Friday hours (15:00–19:30Z) still overlap the
+      # user's date, so bookable slots remain in the future.
       user_tz = "Etc/GMT+12"
-      now_in_tz = DateTime.shift_zone!(DateTime.utc_now(), user_tz)
-      today_in_tz = DateTime.to_date(now_in_tz)
+      now_in_tz = DateTime.shift_zone!(~U[2026-01-02 15:00:00Z], user_tz)
+      assert now_in_tz.hour == 3
 
-      # If it's early morning in this timezone, and business hours end at 17:00, it should be true.
-      # BUT ONLY if today is a business day!
-      if now_in_tz.hour < 14 and BusinessHours.business_day?(today_in_tz, nil) do
-        result =
-          Conflicts.date_has_slots_with_events?(
-            today_in_tz,
-            "Etc/UTC",
-            user_tz,
-            [],
-            now_in_tz,
-            %{min_advance_hours: 0}
-          )
+      result =
+        Conflicts.date_has_slots_with_events?(
+          ~D[2026-01-02],
+          "Etc/UTC",
+          user_tz,
+          [],
+          now_in_tz,
+          %{min_advance_hours: 0}
+        )
 
-        assert result == true, "Should be available when business hours are still in the future"
-      end
+      assert result == true, "Should be available when business hours are still in the future"
     end
 
     test "date_has_slots_with_events? handles all-day CalendarEvent without crashing" do
@@ -282,17 +284,23 @@ defmodule Tymeslot.Availability.ConflictsTest do
 
       config = %{buffer_minutes: 15, min_advance_hours: 0}
 
-      {micro, result} =
-        :timer.tc(fn ->
-          Conflicts.date_has_slots_with_events?(
-            date,
-            timezone,
-            timezone,
-            events,
-            DateTimeUtils.now_in_timezone(timezone),
-            config
-          )
-        end)
+      check = fn ->
+        Conflicts.date_has_slots_with_events?(
+          date,
+          timezone,
+          timezone,
+          events,
+          DateTimeUtils.now_in_timezone(timezone),
+          config
+        )
+      end
+
+      # Warm up once so the measurement reflects steady-state algorithmic cost
+      # rather than first-call overhead (lazy tz data loading, code paths).
+      result = check.()
+
+      # Best-of-3 keeps the budget meaningful while tolerating scheduler noise.
+      micro = 1..3 |> Enum.map(fn _run -> elem(:timer.tc(check), 0) end) |> Enum.min()
 
       # Ensure it's reasonably fast (under 50ms for a single day check even with 500 events)
       # Usually this should be < 15ms on modern hardware, but we allow 50ms for slower CI.

@@ -111,32 +111,33 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
     test "successfully creates room via Zoom provider" do
       user = insert(:user)
 
-      {:ok, integration} =
-        VideoIntegrationQueries.create(%{
-          user_id: user.id,
-          name: "Zoom",
-          provider: "zoom",
-          access_token: "valid_token",
-          refresh_token: "refresh_token",
-          token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
-          oauth_scope: "meeting:write:meeting"
-        })
+      integration = zoom_integration(user)
 
       expect(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 201,
-           body:
-             Jason.encode!(%{
-               "id" => 987_654_321,
-               "join_url" => "https://zoom.us/j/987654321",
-               "start_url" => "https://zoom.us/s/987654321?zak=xyz",
-               "password" => "s3cr3t",
-               "host_email" => "host@example.com"
-             })
-         }}
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn
+        :post, _url, _body, _headers, _opts ->
+          {:ok,
+           %Req.Response{
+             status: 201,
+             body:
+               Jason.encode!(%{
+                 "id" => 987_654_321,
+                 "join_url" => "https://zoom.us/j/987654321",
+                 "start_url" => "https://zoom.us/s/987654321?zak=xyz",
+                 "password" => "s3cr3t",
+                 "host_email" => "host@example.com"
+               })
+           }}
+
+        :get, url, _body, _headers, _opts ->
+          assert url == "https://api.zoom.us/v2/meetings/987654321"
+
+          {:ok,
+           %Req.Response{
+             status: 200,
+             body: Jason.encode!(%{"id" => 987_654_321, "status" => "waiting"})
+           }}
       end)
 
       assert {:ok, context} = Rooms.create_meeting_room(user.id, integration_id: integration.id)
@@ -147,15 +148,10 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
     test "refreshes token for Zoom if needed during room creation and persists to database" do
       user = insert(:user)
 
-      {:ok, integration} =
-        VideoIntegrationQueries.create(%{
-          user_id: user.id,
-          name: "Zoom",
-          provider: "zoom",
+      integration =
+        zoom_integration(user, %{
           access_token: "expired_token",
-          refresh_token: "refresh_token",
-          token_expires_at: DateTime.add(DateTime.utc_now(), -3600),
-          oauth_scope: "meeting:write:meeting"
+          token_expires_at: DateTime.add(DateTime.utc_now(), -3600)
         })
 
       expect(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config ->
@@ -172,19 +168,27 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
          }}
       end)
 
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 201,
-           body:
-             Jason.encode!(%{
-               "id" => 111_222_333,
-               "join_url" => "https://zoom.us/j/111222333",
-               "start_url" => "https://zoom.us/s/111222333?zak=abc",
-               "password" => nil,
-               "host_email" => nil
-             })
-         }}
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn
+        :post, _url, _body, _headers, _opts ->
+          {:ok,
+           %Req.Response{
+             status: 201,
+             body:
+               Jason.encode!(%{
+                 "id" => 111_222_333,
+                 "join_url" => "https://zoom.us/j/111222333",
+                 "start_url" => "https://zoom.us/s/111222333?zak=abc",
+                 "password" => nil,
+                 "host_email" => nil
+               })
+           }}
+
+        :get, _url, _body, _headers, _opts ->
+          {:ok,
+           %Req.Response{
+             status: 200,
+             body: Jason.encode!(%{"id" => 111_222_333, "status" => "waiting"})
+           }}
       end)
 
       assert {:ok, context} = Rooms.create_meeting_room(user.id, integration_id: integration.id)
@@ -492,16 +496,7 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
     test "dispatches PATCH to Zoom and returns :ok on success" do
       user = insert(:user)
 
-      {:ok, integration} =
-        VideoIntegrationQueries.create(%{
-          user_id: user.id,
-          name: "Zoom",
-          provider: "zoom",
-          access_token: "valid_token",
-          refresh_token: "refresh_token",
-          token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
-          oauth_scope: "meeting:write:meeting"
-        })
+      integration = zoom_integration(user)
 
       expect(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
@@ -539,16 +534,7 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
     test "dispatches DELETE to Zoom and returns :ok on success" do
       user = insert(:user)
 
-      {:ok, integration} =
-        VideoIntegrationQueries.create(%{
-          user_id: user.id,
-          name: "Zoom",
-          provider: "zoom",
-          access_token: "valid_token",
-          refresh_token: "refresh_token",
-          token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
-          oauth_scope: "meeting:write:meeting"
-        })
+      integration = zoom_integration(user)
 
       expect(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
@@ -641,5 +627,20 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
       assert :ok = Rooms.handle_meeting_event(meeting_context, :created, %{})
       assert is_map(Rooms.generate_meeting_metadata(meeting_context))
     end
+  end
+
+  defp zoom_integration(user, overrides \\ %{}) do
+    defaults = %{
+      user_id: user.id,
+      name: "Zoom",
+      provider: "zoom",
+      access_token: "valid_token",
+      refresh_token: "refresh_token",
+      token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
+      oauth_scope: "meeting:write:meeting"
+    }
+
+    {:ok, integration} = VideoIntegrationQueries.create(Map.merge(defaults, overrides))
+    integration
   end
 end

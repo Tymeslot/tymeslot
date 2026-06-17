@@ -28,6 +28,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     integration_health_recovery: %{category: "System", severity: :info},
     oban_queue_stuck: %{category: "Queue", severity: :error},
     oban_jobs_accumulating: %{category: "Queue", severity: :warning},
+    oban_job_failure: %{category: "Queue", severity: :error},
+    unhandled_crash: %{category: "System", severity: :error},
     reconciliation_discrepancies: %{category: "Payment", severity: :warning},
     subscription_not_in_database: %{category: "Payment", severity: :warning}
   }
@@ -41,6 +43,43 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   @doc "Looks up category and severity for the given alert type. Returns nil for unknown types."
   @spec get(atom()) :: %{category: String.t(), severity: :info | :warning | :error} | nil
   def get(type), do: Map.get(@registry, type)
+
+  @doc """
+  Returns a stable identity string used to deduplicate repeat alerts.
+
+  Defaults to the formatted message. Add a clause when the message embeds
+  per-occurrence detail (ids, error text) that would defeat deduplication —
+  a burst of permanently failed jobs from one broken worker should collapse
+  into a single alert per dedup window, not one email per job.
+  """
+  @spec dedup_key(atom(), map()) :: String.t()
+  def dedup_key(:oban_job_failure, metadata) do
+    worker = Map.get(metadata, :worker, "unknown")
+    queue = Map.get(metadata, :queue, "unknown")
+    "oban_job_failure:#{worker}:#{queue}"
+  end
+
+  # Crash alerts carry stable crash-identity fields (reason_code + the top
+  # stacktrace frame). Dedup on those rather than the rendered message so a
+  # crash storm with per-occurrence detail (e.g. a user id in the message)
+  # collapses into a single alert per 24h window instead of one email each.
+  # The stacktrace is a multi-line string; only the first line is used so
+  # frame counts that drift over time don't fragment the key.
+  def dedup_key(:unhandled_crash, metadata) do
+    reason_code = Map.get(metadata, :reason_code)
+    stacktrace = Map.get(metadata, :stacktrace)
+
+    if reason_code && stacktrace do
+      top_frame =
+        stacktrace |> to_string() |> String.split("\n") |> List.first("") |> String.trim()
+
+      "unhandled_crash:#{reason_code}:#{top_frame}"
+    else
+      format_message(:unhandled_crash, metadata)
+    end
+  end
+
+  def dedup_key(type, metadata), do: format_message(type, metadata)
 
   @doc "Formats a human-readable message for the given alert type and metadata."
   @spec format_message(atom(), map()) :: String.t()
@@ -109,6 +148,13 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     "Oban job accumulation detected (threshold: #{threshold}): #{inspect(queues)}"
   end
 
+  def format_message(:oban_job_failure, metadata) do
+    worker = Map.get(metadata, :worker, "unknown")
+    queue = Map.get(metadata, :queue, "unknown")
+    reason = Map.get(metadata, :reason_message) || Map.get(metadata, :reason_code, "unknown")
+    "Oban job #{worker} (queue: #{queue}) failed permanently: #{reason}"
+  end
+
   def format_message(:reconciliation_discrepancies, metadata) do
     count = Map.get(metadata, :discrepancies_count, "unknown")
     "Payment reconciliation found #{count} discrepancies"
@@ -124,6 +170,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     reason = Map.get(metadata, :reason, "unknown")
     event_id = Map.get(metadata, :event_id) || Map.get(metadata, :event_uid, "unknown")
     "Invalid #{provider} calendar event (event_id: #{event_id}): #{reason}"
+  end
+
+  def format_message(:unhandled_crash, metadata) do
+    kind = Map.get(metadata, :kind, "error")
+    detail = Map.get(metadata, :reason_message) || Map.get(metadata, :summary, "unknown")
+    "Unhandled #{kind} crash: #{detail}"
   end
 
   def format_message(type, _metadata) do

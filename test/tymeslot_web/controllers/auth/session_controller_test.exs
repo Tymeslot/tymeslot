@@ -308,7 +308,7 @@ defmodule TymeslotWeb.SessionControllerTest do
       conn = get(conn, ~p"/auth/verify-complete/invalid_token")
 
       assert redirected_to(conn) == "/auth/login"
-      assert Flash.get(conn.assigns.flash, :error) =~ "invalid or has expired"
+      assert Flash.get(conn.assigns.flash, :error) =~ "no longer valid"
     end
 
     test "handles expired verification token", %{conn: conn} do
@@ -325,20 +325,20 @@ defmodule TymeslotWeb.SessionControllerTest do
       conn = get(conn, ~p"/auth/verify-complete/expired_verification_token")
 
       assert redirected_to(conn) == "/auth/login"
-      assert Flash.get(conn.assigns.flash, :error) =~ "invalid or has expired"
+      assert Flash.get(conn.assigns.flash, :error) =~ "has expired"
     end
 
     test "handles verification failure for existing user", %{conn: conn, token: token} do
       _unverified_user = insert_unverified_user(token, "127.0.0.1")
 
       Mox.expect(VerificationMock, :verify_user_token, fn ^token ->
-        {:error, :expired}
+        {:error, :invalid_token}
       end)
 
       conn = get(conn, ~p"/auth/verify-complete/#{token}")
 
       assert redirected_to(conn) == "/auth/login"
-      assert Flash.get(conn.assigns.flash, :error) =~ "invalid or has expired"
+      assert Flash.get(conn.assigns.flash, :error) =~ "no longer valid"
     end
   end
 end

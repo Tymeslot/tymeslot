@@ -50,6 +50,15 @@ defmodule Tymeslot.DataCase do
       {:error, %Mint.TransportError{reason: :timeout}}
     end)
 
+    # Safe Stripe adapter fallback — meeting-payments handlers backfill
+    # stripe_charge_id by retrieving the payment intent. Tests that don't
+    # care about the backfill get a benign no-charge response so the handler
+    # logs a warning and continues without crashing.
+    Mox.stub(Tymeslot.MeetingPayments.StripeAdapterMock, :retrieve_payment_intent, fn _id,
+                                                                                      _opts ->
+      {:ok, %{"latest_charge" => nil}}
+    end)
+
     # Reset stateful components to ensure test isolation
     reset_stateful_components()
 
@@ -68,6 +77,10 @@ defmodule Tymeslot.DataCase do
     Enum.each(providers, fn p ->
       CalendarCircuitBreaker.reset(p)
     end)
+
+    # Host-keyed breakers are registered dynamically and are not covered by
+    # the per-provider reset above
+    CalendarCircuitBreaker.reset_all_hosts()
 
     # Reset other circuit breakers
     Enum.each([:email_service_breaker, :oauth_github_breaker, :oauth_google_breaker], fn name ->

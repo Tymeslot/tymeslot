@@ -38,9 +38,14 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
     :ok
   end
 
+  # The live Baikal container runs on localhost, which the discovery SSRF guard
+  # blocks by default (matching the persistence posture). This trusted in-process
+  # integration test opts out via `allow_private_ips: true`.
+  @local_opts [ip_address: "127.0.0.1", allow_private_ips: true]
+
   describe "test_connection/2 against Baikal" do
     test "successfully connects to Baikal" do
-      assert {:ok, message} = Discovery.test_connection(@client, ip_address: "127.0.0.1")
+      assert {:ok, message} = Discovery.test_connection(@client, @local_opts)
       assert is_binary(message)
     end
 
@@ -48,13 +53,13 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
       bad_client = %{@client | password: "wrongpassword"}
 
       assert {:error, :unauthorized} =
-               Discovery.test_connection(bad_client, ip_address: "127.0.0.1")
+               Discovery.test_connection(bad_client, @local_opts)
     end
   end
 
   describe "discover_calendars/2 against Baikal" do
     test "discovers the Test Calendar" do
-      assert {:ok, calendars} = CaldavCommon.discover_calendars(@client)
+      assert {:ok, calendars} = CaldavCommon.discover_calendars(@client, @local_opts)
       assert calendars != []
 
       calendar_names = Enum.map(calendars, & &1.name)
@@ -64,7 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
     end
 
     test "each calendar has required fields" do
-      assert {:ok, calendars} = CaldavCommon.discover_calendars(@client)
+      assert {:ok, calendars} = CaldavCommon.discover_calendars(@client, @local_opts)
 
       Enum.each(calendars, fn cal ->
         assert is_binary(cal.name)

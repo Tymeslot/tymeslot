@@ -78,6 +78,10 @@ Mox.defmock(Tymeslot.Payments.SubscriptionManagerMock,
   for: Tymeslot.Payments.Behaviours.SubscriptionManager
 )
 
+Mox.defmock(Tymeslot.MeetingPayments.StripeAdapterMock,
+  for: Tymeslot.MeetingPayments.StripeAdapter
+)
+
 Mox.defmock(Tymeslot.Auth.OAuth.ClientMock,
   for: Tymeslot.Auth.OAuth.ClientBehaviour
 )
@@ -136,6 +140,19 @@ max_cases =
         :error -> nil
       end
   end
+
+# Analytics: collect emitted events across the suite. In a full CI run
+# (ANALYTICS_COMPLETENESS=1) assert that every declared event actually fired.
+# A focused/partial run won't exercise every flow, so the assertion is gated.
+{:ok, _collector} = Tymeslot.Analytics.TestCollector.start_link()
+Tymeslot.Analytics.TestCollector.attach()
+
+if System.get_env("ANALYTICS_COMPLETENESS") == "1" do
+  ExUnit.after_suite(fn _result ->
+    Tymeslot.Analytics.TestCollector.assert_complete!(Tymeslot.Analytics.Contract.registry())
+    :ok
+  end)
+end
 
 ExUnit.start()
 

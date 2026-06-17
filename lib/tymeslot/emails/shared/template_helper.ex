@@ -21,6 +21,21 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
           optional(:stage_subtitle) => String.t()
         }
 
+  @typedoc """
+  Permissive shape accepted by `build_organizer_details/2`. Covers both the
+  full `Tymeslot.Emails.EmailService.appointment_details()` map used by
+  attendee-facing flows and the narrower 4-key map used by the operator
+  notification templates (Stripe dispute, Connect-restricted, refund) that
+  only carry organiser information.
+  """
+  @type organizer_source :: %{
+          required(:organizer_name) => String.t() | nil,
+          required(:organizer_email) => String.t() | nil,
+          optional(:organizer_title) => String.t() | nil,
+          optional(:organizer_avatar_url) => String.t() | nil,
+          optional(atom()) => term()
+        }
+
   @doc """
   Builds organiser details from an appointment details map.
 
@@ -33,10 +48,7 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
         stage_subtitle: "I'll see you on Tuesday at 15:00"
       )
   """
-  @spec build_organizer_details(
-          Tymeslot.Emails.EmailService.appointment_details(),
-          keyword()
-        ) :: organizer_details()
+  @spec build_organizer_details(organizer_source(), keyword()) :: organizer_details()
   def build_organizer_details(appointment_details, stage) do
     fetch_required!(stage, :intent)
     fetch_required!(stage, :eyebrow)

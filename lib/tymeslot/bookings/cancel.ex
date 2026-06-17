@@ -7,11 +7,11 @@ defmodule Tymeslot.Bookings.Cancel do
   require Logger
 
   alias Tymeslot.Bookings.Policy
-  alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Notifications.Events
+  alias Tymeslot.Workers.VideoSyncWorker
 
   @doc """
   Cancels a meeting by its ID.
@@ -187,24 +187,23 @@ defmodule Tymeslot.Bookings.Cancel do
   # that the calendar-update template cannot replicate, and double-routing would
   # deliver two cancellation emails. Sequence tracking on `Meeting` rows is handled
   # directly by the template via `ical_sequence` when needed.
-  # Deletes the provider-side video meeting (e.g. Zoom) so it doesn't linger
-  # in the organizer's account after cancellation. Providers without a
-  # server-side meeting object (Google Meet, Teams, MiroTalk, Custom) silently
-  # succeed. Failures are logged but do not block cancellation.
+  # Enqueues a supervised, retrying video-sync job so the provider-side meeting
+  # (e.g. Zoom) is deleted and doesn't linger in the organiser's account after
+  # cancellation. Routed through Oban — not done inline — so a transient Zoom
+  # 5xx/429 retries instead of leaving an orphaned meeting. Providers without a
+  # server-side meeting object (Google Meet, Teams, MiroTalk, Custom) resolve to
+  # :ok inside the job. Never blocks cancellation.
   defp delete_provider_video_room(%Meeting{video_integration_id: nil}), do: :ok
   defp delete_provider_video_room(%Meeting{video_room_id: nil}), do: :ok
   defp delete_provider_video_room(%Meeting{organizer_user_id: nil}), do: :ok
 
   defp delete_provider_video_room(%Meeting{} = meeting) do
-    case Video.delete_meeting_room(meeting.organizer_user_id,
-           integration_id: meeting.video_integration_id,
-           room_id: meeting.video_room_id
-         ) do
-      :ok ->
+    case VideoSyncWorker.enqueue(meeting.id, "delete") do
+      {:ok, _status} ->
         :ok
 
       {:error, reason} ->
-        Logger.warning("Failed to delete provider video meeting on cancellation",
+        Logger.warning("Failed to enqueue provider video deletion on cancellation",
           meeting_id: meeting.id,
           reason: inspect(reason)
         )

@@ -12,7 +12,9 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Locales
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.Scheduling
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoRoomWorker
   alias UUID
@@ -29,6 +31,12 @@ defmodule Tymeslot.Bookings.Create do
 
   @type error_reason :: String.t() | atom() | {:validation_error, any()}
 
+  @typedoc "Result returned by `execute/3` and `execute_with_video_room/3`."
+  @type execute_result ::
+          {:ok, map()}
+          | {:ok, :payment_required, %{meeting: map(), checkout_url: String.t()}}
+          | {:error, String.t()}
+
   @doc """
   Creates a booking with fresh calendar validation.
 
@@ -37,9 +45,14 @@ defmodule Tymeslot.Bookings.Create do
   Options:
     - :skip_calendar_check - Skip calendar availability validation
     - :with_video_room - Create with video room integration
+
+  When the booking's meeting type has `payment_required: true`, the meeting
+  is persisted with status `awaiting_payment`, side effects (calendar, video,
+  email) are deferred until payment confirmation, and a Stripe Checkout
+  Session URL is returned alongside the meeting via the
+  `{:ok, :payment_required, ...}` tuple.
   """
-  @spec execute(meeting_params(), form_data(), keyword()) ::
-          {:ok, map()} | {:error, String.t()}
+  @spec execute(meeting_params(), form_data(), keyword()) :: execute_result()
   def execute(meeting_params, form_data, opts \\ []) do
     with {:ok, booking_data} <- prepare_booking_data(meeting_params, form_data),
          :ok <- validate_custom_field_answers(booking_data),
@@ -56,8 +69,7 @@ defmodule Tymeslot.Bookings.Create do
   Includes optional calendar pre-check for better UX.
   Same options as execute/3 plus video room is automatically enabled.
   """
-  @spec execute_with_video_room(meeting_params(), form_data(), keyword()) ::
-          {:ok, map()} | {:error, String.t()}
+  @spec execute_with_video_room(meeting_params(), form_data(), keyword()) :: execute_result()
   def execute_with_video_room(meeting_params, form_data, opts \\ []) do
     opts = Keyword.put(opts, :with_video_room, true)
 
@@ -263,9 +275,72 @@ defmodule Tymeslot.Bookings.Create do
   defp create_meeting_and_all_side_effects_atomically(booking_data, opts) do
     meeting_attrs = Policy.build_meeting_attributes(booking_data)
 
-    meeting_attrs
-    |> run_meeting_transaction(opts)
-    |> map_transaction_result()
+    if paid_meeting_type?(booking_data) do
+      create_paid_booking(meeting_attrs)
+    else
+      meeting_attrs
+      |> run_meeting_transaction(opts)
+      |> map_transaction_result()
+    end
+  end
+
+  defp paid_meeting_type?(%{meeting_type_id: nil}), do: false
+
+  defp paid_meeting_type?(%{meeting_type_id: type_id, organizer_user_id: user_id})
+       when is_integer(user_id) do
+    case MeetingTypes.get_meeting_type(type_id, user_id) do
+      %{payment_required: true} -> true
+      _other -> false
+    end
+  end
+
+  defp paid_meeting_type?(_other), do: false
+
+  defp create_paid_booking(meeting_attrs) do
+    paid_attrs = Map.put(meeting_attrs, :status, "awaiting_payment")
+
+    # The Stripe checkout call deliberately runs OUTSIDE any DB transaction:
+    # holding a pooled DB connection open across a network round-trip to Stripe
+    # risks pool exhaustion under Stripe slowness. The meeting is created (and
+    # conflict-checked) atomically first; the Stripe call follows.
+    #
+    # On checkout failure we expire the just-created meeting so its slot is
+    # released immediately rather than waiting on the reconciliation sweep —
+    # the sweeper remains the net for failures we cannot observe here (e.g. a
+    # crash between session creation and the client redirect).
+    with {:ok, meeting} <- create_meeting(paid_attrs),
+         {:ok, %{checkout_url: url}} <- create_checkout_or_expire(meeting) do
+      {:ok, :payment_required, %{meeting: meeting, checkout_url: url}}
+    else
+      {:error, reason} -> {:error, map_error_to_message(reason)}
+    end
+  end
+
+  defp create_checkout_or_expire(meeting) do
+    case MeetingPayments.create_checkout_session(meeting) do
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, reason} ->
+        expire_unpaid_meeting(meeting, reason)
+        {:error, {:checkout_failed, reason}}
+    end
+  end
+
+  defp expire_unpaid_meeting(meeting, reason) do
+    case Scheduling.update_meeting_with_conflict_check(meeting, %{status: "expired"}) do
+      {:ok, _expired} ->
+        :ok
+
+      {:error, expire_error} ->
+        Logger.warning("Failed to expire meeting after checkout failure",
+          meeting_id: meeting.id,
+          checkout_error: inspect(reason),
+          expire_error: inspect(expire_error)
+        )
+
+        :ok
+    end
   end
 
   defp run_meeting_transaction(meeting_attrs, opts) do
@@ -321,8 +396,23 @@ defmodule Tymeslot.Bookings.Create do
       :validation_error ->
         "Failed to save meeting to database"
 
+      :payments_unavailable ->
+        "Payments are not available for this booking. Please contact the host."
+
+      :host_not_found ->
+        "Host could not be found. Please refresh and try again."
+
+      :host_missing ->
+        "Host could not be found. Please refresh and try again."
+
+      :meeting_type_missing ->
+        "This meeting type is no longer available. Please go back and select another."
+
       {:custom_field_errors, _errors} ->
         "Please fill in all required fields before submitting."
+
+      {:checkout_failed, _reason} ->
+        "We couldn't start the payment process. Please try again."
 
       reason when is_binary(reason) ->
         reason

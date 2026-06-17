@@ -52,6 +52,12 @@ body.rhythm-theme {
   justify-content: center;
   padding: var(--space-lg);
   min-height: 0;
+  /* Scroll when the box exceeds the viewport row (short screens / confirmation
+     step with the branding footer). `safe center` only top-aligns the overflow;
+     without this the bottom of an over-tall box is unreachable. confirmation.css
+     already documents this rule as a precondition. Embed mode overrides this to
+     `overflow: visible` (iframe.css) so the auto-resize loop still drives height. */
+  overflow-y: auto;
   position: relative;
 }
 
@@ -166,102 +172,30 @@ body.rhythm-theme {
    LAYOUT UTILITIES
    ============================================ */
 
-/* Stack Layouts (Vertical Flex) */
+/* Stack Layout (Vertical Flex) */
 .stack {
   display: flex;
   flex-direction: column;
 }
 
-.stack-2xs { gap: var(--space-2xs); }
-.stack-xs { gap: var(--space-xs); }
-.stack-sm { gap: var(--space-sm); }
-.stack-md { gap: var(--space-md); }
-.stack-lg { gap: var(--space-lg); }
-.stack-xl { gap: var(--space-xl); }
-.stack-2xl { gap: var(--space-2xl); }
-
-.stack-center { align-items: center; }
-.stack-start { align-items: flex-start; }
-.stack-end { align-items: flex-end; }
-.stack-stretch { align-items: stretch; }
-
-/* Cluster Layouts (Horizontal Flex) */
+/* Cluster Layout (Horizontal Flex) */
 .cluster {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
 }
 
-.cluster-2xs { gap: var(--space-2xs); }
 .cluster-xs { gap: var(--space-xs); }
-.cluster-sm { gap: var(--space-sm); }
-.cluster-md { gap: var(--space-md); }
-.cluster-lg { gap: var(--space-lg); }
-.cluster-xl { gap: var(--space-xl); }
 
-.cluster-start { justify-content: flex-start; }
-.cluster-center { justify-content: center; }
-.cluster-end { justify-content: flex-end; }
-.cluster-between { justify-content: space-between; }
-.cluster-around { justify-content: space-around; }
-
-/* Grid Layouts */
-.grid-auto {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--grid-min, 220px), 1fr));
-  gap: var(--space-md);
-}
-
-.grid-auto-sm { --grid-min: 150px; }
-.grid-auto-md { --grid-min: 220px; }
-.grid-auto-lg { --grid-min: 300px; }
-
-.grid-2 {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-md);
-}
-
-.grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-md);
-}
-
-.grid-7 {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: var(--calendar-gap);
-}
-
-/* Gap Variants */
-.gap-2xs { gap: var(--space-2xs); }
-.gap-xs { gap: var(--space-xs); }
-.gap-sm { gap: var(--space-sm); }
-.gap-md { gap: var(--space-md); }
-.gap-lg { gap: var(--space-lg); }
-.gap-xl { gap: var(--space-xl); }
-
-/* Centering Utilities */
+/* Centering */
 .center-content {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.center-x {
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.center-y {
-  margin-top: auto;
-  margin-bottom: auto;
-}
-
 /* Flex Utilities */
 .flex-1 { flex: 1 1 auto; }
-.flex-none { flex: none; }
 .flex-shrink-0 { flex-shrink: 0; }
 .flex-grow { flex-grow: 1; }
 
@@ -301,8 +235,7 @@ body.rhythm-theme {
 
 .w-full { width: 100%; }
 
-/* Aspect Ratios */
-.aspect-square { aspect-ratio: 1; }
+/* Aspect Ratio */
 .aspect-video { aspect-ratio: 16 / 9; }
 
 /* ============================================
@@ -484,7 +417,7 @@ body.rhythm-theme {
 
   .meeting-summary {
     padding: var(--space-xs);
-    gap: 2px;
+    gap: var(--space-3xs);
   }
 }
 
@@ -492,11 +425,11 @@ body.rhythm-theme {
 @media (max-height: 350px) {
   .slide-title {
     font-size: var(--theme-font-size-sm);
-    margin-bottom: 2px;
+    margin-bottom: var(--space-hairline);
   }
 
   .slide-actions {
-    padding-top: 2px;
+    padding-top: var(--space-hairline);
   }
 }
 

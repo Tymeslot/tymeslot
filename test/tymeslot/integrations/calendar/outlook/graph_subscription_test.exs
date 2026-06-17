@@ -28,6 +28,32 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
   end
 
   describe "bootstrap_sync/1" do
+    test "calls calendarView/delta with rolling startDateTime/endDateTime params",
+         %{integration: integration} do
+      # Regression: an earlier version called /me/events/delta with no params,
+      # which froze the date window into the returned $deltatoken — events
+      # outside that ~30-day window never reached the cache.
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
+        assert String.contains?(url, "/me/calendarView/delta")
+        refute String.contains?(url, "/me/events/delta")
+        assert String.contains?(url, "startDateTime=")
+        assert String.contains?(url, "endDateTime=")
+
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [],
+               "@odata.deltaLink" =>
+                 "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=window"
+             })
+         }}
+      end)
+
+      assert {:ok, _updated} = GraphSubscription.bootstrap_sync(integration)
+    end
+
     test "fetches initial delta, persists events to the cache, and stores the delta link",
          %{integration: integration} do
       event = %{
@@ -51,7 +77,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
       }
 
       expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
-        assert String.contains?(url, "/me/events/delta")
+        assert String.contains?(url, "/me/calendarView/delta")
 
         {:ok,
          %Req.Response{
@@ -60,7 +86,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
              Jason.encode!(%{
                "value" => [event],
                "@odata.deltaLink" =>
-                 "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=seeded"
+                 "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=seeded"
              })
          }}
       end)
@@ -76,13 +102,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
       assert reloaded.graph_delta_link =~ "deltatoken=seeded"
     end
 
-    test "does not send unsupported query parameters to /me/events/delta",
+    test "does not send unsupported query parameters to /me/calendarView/delta",
          %{integration: integration} do
       expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
-        assert String.contains?(url, "/me/events/delta")
+        assert String.contains?(url, "/me/calendarView/delta")
 
         # Microsoft Graph rejects $orderby, $filter, $select, $expand, $search
-        # on the events/delta change-tracking resource with HTTP 400.
+        # on the calendarView/delta change-tracking resource with HTTP 400.
         refute String.contains?(String.downcase(url), "$select")
         refute String.contains?(String.downcase(url), "$expand")
         refute String.contains?(String.downcase(url), "$filter")
@@ -109,7 +135,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
       # Graph sometimes echoes the requested $select/$expand back in nextLink.
       # The pagination follow-up must still be clean.
       next_link =
-        "https://graph.microsoft.com/v1.0/me/events/delta?" <>
+        "https://graph.microsoft.com/v1.0/me/calendarView/delta?" <>
           "$skiptoken=page2&$select=id,subject&$expand=extendedProperties"
 
       Tymeslot.HTTPClientMock

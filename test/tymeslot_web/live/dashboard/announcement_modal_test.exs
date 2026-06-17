@@ -97,12 +97,36 @@ defmodule TymeslotWeb.Dashboard.AnnouncementModalTest do
       keys = Enum.sort(AnnouncementQueries.seen_keys_for(user.id))
       assert keys == ["test_alpha", "test_beta"]
 
-      # The component sends {:announcement_cta_navigate, path} to the parent
-      # LiveView, which calls push_navigate/2 — assert the navigation fires.
-      assert_redirect(view, "/dashboard/beta")
+      # The component sends {:external_redirect, url} to the parent LiveView,
+      # which redirects to the composed docs URL — assert the navigation fires.
+      assert_redirect(view, "https://tymeslot.app/docs/beta")
     end
 
-    test "closing while still on item 1 leaves item 2 unseen for next login", %{conn: conn} do
+    test "Got it on the last item finishes without navigating, even when it has a CTA", %{
+      conn: conn
+    } do
+      user = pre_existing_user()
+
+      conn = log_in(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+      # Advance to the last item (test_beta), which carries a CTA.
+      view |> element(~s|button[phx-click="next"]|) |> render_click()
+
+      rendered = render(view)
+      # The last slide offers both the CTA and a plain finish button.
+      assert rendered =~ "Try Beta"
+      assert rendered =~ "Got it"
+
+      # "Got it" (the finish action) closes and marks all seen, with no redirect.
+      view |> element(~s|button[phx-click="next"]|) |> render_click()
+
+      keys = Enum.sort(AnnouncementQueries.seen_keys_for(user.id))
+      assert keys == ["test_alpha", "test_beta"]
+      refute render(view) =~ "announcement-modal-modal"
+    end
+
+    test "closing on item 1 marks every announcement seen", %{conn: conn} do
       user = pre_existing_user()
 
       conn = log_in(conn, user)
@@ -110,10 +134,12 @@ defmodule TymeslotWeb.Dashboard.AnnouncementModalTest do
 
       view |> element(~s|.modal-header button[aria-label="Close modal"]|) |> render_click()
 
-      assert AnnouncementQueries.seen_keys_for(user.id) == ["test_alpha"]
+      # Dismissing the stack marks all announcements seen, not just the current one.
+      keys = Enum.sort(AnnouncementQueries.seen_keys_for(user.id))
+      assert keys == ["test_alpha", "test_beta"]
 
       {:ok, _view, html} = live(conn, ~p"/dashboard")
-      assert html =~ "Beta"
+      refute html =~ "announcement-modal-modal"
     end
   end
 
@@ -149,7 +175,7 @@ defmodule TymeslotWeb.Dashboard.AnnouncementModalTest do
       assert seen == ["test_alpha", "test_beta"]
 
       # The LiveView navigates away; consume the redirect so the process is clean.
-      assert_redirect(view, "/dashboard/beta")
+      assert_redirect(view, "https://tymeslot.app/docs/beta")
 
       # Re-mount the dashboard — the modal must not appear.
       {:ok, _view2, html2} = live(conn, ~p"/dashboard")
@@ -223,7 +249,7 @@ defmodule TymeslotWeb.Dashboard.AnnouncementModalTest do
       assert rendered =~ "Next"
     end
 
-    test "clicking the CTA on a non-last item marks only that item seen and navigates", %{
+    test "clicking the CTA on a non-last item marks every announcement seen and navigates", %{
       conn: conn
     } do
       user = pre_existing_user()
@@ -237,14 +263,14 @@ defmodule TymeslotWeb.Dashboard.AnnouncementModalTest do
       # Click the secondary CTA button on test_gamma (a non-last carousel item).
       view |> element(~s|button[phx-click="cta"]|) |> render_click()
 
-      # Only test_gamma must be marked seen — test_alpha was marked seen when
-      # "next" was clicked; test_beta was never reached.
+      # Taking a CTA dismisses the whole stack — every item is marked seen,
+      # including test_beta, which was never displayed.
       seen = Enum.sort(AnnouncementQueries.seen_keys_for(user.id))
-      assert seen == ["test_alpha", "test_gamma"]
-      refute "test_beta" in seen
+      assert seen == ["test_alpha", "test_beta", "test_gamma"]
 
-      # The component sends {:announcement_cta_navigate, path} to the parent LiveView.
-      assert_redirect(view, "/dashboard/gamma")
+      # The component sends {:external_redirect, url} to the parent LiveView,
+      # which redirects to the composed docs URL for the slug.
+      assert_redirect(view, "https://tymeslot.app/docs/gamma")
     end
   end
 

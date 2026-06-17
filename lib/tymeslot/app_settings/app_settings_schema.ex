@@ -25,6 +25,7 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
           recaptcha_booking_min_score: float() | nil,
           admin_alerts_enabled: boolean() | nil,
           admin_alert_email: String.t() | nil,
+          meeting_payments_enabled: boolean() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -40,7 +41,8 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
     :recaptcha_signup_min_score,
     :recaptcha_booking_min_score,
     :admin_alerts_enabled,
-    :admin_alert_email
+    :admin_alert_email,
+    :meeting_payments_enabled
   ]
 
   @score_fields [:recaptcha_signup_min_score, :recaptcha_booking_min_score]
@@ -62,6 +64,7 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
     field(:recaptcha_booking_min_score, :float)
     field(:admin_alerts_enabled, :boolean)
     field(:admin_alert_email, :string)
+    field(:meeting_payments_enabled, :boolean)
 
     timestamps(type: :utc_datetime_usec)
   end

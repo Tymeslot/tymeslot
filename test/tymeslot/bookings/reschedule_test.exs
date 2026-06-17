@@ -4,6 +4,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   """
 
   use Tymeslot.DataCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :bookings
 
   import Mox
@@ -13,6 +14,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.VideoSyncWorker
   alias Tymeslot.ZoomOAuthHelperMock
   import Tymeslot.MeetingTestHelpers
 
@@ -298,7 +300,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   end
 
   describe "Zoom video room sync" do
-    test "PATCHes the Zoom meeting with new times when rescheduling" do
+    test "enqueues a video-sync update job that PATCHes the Zoom meeting with new times" do
       %{user: user, profile: _profile} = create_user_with_profile()
       integration = insert_zoom_integration(user)
 
@@ -316,6 +318,17 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         user_timezone: "America/New_York"
       }
 
+      assert {:ok, updated} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+
+      # The provider PATCH is deferred to a supervised, retrying Oban job — not
+      # made inline — so a transient Zoom failure no longer permanently
+      # desyncs the meeting's scheduled time.
+      assert_enqueued(
+        worker: VideoSyncWorker,
+        args: %{"meeting_id" => updated.id, "action" => "update"}
+      )
+
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
       expect(HTTPClientMock, :request, fn :patch, url, body, headers, _opts ->
@@ -324,17 +337,18 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
         decoded = Jason.decode!(body)
         assert decoded["topic"] == "Customer call"
+        # The job re-reads the meeting, so the PATCH carries the *new* duration.
         assert decoded["duration"] == 60
         assert is_binary(decoded["start_time"])
 
         {:ok, %Req.Response{status: 204, body: ""}}
       end)
 
-      assert {:ok, _updated} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => updated.id, "action" => "update"})
     end
 
-    test "still reschedules successfully when Zoom update fails" do
+    test "still reschedules successfully and the job retries when Zoom update fails" do
       %{user: user, profile: _profile} = create_user_with_profile()
       integration = insert_zoom_integration(user)
 
@@ -351,17 +365,27 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         user_timezone: "America/New_York"
       }
 
+      assert {:ok, updated} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+
+      assert_enqueued(
+        worker: VideoSyncWorker,
+        args: %{"meeting_id" => updated.id, "action" => "update"}
+      )
+
+      # A transient Zoom failure surfaces as {:error, _} from the job so Oban
+      # retries it.
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
       expect(HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
         {:error, :timeout}
       end)
 
-      assert {:ok, _updated} =
-               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+      assert {:error, _reason} =
+               perform_job(VideoSyncWorker, %{"meeting_id" => updated.id, "action" => "update"})
     end
 
-    test "skips Zoom call when meeting has no video_room_id" do
+    test "does not enqueue a video-sync job when meeting has no video_room_id" do
       %{user: user, profile: _profile} = create_user_with_profile()
       integration = insert_zoom_integration(user)
 
@@ -378,9 +402,10 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         user_timezone: "America/New_York"
       }
 
-      # HTTPClientMock not expected — verify_on_exit! catches stray calls.
       assert {:ok, _updated} =
                Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+
+      refute_enqueued(worker: VideoSyncWorker)
     end
   end
 

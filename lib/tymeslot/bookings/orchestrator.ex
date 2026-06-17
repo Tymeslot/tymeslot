@@ -22,9 +22,17 @@ defmodule Tymeslot.Bookings.Orchestrator do
   - Rate limiting (if client IP provided)
   - Meeting creation or rescheduling
 
-  Returns {:ok, meeting} or {:error, reason}
+  Returns:
+    * `{:ok, meeting}` for free bookings (confirmed)
+    * `{:ok, :payment_required, %{meeting: meeting, checkout_url: url}}` when
+      the meeting type requires payment — caller should redirect the
+      attendee to the Stripe Checkout URL
+    * `{:error, reason}` on validation or persistence failure
   """
-  @spec submit_booking(booking_submission_params(), keyword()) :: {:ok, term()} | {:error, term()}
+  @spec submit_booking(booking_submission_params(), keyword()) ::
+          {:ok, term()}
+          | {:ok, :payment_required, %{meeting: map(), checkout_url: String.t()}}
+          | {:error, term()}
   def submit_booking(params, opts \\ []) do
     %{
       form_data: form_data,
@@ -41,6 +49,9 @@ defmodule Tymeslot.Bookings.Orchestrator do
            form_data,
            organizer_user_id
          ) do
+      {:ok, :payment_required, _payload} = payment_tuple ->
+        payment_tuple
+
       {:ok, meeting} ->
         {:ok, meeting}
 

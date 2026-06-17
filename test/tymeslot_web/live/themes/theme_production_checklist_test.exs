@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeProductionChecklistTest do
   import Tymeslot.Factory
 
   alias Tymeslot.TestMocks
-  alias Tymeslot.Themes.Registry
+  alias Tymeslot.Themes.Catalog
 
   @moduledoc """
   Production readiness checklist for themes.
@@ -15,8 +15,8 @@ defmodule TymeslotWeb.Live.Themes.ThemeProductionChecklistTest do
   To test a new theme, add it to @themes_to_test.
   """
 
-  # Use registry to get all active theme IDs
-  @themes_to_test Registry.valid_theme_ids()
+  # Use the catalog to get all theme IDs
+  @themes_to_test Catalog.valid_ids()
 
   describe "production readiness checklist" do
     setup tags do

@@ -2,8 +2,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   @moduledoc """
   LiveComponent that renders and manages the Meeting Type form UI state.
 
-  It handles local UI events (validate, icon selection, meeting mode toggle, provider selection)
-  while the parent component handles the final submit/persist event.
+  It handles local UI events (validate, icon selection, meeting mode toggle,
+  provider selection). When editing an existing meeting type, each change
+  auto-saves via `MeetingTypeForm.Autosave`; when creating a new one, the
+  parent component handles the final "Create" submit/persist event.
   """
   use TymeslotWeb, :live_component
 
@@ -13,13 +15,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
+    Autosave,
     CustomQuestionsSection,
+    HiddenFields,
     Init,
+    PaymentsSection,
     QuestionEditorComponent,
     Validation
   }
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+  import HiddenFields, only: [hidden_fields: 1]
+  import PaymentsSection, only: [payments_section: 1]
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
   import TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
 
@@ -51,23 +58,51 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:show_custom_reminder, false)
      |> assign(:reminder_confirmation, nil)
      |> assign(:custom_fields, [])
+     |> assign(:save_status, :saved)
      |> assign(:editing_question, nil)
      |> assign(:editing_question_mode, :add)
      |> assign(:custom_questions_allowed, true)
+     |> assign(:payments_feature_enabled, false)
+     |> assign(:payments_charges_enabled, false)
+     |> assign(:payment_currency, "usd")
+     |> assign(:payment_currency_minimum_cents, 50)
+     |> assign(:payment_required, false)
+     |> assign(:payment_price, "")
      |> assign(:__initialized__, false)}
   end
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
-    socket = assign(socket, assigns)
-    {:ok, Init.maybe_initialize(socket)}
+    socket =
+      socket
+      |> assign(assigns)
+      |> Init.maybe_initialize()
+
+    # Custom-question edits arrive here as a `send_update` carrying
+    # `:custom_fields` (add/edit/delete/reorder). Persist them like any other
+    # change so auto-save covers the question editor too.
+    #
+    # Deferred autosave retries (throttle backoff) arrive as `trigger_autosave: true`.
+    #
+    # Other send_updates (calendar refresh, reminder-confirmation clearing) don't
+    # carry either key and skip the autosave.
+    if Map.has_key?(assigns, :custom_fields) or Map.get(assigns, :trigger_autosave) == true do
+      {:ok, Autosave.maybe_run(socket)}
+    else
+      {:ok, socket}
+    end
   end
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div id={"meeting-type-form-wrapper-#{@id}"}>
-    <form phx-submit="save_meeting_type" phx-target={@parent_myself} class="space-y-4">
+    <form
+      id={"meeting-type-form-#{@id}"}
+      phx-submit={if @is_edit, do: "flush_autosave", else: "save_meeting_type"}
+      phx-target={if @is_edit, do: @myself, else: @parent_myself}
+      class="space-y-4"
+    >
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <.input
           name="meeting_type[name]"
@@ -77,6 +112,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
           maxlength={Constraints.name_length_opts()[:max]}
           placeholder="e.g., Quick Chat"
           phx-change="validate_meeting_type"
+          phx-debounce="500"
           phx-target={@myself}
           errors={
             FormValidationHelpers.field_errors(@form_errors, :name)
@@ -97,6 +133,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
             required
             placeholder="30"
             phx-change="validate_meeting_type"
+            phx-debounce="500"
             phx-target={@myself}
             errors={
               FormValidationHelpers.field_errors(@form_errors, :duration)
@@ -117,6 +154,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         maxlength={Constraints.description_max_length()}
         placeholder="Brief description of this meeting type"
         phx-change="validate_meeting_type"
+        phx-debounce="500"
         phx-target={@myself}
         errors={
           FormValidationHelpers.field_errors(@form_errors, :description)
@@ -160,6 +198,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         myself={@myself}
       />
 
+      <.payments_section
+        :if={@payments_feature_enabled}
+        charges_enabled={@payments_charges_enabled}
+        payment_required={@payment_required}
+        payment_price={@payment_price}
+        currency={@payment_currency}
+        currency_minimum_cents={@payment_currency_minimum_cents}
+        form_errors={@form_errors}
+        myself={@myself}
+      />
+
       <%!-- Custom questions section --%>
       <.live_component
         module={CustomQuestionsSection}
@@ -170,133 +219,84 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         current_user={@current_user}
       />
 
-      <%!-- Hidden inputs serialising custom_fields into the form submission.
-           When custom questions are paywalled, we deliberately omit these so
-           the form does not post `custom_fields` at all — Ecto's cast_embed
-           leaves the existing embed untouched, preserving any prior questions. --%>
-      <%= if @custom_questions_allowed do %>
-      <%= for {field, fi} <- Enum.with_index(@custom_fields) do %>
-        <input type="hidden" name={"meeting_type[custom_fields][#{fi}][id]"} value={field.id} />
-        <input type="hidden" name={"meeting_type[custom_fields][#{fi}][type]"} value={field.type} />
-        <input type="hidden" name={"meeting_type[custom_fields][#{fi}][label]"} value={field.label} />
-        <input
-          type="hidden"
-          name={"meeting_type[custom_fields][#{fi}][help_text]"}
-          value={field.help_text || ""}
-        />
-        <input
-          type="hidden"
-          name={"meeting_type[custom_fields][#{fi}][required]"}
-          value={to_string(field.required)}
-        />
-        <input
-          type="hidden"
-          name={"meeting_type[custom_fields][#{fi}][position]"}
-          value={field.position}
-        />
-        <%= if field.body do %>
-          <input
-            type="hidden"
-            name={"meeting_type[custom_fields][#{fi}][body]"}
-            value={field.body}
-          />
-        <% end %>
-        <%= if field.min do %>
-          <input
-            type="hidden"
-            name={"meeting_type[custom_fields][#{fi}][min]"}
-            value={field.min}
-          />
-        <% end %>
-        <%= if field.max do %>
-          <input
-            type="hidden"
-            name={"meeting_type[custom_fields][#{fi}][max]"}
-            value={field.max}
-          />
-        <% end %>
-        <%= for {opt, oi} <- Enum.with_index(field.options || []) do %>
-          <input
-            type="hidden"
-            name={"meeting_type[custom_fields][#{fi}][options][#{oi}][key]"}
-            value={opt.key}
-          />
-          <input
-            type="hidden"
-            name={"meeting_type[custom_fields][#{fi}][options][#{oi}][label]"}
-            value={opt.label}
-          />
-        <% end %>
-      <% end %>
-      <% end %>
-
-      <%!-- Hidden fields --%>
-      <%= for reminder <- @reminders do %>
-        <input type="hidden" name="meeting_type[reminder_config][][value]" value={reminder.value} />
-        <input type="hidden" name="meeting_type[reminder_config][][unit]" value={reminder.unit} />
-      <% end %>
-      <input
-        type="hidden"
-        name="meeting_type[is_active]"
-        value={if @type, do: to_string(@type.is_active), else: "true"}
+      <%!-- Create-mode form serialisation. Edits auto-save from socket assigns
+           (see Autosave/Submission) and never post the form, so these hidden
+           inputs are only needed when creating. --%>
+      <.hidden_fields
+        :if={!@is_edit}
+        type={@type}
+        meeting_mode={@meeting_mode}
+        selected_icon={@selected_icon}
+        selected_video_integration_id={@selected_video_integration_id}
+        selected_calendar_integration_id={@selected_calendar_integration_id}
+        selected_target_calendar_id={@selected_target_calendar_id}
+        reminders={@reminders}
+        custom_fields={@custom_fields}
+        custom_questions_allowed={@custom_questions_allowed}
+        payments_feature_enabled={@payments_feature_enabled}
+        payments_charges_enabled={@payments_charges_enabled}
+        payment_required={@payment_required}
+        payment_price={@payment_price}
       />
-      <input type="hidden" name="meeting_type[meeting_mode]" value={@meeting_mode} />
-      <input
-        type="hidden"
-        name="meeting_type[video_integration_id]"
-        value={@selected_video_integration_id}
-      />
-      <input
-        type="hidden"
-        name="meeting_type[calendar_integration_id]"
-        value={@selected_calendar_integration_id}
-      />
-      <input
-        type="hidden"
-        name="meeting_type[target_calendar_id]"
-        value={@selected_target_calendar_id}
-      />
-      <input type="hidden" name="meeting_type[icon]" value={@selected_icon} />
 
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :base) do %>
         <p class="form-error">{Helpers.format_errors(error)}</p>
       <% end %>
 
-      <div class="flex justify-end space-x-3">
-        <button
-          type="button"
-          phx-click={if @is_edit, do: "close_edit_overlay", else: "toggle_add_form"}
-          phx-target={@parent_myself}
-          class="btn btn-secondary"
-        >
-          Cancel
-        </button>
-        <button type="submit" disabled={@saving || @refreshing_calendars} class="btn btn-primary">
-          <%= if @saving do %>
-            <span class="flex items-center">
-              <svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                >
-                </circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                >
-                </path>
-              </svg>
-              Saving...
-            </span>
-          <% else %>
-            {if @is_edit, do: "Update", else: "Create"} Meeting Type
-          <% end %>
-        </button>
+      <div class="flex items-center justify-between gap-4">
+        <%= if @is_edit do %>
+          <Autosave.indicator status={@save_status} />
+          <button
+            type="button"
+            phx-click="close_edit_overlay"
+            phx-target={@parent_myself}
+            class="btn btn-primary"
+          >
+            Done
+          </button>
+        <% else %>
+          <span></span>
+          <div class="flex justify-end space-x-3">
+            <button
+              type="button"
+              phx-click="toggle_add_form"
+              phx-target={@parent_myself}
+              class="btn btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={@saving || @refreshing_calendars}
+              class="btn btn-primary"
+            >
+              <%= if @saving do %>
+                <span class="flex items-center">
+                  <svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    >
+                    </circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    >
+                    </path>
+                  </svg>
+                  Saving...
+                </span>
+              <% else %>
+                Create Meeting Type
+              <% end %>
+            </button>
+          </div>
+        <% end %>
       </div>
     </form>
 
@@ -339,7 +339,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         )
       end)
 
-    {:noreply, assign(socket, form_data: updated_data, form_errors: updated_errors)}
+    {:noreply,
+     socket
+     |> assign(form_data: updated_data, form_errors: updated_errors)
+     |> Autosave.maybe_run()}
   end
 
   @impl Phoenix.LiveComponent
@@ -352,12 +355,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :video_integration)
       )
 
-    {:noreply, socket}
+    {:noreply, Autosave.maybe_run(socket)}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("select_icon", %{"icon" => icon}, socket) do
-    {:noreply, assign(socket, :selected_icon, icon)}
+    {:noreply, socket |> assign(:selected_icon, icon) |> Autosave.maybe_run()}
   end
 
   @impl Phoenix.LiveComponent
@@ -376,7 +379,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :video_integration)
       )
 
-    {:noreply, socket}
+    {:noreply, Autosave.maybe_run(socket)}
   end
 
   @impl Phoenix.LiveComponent
@@ -417,7 +420,37 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :target_calendar)
       )
 
-    {:noreply, socket}
+    {:noreply, Autosave.maybe_run(socket)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_payment_required", _params, socket) do
+    # Guard: hosts who cannot accept charges must not flip the toggle even
+    # if a stale/forged event arrives — the control renders disabled.
+    if socket.assigns.payments_charges_enabled do
+      {:noreply,
+       socket
+       |> assign(:payment_required, !socket.assigns.payment_required)
+       |> assign(
+         :form_errors,
+         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :payment_required)
+       )
+       |> Autosave.maybe_run()}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("change_payment_price", %{"meeting_type" => %{"price_input" => price}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:payment_price, price)
+     |> assign(
+       :form_errors,
+       FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :price_cents)
+     )
+     |> Autosave.maybe_run()}
   end
 
   @impl Phoenix.LiveComponent
@@ -465,7 +498,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
            :reminder_confirmation,
            "Added #{ReminderUtils.format_reminder_label(reminder.value, reminder.unit)} before"
          )
-         |> assign(:reminder_error, nil)}
+         |> assign(:reminder_error, nil)
+         |> Autosave.maybe_run()}
 
       {:error, message} ->
         {:noreply, assign(socket, reminder_error: message)}
@@ -484,14 +518,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         Process.send_after(self(), {:clear_reminder_confirmation, socket.assigns.id}, 3000)
 
         {:noreply,
-         assign(socket,
+         socket
+         |> assign(
            reminders: reminders,
            new_reminder_value: "",
            reminder_error: nil,
            show_custom_reminder: false,
            reminder_confirmation:
              "Added #{ReminderUtils.format_reminder_label(reminder.value, reminder.unit)} before"
-         )}
+         )
+         |> Autosave.maybe_run()}
 
       {:error, message} ->
         {:noreply, assign(socket, reminder_error: message)}
@@ -513,6 +549,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         reminder.value == ReminderUtils.parse_reminder_value(value) and reminder.unit == unit
       end)
 
-    {:noreply, assign(socket, reminders: reminders, reminder_error: nil)}
+    {:noreply,
+     socket
+     |> assign(reminders: reminders, reminder_error: nil)
+     |> Autosave.maybe_run()}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("flush_autosave", _params, socket) do
+    # Edit-mode submit (e.g. pressing Enter) persists current state in place
+    # without closing the overlay — there is no separate "save" action.
+    {:noreply, Autosave.maybe_run(socket)}
   end
 end

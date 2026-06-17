@@ -49,6 +49,10 @@ defmodule Tymeslot.Utils.FormHelpers do
     %{target_calendar: ["Selected calendar is not available for this account"]}
   end
 
+  def format_context_error(:invalid_price) do
+    %{price_cents: ["Enter a valid price"]}
+  end
+
   def format_context_error(error) when is_atom(error) do
     %{base: [format_generic_error(error)]}
   end

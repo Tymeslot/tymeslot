@@ -8,8 +8,14 @@ defmodule Tymeslot.Workers.SlackWorker do
 
   Errors are mapped to outcomes per the Slack API documentation:
     * `token_revoked` / `account_inactive` / `channel_not_found` → auto-disable
-    * `ratelimited` → `{:snooze, retry_after}`
+    * rate limiting (HTTP 429 from the Web API or hooks.slack.com, or the
+      `ok:false ratelimited` body) → `{:snooze, retry_after}`, without counting
+      toward the auto-disable failure budget
     * Anything else → `{:error, reason}` and Oban retries with backoff
+
+  Failures are recorded against the integration only on the genuinely final
+  attempt. Because `{:snooze, n}` bumps `max_attempts`, the final attempt is
+  `max_attempts`, not the static `5`.
   """
 
   use Oban.Worker,
@@ -44,7 +50,7 @@ defmodule Tymeslot.Workers.SlackWorker do
          {:ok, meeting} <- Meetings.get_meeting(meeting_id) do
       blocks = MessageBuilder.build_blocks(event_type, meeting)
       result = deliver(integration, blocks)
-      handle_result(integration, event_type, meeting_id, blocks, attempt, result)
+      handle_result(integration, event_type, meeting_id, blocks, job, result)
     else
       {:error, :not_found} -> {:discard, "Integration or meeting not found"}
       {:error, :disabled} -> {:discard, "Integration is disabled"}
@@ -143,18 +149,18 @@ defmodule Tymeslot.Workers.SlackWorker do
     end
   end
 
-  defp handle_result(integration, event_type, meeting_id, blocks, attempt, result) do
+  defp handle_result(integration, event_type, meeting_id, blocks, %Oban.Job{} = job, result) do
     delivery_attrs = %{
       integration_id: integration.id,
       event_type: event_type,
       meeting_id: to_string(meeting_id),
       message_blocks: %{"blocks" => blocks},
-      attempt_count: attempt
+      attempt_count: job.attempt
     }
 
     case result do
       {:ok, body} -> handle_success(integration, delivery_attrs, body)
-      {:error, reason} -> handle_error(integration, delivery_attrs, attempt, reason)
+      {:error, reason} -> handle_error(integration, delivery_attrs, job, reason)
     end
   end
 
@@ -167,54 +173,69 @@ defmodule Tymeslot.Workers.SlackWorker do
   # Auto-disabling Slack errors — token / account / channel are not retry-worthy.
   @auto_disable_errors ~w(token_revoked account_inactive channel_not_found)
 
-  defp handle_error(integration, delivery_attrs, _attempt, {:slack_error, err, _body})
+  defp handle_error(integration, delivery_attrs, _job, {:slack_error, err, _body})
        when err in @auto_disable_errors,
        do: auto_disable_and_log(integration, err, delivery_attrs)
+
+  # Rate-limit responses (HTTP 429 from either the Web API or hooks.slack.com,
+  # and the `ok:false ratelimited` body) snooze for the requested interval and
+  # must never count toward the auto-disable failure budget.
+  defp handle_error(_integration, delivery_attrs, _job, {:rate_limited, retry_after}) do
+    log_failure(delivery_attrs, "ratelimited", nil)
+    {:snooze, retry_after_from(retry_after)}
+  end
 
   defp handle_error(
          _integration,
          delivery_attrs,
-         _attempt,
+         _job,
          {:slack_error, "ratelimited", body, retry_after}
        ) do
     log_failure(delivery_attrs, "ratelimited", body)
     {:snooze, retry_after_from(retry_after)}
   end
 
-  defp handle_error(integration, delivery_attrs, attempt, {:slack_error, err, body}) do
+  defp handle_error(integration, delivery_attrs, job, {:slack_error, err, body}) do
     log_failure(delivery_attrs, err, body)
-    if attempt == 5, do: Slack.record_failure(integration, err)
+    if final_attempt?(job), do: Slack.record_failure(integration, err)
     {:error, err}
   end
 
-  defp handle_error(integration, delivery_attrs, attempt, {:http_error, status, body}) do
+  defp handle_error(integration, delivery_attrs, job, {:http_error, status, body}) do
     log_failure(delivery_attrs, "http_#{status}", body)
-    if attempt == 5, do: Slack.record_failure(integration, "http_#{status}")
+    if final_attempt?(job), do: Slack.record_failure(integration, "http_#{status}")
     {:error, {:http_error, status}}
   end
 
   # A 404 from an Incoming Webhook URL means the user revoked the hook in Slack.
   # Retries will never succeed — auto-disable the same way we do for token_revoked.
-  defp handle_error(integration, delivery_attrs, _attempt, {:webhook_error, 404, _body}),
+  defp handle_error(integration, delivery_attrs, _job, {:webhook_error, 404, _body}),
     do: auto_disable_and_log(integration, "webhook_url_revoked", delivery_attrs)
 
-  defp handle_error(integration, delivery_attrs, attempt, {:webhook_error, status, body}) do
+  defp handle_error(integration, delivery_attrs, job, {:webhook_error, status, body}) do
     log_failure(delivery_attrs, "webhook_#{status}", body)
-    if attempt == 5, do: Slack.record_failure(integration, "webhook_#{status}")
+    if final_attempt?(job), do: Slack.record_failure(integration, "webhook_#{status}")
     {:error, {:webhook_error, status}}
   end
 
-  defp handle_error(integration, delivery_attrs, attempt, {:transport_error, reason}) do
+  defp handle_error(integration, delivery_attrs, job, {:transport_error, reason}) do
     log_failure(delivery_attrs, "transport_error", reason)
-    if attempt == 5, do: Slack.record_failure(integration, inspect(reason))
+    if final_attempt?(job), do: Slack.record_failure(integration, inspect(reason))
     {:error, :transport_error}
   end
 
-  defp handle_error(integration, delivery_attrs, attempt, reason) do
+  defp handle_error(integration, delivery_attrs, job, reason) do
     log_failure(delivery_attrs, inspect(reason), nil)
-    if attempt == 5, do: Slack.record_failure(integration, inspect(reason))
+    if final_attempt?(job), do: Slack.record_failure(integration, inspect(reason))
     {:error, reason}
   end
+
+  # Oban's `{:snooze, n}` increments `max_attempts` while keeping the attempt
+  # number, so a snoozed-then-retried job's genuine final attempt is
+  # `max_attempts`, not the original `5`. Comparing against the live
+  # `max_attempts` records the failure exactly once, on the real last attempt.
+  defp final_attempt?(%Oban.Job{attempt: attempt, max_attempts: max_attempts}),
+    do: attempt >= max_attempts
 
   defp auto_disable_and_log(integration, reason, delivery_attrs) do
     log_failure(delivery_attrs, reason, nil)

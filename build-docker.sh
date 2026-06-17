@@ -10,7 +10,10 @@
 # Required .env variables:
 #   - SECRET_KEY_BASE (64+ chars)
 #   - PHX_HOST
-#   - POSTGRES_PASSWORD
+#
+# Optional .env variables:
+#   - POSTGRES_PASSWORD (only needed for an external database — the embedded
+#     one defaults this internally)
 #
 # Run this script from apps/tymeslot/ or from anywhere — it always operates
 # relative to its own directory.
@@ -85,10 +88,8 @@ if [ -z "$PHX_HOST" ]; then
     MISSING_VARS+=("PHX_HOST")
 fi
 
-# Check POSTGRES_PASSWORD: required database password for PostgreSQL
-if [ -z "$POSTGRES_PASSWORD" ]; then
-    MISSING_VARS+=("POSTGRES_PASSWORD")
-fi
+# POSTGRES_PASSWORD is optional: only needed when connecting to an external
+# database. The embedded database defaults it internally.
 
 # If any variables are missing, report them and exit
 if [ ${#MISSING_VARS[@]} -ne 0 ]; then
@@ -105,9 +106,6 @@ if [ ${#MISSING_VARS[@]} -ne 0 ]; then
     echo ""
     echo "Generate a secure secret with:"
     echo "  openssl rand -base64 64 | tr -d '\\n'"
-    echo ""
-    echo "And a password for:"
-    echo "  - POSTGRES_PASSWORD (can use: openssl rand -base64 32)"
     echo "========================================"
     exit 1
 fi
@@ -160,10 +158,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     # -v: Mount Docker volumes for persistent data storage
     docker run -d \
         --name tymeslot \
-        -p ${PORT:-4000}:4000 \
+        -p ${PORT:-4000}:${PORT:-4000} \
         --env-file .env \
         -v tymeslot_data:/app/data \
-        -v postgres_data:/var/lib/postgresql/data \
+        -v tymeslot_pg:/var/lib/postgresql/data \
         tymeslot
     
     # Display startup information and helpful next steps
@@ -197,10 +195,10 @@ else
     echo ""
     echo "Using docker run:"
     echo "  docker run -d --name tymeslot \\"
-    echo "    -p ${PORT:-4000}:4000 \\"
+    echo "    -p ${PORT:-4000}:${PORT:-4000} \\"
     echo "    --env-file .env \\"
     echo "    -v tymeslot_data:/app/data \\"
-    echo "    -v postgres_data:/var/lib/postgresql/data \\"
+    echo "    -v tymeslot_pg:/var/lib/postgresql/data \\"
     echo "    tymeslot"
     echo ""
     echo "Or using docker-compose (recommended):"

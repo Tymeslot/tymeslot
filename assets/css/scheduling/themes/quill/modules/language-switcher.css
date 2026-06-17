@@ -62,10 +62,7 @@
   }
 }
 
-/* ============================================================================
-   CONTAINER-RESPONSIVE LANGUAGE SWITCHER
-   (dissolved from responsive.css — width queries → @container scheduling)
-   ============================================================================ */
+/* ===== Responsive ===== */
 
 @media (max-width: 640px) {
   .language-switcher {

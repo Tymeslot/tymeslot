@@ -191,5 +191,29 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaTest do
       assert {:error, :recaptcha_configuration_error} =
                Recaptcha.validate_min_score(0.5, "not a number")
     end
+
+    test "validate_expected_action/2" do
+      assert :ok = Recaptcha.validate_expected_action("signup_form", "signup_form")
+      assert :ok = Recaptcha.validate_expected_action("anything", nil)
+
+      assert {:error, :recaptcha_action_mismatch} =
+               Recaptcha.validate_expected_action("login_form", "signup_form")
+
+      # A missing action field (nil) is reported distinctly from a mismatch.
+      assert {:error, :recaptcha_missing_action} =
+               Recaptcha.validate_expected_action(nil, "signup_form")
+    end
+
+    test "validate_expected_hostname/2" do
+      assert :ok = Recaptcha.validate_expected_hostname("example.com", [])
+      assert :ok = Recaptcha.validate_expected_hostname("example.com", ["example.com"])
+
+      assert {:error, :recaptcha_hostname_mismatch} =
+               Recaptcha.validate_expected_hostname("evil.com", ["example.com"])
+
+      # A missing hostname field (nil) is reported distinctly from a mismatch.
+      assert {:error, :recaptcha_missing_hostname} =
+               Recaptcha.validate_expected_hostname(nil, ["example.com"])
+    end
   end
 end

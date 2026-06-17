@@ -17,6 +17,16 @@ defmodule TymeslotWeb.Components.CoreComponents.Dropdown do
 
   attr :role, :string, default: "menu"
   attr :aria_orientation, :string, default: "vertical"
+
+  attr :panel_label, :string,
+    default: nil,
+    doc: """
+    Accessible name for the floating panel. Required when `role="dialog"`, since a
+    dialog must have an accessible name and the trigger's `aria-label` (supplied via
+    `@rest`) does not name the panel. Ignored for `role="menu"` panels, whose items
+    provide their own labels.
+    """
+
   attr :trigger_class, :string, default: nil
   attr :class, :string, default: nil
 
@@ -41,7 +51,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Dropdown do
     <div
       id={@id}
       class="relative"
-      phx-click-away={@on_close}
+      phx-click-away={@open && @on_close}
       phx-window-keydown={@open && @on_close}
       phx-key="escape"
       phx-target={@target}
@@ -74,6 +84,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Dropdown do
         }
         role={@role}
         aria-orientation={@aria_orientation}
+        aria-label={@panel_label}
       >
         {render_slot(@panel)}
       </div>

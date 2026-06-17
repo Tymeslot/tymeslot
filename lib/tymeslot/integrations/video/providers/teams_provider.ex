@@ -7,14 +7,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   """
 
   alias Tymeslot.Infrastructure.HTTPClient
-  alias Tymeslot.Integrations.Shared.Lock
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
-  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   require Logger
 
@@ -235,39 +234,12 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   defp refresh_and_update_token(config) do
-    integration_id = Map.get(config, :integration_id)
-    user_id = Map.get(config, :user_id)
-
-    if is_nil(integration_id) or is_nil(user_id) do
-      do_actual_refresh(config)
-    else
-      Lock.with_lock(
-        {:teams, integration_id},
-        fn -> check_and_refresh_token(integration_id, user_id, config) end,
-        mode: :blocking
-      )
-    end
-  end
-
-  defp check_and_refresh_token(integration_id, user_id, config) do
-    case Video.fetch_integration_for_user(integration_id, user_id) do
-      {:ok, fresh_integration} ->
-        decrypted = VideoIntegrationSchema.decrypt_credentials(fresh_integration)
-
-        if token_still_valid?(decrypted.token_expires_at) do
-          {:ok, decrypted.access_token}
-        else
-          perform_refresh(config)
-        end
-
-      {:error, :not_found} ->
-        perform_refresh(config)
-    end
-  end
-
-  defp token_still_valid?(expires_at) do
-    now = DateTime.utc_now()
-    DateTime.compare(expires_at, DateTime.add(now, 300, :second)) == :gt
+    OAuthTokenManager.refresh_with_lock(config, %{
+      provider: :teams,
+      refresh: &perform_refresh/1,
+      already_refreshed: fn _config, decrypted -> {:ok, decrypted.access_token} end,
+      fallback_refresh: &perform_refresh/1
+    })
   end
 
   defp perform_refresh(config) do
@@ -351,11 +323,51 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       {:ok, %Req.Response{status: 201, body: body}} ->
         parse_meeting_response(body)
 
+      {:ok, %Req.Response{status: 401, body: body}} ->
+        # The access token was rejected by Graph even though it had survived
+        # token validation/refresh — this indicates server-side revocation or a
+        # consent withdrawal. Flag the integration so the dashboard surfaces the
+        # "Reconnect required" badge immediately, rather than waiting for the
+        # async HealthCheck cycle. Mirrors Zoom's flag_revoked_token/1.
+        flag_revoked_token(config)
+        decode_and_format_error(401, body)
+
       {:ok, %Req.Response{status: status, body: body}} ->
         decode_and_format_error(status, body)
 
       {:error, reason} ->
         {:error, "Network error: #{inspect(reason)}"}
+    end
+  end
+
+  # Flags the integration as needing reauthentication after a 401 from Graph —
+  # i.e. the credentials are no longer accepted server-side. The dashboard
+  # surfaces this via the "Reconnect required" badge on the video row. Purely
+  # additive: it does not touch token validation or the OAuthTokenManager flow.
+  defp flag_revoked_token(config) do
+    integration_id = Map.get(config, :integration_id)
+    user_id = Map.get(config, :user_id)
+
+    if is_nil(integration_id) or is_nil(user_id) do
+      Logger.warning("Teams token appears revoked but no integration_id to flag",
+        event: "teams_token_revoked"
+      )
+    else
+      Logger.warning("Teams token revoked; flagging integration for reauth",
+        event: "teams_token_revoked",
+        integration_id: integration_id
+      )
+
+      case Video.fetch_integration_for_user(integration_id, user_id) do
+        {:ok, integration} ->
+          VideoIntegrationQueries.mark_needs_reauth(
+            integration,
+            "Microsoft Teams access was revoked. Please reconnect your Teams account."
+          )
+
+        {:error, :not_found} ->
+          :ok
+      end
     end
   end
 

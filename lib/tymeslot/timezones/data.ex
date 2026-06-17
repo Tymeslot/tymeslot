@@ -245,7 +245,6 @@ defmodule Tymeslot.Timezones.Data do
 
   def valid?(_other), do: false
 
-  @dialyzer {:no_contracts, valid_ids: 0}
   @spec valid_ids() :: MapSet.t(String.t())
   def valid_ids, do: @valid_ids
 

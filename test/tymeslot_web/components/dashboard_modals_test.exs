@@ -166,7 +166,8 @@ defmodule TymeslotWeb.Components.DashboardModalsTest do
       },
       cancelling: false,
       on_cancel: %JS{},
-      on_confirm: %JS{}
+      confirm_event: "confirm_cancel_meeting",
+      target: nil
     }
 
     html = render_component(&CancelMeetingModal.cancel_meeting_modal/1, assigns)
@@ -190,7 +191,8 @@ defmodule TymeslotWeb.Components.DashboardModalsTest do
       },
       cancelling: false,
       on_cancel: %JS{},
-      on_confirm: %JS{}
+      confirm_event: "confirm_cancel_meeting",
+      target: nil
     }
 
     html = render_component(&CancelMeetingModal.cancel_meeting_modal/1, assigns)

@@ -18,8 +18,6 @@ defmodule Tymeslot.Repo.Migrations.CreateSlackIntegrations do
       add :authed_user_id, :string
       # comma-separated scopes returned
       add :scope, :string
-      # for OAuth completion / channel-picker step
-      add :link_token, :string
 
       # Webhook URL mode fields
       add :webhook_url_encrypted, :binary
@@ -39,7 +37,6 @@ defmodule Tymeslot.Repo.Migrations.CreateSlackIntegrations do
 
     create index(:slack_integrations, [:user_id])
     create index(:slack_integrations, [:is_active])
-    create unique_index(:slack_integrations, [:link_token], where: "link_token IS NOT NULL")
 
     create constraint(:slack_integrations, :app_mode_must_be_valid,
              check: "app_mode IN ('oauth', 'webhook_url')"

@@ -142,18 +142,20 @@ defmodule Tymeslot.Emails.EmailScheduler.IntegrationScheduler do
   @doc """
   Schedules an administrative alert email.
 
-  Delegates to `Tymeslot.Workers.EmailWorker.AdminAlertScheduler.schedule/5`,
+  Delegates to `Tymeslot.Workers.EmailWorker.AdminAlertScheduler.schedule/6`,
   which handles dedup via Oban's uniqueness constraint (24-hour window keyed on
-  recipient + category + message hash).
+  recipient + category + dedup hash; pass `dedup_key:` in `opts` to override
+  the default message-based hash).
   """
   @spec schedule_admin_alert(
           recipient :: String.t(),
           category :: String.t(),
           severity :: :info | :warning | :error,
           message :: String.t(),
-          metadata :: map()
+          metadata :: map(),
+          opts :: [dedup_key: String.t()]
         ) :: :ok | {:error, String.t()}
-  defdelegate schedule_admin_alert(recipient, category, severity, message, metadata),
+  defdelegate schedule_admin_alert(recipient, category, severity, message, metadata, opts \\ []),
     to: Tymeslot.Workers.EmailWorker.AdminAlertScheduler,
     as: :schedule
 end

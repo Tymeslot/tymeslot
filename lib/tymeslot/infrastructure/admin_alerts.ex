@@ -32,11 +32,13 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
           | :integration_health_recovery
           | :oban_queue_stuck
           | :oban_jobs_accumulating
+          | :oban_job_failure
           | :pubsub_broadcast_failed
           | :dispute_created
           | :dispute_lost
           | :reconciliation_discrepancies
           | :subscription_not_in_database
+          | :unhandled_crash
           | atom()
 
   @callback send_alert(alert_type(), map()) :: :ok | {:error, any()}
@@ -130,14 +132,10 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
   defp maybe_put_reason(payload, nil), do: payload
 
   defp maybe_put_reason(payload, reason) do
-    case ReasonNormaliser.normalise(reason) do
-      nil ->
-        payload
+    %{code: code, message: message} = ReasonNormaliser.normalise(reason)
 
-      %{code: code, message: message} ->
-        payload
-        |> Map.put(:reason_code, code)
-        |> Map.put(:reason_message, message)
-    end
+    payload
+    |> Map.put(:reason_code, code)
+    |> Map.put(:reason_message, message)
   end
 end

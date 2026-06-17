@@ -55,4 +55,53 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpersTest do
       assert Date.to_string(end_date) == List.last(calendar_days).date
     end
   end
+
+  describe "trim_trailing_other_month_weeks/1" do
+    defp week(current_month?), do: for(_i <- 1..7, do: %{current_month: current_month?})
+
+    test "drops trailing weeks that are entirely other-month" do
+      days = week(true) ++ week(true) ++ week(false)
+      result = CalendarHelpers.trim_trailing_other_month_weeks(days)
+
+      assert length(result) == 14
+      assert Enum.all?(result, & &1.current_month)
+    end
+
+    test "keeps a trailing week that contains any current-month day" do
+      mixed_week = for i <- 1..7, do: %{current_month: i <= 3}
+      days = week(true) ++ mixed_week
+      result = CalendarHelpers.trim_trailing_other_month_weeks(days)
+
+      assert length(result) == 14
+    end
+
+    test "never trims leading or current-month weeks" do
+      days = week(true) ++ week(true)
+      assert CalendarHelpers.trim_trailing_other_month_weeks(days) == days
+    end
+
+    test "returns [] for an empty grid" do
+      assert CalendarHelpers.trim_trailing_other_month_weeks([]) == []
+    end
+
+    test "treats a missing :current_month key as other-month" do
+      days = week(true) ++ for(_i <- 1..7, do: %{})
+      assert length(CalendarHelpers.trim_trailing_other_month_weeks(days)) == 7
+    end
+  end
+
+  describe "get_calendar_days/5 trims trailing other-month weeks" do
+    test "keeps full weeks, all current-month days, and no all-next-month tail" do
+      profile = insert(:profile, advance_booking_days: 90)
+      days = CalendarHelpers.get_calendar_days("Etc/UTC", 2025, 6, profile, nil)
+
+      # Whole weeks only, and the last rendered week still has a real June day.
+      assert rem(length(days), 7) == 0
+      assert Enum.any?(Enum.take(days, -7), & &1.current_month)
+
+      # The current month is never truncated.
+      current = Enum.filter(days, & &1.current_month)
+      assert length(current) == Date.days_in_month(~D[2025-06-01])
+    end
+  end
 end

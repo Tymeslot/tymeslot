@@ -394,6 +394,23 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Returns the count of meetings with status `awaiting_payment` for a given organizer.
+
+  Used by `Tymeslot.MeetingPayments` to guard currency changes: if the host has any
+  meetings waiting for payment, the currency cannot be changed until they are resolved.
+  """
+  @spec count_awaiting_payment_for_organizer(integer()) :: non_neg_integer()
+  def count_awaiting_payment_for_organizer(organizer_user_id) do
+    Repo.aggregate(
+      from(m in Meeting,
+        where: m.organizer_user_id == ^organizer_user_id and m.status == "awaiting_payment"
+      ),
+      :count,
+      :id
+    )
+  end
+
+  @doc """
   Returns meetings in the reminder window with confirmed status.
   Business logic for determining which meetings need reminders should be in the Meetings context.
   """

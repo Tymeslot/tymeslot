@@ -9,7 +9,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.ThemeCustomizations.Validation
-  alias Tymeslot.Themes.Registry
+  alias Tymeslot.Themes.Catalog
 
   @type capability :: atom()
   @type customization_type :: :color | :background | :typography | :layout
@@ -30,7 +30,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
           customization_type() => [customization_option()]
         }
   def get_customization_options(theme_id) do
-    case Registry.get_theme_by_id(theme_id) do
+    case Catalog.get_by_id(theme_id) do
       {:ok, theme} ->
         build_options_from_capabilities(theme.features)
 
@@ -45,7 +45,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
   @spec validate_customization(String.t(), customization_attrs()) ::
           {:ok, customization_attrs()} | {:error, [String.t()]}
   def validate_customization(theme_id, customization_attrs) do
-    case Registry.get_theme_by_id(theme_id) do
+    case Catalog.get_by_id(theme_id) do
       {:ok, theme} ->
         validate_against_capabilities(theme.features, customization_attrs)
 
@@ -59,7 +59,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
   """
   @spec get_capability_defaults(String.t()) :: capability_defaults()
   def get_capability_defaults(theme_id) do
-    case Registry.get_theme_by_id(theme_id) do
+    case Catalog.get_by_id(theme_id) do
       {:ok, theme} ->
         build_defaults_from_capabilities(theme.features)
 
@@ -73,7 +73,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
   """
   @spec supports_customization?(String.t(), customization_type()) :: boolean()
   def supports_customization?(theme_id, customization_type) do
-    case Registry.get_theme_by_id(theme_id) do
+    case Catalog.get_by_id(theme_id) do
       {:ok, theme} ->
         check_capability_support(theme.features, customization_type)
 
@@ -87,7 +87,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
   """
   @spec generate_css(String.t(), customization_attrs()) :: String.t()
   def generate_css(theme_id, customizations) do
-    case Registry.get_theme_by_id(theme_id) do
+    case Catalog.get_by_id(theme_id) do
       {:ok, theme} ->
         generate_capability_css(theme.features, customizations)
 

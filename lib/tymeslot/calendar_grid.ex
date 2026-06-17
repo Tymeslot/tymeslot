@@ -14,6 +14,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
@@ -47,7 +48,9 @@ defmodule Tymeslot.CalendarGrid do
 
   Each integration is dispatched to the appropriate worker based on its provider:
   - `"google"` → `SyncGoogleCalendarWorker`
-  - `"outlook"` → skipped (event-driven via Microsoft Graph webhooks)
+  - `"outlook"` → `RefreshOutlookCalendarWorker` (delta sync or bootstrap; the
+    standard webhook-driven `SyncOutlookCalendarWorker` is per-event and can't
+    service a manual refresh on its own)
   - any provider returned by `ProviderConfig.caldav_based_providers/0` →
     `SyncCalDavCalendarWorker`
 
@@ -68,10 +71,6 @@ defmodule Tymeslot.CalendarGrid do
     {enqueued, skipped, errors} =
       Enum.reduce(integrations, {0, 0, []}, fn integration, {count, skip, errs} ->
         case enqueue_sync_worker(integration) do
-          # Outlook is webhook-driven; enqueue_sync_worker returns {:ok, nil}.
-          # No Oban job fires, so no broadcast_sync_complete will arrive.
-          # Tracked separately so the UI can pre-count these as done.
-          {:ok, nil} -> {count, skip + 1, errs}
           {:ok, _job} -> {count + 1, skip, errs}
           {:error, reason} -> {count, skip, [{integration.id, reason} | errs]}
         end
@@ -247,8 +246,11 @@ defmodule Tymeslot.CalendarGrid do
     |> Oban.insert()
   end
 
-  # Outlook syncs are event-driven via Microsoft Graph webhooks; no full-sync worker exists.
-  defp enqueue_sync_worker(%{provider: "outlook"} = _integration), do: {:ok, nil}
+  defp enqueue_sync_worker(%{provider: "outlook"} = integration) do
+    %{"calendar_integration_id" => integration.id}
+    |> RefreshOutlookCalendarWorker.new()
+    |> Oban.insert()
+  end
 
   defp enqueue_sync_worker(%{provider: provider} = integration) do
     if provider in @caldav_providers do

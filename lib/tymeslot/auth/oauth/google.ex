@@ -3,7 +3,6 @@ defmodule Tymeslot.Auth.OAuth.Google do
   Handles Google OAuth authentication logic.
   """
   @behaviour Tymeslot.Auth.OAuth.ProviderBehaviour
-  require Logger
 
   alias OAuth2.Client
   alias Tymeslot.Auth.OAuth.Helper

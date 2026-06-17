@@ -309,6 +309,4 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
       is_binary(path) and String.starts_with?(peid, path)
     end)
   end
-
-  defp matches_selected_calendar_path?(_event, _selected), do: false
 end

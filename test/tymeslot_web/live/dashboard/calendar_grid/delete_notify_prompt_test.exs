@@ -88,6 +88,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
         {:delete_event_result, {:ok, %{uid: event.uid, integration_id: integration.id}}}
       )
 
+      # Flush the :delete_event_result message before rendering. Its handler
+      # fires send_update to the calendar grid component (an async self-message),
+      # so without this the event removal can land after the assertion below.
+      :sys.get_state(lv.pid)
       html = render(lv)
       assert html =~ "Event deleted. Attendees have been notified."
       refute html =~ "Cancel Me"
@@ -127,6 +131,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
         {:delete_event_result, {:ok, %{uid: event.uid, integration_id: integration.id}}}
       )
 
+      # Flush the :delete_event_result message before rendering. Its handler
+      # fires send_update to the calendar grid component (an async self-message),
+      # so without this the event removal can land after the assertion below.
+      :sys.get_state(lv.pid)
       html = render(lv)
       assert html =~ "Event deleted."
       refute html =~ "Attendees have been notified"
@@ -166,6 +174,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
         {:delete_event_result, {:ok, %{uid: event.uid, integration_id: integration.id}}}
       )
 
+      # Flush the :delete_event_result message before rendering. Its handler
+      # fires send_update to the calendar grid component (an async self-message),
+      # so without this the event removal can land after the assertion below.
+      :sys.get_state(lv.pid)
       html = render(lv)
       assert html =~ "Event deleted."
       refute html =~ "Attendees have been notified"

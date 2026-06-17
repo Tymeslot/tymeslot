@@ -389,11 +389,11 @@ defmodule Tymeslot.Integrations.Calendar do
   # ---------------------------
 
   @doc """
-  Reconnect an existing CalDAV-family integration. Always returns
-  `{:ok, :needs_calendar_selection, payload}` on success — the caller
-  must show the discovered calendars (pre-ticking the integration's
-  existing `calendar_paths`) and then call
-  `Calendar.finalise_caldav_reconnect/3` with the user's selection.
+  Reconnect an existing CalDAV-family integration. Returns either
+  `{:ok, :updated, integration}` (password-only path, done) or
+  `{:ok, :needs_calendar_selection, payload}` (account change; caller must
+  prompt for calendar selection and then call
+  `Calendar.finalise_caldav_reconnect/3`).
 
   Arguments:
     * `user_id` — owning user id, used to scope the fetch.

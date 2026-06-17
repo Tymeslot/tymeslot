@@ -15,17 +15,24 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
   @dedup_period_seconds 86_400
 
   @doc """
-  Builds the args map for an admin alert job, including the SHA-256 dedup hash
-  derived from the category + message.
+  Builds the args map for an admin alert job, including the SHA-256 dedup hash.
+
+  The hash is derived from the category plus the `:dedup_key` option when
+  given, falling back to the message. Callers whose messages embed
+  per-occurrence detail should pass a stable `:dedup_key` so repeat alerts
+  collapse within the dedup window instead of each hashing differently.
   """
   @spec build_args(
           recipient :: String.t(),
           category :: String.t(),
           severity :: :info | :warning | :error,
           message :: String.t(),
-          metadata :: map()
+          metadata :: map(),
+          opts :: [dedup_key: String.t()]
         ) :: map()
-  def build_args(recipient, category, severity, message, metadata) do
+  def build_args(recipient, category, severity, message, metadata, opts \\ []) do
+    dedup_key = Keyword.get(opts, :dedup_key) || message
+
     %{
       "action" => "send_admin_alert",
       "recipient" => recipient,
@@ -33,14 +40,14 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
       "severity" => to_string(severity),
       "message" => message,
       "metadata" => serialize_metadata(metadata),
-      "alert_hash" => compute_alert_hash(category, message)
+      "alert_hash" => compute_alert_hash(category, dedup_key)
     }
   end
 
   @doc """
   Inserts an admin alert job into Oban with a 24-hour dedup window.
 
-  Identical alerts (same recipient + category + message hash) within the
+  Identical alerts (same recipient + category + dedup hash) within the
   window are silently dropped via Oban's uniqueness constraint, so a
   persistent issue produces at most one email per day for the same content.
   """
@@ -49,10 +56,11 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
           category :: String.t(),
           severity :: :info | :warning | :error,
           message :: String.t(),
-          metadata :: map()
+          metadata :: map(),
+          opts :: [dedup_key: String.t()]
         ) :: :ok | {:error, String.t()}
-  def schedule(recipient, category, severity, message, metadata) do
-    args = build_args(recipient, category, severity, message, metadata)
+  def schedule(recipient, category, severity, message, metadata, opts \\ []) do
+    args = build_args(recipient, category, severity, message, metadata, opts)
 
     result =
       args

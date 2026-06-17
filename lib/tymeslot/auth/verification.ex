@@ -18,6 +18,9 @@ defmodule Tymeslot.Auth.Verification do
           {:ok, term()} | {:error, atom()} | {:error, :rate_limited, String.t()}
   @type socket_or_conn :: Phoenix.LiveView.Socket.t() | Plug.Conn.t()
 
+  # Verification links stay valid for 24 hours from the moment they are sent.
+  @token_validity_seconds 24 * 3600
+
   @doc """
   Stores a verification token for a user.
   """
@@ -161,7 +164,7 @@ defmodule Tymeslot.Auth.Verification do
   defp check_token_expiration(user) do
     with nil <- user.verification_token_used_at,
          %DateTime{} = sent_at <- user.verification_sent_at,
-         expiry <- DateTime.add(sent_at, 24 * 3600, :second),
+         expiry <- DateTime.add(sent_at, @token_validity_seconds, :second),
          :gt <- DateTime.compare(expiry, DateTime.utc_now()) do
       :ok
     else
@@ -176,6 +179,7 @@ defmodule Tymeslot.Auth.Verification do
         case Config.user_queries_module().verify_user(user) do
           {:ok, updated_user} ->
             AccountLogging.log_user_verified(updated_user, "email")
+            :telemetry.execute([:tymeslot, :auth, :email_verified], %{count: 1}, %{})
             {:ok, updated_user}
 
           {:error, _changeset} ->
@@ -190,27 +194,42 @@ defmodule Tymeslot.Auth.Verification do
   end
 
   defp do_verify_user_email(socket_or_conn, user) do
-    {token, expiry, _hash} = Token.generate_email_verification_token(user.id)
+    {token, expiry, _purpose} = Token.generate_email_verification_token(user.id)
     verification_url = build_verification_url(socket_or_conn, token)
+    token_hash = Token.hash_token(token)
     ip_address = extract_ip_address(socket_or_conn)
 
-    case store_verification_token(user.id, token, expiry, ip_address) do
-      {:ok, updated_user} ->
-        case send_verification_email(updated_user, verification_url) do
-          {:ok, _pid} ->
-            {:ok, updated_user}
-
-          {:error, _reason} ->
-            Logger.error("Failed to send verification email", user_id: user.id)
-            {:error, :email_send_failed}
-        end
-
+    # Persist the token first so it is valid in the database before the job runs.
+    # The job carries the token's hash; the worker discards it at send time if a
+    # newer request has since rotated the stored token, so an in-flight or
+    # retrying job can never deliver an invalidated link.
+    with {:ok, updated_user} <- persist_verification_token(user, token, expiry, ip_address),
+         {:ok, _status} <- send_verification_email(updated_user, verification_url, token_hash) do
+      {:ok, updated_user}
+    else
       {:error, :token_storage_failed} ->
         Logger.error("Failed to store verification token", user_id: user.id)
         {:error, :token_storage_failed}
 
-      {:error, _reason} ->
+      {:error, :unknown} ->
         Logger.error("Unknown error during email verification", user_id: user.id)
+        {:error, :unknown}
+
+      {:error, _reason} ->
+        Logger.error("Failed to send verification email", user_id: user.id)
+        {:error, :email_send_failed}
+    end
+  end
+
+  defp persist_verification_token(user, token, expiry, ip_address) do
+    case store_verification_token(user.id, token, expiry, ip_address) do
+      {:ok, updated_user} ->
+        {:ok, updated_user}
+
+      {:error, :token_storage_failed} ->
+        {:error, :token_storage_failed}
+
+      {:error, _reason} ->
         {:error, :unknown}
     end
   end
@@ -219,12 +238,15 @@ defmodule Tymeslot.Auth.Verification do
     UrlBuilder.email_verification_url(verification_token)
   end
 
-  defp send_verification_email(user, verification_url) do
-    # Use the email worker to send the verification email asynchronously
-    case EmailScheduler.schedule_email_verification(user.id, verification_url) do
-      :ok ->
+  defp send_verification_email(user, verification_url, token_hash) do
+    # Use the email worker to send the verification email asynchronously.
+    case EmailScheduler.schedule_email_verification(user.id, verification_url, token_hash) do
+      {:ok, :scheduled} ->
         Logger.info("Verification email job scheduled", user_id: user.id)
-        {:ok, self()}
+        {:ok, :scheduled}
+
+      {:ok, :duplicate} ->
+        {:ok, :duplicate}
 
       {:error, reason} ->
         Logger.error("Failed to schedule verification email",

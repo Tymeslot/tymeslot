@@ -265,5 +265,38 @@ defmodule Tymeslot.Slack.InputValidationTest do
       assert {:error, errors} = InputValidation.validate_form(params, mode: :oauth_pending)
       assert Map.has_key?(errors, :channel_id)
     end
+
+    test "webhook_url_existing mode: blank webhook_url is allowed (keep current)" do
+      params = %{
+        "name" => "Edited",
+        "webhook_url" => "",
+        "events" => ["meeting.created"]
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_form(params, mode: :webhook_url_existing)
+      # The blank URL is omitted so the stored encrypted value is preserved.
+      refute Map.has_key?(sanitized, :webhook_url)
+      assert sanitized.name == "Edited"
+    end
+
+    test "webhook_url_existing mode: a provided URL is still format-validated" do
+      bad = %{
+        "name" => "Edited",
+        "webhook_url" => "https://evil.example",
+        "events" => ["meeting.created"]
+      }
+
+      assert {:error, errors} = InputValidation.validate_form(bad, mode: :webhook_url_existing)
+      assert Map.has_key?(errors, :webhook_url)
+
+      good = %{
+        "name" => "Edited",
+        "webhook_url" => "https://hooks.slack.com/services/TABC123/BABC123/tok",
+        "events" => ["meeting.created"]
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_form(good, mode: :webhook_url_existing)
+      assert sanitized.webhook_url =~ "hooks.slack.com"
+    end
   end
 end

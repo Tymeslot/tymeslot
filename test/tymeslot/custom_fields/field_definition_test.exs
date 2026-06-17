@@ -211,6 +211,109 @@ defmodule Tymeslot.CustomFields.FieldDefinitionTest do
       refute cs.valid?
       assert "should have at most 50 item(s)" in errors_on(cs).options
     end
+
+    test "single_select rejects duplicate option keys" do
+      cs =
+        FieldDefinition.changeset(%FieldDefinition{}, %{
+          "type" => "single_select",
+          "label" => "Pick",
+          "options" => [
+            %{"key" => "dup", "label" => "A"},
+            %{"key" => "dup", "label" => "B"}
+          ]
+        })
+
+      refute cs.valid?
+      assert "must not contain duplicate keys" in errors_on(cs).options
+    end
+
+    test "number bounds are stored as strings and validated lo <= hi" do
+      cs =
+        FieldDefinition.changeset(%FieldDefinition{}, %{
+          "type" => "number",
+          "label" => "Qty",
+          "min" => "1",
+          "max" => "10"
+        })
+
+      assert cs.valid?
+      assert Changeset.get_field(cs, :min) == "1"
+      assert Changeset.get_field(cs, :max) == "10"
+    end
+
+    test "number min greater than max is rejected" do
+      cs =
+        FieldDefinition.changeset(%FieldDefinition{}, %{
+          "type" => "number",
+          "label" => "Qty",
+          "min" => "10",
+          "max" => "1"
+        })
+
+      refute cs.valid?
+    end
+
+    test "date bounds accept ISO date strings and validate ordering" do
+      ok =
+        FieldDefinition.changeset(%FieldDefinition{}, %{
+          "type" => "date",
+          "label" => "When",
+          "min" => "2026-01-01",
+          "max" => "2026-12-31"
+        })
+
+      assert ok.valid?
+
+      bad =
+        FieldDefinition.changeset(%FieldDefinition{}, %{
+          "type" => "date",
+          "label" => "When",
+          "min" => "2026-12-31",
+          "max" => "2026-01-01"
+        })
+
+      refute bad.valid?
+    end
+
+    test "time bounds accept HH:MM strings and validate ordering" do
+      ok =
+        FieldDefinition.changeset(%FieldDefinition{}, %{
+          "type" => "time",
+          "label" => "At",
+          "min" => "09:00",
+          "max" => "17:00"
+        })
+
+      assert ok.valid?
+
+      bad =
+        FieldDefinition.changeset(%FieldDefinition{}, %{
+          "type" => "time",
+          "label" => "At",
+          "min" => "17:00",
+          "max" => "09:00"
+        })
+
+      refute bad.valid?
+    end
+
+    test "time keeps min/max when switching from another bounded type" do
+      cs =
+        FieldDefinition.changeset(
+          %FieldDefinition{
+            id: UUID.generate(),
+            type: "number",
+            label: "X",
+            min: "1",
+            max: "10"
+          },
+          %{"type" => "time"}
+        )
+
+      # number → time is a bounded → bounded switch, so min/max are retained.
+      assert Changeset.get_field(cs, :min) == "1"
+      assert Changeset.get_field(cs, :max) == "10"
+    end
   end
 
   defp errors_on(cs) do

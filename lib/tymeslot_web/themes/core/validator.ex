@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Themes.Core.Validator do
   Validation utilities for theme system integrity.
   """
 
-  alias Tymeslot.Themes.Theme
+  alias TymeslotWeb.Themes.Core.ThemeInfo
 
   require Logger
 
@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Themes.Core.Validator do
   """
   @spec validate_all_themes() :: :ok | {:error, list()}
   def validate_all_themes do
-    case Theme.validate_all_themes() do
+    case ThemeInfo.validate_all_themes() do
       :ok ->
         Logger.info("✅ All themes validated successfully")
         :ok
@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Themes.Core.Validator do
   """
   @spec validate_theme_independence() :: :ok | {:error, list()}
   def validate_theme_independence do
-    all_themes = Theme.all_themes()
+    all_themes = ThemeInfo.all_themes()
 
     Logger.info("Testing theme independence", theme_count: Enum.count(all_themes))
 
@@ -63,13 +63,13 @@ defmodule TymeslotWeb.Themes.Core.Validator do
   """
   @spec validate_theme_components() :: :ok | {:error, list()}
   def validate_theme_components do
-    all_themes = Theme.all_themes()
+    all_themes = ThemeInfo.all_themes()
 
     Logger.info("Testing theme components", theme_count: Enum.count(all_themes))
 
     results =
       Enum.flat_map(all_themes, fn {theme_id, _theme_info} ->
-        components = Theme.get_components(theme_id)
+        components = ThemeInfo.get_components(theme_id)
 
         Enum.map(components, fn {component_name, component_module} ->
           {{theme_id, component_name}, test_component_loading(component_module)}
@@ -129,7 +129,7 @@ defmodule TymeslotWeb.Themes.Core.Validator do
 
   defp test_theme_independence(theme_id) do
     # Test that theme module can be loaded
-    theme_module = Theme.get_theme_module(theme_id)
+    theme_module = ThemeInfo.get_theme_module(theme_id)
 
     if theme_module == nil do
       {:error, "Theme module not found"}
@@ -174,8 +174,11 @@ defmodule TymeslotWeb.Themes.Core.Validator do
   defp test_component_loading(component_module) do
     case Code.ensure_loaded(component_module) do
       {:module, ^component_module} ->
-        # Test that it's a valid LiveComponent
-        if function_exported?(component_module, :update, 2) do
+        # Test that it's a valid LiveComponent. `update/2` is an optional
+        # callback, so check the `__live__/0` marker that
+        # `use Phoenix.LiveComponent` defines instead.
+        if function_exported?(component_module, :__live__, 0) &&
+             match?(%{kind: :component}, component_module.__live__()) do
           :ok
         else
           {:error, "Component does not implement LiveComponent behavior"}

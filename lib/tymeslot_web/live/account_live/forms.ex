@@ -16,7 +16,7 @@ defmodule TymeslotWeb.AccountLive.Forms do
   @spec email_form(map()) :: Phoenix.LiveView.Rendered.t()
   def email_form(assigns) do
     ~H"""
-    <form phx-submit="update_email" class="space-y-4">
+    <form id="account-email-form" phx-submit="update_email" class="space-y-4">
       <.input
         name="email_form[new_email]"
         type="email"
@@ -52,7 +52,7 @@ defmodule TymeslotWeb.AccountLive.Forms do
   @spec password_form(map()) :: Phoenix.LiveView.Rendered.t()
   def password_form(assigns) do
     ~H"""
-    <form phx-submit="update_password" class="space-y-4">
+    <form id="account-password-form" phx-submit="update_password" class="space-y-4">
       <.input
         name="password_form[current_password]"
         type="password"

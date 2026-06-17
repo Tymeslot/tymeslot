@@ -5,6 +5,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
   Cleans up:
   1. Outgoing webhook delivery logs (60 days retention)
   2. Incoming Stripe webhook events (90 days retention)
+  3. Slack delivery logs (60 days retention)
 
   Ensures the database doesn't grow indefinitely by removing
   old records based on configured retention periods.
@@ -17,6 +18,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
 
   require Logger
 
+  alias Tymeslot.Slack
   alias Tymeslot.Webhooks.WebhookQueries
 
   @impl Oban.Worker
@@ -29,6 +31,9 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
 
     # Clean up incoming Stripe webhook events
     cleanup_incoming_webhook_events(args)
+
+    # Clean up Slack delivery logs (one row per attempt — grows fast)
+    cleanup_slack_deliveries(args)
 
     :ok
   end
@@ -71,6 +76,23 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
       {0, _nil} ->
         Logger.debug("No stale webhook payloads to nullify")
     end
+  end
+
+  defp cleanup_slack_deliveries(args) do
+    # Default to 60 days retention, matching outgoing webhook deliveries.
+    retention_days =
+      Map.get(args, "slack_delivery_retention_days") ||
+        get_in(Application.get_env(:tymeslot, :payments, []), [:retention, :outgoing_webhook_days]) ||
+        60
+
+    Logger.info("Starting Slack delivery cleanup", retention_days: retention_days)
+
+    {count, _rows} = Slack.prune_deliveries(retention_days)
+
+    Logger.info("Slack delivery cleanup completed",
+      deleted_count: count,
+      retention_days: retention_days
+    )
   end
 
   defp cleanup_incoming_webhook_events(args) do

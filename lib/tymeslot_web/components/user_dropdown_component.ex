@@ -22,11 +22,11 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
         on_toggle="toggle_user_dropdown"
         on_close="hide_user_dropdown"
         target={@myself}
-        trigger_class="flex items-center space-x-3 bg-white border-2 border-tymeslot-50 rounded-2xl px-3 py-2 shadow-sm hover:border-turquoise-100 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-turquoise-500"
-        class="mt-3 w-56 bg-white rounded-2xl shadow-2xl ring-1 ring-tymeslot-200 border-2 border-tymeslot-50 overflow-hidden"
+        trigger_class="flex items-center space-x-3 bg-white border-2 border-tymeslot-50 rounded-2xl px-3 py-2 shadow-sm hover:border-turquoise-100 hover:shadow-md transition-all focus:outline-hidden focus:ring-2 focus:ring-turquoise-500"
+        class="w-56 bg-white rounded-2xl shadow-2xl ring-1 ring-tymeslot-200 border-2 border-tymeslot-50 overflow-hidden"
       >
       <:trigger>
-        <div class="w-10 h-10 rounded-xl overflow-hidden bg-tymeslot-100 border-2 border-white shadow-sm flex-shrink-0">
+        <div class="w-10 h-10 rounded-xl overflow-hidden bg-tymeslot-100 border-2 border-white shadow-sm shrink-0">
           <img
             src={Profiles.avatar_url(@profile, :thumb)}
             alt={Profiles.avatar_alt_text(@profile)}
@@ -102,13 +102,14 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
     {:ok, assign(socket, :dropdown_open, false)}
   end
 
-  # Helper function to get display name (full name or email fallback)
+  # Helper function to get display name (full name or email fallback).
+  # All render sites are authenticated, so `current_user` is always present.
   defp get_display_name(profile, current_user) do
     cond do
       profile && profile.full_name && String.trim(profile.full_name) != "" ->
         String.trim(profile.full_name)
 
-      current_user && current_user.email ->
+      current_user.email ->
         current_user.email
 
       true ->

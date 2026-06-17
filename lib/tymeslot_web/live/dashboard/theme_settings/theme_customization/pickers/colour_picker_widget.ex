@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
       data-initial-hex={@initial_hex}
     >
       <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-        <div class="relative h-40 w-40 flex-shrink-0 select-none touch-none overflow-hidden rounded-token-xl bg-white shadow-glass-sm ring-1 ring-tymeslot-200">
+        <div class="relative h-40 w-40 shrink-0 select-none touch-none overflow-hidden rounded-token-xl bg-white shadow-glass-sm ring-1 ring-tymeslot-200">
           <canvas
             data-cp="canvas"
             width="160"
@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
         <div class="flex flex-row items-center gap-3 sm:flex-col sm:items-stretch sm:gap-2">
           <div
             data-cp="preview"
-            class="h-9 w-9 flex-shrink-0 rounded-token-lg shadow-inner ring-1 ring-tymeslot-200"
+            class="h-9 w-9 shrink-0 rounded-token-lg shadow-inner ring-1 ring-tymeslot-200"
             style={"background-color: #{@initial_hex}"}
           >
           </div>
@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
             spellcheck="false"
             aria-label="Hex colour value"
             value={String.upcase(@initial_hex)}
-            class="w-28 rounded-token-lg border-2 border-tymeslot-200 bg-white px-2 py-1 font-mono text-token-2xs font-bold uppercase text-tymeslot-700 transition-all focus:border-turquoise-400 focus:outline-none focus:ring-2 focus:ring-turquoise-400/20 sm:w-24"
+            class="w-28 rounded-token-lg border-2 border-tymeslot-200 bg-white px-2 py-1 font-mono text-token-2xs font-bold uppercase text-tymeslot-700 transition-all focus:border-turquoise-400 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400/20 sm:w-24"
           />
         </div>
       </div>

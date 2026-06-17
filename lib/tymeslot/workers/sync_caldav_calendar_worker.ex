@@ -33,12 +33,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   so Oban retries and takes another shot at recording the flag. The
   `is_active` flag is left unchanged so the integration remains visible in the
   dashboard.
-
-  ## Jitter (first run)
-
-  When `caldav_sync_tier` is nil (first-ever sync), the worker sleeps 0–30 s
-  before making any HTTP requests. This prevents a thunderstorm when many CalDAV
-  integrations are enqueued simultaneously by the fallback sweep.
   """
 
   use Oban.Worker,
@@ -47,7 +41,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     unique: [
       period: 300,
       keys: [:calendar_integration_id],
-      states: [:available, :scheduled, :executing, :retryable]
+      states: [:available, :scheduled, :executing, :retryable, :suspended]
     ]
 
   require Logger
@@ -159,15 +153,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
       :ok
     else
-      result =
-        Enum.reduce_while(paths, :ok, fn path, _acc ->
-          case do_full_fetch(integration, client, path, []) do
-            :ok -> {:cont, :ok}
-            error -> {:halt, error}
-          end
-        end)
-
-      case result do
+      case fetch_paths(integration, client, paths) do
         :ok ->
           # do_full_fetch has already called persist_sync_state per path (without
           # the new options). Now write the force-specific fields in one final
@@ -249,12 +235,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
       [primary_path | extra_paths] ->
         with :ok <- do_sync_tier1(integration, client, primary_path) do
-          Enum.reduce_while(extra_paths, :ok, fn path, _acc ->
-            case do_full_fetch(integration, client, path, []) do
-              :ok -> {:cont, :ok}
-              error -> {:halt, error}
-            end
-          end)
+          fetch_paths(integration, client, extra_paths)
         end
     end
   end
@@ -299,6 +280,9 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       {:error, :forbidden} ->
         flag_reauth_required(integration)
 
+      {:error, :not_found} ->
+        flag_booking_calendar_missing(integration)
+
       {:error, reason} ->
         log_sync_error(integration, "Tier 1 sync", reason)
         {:error, reason}
@@ -323,12 +307,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
       [primary_path | extra_paths] ->
         with :ok <- do_sync_tier2(integration, client, primary_path) do
-          Enum.reduce_while(extra_paths, :ok, fn path, _acc ->
-            case do_full_fetch(integration, client, path, []) do
-              :ok -> {:cont, :ok}
-              error -> {:halt, error}
-            end
-          end)
+          fetch_paths(integration, client, extra_paths)
         end
     end
   end
@@ -348,7 +327,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
           persist_sync_state(integration, [])
           :ok
         else
-          do_full_fetch(integration, client, primary_path,
+          full_fetch_primary(integration, client, primary_path,
             new_ctag: current_ctag,
             ctag_paths: [primary_path]
           )
@@ -360,10 +339,22 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       {:error, :forbidden} ->
         flag_reauth_required(integration)
 
+      {:error, :not_found} ->
+        flag_booking_calendar_missing(integration)
+
       {:error, reason} ->
         log_sync_error(integration, "Tier 2 CTag check", reason)
         # Fall back to full fetch on CTag probe failure
-        do_full_fetch(integration, client, primary_path, [])
+        full_fetch_primary(integration, client, primary_path, [])
+    end
+  end
+
+  # Wraps `do_full_fetch/4` for the booking (first) calendar path, where a
+  # missing collection means user action is required rather than path removal.
+  defp full_fetch_primary(integration, client, primary_path, opts) do
+    case do_full_fetch(integration, client, primary_path, opts) do
+      :not_found -> flag_booking_calendar_missing(integration)
+      other -> other
     end
   end
 
@@ -381,12 +372,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
       :ok
     else
-      Enum.reduce_while(paths, :ok, fn path, _acc ->
-        case do_full_fetch(integration, client, path, []) do
-          :ok -> {:cont, :ok}
-          error -> {:halt, error}
-        end
-      end)
+      fetch_paths(integration, client, paths)
     end
   end
 
@@ -441,9 +427,82 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       {:error, :forbidden} ->
         flag_reauth_required(integration)
 
+      {:error, :not_found} ->
+        :not_found
+
       {:error, reason} ->
         log_sync_error(integration, "full fetch", reason)
         {:error, reason}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Missing calendar paths (deleted on the server)
+  # ---------------------------------------------------------------------------
+
+  # Fetches each path in turn, accumulating any that 404 so they can be
+  # handled in one place afterwards: a missing booking (first) path flags the
+  # integration for reconnection, missing extra paths are removed so they are
+  # not re-fetched — and 404 — on every subsequent sweep.
+  defp fetch_paths(integration, client, paths) do
+    {status, missing} =
+      Enum.reduce_while(paths, {:ok, []}, fn path, {:ok, missing} ->
+        case do_full_fetch(integration, client, path, []) do
+          :ok -> {:cont, {:ok, missing}}
+          :not_found -> {:cont, {:ok, [path | missing]}}
+          error -> {:halt, {error, missing}}
+        end
+      end)
+
+    handle_missing_paths(integration, client, missing, status)
+  end
+
+  defp handle_missing_paths(_integration, _client, [], status), do: status
+
+  defp handle_missing_paths(integration, client, missing, status) do
+    if List.first(client.calendar_paths) in missing do
+      flag_booking_calendar_missing(integration)
+    else
+      remove_missing_paths(integration, missing)
+      status
+    end
+  end
+
+  defp remove_missing_paths(integration, missing) do
+    Logger.warning("CalDAV calendar paths no longer exist on server; removing from sync",
+      calendar_integration_id: integration.id,
+      missing_count: length(missing)
+    )
+
+    case CalendarIntegrationQueries.remove_calendar_paths(integration, missing) do
+      {:ok, _updated} ->
+        :ok
+
+      {:error, changeset} ->
+        Logger.error("Failed to remove missing CalDAV calendar paths",
+          calendar_integration_id: integration.id,
+          error: inspect(changeset.errors)
+        )
+
+        :ok
+    end
+  end
+
+  defp flag_booking_calendar_missing(integration) do
+    Logger.warning(
+      "CalDAV booking calendar no longer exists; flagging integration for reconnection",
+      calendar_integration_id: integration.id
+    )
+
+    case CalendarManagement.mark_needs_reauth(
+           integration,
+           "The booking calendar no longer exists on the CalDAV server. Please reconnect the integration and select a different calendar."
+         ) do
+      {:ok, _updated} ->
+        {:discard, "CalDAV booking calendar not found — user action required"}
+
+      {:error, _changeset} ->
+        {:error, "Failed to flag integration for missing booking calendar"}
     end
   end
 

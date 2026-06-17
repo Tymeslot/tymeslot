@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
             <% else %>
               <div class="duration-grid">
                 <%= for meeting_type <- @meeting_types do %>
-                  <% slug = MeetingTypes.to_slug(meeting_type) %>
+                  <% slug = MeetingTypes.effective_slug(meeting_type) %>
                   <div class={"duration-card #{if @selected_duration == slug, do: "selected", else: ""}"}>
                     <button
                       phx-click="select_duration"
@@ -87,7 +87,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                       data-testid="duration-option"
                       data-duration={slug}
                     >
-                      <div class="duration-icon flex-shrink-0">
+                      <div class="duration-icon shrink-0">
                         {render_icon(meeting_type.icon || get_default_icon(meeting_type))}
                       </div>
                       <div class="duration-info">

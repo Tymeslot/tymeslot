@@ -164,7 +164,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   defp take_octets(binary, max_bytes) do
     # Walk forward from max_bytes to find a UTF-8 codepoint boundary.
     split_at = safe_utf8_split(binary, max_bytes)
-    <<chunk::binary-size(split_at), rest::binary>> = binary
+    <<chunk::binary-size(^split_at), rest::binary>> = binary
     {chunk, rest}
   end
 

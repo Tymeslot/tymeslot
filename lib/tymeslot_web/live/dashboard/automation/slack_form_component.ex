@@ -12,7 +12,6 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Slack
-  alias Tymeslot.Slack.SlackIntegrationSchema
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -78,11 +77,14 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
     }
   end
 
+  # Never pre-fill the stored webhook URL — rendering the decrypted secret as a
+  # value would leak it into the DOM and LiveView diffs. Leave it blank; a blank
+  # submission keeps the current URL.
   defp resolve_form_values(_assigns, %{} = integration, :webhook_url_existing) do
     %{
       "name" => integration.name,
       "events" => integration.events,
-      "webhook_url" => SlackIntegrationSchema.webhook_url(integration) || "",
+      "webhook_url" => "",
       "webhook_channel_hint" => integration.webhook_channel_hint || ""
     }
   end
@@ -189,19 +191,23 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                   label="Slack Webhook URL"
                   value={Map.get(@form_values, "webhook_url", "")}
                   phx-blur={JS.push("slack_validate_field", value: %{"field" => "webhook_url"}, target: @parent_component)}
-                  placeholder="https://hooks.slack.com/services/T.../B.../..."
-                  required
+                  placeholder={webhook_url_placeholder(@mode)}
+                  required={@mode == :webhook_url}
                   errors={FormValidationHelpers.field_errors(@form_errors, :webhook_url)}
                   icon="hero-link"
                 >
                   <:description>
-                    Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created — see the full setup guide on
-                    <a
-                      href="https://tymeslot.app/docs/slack"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="font-black text-turquoise-700 hover:text-turquoise-900 underline"
-                    >tymeslot.app/docs/slack</a>.
+                    <%= if @mode == :webhook_url_existing do %>
+                      Leave blank to keep the current webhook URL. Paste a new one only if you want to replace it.
+                    <% else %>
+                      Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created — see the full setup guide on
+                      <a
+                        href="https://tymeslot.app/docs/slack"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="font-black text-turquoise-700 hover:text-turquoise-900 underline"
+                      >tymeslot.app/docs/slack</a>.
+                    <% end %>
                   </:description>
                 </.input>
 
@@ -342,30 +348,29 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
           </div>
 
         <% true -> %>
-          <select
+          <.input
+            type="select"
             name="slack[channel_id]"
-            class={[
-              "glass-dropdown",
-              FormValidationHelpers.field_errors(@form_errors, :channel_id) != [] && "input-error"
-            ]}
-          >
-            <option value="">Pick a channel...</option>
-            <%= for c <- @channels do %>
-              <option value={c.id} selected={c.id == Map.get(@form_values, "channel_id")}>
-                #<%= c.name %><%= if c.is_private, do: " (private)" %>
-              </option>
-            <% end %>
-          </select>
-
-          <%= for error <- FormValidationHelpers.field_errors(@form_errors, :channel_id) do %>
-            <p class="mt-2 text-token-sm font-semibold text-red-600">{error}</p>
-          <% end %>
+            value={Map.get(@form_values, "channel_id")}
+            prompt="Pick a channel..."
+            options={channel_options(@channels)}
+            errors={FormValidationHelpers.field_errors(@form_errors, :channel_id)}
+          />
 
           <%!-- Hidden channel_name pairs with the chosen channel_id; submit handler resolves it via the channels list. --%>
           <input type="hidden" name="slack[channel_name]" value={lookup_channel_name(@channels, Map.get(@form_values, "channel_id"))} />
       <% end %>
     </div>
     """
+  end
+
+  # Builds `{label, value}` option tuples for the core `<.input type="select">`
+  # component. Private channels are suffixed so the user can tell them apart.
+  defp channel_options(channels) do
+    Enum.map(channels, fn c ->
+      label = "##{c.name}" <> if(c.is_private, do: " (private)", else: "")
+      {label, c.id}
+    end)
   end
 
   defp lookup_channel_name(channels, channel_id)
@@ -400,6 +405,9 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
   defp submit_event(:webhook_url), do: "slack_save_webhook"
   defp submit_event(:webhook_url_existing), do: "slack_update"
 
+  defp webhook_url_placeholder(:webhook_url_existing), do: "Leave blank to keep current URL"
+  defp webhook_url_placeholder(_mode), do: "https://hooks.slack.com/services/T.../B.../..."
+
   defp submit_label(:oauth_pending), do: "Save channel"
   defp submit_label(:oauth_existing), do: "Update"
   defp submit_label(:webhook_url), do: "Save"
@@ -419,8 +427,13 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
       :oauth_existing ->
         base and present?(values, "name") and present?(values, "channel_id")
 
-      mode when mode in [:webhook_url, :webhook_url_existing] ->
+      :webhook_url ->
         base and present?(values, "name") and present?(values, "webhook_url")
+
+      # On edit the webhook URL is optional (blank keeps the stored value), so
+      # only name + at least one event are required to submit.
+      :webhook_url_existing ->
+        base and present?(values, "name")
     end
   end
 

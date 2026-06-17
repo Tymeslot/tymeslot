@@ -173,6 +173,15 @@ defmodule TymeslotWeb.AuthLiveTest do
   end
 
   describe "Registration" do
+    setup do
+      # The signup form only renders the terms checkbox and enforces the
+      # "must be accepted" validation when legal agreements are enforced.
+      original = Application.get_env(:tymeslot, :enforce_legal_agreements)
+      Application.put_env(:tymeslot, :enforce_legal_agreements, true)
+      on_exit(fn -> Application.put_env(:tymeslot, :enforce_legal_agreements, original) end)
+      :ok
+    end
+
     test "renders signup page", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/auth/signup")
       assert has_element?(view, "#signup-form")
@@ -474,6 +483,78 @@ defmodule TymeslotWeb.AuthLiveTest do
       render_hook(view, "resend_verification", %{})
 
       assert render(view) =~ "limit" or render(view) =~ "Too many"
+    end
+
+    test "resend_verification disables the button with a live cooldown countdown",
+         %{conn: conn} do
+      user = insert(:unverified_user)
+
+      conn =
+        init_test_session(conn, %{
+          "unverified_user_id" => user.id,
+          "unverified_user_email" => user.email,
+          "unverified_session_timestamp" => DateTime.to_unix(DateTime.utc_now())
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/auth/verify-email")
+
+      html = render_hook(view, "resend_verification", %{})
+
+      assert html =~ "Resend available in"
+      assert has_element?(view, "button[phx-click='resend_verification'][disabled]")
+
+      # The countdown ticks down via handle_info without re-enabling prematurely.
+      send(view.pid, :resend_cooldown_tick)
+      assert has_element?(view, "button[phx-click='resend_verification'][disabled]")
+    end
+
+    test "the cooldown re-enables the button once it elapses", %{conn: conn} do
+      user = insert(:unverified_user)
+
+      conn =
+        init_test_session(conn, %{
+          "unverified_user_id" => user.id,
+          "unverified_user_email" => user.email,
+          "unverified_session_timestamp" => DateTime.to_unix(DateTime.utc_now())
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/auth/verify-email")
+
+      render_hook(view, "resend_verification", %{})
+      assert has_element?(view, "button[phx-click='resend_verification'][disabled]")
+
+      # Drive the countdown to zero (cooldown starts at @resend_cooldown_seconds = 60).
+      for _tick <- 1..60, do: send(view.pid, :resend_cooldown_tick)
+
+      html = render(view)
+      refute html =~ "Resend available in"
+      assert html =~ "Resend Verification Email"
+      refute has_element?(view, "button[phx-click='resend_verification'][disabled]")
+    end
+
+    test "a second resend during the cooldown is ignored and does not reset the countdown",
+         %{conn: conn} do
+      user = insert(:unverified_user)
+
+      conn =
+        init_test_session(conn, %{
+          "unverified_user_id" => user.id,
+          "unverified_user_email" => user.email,
+          "unverified_session_timestamp" => DateTime.to_unix(DateTime.utc_now())
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/auth/verify-email")
+
+      render_hook(view, "resend_verification", %{})
+      for _tick <- 1..5, do: send(view.pid, :resend_cooldown_tick)
+      assert render(view) =~ "Resend available in 55s"
+
+      # A double-click before the disabled patch lands must not restart the cooldown
+      # (which would otherwise spawn a second timer chain and drain it early).
+      render_hook(view, "resend_verification", %{})
+      html = render(view)
+      assert html =~ "Resend available in 55s"
+      refute html =~ "Resend available in 60s"
     end
   end
 

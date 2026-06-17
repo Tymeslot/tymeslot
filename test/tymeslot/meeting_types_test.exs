@@ -527,4 +527,99 @@ defmodule Tymeslot.MeetingTypesTest do
       assert updated.duration_minutes == 45
     end
   end
+
+  describe "meeting_payments feature gating" do
+    defmodule DenyPaymentsChecker do
+      @behaviour Tymeslot.Features.CheckerBehaviour
+      @impl Tymeslot.Features.CheckerBehaviour
+      def check_access(_user_id, :meeting_payments), do: {:error, :pro_required}
+      def check_access(_user_id, _feature), do: :ok
+    end
+
+    setup do
+      setup_config(:tymeslot, feature_access_checker: DenyPaymentsChecker)
+      :ok
+    end
+
+    test "rejects a forged payment_required=true create when access is denied" do
+      user = insert(:user)
+
+      assert {:error, :pro_required} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 %{
+                   "name" => "Forged Paid",
+                   "duration" => "30",
+                   "description" => "",
+                   "is_active" => "true",
+                   "calendar_integration_id" => "",
+                   "target_calendar_id" => nil,
+                   "payment_required" => "true",
+                   "price" => "50.00"
+                 },
+                 %{
+                   meeting_mode: "in_person",
+                   selected_video_integration_id: nil,
+                   selected_icon: "none"
+                 }
+               )
+    end
+
+    test "allows a free (payment_required absent) create when payments are denied" do
+      user = insert(:user)
+
+      assert {:ok, meeting_type} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 %{
+                   "name" => "Free Type",
+                   "duration" => "30",
+                   "description" => "",
+                   "is_active" => "true",
+                   "calendar_integration_id" => "",
+                   "target_calendar_id" => nil
+                 },
+                 %{
+                   meeting_mode: "in_person",
+                   selected_video_integration_id: nil,
+                   selected_icon: "none"
+                 }
+               )
+
+      refute meeting_type.payment_required
+    end
+
+    test "allows turning a paid type off even when payments are denied" do
+      user = insert(:user)
+      # Simulate a type created while the host still had access.
+      {:ok, meeting_type} =
+        MeetingTypes.create_meeting_type(%{
+          name: "Was Paid",
+          duration_minutes: 30,
+          user_id: user.id,
+          payment_required: false
+        })
+
+      assert {:ok, updated} =
+               MeetingTypes.update_meeting_type_from_form(
+                 meeting_type,
+                 %{
+                   "name" => "Was Paid",
+                   "duration" => "30",
+                   "description" => "",
+                   "is_active" => "true",
+                   "calendar_integration_id" => "",
+                   "target_calendar_id" => nil,
+                   "payment_required" => "false"
+                 },
+                 %{
+                   meeting_mode: "in_person",
+                   selected_video_integration_id: nil,
+                   selected_icon: "none"
+                 }
+               )
+
+      refute updated.payment_required
+    end
+  end
 end

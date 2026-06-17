@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.DateTest do
   test "renders an HTML5 date input" do
     html = render_input(%{"type" => "date", "label" => "Birthday"})
     assert html =~ ~s(type="date")
-    assert html =~ ~s(phx-blur="answer")
+    assert html =~ ~s(phx-change="answer")
   end
 
   test "renders the provided value" do

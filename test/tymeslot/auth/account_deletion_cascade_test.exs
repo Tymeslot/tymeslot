@@ -38,6 +38,8 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Payments.PaymentTransactionSchema
@@ -52,7 +54,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
   import Tymeslot.Factory
 
   describe "delete_user/1 full cascade" do
-    test "removes every user-keyed row directly FK'd to users and all profile-chained rows" do
+    test "deletes user-keyed rows, retains payment records anonymised, isolates other users" do
       user = insert(:user)
       profile = insert(:profile, user: user)
 
@@ -63,8 +65,25 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       video_integration = insert(:video_integration, user: user)
       telegram_integration = insert(:telegram_integration, user: user)
       webhook = insert(:webhook, user: user)
-      payment_transaction = insert(:payment_transaction, user: user)
       meeting = insert(:meeting, organizer_user: user, organizer_email: user.email)
+
+      # Retention rows: FKs flipped to :nilify_all so the rows survive the
+      # user delete and are anonymised by Tymeslot.MeetingPayments.DataRetention
+      # before the user row is destroyed (EU/Swiss tax-record retention,
+      # GDPR Art. 17(3)(b) carve-out).
+      payment_transaction =
+        insert(:payment_transaction, user: user, host_email: user.email, host_name: "Host")
+
+      booking_payment =
+        insert(:booking_payment,
+          host_user_id: user.id,
+          host_email: user.email,
+          attendee_email: "attendee@example.com",
+          attendee_name: "Attendee",
+          meeting_type_name: "Consult"
+        )
+
+      connect_account = insert(:connect_account, user: user, status: "active")
 
       # Transitive cascade via webhook_id -> delete_all
       webhook_delivery = insert(:webhook_delivery, webhook: webhook)
@@ -133,6 +152,8 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       assert Repo.get(WebhookSchema, webhook.id)
       assert Repo.get(WebhookDeliverySchema, webhook_delivery.id)
       assert Repo.get(PaymentTransactionSchema, payment_transaction.id)
+      assert Repo.get(BookingPaymentSchema, booking_payment.id)
+      assert Repo.get(ConnectAccountSchema, connect_account.id)
       assert Repo.get(MeetingSchema, meeting.id)
       assert Repo.get(WeeklyAvailabilitySchema, weekly.id)
       assert Repo.get(AvailabilityOverrideSchema, override.id)
@@ -171,8 +192,51 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       refute Repo.get(WebhookSchema, webhook.id),
              "webhook: expected delete-cascade"
 
-      refute Repo.get(PaymentTransactionSchema, payment_transaction.id),
-             "payment_transaction: expected delete-cascade"
+      # payment_transaction: FK on user_id flipped to :nilify_all in
+      # 20260508164247_add_retention_columns_to_payment_transactions.exs
+      # so the row survives the user delete and stands alone as a tax
+      # record. Tymeslot.MeetingPayments.DataRetention.anonymise_host/1
+      # nilifies user_id and stamps host_deleted_at; host_email is
+      # snapshotted to retain counterparty identity. EU/Swiss tax law
+      # requires up-to-ten-year retention (GDPR Art. 17(3)(b) carve-out).
+      retained_pt = Repo.get(PaymentTransactionSchema, payment_transaction.id)
+
+      assert retained_pt,
+             "payment_transaction: expected retention (row preserved past user delete)"
+
+      assert retained_pt.user_id == nil, "payment_transaction.user_id should be nilified"
+      assert retained_pt.host_deleted_at != nil, "payment_transaction.host_deleted_at must be set"
+      assert retained_pt.host_email == user.email, "host_email snapshot must be retained"
+
+      # booking_payment: host_user_id is a bare integer (no FK) so it is
+      # unaffected by the user delete. The retention pass scrubs attendee
+      # PII (attendee_email, attendee_name, meeting_type_name) and stamps
+      # host_deleted_at; host snapshot fields (host_email, host_name,
+      # host_user_id) are retained.
+      retained_bp = Repo.get(BookingPaymentSchema, booking_payment.id)
+      assert retained_bp, "booking_payment: expected retention (row preserved past user delete)"
+      assert retained_bp.host_email == user.email, "booking_payment.host_email must be retained"
+      assert retained_bp.host_user_id == user.id, "booking_payment.host_user_id must be retained"
+      assert retained_bp.host_deleted_at != nil, "booking_payment.host_deleted_at must be set"
+
+      assert is_nil(retained_bp.attendee_email),
+             "attendee_email must be scrubbed to nil"
+
+      assert is_nil(retained_bp.attendee_name),
+             "attendee_name must be scrubbed to nil"
+
+      assert retained_bp.meeting_type_name == "[deleted]",
+             "meeting_type_name must be scrubbed"
+
+      # connect_account: FK on user_id is :nilify_all. The retention pass
+      # also marks the row as soft-deleted (status, deleted_at) and
+      # disables charges_enabled before the user is destroyed.
+      retained_connect = Repo.get(ConnectAccountSchema, connect_account.id)
+      assert retained_connect, "connect_account: expected retention (soft-delete only)"
+      assert retained_connect.user_id == nil, "connect_account.user_id should be nilified"
+      assert retained_connect.deleted_at != nil, "connect_account.deleted_at must be set"
+      assert retained_connect.status == "deleted"
+      refute retained_connect.charges_enabled
 
       refute Repo.get(MeetingSchema, meeting.id),
              "meeting: expected delete-cascade via organizer_user_id " <>

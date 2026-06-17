@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
       </label>
 
     <%!-- Tag-based Selection --%>
-      <form phx-change="update_buffer_minutes" phx-debounce="300" phx-target={@myself}>
+      <form id="buffer-minutes-form" phx-change="update_buffer_minutes" phx-debounce="300" phx-target={@myself}>
       <div class="flex flex-wrap items-center gap-3">
         <%!-- Quick preset tags --%>
         <%= for minutes <- [0, 5, 10, 15, 30, 60] do %>
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
               step="5"
               value={@buffer_value}
               name="buffer_minutes"
-              class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-none rounded-l-xl"
+              class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-xl"
               placeholder="0"
             />
             <span class="pr-3 py-2 text-token-sm font-black text-turquoise-700">
@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
       </label>
 
     <%!-- Tag-based Selection --%>
-      <form phx-change="update_advance_booking_days" phx-debounce="300" phx-target={@myself}>
+      <form id="advance-booking-days-form" phx-change="update_advance_booking_days" phx-debounce="300" phx-target={@myself}>
       <div class="flex flex-wrap items-center gap-3">
         <%!-- Quick preset tags --%>
         <%= for {days, label} <- [
@@ -145,7 +145,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
               step="1"
               value={@booking_days}
               name="advance_booking_days"
-              class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-none rounded-l-xl"
+              class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-xl"
               placeholder="90"
             />
             <span class="pr-3 py-2 text-token-sm font-black text-cyan-700">
@@ -196,7 +196,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
       </label>
 
     <%!-- Tag-based Selection --%>
-      <form phx-change="update_min_advance_hours" phx-debounce="300" phx-target={@myself}>
+      <form id="min-advance-hours-form" phx-change="update_min_advance_hours" phx-debounce="300" phx-target={@myself}>
       <div class="flex flex-wrap items-center gap-3">
         <%!-- Quick preset tags --%>
         <%= for {hours, label} <- [
@@ -232,7 +232,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
               step="1"
               value={@notice_hours}
               name="min_advance_hours"
-              class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-none rounded-l-xl"
+              class="w-20 px-3 py-2 text-token-sm font-black bg-transparent border-0 focus:ring-0 focus:outline-hidden rounded-l-xl"
               placeholder="24"
             />
             <span class="pr-3 py-2 text-token-sm font-black text-blue-700">

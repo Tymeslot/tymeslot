@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           <button
             phx-click="prev_period"
             phx-target={@myself}
-            class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-none focus:ring-2 focus:ring-turquoise-400"
+            class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
             aria-label="Previous period"
           >
             <IconComponents.icon name={:chevron_left} class="w-4 h-4" />
@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           <button
             phx-click="next_period"
             phx-target={@myself}
-            class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-none focus:ring-2 focus:ring-turquoise-400"
+            class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
             aria-label="Next period"
           >
             <IconComponents.icon name={:chevron_right} class="w-4 h-4" />
@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
               JS.push("today", target: @myself)
               |> JS.dispatch("calendar:scroll-to-current", to: "#calendar-drag-zone")
             }
-            class="px-2.5 py-1.5 md:px-3 text-token-sm border border-tymeslot-200 rounded hover:bg-tymeslot-50 text-tymeslot-600 focus:outline-none focus:ring-2 focus:ring-turquoise-400"
+            class="px-2.5 py-1.5 md:px-3 text-token-sm border border-tymeslot-200 rounded hover:bg-tymeslot-50 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
           >Today</button>
           <h2 class="text-token-sm md:text-token-base font-semibold text-tymeslot-800 ml-1 md:ml-2 min-w-0 truncate">
             <%= Helpers.period_label(assigns) %>
@@ -64,8 +64,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           </div>
         </div>
 
-        <%!-- Row 2: actions (mobile) / right-aligned row 1 (desktop) --%>
-        <div class="flex items-center gap-1 md:gap-2 md:ml-auto overflow-x-auto">
+        <%!--
+          Row 2: actions (mobile) / right-aligned row 1 (desktop).
+          Use flex-wrap (not overflow-x-auto) so the toolbar reflows on narrow
+          screens. overflow-x-auto forces overflow-y to compute to auto, which
+          clips the dropdown panels (calendars, view switcher) that extend below
+          the row via `top-full`.
+        --%>
+        <div class="flex flex-wrap items-center gap-1 md:gap-2 md:ml-auto">
           <div class="md:hidden">
             <AvailabilityHelpers.timezone_display timezone_display={@timezone_display} country_code={@timezone_country_code} />
           </div>
@@ -81,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           <button
             phx-click="toggle_settings"
             phx-target={@myself}
-            class="min-w-[40px] min-h-[40px] flex items-center justify-center text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-none focus:ring-2 focus:ring-turquoise-400"
+            class="min-w-[40px] min-h-[40px] flex items-center justify-center text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
             aria-label="Calendar settings"
           >
             <IconComponents.icon name={:cog} class="w-4 h-4" />
@@ -107,8 +113,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
       on_close="close_calendar_list"
       target={@myself}
       role="dialog"
-      trigger_class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-turquoise-400"
-      class="z-30 bg-white border border-tymeslot-200 rounded-xl shadow-lg p-3 w-60"
+      panel_label="My Calendars"
+      trigger_class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1.5 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
+      class="bg-white border border-tymeslot-200 rounded-xl shadow-lg p-3 w-60"
       aria-label="Toggle calendars"
     >
       <:trigger>
@@ -132,7 +139,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             class="rounded"
           />
           <div
-            class={"w-3 h-3 rounded-full flex-shrink-0 #{Helpers.color_class_for_integration(@integration_colors, integration.id)}"}
+            class={"w-3 h-3 rounded-full shrink-0 #{Helpers.color_class_for_integration(@integration_colors, integration.id)}"}
             aria-hidden="true"
           >
           </div>
@@ -160,8 +167,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         on_toggle="toggle_view_menu"
         on_close="close_view_menu"
         target={@myself}
-        trigger_class="min-w-[40px] min-h-[40px] px-2 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-turquoise-400"
-        class="z-30 bg-white border border-tymeslot-200 rounded-xl shadow-lg py-1 w-36"
+        trigger_class="min-w-[40px] min-h-[40px] px-2 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
+        class="bg-white border border-tymeslot-200 rounded-xl shadow-lg py-1 w-36"
         aria-label="Switch view"
       >
         <:trigger>
@@ -187,7 +194,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         phx-click="set_view"
         phx-value-view={Atom.to_string(value)}
         phx-target={@myself}
-        class={"px-3 py-1.5 focus:outline-none focus:z-10 focus:ring-2 focus:ring-turquoise-400 #{if idx > 0, do: "border-l border-tymeslot-200"} #{if @view == value, do: "bg-turquoise-600 text-white", else: "bg-white text-tymeslot-600 hover:bg-tymeslot-50"}"}
+        class={"px-3 py-1.5 focus:outline-hidden focus:z-10 focus:ring-2 focus:ring-turquoise-400 #{if idx > 0, do: "border-l border-tymeslot-200"} #{if @view == value, do: "bg-turquoise-600 text-white", else: "bg-white text-tymeslot-600 hover:bg-tymeslot-50"}"}
       >{label}</button>
     </div>
     """
@@ -208,7 +215,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         |> JS.dispatch("calendar:scroll-to-current", to: "#calendar-drag-zone")
       }
       disabled={@syncing}
-      class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 flex items-center justify-center gap-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-turquoise-400"
+      class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 flex items-center justify-center gap-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
       aria-label="Refresh"
     >
       <IconComponents.icon name={:refresh} class={if @syncing, do: "w-4 h-4 animate-spin", else: "w-4 h-4"} />

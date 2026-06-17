@@ -87,7 +87,9 @@ config :tymeslot, Oban,
        # Run daily at 03:30 UTC to prune old/inactive calendar event cache
        {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
        # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
-       {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker}
+       {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
+       # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
+       {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments}
      ]}
   ]
 
@@ -100,3 +102,11 @@ config :tymeslot, :skip_webhook_verification, false
 # Analytics fingerprint salt secret — fixed dev value. Production must override
 # via the ANALYTICS_SALT_SECRET environment variable (see runtime.exs).
 config :tymeslot, :analytics_salt_secret, "dev_analytics_salt_secret_change_in_prod"
+
+# Opt-in dev calendar stub: when DEV_EMPTY_CALENDAR is set, the seeded demo
+# organiser's slots resolve with no busy events, bypassing real CalDAV — handy
+# for booking-UI and scheduling-theme work. Left unset, dev uses the real
+# calendar so genuine sync can be exercised. See Tymeslot.Dev.EmptyCalendar.
+if System.get_env("DEV_EMPTY_CALENDAR") in ~w(1 true) do
+  config :tymeslot, :calendar_module, Tymeslot.Dev.EmptyCalendar
+end

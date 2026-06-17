@@ -63,7 +63,12 @@ defmodule Tymeslot.Integrations.Common.ErrorHandlerTest do
                    )
         end)
 
-      assert log == ""
+      # The suppressed error must not be logged. Assert on its specific
+      # footprint rather than log == "", which is brittle: capture_log in an
+      # async test also captures log output emitted by other concurrently
+      # running test modules.
+      refute log =~ "ignored"
+      refute log =~ "Integration error"
     end
 
     test "handles exceptions" do

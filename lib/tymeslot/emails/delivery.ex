@@ -8,11 +8,16 @@ defmodule Tymeslot.Emails.Delivery do
 
   require Logger
 
-  alias Tymeslot.Infrastructure.{CircuitBreaker, Retry}
+  alias Tymeslot.Infrastructure.CircuitBreaker
   alias Tymeslot.Mailer
 
   @doc """
-  Delivers an email using the configured mailer with circuit breaker and retry logic.
+  Delivers an email using the configured mailer, wrapped in a circuit breaker.
+
+  Retries are delegated to Oban (a single retry authority) rather than retried
+  here — re-sending the same message on a flaky transport is what produces
+  duplicate emails. A client-side timeout is treated as delivered for the same
+  reason (see `do_deliver/1`).
   """
   @spec deliver(Swoosh.Email.t()) :: {:ok, any()} | {:error, any()}
   def deliver(email) do
@@ -22,16 +27,7 @@ defmodule Tymeslot.Emails.Delivery do
         subject: email.subject
       )
 
-      # Use circuit breaker with retry logic for email delivery
-      CircuitBreaker.call(:email_service_breaker, fn ->
-        Retry.with_backoff(
-          fn -> do_deliver(email) end,
-          max_attempts: 3,
-          initial_delay: 1000,
-          max_delay: 10_000,
-          retriable?: &email_retriable?/1
-        )
-      end)
+      CircuitBreaker.call(:email_service_breaker, fn -> do_deliver(email) end)
     end
   end
 
@@ -45,43 +41,50 @@ defmodule Tymeslot.Emails.Delivery do
 
         result
 
-      {:error, reason} = error ->
-        Logger.error("Failed to deliver email",
-          to: email.to,
-          subject: email.subject,
-          reason: reason
-        )
-
-        error
+      {:error, reason} ->
+        handle_delivery_error(email, reason)
     end
   end
 
-  # Determine if an email error is retriable
-  defp email_retriable?(reason) when is_binary(reason) do
-    retriable_patterns = [
-      "timeout",
-      "connection refused",
-      "network",
-      "temporarily unavailable",
-      "rate limit",
-      "500",
-      "502",
-      "503",
-      "504"
-    ]
+  # A client-side timeout is ambiguous: the SMTP server has very likely already
+  # accepted and sent the message, and only the client gave up waiting. Treating
+  # it as a failure means a retry (here or via Oban) re-sends a message that was
+  # already delivered — the root cause of duplicate emails. So we assume delivery
+  # on timeout; a genuinely lost mail can be re-requested by the user.
+  defp handle_delivery_error(email, reason) do
+    if timeout_error?(reason) do
+      Logger.warning("Email delivery timed out; assuming delivered to avoid duplicate sends",
+        to: email.to,
+        subject: email.subject,
+        reason: inspect(reason)
+      )
 
-    down = String.downcase(reason)
-    Enum.any?(retriable_patterns, fn pattern -> String.contains?(down, pattern) end)
+      {:ok, :assumed_delivered}
+    else
+      Logger.error("Failed to deliver email",
+        to: email.to,
+        subject: email.subject,
+        reason: reason
+      )
+
+      {:error, reason}
+    end
   end
 
-  defp email_retriable?(%{status: code}) when code in [500, 502, 503, 504] do
-    true
-  end
+  @doc """
+  Returns true when a delivery error reason represents a (client-side) timeout.
 
-  defp email_retriable?(:timeout), do: true
-  defp email_retriable?(:closed), do: true
-  defp email_retriable?(:econnrefused), do: true
-  defp email_retriable?(_error), do: false
+  Matches any reason shape — bare `:timeout`, a string mentioning "timeout", or
+  the nested tuples gen_smtp produces — by inspecting the term, so new adapter
+  error shapes don't silently slip through as retriable failures.
+  """
+  @spec timeout_error?(term()) :: boolean()
+  def timeout_error?(reason) do
+    reason
+    |> inspect()
+    |> String.downcase()
+    |> String.contains?("timeout")
+  end
 
   defp check_text_body(%Swoosh.Email{text_body: body, subject: subject}) when body in [nil, ""] do
     Logger.error("Refusing to deliver email without a plain-text body",

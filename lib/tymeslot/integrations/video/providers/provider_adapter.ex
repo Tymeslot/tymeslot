@@ -183,7 +183,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
       case ProviderRegistry.get_provider(provider_type) do
         {:ok, provider_module} ->
           if callback_exported?(provider_module, :update_meeting_room, 2) do
-            provider_module.update_meeting_room(room_id, config)
+            # Optional callback resolved at runtime via the guard above; apply/3
+            # keeps the static type checker from flagging providers that omit it.
+            # credo:disable-for-next-line Credo.Check.Refactor.Apply
+            apply(provider_module, :update_meeting_room, [room_id, config])
           else
             Logger.debug("Provider does not support update_meeting_room; treating as no-op",
               provider: provider_type
@@ -212,7 +215,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
       case ProviderRegistry.get_provider(provider_type) do
         {:ok, provider_module} ->
           if callback_exported?(provider_module, :delete_meeting_room, 2) do
-            provider_module.delete_meeting_room(room_id, config)
+            # Optional callback resolved at runtime via the guard above; apply/3
+            # keeps the static type checker from flagging providers that omit it.
+            # credo:disable-for-next-line Credo.Check.Refactor.Apply
+            apply(provider_module, :delete_meeting_room, [room_id, config])
           else
             Logger.debug("Provider does not support delete_meeting_room; treating as no-op",
               provider: provider_type
@@ -308,7 +314,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
            true <- module != nil,
            true <- Code.ensure_loaded?(module),
            true <- function_exported?(module, :url_patterns, 0),
-           patterns when patterns != [] <- module.url_patterns(),
+           # credo:disable-for-next-line Credo.Check.Refactor.Apply
+           patterns when patterns != [] <- apply(module, :url_patterns, []),
            true <- Enum.any?(patterns, &String.contains?(meeting_url, &1)) do
         {:ok, provider_type}
       else

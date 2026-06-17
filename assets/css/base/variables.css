@@ -61,6 +61,7 @@
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
+  --color-error-bg: #fef2f2;
   --color-info: #3b82f6;
   
   /* Background Colors - Glass Theme */
@@ -302,7 +303,7 @@
   --dropdown-item-hover-bg: var(--color-bg-tertiary);
   --dropdown-item-hover-text: var(--color-text-primary);
   --dropdown-item-danger-text: var(--color-error);
-  --dropdown-item-danger-hover-bg: #fef2f2;
+  --dropdown-item-danger-hover-bg: var(--color-error-bg);
   --dropdown-divider: var(--color-border-light);
 }
 
@@ -312,6 +313,7 @@
     --mode-tab-inactive-text: #94a3b8;
     --mode-tab-hover-bg: rgba(20, 184, 166, 0.15);
     --color-calendar-fallback: #71717a;
+    --color-error-bg: rgba(239, 68, 68, 0.15);
   }
 }
 

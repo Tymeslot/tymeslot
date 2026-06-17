@@ -161,21 +161,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
         missing_count: length(missing_uids)
       )
 
-      Enum.each(missing_uids, fn uid ->
-        ProviderCalendarEventQueries.delete_by_uid(integration.id, uid)
-
-        case Sync.reconcile(integration.id, nil, uid, :deleted) do
-          :ok ->
-            :ok
-
-          {:error, reason} ->
-            Logger.warning("Reconcile failed for deleted event",
-              uid: uid,
-              integration_id: integration.id,
-              reason: inspect(reason)
-            )
-        end
-      end)
+      Sync.reconcile_deletions(integration, uid_refs(missing_uids))
     end
 
     :ok
@@ -312,61 +298,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
     missing_uids
   end
 
-  # Post-commit side effects for full-fetch deletions.
-  defp reconcile_missing_uids(_integration, []), do: :ok
-
+  # Post-commit side effects for full-fetch deletions. The cache rows were
+  # already deleted inside the transaction.
   defp reconcile_missing_uids(integration, missing_uids) do
-    Enum.each(missing_uids, fn uid ->
-      case Sync.reconcile(integration.id, nil, uid, :deleted) do
-        :ok ->
-          :ok
-
-        {:error, reason} ->
-          Logger.warning("Reconcile failed for deleted event",
-            uid: uid,
-            integration_id: integration.id,
-            reason: inspect(reason)
-          )
-      end
-    end)
+    Sync.reconcile_deletions(integration, uid_refs(missing_uids), delete_cache: false)
   end
 
-  # Post-commit side effects for Tier 1 href-based deletions.
-  defp reconcile_deleted_hrefs(_integration, []), do: :ok
-
+  # Post-commit side effects for Tier 1 href-based deletions. The cache rows
+  # were already deleted inside the transaction.
   defp reconcile_deleted_hrefs(integration, hrefs) do
-    Enum.each(hrefs, fn href ->
-      case Sync.reconcile(integration.id, href, nil, :deleted) do
-        :ok ->
-          :ok
-
-        {:error, reason} ->
-          Logger.warning("Reconcile failed for deleted event",
-            href: href,
-            integration_id: integration.id,
-            reason: inspect(reason)
-          )
-      end
-    end)
+    Sync.reconcile_deletions(integration, href_refs(hrefs), delete_cache: false)
   end
-
-  defp process_href_deletions(_integration, []), do: :ok
 
   defp process_href_deletions(integration, deleted_hrefs) do
-    Enum.each(deleted_hrefs, fn href ->
-      ProviderCalendarEventQueries.delete_by_provider_event_id(integration.id, href)
-
-      case Sync.reconcile(integration.id, href, nil, :deleted) do
-        :ok ->
-          :ok
-
-        {:error, reason} ->
-          Logger.warning("Reconcile failed for deleted event",
-            href: href,
-            integration_id: integration.id,
-            reason: inspect(reason)
-          )
-      end
-    end)
+    Sync.reconcile_deletions(integration, href_refs(deleted_hrefs))
   end
+
+  defp uid_refs(uids), do: Enum.map(uids, &%{provider_event_id: nil, uid: &1})
+
+  defp href_refs(hrefs), do: Enum.map(hrefs, &%{provider_event_id: &1, uid: nil})
 end

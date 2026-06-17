@@ -17,6 +17,13 @@ config :tymeslot,
   enable_admin_ui: true,
   # Controls whether users must accept T&C/Privacy during registration
   enforce_legal_agreements: false,
+  # Whether meeting payments (booker pays at booking time) is enabled.
+  # Self-hosters opt in by setting :meeting_payments_enabled to true.
+  # SaaS overrides this in apps/tymeslot_saas/config/config.exs.
+  meeting_payments_enabled: false,
+  # Application fee charged on top of meeting payments, in basis points
+  # (1 bp = 0.01%). 0 = no fee. SaaS may override per environment.
+  payment_application_fee_bp: 0,
   # Whether to show marketing-related links (Docs, etc) in navigation
   show_marketing_links: false,
   # Whether the logo links to a marketing site or the login page
@@ -47,6 +54,13 @@ config :tymeslot,
   # Theme protection plugs - empty by default (external layers can add restrictions)
   extra_theme_protection_plugs: [],
 
+  # Additional Plug.Static sources served after Core's own static files.
+  # Each entry is a Plug.Static options keyword list, e.g.
+  #   [at: "/", from: {:other_app, "priv/static"}, gzip: true, only: ["images"]]
+  # Empty by default - external layers can serve their own static assets
+  # without those files living in Core's priv/static.
+  extra_static_sources: [],
+
   # Theme extensions - empty by default (external layers can add overlays/branding)
   theme_extensions: [],
 
@@ -74,6 +88,21 @@ config :tymeslot,
   admin_alerts_enabled: false,
   admin_alert_email: nil,
 
+  # Crashes whose exception maps to a client (4xx) error are routine request
+  # noise, not operator-actionable — never raise an admin alert for them.
+  crash_reporter_ignored_exceptions: [
+    Phoenix.Router.NoRouteError,
+    Ecto.NoResultsError,
+    Plug.Parsers.UnsupportedMediaTypeError,
+    Plug.Parsers.RequestTooLargeError,
+    Plug.BadRequestError,
+    Plug.CSRFProtectionError
+  ],
+  # Global cap on crash alerts to survive a crash storm without flooding the
+  # logging subsystem or the email queue. Tune per deployment traffic.
+  crash_reporter_rate_limit_max: 20,
+  crash_reporter_rate_limit_window_ms: 60_000,
+
   # Dashboard Extensions
   dashboard_sidebar_extensions: [],
   dashboard_action_components: %{}
@@ -82,11 +111,19 @@ config :tymeslot,
 # what's-new modal shown on dashboard mount. SaaS appends its own catalog.
 config :tymeslot, :announcement_catalogs, [Tymeslot.Announcements.Catalog]
 
+# Base URL for documentation articles linked from announcement CTAs. Kept in
+# config (rather than hardcoded in the catalogue) so Core's code stays free of
+# the SaaS marketing domain; self-hosters can point this at their own docs.
+config :tymeslot, :docs_base_url, "https://tymeslot.app/docs"
+
 # Feature Assigns - Default to allowing all features
-# SaaS can override these via on_mount hooks based on subscription status
+# SaaS can override these via on_mount hooks based on subscription status.
+# `:meeting_payments` defaults to false because Core treats it as a self-host
+# opt-in feature; LiveViews use the assign to hide payment-related UI bits.
 config :tymeslot, :feature_assigns,
   automations_allowed: true,
-  custom_questions_allowed: true
+  custom_questions_allowed: true,
+  meeting_payments: false
 
 # Dashboard Feature Gates - Maps live_action atoms to feature flag assign keys.
 # When an action is listed here, the corresponding assign must be true for the
@@ -134,7 +171,12 @@ config :tymeslot, :oban_queues,
 
 # Webhook configuration
 config :tymeslot, :webhook_base_url, nil
-config :tymeslot, :webhook_paths, ["/webhooks/stripe", "/auth/zoom/deauthorize"]
+
+config :tymeslot, :webhook_paths, [
+  "/webhooks/stripe",
+  "/webhooks/stripe/connect",
+  "/auth/zoom/deauthorize"
+]
 
 # Webhook idempotency cache TTLs
 config :tymeslot, :webhook_idempotency,
@@ -222,10 +264,9 @@ config :esbuild,
 
 # Configure tailwind
 config :tailwind,
-  version: "3.4.3",
+  version: "4.3.1",
   tymeslot: [
     args: ~w(
-      --config=tailwind.config.js
       --input=css/app.css
       --output=../priv/static/assets/app.css
     ),
@@ -233,7 +274,6 @@ config :tailwind,
   ],
   quill: [
     args: ~w(
-      --config=tailwind.config.js
       --input=css/scheduling/themes/quill/theme.css
       --output=../priv/static/assets/scheduling-theme-quill.css
     ),
@@ -241,7 +281,6 @@ config :tailwind,
   ],
   rhythm: [
     args: ~w(
-      --config=tailwind.config.js
       --input=css/scheduling/themes/rhythm/theme.css
       --output=../priv/static/assets/scheduling-theme-rhythm.css
     ),
@@ -300,6 +339,11 @@ config :tymeslot, :integration_locks,
   google: 60_000,
   outlook: 60_000,
   teams: 120_000
+
+# Default country code (ISO 3166-1 alpha-2) for Stripe Connect onboarding when
+# the host's profile carries no explicit country. Configurable via the
+# MEETING_PAYMENTS_DEFAULT_COUNTRY env var (read in runtime.exs).
+config :tymeslot, :meeting_payments_default_country, "ch"
 
 # Payment rate limiting configuration
 config :tymeslot, :payment_rate_limits,

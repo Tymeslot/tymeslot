@@ -208,7 +208,14 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
             Flash.info("Webhook status updated")
             {:noreply, AutomationHelpers.load_webhooks(socket)}
 
-          {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
+          {:error, reason}
+          when reason in [
+                 :insufficient_plan,
+                 :feature_disabled,
+                 :pro_required,
+                 :stripe_required,
+                 :feature_access_checker_failed
+               ] ->
             {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
 
           {:error, _reason} ->
@@ -334,7 +341,13 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
             {:noreply, assign(socket, :form_errors, errors)}
 
           {:error, reason}
-          when reason in [:insufficient_plan, :feature_access_checker_failed] ->
+          when reason in [
+                 :insufficient_plan,
+                 :feature_disabled,
+                 :pro_required,
+                 :stripe_required,
+                 :feature_access_checker_failed
+               ] ->
             {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
         end
 
@@ -368,7 +381,14 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
              |> assign(:selected_webhook, nil)
              |> AutomationHelpers.load_webhooks()}
 
-          {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
+          {:error, reason}
+          when reason in [
+                 :insufficient_plan,
+                 :feature_disabled,
+                 :pro_required,
+                 :stripe_required,
+                 :feature_access_checker_failed
+               ] ->
             {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
 
           {:error, _reason} ->

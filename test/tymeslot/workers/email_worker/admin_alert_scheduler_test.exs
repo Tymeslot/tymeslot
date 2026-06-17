@@ -73,6 +73,44 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertSchedulerTest do
 
       refute args1["alert_hash"] == args2["alert_hash"]
     end
+
+    test "an explicit dedup_key overrides the message in the alert_hash" do
+      args1 =
+        AdminAlertScheduler.build_args("ops@example.com", "Cat", :warning, "Job 1 failed", %{},
+          dedup_key: "worker:queue"
+        )
+
+      args2 =
+        AdminAlertScheduler.build_args("ops@example.com", "Cat", :warning, "Job 2 failed", %{},
+          dedup_key: "worker:queue"
+        )
+
+      assert args1["alert_hash"] == args2["alert_hash"]
+    end
+
+    test "duplicate alerts sharing a dedup_key enqueue only one job despite different messages" do
+      assert :ok =
+               AdminAlertScheduler.schedule(
+                 "ops@example.com",
+                 "Queue",
+                 :error,
+                 "Oban job MyWorker (queue: q) failed permanently: error for job 1",
+                 %{},
+                 dedup_key: "oban_job_failure:MyWorker:q"
+               )
+
+      assert :ok =
+               AdminAlertScheduler.schedule(
+                 "ops@example.com",
+                 "Queue",
+                 :error,
+                 "Oban job MyWorker (queue: q) failed permanently: error for job 2",
+                 %{},
+                 dedup_key: "oban_job_failure:MyWorker:q"
+               )
+
+      assert [_only_one] = all_enqueued(worker: EmailWorker)
+    end
   end
 
   describe "build_args/5" do

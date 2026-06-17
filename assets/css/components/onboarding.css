@@ -51,7 +51,7 @@
   height: auto;
 }
 
-/* Content area — vertically centred with flex-grow spacer */
+/* Content area — vertically centred with grow spacer */
 .onboarding-content-area {
   flex: 1;
   display: flex;

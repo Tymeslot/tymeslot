@@ -424,10 +424,17 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
     }
   end
 
+  # Mirrors the persistence posture in `CalendarIntegrationSchema`, which
+  # validates `:base_url` with `block_private_ips: true`. Discovery/test-connection
+  # forms must reject internal hosts (loopback, link-local, RFC 1918) so an
+  # authenticated user can't probe them server-side any more than they can save
+  # such a URL on the integration.
   defp validate_calendar_url(url) do
     UrlValidation.validate_http_url(url,
       enforce_https_for_public: true,
-      https_error_message: "Use HTTPS for non-local calendar servers"
+      block_private_ips: true,
+      https_error_message: "Use HTTPS for non-local calendar servers",
+      private_ip_error_message: "Private or local network addresses are not allowed"
     )
   end
 end

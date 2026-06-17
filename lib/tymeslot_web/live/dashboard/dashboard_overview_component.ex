@@ -125,7 +125,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           {@meeting.attendee_name} • {format_meeting_time(@meeting, @profile.timezone)}
         </div>
       </div>
-      <div class="flex-shrink-0">
+      <div class="shrink-0">
         <span class="px-3 py-1 text-token-xs font-black bg-emerald-100 text-emerald-700 rounded-full uppercase tracking-wider">
           {@meeting.status}
         </span>
@@ -144,7 +144,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
     ~H"""
     <.link patch={@patch} class="block group min-w-0">
       <div class="flex items-center p-4 rounded-token-2xl bg-tymeslot-50/50 border-2 border-tymeslot-50 hover:bg-white hover:border-turquoise-100 hover:shadow-xl hover:shadow-turquoise-500/5 transition-all">
-        <div class="flex-shrink-0 mr-4">
+        <div class="shrink-0 mr-4">
           <div class={["w-12 h-12 rounded-token-xl flex items-center justify-center transition-all shadow-sm", @color_class]}>
             <IconComponents.icon name={@icon} class="w-6 h-6" />
           </div>
@@ -157,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
             {@description}
           </div>
         </div>
-        <div class="flex-shrink-0 ml-4">
+        <div class="shrink-0 ml-4">
           <div class="w-8 h-8 rounded-token-lg bg-white flex items-center justify-center border border-tymeslot-100 group-hover:border-turquoise-200 group-hover:bg-turquoise-50 transition-all">
             <svg
               class="w-4 h-4 text-tymeslot-400 group-hover:text-turquoise-600 transition-all transform group-hover:translate-x-0.5"
