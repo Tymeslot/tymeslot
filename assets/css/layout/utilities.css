@@ -1,6 +1,17 @@
 /* ===================================
    LAYOUT UTILITIES
-   =================================== */
+   ===================================
+
+   These hand-rolled helpers predate full reliance on Tailwind and duplicate
+   many standard utilities. Under Tailwind v4 the framework's own utilities live
+   in `@layer utilities`; leaving these unlayered would make them win over every
+   layered utility — including responsive variants like `md:flex` — which breaks
+   desktop layouts (hamburger nav on desktop, stacked hero buttons, collapsed
+   footer columns). Scoping them to the lower-priority `components` layer lets
+   Tailwind's utilities take precedence (matching the pre-v4 cascade), while the
+   genuinely custom classes here (.bg-primary, .border-default, .aspect-4-3, …)
+   still apply because nothing else defines them. */
+@layer components {
 
 /* Container */
 .container {
@@ -273,3 +284,5 @@
 .cursor-wait { cursor: wait; }
 .cursor-move { cursor: move; }
 .cursor-not-allowed { cursor: not-allowed; }
+
+}
