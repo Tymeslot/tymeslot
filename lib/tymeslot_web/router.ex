@@ -126,6 +126,12 @@ defmodule TymeslotWeb.Router do
     # Email change verification route
     get "/email-change/:token", EmailChangeController, :verify
 
+    # Public guest RSVP (accept/decline) from the tokenised email link.
+    # GET renders a confirmation landing page (no mutation — safe for link prefetchers).
+    # POST performs the RSVP write (CSRF-protected via the :browser pipeline).
+    get "/guest/:token/:response", GuestRsvpController, :confirm
+    post "/guest/:token/:response", GuestRsvpController, :submit
+
     # OAuth routes (must remain as controllers for external redirects)
     get "/auth/:provider", OAuthController, :request
     get "/auth/:provider/callback", OAuthController, :callback

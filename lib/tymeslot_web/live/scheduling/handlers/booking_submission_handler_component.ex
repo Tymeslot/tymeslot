@@ -361,20 +361,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     # Prepare parameters for orchestrator
     params = %{
       form_data: sanitized_params,
-      meeting_params: %{
-        date: socket.assigns.selected_date,
-        time: socket.assigns.selected_time,
-        duration: resolve_duration_minutes(socket),
-        user_timezone: socket.assigns.user_timezone,
-        organizer_user_id: socket.assigns.organizer_user_id,
-        meeting_type_id: get_meeting_type_id(socket),
-        attendee_locale:
-          socket.assigns[:locale] || Application.get_env(:tymeslot, :locales)[:default] || "en",
-        # Always true for public booking flow
-        with_video_room: true,
-        custom_fields_snapshot: Map.get(sanitized_params, "custom_fields_snapshot", []),
-        custom_field_answers: Map.get(sanitized_params, "custom_field_answers", %{})
-      }
+      meeting_params: build_meeting_params(socket, sanitized_params)
     }
 
     opts = [
@@ -411,6 +398,24 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       {:error, reason} ->
         handle_booking_error(socket, reason)
     end
+  end
+
+  defp build_meeting_params(socket, sanitized_params) do
+    %{
+      date: socket.assigns.selected_date,
+      time: socket.assigns.selected_time,
+      duration: resolve_duration_minutes(socket),
+      user_timezone: socket.assigns.user_timezone,
+      organizer_user_id: socket.assigns.organizer_user_id,
+      meeting_type_id: get_meeting_type_id(socket),
+      attendee_locale:
+        socket.assigns[:locale] || Application.get_env(:tymeslot, :locales)[:default] || "en",
+      # Always true for public booking flow
+      with_video_room: true,
+      custom_fields_snapshot: Map.get(sanitized_params, "custom_fields_snapshot", []),
+      custom_field_answers: Map.get(sanitized_params, "custom_field_answers", %{}),
+      guest_emails: socket.assigns[:guest_emails] || []
+    }
   end
 
   defp handle_payment_required(socket, meeting, url, sanitized_params) do

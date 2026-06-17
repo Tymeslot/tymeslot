@@ -40,6 +40,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       alias TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent
 
       alias TymeslotWeb.Themes.Shared.BookingFlow
+      alias TymeslotWeb.Themes.Shared.GuestBooking
 
       alias TymeslotWeb.Themes.Shared.{
         EventHandlers,
@@ -256,6 +257,18 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
           :field_blur ->
             {:noreply, OrganizerHelpers.mark_field_touched(socket, data)}
 
+          :toggle_guests ->
+            {:noreply, GuestBooking.open(socket)}
+
+          :guest_input ->
+            {:noreply, GuestBooking.set_input(socket, data)}
+
+          :add_guest ->
+            {:noreply, GuestBooking.add(socket, data)}
+
+          :remove_guest ->
+            {:noreply, GuestBooking.remove(socket, data)}
+
           :submit ->
             BookingFlow.submit_booking(socket, data, &transition_to/3)
 
@@ -340,8 +353,11 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
       defp handle_confirmation_events(socket, event, _data) do
         case event do
-          :schedule_another -> {:noreply, transition_to(socket, :overview, %{})}
-          _other -> {:noreply, socket}
+          :schedule_another ->
+            {:noreply, transition_to(GuestBooking.assign_defaults(socket), :overview, %{})}
+
+          _other ->
+            {:noreply, socket}
         end
       end
 

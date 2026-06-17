@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
   attr :payments_charges_enabled, :boolean, required: true
   attr :payment_required, :boolean, required: true
   attr :payment_price, :string, required: true
+  attr :allow_guests, :boolean, required: true
 
   @spec hidden_fields(map()) :: Phoenix.LiveView.Rendered.t()
   def hidden_fields(assigns) do
@@ -124,6 +125,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
         value={@selected_target_calendar_id}
       />
       <input type="hidden" name="meeting_type[icon]" value={@selected_icon} />
+      <input
+        type="hidden"
+        name="meeting_type[allow_guests]"
+        value={to_string(@allow_guests)}
+      />
       <%!-- Payment fields are mirrored from socket state so the section's
            toggle/price controls survive re-render and post on submit. They
            are only meaningful when the host can accept charges. --%>

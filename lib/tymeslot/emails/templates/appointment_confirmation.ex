@@ -30,7 +30,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   @intent :confirmed
 
   @spec render(
-          :attendee | :organizer,
+          :attendee | :organizer | :guest,
           String.t(),
           Tymeslot.Emails.EmailService.appointment_details()
         ) :: Swoosh.Email.t()
@@ -113,6 +113,78 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       )
       |> html_body(html_body)
       |> text_body(build_attendee_text_body(appointment_details, locale, payment_receipt))
+      |> attachment(
+        IcsGenerator.generate_ics_attachment(
+          appointment_details,
+          locale,
+          "appointment-#{appointment_details.uid}.ics"
+        )
+      )
+    end)
+  end
+
+  def render(:guest, guest_email, appointment_details) do
+    # Guests have no per-guest locale field; they intentionally inherit the
+    # booker's locale (`:attendee_locale`) set when the booking was created.
+    locale = Map.get(appointment_details, :attendee_locale, "en")
+
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      guest_name = Map.get(appointment_details, :guest_name) || guest_email
+
+      meeting_details = %{
+        date: appointment_details.date,
+        start_time: appointment_details.start_time_attendee_tz,
+        duration: appointment_details.duration,
+        location: appointment_details.location,
+        location_type: Map.get(appointment_details, :location_type),
+        meeting_type: appointment_details.meeting_type
+      }
+
+      intro_copy =
+        dgettext(
+          "emails",
+          "Hi %{guest} — %{booker} has invited you as a guest to this meeting with %{organizer}.",
+          guest: guest_name,
+          booker: appointment_details.attendee_name,
+          organizer: appointment_details.organizer_name
+        )
+
+      mjml_content = """
+      #{Text.centered_text(intro_copy, padding: "8px 0 16px 0")}
+
+      #{MeetingComponents.meeting_details_table(meeting_details, locale)}
+
+      #{Text.section_title(dgettext("emails", "Will you be there?"))}
+
+      #{MeetingComponents.meeting_actions_bar(@intent, [%{text: dgettext("emails", "Yes, I'll attend"), url: Map.get(appointment_details, :guest_accept_url, "#"), style: :secondary}, %{text: dgettext("emails", "Can't make it"), url: Map.get(appointment_details, :guest_decline_url, "#"), style: :danger}])}
+
+      #{Text.centered_text(dgettext("emails", "You can change your response any time using the buttons above."), font_size: "14px", padding: "16px 0 0 0")}
+      """
+
+      organizer_details =
+        TemplateHelper.build_organizer_details(appointment_details,
+          intent: @intent,
+          eyebrow: dgettext("emails", "You're invited"),
+          stage_title: dgettext("emails", "You've been added as a guest"),
+          stage_subtitle:
+            dgettext("emails", "Meeting with %{name}", name: appointment_details.organizer_name)
+        )
+
+      html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
+      date_short = Formatting.format_date_short(appointment_details.date, locale)
+
+      MjmlEmail.base_email()
+      |> to({guest_name, guest_email})
+      |> subject(
+        Sanitise.sanitize_for_header(
+          dgettext("emails", "You're invited - %{date} with %{name}",
+            date: date_short,
+            name: appointment_details.organizer_name
+          )
+        )
+      )
+      |> html_body(html_body)
+      |> text_body(build_guest_text_body(appointment_details, guest_name, locale))
       |> attachment(
         IcsGenerator.generate_ics_attachment(
           appointment_details,
@@ -213,6 +285,27 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
     #{dgettext("emails", "Looking forward to meeting you!")}
     #{appointment_details.organizer_name}
+    """
+  end
+
+  defp build_guest_text_body(appointment_details, guest_name, locale) do
+    meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
+
+    """
+    #{dgettext("emails", "You're invited!")}
+
+    #{dgettext("emails", "Hi %{guest},", guest: guest_name)}
+
+    #{dgettext("emails", "%{booker} has invited you as a guest to this meeting with %{organizer}.", booker: appointment_details.attendee_name, organizer: appointment_details.organizer_name)}
+
+    #{dgettext("emails", "MEETING DETAILS:")}
+    #{meeting_details}
+
+    #{dgettext("emails", "WILL YOU BE THERE?")}
+    #{dgettext("emails", "Yes, I'll attend: %{url}", url: Map.get(appointment_details, :guest_accept_url, "#"))}
+    #{dgettext("emails", "Can't make it: %{url}", url: Map.get(appointment_details, :guest_decline_url, "#"))}
+
+    #{dgettext("emails", "You can change your response any time using the links above.")}
     """
   end
 

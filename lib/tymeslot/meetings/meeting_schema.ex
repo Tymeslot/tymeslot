@@ -66,6 +66,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           meeting_type_ref: any() | Ecto.Association.NotLoaded.t() | nil,
+          guests: [Tymeslot.Meetings.GuestSchema.t()] | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -159,6 +160,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     # Custom booking fields
     field(:custom_fields_snapshot, {:array, :map}, default: [])
     field(:custom_field_answers, :map, default: %{})
+
+    # Guests added by the attendee at booking time
+    has_many(:guests, Tymeslot.Meetings.GuestSchema,
+      foreign_key: :meeting_id,
+      preload_order: [asc: :inserted_at],
+      on_delete: :delete_all
+    )
 
     timestamps(type: :utc_datetime)
   end

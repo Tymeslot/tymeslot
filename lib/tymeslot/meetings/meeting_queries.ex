@@ -570,6 +570,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     |> order_by_start_desc_id_desc()
     |> cursor_after(after_start, after_id)
     |> apply_limit(limit)
+    |> preload(:guests)
     |> Repo.all()
   end
 end

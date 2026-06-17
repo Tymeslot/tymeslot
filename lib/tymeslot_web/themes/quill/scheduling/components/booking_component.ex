@@ -10,6 +10,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+  alias TymeslotWeb.Themes.Shared.Components.GuestField
+  alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
 
@@ -45,6 +47,30 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   @impl Phoenix.LiveComponent
   def handle_event("back_step", _params, socket) do
     send(self(), {:step_event, :booking, :back_step, nil})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_guests", _params, socket) do
+    send(self(), {:step_event, :booking, :toggle_guests, nil})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("guest_input_change", params, socket) do
+    send(self(), {:step_event, :booking, :guest_input, params["guest_email"] || ""})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("add_guest", params, socket) do
+    send(self(), {:step_event, :booking, :add_guest, params["guest_email"] || ""})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("remove_guest", %{"email" => email}, socket) do
+    send(self(), {:step_event, :booking, :remove_guest, email})
     {:noreply, socket}
   end
 
@@ -141,34 +167,45 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     />
 
                     <SecurityFields.recaptcha_fields id_prefix="booking" param_root="booking" />
-
-                    <div class="booking-actions">
-                      <.action_button
-                        type="button"
-                        phx-click="back_step"
-                        phx-target={@myself}
-                        data-testid="back-step"
-                        variant={:secondary}
-                        disabled={@submitting}
-                        class="flex-1"
-                      >
-                        ← {gettext("back")}
-                      </.action_button>
-
-                      <.loading_button
-                        type="submit"
-                        id="submit-booking-button"
-                        loading={@submitting}
-                        loading_text={gettext("Verifying...")}
-                        disabled={!OrganizerHelpers.form_valid?(@form)}
-                        data-testid="submit-booking"
-                        class="flex-1"
-                        title={get_submit_title(@submitting, @form)}
-                      >
-                        {if @is_rescheduling, do: gettext("reschedule_meeting"), else: gettext("book_meeting")} 🎆
-                      </.loading_button>
-                    </div>
                   </.form>
+
+                  <GuestField.guest_field
+                    :if={guests_allowed?(assigns)}
+                    guest_emails={@guest_emails}
+                    guest_input={@guest_input}
+                    guest_error={@guest_error}
+                    guests_open={@guests_open}
+                    max_guests={@max_guests}
+                    target={@myself}
+                  />
+
+                  <div class="booking-actions">
+                    <.action_button
+                      type="button"
+                      phx-click="back_step"
+                      phx-target={@myself}
+                      data-testid="back-step"
+                      variant={:secondary}
+                      disabled={@submitting}
+                      class="flex-1"
+                    >
+                      ← {gettext("back")}
+                    </.action_button>
+
+                    <.loading_button
+                      type="submit"
+                      form="booking-form"
+                      id="submit-booking-button"
+                      loading={@submitting}
+                      loading_text={gettext("Verifying...")}
+                      disabled={!OrganizerHelpers.form_valid?(@form)}
+                      data-testid="submit-booking"
+                      class="flex-1"
+                      title={get_submit_title(@submitting, @form)}
+                    >
+                      {if @is_rescheduling, do: gettext("reschedule_meeting"), else: gettext("book_meeting")} 🎆
+                    </.loading_button>
+                  </div>
                 </div>
               </.glass_morphism_card>
             </div>
@@ -180,6 +217,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   end
 
   # Helper functions
+  defp guests_allowed?(assigns), do: GuestBooking.guests_allowed?(assigns)
+
   defp get_organizer_name(organizer_profile, username_context) do
     Profiles.display_name(organizer_profile) || username_context
   end

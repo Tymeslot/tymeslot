@@ -341,6 +341,7 @@ defmodule Tymeslot.MeetingTypes do
         icon: ui_state.selected_icon,
         is_active: params["is_active"] == "true",
         allow_video: ui_state.meeting_mode == "video",
+        allow_guests: params["allow_guests"] == "true",
         video_integration_id: video_integration_id,
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
         target_calendar_id: blank_to_nil(params["target_calendar_id"]),

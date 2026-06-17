@@ -414,5 +414,16 @@ defmodule Tymeslot.Bookings.Policy do
     Endpoint.url()
   end
 
+  @doc """
+  Builds the public accept/decline RSVP URLs for a guest's token.
+  """
+  @spec guest_rsvp_urls(String.t()) :: %{accept_url: String.t(), decline_url: String.t()}
+  def guest_rsvp_urls(token) when is_binary(token) do
+    %{
+      accept_url: app_url() <> "/guest/#{token}/accept",
+      decline_url: app_url() <> "/guest/#{token}/decline"
+    }
+  end
+
   defp default_locale, do: Locales.default_locale()
 end

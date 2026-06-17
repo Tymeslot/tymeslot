@@ -10,6 +10,8 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               {:ok, any()} | {:error, any()}
   @callback send_appointment_confirmation_to_attendee(String.t(), appointment_details()) ::
               {:ok, any()} | {:error, any()}
+  @callback send_guest_confirmation(String.t(), appointment_details()) ::
+              {:ok, any()} | {:error, any()}
   @callback send_appointment_confirmations(appointment_details()) ::
               {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   @callback send_appointment_reminder_to_organizer(String.t(), appointment_details()) ::

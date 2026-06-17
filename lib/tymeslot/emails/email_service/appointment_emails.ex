@@ -40,6 +40,20 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   end
 
   @doc """
+  Sends an appointment confirmation email to a meeting guest, with accept/decline
+  RSVP buttons. `appointment_details` must carry `:guest_name`,
+  `:guest_accept_url` and `:guest_decline_url`.
+  """
+  @spec send_guest_confirmation(
+          String.t(),
+          Tymeslot.Emails.EmailService.appointment_details()
+        ) ::
+          {:ok, any()} | {:error, any()}
+  def send_guest_confirmation(guest_email, appointment_details) do
+    Delivery.deliver(AppointmentConfirmation.render(:guest, guest_email, appointment_details))
+  end
+
+  @doc """
   Sends appointment confirmations to both organizer and attendee.
   """
   @spec send_appointment_confirmations(Tymeslot.Emails.EmailService.appointment_details()) ::

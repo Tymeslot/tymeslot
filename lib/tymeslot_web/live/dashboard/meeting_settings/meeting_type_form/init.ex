@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> Component.assign(:selected_target_calendar_id, get_target_calendar_id(type))
     |> Component.assign(:reminders, get_reminders(type))
     |> Component.assign(:custom_fields, get_custom_fields(type))
+    |> Component.assign(:allow_guests, get_allow_guests(type))
     |> assign_payment_state(type, Map.get(assigns, :current_user))
     |> then(fn socket ->
       if id = socket.assigns.selected_calendar_integration_id do
@@ -131,6 +132,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
       "icon" => type.icon || "none"
     }
   end
+
+  @doc "Returns whether guests are allowed for an existing meeting type."
+  @spec get_allow_guests(Ecto.Schema.t() | nil) :: boolean()
+  def get_allow_guests(%{allow_guests: true}), do: true
+  def get_allow_guests(_type), do: false
 
   @doc "Returns the selected icon for a meeting type, or `\"none\"` when absent."
   @spec get_selected_icon(Ecto.Schema.t() | nil) :: String.t()

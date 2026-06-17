@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "calendar_integration_id" => to_param(assigns.selected_calendar_integration_id),
       "target_calendar_id" => to_param(assigns.selected_target_calendar_id),
       "icon" => assigns.selected_icon,
+      "allow_guests" => to_string(Map.get(assigns, :allow_guests, false)),
       "reminder_config" => Enum.map(assigns.reminders, &reminder_param/1)
     }
     |> maybe_put_custom_fields(assigns)

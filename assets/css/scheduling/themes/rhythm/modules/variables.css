@@ -86,6 +86,7 @@
   --radius-lg: 10px;
   --radius-xl: 12px;
   --radius-2xl: 16px;
+  --radius-full: 9999px;
 
   /* Border width scale */
   --border-width-thin: 1px;

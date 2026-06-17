@@ -295,3 +295,178 @@
     padding-top: var(--space-3xs);
   }
 }
+
+/* ============================================================================
+   ADD GUESTS FIELD
+   Collapsible chip/token field; a sibling of the booking form, matched to its
+   width and styled with Rhythm's surfaces, radii and cyan accent.
+   ============================================================================ */
+
+.rhythm-theme-wrapper .guest-field,
+.rhythm-theme-wrapper .booking-slide > .slide-actions {
+  width: 100%;
+  max-width: 500px;
+  margin-inline: auto;
+}
+
+.rhythm-theme-wrapper .guest-field {
+  margin-top: var(--space-sm);
+}
+
+.rhythm-theme-wrapper .booking-slide > .slide-actions {
+  margin-top: var(--space-md);
+}
+
+.rhythm-theme-wrapper .guest-field__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: var(--space-3xs) 0;
+  background: transparent;
+  border: none;
+  color: var(--theme-primary);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.rhythm-theme-wrapper .guest-field__toggle:hover {
+  color: var(--theme-primary-hover);
+  text-decoration: underline;
+}
+
+.rhythm-theme-wrapper .guest-field__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-xs);
+}
+
+.rhythm-theme-wrapper .guest-field__label {
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.rhythm-theme-wrapper .guest-field__count {
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.rhythm-theme-wrapper .guest-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  margin: 0 0 var(--space-xs);
+  padding: 0;
+  list-style: none;
+}
+
+.rhythm-theme-wrapper .guest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  max-width: 100%;
+  padding: var(--space-hairline) var(--space-2xs) var(--space-hairline) var(--space-hairline);
+  background: var(--surface-light);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-full);
+}
+
+.rhythm-theme-wrapper .guest-chip__avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-full);
+  background: var(--theme-primary);
+  color: white;
+  font-size: var(--theme-font-size-3xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
+.rhythm-theme-wrapper .guest-chip__email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--theme-font-size-2xs);
+  color: var(--theme-text);
+}
+
+.rhythm-theme-wrapper .guest-chip__remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-md);
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.rhythm-theme-wrapper .guest-chip__remove:hover {
+  color: white;
+  background: var(--theme-danger);
+}
+
+.rhythm-theme-wrapper .guest-add {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: stretch;
+}
+
+.rhythm-theme-wrapper .guest-add__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-sm);
+  border: var(--border-width-thin) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-light);
+  color: var(--theme-text);
+  min-height: var(--min-touch-target);
+  transition: border-color var(--transition-normal), background var(--transition-normal);
+}
+
+.rhythm-theme-wrapper .guest-add__input::placeholder {
+  color: var(--theme-text-secondary);
+}
+
+.rhythm-theme-wrapper .guest-add__input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  background: var(--surface-strong);
+}
+
+.rhythm-theme-wrapper .guest-add__button {
+  flex: none;
+  padding: var(--space-sm) var(--space-md);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--surface-light);
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background var(--transition-normal), border-color var(--transition-normal);
+}
+
+.rhythm-theme-wrapper .guest-add__button:hover {
+  background: var(--surface-medium);
+  border-color: var(--theme-primary);
+}
+
+.rhythm-theme-wrapper .guest-field__error {
+  margin-top: var(--space-3xs);
+  color: var(--theme-error);
+  font-size: var(--theme-font-size-sm);
+}

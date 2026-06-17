@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias Tymeslot.Meetings
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Components.Icons.IconComponents, as: Icons
@@ -174,6 +175,41 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                 </a>
               </div>
             </div>
+          </div>
+
+          <div
+            :if={guest_list(@meeting) != []}
+            class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50"
+          >
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-4">
+                <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0 border border-tymeslot-100">
+                  <CoreComponents.icon name="hero-user-group" class="w-4 h-4 text-tymeslot-400" />
+                </div>
+                <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest">
+                  {gettext("Guests")}
+                </p>
+              </div>
+              <span class="text-token-sm font-bold text-tymeslot-500">
+                {guest_summary_label(@meeting)}
+              </span>
+            </div>
+            <ul class="space-y-2.5">
+              <li
+                :for={guest <- guest_list(@meeting)}
+                class="flex items-center justify-between gap-3"
+              >
+                <span class="flex items-center gap-2.5 min-w-0">
+                  <span class="flex h-7 w-7 flex-none items-center justify-center rounded-token-full bg-turquoise-100 text-token-xs font-bold uppercase text-turquoise-700">
+                    {guest_initial(guest)}
+                  </span>
+                  <span class="truncate text-token-sm font-medium text-tymeslot-700">
+                    {guest.name || guest.email}
+                  </span>
+                </span>
+                <.guest_status_badge status={guest.status} />
+              </li>
+            </ul>
           </div>
 
           <div :if={@meeting.description && @meeting.description != ""} class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50 flex gap-4 items-start">
@@ -419,5 +455,48 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
       </div>
     </div>
     """
+  end
+
+  # Small coloured pill reflecting a guest's RSVP status.
+  attr :status, :string, required: true
+
+  defp guest_status_badge(assigns) do
+    ~H"""
+    <span class={[
+      "inline-flex flex-none items-center gap-1 rounded-full px-2.5 py-0.5 text-token-xs font-bold",
+      guest_badge_classes(@status)
+    ]}>
+      <CoreComponents.icon name={guest_badge_icon(@status)} class="w-3.5 h-3.5" />
+      {guest_status_label(@status)}
+    </span>
+    """
+  end
+
+  defp guest_badge_classes("accepted"), do: "bg-green-50 text-green-700 border border-green-100"
+  defp guest_badge_classes("declined"), do: "bg-red-50 text-red-600 border border-red-100"
+  defp guest_badge_classes(_pending), do: "bg-amber-50 text-amber-700 border border-amber-100"
+
+  defp guest_badge_icon("accepted"), do: "hero-check-circle-mini"
+  defp guest_badge_icon("declined"), do: "hero-x-circle-mini"
+  defp guest_badge_icon(_pending), do: "hero-clock-mini"
+
+  defp guest_status_label("accepted"), do: gettext("Going")
+  defp guest_status_label("declined"), do: gettext("Declined")
+  defp guest_status_label(_pending), do: gettext("Pending")
+
+  defp guest_list(%{guests: guests}) when is_list(guests), do: guests
+  defp guest_list(_meeting), do: []
+
+  defp guest_initial(%{name: name}) when is_binary(name) and name != "",
+    do: name |> String.first() |> String.upcase()
+
+  defp guest_initial(%{email: email}) when is_binary(email) and email != "",
+    do: email |> String.first() |> String.upcase()
+
+  defp guest_initial(_guest), do: "?"
+
+  defp guest_summary_label(meeting) do
+    summary = Meetings.guest_rsvp_summary(guest_list(meeting))
+    gettext("%{going} of %{total} going", going: summary.accepted, total: summary.total)
   end
 end

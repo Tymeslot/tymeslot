@@ -13,6 +13,7 @@ defmodule Tymeslot.Meetings do
   alias Tymeslot.Meetings.{
     CalendarEvents,
     ExternalCalendarChanges,
+    Guests,
     MeetingCalendarQueries,
     MeetingQueries,
     MeetingSchema,
@@ -82,6 +83,25 @@ defmodule Tymeslot.Meetings do
   Creates a calendar event asynchronously (does not fail the booking workflow if scheduling fails).
   """
   defdelegate create_calendar_event_async(meeting), to: CalendarEvents
+
+  @doc "Looks up a guest by their RSVP token without mutating anything."
+  defdelegate get_guest_by_token(token), to: Guests, as: :get_by_token
+
+  @doc """
+  Records a guest's RSVP (`"accepted"` / `"declined"`) from their token.
+  """
+  defdelegate record_guest_rsvp(token, response), to: Guests, as: :record_rsvp
+
+  @doc "Lists the guests attached to a meeting, oldest first."
+  defdelegate list_meeting_guests(meeting_id), to: Guests, as: :list_for_meeting
+
+  @doc "Aggregates RSVP counts for a list of guests."
+  defdelegate guest_rsvp_summary(guests), to: Guests, as: :summarize
+
+  @doc "Returns a `meeting_uid => RSVP summary` map for a user's guest meetings."
+  defdelegate guest_rsvp_summaries_for_user(user_id),
+    to: Tymeslot.Meetings.GuestQueries,
+    as: :rsvp_summaries_for_user
 
   @doc """
   Schedules email notifications for a meeting via Oban.

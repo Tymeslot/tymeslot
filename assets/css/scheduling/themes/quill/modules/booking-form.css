@@ -305,6 +305,178 @@
   }
 }
 
+/* ===== Add Guests field ===== */
+/* A collapsible token/chip field; scoped to the Quill wrapper so it inherits
+   the theme's glass surfaces, radii and cyan accent. */
+
+.quill-theme-wrapper .guest-field {
+  margin-top: var(--space-sm);
+}
+
+/* Quiet "+ Add guests" link shown while collapsed */
+.quill-theme-wrapper .guest-field__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: var(--space-3xs) 0;
+  background: transparent;
+  border: none;
+  color: var(--theme-primary);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.quill-theme-wrapper .guest-field__toggle:hover {
+  color: var(--theme-primary-hover);
+  text-decoration: underline;
+}
+
+.quill-theme-wrapper .guest-field__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-xs);
+}
+
+.quill-theme-wrapper .guest-field__label {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-opacity-medium-high);
+}
+
+.quill-theme-wrapper .guest-field__count {
+  font-size: var(--theme-font-size-2xs);
+  color: var(--text-opacity-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chip list */
+.quill-theme-wrapper .guest-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  margin: 0 0 var(--space-xs);
+  padding: 0;
+  list-style: none;
+}
+
+.quill-theme-wrapper .guest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  max-width: 100%;
+  padding: var(--space-hairline) var(--space-2xs) var(--space-hairline) var(--space-hairline);
+  background: var(--surface-light);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+}
+
+.quill-theme-wrapper .guest-chip__avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-full);
+  background: var(--theme-primary);
+  color: white;
+  font-size: var(--theme-font-size-3xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
+.quill-theme-wrapper .guest-chip__email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--theme-font-size-2xs);
+  color: var(--text-opacity-medium-high);
+}
+
+.quill-theme-wrapper .guest-chip__remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--text-opacity-low);
+  font-size: var(--theme-font-size-base);
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.quill-theme-wrapper .guest-chip__remove:hover {
+  color: white;
+  background: var(--theme-danger);
+}
+
+/* Add-guest input row (its own form, sibling of the booking form) */
+.quill-theme-wrapper .guest-add {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: stretch;
+}
+
+.quill-theme-wrapper .guest-add__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--input-padding);
+  border: var(--border-width-thin) solid var(--input-border-glass);
+  border-radius: var(--input-border-radius);
+  background: var(--input-bg-glass);
+  backdrop-filter: blur(var(--glass-blur-md));
+  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+  color: white;
+  font-size: var(--theme-font-size-sm);
+  transition: var(--transition-normal);
+}
+
+.quill-theme-wrapper .guest-add__input::placeholder {
+  color: var(--input-placeholder-glass);
+}
+
+.quill-theme-wrapper .guest-add__input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  background: var(--input-bg-glass-focus);
+  box-shadow: 0 0 0 3px var(--theme-primary-focus);
+}
+
+.quill-theme-wrapper .guest-add__button {
+  flex: none;
+  padding: var(--button-padding-sm);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--button-radius-sm);
+  background: var(--surface-light);
+  color: var(--text-opacity-high);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+.quill-theme-wrapper .guest-add__button:hover {
+  background: var(--surface-medium);
+  border-color: var(--theme-primary);
+}
+
+.quill-theme-wrapper .guest-field__error {
+  display: block;
+  margin-top: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-danger);
+  font-weight: var(--font-weight-medium);
+}
+
 /* ===== Container Queries ===== */
 
 /* Small containers: constrain form width */

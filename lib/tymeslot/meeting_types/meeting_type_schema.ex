@@ -16,6 +16,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           icon: String.t() | nil,
           is_active: boolean(),
           allow_video: boolean(),
+          allow_guests: boolean(),
           sort_order: integer(),
           reminder_config: [map()],
           payment_required: boolean(),
@@ -37,6 +38,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:icon, :string)
     field(:is_active, :boolean, default: true)
     field(:allow_video, :boolean, default: false)
+    field(:allow_guests, :boolean, default: false)
     field(:sort_order, :integer, default: 0)
     field(:target_calendar_id, :string)
     field(:reminder_config, {:array, :map}, default: nil)
@@ -94,6 +96,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :icon,
       :is_active,
       :allow_video,
+      :allow_guests,
       :sort_order,
       :user_id,
       :video_integration_id,

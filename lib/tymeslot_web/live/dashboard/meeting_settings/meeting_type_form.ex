@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
     Autosave,
     CustomQuestionsSection,
+    GuestsSection,
     HiddenFields,
     Init,
     PaymentsSection,
@@ -25,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   }
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+  import GuestsSection, only: [guests_section: 1]
   import HiddenFields, only: [hidden_fields: 1]
   import PaymentsSection, only: [payments_section: 1]
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
@@ -68,6 +70,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:payment_currency_minimum_cents, 50)
      |> assign(:payment_required, false)
      |> assign(:payment_price, "")
+     |> assign(:allow_guests, false)
      |> assign(:__initialized__, false)}
   end
 
@@ -209,6 +212,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         myself={@myself}
       />
 
+      <.guests_section allow_guests={@allow_guests} myself={@myself} />
+
       <%!-- Custom questions section --%>
       <.live_component
         module={CustomQuestionsSection}
@@ -237,6 +242,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         payments_charges_enabled={@payments_charges_enabled}
         payment_required={@payment_required}
         payment_price={@payment_price}
+        allow_guests={@allow_guests}
       />
 
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :base) do %>
@@ -439,6 +445,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     else
       {:noreply, socket}
     end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_allow_guests", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:allow_guests, !socket.assigns.allow_guests)
+     |> Autosave.maybe_run()}
   end
 
   @impl Phoenix.LiveComponent

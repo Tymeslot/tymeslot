@@ -10,6 +10,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
+  alias TymeslotWeb.Themes.Shared.Components.GuestField
+  alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
 
@@ -42,6 +44,30 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   @impl Phoenix.LiveComponent
   def handle_event("prev_slide", _params, socket) do
     send(self(), {:step_event, :booking, :back_step, nil})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_guests", _params, socket) do
+    send(self(), {:step_event, :booking, :toggle_guests, nil})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("guest_input_change", params, socket) do
+    send(self(), {:step_event, :booking, :guest_input, params["guest_email"] || ""})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("add_guest", params, socket) do
+    send(self(), {:step_event, :booking, :add_guest, params["guest_email"] || ""})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("remove_guest", %{"email" => email}, socket) do
+    send(self(), {:step_event, :booking, :remove_guest, email})
     {:noreply, socket}
   end
 
@@ -138,25 +164,37 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               />
 
               <SecurityFields.recaptcha_fields id_prefix="booking" param_root="booking" />
+            </.form>
 
-              <div class="slide-actions horizontal">
-                <button
-                  type="button"
-                  class="prev-button"
-                  phx-click="prev_slide"
-                  phx-target={@myself}
-                  data-testid="back-step"
-                  disabled={@submitting}
-                >
-                  ← {gettext("back")}
-                </button>
-                <button
-                  type="submit"
-                  class="submit-button"
-                  data-testid="submit-booking"
-                  disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
-                >
-                  <%= if @submitting do %>
+            <GuestField.guest_field
+              :if={guests_allowed?(assigns)}
+              guest_emails={@guest_emails}
+              guest_input={@guest_input}
+              guest_error={@guest_error}
+              guests_open={@guests_open}
+              max_guests={@max_guests}
+              target={@myself}
+            />
+
+            <div class="slide-actions horizontal">
+              <button
+                type="button"
+                class="prev-button"
+                phx-click="prev_slide"
+                phx-target={@myself}
+                data-testid="back-step"
+                disabled={@submitting}
+              >
+                ← {gettext("back")}
+              </button>
+              <button
+                type="submit"
+                form="booking-form"
+                class="submit-button"
+                data-testid="submit-booking"
+                disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
+              >
+                <%= if @submitting do %>
                     <svg
                       class="loading-spinner icon-sm"
                       xmlns="http://www.w3.org/2000/svg"
@@ -184,12 +222,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                     {if @is_rescheduling, do: gettext("reschedule_meeting"), else: gettext("submit")}
                   <% end %>
                 </button>
-              </div>
-            </.form>
+            </div>
           </div>
         </div>
       </div>
     </div>
     """
   end
+
+  defp guests_allowed?(assigns), do: GuestBooking.guests_allowed?(assigns)
 end
