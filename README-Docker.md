@@ -53,7 +53,7 @@ docker run -d \
   luka1thb/tymeslot:latest
 ```
 
-This will pull the image automatically if it is not present locally. For a pinned version, use `luka1thb/tymeslot:<VERSION>` (e.g., `luka1thb/tymeslot:1.0.5`).
+This will pull the image automatically if it is not present locally. For a pinned version, replace `latest` with a release tag — `luka1thb/tymeslot:<VERSION>`, substituting the version number you want. The full list of published tags is on [Docker Hub](https://hub.docker.com/r/luka1thb/tymeslot/tags).
 
 The embedded PostgreSQL listens only on `localhost` inside the container and is never exposed, so its password is an internal detail — if you omit `POSTGRES_PASSWORD` it defaults to `tymeslot`, which is fine for the embedded database. Set a strong `POSTGRES_PASSWORD` when you point Tymeslot at an [external database](#using-an-external-database).
 
