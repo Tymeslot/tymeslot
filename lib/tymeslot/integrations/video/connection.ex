@@ -24,20 +24,18 @@ defmodule Tymeslot.Integrations.Video.Connection do
     end
   end
 
-  defp run_connection_test(integration) do
-    start_time = System.monotonic_time(:millisecond)
-    result = do_test_connection(integration)
+  @doc """
+  Runs a connection test against an already-loaded integration struct.
 
-    :telemetry.execute(
-      [:tymeslot, :integration, :test_connection],
-      %{duration: System.monotonic_time(:millisecond) - start_time},
-      %{provider: integration.provider, type: "video", success: match?({:ok, _}, result)}
-    )
-
-    result
-  end
-
-  defp do_test_connection(integration) do
+  Resolves the provider module from the single source of truth (`ProviderConfig`),
+  builds the provider config via its `build_config/3` callback, and delegates to
+  the provider's connection test. This is the one canonical connection-test path:
+  the user-facing `test_connection/2` wraps it with loading and telemetry, and the
+  background health check (`HealthCheck.Assessor`) calls it directly, so both
+  exercise an identical pipeline and stay in lockstep as providers change.
+  """
+  @spec test_integration(VideoIntegrationSchema.t()) :: {:ok, String.t()} | {:error, any()}
+  def test_integration(%VideoIntegrationSchema{} = integration) do
     with {:ok, provider_atom} <- ProviderConfig.parse_known(integration.provider),
          module when module != nil <- ProviderConfig.get_provider_module(provider_atom) do
       decrypted = VideoIntegrationSchema.decrypt_credentials(integration)
@@ -46,5 +44,18 @@ defmodule Tymeslot.Integrations.Video.Connection do
     else
       _other -> {:error, :unsupported_provider}
     end
+  end
+
+  defp run_connection_test(integration) do
+    start_time = System.monotonic_time(:millisecond)
+    result = test_integration(integration)
+
+    :telemetry.execute(
+      [:tymeslot, :integration, :test_connection],
+      %{duration: System.monotonic_time(:millisecond) - start_time},
+      %{provider: integration.provider, type: "video", success: match?({:ok, _}, result)}
+    )
+
+    result
   end
 end
