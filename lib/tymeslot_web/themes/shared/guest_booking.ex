@@ -39,6 +39,22 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   def open(socket), do: assign(socket, :guests_open, true)
 
   @doc """
+  Collapses the guest field back to its "+ Add guests" call to action.
+
+  Clears any in-flight guests and the draft input — the close (×) control
+  abandons the guest section entirely, so the field is reset to its initial
+  state.
+  """
+  @spec close(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def close(socket) do
+    socket
+    |> assign(:guests_open, false)
+    |> assign(:guest_emails, [])
+    |> assign(:guest_input, "")
+    |> assign(:guest_error, nil)
+  end
+
+  @doc """
   Validates and adds a guest email to the in-flight list.
 
   Returns the socket with `:guest_emails` extended and the input cleared on

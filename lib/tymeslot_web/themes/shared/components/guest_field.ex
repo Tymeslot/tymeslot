@@ -34,7 +34,19 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
       <%= if @guests_open or @guest_emails != [] do %>
         <div class="guest-field__header">
           <span class="guest-field__label">{dgettext("booking", "Guests")}</span>
-          <span class="guest-field__count">{length(@guest_emails)}/{@max_guests}</span>
+          <div class="guest-field__header-meta">
+            <span class="guest-field__count">{length(@guest_emails)}/{@max_guests}</span>
+            <button
+              type="button"
+              class="guest-field__close"
+              phx-click="close_guests"
+              phx-target={@target}
+              aria-label={dgettext("booking", "Close")}
+              data-testid="guest-close"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         <ul :if={@guest_emails != []} class="guest-chips">
@@ -60,6 +72,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
           phx-submit="add_guest"
           phx-change="guest_input_change"
           phx-target={@target}
+          novalidate
         >
           <input
             type="email"

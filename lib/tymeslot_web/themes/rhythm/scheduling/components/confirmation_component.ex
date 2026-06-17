@@ -103,6 +103,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                         </div>
                       </div>
                     <% end %>
+
+                    <div :if={@guest_emails not in [nil, []]} class="ticket-row">
+                      <div class="ticket-icon">
+                        <.icon name="hero-user-group" class="hero-icon hero-icon--md" />
+                      </div>
+                      <div class="ticket-info">
+                        <span class="ticket-value">{Enum.join(@guest_emails, ", ")}</span>
+                        <span class="ticket-sublabel">{dgettext("booking", "Guests")}</span>
+                      </div>
+                    </div>
                   </div>
 
                   <div class="ticket-footer">

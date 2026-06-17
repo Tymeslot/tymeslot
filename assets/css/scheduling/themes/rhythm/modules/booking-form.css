@@ -94,7 +94,8 @@
 
 .rhythm-theme-wrapper .booking-form .input,
 .rhythm-theme-wrapper .booking-form input.input,
-.rhythm-theme-wrapper .booking-form textarea.input {
+.rhythm-theme-wrapper .booking-form textarea.input,
+.rhythm-theme-wrapper .guest-add__input {
   width: 100%;
   padding: var(--space-sm);
   border: var(--border-width-thin) solid var(--border-strong);
@@ -107,20 +108,23 @@
 
 .rhythm-theme-wrapper .booking-form .input::placeholder,
 .rhythm-theme-wrapper .booking-form input.input::placeholder,
-.rhythm-theme-wrapper .booking-form textarea.input::placeholder {
+.rhythm-theme-wrapper .booking-form textarea.input::placeholder,
+.rhythm-theme-wrapper .guest-add__input::placeholder {
   color: var(--theme-text-secondary);
 }
 
 .rhythm-theme-wrapper .booking-form .input:hover,
 .rhythm-theme-wrapper .booking-form input.input:hover,
-.rhythm-theme-wrapper .booking-form textarea.input:hover {
+.rhythm-theme-wrapper .booking-form textarea.input:hover,
+.rhythm-theme-wrapper .guest-add__input:hover {
   border-color: var(--border-strong);
   background: var(--surface-medium);
 }
 
 .rhythm-theme-wrapper .booking-form .input:focus,
 .rhythm-theme-wrapper .booking-form input.input:focus,
-.rhythm-theme-wrapper .booking-form textarea.input:focus {
+.rhythm-theme-wrapper .booking-form textarea.input:focus,
+.rhythm-theme-wrapper .guest-add__input:focus {
   outline: none;
   border-color: var(--theme-primary);
   background: var(--surface-strong);
@@ -338,7 +342,7 @@
 
 .rhythm-theme-wrapper .guest-field__header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   margin-bottom: var(--space-xs);
 }
@@ -349,10 +353,38 @@
   font-weight: var(--font-weight-medium);
 }
 
+.rhythm-theme-wrapper .guest-field__header-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
 .rhythm-theme-wrapper .guest-field__count {
   color: var(--theme-text-secondary);
   font-size: var(--theme-font-size-2xs);
   font-variant-numeric: tabular-nums;
+}
+
+.rhythm-theme-wrapper .guest-field__close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-md);
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.rhythm-theme-wrapper .guest-field__close:hover {
+  color: white;
+  background: var(--theme-danger);
 }
 
 .rhythm-theme-wrapper .guest-chips {
@@ -428,23 +460,6 @@
 .rhythm-theme-wrapper .guest-add__input {
   flex: 1 1 auto;
   min-width: 0;
-  padding: var(--space-sm);
-  border: var(--border-width-thin) solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface-light);
-  color: var(--theme-text);
-  min-height: var(--min-touch-target);
-  transition: border-color var(--transition-normal), background var(--transition-normal);
-}
-
-.rhythm-theme-wrapper .guest-add__input::placeholder {
-  color: var(--theme-text-secondary);
-}
-
-.rhythm-theme-wrapper .guest-add__input:focus {
-  outline: none;
-  border-color: var(--theme-primary);
-  background: var(--surface-strong);
 }
 
 .rhythm-theme-wrapper .guest-add__button {

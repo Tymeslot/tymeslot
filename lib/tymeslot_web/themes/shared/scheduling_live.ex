@@ -270,6 +270,9 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
           :toggle_guests ->
             {:noreply, GuestBooking.open(socket)}
 
+          :close_guests ->
+            {:noreply, GuestBooking.close(socket)}
+
           :guest_input ->
             {:noreply, GuestBooking.set_input(socket, data)}
 

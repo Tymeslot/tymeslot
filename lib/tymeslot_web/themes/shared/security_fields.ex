@@ -65,17 +65,49 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
   @spec recaptcha_fields(map()) :: Phoenix.LiveView.Rendered.t()
   def recaptcha_fields(assigns) do
     ~H"""
-    <%= if RecaptchaHelpers.booking_active?() do %>
-      <input
-        type="hidden"
-        name={"#{@param_root}[g-recaptcha-response]"}
-        id={"#{@id_prefix}-g-recaptcha-response"}
-        value=""
-      />
-      <div class="recaptcha-notice text-xs text-tymeslot-500 text-center">
-        {Phoenix.HTML.raw(recaptcha_notice())}
-      </div>
-    <% end %>
+    <.recaptcha_token_field id_prefix={@id_prefix} param_root={@param_root} />
+    <.recaptcha_notice_block />
+    """
+  end
+
+  @doc """
+  Renders only the hidden reCAPTCHA token input (no notice).
+
+  Use this inside the booking `<.form>` when the privacy notice needs to be
+  positioned separately (e.g. below a sibling field). Pair with
+  `recaptcha_notice_block/1`.
+  """
+  attr :id_prefix, :string, required: true
+  attr :param_root, :string, required: true
+
+  @spec recaptcha_token_field(map()) :: Phoenix.LiveView.Rendered.t()
+  def recaptcha_token_field(assigns) do
+    ~H"""
+    <input
+      :if={RecaptchaHelpers.booking_active?()}
+      type="hidden"
+      name={"#{@param_root}[g-recaptcha-response]"}
+      id={"#{@id_prefix}-g-recaptcha-response"}
+      value=""
+    />
+    """
+  end
+
+  @doc """
+  Renders only the reCAPTCHA privacy notice (no hidden input).
+
+  Position this wherever the notice should appear in the layout; the token
+  input from `recaptcha_token_field/1` must still live inside the form.
+  """
+  @spec recaptcha_notice_block(map()) :: Phoenix.LiveView.Rendered.t()
+  def recaptcha_notice_block(assigns) do
+    ~H"""
+    <div
+      :if={RecaptchaHelpers.booking_active?()}
+      class="recaptcha-notice text-xs text-tymeslot-500 text-center"
+    >
+      {Phoenix.HTML.raw(recaptcha_notice())}
+    </div>
     """
   end
 

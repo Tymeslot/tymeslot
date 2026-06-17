@@ -116,6 +116,29 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                         </p>
                       </div>
                     </div>
+
+                    <div
+                      :if={@guest_emails not in [nil, []]}
+                      class="confirmation-border-top mt-3 pt-3 border-t"
+                    >
+                      <div class="confirmation-email-row">
+                        <div class="confirmation-icon-wrapper rounded-full center-content">
+                          <svg
+                            class="confirmation-email-link w-3.5 h-3.5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                          </svg>
+                        </div>
+                        <p class="text-sm text-white">
+                          {dgettext("booking", "Guests")}:
+                          <span class="confirmation-email-link font-semibold">
+                            {Enum.join(@guest_emails, ", ")}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
                   </.meeting_details_card>
 
                   <%= if length(@custom_fields_snapshot) > 0 do %>

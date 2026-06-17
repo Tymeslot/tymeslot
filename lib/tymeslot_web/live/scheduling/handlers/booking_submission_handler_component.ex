@@ -209,6 +209,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> assign(:email, validated_data["email"])
       |> assign(:custom_fields_snapshot, Map.get(validated_data, "custom_fields_snapshot", []))
       |> assign(:custom_field_answers, Map.get(validated_data, "custom_field_answers", %{}))
+      |> assign(:guest_emails, socket.assigns[:guest_emails] || [])
       |> Flash.put_flash(:info, success_message)
 
     {:ok, socket}
@@ -462,6 +463,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> assign(:awaiting_payment_checkout_url, url)
       |> assign(:custom_fields_snapshot, Map.get(sanitized_params, "custom_fields_snapshot", []))
       |> assign(:custom_field_answers, Map.get(sanitized_params, "custom_field_answers", %{}))
+      |> assign(:guest_emails, socket.assigns[:guest_emails] || [])
       |> LiveView.push_event("payment_redirect_open_tab", %{url: url})
 
     {:awaiting_payment, socket}

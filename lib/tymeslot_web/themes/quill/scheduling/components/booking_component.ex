@@ -57,6 +57,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("close_guests", _params, socket) do
+    send(self(), {:step_event, :booking, :close_guests, nil})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
   def handle_event("guest_input_change", params, socket) do
     send(self(), {:step_event, :booking, :guest_input, params["guest_email"] || ""})
     {:noreply, socket}
@@ -166,7 +172,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       phx-target={@myself}
                     />
 
-                    <SecurityFields.recaptcha_fields id_prefix="booking" param_root="booking" />
+                    <SecurityFields.recaptcha_token_field id_prefix="booking" param_root="booking" />
                   </.form>
 
                   <GuestField.guest_field
@@ -178,6 +184,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     max_guests={@max_guests}
                     target={@myself}
                   />
+
+                  <SecurityFields.recaptcha_notice_block />
 
                   <div class="booking-actions">
                     <.action_button

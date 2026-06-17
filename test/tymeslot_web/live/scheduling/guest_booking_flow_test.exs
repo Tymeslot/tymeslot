@@ -109,6 +109,11 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       # After toggling: the input area replaces the toggle button.
       assert has_element?(view, "[data-testid='guest-input']")
       refute has_element?(view, "[data-testid='guest-toggle']")
+
+      # The add form opts out of native browser validation, so an invalid
+      # email reaches the server and surfaces the inline error instead of the
+      # browser silently blocking the submit.
+      assert view |> element("form.guest-add") |> render() =~ "novalidate"
     end
 
     @tag :capture_log
@@ -151,6 +156,29 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       html = render(view)
       assert html =~ "keeper@example.com"
       refute html =~ "todelete@example.com"
+    end
+
+    @tag :capture_log
+    test "close button clears guests and collapses the field", %{conn: conn, profile: profile} do
+      view = navigate_to_booking_form(conn, profile, nil)
+
+      send(view.pid, {:step_event, :booking, :toggle_guests, nil})
+      send(view.pid, {:step_event, :booking, :add_guest, "willclose@example.com"})
+      _drain = :sys.get_state(view.pid)
+
+      # Open with one guest and a close control present.
+      assert has_element?(view, "[data-testid='guest-close']")
+      assert render(view) =~ "willclose@example.com"
+
+      # Closing resets the list and returns to the collapsed "+ Add guests" CTA.
+      send(view.pid, {:step_event, :booking, :close_guests, nil})
+      _drain = :sys.get_state(view.pid)
+
+      state = :sys.get_state(view.pid).socket.assigns
+      assert state.guest_emails == []
+      assert state.guests_open == false
+      refute render(view) =~ "willclose@example.com"
+      assert has_element?(view, "[data-testid='guest-toggle']")
     end
 
     @tag :capture_log
@@ -241,6 +269,10 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       # The confirmation page must be showing.
       html = render(view)
       assert html =~ "Meeting Confirmed" or html =~ "confirmed" or html =~ "Booking submitted"
+
+      # The confirmation must acknowledge the invited guests back to the booker.
+      assert html =~ "invited1@example.com"
+      assert html =~ "invited2@example.com"
 
       # Read the created meeting back and verify guests are stored.
       [meeting] = MeetingQueries.list_meetings_by_attendee_email("sender@example.com")
