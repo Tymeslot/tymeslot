@@ -591,12 +591,12 @@ msgstr ""
 msgid "%{accepted} of %{total} guests going"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:500
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:501
 #, elixir-autogen, elixir-format
 msgid "%{going} of %{total} going"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex:509
+#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex:512
 #, elixir-autogen, elixir-format
 msgid ", %{count} declined"
 msgid_plural ", %{count} declined"

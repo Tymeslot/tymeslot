@@ -1018,7 +1018,7 @@ msgstr ""
 msgid "with %{name}"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/guest_booking.ex:99
+#: lib/tymeslot_web/themes/shared/guest_booking.ex:100
 #, elixir-autogen, elixir-format
 msgid "%{email} has already been added."
 msgstr ""
@@ -1073,8 +1073,8 @@ msgstr ""
 msgid "Decline instead"
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/guest_booking.ex:105
-#: lib/tymeslot_web/themes/shared/guest_booking.ex:112
+#: lib/tymeslot_web/themes/shared/guest_booking.ex:106
+#: lib/tymeslot_web/themes/shared/guest_booking.ex:113
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr ""
@@ -1125,12 +1125,12 @@ msgstr ""
 msgid "We've let %{name} know you can't make it."
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/guest_booking.ex:96
+#: lib/tymeslot_web/themes/shared/guest_booking.ex:97
 #, elixir-autogen, elixir-format
 msgid "You can add up to %{count} guests."
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/guest_booking.ex:102
+#: lib/tymeslot_web/themes/shared/guest_booking.ex:103
 #, elixir-autogen, elixir-format
 msgid "You don't need to add your own email as a guest."
 msgstr ""

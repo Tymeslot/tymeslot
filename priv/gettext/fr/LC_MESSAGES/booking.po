@@ -1018,149 +1018,149 @@ msgstr "24h"
 msgid "with %{name}"
 msgstr "avec %{name}"
 
-#: lib/tymeslot_web/themes/shared/guest_booking.ex:99
+#: lib/tymeslot_web/themes/shared/guest_booking.ex:100
 #, elixir-autogen, elixir-format
 msgid "%{email} has already been added."
-msgstr ""
+msgstr "%{email} a déjà été ajouté."
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex:89
 #, elixir-autogen, elixir-format
 msgid "+ Add guests"
-msgstr ""
+msgstr "+ Ajouter des invités"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:120
 #, elixir-autogen, elixir-format
 msgid "Able to make it after all?"
-msgstr ""
+msgstr "Vous pouvez venir finalement ?"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:122
 #, elixir-autogen, elixir-format
 msgid "Accept instead"
-msgstr ""
+msgstr "Accepter finalement"
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex:76
 #, elixir-autogen, elixir-format
 msgid "Add"
-msgstr ""
+msgstr "Ajouter"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:120
 #, elixir-autogen, elixir-format
 msgid "Changed your mind?"
-msgstr ""
+msgstr "Vous avez changé d'avis ?"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:68
 #, elixir-autogen, elixir-format
 msgid "Confirm attendance"
-msgstr ""
+msgstr "Confirmer la présence"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:68
 #, elixir-autogen, elixir-format
 msgid "Confirm decline"
-msgstr ""
+msgstr "Confirmer l'absence"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:42
 #, elixir-autogen, elixir-format
 msgid "Confirm to let %{name} know you can't make it."
-msgstr ""
+msgstr "Confirmez pour prévenir %{name} que vous ne pourrez pas venir."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:40
 #, elixir-autogen, elixir-format
 msgid "Confirm to let %{name} know you'll be attending."
-msgstr ""
+msgstr "Confirmez pour prévenir %{name} de votre présence."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:122
 #, elixir-autogen, elixir-format
 msgid "Decline instead"
-msgstr ""
+msgstr "Refuser finalement"
 
-#: lib/tymeslot_web/themes/shared/guest_booking.ex:105
-#: lib/tymeslot_web/themes/shared/guest_booking.ex:112
+#: lib/tymeslot_web/themes/shared/guest_booking.ex:106
+#: lib/tymeslot_web/themes/shared/guest_booking.ex:113
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
-msgstr ""
+msgstr "Saisissez une adresse e-mail valide."
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex:72
 #, elixir-autogen, elixir-format
 msgid "Guest email address"
-msgstr ""
+msgstr "Adresse e-mail de l'invité"
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex:36
 #, elixir-autogen, elixir-format
 msgid "Guests"
-msgstr ""
+msgstr "Invités"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:54
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:115
 #, elixir-autogen, elixir-format
 msgid "Hosted by %{name}"
-msgstr ""
+msgstr "Organisé par %{name}"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:159
 #, elixir-autogen, elixir-format
 msgid "Please wait a moment and try again."
-msgstr ""
+msgstr "Veuillez patienter un instant avant de réessayer."
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex:50
 #, elixir-autogen, elixir-format
 msgid "Remove guest %{email}"
-msgstr ""
+msgstr "Supprimer l'invité %{email}"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:141
 #, elixir-autogen, elixir-format
 msgid "The invitation link may have expired or already been used. Please contact the meeting host."
-msgstr ""
+msgstr "Le lien d'invitation a peut-être expiré ou a déjà été utilisé. Veuillez contacter l'organisateur."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:138
 #, elixir-autogen, elixir-format
 msgid "This link is no longer valid"
-msgstr ""
+msgstr "Ce lien n'est plus valide"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:156
 #, elixir-autogen, elixir-format
 msgid "Too many attempts"
-msgstr ""
+msgstr "Trop de tentatives"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:103
 #, elixir-autogen, elixir-format
 msgid "We've let %{name} know you can't make it."
-msgstr ""
+msgstr "Nous avons prévenu %{name} de votre absence."
 
-#: lib/tymeslot_web/themes/shared/guest_booking.ex:96
+#: lib/tymeslot_web/themes/shared/guest_booking.ex:97
 #, elixir-autogen, elixir-format
 msgid "You can add up to %{count} guests."
-msgstr ""
+msgstr "Vous pouvez ajouter jusqu'à %{count} invités."
 
-#: lib/tymeslot_web/themes/shared/guest_booking.ex:102
+#: lib/tymeslot_web/themes/shared/guest_booking.ex:103
 #, elixir-autogen, elixir-format
 msgid "You don't need to add your own email as a guest."
-msgstr ""
+msgstr "Vous n'avez pas besoin d'ajouter votre propre adresse e-mail comme invité."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:34
 #, elixir-autogen, elixir-format
 msgid "You're about to accept"
-msgstr ""
+msgstr "Vous êtes sur le point d'accepter"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:35
 #, elixir-autogen, elixir-format
 msgid "You're about to decline"
-msgstr ""
+msgstr "Vous êtes sur le point de refuser"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:96
 #, elixir-autogen, elixir-format
 msgid "You're going!"
-msgstr ""
+msgstr "Vous participez !"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:96
 #, elixir-autogen, elixir-format
 msgid "You've declined"
-msgstr ""
+msgstr "Vous avez décliné"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:101
 #, elixir-autogen, elixir-format
 msgid "Your response has been sent to %{name}."
-msgstr ""
+msgstr "Votre réponse a été envoyée à %{name}."
 
 #: lib/tymeslot_web/themes/shared/components/guest_field.ex:69
 #, elixir-autogen, elixir-format
 msgid "guest@example.com"
-msgstr ""
+msgstr "invite@example.com"
