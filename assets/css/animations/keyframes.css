@@ -115,6 +115,28 @@
   }
 }
 
+/* Entrance keyframe (ports tailwindcss-animate's `enter` animation).
+   Reads CSS variables set by the `.animate-in` utility and its modifiers so a
+   single keyframe drives fade/zoom/slide entrances. Each variable defaults to a
+   no-op value, so a bare `.animate-in` animates nothing until a modifier
+   (`.fade-in`, `.zoom-in`, `.slide-in-from-*`) overrides one. */
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(
+        var(--tw-enter-translate-x, 0),
+        var(--tw-enter-translate-y, 0),
+        0
+      )
+      scale3d(
+        var(--tw-enter-scale, 1),
+        var(--tw-enter-scale, 1),
+        var(--tw-enter-scale, 1)
+      )
+      rotate(var(--tw-enter-rotate, 0));
+  }
+}
+
 /* Glass Theme Specific Animations */
 @keyframes gradientShift {
   0% { background-position: 0% 50%; }

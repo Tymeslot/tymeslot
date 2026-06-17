@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     <%!-- Mobile Overlay --%>
     <div
       id="dashboard-sidebar-overlay"
-      class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30 dashboard-sidebar-overlay hidden"
+      class="lg:hidden fixed inset-0 bg-black/50 z-30 dashboard-sidebar-overlay hidden"
       phx-click={close_sidebar_js()}
     >
     </div>
@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     <aside
       id="dashboard-sidebar"
       data-tour="sidebar-nav"
-      class="dashboard-sidebar lg:w-64 w-80 h-screen lg:h-full overflow-y-auto lg:flex-shrink-0 lg:relative fixed top-0 left-0 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
+      class="dashboard-sidebar lg:w-64 w-80 h-screen lg:h-full overflow-y-auto lg:shrink-0 lg:relative fixed top-0 left-0 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
     >
       <div class="p-6">
         <%!-- Mobile Close Button --%>

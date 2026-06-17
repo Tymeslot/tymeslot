@@ -2,10 +2,8 @@
    Contains ONLY structural helpers — no colors, typography, or theme-specific styles.
    Replaces the old variables.css + utilities.css split. */
 
-/* Import Tailwind CSS for full utility access across all themes */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind CSS is imported by each theme's entry file (theme.css) in v4 —
+   the framework @import must lead the entry, so it cannot live here. */
 
 :root {
   /* Radius scale — themes override these; kept here as safe fallback defaults */

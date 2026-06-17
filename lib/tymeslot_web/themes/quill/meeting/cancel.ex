@@ -163,7 +163,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                   style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2);"
                 >
                   <svg
-                    class="w-5 h-5 flex-shrink-0 mt-0.5"
+                    class="w-5 h-5 shrink-0 mt-0.5"
                     style="color: #ef4444;"
                     fill="currentColor"
                     viewBox="0 0 20 20"

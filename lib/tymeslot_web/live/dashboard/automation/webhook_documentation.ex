@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
               {"Build automation", "Add actions to process the webhook data"}
             ], 1) do %>
               <div class="flex items-start gap-3 p-3 bg-white rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 transition-all">
-                <div class="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-turquoise-500 to-cyan-500 text-white flex items-center justify-center text-xs font-black">
+                <div class="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-turquoise-500 to-cyan-500 text-white flex items-center justify-center text-xs font-black">
                   <%= step_index %>
                 </div>
                 <div class="flex-1 min-w-0">
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
           <div class="ml-5 space-y-3">
             <div class="p-4 bg-tymeslot-50 rounded-token-xl border-2 border-tymeslot-100">
               <div class="flex items-start gap-3">
-                <div class="p-2 bg-white rounded-lg flex-shrink-0">
+                <div class="p-2 bg-white rounded-lg shrink-0">
                   <svg class="w-5 h-5 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       stroke-linecap="round"

@@ -264,10 +264,9 @@ config :esbuild,
 
 # Configure tailwind
 config :tailwind,
-  version: "3.4.17",
+  version: "4.3.1",
   tymeslot: [
     args: ~w(
-      --config=tailwind.config.js
       --input=css/app.css
       --output=../priv/static/assets/app.css
     ),
@@ -275,7 +274,6 @@ config :tailwind,
   ],
   quill: [
     args: ~w(
-      --config=tailwind.config.js
       --input=css/scheduling/themes/quill/theme.css
       --output=../priv/static/assets/scheduling-theme-quill.css
     ),
@@ -283,7 +281,6 @@ config :tailwind,
   ],
   rhythm: [
     args: ~w(
-      --config=tailwind.config.js
       --input=css/scheduling/themes/rhythm/theme.css
       --output=../priv/static/assets/scheduling-theme-rhythm.css
     ),

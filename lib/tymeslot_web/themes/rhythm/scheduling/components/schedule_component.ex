@@ -297,6 +297,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
 
             <div class="slide-actions horizontal">
               <button
+                :if={@entered_via_overview}
                 class="prev-button"
                 phx-click="prev_slide"
                 phx-target={@myself}

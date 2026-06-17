@@ -13,9 +13,23 @@ defmodule Tymeslot.Announcements.Catalog do
   @published_at ~U[2026-06-05 00:00:00Z]
   @expires_at ~U[2026-07-05 00:00:00Z]
 
+  @private_links_published_at ~U[2026-06-16 00:00:00Z]
+  @private_links_expires_at ~U[2026-07-16 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     [
+      %Announcement{
+        key: "private_booking_links",
+        title: "Share private booking links",
+        body:
+          "Every meeting type now has its own direct link that takes people straight to " <>
+            "booking it — without showing your other meeting types. Mark a type as unlisted " <>
+            "to keep it off your public page, and randomise its link any time to make it " <>
+            "unguessable or to retire an old one.",
+        published_at: @private_links_published_at,
+        expires_at: @private_links_expires_at
+      },
       %Announcement{
         key: "custom_booking_questions",
         title: "Ask the right questions up front",

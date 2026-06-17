@@ -3,17 +3,20 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   LiveComponent for managing meeting settings in the dashboard.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypesListComponent
   alias TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent
+  alias TymeslotWeb.Endpoint
   require Logger
 
   @impl Phoenix.LiveComponent
@@ -29,6 +32,9 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> assign(:video_integrations, [])
      |> assign(:toggling_type_id, nil)
      |> assign(:custom_questions_allowed, true)
+     |> assign(:show_slug_modal, false)
+     |> assign(:slug_modal_type, nil)
+     |> assign(:slug_draft, "")
      |> ModalHook.mount_modal(delete_meeting_type: false)}
   end
 
@@ -160,6 +166,50 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     end
   end
 
+  def handle_event("toggle_private", %{"id" => id}, socket) do
+    user_id = socket.assigns.current_user.id
+    type_id = String.to_integer(id)
+
+    with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
+      do_toggle_private(socket, type_id, user_id)
+    end)
+  end
+
+  def handle_event("open_slug_modal", _params, socket) do
+    case socket.assigns.editing_type do
+      nil ->
+        {:noreply, socket}
+
+      type ->
+        {:noreply,
+         socket
+         |> assign(:show_slug_modal, true)
+         |> assign(:slug_modal_type, type)
+         |> assign(:slug_draft, MeetingTypes.effective_slug(type))}
+    end
+  end
+
+  def handle_event("close_slug_modal", _params, socket) do
+    {:noreply, hide_slug_modal(socket)}
+  end
+
+  def handle_event("slug_draft_changed", %{"slug" => slug}, socket) do
+    {:noreply, assign(socket, :slug_draft, slug)}
+  end
+
+  def handle_event("randomise_slug", _params, socket) do
+    user_id = socket.assigns.current_user.id
+    {:noreply, assign(socket, :slug_draft, MeetingTypes.generate_random_slug(user_id))}
+  end
+
+  def handle_event("confirm_slug_change", _params, socket) do
+    user_id = socket.assigns.current_user.id
+
+    with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
+      do_confirm_slug_change(socket, user_id)
+    end)
+  end
+
   def handle_event("show_delete_modal", %{"id" => id}, socket) do
     type_id = String.to_integer(id)
     type = MeetingTypes.get_meeting_type(type_id, socket.assigns.current_user.id)
@@ -261,12 +311,87 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     end
   end
 
+  defp do_toggle_private(socket, type_id, user_id) do
+    case MeetingTypes.get_meeting_type(type_id, user_id) do
+      nil ->
+        Flash.error(gettext("Meeting type not found"))
+        {:noreply, socket}
+
+      type ->
+        case MeetingTypes.set_private(type, !type.is_private) do
+          {:ok, _updated} ->
+            send(self(), {:meeting_type_changed})
+            Flash.info(gettext("Visibility updated"))
+            {:noreply, reload_editing_type(socket, type_id, user_id)}
+
+          {:error, _reason} ->
+            Flash.error(gettext("Failed to update visibility"))
+            {:noreply, socket}
+        end
+    end
+  end
+
+  defp do_confirm_slug_change(socket, user_id) do
+    type = socket.assigns.slug_modal_type
+
+    case MeetingTypes.update_slug(type, socket.assigns.slug_draft) do
+      {:ok, _updated} ->
+        send(self(), {:meeting_type_changed})
+        Flash.info(gettext("Booking link updated"))
+
+        {:noreply,
+         socket
+         |> reload_editing_type(type.id, user_id)
+         |> hide_slug_modal()}
+
+      {:error, :slug_taken} ->
+        Flash.error(gettext("That link is already taken. Please choose another."))
+        {:noreply, socket}
+
+      {:error, %Ecto.Changeset{}} ->
+        Flash.error(gettext("That link isn't valid. Use lowercase letters, numbers and hyphens."))
+
+        {:noreply, socket}
+    end
+  end
+
+  # Re-fetches the (preloaded) type and refreshes both the open editor and the
+  # underlying list entry so the UI reflects the saved state immediately.
+  defp reload_editing_type(socket, type_id, user_id) do
+    updated = MeetingTypes.get_meeting_type(type_id, user_id)
+
+    meeting_types =
+      Enum.map(socket.assigns.meeting_types, fn
+        t when t.id == type_id -> updated
+        t -> t
+      end)
+
+    socket
+    |> assign(:meeting_types, meeting_types)
+    |> assign(:editing_type, updated)
+  end
+
+  defp hide_slug_modal(socket) do
+    socket
+    |> assign(:show_slug_modal, false)
+    |> assign(:slug_modal_type, nil)
+    |> assign(:slug_draft, "")
+  end
+
   defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
     Flash.error(message)
     {:noreply, socket}
   end
 
   defp with_rate_limit(:ok, _socket, action), do: action.()
+
+  # The public base of a meeting type's booking link, e.g. "https://host/alice".
+  # Returns nil when the profile has no username yet (link UI is then hidden).
+  defp booking_base_url(%{username: username}) when is_binary(username) and username != "" do
+    Endpoint.url() <> "/" <> username
+  end
+
+  defp booking_base_url(_profile), do: nil
 
   defp do_save_meeting_type(params, socket) do
     socket = assign(socket, :saving, true)
@@ -316,7 +441,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
             <button
               phx-click={if @editing_type, do: "close_edit_overlay", else: "toggle_add_form"}
               phx-target={@myself}
-              class="flex-shrink-0 p-2 rounded-lg text-tymeslot-500 hover:text-tymeslot-700 hover:bg-tymeslot-100 transition-colors"
+              class="shrink-0 p-2 rounded-lg text-tymeslot-500 hover:text-tymeslot-700 hover:bg-tymeslot-100 transition-colors"
               title="Close"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -342,6 +467,96 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
               custom_questions_allowed={@custom_questions_allowed}
             />
           </div>
+
+          <%!-- Booking link & visibility (existing types only; needs a username) --%>
+          <div
+            :if={@editing_type && booking_base_url(@profile)}
+            class="card-glass space-y-6"
+          >
+            <div class="flex items-center gap-2">
+              <.icon name="hero-link" class="w-5 h-5 text-turquoise-500" />
+              <h3 class="font-semibold text-tymeslot-700 text-token-lg">
+                {gettext("Booking link & visibility")}
+              </h3>
+            </div>
+
+            <div class="space-y-2">
+              <label class="block font-medium text-tymeslot-700 text-token-sm">
+                {gettext("Direct booking link")}
+              </label>
+              <div class="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  readonly
+                  value={"#{booking_base_url(@profile)}/#{MeetingTypes.effective_slug(@editing_type)}"}
+                  class="font-mono text-token-sm flex-1 min-w-[12rem] px-4 py-2.5 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50 text-tymeslot-600 cursor-default"
+                />
+                <button
+                  type="button"
+                  id={"copy-booking-link-#{@editing_type.id}"}
+                  phx-hook="CopyOnClick"
+                  data-copy-text={"#{booking_base_url(@profile)}/#{MeetingTypes.effective_slug(@editing_type)}"}
+                  data-copy-feedback={gettext("Booking link copied!")}
+                  class="whitespace-nowrap px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
+                >
+                  {gettext("Copy")}
+                </button>
+                <.action_button
+                  type="button"
+                  variant={:secondary}
+                  phx-click="open_slug_modal"
+                  phx-target={@myself}
+                >
+                  {gettext("Change link")}
+                </.action_button>
+              </div>
+              <p class="text-token-sm text-tymeslot-500">
+                {gettext(
+                  "Anyone with this link can book this meeting type directly, without seeing your other meeting types."
+                )}
+              </p>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 pt-2 border-t-2 border-tymeslot-50">
+              <div>
+                <p class="font-medium text-tymeslot-700">
+                  {gettext("Hide from public booking page")}
+                </p>
+                <p class="text-token-sm text-tymeslot-500">
+                  {gettext("When on, this meeting type is reachable only through its direct link.")}
+                </p>
+              </div>
+              <button
+                type="button"
+                phx-click="toggle_private"
+                phx-value-id={@editing_type.id}
+                phx-target={@myself}
+                role="switch"
+                aria-checked={@editing_type.is_private}
+                aria-label={gettext("Hide from public booking page")}
+                class={[
+                  "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-hidden focus:ring-2 focus:ring-turquoise-500 focus:ring-offset-2",
+                  if(@editing_type.is_private,
+                    do: "bg-turquoise-500 border-turquoise-500",
+                    else: "bg-tymeslot-300 border-tymeslot-300"
+                  )
+                ]}
+              >
+                <span class={[
+                  "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                  if(@editing_type.is_private, do: "translate-x-4", else: "translate-x-0")
+                ]} />
+              </button>
+            </div>
+          </div>
+
+          <BookingLinkModal.booking_link_modal
+            show={@show_slug_modal}
+            meeting_type={@slug_modal_type}
+            slug_draft={@slug_draft}
+            base_url={booking_base_url(@profile) || ""}
+            myself={@myself}
+          />
         </div>
       <% else %>
         <%!-- Normal View --%>

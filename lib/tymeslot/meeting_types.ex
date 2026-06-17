@@ -9,6 +9,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Utils.UriUtils
   require Logger
@@ -42,6 +43,24 @@ defmodule Tymeslot.MeetingTypes do
 
       true ->
         MeetingTypeQueries.list_all_meeting_types(user_id)
+    end
+  end
+
+  @doc """
+  Gets the publicly listed meeting types for a user (active and not private),
+  creating defaults if none exist. This feeds the public booking overview;
+  private types are excluded and reachable only by their direct link.
+  """
+  @spec get_public_meeting_types(integer()) :: [Ecto.Schema.t()]
+  def get_public_meeting_types(user_id) do
+    case MeetingTypeQueries.has_meeting_types?(user_id) do
+      false ->
+        Logger.info("Creating default meeting types for user", user_id: user_id)
+        create_default_meeting_types(user_id)
+        MeetingTypeQueries.list_public_meeting_types(user_id)
+
+      true ->
+        MeetingTypeQueries.list_public_meeting_types(user_id)
     end
   end
 
@@ -94,6 +113,16 @@ defmodule Tymeslot.MeetingTypes do
   end
 
   @doc """
+  Sets whether a meeting type is private. A private type is excluded from the
+  organiser's public booking page but stays reachable by its direct link.
+  """
+  @spec set_private(Ecto.Schema.t(), boolean()) ::
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+  def set_private(meeting_type, is_private) when is_boolean(is_private) do
+    MeetingTypeQueries.set_visibility(meeting_type, %{is_private: is_private})
+  end
+
+  @doc """
   Toggles the active status of a meeting type.
   """
   @spec toggle_meeting_type(integer(), integer()) ::
@@ -116,34 +145,16 @@ defmodule Tymeslot.MeetingTypes do
     MeetingTypeQueries.reorder_meeting_types(user_id, meeting_type_ids)
   end
 
-  @doc """
-  Finds a meeting type by its slug (derived from name).
-  """
-  @spec find_by_slug(integer(), String.t()) :: Ecto.Schema.t() | nil
-  def find_by_slug(user_id, slug) do
-    Enum.find(get_active_meeting_types(user_id), fn mt ->
-      to_slug(mt) == slug
-    end)
-  end
-
-  @doc """
-  Converts meeting type to slug format used in URLs.
-  """
-  @spec to_slug(Ecto.Schema.t()) :: String.t()
-  def to_slug(meeting_type) do
-    meeting_type.name
-    |> String.downcase()
-    |> String.replace(~r/[^a-z0-9]+/, "-")
-    |> String.trim("-")
-  end
-
-  @doc """
-  Converts meeting type to duration string format used in URLs.
-  """
-  @spec to_duration_string(Ecto.Schema.t()) :: String.t()
-  def to_duration_string(meeting_type) do
-    to_slug(meeting_type)
-  end
+  # Slug resolution and custom-slug management live in the focused sibling
+  # module Tymeslot.MeetingTypes.Slugs; these delegations keep the context's
+  # public API stable.
+  defdelegate find_by_slug(user_id, slug), to: Slugs
+  defdelegate effective_slug(meeting_type), to: Slugs
+  defdelegate to_slug(meeting_type), to: Slugs
+  defdelegate to_duration_string(meeting_type), to: Slugs
+  defdelegate generate_random_slug(user_id), to: Slugs
+  defdelegate normalize_slug(slug), to: Slugs
+  defdelegate update_slug(meeting_type, slug), to: Slugs
 
   @doc """
   Normalizes duration inputs into the slug format used in URLs.

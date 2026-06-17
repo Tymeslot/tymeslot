@@ -22,6 +22,23 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
+  Gets the publicly listed meeting types for a user (active and not private),
+  ordered by sort_order. Private types are reachable only by their direct link,
+  so they are excluded from the public overview this query feeds.
+  """
+  @spec list_public_meeting_types(integer()) :: [MeetingTypeSchema.t()]
+  def list_public_meeting_types(user_id) do
+    query =
+      from(mt in MeetingTypeSchema,
+        where: mt.user_id == ^user_id and mt.is_active == true and mt.is_private == false,
+        order_by: [asc: mt.sort_order, asc: mt.name],
+        preload: [:video_integration, :calendar_integration]
+      )
+
+    Repo.all(query)
+  end
+
+  @doc """
   Gets all meeting types for a user (active and inactive), ordered by sort_order.
   """
   @spec list_all_meeting_types(integer()) :: [MeetingTypeSchema.t()]
@@ -101,6 +118,28 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   def toggle_meeting_type_status(meeting_type, attrs) do
     meeting_type
     |> MeetingTypeSchema.toggle_active_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Updates a meeting type's private visibility using a focused changeset.
+  """
+  @spec set_visibility(MeetingTypeSchema.t(), map()) ::
+          {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
+  def set_visibility(meeting_type, attrs) do
+    meeting_type
+    |> MeetingTypeSchema.visibility_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Updates a meeting type's custom booking slug using a focused changeset.
+  """
+  @spec update_slug(MeetingTypeSchema.t(), map()) ::
+          {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_slug(meeting_type, attrs) do
+    meeting_type
+    |> MeetingTypeSchema.slug_changeset(attrs)
     |> Repo.update()
   end
 

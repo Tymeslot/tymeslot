@@ -341,8 +341,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                     />
                   </div>
 
-                  <div class="schedule-actions flex-shrink-0">
+                  <div class="schedule-actions shrink-0">
                     <.action_button
+                      :if={@entered_via_overview}
                       type="button"
                       phx-click="back_step"
                       phx-target={@myself}

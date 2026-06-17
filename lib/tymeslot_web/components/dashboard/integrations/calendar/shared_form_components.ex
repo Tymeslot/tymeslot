@@ -226,7 +226,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
     <div class="form-field-wrapper">
       <div class="flex items-center gap-1.5 mb-2">
         <span class="label !mb-0">Server URL</span>
-        <span class="text-tymeslot-400 flex-shrink-0">
+        <span class="text-tymeslot-400 shrink-0">
           <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
             <path
               fill-rule="evenodd"

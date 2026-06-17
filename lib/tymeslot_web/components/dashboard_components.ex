@@ -247,7 +247,7 @@ defmodule TymeslotWeb.Components.DashboardComponents do
     <.link patch={@link} class="block group">
       <div class="card-glass hover:bg-white hover:border-turquoise-100 hover:shadow-2xl hover:shadow-turquoise-500/5 transition-all">
         <div class="flex items-center gap-6">
-          <div class="flex-shrink-0">
+          <div class="shrink-0">
             <div class="w-16 h-16 bg-turquoise-50 rounded-2xl flex items-center justify-center border border-turquoise-100 group-hover:scale-110 transition-transform">
               <IconComponents.icon name={@icon} class="w-8 h-8 text-turquoise-600" />
             </div>

@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
               <.glass_morphism_card>
                 <div class="confirmation-content">
                   <div class="confirmation-heading-row flex items-center">
-                    <div class="flex-shrink-0">
+                    <div class="shrink-0">
                       <div class="relative">
                         <div class="confirmation-badge rounded-full flex items-center justify-center">
                           <svg

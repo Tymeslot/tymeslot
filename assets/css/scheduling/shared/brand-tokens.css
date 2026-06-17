@@ -1,0 +1,13 @@
+/* Brand colour tokens shared across scheduling theme bundles.
+ *
+ * The security_fields.ex component (reCAPTCHA notice) is rendered inside
+ * every theme page and uses text-turquoise-600, text-turquoise-700, and
+ * text-tymeslot-500. Because the theme CSS bundles are compiled independently
+ * from app.css, they need their own @theme block so Tailwind v4 generates
+ * these utilities. Hex values match app.css exactly.
+ */
+@theme {
+  --color-turquoise-600: #0d9488;
+  --color-turquoise-700: #0f766e;
+  --color-tymeslot-500: #71717a;
+}

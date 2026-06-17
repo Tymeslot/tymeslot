@@ -239,7 +239,17 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       defp handle_schedule_navigation_events(socket, event) do
         case event do
           :back_step ->
-            handle_state_transition(socket, :schedule, :overview)
+            # Only allow returning to the overview when the booker actually
+            # entered via it. A direct/private-link entry sets
+            # `entered_via_overview: false` and must never expose the
+            # organiser's other meeting types — enforce this server-side so a
+            # client cannot bypass the template-level `:if` guard by pushing
+            # the event directly.
+            if socket.assigns[:entered_via_overview] do
+              handle_state_transition(socket, :schedule, :overview)
+            else
+              {:noreply, socket}
+            end
 
           :next_step ->
             # Route to :questions when the meeting type has custom fields, else :booking.

@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
   def validate_step_requirements(socket, :schedule) do
     MeetingTypes.validate_duration_selection(
       socket.assigns[:selected_duration],
-      socket.assigns[:meeting_types]
+      validatable_meeting_types(socket)
     )
   end
 
@@ -114,5 +114,17 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
       socket.assigns[:selected_time],
       socket.assigns[:available_slots]
     )
+  end
+
+  # The booker's selection is authoritative once resolved. A private type is
+  # reached by its direct link and is absent from the public `:meeting_types`
+  # list, so include the resolved `:meeting_type` to validate against.
+  defp validatable_meeting_types(socket) do
+    list = socket.assigns[:meeting_types] || []
+
+    case socket.assigns[:meeting_type] do
+      nil -> list
+      meeting_type -> [meeting_type | list]
+    end
   end
 end

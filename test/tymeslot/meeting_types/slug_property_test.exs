@@ -11,6 +11,87 @@ defmodule Tymeslot.MeetingTypes.SlugPropertyTest do
   use ExUnitProperties
 
   alias Tymeslot.MeetingTypes.InputValidation
+  alias Tymeslot.MeetingTypes.Slugs
+
+  # ---------------------------------------------------------------------------
+  # Slugs.to_slug/1 and Slugs.effective_slug/1 unit tests
+  # ---------------------------------------------------------------------------
+
+  describe "Slugs.to_slug/1 — unicode and edge-case inputs" do
+    test "returns empty string for an emoji-only name" do
+      # Emoji have no ASCII representation; the regex strips them entirely.
+      assert Slugs.to_slug(%{name: "🎯"}) == ""
+    end
+
+    test "returns empty string for a CJK-only name" do
+      assert Slugs.to_slug(%{name: "日本語"}) == ""
+    end
+
+    test "returns empty string for a mixed emoji-and-whitespace name" do
+      assert Slugs.to_slug(%{name: "🎯 🚀"}) == ""
+    end
+
+    test "handles a very long ASCII name without crashing and slugifies it" do
+      long_name = String.duplicate("a", 500)
+      result = Slugs.to_slug(%{name: long_name})
+      # No length cap in to_slug/1 itself — it returns the full slug.
+      assert is_binary(result)
+      assert result =~ ~r/\A[a-z0-9-]+\z/
+    end
+
+    test "handles a mixed ASCII + unicode name by keeping only ASCII characters" do
+      result = Slugs.to_slug(%{name: "Coffee 日本語 Chat"})
+      assert result == "coffee-chat"
+    end
+  end
+
+  describe "Slugs.effective_slug/1 — custom vs name-derived" do
+    test "returns the custom slug when one is set" do
+      mt = %{slug: "secret-9z", name: "Coffee Chat"}
+      assert Slugs.effective_slug(mt) == "secret-9z"
+    end
+
+    test "returns the name-derived slug when no custom slug is set" do
+      mt = %{slug: nil, name: "Coffee Chat"}
+      assert Slugs.effective_slug(mt) == "coffee-chat"
+    end
+
+    test "returns empty string when no custom slug is set and name is unicode-only" do
+      # effective_slug/1 does NOT guard against an empty name-derived slug;
+      # the guard lives in InputValidation.validate_meeting_name/2.
+      mt = %{slug: nil, name: "🎯"}
+      assert Slugs.effective_slug(mt) == ""
+    end
+
+    test "returns the custom slug even when the name itself would produce an empty slug" do
+      mt = %{slug: "my-link", name: "🎯"}
+      assert Slugs.effective_slug(mt) == "my-link"
+    end
+  end
+
+  describe "InputValidation.validate_meeting_name/2 — unicode name guard" do
+    test "rejects a name composed only of emoji (slug would be empty)" do
+      assert {:error, %{name: _msg}} =
+               InputValidation.validate_field(:name, "🎯", %{})
+    end
+
+    test "rejects a name composed only of CJK characters (slug would be empty)" do
+      assert {:error, %{name: _msg}} =
+               InputValidation.validate_field(:name, "日本語テスト", %{})
+    end
+
+    test "rejects a unicode name that is long enough to pass the length check but still slugifies to empty" do
+      # 10 emoji — each is 1 grapheme cluster but the slug derivation removes
+      # all of them, so the slug check fires before the length check.
+      unicode_name = String.duplicate("🎯", 10)
+      assert {:error, %{name: msg}} = InputValidation.validate_field(:name, unicode_name, %{})
+      assert msg =~ "letter or number"
+    end
+
+    test "accepts a name that mixes ASCII with unicode (ASCII chars survive slugification)" do
+      assert {:ok, _validated} = InputValidation.validate_field(:name, "AI 会議", %{})
+    end
+  end
 
   describe "slug generation properties via validate_field" do
     property "valid names produce slugs containing only lowercase alphanumerics and hyphens" do

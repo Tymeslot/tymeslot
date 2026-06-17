@@ -5,7 +5,7 @@
 /* Input Fields - Modern Branding */
 .input {
   @apply block w-full text-sm font-medium text-slate-900 bg-slate-50/50 border-2 border-slate-100 rounded-2xl transition-all duration-300;
-  @apply focus:outline-none focus:border-turquoise-400 focus:bg-white focus:shadow-xl focus:shadow-turquoise-500/10;
+  @apply focus:outline-hidden focus:border-turquoise-400 focus:bg-white focus:shadow-xl focus:shadow-turquoise-500/10;
   @apply hover:border-slate-200 hover:bg-slate-50;
   padding: 0.75rem 1rem;
   -webkit-appearance: none;
@@ -63,7 +63,7 @@
 /* Textarea */
 .textarea {
   @apply block w-full px-4 py-3 text-sm font-medium text-slate-900 bg-slate-50/50 border-2 border-slate-100 rounded-2xl transition-all duration-300 min-h-[120px] resize-y;
-  @apply focus:outline-none focus:border-turquoise-400 focus:bg-white focus:shadow-xl focus:shadow-turquoise-500/10;
+  @apply focus:outline-hidden focus:border-turquoise-400 focus:bg-white focus:shadow-xl focus:shadow-turquoise-500/10;
 }
 
 /* Select Dropdowns */
@@ -79,7 +79,7 @@ select.input {
 .glass-dropdown {
   @apply block w-full px-4 py-3 text-sm font-bold text-slate-900 bg-white border-2 border-slate-100 rounded-2xl transition-all duration-300 shadow-sm cursor-pointer;
   @apply hover:border-turquoise-100 hover:bg-slate-50;
-  @apply focus:outline-none focus:border-turquoise-400 focus:shadow-lg focus:shadow-turquoise-500/10;
+  @apply focus:outline-hidden focus:border-turquoise-400 focus:shadow-lg focus:shadow-turquoise-500/10;
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;

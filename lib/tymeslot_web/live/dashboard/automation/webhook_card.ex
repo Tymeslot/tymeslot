@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
         <div class="flex items-start gap-4 sm:gap-5">
           <%!-- Webhook Icon --%>
           <div class={[
-            "p-3 rounded-2xl transition-colors duration-300 flex-shrink-0",
+            "p-3 rounded-2xl transition-colors duration-300 shrink-0",
             if(@webhook.is_active,
               do: "bg-tymeslot-50 group-hover:bg-white",
               else: "bg-tymeslot-200"
@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             <%!-- Last Triggered Info --%>
             <%= if @webhook.last_triggered_at do %>
               <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
@@ -118,7 +118,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
               </div>
             <% else %>
               <div class="flex items-center gap-2 text-token-sm text-tymeslot-400 italic">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
@@ -132,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
           </div>
 
           <%!-- Status Toggle (top right) --%>
-          <div class="flex-shrink-0 ml-2">
+          <div class="shrink-0 ml-2">
             <StatusSwitch.status_switch
               id={"webhook-toggle-#{@webhook.id}"}
               checked={@webhook.is_active}
@@ -146,7 +146,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
         </div>
 
         <%!-- Bottom: Actions --%>
-        <div class="flex items-center gap-2 flex-shrink-0 border-t border-tymeslot-100 pt-3">
+        <div class="flex items-center gap-2 shrink-0 border-t border-tymeslot-100 pt-3">
           <%!-- Test Button --%>
           <button
             phx-click={@on_test}

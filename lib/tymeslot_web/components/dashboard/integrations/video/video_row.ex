@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
       <div class="flex items-start justify-between gap-4">
         <%!-- Left: Info --%>
         <div class="flex items-start gap-4 min-w-0">
-          <ProviderIcon.provider_icon provider={@integration.provider} size={@icon_size} class="mt-1 flex-shrink-0" />
+          <ProviderIcon.provider_icon provider={@integration.provider} size={@icon_size} class="mt-1 shrink-0" />
 
           <div class="min-w-0">
             <%!-- Title --%>
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
         </div>
 
         <%!-- Desktop: actions + toggle inline --%>
-        <div class="hidden sm:flex items-center gap-1 flex-shrink-0">
+        <div class="hidden sm:flex items-center gap-1 shrink-0">
           <%= if @integration.is_active do %>
             <button
               phx-click="test_connection"
@@ -159,7 +159,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
         </div>
 
         <%!-- Mobile: toggle only --%>
-        <div class="flex-shrink-0 sm:hidden">
+        <div class="shrink-0 sm:hidden">
           <StatusSwitch.status_switch
             id={"video-toggle-mobile-#{@integration.id}"}
             checked={@integration.is_active}

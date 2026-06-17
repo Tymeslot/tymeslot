@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
     ]}>
       <div class="h-full flex gap-2.5 p-3 text-sm overflow-y-auto">
         <%!-- Icon Column (Fixed Width) --%>
-        <div class="flex-shrink-0 w-5">
+        <div class="shrink-0 w-5">
           <.status_icon status={@status} />
         </div>
 

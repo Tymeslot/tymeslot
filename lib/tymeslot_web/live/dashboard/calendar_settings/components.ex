@@ -303,7 +303,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <div class="flex items-start justify-between gap-4">
         <%!-- Info --%>
         <div class="flex items-start gap-4 min-w-0">
-          <div class="p-3 bg-tymeslot-50 rounded-2xl group-hover:bg-white group-hover:shadow-md transition-all border border-tymeslot-100 group-hover:border-turquoise-100 flex-shrink-0">
+          <div class="p-3 bg-tymeslot-50 rounded-2xl group-hover:bg-white group-hover:shadow-md transition-all border border-tymeslot-100 group-hover:border-turquoise-100 shrink-0">
             <ProviderIcon.provider_icon provider={@integration.provider} size={@icon_size} />
           </div>
 
@@ -343,7 +343,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
         </div>
 
         <%!-- Actions + toggle (top right) --%>
-        <div class="flex items-center gap-1 flex-shrink-0">
+        <div class="flex items-center gap-1 shrink-0">
           <button
             :if={@integration.provider == "google" && Helpers.needs_scope_upgrade?(@integration)}
             phx-click="upgrade_google_scope"

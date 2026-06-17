@@ -83,7 +83,7 @@ function buildPanel(headings) {
   // Static panel skeleton — all strings are developer-controlled constants or URL-encoded values.
   panel.innerHTML = `
     <div class="flex items-center gap-2 mb-3">
-      <svg class="w-4 h-4 text-turquoise-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="w-4 h-4 text-turquoise-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
           d="M4 6h16M4 10h16M4 14h10" />
       </svg>
@@ -106,7 +106,7 @@ function buildPanel(headings) {
     a.className = "toc-link text-xs text-gray-600 hover:text-turquoise-600 transition-colors leading-snug flex items-start gap-1.5 py-0.5";
     a.dataset.targetId = h.id;
     const dot = document.createElement("span");
-    dot.className = "mt-1.5 w-1 h-1 rounded-full bg-gray-300 flex-shrink-0";
+    dot.className = "mt-1.5 w-1 h-1 rounded-full bg-gray-300 shrink-0";
     a.appendChild(dot);
     a.appendChild(document.createTextNode(headingLabel(h)));
     li.appendChild(a);

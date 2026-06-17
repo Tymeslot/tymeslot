@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
         <div class="flex items-start gap-4 sm:gap-5">
           <%!-- Telegram Icon --%>
           <div class={[
-            "p-3 rounded-2xl transition-colors duration-300 flex-shrink-0",
+            "p-3 rounded-2xl transition-colors duration-300 shrink-0",
             icon_bg(@integration.status)
           ]}>
             <svg class={["w-6 h-6", icon_color(@integration.status)]} viewBox="0 0 24 24" fill="currentColor">
@@ -77,14 +77,14 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
               <%!-- Last Triggered Info --%>
               <%= if @integration.last_triggered_at do %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
-                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span>Last triggered: <%= AutomationHelpers.format_datetime(@integration.last_triggered_at) %></span>
                 </div>
               <% else %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-400 italic">
-                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span>Never triggered</span>
@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
           </div>
 
           <%!-- Status Toggle (active/paused only) --%>
-          <div class="flex-shrink-0 ml-2">
+          <div class="shrink-0 ml-2">
             <%= if @integration.status in [:active, :paused] do %>
               <StatusSwitch.status_switch
                 id={"telegram-toggle-#{@integration.id}"}
@@ -116,7 +116,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
         </div>
 
         <%!-- Bottom: Actions --%>
-        <div class="flex items-center gap-2 flex-shrink-0 border-t border-tymeslot-100 pt-3">
+        <div class="flex items-center gap-2 shrink-0 border-t border-tymeslot-100 pt-3">
           <%!-- Test Button --%>
           <%= if @integration.status in [:active, :paused] do %>
             <button
