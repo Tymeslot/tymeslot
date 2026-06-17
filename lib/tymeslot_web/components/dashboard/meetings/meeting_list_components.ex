@@ -183,7 +183,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
           >
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center gap-4">
-                <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0 border border-tymeslot-100">
+                <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-tymeslot-100">
                   <CoreComponents.icon name="hero-user-group" class="w-4 h-4 text-tymeslot-400" />
                 </div>
                 <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest">
