@@ -2,8 +2,19 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   @moduledoc """
   Google Meet video conferencing provider implementation.
 
-  This provider creates Google Meet links by creating calendar events
-  with Google Meet conferencing data via the Google Calendar API.
+  This provider creates Google Meet links via the **Google Meet REST API**
+  (`meet.googleapis.com/v2/spaces`), which provisions a standalone meeting
+  space. Crucially, a space is *not* a calendar event — so connecting Google
+  Meet no longer writes a second event into the user's Google Calendar
+  alongside the booking event held on their own calendar provider
+  (Radicale/Outlook/Google). This avoids the duplicate-event and
+  orphaned-event problems of the previous approach, which created a throwaway
+  Google Calendar event purely to harvest the Meet link.
+
+  Requires the `https://www.googleapis.com/auth/meetings.space.created` OAuth
+  scope **and** the *Google Meet API* enabled on the Google Cloud project — the
+  scope alone is not sufficient (the API returns `403 SERVICE_DISABLED` until
+  the API is enabled in the Cloud console).
   """
 
   @behaviour Tymeslot.Integrations.Video.Providers.ProviderBehaviour
@@ -29,12 +40,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     %{
       access_token: %{type: :string, required: true, description: "Google OAuth access token"},
       refresh_token: %{type: :string, required: true, description: "Google OAuth refresh token"},
-      token_expires_at: %{type: :datetime, required: true, description: "Token expiration time"},
-      calendar_id: %{
-        type: :string,
-        required: false,
-        description: "Calendar ID for events (defaults to 'primary')"
-      }
+      token_expires_at: %{type: :datetime, required: true, description: "Token expiration time"}
     }
   end
 
@@ -66,19 +72,31 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_meeting_room(config) do
-    Logger.info("Creating Google Meet room")
+    Logger.info("Creating Google Meet space")
 
     with {:ok, valid_token} <- ensure_valid_token(config),
-         {:ok, event_data} <- create_calendar_event_with_meet(valid_token),
-         {:ok, room_data} <- extract_meeting_data(event_data) do
-      Logger.info("Successfully created Google Meet room", room_id: room_data.room_id)
+         {:ok, space} <- create_meet_space(valid_token),
+         {:ok, room_data} <- extract_space_data(space) do
+      Logger.info("Successfully created Google Meet space", room_id: room_data.room_id)
       {:ok, room_data}
     else
       {:error, reason} = error ->
-        Logger.error("Failed to create Google Meet room", reason: Redactor.redact(reason))
+        Logger.error("Failed to create Google Meet space", reason: Redactor.redact(reason))
         error
     end
   end
+
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def delete_meeting_room(space_id, config) when is_binary(space_id) and space_id != "" do
+    Logger.info("Ending active Google Meet conference on cancellation", room_id: space_id)
+
+    case ensure_valid_token(config) do
+      {:ok, valid_token} -> end_active_conference(valid_token, space_id)
+      {:error, _reason} = error -> error
+    end
+  end
+
+  def delete_meeting_room(_space_id, _config), do: :ok
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, participant_email, role, _meeting_time) do
@@ -342,47 +360,27 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     end
   end
 
-  defp create_calendar_event_with_meet(config) do
-    calendar_id = Map.get(config, :calendar_id, "primary")
+  # Creates a standalone Google Meet space via the Meet REST API. An empty body
+  # provisions a space with default settings; no calendar event is created.
+  defp create_meet_space(config) do
     access_token = Map.get(config, :access_token)
-    event_details = Map.get(config, :event_details) || %{}
-
-    {start_time, end_time} = resolve_event_times(event_details)
-
-    event_data = %{
-      summary: resolve_event_summary(event_details),
-      description: resolve_event_description(event_details),
-      start: %{dateTime: DateTime.to_iso8601(start_time), timeZone: "UTC"},
-      end: %{dateTime: DateTime.to_iso8601(end_time), timeZone: "UTC"},
-      conferenceData: %{
-        createRequest: %{
-          requestId: generate_request_id(),
-          conferenceSolutionKey: %{type: "hangoutsMeet"}
-        }
-      },
-      attendees: resolve_event_attendees(event_details),
-      reminders: %{useDefault: false, overrides: []}
-    }
 
     headers = [
       {"Authorization", "Bearer #{access_token}"},
       {"Content-Type", "application/json"}
     ]
 
-    url =
-      "https://www.googleapis.com/calendar/v3/calendars/#{calendar_id}/events?conferenceDataVersion=1"
+    url = "https://meet.googleapis.com/v2/spaces"
 
-    body = Jason.encode!(event_data)
-
-    case http_client().request(:post, url, body, headers, []) do
+    case http_client().request(:post, url, "{}", headers, []) do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
         case Jason.decode(response_body) do
-          {:ok, event} -> {:ok, event}
-          {:error, _decode_error} -> {:error, "Invalid JSON response from Google Calendar API"}
+          {:ok, space} -> {:ok, space}
+          {:error, _decode_error} -> {:error, "Invalid JSON response from Google Meet API"}
         end
 
       {:ok, %Req.Response{status: 401, body: body}} ->
-        Logger.error("Google Calendar API error in Google Meet provider",
+        Logger.error("Google Meet API rejected the access token",
           status: 401,
           body: Redactor.redact_and_truncate(body)
         )
@@ -392,15 +390,71 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
         # withdrawal at Google. Flag the integration so the dashboard shows the
         # "Reconnect required" badge immediately. Mirrors Zoom's flag_revoked_token/1.
         flag_revoked_token(config)
-        {:error, "Google Calendar API error: HTTP 401 (see logs for details)"}
+        {:error, "Google Meet API error: HTTP 401 (see logs for details)"}
+
+      {:ok, %Req.Response{status: 403, body: body}} ->
+        Logger.error(
+          "Google Meet API denied access — the Google Meet API may be disabled for the " <>
+            "Cloud project (enable it in the Google Cloud console)",
+          status: 403,
+          body: Redactor.redact_and_truncate(body)
+        )
+
+        {:error, "Google Meet API error: HTTP 403 (Meet API may be disabled; see logs)"}
 
       {:ok, %Req.Response{status: status, body: body}} ->
-        Logger.error("Google Calendar API error in Google Meet provider",
+        Logger.error("Google Meet API error creating space",
           status: status,
           body: Redactor.redact_and_truncate(body)
         )
 
-        {:error, "Google Calendar API error: HTTP #{status} (see logs for details)"}
+        {:error, "Google Meet API error: HTTP #{status} (see logs for details)"}
+
+      {:error, reason} ->
+        {:error, "HTTP error: #{inspect(reason)}"}
+    end
+  end
+
+  # Ends the active conference on a space when a meeting is cancelled. The space
+  # itself is not a calendar event and cannot be deleted via the API, but ending
+  # any in-progress call is the closest equivalent to "tearing down the room".
+  #
+  # Best-effort by design: cancellation must never fail because of Meet cleanup.
+  # The common case — no one is in the call — returns 400 FAILED_PRECONDITION,
+  # which we treat as success. Legacy meetings stored a meeting *code* rather
+  # than a space id, which yields 403/404 here; those are also treated as no-ops.
+  defp end_active_conference(config, space_id) do
+    access_token = Map.get(config, :access_token)
+
+    headers = [
+      {"Authorization", "Bearer #{access_token}"},
+      {"Content-Type", "application/json"}
+    ]
+
+    url = "https://meet.googleapis.com/v2/spaces/#{space_id}:endActiveConference"
+
+    case http_client().request(:post, url, "{}", headers, []) do
+      {:ok, %Req.Response{status: 200}} ->
+        :ok
+
+      {:ok, %Req.Response{status: status}} when status in [400, 403, 404] ->
+        # 400: no active conference. 403/404: space not addressable (e.g. a
+        # legacy meeting-code id) or already gone. Nothing to tear down.
+        Logger.debug("No active Google Meet conference to end; treating as success",
+          room_id: space_id,
+          status: status
+        )
+
+        :ok
+
+      {:ok, %Req.Response{status: status, body: body}} ->
+        Logger.warning("Google Meet endActiveConference failed",
+          room_id: space_id,
+          status: status,
+          body: Redactor.redact_and_truncate(body)
+        )
+
+        {:error, "Google Meet API error: HTTP #{status} (see logs for details)"}
 
       {:error, reason} ->
         {:error, "HTTP error: #{inspect(reason)}"}
@@ -468,80 +522,26 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     end
   end
 
-  defp extract_meeting_data(event) do
-    case get_in(event, ["conferenceData", "entryPoints"]) do
-      entry_points when is_list(entry_points) ->
-        found_ep = Enum.find(entry_points, fn ep -> ep["entryPointType"] == "video" end)
+  # Extracts the room data we persist from a Meet space response. We store the
+  # space *id* (the segment after `spaces/`) as the room_id, because that is the
+  # identifier `endActiveConference` requires on cancellation — the meeting code
+  # is not accepted there. The human-facing join link lives in `meeting_url`.
+  defp extract_space_data(space) do
+    meeting_url = space["meetingUri"]
+    space_id = space_id_from_name(space["name"])
 
-        meeting_url =
-          case found_ep do
-            nil -> nil
-            ep -> ep["uri"]
-          end
+    cond do
+      not (is_binary(meeting_url) and meeting_url != "") ->
+        {:error, "Google Meet did not return a meeting URL"}
 
-        room_id = extract_room_id(meeting_url)
+      is_nil(space_id) ->
+        {:error, "Google Meet did not return a space identifier"}
 
-        if meeting_url do
-          {:ok, %{room_id: room_id, meeting_url: meeting_url, provider_data: event}}
-        else
-          {:error, "No meeting URL returned from Google"}
-        end
-
-      _other ->
-        {:error, "Google Calendar did not return conference data"}
+      true ->
+        {:ok, %{room_id: space_id, meeting_url: meeting_url, provider_data: space}}
     end
   end
 
-  defp generate_request_id do
-    Base.encode16(:crypto.strong_rand_bytes(8))
-  end
-
-  defp resolve_event_summary(event_details) do
-    case Map.get(event_details, :summary) do
-      summary when is_binary(summary) and summary != "" -> summary
-      _other -> "Tymeslot - Temporary Event for Google Meet"
-    end
-  end
-
-  defp resolve_event_description(event_details) do
-    case Map.get(event_details, :description) do
-      description when is_binary(description) and description != "" -> description
-      _other -> ""
-    end
-  end
-
-  defp resolve_event_times(event_details) do
-    start_time = Map.get(event_details, :start_time)
-    end_time = Map.get(event_details, :end_time)
-
-    if is_struct(start_time, DateTime) and is_struct(end_time, DateTime) do
-      {start_time, end_time}
-    else
-      now = DateTime.utc_now()
-      fallback_start = DateTime.add(now, 3600, :second)
-      fallback_end = DateTime.add(fallback_start, 1800, :second)
-      {fallback_start, fallback_end}
-    end
-  end
-
-  defp resolve_event_attendees(event_details) do
-    case Map.get(event_details, :attendees) do
-      attendees when is_list(attendees) ->
-        attendees
-        |> Enum.map(&normalise_attendee/1)
-        |> Enum.reject(&is_nil/1)
-
-      _other ->
-        []
-    end
-  end
-
-  defp normalise_attendee(%{email: email}) when is_binary(email) and email != "",
-    do: %{email: email}
-
-  defp normalise_attendee(%{"email" => email}) when is_binary(email) and email != "",
-    do: %{email: email}
-
-  defp normalise_attendee(email) when is_binary(email) and email != "", do: %{email: email}
-  defp normalise_attendee(_other), do: nil
+  defp space_id_from_name("spaces/" <> id) when id != "", do: id
+  defp space_id_from_name(_other), do: nil
 end

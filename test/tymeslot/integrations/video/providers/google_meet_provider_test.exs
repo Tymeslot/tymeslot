@@ -37,14 +37,6 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       assert schema[:token_expires_at][:type] == :datetime
       assert schema[:token_expires_at][:required] == true
     end
-
-    test "includes optional calendar_id field" do
-      schema = GoogleMeetProvider.config_schema()
-
-      assert schema[:calendar_id][:type] == :string
-      assert schema[:calendar_id][:required] == false
-      assert String.contains?(schema[:calendar_id][:description], "primary")
-    end
   end
 
   describe "capabilities/0" do
@@ -383,7 +375,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
   end
 
   describe "create_meeting_room/1 reauth flagging" do
-    test "flags the integration as needs_reauth on a 401 from the Calendar API" do
+    test "flags the integration as needs_reauth on a 401 from the Meet API" do
       user = insert(:user)
 
       {:ok, integration} =
