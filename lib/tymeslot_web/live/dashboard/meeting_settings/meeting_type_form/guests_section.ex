@@ -12,35 +12,37 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GuestsSection do
   use TymeslotWeb, :html
 
   attr :allow_guests, :boolean, required: true
+  attr :max_guests, :integer, required: true
   attr :myself, :any, required: true
 
   @spec guests_section(map()) :: Phoenix.LiveView.Rendered.t()
   def guests_section(assigns) do
     ~H"""
-    <div class="space-y-3">
+    <section class="space-y-4">
       <div class="flex items-center gap-2">
         <.icon name="hero-user-group" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-700">Guests</h3>
+        <h3 class="text-token-base font-semibold text-tymeslot-800">Guests</h3>
       </div>
 
-      <label class="flex items-center gap-3">
+      <label class="card-glass flex items-start gap-3 p-4 cursor-pointer">
         <input
           type="checkbox"
-          class="checkbox"
+          class="checkbox mt-0.5"
           checked={@allow_guests}
           phx-click="toggle_allow_guests"
           phx-target={@myself}
         />
-        <span class="text-token-sm text-tymeslot-700">
-          Let invitees add guests to this meeting
-        </span>
+        <div class="space-y-1">
+          <p class="text-token-sm font-medium text-tymeslot-700">
+            Let invitees add up to {@max_guests} guests to this meeting
+          </p>
+          <p class="text-token-sm text-tymeslot-500">
+            Each guest is emailed a confirmation with their own link to accept or decline.
+            You'll see every guest's response on your dashboard.
+          </p>
+        </div>
       </label>
-
-      <p class="text-token-sm text-tymeslot-600">
-        Guests are emailed a confirmation with their own link to accept or decline.
-        You'll see each guest's response on your dashboard.
-      </p>
-    </div>
+    </section>
     """
   end
 end

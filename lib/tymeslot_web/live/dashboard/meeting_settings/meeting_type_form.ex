@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   use TymeslotWeb, :live_component
 
   # Follow project rule: ALWAYS alias nested modules and organize alphabetically within groups
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
@@ -212,7 +213,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         myself={@myself}
       />
 
-      <.guests_section allow_guests={@allow_guests} myself={@myself} />
+      <.guests_section
+        allow_guests={@allow_guests}
+        max_guests={Guests.max_guests()}
+        myself={@myself}
+      />
 
       <%!-- Custom questions section --%>
       <.live_component
