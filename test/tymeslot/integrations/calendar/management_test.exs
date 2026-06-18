@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
 
   use Oban.Testing, repo: Tymeslot.Repo
 
+  import Mox
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.CalendarManagement
@@ -11,6 +12,8 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Repo
   alias Tymeslot.Workers.IntegrationHealthWorker
+
+  setup :verify_on_exit!
 
   # ---------------------------------------------------------------------------
   # toggle_calendar_integration/1
@@ -133,6 +136,68 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
         worker: IntegrationHealthWorker,
         args: %{"type" => "calendar", "integration_id" => integration.id}
       )
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # create_calendar_integration/1
+  # ---------------------------------------------------------------------------
+
+  @propfind_calendar_response """
+  <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+    <D:response>
+      <D:href>/calendars/user/personal/</D:href>
+      <D:propstat>
+        <D:prop>
+          <D:displayname>Personal</D:displayname>
+          <D:resourcetype>
+            <D:collection/>
+            <C:calendar/>
+          </D:resourcetype>
+        </D:prop>
+        <D:status>HTTP/1.1 200 OK</D:status>
+      </D:propstat>
+    </D:response>
+  </D:multistatus>
+  """
+
+  describe "create_calendar_integration/1" do
+    test "emits [:tymeslot, :calendar, :connected] telemetry with provider on success" do
+      stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 207, body: @propfind_calendar_response}}
+      end)
+
+      user = insert(:user)
+      _profile = insert(:profile, user: user)
+
+      attrs = %{
+        user_id: user.id,
+        name: "My CalDAV",
+        provider: "caldav",
+        base_url: "https://caldav.example.com",
+        username: "user",
+        password: "pass",
+        calendar_paths: [],
+        provider_account_id: "https://caldav.example.com||user",
+        is_active: true
+      }
+
+      test_pid = self()
+
+      :telemetry.attach(
+        "test-calendar-connected",
+        [:tymeslot, :calendar, :connected],
+        fn _event, measurements, metadata, _config ->
+          send(test_pid, {:telemetry, measurements, metadata})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach("test-calendar-connected") end)
+
+      assert {:ok, _integration} = CalendarManagement.create_calendar_integration(attrs)
+      assert_received {:telemetry, %{count: 1}, %{provider: provider}}
+      assert is_binary(provider)
     end
   end
 end

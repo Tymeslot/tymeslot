@@ -87,6 +87,10 @@ defmodule Tymeslot.Integrations.CalendarManagement do
          {:ok, integration} <-
            PrimarySelection.create_with_auto_primary(discovered_attrs),
          {:ok, final_integration} <- ensure_default_booking_calendar(integration) do
+      :telemetry.execute([:tymeslot, :calendar, :connected], %{count: 1}, %{
+        provider: final_integration.provider
+      })
+
       {:ok, final_integration}
     else
       other -> other
