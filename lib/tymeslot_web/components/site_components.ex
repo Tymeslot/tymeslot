@@ -78,6 +78,23 @@ defmodule TymeslotWeb.Components.SiteComponents do
                 </.link>
               <% end %>
             <% end %>
+            <%= if contact_url = Application.get_env(:tymeslot, :contact_url) do %>
+              <%= if external_url?(contact_url) do %>
+                <.link
+                  href={contact_url}
+                  class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                >
+                  Contact
+                </.link>
+              <% else %>
+                <.link
+                  navigate={contact_url}
+                  class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                >
+                  Contact
+                </.link>
+              <% end %>
+            <% end %>
           <% end %>
           <%= if @current_user do %>
             <.link
