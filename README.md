@@ -251,9 +251,9 @@ Once enabled, hosts connect their own Stripe account from **Dashboard → Paymen
 
 ### Managed Cloud
 
-<h2>Free <small>·</small> €5<small>/mo</small></h2>
+<h2>Free <small>·</small> €9<small>/mo</small></h2>
 
-<sub>free plan — €5/mo for Pro</sub>
+<sub>free plan — €9/mo for Pro</sub>
 
 <br>
 
