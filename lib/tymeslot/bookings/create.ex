@@ -288,7 +288,9 @@ defmodule Tymeslot.Bookings.Create do
     Map.put(booking_data, :meeting_type, nil)
   end
 
-  defp put_meeting_type_record(%{meeting_type_id: type_id, organizer_user_id: user_id} = booking_data)
+  defp put_meeting_type_record(
+         %{meeting_type_id: type_id, organizer_user_id: user_id} = booking_data
+       )
        when is_integer(user_id) do
     Map.put(booking_data, :meeting_type, MeetingTypes.get_meeting_type(type_id, user_id))
   end
