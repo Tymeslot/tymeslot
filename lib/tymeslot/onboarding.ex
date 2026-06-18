@@ -60,7 +60,14 @@ defmodule Tymeslot.Onboarding do
     if dev_mode do
       {:ok, user}
     else
-      Auth.mark_onboarding_complete(user)
+      case Auth.mark_onboarding_complete(user) do
+        {:ok, _updated_user} = result ->
+          :telemetry.execute([:tymeslot, :onboarding, :completed], %{count: 1}, %{})
+          result
+
+        error ->
+          error
+      end
     end
   end
 end

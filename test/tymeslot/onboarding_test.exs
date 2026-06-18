@@ -75,5 +75,43 @@ defmodule Tymeslot.OnboardingTest do
       assert {:ok, updated_user} = Onboarding.complete_onboarding(user, false)
       assert updated_user.onboarding_completed_at != nil
     end
+
+    test "emits [:tymeslot, :onboarding, :completed] telemetry for a real user" do
+      user = insert(:user, onboarding_completed_at: nil)
+      test_pid = self()
+
+      :telemetry.attach(
+        "test-onboarding-completed",
+        [:tymeslot, :onboarding, :completed],
+        fn _event, measurements, metadata, _config ->
+          send(test_pid, {:telemetry, measurements, metadata})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach("test-onboarding-completed") end)
+
+      assert {:ok, _updated} = Onboarding.complete_onboarding(user, false)
+      assert_received {:telemetry, %{count: 1}, %{}}
+    end
+
+    test "does NOT emit telemetry in dev_mode" do
+      user = %{id: 1}
+      test_pid = self()
+
+      :telemetry.attach(
+        "test-onboarding-completed-devmode",
+        [:tymeslot, :onboarding, :completed],
+        fn _event, measurements, metadata, _config ->
+          send(test_pid, {:telemetry, measurements, metadata})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach("test-onboarding-completed-devmode") end)
+
+      assert {:ok, _user} = Onboarding.complete_onboarding(user, true)
+      refute_received {:telemetry, _, _}
+    end
   end
 end
