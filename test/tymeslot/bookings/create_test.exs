@@ -430,6 +430,35 @@ defmodule Tymeslot.Bookings.CreateTest do
     end
   end
 
+  describe "execute/3 telemetry" do
+    setup do
+      setup_booking_test()
+    end
+
+    test "emits [:tymeslot, :booking, :created] on successful free guest booking", %{
+      meeting_params: meeting_params,
+      form_data: form_data
+    } do
+      set_calendar_empty()
+
+      test_pid = self()
+
+      :telemetry.attach(
+        "test-booking-created",
+        [:tymeslot, :booking, :created],
+        fn _event, measurements, metadata, _config ->
+          send(test_pid, {:telemetry, measurements, metadata})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach("test-booking-created") end)
+
+      assert {:ok, _meeting} = Create.execute(meeting_params, form_data)
+      assert_received {:telemetry, %{count: 1}, %{}}
+    end
+  end
+
   describe "execute/3 with custom field validation" do
     setup do
       setup_booking_test()

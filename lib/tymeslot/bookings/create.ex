@@ -310,6 +310,7 @@ defmodule Tymeslot.Bookings.Create do
     # crash between session creation and the client redirect).
     with {:ok, meeting} <- create_meeting(paid_attrs),
          {:ok, %{checkout_url: url}} <- create_checkout_or_expire(meeting) do
+      emit_booking_created()
       {:ok, :payment_required, %{meeting: meeting, checkout_url: url}}
     else
       {:error, reason} -> {:error, map_error_to_message(reason)}
@@ -372,7 +373,10 @@ defmodule Tymeslot.Bookings.Create do
     CalendarJobs.schedule_job(meeting, "create")
   end
 
-  defp map_transaction_result({:ok, meeting}), do: {:ok, meeting}
+  defp map_transaction_result({:ok, meeting}) do
+    emit_booking_created()
+    {:ok, meeting}
+  end
 
   defp map_transaction_result({:error, reason}), do: {:error, map_error_to_message(reason)}
 
@@ -420,6 +424,10 @@ defmodule Tymeslot.Bookings.Create do
       _other ->
         "Failed to save meeting to database"
     end
+  end
+
+  defp emit_booking_created do
+    :telemetry.execute([:tymeslot, :booking, :created], %{count: 1}, %{})
   end
 
   defp handle_post_creation_effects(meeting, opts) do
