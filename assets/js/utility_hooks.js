@@ -194,38 +194,50 @@ export const AutoFocus = {
   }
 };
 
+// Scroll the whole page back to the top.
+//
+// The global `html, body { height: 100% }` + `overflow-x: hidden` rules
+// (base.css) promote <body> to the scroll container, so `window.scrollTo`
+// alone is a no-op on full-page views. Reset every plausible scroll root to
+// cover both the window-scroller and body-scroller layouts.
+export function scrollPageToTop() {
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
+
+// Decide whether a LiveView `phx:navigate` event should reset scroll to the
+// top. Only forward `navigate` redirects qualify: `patch` navigations keep
+// their scroll position (filters, tabs, multi-step flows), and back/forward
+// (`pop`) navigation lets LiveView restore the previously saved position.
+export function shouldScrollToTopOnNavigate(detail) {
+  return !detail.pop && !detail.patch;
+}
+
 // Reset scroll position to top when action changes (on navigation)
 export const ScrollReset = {
   mounted() {
     this.currentAction = String(this.el.dataset.action || '');
     this.scrollToTop();
   },
-  
+
   updated() {
     const newAction = String(this.el.dataset.action || '');
     const currentActionStr = String(this.currentAction || '');
-    
+
     if (newAction !== currentActionStr) {
       this.currentAction = newAction;
       this.scrollToTop();
     }
   },
-  
+
   scrollToTop() {
     // Check if we should scroll the window (for full-page views) or the element
     const scrollWindow = this.el.dataset.scrollWindow === 'true' ||
                         this.el.scrollHeight <= this.el.clientHeight;
 
     if (scrollWindow) {
-      // Scroll the page to the top (for full-page views).
-      //
-      // The global `html, body { height: 100% }` + `overflow-x: hidden` rules
-      // (base.css) promote <body> to the scroll container, so `window.scrollTo`
-      // is a no-op on these pages. Reset every plausible scroll root to cover
-      // both the window-scroller and body-scroller layouts.
-      window.scrollTo({ top: 0, behavior: 'instant' });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
+      scrollPageToTop();
     } else {
       // If the element has a scroll height, reset its scroll
       this.el.scrollTop = 0;
