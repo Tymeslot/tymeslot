@@ -23,9 +23,9 @@ By participating in this project, you agree to abide by our Code of Conduct. Ple
 
 ## 💳 Support Tymeslot's Future
 
-The best way to contribute to Tymeslot's sustainability is by **subscribing to our managed cloud service for just €5/month**. Your subscription directly funds development, ensures long-term maintenance, and helps sustain the open-source core that everyone benefits from.
+The best way to contribute to Tymeslot's sustainability is by **subscribing to our managed cloud service for just €9/month**. Your subscription directly funds development, ensures long-term maintenance, and helps sustain the open-source core that everyone benefits from.
 
-👉 **[Try Tymeslot Cloud](https://tymeslot.app)** — 14-day free trial, no credit card required.
+👉 **[Try Tymeslot Cloud](https://tymeslot.app)** — 7-day free trial, no credit card required.
 
 ---
 
