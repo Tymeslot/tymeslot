@@ -309,6 +309,16 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
+  Returns the count of users currently eligible to receive marketing email.
+  Prefer this over `list_marketing_eligible_user_ids/0` when you only need the
+  number — it runs a single COUNT(*) without loading IDs into memory.
+  """
+  @spec count_marketing_eligible_user_ids() :: non_neg_integer()
+  def count_marketing_eligible_user_ids do
+    UserQueries.count_marketing_eligible_user_ids()
+  end
+
+  @doc """
   Checks if an email is available for registration.
   Returns :ok if available, {:error, reason} otherwise.
   """

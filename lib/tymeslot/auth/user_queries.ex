@@ -425,6 +425,17 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
+  Returns the count of users currently eligible to receive marketing email.
+  Runs a single COUNT(*) query — no IDs are loaded into memory.
+  """
+  @spec count_marketing_eligible_user_ids() :: non_neg_integer()
+  def count_marketing_eligible_user_ids do
+    UserSchema
+    |> where([u], not is_nil(u.verified_at) and is_nil(u.marketing_unsubscribed_at))
+    |> Repo.aggregate(:count)
+  end
+
+  @doc """
   Gets a user by ID with profile preloaded.
   """
   @spec get_user_with_profile!(integer()) :: UserSchema.t()
