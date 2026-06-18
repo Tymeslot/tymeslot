@@ -41,21 +41,21 @@ defmodule TymeslotWeb.Components.SiteComponents do
           </.link>
         <% end %>
         
-    <%!-- Desktop Navigation --%>
-        <div class="hidden md:flex items-center gap-6">
+    <%!-- Desktop Navigation: marketing links (centre zone) --%>
+        <div class="hidden md:flex flex-1 items-center justify-center gap-1">
           <%= if Config.show_marketing_links?() do %>
             <%= if features_url = Application.get_env(:tymeslot, :features_url) do %>
               <%= if external_url?(features_url) do %>
                 <.link
                   href={features_url}
-                  class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
                 >
                   Features
                 </.link>
               <% else %>
                 <.link
                   navigate={features_url}
-                  class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
                 >
                   Features
                 </.link>
@@ -65,14 +65,14 @@ defmodule TymeslotWeb.Components.SiteComponents do
               <%= if external_url?(pricing_url) do %>
                 <.link
                   href={pricing_url}
-                  class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
                 >
                   Pricing
                 </.link>
               <% else %>
                 <.link
                   navigate={pricing_url}
-                  class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
                 >
                   Pricing
                 </.link>
@@ -82,14 +82,14 @@ defmodule TymeslotWeb.Components.SiteComponents do
               <%= if external_url?(docs_url) do %>
                 <.link
                   href={docs_url}
-                  class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
                 >
                   Docs
                 </.link>
               <% else %>
                 <.link
                   navigate={docs_url}
-                  class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
                 >
                   Docs
                 </.link>
@@ -99,45 +99,51 @@ defmodule TymeslotWeb.Components.SiteComponents do
               <%= if external_url?(contact_url) do %>
                 <.link
                   href={contact_url}
-                  class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
                 >
                   Contact
                 </.link>
               <% else %>
                 <.link
                   navigate={contact_url}
-                  class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
                 >
                   Contact
                 </.link>
               <% end %>
             <% end %>
           <% end %>
+        </div>
+
+    <%!-- Desktop Navigation: account actions (right zone) --%>
+        <div class="hidden md:flex items-center gap-3">
           <%= if @current_user do %>
             <.link
               navigate={~p"/dashboard"}
               data-tymeslot-suppress-lv-disconnect
-              class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+              class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
             >
               Dashboard
             </.link>
+            <div class="h-6 w-px bg-tymeslot-200" aria-hidden="true"></div>
             <.link
               href={~p"/auth/logout"}
               method="delete"
-              class="px-6 py-2 font-black text-tymeslot-700 hover:text-red-600 hover:bg-red-50 transition-all rounded-2xl"
+              class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-red-600 hover:bg-red-50 transition-all rounded-2xl"
             >
               Logout
             </.link>
           <% else %>
             <.link
               href={~p"/auth/login"}
-              class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+              class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
             >
               Login
             </.link>
+            <div class="h-6 w-px bg-tymeslot-200" aria-hidden="true"></div>
             <.link
               href={~p"/auth/signup"}
-              class="px-10 py-4 font-black text-white bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 hover:from-turquoise-500 hover:to-blue-500 rounded-2xl shadow-xl hover:shadow-turquoise-500/40 transition-all duration-300 hover:-translate-y-1"
+              class="px-8 py-3 font-black text-white bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 hover:from-turquoise-500 hover:to-blue-500 rounded-2xl shadow-xl hover:shadow-turquoise-500/40 transition-all duration-300 hover:-translate-y-1"
             >
               Get Started
             </.link>
