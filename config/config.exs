@@ -36,6 +36,10 @@ config :tymeslot,
   repo: Tymeslot.Repo,
   contact_url: nil,
   features_url: nil,
+  # Optional sub-pages for a "Features" navigation dropdown. Each entry is a
+  # %{label: string, url: string} map. Empty by default — the nav then renders a
+  # plain "Features" link. SaaS populates this with its single-feature pages.
+  feature_pages: [],
   pricing_url: nil,
   privacy_policy_url: nil,
   terms_and_conditions_url: nil,
