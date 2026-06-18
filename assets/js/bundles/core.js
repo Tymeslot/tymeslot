@@ -14,7 +14,7 @@ import topbar from "../../vendor/topbar.cjs"
 import { ConfirmDelete, PageReload } from "../ui_interaction_hooks"
 import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick } from "../utility_hooks"
 import { ClipboardCopy } from "../clipboard_hook"
-import { installAnalytics, installEventBridge } from "../analytics"
+import { installAnalytics, installEventBridge, installClickTracking } from "../analytics"
 
 // CSRF token
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
@@ -183,6 +183,7 @@ document.addEventListener("click", (e) => {
 // plus the bridge that forwards server-pushed `ts:analytics` events to it.
 installAnalytics();
 installEventBridge();
+installClickTracking();
 
 // Export for route bundles to extend
 window.liveSocket = liveSocket;

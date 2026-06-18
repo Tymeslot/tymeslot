@@ -22,6 +22,35 @@ export function installAnalytics(target = window) {
 }
 
 /**
+ * Capture-phase delegated click handler. Any element (or ancestor) with
+ * `data-analytics-event` fires analytics.track when clicked.
+ * Optional `data-analytics-props` holds a JSON object of categorical
+ * dimensions — never user ids, emails, or free text (GDPR guardrail).
+ * Safe no-op when no analytics provider is present.
+ */
+export function installClickTracking(target = window, root = document) {
+  root.addEventListener(
+    "click",
+    (event) => {
+      const el = event.target.closest?.("[data-analytics-event]");
+      if (!el) return;
+      const name = el.dataset.analyticsEvent;
+      let props = {};
+      const raw = el.dataset.analyticsProps;
+      if (raw) {
+        try {
+          props = JSON.parse(raw);
+        } catch (_e) {
+          props = {};
+        }
+      }
+      target.analytics?.track(name, props);
+    },
+    true,
+  );
+}
+
+/**
  * Bridges server-pushed events to the facade. LiveView's
  * `push_event(socket, "ts:analytics", %{name, props})` is dispatched on the
  * window as `phx:ts:analytics`; forward it to analytics.track.
