@@ -582,7 +582,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           </div>
         </div>
         <%!-- Gradient fade overlay --%>
-        <div class="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-white/50"></div>
+        <div class="absolute inset-0 bg-linear-to-b from-white/40 via-transparent to-white/50"></div>
       </div>
       <%!-- Centred content --%>
       <div class="absolute inset-0 flex flex-col items-center justify-center px-6">

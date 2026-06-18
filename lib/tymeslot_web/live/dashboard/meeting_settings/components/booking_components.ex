@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
               "relative rounded-token-md border-2 transition-colors duration-200 group",
               "w-10 h-10 flex items-center justify-center overflow-hidden",
               if(@selected_icon == icon_value,
-                do: "bg-gradient-to-br from-teal-50 to-teal-100 border-teal-500 shadow-md",
+                do: "bg-linear-to-br from-teal-50 to-teal-100 border-teal-500 shadow-md",
                 else: "bg-white/50 border-tymeslot-300/50 hover:border-teal-400/50 hover:bg-white/70"
               )
             ]}

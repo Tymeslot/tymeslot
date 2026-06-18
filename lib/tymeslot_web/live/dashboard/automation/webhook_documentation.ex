@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
     ~H"""
     <div class="card-glass space-y-8">
       <div class="flex items-start gap-4">
-        <div class="p-3 bg-gradient-to-br from-turquoise-500 to-cyan-500 rounded-2xl shadow-lg shadow-turquoise-500/20">
+        <div class="p-3 bg-linear-to-br from-turquoise-500 to-cyan-500 rounded-2xl shadow-lg shadow-turquoise-500/20">
           <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
 
       <div class="space-y-6">
         <%!-- What are webhooks --%>
-        <div class="p-5 bg-gradient-to-br from-turquoise-50 to-cyan-50 rounded-token-2xl border-2 border-turquoise-100">
+        <div class="p-5 bg-linear-to-br from-turquoise-50 to-cyan-50 rounded-token-2xl border-2 border-turquoise-100">
           <div class="flex items-start gap-3 mb-3">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
             <h4 class="text-token-lg font-black text-tymeslot-900">What are webhooks?</h4>
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
               {"Build automation", "Add actions to process the webhook data"}
             ], 1) do %>
               <div class="flex items-start gap-3 p-3 bg-white rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 transition-all">
-                <div class="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-turquoise-500 to-cyan-500 text-white flex items-center justify-center text-xs font-black">
+                <div class="shrink-0 w-6 h-6 rounded-full bg-linear-to-br from-turquoise-500 to-cyan-500 text-white flex items-center justify-center text-xs font-black">
                   <%= step_index %>
                 </div>
                 <div class="flex-1 min-w-0">

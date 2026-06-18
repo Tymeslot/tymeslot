@@ -206,7 +206,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
               </div>
               <div class="bg-white rounded-full h-2 overflow-hidden shadow-inner">
                 <div
-                  class="bg-gradient-to-r from-turquoise-500 to-cyan-500 h-full transition-all duration-300"
+                  class="bg-linear-to-r from-turquoise-500 to-cyan-500 h-full transition-all duration-300"
                   style={"width: #{entry.progress}%"}
                 ></div>
               </div>

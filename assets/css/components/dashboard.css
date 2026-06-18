@@ -266,7 +266,7 @@
 }
 
 .dashboard-nav-link--active {
-  @apply text-white bg-gradient-to-r from-turquoise-600 to-cyan-600 shadow-lg shadow-turquoise-500/20 font-black;
+  @apply text-white bg-linear-to-r from-turquoise-600 to-cyan-600 shadow-lg shadow-turquoise-500/20 font-black;
   @apply hover:text-white hover:from-turquoise-700 hover:to-cyan-700 hover:translate-x-0;
 }
 

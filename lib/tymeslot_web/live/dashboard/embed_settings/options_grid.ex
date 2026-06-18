@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             <div class="space-y-2">
               <div class="h-2 bg-tymeslot-200 rounded w-3/4"></div>
               <div class="h-2 bg-tymeslot-200 rounded w-1/2"></div>
-              <div class="mt-4 p-3 bg-gradient-to-br from-turquoise-50 to-cyan-50 border-2 border-turquoise-200 rounded-token-lg">
+              <div class="mt-4 p-3 bg-linear-to-br from-turquoise-50 to-cyan-50 border-2 border-turquoise-200 rounded-token-lg">
                 <div class="flex items-center space-x-2">
                   <svg class="w-4 h-4 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>

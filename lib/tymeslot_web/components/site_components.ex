@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
             </.link>
             <.link
               href={~p"/auth/signup"}
-              class="px-10 py-4 font-black text-white bg-gradient-to-br from-turquoise-600 via-cyan-600 to-blue-600 hover:from-turquoise-500 hover:to-blue-500 rounded-2xl shadow-xl hover:shadow-turquoise-500/40 transition-all duration-300 hover:-translate-y-1"
+              class="px-10 py-4 font-black text-white bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 hover:from-turquoise-500 hover:to-blue-500 rounded-2xl shadow-xl hover:shadow-turquoise-500/40 transition-all duration-300 hover:-translate-y-1"
             >
               Get Started
             </.link>
@@ -292,7 +292,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
   @spec site_footer(map()) :: Phoenix.LiveView.Rendered.t()
   def site_footer(assigns) do
     ~H"""
-    <footer class="mt-auto bg-gradient-to-r from-tymeslot-900 to-tymeslot-800">
+    <footer class="mt-auto bg-linear-to-r from-tymeslot-900 to-tymeslot-800">
       <div class="container mx-auto px-6 py-16 max-w-7xl">
         <div class="flex flex-col lg:flex-row gap-12 mb-12">
           <%!-- Brand column --%>
@@ -307,7 +307,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
               href="https://lukabreitig.com"
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-turquoise-500 to-turquoise-600 text-white font-semibold rounded-token-lg hover:from-turquoise-600 hover:to-turquoise-700 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-turquoise-500/25 text-token-sm"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-linear-to-r from-turquoise-500 to-turquoise-600 text-white font-semibold rounded-token-lg hover:from-turquoise-600 hover:to-turquoise-700 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-turquoise-500/25 text-token-sm"
             >
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path

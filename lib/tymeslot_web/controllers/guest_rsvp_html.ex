@@ -167,7 +167,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
 
   defp rsvp_shell(assigns) do
     ~H"""
-    <main class="flex min-h-screen items-center justify-center bg-gradient-to-br from-turquoise-50 via-white to-cyan-50 p-4">
+    <main class="flex min-h-screen items-center justify-center bg-linear-to-br from-turquoise-50 via-white to-cyan-50 p-4">
       <div class="w-full max-w-md rounded-token-2xl bg-white p-8 text-center shadow-glass-lg">
         {render_slot(@inner_block)}
       </div>

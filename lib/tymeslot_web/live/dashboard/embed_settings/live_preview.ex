@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview do
   @spec live_preview(map()) :: Phoenix.LiveView.Rendered.t()
   def live_preview(assigns) do
     ~H"""
-    <div class="bg-gradient-to-br from-tymeslot-50 to-tymeslot-100 rounded-token-2xl border-2 border-tymeslot-200 p-8">
+    <div class="bg-linear-to-br from-tymeslot-50 to-tymeslot-100 rounded-token-2xl border-2 border-tymeslot-200 p-8">
       <div class="flex items-center mb-6">
         <div>
           <h3 class="text-token-2xl font-bold text-tymeslot-900">Test It Live</h3>

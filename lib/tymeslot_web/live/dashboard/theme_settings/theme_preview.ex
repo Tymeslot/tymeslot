@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemePreview do
         />
         <%!-- Fallback content when image fails to load --%>
         <div
-          class="w-full h-full bg-gradient-to-br from-tymeslot-100 to-turquoise-50 flex items-center justify-center"
+          class="w-full h-full bg-linear-to-br from-tymeslot-100 to-turquoise-50 flex items-center justify-center"
           style="display: none;"
         >
           <div class="text-center p-4">

@@ -71,7 +71,7 @@
 
 /* Meeting Details Card - Modernized */
 .meeting-details-card {
-  @apply bg-gradient-to-br from-turquoise-50 to-cyan-50 border border-turquoise-100 rounded-token-2xl p-6 shadow-sm;
+  @apply bg-linear-to-br from-turquoise-50 to-cyan-50 border border-turquoise-100 rounded-token-2xl p-6 shadow-sm;
 }
 
 @media (min-width: 640px) {
@@ -86,7 +86,7 @@
 }
 
 .action-button--primary {
-  @apply bg-gradient-to-r from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/20;
+  @apply bg-linear-to-r from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/20;
 }
 
 .action-button--primary:hover:not(:disabled) {
@@ -102,7 +102,7 @@
 }
 
 .action-button--danger {
-  @apply bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/20;
+  @apply bg-linear-to-r from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/20;
 }
 
 .action-button--danger:hover:not(:disabled) {

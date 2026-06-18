@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
       />
 
       <%!-- Welcome Section --%>
-      <div class="bg-gradient-to-br from-turquoise-600 via-cyan-600 to-blue-600 rounded-token-3xl p-8 lg:p-12 text-white shadow-2xl shadow-turquoise-500/20 relative overflow-hidden">
+      <div class="bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 rounded-token-3xl p-8 lg:p-12 text-white shadow-2xl shadow-turquoise-500/20 relative overflow-hidden">
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_50%)]"></div>
         <div class="relative z-10">
           <h1 class="text-4xl lg:text-5xl font-black mb-4 tracking-tight">

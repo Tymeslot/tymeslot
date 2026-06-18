@@ -87,7 +87,7 @@ defmodule TymeslotWeb.StepNavigation do
   end
 
   defp step_class(step, current) when step <= current do
-    "step-circle--active w-8 h-8 rounded-full bg-gradient-to-r from-purple-800 to-purple-900 text-white flex items-center justify-center shadow-lg border border-white/20 transition-all duration-300 scale-110"
+    "step-circle--active w-8 h-8 rounded-full bg-linear-to-r from-purple-800 to-purple-900 text-white flex items-center justify-center shadow-lg border border-white/20 transition-all duration-300 scale-110"
   end
 
   defp step_class(_step, _current) do
@@ -95,7 +95,7 @@ defmodule TymeslotWeb.StepNavigation do
   end
 
   defp connector_class(step, current) when step < current do
-    "step-connector--active w-4 sm:w-8 md:w-12 h-0.5 sm:h-1 bg-gradient-to-r from-purple-800 to-purple-900 rounded shadow-sm transition-all duration-500"
+    "step-connector--active w-4 sm:w-8 md:w-12 h-0.5 sm:h-1 bg-linear-to-r from-purple-800 to-purple-900 rounded shadow-sm transition-all duration-500"
   end
 
   defp connector_class(_step, _current) do

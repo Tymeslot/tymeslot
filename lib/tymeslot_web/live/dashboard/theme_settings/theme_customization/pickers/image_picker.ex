@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
                   class="w-full h-full object-cover transition-transform duration-700 group-hover/image:scale-110"
                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 />
-                <div class="absolute inset-0 bg-gradient-to-br from-tymeslot-100 to-tymeslot-200 items-center justify-center hidden">
+                <div class="absolute inset-0 bg-linear-to-br from-tymeslot-100 to-tymeslot-200 items-center justify-center hidden">
                   <svg class="w-12 h-12 text-tymeslot-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
@@ -121,7 +121,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
                   </div>
                   <div class="bg-tymeslot-100 rounded-full h-2 overflow-hidden shadow-inner">
                     <div
-                      class="bg-gradient-to-r from-turquoise-500 to-cyan-500 h-full transition-all duration-300"
+                      class="bg-linear-to-r from-turquoise-500 to-cyan-500 h-full transition-all duration-300"
                       style={"width: #{entry.progress}%"}
                     ></div>
                   </div>

@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
       class={[
         "flex items-center space-x-2 px-6 py-2.5 rounded-token-xl text-token-sm font-black transition-all duration-300",
         if(@active,
-          do: "bg-gradient-to-br from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/20",
+          do: "bg-linear-to-br from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/20",
           else: "text-tymeslot-500 hover:text-turquoise-600 hover:bg-turquoise-50"
         )
       ]}

@@ -13,7 +13,7 @@
 
 /* Button Variants - Global Branding */
 .btn-primary {
-  @apply bg-gradient-to-br from-turquoise-600 to-cyan-600 text-white font-black shadow-lg shadow-turquoise-500/20 rounded-token-2xl px-6 py-3 transition-glass;
+  @apply bg-linear-to-br from-turquoise-600 to-cyan-600 text-white font-black shadow-lg shadow-turquoise-500/20 rounded-token-2xl px-6 py-3 transition-glass;
   @apply hover:from-turquoise-700 hover:to-cyan-700 hover:-translate-y-1 hover:shadow-xl hover:shadow-turquoise-500/40;
 }
 
