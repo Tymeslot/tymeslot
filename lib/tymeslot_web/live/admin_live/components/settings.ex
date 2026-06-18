@@ -61,7 +61,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         {Formatters.section_label(@section)}
       </h3>
 
-      <div class="card-glass !p-0 overflow-hidden divide-y divide-tymeslot-100">
+      <div class="card-glass p-0! overflow-hidden divide-y divide-tymeslot-100">
         <.setting_row
           :for={key <- @keys}
           key={key}
@@ -201,7 +201,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       <.action_button
         type="submit"
         variant={:secondary}
-        class="!py-1.5 !px-3 !text-token-xs"
+        class="py-1.5! px-3! text-token-xs!"
         disabled={@disabled}
       >
         {dgettext("dashboard", "Save")}

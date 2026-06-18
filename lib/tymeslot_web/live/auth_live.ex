@@ -472,7 +472,7 @@ defmodule TymeslotWeb.AuthLive do
   @impl Phoenix.LiveView
   def render(assigns) do
     ~H"""
-    <div id="auth-live" class="brand-container !bg-transparent" data-state={@current_state}>
+    <div id="auth-live" class="brand-container bg-transparent!" data-state={@current_state}>
       <%= case @current_state do %>
         <% :login -> %>
           <LoginComponent.auth_login {assigns} />

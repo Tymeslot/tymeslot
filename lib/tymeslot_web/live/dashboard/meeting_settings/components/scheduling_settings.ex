@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
 
     <%!-- Custom input tag --%>
         <%= if @custom_mode or @buffer_value not in [0, 5, 10, 15, 30, 60] do %>
-          <div class="btn-tag-selector btn-tag-selector-primary--active !p-0 overflow-hidden">
+          <div class="btn-tag-selector btn-tag-selector-primary--active p-0! overflow-hidden">
             <input
               type="number"
               min="0"
@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
 
     <%!-- Custom input tag --%>
         <%= if @custom_mode or @booking_days not in [7, 14, 30, 60, 90, 180] do %>
-          <div class="btn-tag-selector btn-tag-selector-secondary--active !p-0 overflow-hidden">
+          <div class="btn-tag-selector btn-tag-selector-secondary--active p-0! overflow-hidden">
             <input
               type="number"
               min="1"
@@ -224,7 +224,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
 
     <%!-- Custom input tag --%>
         <%= if @custom_mode or @notice_hours not in [0, 1, 4, 24, 48, 168] do %>
-          <div class="btn-tag-selector btn-tag-selector-tertiary--active !p-0 overflow-hidden">
+          <div class="btn-tag-selector btn-tag-selector-tertiary--active p-0! overflow-hidden">
             <input
               type="number"
               min="0"

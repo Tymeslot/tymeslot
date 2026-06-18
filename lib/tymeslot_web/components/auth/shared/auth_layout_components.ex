@@ -118,7 +118,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
 
       <%!-- Content Overlay --%>
       <div class="w-full max-w-[500px] relative z-10 animate-in fade-in zoom-in-95 duration-700">
-        <div class="auth-glass-card !max-w-none">
+        <div class="auth-glass-card max-w-none!">
           <.auth_logo_header title={@title} subtitle={@subtitle} />
           
           <%= if assigns[:heading], do: render_slot(@heading) %>

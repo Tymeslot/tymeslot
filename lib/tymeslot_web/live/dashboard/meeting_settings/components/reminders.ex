@@ -113,13 +113,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
                 name="reminder[value]"
                 value={@new_reminder_value}
                 placeholder="30"
-                class="input !py-1.5 !px-3 w-20 text-token-sm"
+                class="input py-1.5! px-3! w-20 text-token-sm"
                 phx-change="update_reminder_input"
                 phx-target={@myself}
               />
               <select
                 name="reminder[unit]"
-                class="input !py-1.5 !px-3 w-28 text-token-sm"
+                class="input py-1.5! px-3! w-28 text-token-sm"
                 value={@new_reminder_unit}
                 phx-change="update_reminder_input"
                 phx-target={@myself}
@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
               type="button"
               phx-click="add_reminder"
               phx-target={@myself}
-              class="btn btn-primary btn-sm !rounded-token-lg"
+              class="btn btn-primary btn-sm rounded-token-lg!"
             >
               Add
             </button>

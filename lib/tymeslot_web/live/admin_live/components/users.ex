@@ -26,7 +26,7 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       <.stat_card label={dgettext("dashboard", "Admins")} value={@admin_count} />
     </div>
 
-    <div class="card-glass !p-0 overflow-hidden">
+    <div class="card-glass p-0! overflow-hidden">
       <table class="min-w-full divide-y divide-tymeslot-100">
         <thead class="bg-tymeslot-50/60">
           <tr>
