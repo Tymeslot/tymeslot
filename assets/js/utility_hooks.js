@@ -213,12 +213,19 @@ export const ScrollReset = {
   
   scrollToTop() {
     // Check if we should scroll the window (for full-page views) or the element
-    const scrollWindow = this.el.dataset.scrollWindow === 'true' || 
+    const scrollWindow = this.el.dataset.scrollWindow === 'true' ||
                         this.el.scrollHeight <= this.el.clientHeight;
-    
+
     if (scrollWindow) {
-      // Scroll the window to the top (for full-page views)
+      // Scroll the page to the top (for full-page views).
+      //
+      // The global `html, body { height: 100% }` + `overflow-x: hidden` rules
+      // (base.css) promote <body> to the scroll container, so `window.scrollTo`
+      // is a no-op on these pages. Reset every plausible scroll root to cover
+      // both the window-scroller and body-scroller layouts.
       window.scrollTo({ top: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
     } else {
       // If the element has a scroll height, reset its scroll
       this.el.scrollTop = 0;
