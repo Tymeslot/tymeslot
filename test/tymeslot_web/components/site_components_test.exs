@@ -69,7 +69,7 @@ defmodule TymeslotWeb.Components.SiteComponentsTest do
       end
 
       if Application.get_env(:tymeslot, :terms_and_conditions_url) do
-        assert html =~ "Terms of Service"
+        assert html =~ "Terms and Conditions"
       end
     end
   end
