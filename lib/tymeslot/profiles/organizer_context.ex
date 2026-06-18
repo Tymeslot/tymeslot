@@ -6,6 +6,8 @@ defmodule Tymeslot.Profiles.OrganizerContext do
   and assembles the context map consumed by scheduling LiveViews.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles.ProfileQueries
 
@@ -40,7 +42,7 @@ defmodule Tymeslot.Profiles.OrganizerContext do
       profile: profile,
       user_id: profile.user_id,
       meeting_types: meeting_types,
-      page_title: "Schedule with #{display_name}"
+      page_title: dgettext("booking", "Schedule with %{name}", name: display_name)
     }
   end
 

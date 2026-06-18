@@ -49,6 +49,10 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
   @impl Phoenix.LiveView
   def handle_params(params, url, socket) do
+    # Track the request path so the root layout can build the canonical/og:url
+    # on the static (crawler) render, where no conn is available.
+    socket = assign(socket, :request_path, URI.parse(url).path || "/")
+
     # Sync locale from params if present
     socket =
       if locale = params["locale"] do

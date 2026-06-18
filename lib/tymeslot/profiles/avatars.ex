@@ -150,21 +150,29 @@ defmodule Tymeslot.Profiles.Avatars do
   def avatar_url(nil, _version), do: AvatarUtils.generate_fallback_data_uri(nil)
 
   def avatar_url(%ProfileSchema{} = profile, _version) do
-    case profile.avatar do
-      nil ->
-        AvatarUtils.generate_fallback_data_uri(profile)
-
-      "" ->
-        AvatarUtils.generate_fallback_data_uri(profile)
-
-      avatar ->
-        if String.starts_with?(avatar, "/") do
-          avatar
-        else
-          "/uploads/avatars/#{profile.id}/#{avatar}"
-        end
+    case uploaded_avatar_path(profile) do
+      nil -> AvatarUtils.generate_fallback_data_uri(profile)
+      path -> path
     end
   end
+
+  @doc """
+  Returns the public path to a profile's *uploaded* avatar image, or `nil`
+  when no real image has been uploaded.
+
+  Unlike `avatar_url/2`, this never falls back to a generated initials data URI.
+  It is intended for contexts that require a real, fetchable image URL — e.g.
+  Open Graph / social-share meta tags — where a data URI is not usable.
+  """
+  @spec uploaded_avatar_path(profile | nil) :: String.t() | nil
+  def uploaded_avatar_path(%ProfileSchema{avatar: avatar} = profile)
+      when is_binary(avatar) and avatar != "" do
+    if String.starts_with?(avatar, "/"),
+      do: avatar,
+      else: "/uploads/avatars/#{profile.id}/#{avatar}"
+  end
+
+  def uploaded_avatar_path(_profile), do: nil
 
   @doc """
   Gets appropriate alt text for the avatar image.

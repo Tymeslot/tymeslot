@@ -329,6 +329,13 @@ defmodule Tymeslot.Profiles do
   @spec avatar_url(profile | nil, atom()) :: String.t()
   def avatar_url(profile, version \\ :original), do: Avatars.avatar_url(profile, version)
 
+  @doc """
+  Returns the public path to a profile's uploaded avatar image, or `nil` when
+  none has been uploaded. Never returns a data URI (see `Avatars.uploaded_avatar_path/1`).
+  """
+  @spec uploaded_avatar_path(profile | nil) :: String.t() | nil
+  def uploaded_avatar_path(profile), do: Avatars.uploaded_avatar_path(profile)
+
   @spec avatar_alt_text(profile | nil) :: String.t()
   def avatar_alt_text(profile), do: Avatars.avatar_alt_text(profile)
 

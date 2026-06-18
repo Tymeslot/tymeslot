@@ -12,6 +12,19 @@
     <.live_title suffix=" · Tymeslot">
       {assigns[:page_title] || "Schedule a Meeting"}
     </.live_title>
+
+    <%!-- Social share (Open Graph / Twitter) preview for booking links --%>
+    <meta property="og:type" content="profile" />
+    <meta property="og:site_name" content="Tymeslot" />
+    <meta property="og:title" content={assigns[:page_title] || "Schedule a Meeting"} />
+    <meta property="og:description" content={booking_og_description(assigns)} />
+    <meta property="og:url" content={current_url(assigns)} />
+    <meta property="og:image" content={booking_og_image(assigns)} />
+    <meta name="twitter:card" content={booking_twitter_card(assigns)} />
+    <meta name="twitter:title" content={assigns[:page_title] || "Schedule a Meeting"} />
+    <meta name="twitter:description" content={booking_og_description(assigns)} />
+    <meta name="twitter:image" content={booking_og_image(assigns)} />
+
     <link rel="icon" type="image/svg+xml" href={~p"/images/brand/favicon.svg"} />
     <link rel="alternate icon" href={~p"/images/brand/favicon.ico"} />
 

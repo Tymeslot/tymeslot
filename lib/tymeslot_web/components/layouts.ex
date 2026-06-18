@@ -9,8 +9,12 @@ defmodule TymeslotWeb.Layouts do
   `use TymeslotWeb, :live_view`.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import TymeslotWeb.Components.CoreComponents
 
+  alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileSchema
   alias TymeslotWeb.Endpoint
 
   embed_templates "layouts/*"
@@ -39,6 +43,60 @@ defmodule TymeslotWeb.Layouts do
         else: path
 
     Endpoint.url() <> normalized_path
+  end
+
+  @doc """
+  Returns the absolute URL of the social-share (Open Graph) image for a
+  scheduling page.
+
+  Resolves in layers: the organiser's uploaded profile photo → a neutral
+  default avatar → the Tymeslot brand card. The brand card is a defensive
+  fallback used only when there is no organiser context (e.g. error pages).
+  """
+  @spec booking_og_image(map()) :: String.t()
+  def booking_og_image(assigns) do
+    Endpoint.url() <> booking_og_image_path(assigns[:organizer_profile])
+  end
+
+  defp booking_og_image_path(%ProfileSchema{} = profile) do
+    Profiles.uploaded_avatar_path(profile) || ~p"/images/brand/default-avatar.png"
+  end
+
+  defp booking_og_image_path(_profile), do: ~p"/images/brand/og-image.png"
+
+  @doc """
+  Returns the Twitter card type for a scheduling page.
+
+  A square avatar/photo pairs with the `summary` card; the wide brand fallback
+  (no organiser context) pairs with `summary_large_image`.
+  """
+  @spec booking_twitter_card(map()) :: String.t()
+  def booking_twitter_card(assigns) do
+    if assigns[:organizer_profile], do: "summary", else: "summary_large_image"
+  end
+
+  @doc """
+  Returns the social-share description for a scheduling page, personalised with
+  the organiser's name when available.
+  """
+  @spec booking_og_description(map()) :: String.t()
+  def booking_og_description(assigns) do
+    case booking_organizer_name(assigns) do
+      nil ->
+        dgettext("booking", "Pick a time that works for you and book a meeting in seconds.")
+
+      name ->
+        dgettext("booking", "Book a meeting with %{name}. Pick a time that works for you.",
+          name: name
+        )
+    end
+  end
+
+  defp booking_organizer_name(assigns) do
+    case assigns[:organizer_profile] do
+      %ProfileSchema{} = profile -> Profiles.display_name(profile) || assigns[:username_context]
+      _no_organizer -> nil
+    end
   end
 
   @doc """
