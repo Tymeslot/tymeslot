@@ -36,6 +36,7 @@ config :tymeslot,
   repo: Tymeslot.Repo,
   contact_url: nil,
   features_url: nil,
+  pricing_url: nil,
   privacy_policy_url: nil,
   terms_and_conditions_url: nil,
   # Base URL for documentation articles. Self-hosted instances link to the public SaaS docs.

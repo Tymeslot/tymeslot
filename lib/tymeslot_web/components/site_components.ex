@@ -61,6 +61,23 @@ defmodule TymeslotWeb.Components.SiteComponents do
                 </.link>
               <% end %>
             <% end %>
+            <%= if pricing_url = Application.get_env(:tymeslot, :pricing_url) do %>
+              <%= if external_url?(pricing_url) do %>
+                <.link
+                  href={pricing_url}
+                  class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                >
+                  Pricing
+                </.link>
+              <% else %>
+                <.link
+                  navigate={pricing_url}
+                  class="px-6 py-2 font-black text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                >
+                  Pricing
+                </.link>
+              <% end %>
+            <% end %>
             <%= if docs_url = Application.get_env(:tymeslot, :docs_url) do %>
               <%= if external_url?(docs_url) do %>
                 <.link
@@ -150,6 +167,23 @@ defmodule TymeslotWeb.Components.SiteComponents do
                     class="mobile-nav-link block px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
                   >
                     Features
+                  </.link>
+                <% end %>
+              <% end %>
+              <%= if pricing_url = Application.get_env(:tymeslot, :pricing_url) do %>
+                <%= if external_url?(pricing_url) do %>
+                  <.link
+                    href={pricing_url}
+                    class="mobile-nav-link block px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
+                  >
+                    Pricing
+                  </.link>
+                <% else %>
+                  <.link
+                    navigate={pricing_url}
+                    class="mobile-nav-link block px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
+                  >
+                    Pricing
                   </.link>
                 <% end %>
               <% end %>
@@ -303,6 +337,25 @@ defmodule TymeslotWeb.Components.SiteComponents do
                           class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
                         >
                           Features
+                        </.link>
+                      <% end %>
+                    </li>
+                  <% end %>
+                  <%= if url = Application.get_env(:tymeslot, :pricing_url) do %>
+                    <li>
+                      <%= if external_url?(url) do %>
+                        <.link
+                          href={url}
+                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
+                        >
+                          Pricing
+                        </.link>
+                      <% else %>
+                        <.link
+                          navigate={url}
+                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
+                        >
+                          Pricing
                         </.link>
                       <% end %>
                     </li>
