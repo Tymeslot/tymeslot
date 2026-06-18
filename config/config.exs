@@ -37,8 +37,11 @@ config :tymeslot,
   contact_url: nil,
   features_url: nil,
   # Optional sub-pages for a "Features" navigation dropdown. Each entry is a
-  # %{label: string, url: string} map. Empty by default — the nav then renders a
-  # plain "Features" link. SaaS populates this with its single-feature pages.
+  # %{label: string, url: string, icon: string} map; `icon` is an optional
+  # heroicon name (e.g. "hero-calendar-days") shown beside the label — add new
+  # icons to the @source inline safelist in assets/css/app.css. Empty by default —
+  # the nav then renders a plain "Features" link. SaaS populates this with its
+  # single-feature pages.
   feature_pages: [],
   pricing_url: nil,
   privacy_policy_url: nil,

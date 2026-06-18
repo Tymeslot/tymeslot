@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
   # Import JS helpers for LiveView interactions
   alias Phoenix.LiveView.JS
   alias Tymeslot.Infrastructure.Config
-  import TymeslotWeb.Components.CoreComponents, only: [logo: 1]
+  import TymeslotWeb.Components.CoreComponents, only: [logo: 1, icon: 1]
 
   @doc """
   Main navigation component used across the application.
@@ -23,6 +23,19 @@ defmodule TymeslotWeb.Components.SiteComponents do
   @spec navigation(map()) :: Phoenix.LiveView.Rendered.t()
   def navigation(assigns) do
     ~H"""
+    <% features_url = Application.get_env(:tymeslot, :features_url) %>
+    <% feature_pages = Application.get_env(:tymeslot, :feature_pages, []) %>
+    <% marketing_links =
+      [
+        %{url: Application.get_env(:tymeslot, :pricing_url), label: "Pricing", icon: "hero-tag"},
+        %{url: Application.get_env(:tymeslot, :docs_url), label: "Docs", icon: "hero-book-open"},
+        %{
+          url: Application.get_env(:tymeslot, :contact_url),
+          label: "Contact",
+          icon: "hero-envelope"
+        }
+      ]
+      |> Enum.filter(& &1.url) %>
     <nav class="bg-white border-b-4 border-turquoise-500 shadow-xl relative z-50">
       <div class="container mx-auto flex justify-between items-center px-6 py-5">
         <%= if external_url?(logo_link(@current_user)) do %>
@@ -40,109 +53,25 @@ defmodule TymeslotWeb.Components.SiteComponents do
             <.logo mode={:full} img_class="h-12 shrink-0" />
           </.link>
         <% end %>
-        
+
     <%!-- Desktop Navigation: marketing links (centre zone) --%>
         <div class="hidden md:flex flex-1 items-center justify-center gap-1">
           <%= if Config.show_marketing_links?() do %>
-            <%= if features_url = Application.get_env(:tymeslot, :features_url) do %>
-              <% feature_pages = Application.get_env(:tymeslot, :feature_pages, []) %>
-              <%= if feature_pages == [] do %>
-                <.nav_sublink
-                  url={features_url}
-                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
-                >
-                  Features
-                </.nav_sublink>
-              <% else %>
-                <div class="relative group">
-                  <.nav_sublink
-                    url={features_url}
-                    class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-1.5"
-                  >
-                    Features
-                    <svg
-                      class="w-4 h-4 transition-transform duration-200 group-hover:rotate-180"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      stroke-width="2.5"
-                      aria-hidden="true"
-                    >
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </.nav_sublink>
-                  <div class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-all duration-200 absolute left-0 top-full pt-3 z-50">
-                    <div class="w-72 bg-white rounded-2xl shadow-xl border border-tymeslot-100 p-2">
-                      <.nav_sublink
-                        url={features_url}
-                        class="block px-4 py-2.5 rounded-xl text-tymeslot-700 hover:bg-turquoise-50 hover:text-turquoise-600 font-bold transition-colors"
-                      >
-                        All features
-                      </.nav_sublink>
-                      <div class="my-1 h-px bg-tymeslot-100" aria-hidden="true"></div>
-                      <.nav_sublink
-                        :for={page <- feature_pages}
-                        url={page.url}
-                        class="block px-4 py-2.5 rounded-xl text-tymeslot-700 hover:bg-turquoise-50 hover:text-turquoise-600 font-medium transition-colors"
-                      >
-                        {page.label}
-                      </.nav_sublink>
-                    </div>
-                  </div>
-                </div>
-              <% end %>
-            <% end %>
-            <%= if pricing_url = Application.get_env(:tymeslot, :pricing_url) do %>
-              <%= if external_url?(pricing_url) do %>
-                <.link
-                  href={pricing_url}
-                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
-                >
-                  Pricing
-                </.link>
-              <% else %>
-                <.link
-                  navigate={pricing_url}
-                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
-                >
-                  Pricing
-                </.link>
-              <% end %>
-            <% end %>
-            <%= if docs_url = Application.get_env(:tymeslot, :docs_url) do %>
-              <%= if external_url?(docs_url) do %>
-                <.link
-                  href={docs_url}
-                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
-                >
-                  Docs
-                </.link>
-              <% else %>
-                <.link
-                  navigate={docs_url}
-                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
-                >
-                  Docs
-                </.link>
-              <% end %>
-            <% end %>
-            <%= if contact_url = Application.get_env(:tymeslot, :contact_url) do %>
-              <%= if external_url?(contact_url) do %>
-                <.link
-                  href={contact_url}
-                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
-                >
-                  Contact
-                </.link>
-              <% else %>
-                <.link
-                  navigate={contact_url}
-                  class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
-                >
-                  Contact
-                </.link>
-              <% end %>
-            <% end %>
+            <.feature_menu
+              :if={features_url}
+              features_url={features_url}
+              feature_pages={feature_pages}
+            />
+            <.nav_sublink
+              :for={link <- marketing_links}
+              url={link.url}
+              class="group px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
+            >
+              <.icon
+                name={link.icon}
+                class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+              /> {link.label}
+            </.nav_sublink>
           <% end %>
         </div>
 
@@ -180,7 +109,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
             </.link>
           <% end %>
         </div>
-        
+
     <%!-- Mobile Menu Button --%>
         <button
           class="md:hidden mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-turquoise-100 hover:bg-turquoise-200 transition-colors"
@@ -199,7 +128,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
             </path>
           </svg>
         </button>
-        
+
     <%!-- Mobile Menu --%>
         <div
           id="mobile-menu"
@@ -207,73 +136,21 @@ defmodule TymeslotWeb.Components.SiteComponents do
         >
           <div class="container mx-auto px-4 py-4 space-y-3">
             <%= if Config.show_marketing_links?() do %>
-              <%= if features_url = Application.get_env(:tymeslot, :features_url) do %>
-                <% feature_pages = Application.get_env(:tymeslot, :feature_pages, []) %>
-                <.nav_sublink
-                  url={features_url}
-                  class="mobile-nav-link block px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
-                >
-                  Features
-                </.nav_sublink>
-                <.nav_sublink
-                  :for={page <- feature_pages}
-                  url={page.url}
-                  class="mobile-nav-link block px-4 py-2.5 pl-8 text-token-sm text-tymeslot-600 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
-                >
-                  {page.label}
-                </.nav_sublink>
-              <% end %>
-              <%= if pricing_url = Application.get_env(:tymeslot, :pricing_url) do %>
-                <%= if external_url?(pricing_url) do %>
-                  <.link
-                    href={pricing_url}
-                    class="mobile-nav-link block px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
-                  >
-                    Pricing
-                  </.link>
-                <% else %>
-                  <.link
-                    navigate={pricing_url}
-                    class="mobile-nav-link block px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
-                  >
-                    Pricing
-                  </.link>
-                <% end %>
-              <% end %>
-              <%= if docs_url = Application.get_env(:tymeslot, :docs_url) do %>
-                <%= if external_url?(docs_url) do %>
-                  <.link
-                    href={docs_url}
-                    class="mobile-nav-link block px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
-                  >
-                    Docs
-                  </.link>
-                <% else %>
-                  <.link
-                    navigate={docs_url}
-                    class="mobile-nav-link block px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
-                  >
-                    Docs
-                  </.link>
-                <% end %>
-              <% end %>
-              <%= if contact_url = Application.get_env(:tymeslot, :contact_url) do %>
-                <%= if external_url?(contact_url) do %>
-                  <.link
-                    href={contact_url}
-                    class="mobile-nav-link block px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
-                  >
-                    Contact
-                  </.link>
-                <% else %>
-                  <.link
-                    navigate={contact_url}
-                    class="mobile-nav-link block px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
-                  >
-                    Contact
-                  </.link>
-                <% end %>
-              <% end %>
+              <.feature_menu_mobile
+                :if={features_url}
+                features_url={features_url}
+                feature_pages={feature_pages}
+              />
+              <.nav_sublink
+                :for={link <- marketing_links}
+                url={link.url}
+                class="group mobile-nav-link flex items-center gap-2.5 px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
+              >
+                <.icon
+                  name={link.icon}
+                  class="w-5 h-5 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+                /> {link.label}
+              </.nav_sublink>
             <% end %>
             <%= if @current_user do %>
               <.link
@@ -311,6 +188,121 @@ defmodule TymeslotWeb.Components.SiteComponents do
     """
   end
 
+  # Desktop "Features" navigation entry. Renders a plain link when there are no
+  # sub-pages, or a hover dropdown listing each feature page when `feature_pages`
+  # is populated.
+  attr :features_url, :string, required: true
+  attr :feature_pages, :list, required: true
+
+  defp feature_menu(assigns) do
+    ~H"""
+    <%= if @feature_pages == [] do %>
+      <.nav_sublink
+        url={@features_url}
+        class="group px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
+      >
+        <.icon
+          name="hero-sparkles"
+          class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+        /> Features
+      </.nav_sublink>
+    <% else %>
+      <div class="relative group">
+        <.nav_sublink
+          url={@features_url}
+          class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
+        >
+          <.icon
+          name="hero-sparkles"
+          class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+        /> Features
+          <svg
+            class="w-4 h-4 transition-transform duration-200 group-hover:rotate-180"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            stroke-width="2.5"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </.nav_sublink>
+        <div class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-all duration-200 absolute left-0 top-full pt-3 z-50">
+          <div class="w-80 bg-white rounded-2xl shadow-xl border border-tymeslot-100 p-2">
+            <.nav_sublink
+              url={@features_url}
+              class="group/feat flex items-center gap-3 px-3 py-2.5 rounded-xl text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-700 font-bold transition-colors"
+            >
+              <.nav_icon_tile name="hero-squares-2x2-solid" variant={:solid} /> All features
+            </.nav_sublink>
+            <div class="my-1 h-px bg-tymeslot-100" aria-hidden="true"></div>
+            <.nav_sublink
+              :for={page <- @feature_pages}
+              url={page.url}
+              class="group/feat flex items-center gap-3 px-3 py-2.5 rounded-xl text-tymeslot-700 hover:bg-turquoise-50 hover:text-turquoise-700 font-medium transition-colors"
+            >
+              <.nav_icon_tile :if={page[:icon]} name={page.icon} />
+              {page.label}
+            </.nav_sublink>
+          </div>
+        </div>
+      </div>
+    <% end %>
+    """
+  end
+
+  # Mobile "Features" navigation entry: a top-level Features link followed by an
+  # indented list of feature sub-pages.
+  attr :features_url, :string, required: true
+  attr :feature_pages, :list, required: true
+
+  defp feature_menu_mobile(assigns) do
+    ~H"""
+    <div>
+      <.nav_sublink
+        url={@features_url}
+        class="group mobile-nav-link flex items-center gap-2.5 px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
+      >
+        <.icon
+          name="hero-sparkles"
+          class="w-5 h-5 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+        /> Features
+      </.nav_sublink>
+      <.nav_sublink
+        :for={page <- @feature_pages}
+        url={page.url}
+        class="group/feat mobile-nav-link flex items-center gap-3 px-4 py-2.5 text-token-sm text-tymeslot-600 hover:bg-turquoise-50 hover:text-turquoise-700 rounded-lg transition-colors"
+      >
+        <.nav_icon_tile :if={page[:icon]} name={page.icon} class="w-8 h-8" icon_class="w-4 h-4" />
+        {page.label}
+      </.nav_sublink>
+    </div>
+    """
+  end
+
+  # Brand "icon tile" for the Features navigation dropdown. `:soft` (default)
+  # sits as a tinted tile that inverts to the turquoise→cyan gradient when the
+  # enclosing `group/feat` row is hovered; `:solid` always shows the gradient,
+  # used to emphasise the "All features" overview row.
+  attr :name, :string, required: true
+  attr :class, :string, default: "w-9 h-9"
+  attr :icon_class, :string, default: "w-5 h-5"
+  attr :variant, :atom, values: [:soft, :solid], default: :soft
+
+  defp nav_icon_tile(assigns) do
+    ~H"""
+    <span class={[
+      "flex items-center justify-center rounded-lg shrink-0 transition-all",
+      @class,
+      @variant == :soft &&
+        "bg-turquoise-50 text-turquoise-600 group-hover/feat:bg-linear-to-br group-hover/feat:from-turquoise-500 group-hover/feat:to-cyan-500 group-hover/feat:text-white",
+      @variant == :solid && "bg-linear-to-br from-turquoise-500 to-cyan-500 text-white shadow-sm"
+    ]}>
+      <.icon name={@name} class={@icon_class} />
+    </span>
+    """
+  end
+
   @doc """
   Site footer component with legal links.
 
@@ -328,6 +320,20 @@ defmodule TymeslotWeb.Components.SiteComponents do
   @spec site_footer(map()) :: Phoenix.LiveView.Rendered.t()
   def site_footer(assigns) do
     ~H"""
+    <% product_links =
+      footer_links([
+        {:features_url, "Features"},
+        {:pricing_url, "Pricing"},
+        {:docs_url, "Docs"},
+        {:changelog_url, "Changelog"},
+        {:contact_url, "Contact"}
+      ]) %>
+    <% legal_links =
+      footer_links([
+        {:privacy_policy_url, "Privacy Policy"},
+        {:terms_and_conditions_url, "Terms and Conditions"},
+        {:sitemap_url, "Sitemap"}
+      ]) %>
     <footer class="mt-auto bg-linear-to-r from-tymeslot-900 to-tymeslot-800">
       <div class="container mx-auto px-6 py-16 max-w-7xl">
         <div class="flex flex-col lg:flex-row gap-12 mb-12">
@@ -368,176 +374,9 @@ defmodule TymeslotWeb.Components.SiteComponents do
 
           <%!-- Link columns --%>
           <div class="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8">
-            <%!-- Product column --%>
             <%= if Config.show_marketing_links?() do %>
-              <div>
-                <h4 class="text-white font-bold text-token-sm mb-4 uppercase tracking-widest">
-                  Product
-                </h4>
-                <ul class="space-y-3">
-                  <%= if url = Application.get_env(:tymeslot, :features_url) do %>
-                    <li>
-                      <%= if external_url?(url) do %>
-                        <.link
-                          href={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Features
-                        </.link>
-                      <% else %>
-                        <.link
-                          navigate={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Features
-                        </.link>
-                      <% end %>
-                    </li>
-                  <% end %>
-                  <%= if url = Application.get_env(:tymeslot, :pricing_url) do %>
-                    <li>
-                      <%= if external_url?(url) do %>
-                        <.link
-                          href={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Pricing
-                        </.link>
-                      <% else %>
-                        <.link
-                          navigate={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Pricing
-                        </.link>
-                      <% end %>
-                    </li>
-                  <% end %>
-                  <%= if url = Application.get_env(:tymeslot, :docs_url) do %>
-                    <li>
-                      <%= if external_url?(url) do %>
-                        <.link
-                          href={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Docs
-                        </.link>
-                      <% else %>
-                        <.link
-                          navigate={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Docs
-                        </.link>
-                      <% end %>
-                    </li>
-                  <% end %>
-                  <%= if url = Application.get_env(:tymeslot, :changelog_url) do %>
-                    <li>
-                      <%= if external_url?(url) do %>
-                        <.link
-                          href={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Changelog
-                        </.link>
-                      <% else %>
-                        <.link
-                          navigate={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Changelog
-                        </.link>
-                      <% end %>
-                    </li>
-                  <% end %>
-                  <%= if url = Application.get_env(:tymeslot, :contact_url) do %>
-                    <li>
-                      <%= if external_url?(url) do %>
-                        <.link
-                          href={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Contact
-                        </.link>
-                      <% else %>
-                        <.link
-                          navigate={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Contact
-                        </.link>
-                      <% end %>
-                    </li>
-                  <% end %>
-                </ul>
-              </div>
-
-              <%!-- Legal column --%>
-              <div>
-                <h4 class="text-white font-bold text-token-sm mb-4 uppercase tracking-widest">
-                  Legal
-                </h4>
-                <ul class="space-y-3">
-                  <%= if url = Application.get_env(:tymeslot, :privacy_policy_url) do %>
-                    <li>
-                      <%= if external_url?(url) do %>
-                        <.link
-                          href={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Privacy Policy
-                        </.link>
-                      <% else %>
-                        <.link
-                          navigate={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Privacy Policy
-                        </.link>
-                      <% end %>
-                    </li>
-                  <% end %>
-                  <%= if url = Application.get_env(:tymeslot, :terms_and_conditions_url) do %>
-                    <li>
-                      <%= if external_url?(url) do %>
-                        <.link
-                          href={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Terms and Conditions
-                        </.link>
-                      <% else %>
-                        <.link
-                          navigate={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Terms and Conditions
-                        </.link>
-                      <% end %>
-                    </li>
-                  <% end %>
-                  <%= if url = Application.get_env(:tymeslot, :sitemap_url) do %>
-                    <li>
-                      <%= if external_url?(url) do %>
-                        <.link
-                          href={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Sitemap
-                        </.link>
-                      <% else %>
-                        <.link
-                          navigate={url}
-                          class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
-                        >
-                          Sitemap
-                        </.link>
-                      <% end %>
-                    </li>
-                  <% end %>
-                </ul>
-              </div>
+              <.footer_column heading="Product" links={product_links} />
+              <.footer_column heading="Legal" links={legal_links} />
             <% end %>
 
             <%!-- Supplemental nav columns injected by consumers (e.g. SaaS use cases) --%>
@@ -556,6 +395,39 @@ defmodule TymeslotWeb.Components.SiteComponents do
       </div>
     </footer>
     """
+  end
+
+  # A single footer link column: a heading above a list of internal/external links.
+  attr :heading, :string, required: true
+  attr :links, :list, required: true
+
+  defp footer_column(assigns) do
+    ~H"""
+    <div>
+      <h4 class="text-white font-bold text-token-sm mb-4 uppercase tracking-widest">
+        {@heading}
+      </h4>
+      <ul class="space-y-3">
+        <li :for={link <- @links}>
+          <.nav_sublink
+            url={link.url}
+            class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
+          >
+            {link.label}
+          </.nav_sublink>
+        </li>
+      </ul>
+    </div>
+    """
+  end
+
+  # Resolves a list of `{config_key, label}` pairs into `%{url, label}` entries,
+  # dropping any whose URL is not configured.
+  @spec footer_links([{atom(), String.t()}]) :: [%{url: String.t(), label: String.t()}]
+  defp footer_links(specs) do
+    specs
+    |> Enum.map(fn {key, label} -> %{url: Application.get_env(:tymeslot, key), label: label} end)
+    |> Enum.filter(& &1.url)
   end
 
   # Renders a navigation link, choosing `href` for external URLs and `navigate`
