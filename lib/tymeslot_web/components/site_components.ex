@@ -469,14 +469,14 @@ defmodule TymeslotWeb.Components.SiteComponents do
                           href={url}
                           class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
                         >
-                          Terms of Service
+                          Terms and Conditions
                         </.link>
                       <% else %>
                         <.link
                           navigate={url}
                           class="text-tymeslot-400 hover:text-turquoise-400 transition-colors text-token-sm"
                         >
-                          Terms of Service
+                          Terms and Conditions
                         </.link>
                       <% end %>
                     </li>
