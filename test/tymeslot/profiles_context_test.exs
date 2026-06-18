@@ -474,6 +474,41 @@ defmodule Tymeslot.ProfilesContextTest do
     end
   end
 
+  describe "mark_booking_page_published/1" do
+    test "publishes when the profile has a username and was not yet published" do
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: "host")
+
+      assert {:ok, :published} = Profiles.mark_booking_page_published(profile)
+
+      {:ok, reloaded} = ProfileQueries.get_by_user_id(user.id)
+      assert reloaded.booking_page_published_at != nil
+    end
+
+    test "is idempotent — a second call is a no-op" do
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: "host")
+
+      assert {:ok, :published} = Profiles.mark_booking_page_published(profile)
+      {:ok, published} = ProfileQueries.get_by_user_id(user.id)
+
+      assert {:ok, :noop} = Profiles.mark_booking_page_published(published)
+
+      {:ok, reloaded} = ProfileQueries.get_by_user_id(user.id)
+      assert reloaded.booking_page_published_at == published.booking_page_published_at
+    end
+
+    test "is a no-op when the profile has no username" do
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: nil)
+
+      assert {:ok, :noop} = Profiles.mark_booking_page_published(profile)
+
+      {:ok, reloaded} = ProfileQueries.get_by_user_id(user.id)
+      assert reloaded.booking_page_published_at == nil
+    end
+  end
+
   # Helper to update settings directly in DB for testing retrieval
   defp update_profile_settings(user_id, attrs) do
     {:ok, profile} = ProfileQueries.get_by_user_id(user_id)

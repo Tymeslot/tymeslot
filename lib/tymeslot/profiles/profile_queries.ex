@@ -90,6 +90,24 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
+  Atomically stamps `booking_page_published_at` for a profile, but only when it
+  is currently `nil`.
+
+  The `is_nil` guard makes the update race-safe and idempotent: the timestamp is
+  written by exactly one caller. Returns the number of rows actually updated
+  (`1` on first publish, `0` if it was already set).
+  """
+  @spec mark_booking_page_published(integer(), DateTime.t()) :: non_neg_integer()
+  def mark_booking_page_published(profile_id, published_at) do
+    {count, _result} =
+      ProfileSchema
+      |> where([p], p.id == ^profile_id and is_nil(p.booking_page_published_at))
+      |> Repo.update_all(set: [booking_page_published_at: published_at])
+
+    count
+  end
+
+  @doc """
   Gets a profile with preloaded user.
   """
   @spec get_with_user(integer()) :: ProfileSchema.t() | nil

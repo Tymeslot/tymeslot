@@ -10,6 +10,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.Slugs
+  alias Tymeslot.Profiles
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Utils.UriUtils
   require Logger
@@ -80,7 +81,25 @@ defmodule Tymeslot.MeetingTypes do
   @spec create_meeting_type(map(), keyword()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def create_meeting_type(attrs, opts \\ []) do
-    MeetingTypeQueries.create_meeting_type(attrs, opts)
+    with {:ok, meeting_type} <- MeetingTypeQueries.create_meeting_type(attrs, opts) do
+      maybe_publish_booking_page(meeting_type)
+      {:ok, meeting_type}
+    end
+  end
+
+  # A host's booking page is "published" the first time they have a username set
+  # and an active meeting type. Emit the telemetry once per host — the guard
+  # lives in Profiles.mark_booking_page_published/1, which returns
+  # {:ok, :published} only on the transition.
+  defp maybe_publish_booking_page(%{user_id: user_id}) do
+    with {:ok, profile} <- Profiles.get_or_create_profile(user_id),
+         {:ok, :published} <- Profiles.mark_booking_page_published(profile) do
+      :telemetry.execute([:tymeslot, :booking_page, :published], %{count: 1}, %{
+        theme: profile.booking_theme
+      })
+    else
+      _other -> :ok
+    end
   end
 
   @doc """

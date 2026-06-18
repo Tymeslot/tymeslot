@@ -136,6 +136,36 @@ defmodule Tymeslot.MeetingTypesTest do
       assert {:error, changeset} = result
       assert changeset.valid? == false
     end
+
+    test "emits booking-page-published telemetry on first publish for a user with a username" do
+      user = insert(:user)
+      insert(:profile, user: user, username: "host", booking_theme: "2")
+
+      test_pid = self()
+
+      :telemetry.attach(
+        "test-booking-page-published",
+        [:tymeslot, :booking_page, :published],
+        fn _event, measurements, metadata, _config ->
+          send(test_pid, {:telemetry, measurements, metadata})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach("test-booking-page-published") end)
+
+      attrs = %{
+        name: "Quick Chat",
+        duration_minutes: 15,
+        icon: "hero-bolt",
+        is_active: true,
+        user_id: user.id
+      }
+
+      assert {:ok, _meeting_type} = MeetingTypes.create_meeting_type(attrs)
+
+      assert_received {:telemetry, %{count: 1}, %{theme: "2"}}
+    end
   end
 
   # =====================================

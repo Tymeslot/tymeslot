@@ -114,6 +114,36 @@ defmodule Tymeslot.Profiles do
     end
   end
 
+  @doc """
+  Marks a host's booking page as published the first time it goes live.
+
+  A page is "published" once the host has a username set. The write is guarded
+  by `booking_page_published_at` so it happens at most once per host:
+
+    * no username (nil or "") → `{:ok, :noop}`
+    * already published → `{:ok, :noop}`
+    * otherwise stamp the timestamp atomically → `{:ok, :published}`
+
+  Returns `{:ok, :published}` only on the transition, so callers can use it to
+  guard once-per-host side effects (e.g. analytics emission).
+  """
+  @spec mark_booking_page_published(profile()) :: {:ok, :published | :noop}
+  def mark_booking_page_published(%ProfileSchema{username: username})
+      when is_nil(username) or username == "",
+      do: {:ok, :noop}
+
+  def mark_booking_page_published(%ProfileSchema{booking_page_published_at: %DateTime{}}),
+    do: {:ok, :noop}
+
+  def mark_booking_page_published(%ProfileSchema{id: profile_id}) do
+    published_at = DateTime.utc_now(:second)
+
+    case ProfileQueries.mark_booking_page_published(profile_id, published_at) do
+      1 -> {:ok, :published}
+      0 -> {:ok, :noop}
+    end
+  end
+
   # --- Profile Updates ---
 
   @doc """

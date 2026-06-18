@@ -26,6 +26,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           booking_theme: String.t() | nil,
           has_custom_theme: boolean(),
           allowed_embed_domains: [String.t()] | nil,
+          booking_page_published_at: DateTime.t() | nil,
           primary_calendar_integration_id: integer() | nil,
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           primary_calendar_integration:
@@ -50,6 +51,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:booking_theme, :string, default: Catalog.default_id())
     field(:has_custom_theme, :boolean, default: false)
     field(:allowed_embed_domains, {:array, :string}, default: ["none"])
+    field(:booking_page_published_at, :utc_datetime)
     field(:meeting_types, {:array, :map}, virtual: true)
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 
@@ -79,6 +81,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
       :booking_theme,
       :has_custom_theme,
       :allowed_embed_domains,
+      :booking_page_published_at,
       :primary_calendar_integration_id
     ])
     |> validate_required([:user_id])
