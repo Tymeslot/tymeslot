@@ -53,7 +53,7 @@ msgid "Admin alert recipient"
 msgstr ""
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:22
-#: lib/tymeslot_web/live/admin_live/formatters.ex:173
+#: lib/tymeslot_web/live/admin_live/formatters.ex:183
 #, elixir-autogen, elixir-format
 msgid "Admin alerts"
 msgstr ""
@@ -68,12 +68,12 @@ msgstr ""
 msgid "Admins"
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:45
+#: lib/tymeslot_web/live/admin_live/formatters.ex:46
 #, elixir-autogen, elixir-format
 msgid "Allow log-in with email and password. When disabled, users can only authenticate through configured OAuth providers."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:38
+#: lib/tymeslot_web/live/admin_live/formatters.ex:39
 #, elixir-autogen, elixir-format
 msgid "Allow new users to sign up via the public registration page. Disable for a private install where admins create accounts manually."
 msgstr ""
@@ -83,7 +83,7 @@ msgstr ""
 msgid "Anyone with this link can book this meeting type directly, without seeing your other meeting types."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:170
+#: lib/tymeslot_web/live/admin_live/formatters.ex:179
 #, elixir-autogen, elixir-format
 msgid "Authentication"
 msgstr ""
@@ -129,12 +129,12 @@ msgstr ""
 msgid "Cannot demote the last admin. Promote someone else first."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:195
+#: lib/tymeslot_web/live/admin_live/formatters.ex:205
 #, elixir-autogen, elixir-format
 msgid "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:215
+#: lib/tymeslot_web/live/admin_live/formatters.ex:225
 #, elixir-autogen, elixir-format
 msgid "Cannot disable this login provider while it is the only working sign-in path for admins. Enable password authentication or another credentialed SSO provider first."
 msgstr ""
@@ -234,7 +234,7 @@ msgid "Direct booking link"
 msgstr ""
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:148
-#: lib/tymeslot_web/live/admin_live/formatters.ex:135
+#: lib/tymeslot_web/live/admin_live/formatters.ex:143
 #, elixir-autogen, elixir-format
 msgid "Disabled"
 msgstr ""
@@ -249,23 +249,23 @@ msgstr ""
 msgid "Email"
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:108
+#: lib/tymeslot_web/live/admin_live/formatters.ex:109
 #, elixir-autogen, elixir-format
 msgid "Email address that receives admin alerts when the toggle above is enabled. Leave blank to fall back to the ADMIN_ALERT_EMAIL environment variable."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:101
+#: lib/tymeslot_web/live/admin_live/formatters.ex:102
 #, elixir-autogen, elixir-format
 msgid "Email operational alerts (webhook failures, integration health issues, background job errors) to the admin alert recipient. Requires a recipient address to be set below."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:66
+#: lib/tymeslot_web/live/admin_live/formatters.ex:67
 #, elixir-autogen, elixir-format
 msgid "Enable generic OAuth 2.0 / OIDC single sign-on (Keycloak, Authentik, Lemonldap, etc.). Requires the OAUTH_* environment variables to be set."
 msgstr ""
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:140
-#: lib/tymeslot_web/live/admin_live/formatters.ex:134
+#: lib/tymeslot_web/live/admin_live/formatters.ex:142
 #, elixir-autogen, elixir-format
 msgid "Enabled"
 msgstr ""
@@ -327,7 +327,7 @@ msgstr ""
 msgid "Invalid user id."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:115
+#: lib/tymeslot_web/live/admin_live/formatters.ex:116
 #, elixir-autogen, elixir-format
 msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment — without them the toggle stays locked."
 msgstr ""
@@ -352,12 +352,12 @@ msgstr ""
 msgid "Meeting type not found"
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:94
+#: lib/tymeslot_web/live/admin_live/formatters.ex:95
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a booking. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:87
+#: lib/tymeslot_web/live/admin_live/formatters.ex:88
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a signup. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
 msgstr ""
@@ -367,7 +367,7 @@ msgstr ""
 msgid "Password authentication"
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:172
+#: lib/tymeslot_web/live/admin_live/formatters.ex:181
 #, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr ""
@@ -409,12 +409,12 @@ msgstr ""
 msgid "Registration enabled"
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:80
+#: lib/tymeslot_web/live/admin_live/formatters.ex:81
 #, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:73
+#: lib/tymeslot_web/live/admin_live/formatters.ex:74
 #, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
 msgstr ""
@@ -441,7 +441,7 @@ msgstr ""
 msgid "Set %{name}"
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:206
+#: lib/tymeslot_web/live/admin_live/formatters.ex:216
 #, elixir-autogen, elixir-format
 msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
 msgstr ""
@@ -451,12 +451,12 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:59
+#: lib/tymeslot_web/live/admin_live/formatters.ex:60
 #, elixir-autogen, elixir-format
 msgid "Show the \"Continue with GitHub\" button on login and signup. Requires GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to be set in the environment."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:52
+#: lib/tymeslot_web/live/admin_live/formatters.ex:53
 #, elixir-autogen, elixir-format
 msgid "Show the \"Continue with Google\" button on login and signup. Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to be set in the environment."
 msgstr ""
@@ -566,7 +566,7 @@ msgstr ""
 msgid "from admin?"
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:171
+#: lib/tymeslot_web/live/admin_live/formatters.ex:180
 #, elixir-autogen, elixir-format
 msgid "reCAPTCHA"
 msgstr ""
@@ -621,4 +621,19 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:485
 #, elixir-autogen, elixir-format
 msgid "Pending"
+msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:182
+#, elixir-autogen, elixir-format
+msgid "Analytics"
+msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:25
+#, elixir-autogen, elixir-format
+msgid "Booking analytics"
+msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:123
+#, elixir-autogen, elixir-format
+msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint — no raw IP is stored. Off by default; review your privacy policy before enabling."
 msgstr ""

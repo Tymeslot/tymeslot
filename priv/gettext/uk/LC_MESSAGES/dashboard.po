@@ -53,7 +53,7 @@ msgid "Admin alert recipient"
 msgstr "Отримувач адміністративних сповіщень"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:22
-#: lib/tymeslot_web/live/admin_live/formatters.ex:173
+#: lib/tymeslot_web/live/admin_live/formatters.ex:183
 #, elixir-autogen, elixir-format
 msgid "Admin alerts"
 msgstr "Адміністративні сповіщення"
@@ -68,12 +68,12 @@ msgstr "Адміністративні розділи"
 msgid "Admins"
 msgstr "Адміністратори"
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:45
+#: lib/tymeslot_web/live/admin_live/formatters.ex:46
 #, elixir-autogen, elixir-format
 msgid "Allow log-in with email and password. When disabled, users can only authenticate through configured OAuth providers."
 msgstr "Дозволити вхід за допомогою електронної пошти та пароля. Коли вимкнено, користувачі можуть автентифікуватися лише через налаштованих провайдерів OAuth."
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:38
+#: lib/tymeslot_web/live/admin_live/formatters.ex:39
 #, elixir-autogen, elixir-format
 msgid "Allow new users to sign up via the public registration page. Disable for a private install where admins create accounts manually."
 msgstr "Дозволити новим користувачам реєструватися через публічну сторінку реєстрації. Вимкніть для приватної інсталяції, де адміністратори створюють облікові записи вручну."
@@ -83,7 +83,7 @@ msgstr "Дозволити новим користувачам реєструв�
 msgid "Anyone with this link can book this meeting type directly, without seeing your other meeting types."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:170
+#: lib/tymeslot_web/live/admin_live/formatters.ex:179
 #, elixir-autogen, elixir-format
 msgid "Authentication"
 msgstr "Автентифікація"
@@ -129,12 +129,12 @@ msgstr "Скасувати"
 msgid "Cannot demote the last admin. Promote someone else first."
 msgstr "Неможливо понизити останнього адміністратора. Спочатку підвищте когось іншого."
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:195
+#: lib/tymeslot_web/live/admin_live/formatters.ex:205
 #, elixir-autogen, elixir-format
 msgid "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
 msgstr "Неможливо вимкнути автентифікацію за паролем, поки принаймні один адміністратор входить за допомогою електронної пошти та пароля — це заблокує їм доступ. Спочатку понизьте цих адміністраторів або попросіть їх перейти на вхід через OAuth."
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:215
+#: lib/tymeslot_web/live/admin_live/formatters.ex:225
 #, elixir-autogen, elixir-format
 msgid "Cannot disable this login provider while it is the only working sign-in path for admins. Enable password authentication or another credentialed SSO provider first."
 msgstr "Неможливо вимкнути цей постачальник входу, доки він є єдиним робочим способом входу для адміністраторів. Спершу увімкніть автентифікацію за паролем або інший постачальник SSO з налаштованими обліковими даними."
@@ -234,7 +234,7 @@ msgid "Direct booking link"
 msgstr ""
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:148
-#: lib/tymeslot_web/live/admin_live/formatters.ex:135
+#: lib/tymeslot_web/live/admin_live/formatters.ex:143
 #, elixir-autogen, elixir-format
 msgid "Disabled"
 msgstr "Вимкнено"
@@ -249,23 +249,23 @@ msgstr "Відображуване ім'я"
 msgid "Email"
 msgstr "Електронна пошта"
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:108
+#: lib/tymeslot_web/live/admin_live/formatters.ex:109
 #, elixir-autogen, elixir-format
 msgid "Email address that receives admin alerts when the toggle above is enabled. Leave blank to fall back to the ADMIN_ALERT_EMAIL environment variable."
 msgstr "Адреса електронної пошти, яка отримує адміністративні сповіщення, коли перемикач вище увімкнено. Залиште порожнім, щоб використовувати змінну середовища ADMIN_ALERT_EMAIL."
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:101
+#: lib/tymeslot_web/live/admin_live/formatters.ex:102
 #, elixir-autogen, elixir-format
 msgid "Email operational alerts (webhook failures, integration health issues, background job errors) to the admin alert recipient. Requires a recipient address to be set below."
 msgstr "Надсилати операційні сповіщення електронною поштою (помилки веб-хуків, проблеми зі станом інтеграцій, помилки фонових завдань) отримувачу адміністративних сповіщень. Потребує вказання адреси отримувача нижче."
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:66
+#: lib/tymeslot_web/live/admin_live/formatters.ex:67
 #, elixir-autogen, elixir-format
 msgid "Enable generic OAuth 2.0 / OIDC single sign-on (Keycloak, Authentik, Lemonldap, etc.). Requires the OAUTH_* environment variables to be set."
 msgstr "Увімкнути загальний єдиний вхід OAuth 2.0 / OIDC (Keycloak, Authentik, Lemonldap тощо). Потребує налаштування змінних середовища OAUTH_*."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:140
-#: lib/tymeslot_web/live/admin_live/formatters.ex:134
+#: lib/tymeslot_web/live/admin_live/formatters.ex:142
 #, elixir-autogen, elixir-format
 msgid "Enabled"
 msgstr "Увімкнено"
@@ -327,7 +327,7 @@ msgstr "Недійсний запит."
 msgid "Invalid user id."
 msgstr "Недійсний ідентифікатор користувача."
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:115
+#: lib/tymeslot_web/live/admin_live/formatters.ex:116
 #, elixir-autogen, elixir-format
 msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment — without them the toggle stays locked."
 msgstr "Дозволяє організаторам на цьому сервері приймати оплату від бронювальників через Stripe Connect. Потребує встановлення STRIPE_SECRET_KEY та STRIPE_CONNECT_WEBHOOK_SECRET у середовищі — без них перемикач залишається заблокованим."
@@ -352,12 +352,12 @@ msgstr "Платежі за зустрічі"
 msgid "Meeting type not found"
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:94
+#: lib/tymeslot_web/live/admin_live/formatters.ex:95
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a booking. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
 msgstr "Мінімальний бал reCAPTCHA v3 (0.0–1.0), необхідний для прийняття бронювання. Нижчі значення є більш дозвільними; 0.3 — це значення за замовчуванням, що відповідає рекомендації Google для форм із низьким ризиком зловживань."
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:87
+#: lib/tymeslot_web/live/admin_live/formatters.ex:88
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a signup. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
 msgstr "Мінімальний бал reCAPTCHA v3 (0.0–1.0), необхідний для прийняття реєстрації. Нижчі значення є більш дозвільними; 0.3 — це значення за замовчуванням, що відповідає рекомендації Google для форм із низьким ризиком зловживань."
@@ -367,7 +367,7 @@ msgstr "Мінімальний бал reCAPTCHA v3 (0.0–1.0), необхідн
 msgid "Password authentication"
 msgstr "Автентифікація за паролем"
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:172
+#: lib/tymeslot_web/live/admin_live/formatters.ex:181
 #, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr "Платежі"
@@ -409,12 +409,12 @@ msgstr "Рекомендовано:"
 msgid "Registration enabled"
 msgstr "Реєстрацію увімкнено"
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:80
+#: lib/tymeslot_web/live/admin_live/formatters.ex:81
 #, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
 msgstr "Вимагати прохідний бал reCAPTCHA v3 у публічній формі бронювання. Потребує налаштування RECAPTCHA_SITE_KEY та RECAPTCHA_SECRET_KEY у середовищі — коли ключі відсутні, перемикач враховується, але перевірка пропускається без повідомлення."
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:73
+#: lib/tymeslot_web/live/admin_live/formatters.ex:74
 #, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
 msgstr "Вимагати прохідний бал reCAPTCHA v3 у публічній формі реєстрації. Потребує налаштування RECAPTCHA_SITE_KEY та RECAPTCHA_SECRET_KEY у середовищі — коли ключі відсутні, перемикач враховується, але перевірка пропускається без повідомлення."
@@ -441,7 +441,7 @@ msgstr ""
 msgid "Set %{name}"
 msgstr "Встановити %{name}"
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:206
+#: lib/tymeslot_web/live/admin_live/formatters.ex:216
 #, elixir-autogen, elixir-format
 msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
 msgstr "Встановіть STRIPE_SECRET_KEY та STRIPE_CONNECT_WEBHOOK_SECRET у середовищі, щоб увімкнути оплату зустрічей. Без облікових даних платформи процес підключення Stripe Connect не може розпочатися."
@@ -451,12 +451,12 @@ msgstr "Встановіть STRIPE_SECRET_KEY та STRIPE_CONNECT_WEBHOOK_SECRE
 msgid "Settings"
 msgstr "Налаштування"
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:59
+#: lib/tymeslot_web/live/admin_live/formatters.ex:60
 #, elixir-autogen, elixir-format
 msgid "Show the \"Continue with GitHub\" button on login and signup. Requires GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to be set in the environment."
 msgstr "Показувати кнопку \"Продовжити з GitHub\" на сторінках входу та реєстрації. Потребує налаштування GITHUB_CLIENT_ID та GITHUB_CLIENT_SECRET у середовищі."
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:52
+#: lib/tymeslot_web/live/admin_live/formatters.ex:53
 #, elixir-autogen, elixir-format
 msgid "Show the \"Continue with Google\" button on login and signup. Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to be set in the environment."
 msgstr "Показувати кнопку \"Продовжити з Google\" на сторінках входу та реєстрації. Потребує налаштування GOOGLE_CLIENT_ID та GOOGLE_CLIENT_SECRET у середовищі."
@@ -566,7 +566,7 @@ msgstr "admin@example.com"
 msgid "from admin?"
 msgstr "з адміністратора?"
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:171
+#: lib/tymeslot_web/live/admin_live/formatters.ex:180
 #, elixir-autogen, elixir-format
 msgid "reCAPTCHA"
 msgstr "reCAPTCHA"
@@ -623,3 +623,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Pending"
 msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:182
+#, elixir-autogen, elixir-format
+msgid "Analytics"
+msgstr "Аналітика"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:25
+#, elixir-autogen, elixir-format
+msgid "Booking analytics"
+msgstr "Аналітика бронювань"
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:123
+#, elixir-autogen, elixir-format
+msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint — no raw IP is stored. Off by default; review your privacy policy before enabling."
+msgstr "Збирайте аналітику для сторінок бронювання цього екземпляра з повагою до приватності: перегляди сторінок, джерело трафіку (UTM/реферер) та конверсію. Унікальні відвідувачі підраховуються за допомогою відбитка без файлів cookie, що змінюється щодня — необроблена IP-адреса не зберігається. Вимкнено за замовчуванням; перегляньте свою політику конфіденційності перед увімкненням."
