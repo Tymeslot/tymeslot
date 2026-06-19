@@ -116,6 +116,10 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
     assert meeting.utm_medium == "social"
     assert meeting.utm_campaign == "spring"
     assert meeting.tracking_params == %{"ref" => "newsletter"}
+
+    # The cookieless join key is captured at mount and persisted on the booking,
+    # letting analytics join this meeting back to its page-view for conversion.
+    assert meeting.visitor_hash =~ ~r/^[0-9a-f]{64}$/
   end
 
   @tag :capture_log
@@ -149,6 +153,8 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
     assert is_nil(meeting.utm_medium)
     assert is_nil(meeting.utm_campaign)
     assert meeting.tracking_params == %{}
+    # Feature off → no visitor hash captured or persisted.
+    assert is_nil(meeting.visitor_hash)
   end
 
   # Mirrors `Tymeslot.BookingTestHelpers.navigate_to_booking_form/3` but

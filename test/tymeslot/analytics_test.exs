@@ -150,17 +150,18 @@ defmodule Tymeslot.AnalyticsTest do
       assert Analytics.conversion_rate(5, 0) == "0.0"
     end
 
-    test "caps at 100.0 when bookings exceed unique visitors" do
-      # 5 bookings, 4 unique visitors → would be 125% but capped at 100
+    test "caps at 100.0 when converting visitors exceed unique visitors" do
+      # 5 converting, 4 unique → would be 125% (a dropped page-view write) but
+      # capped at 100
       assert Analytics.conversion_rate(5, 4) == "100.0"
     end
 
     test "returns the correct percentage for normal cases" do
-      # 2 bookings out of 3 unique visitors → 66.7%
+      # 2 converting visitors out of 3 unique visitors → 66.7%
       assert Analytics.conversion_rate(2, 3) == "66.7"
     end
 
-    test "returns 100.0 when bookings equal unique visitors" do
+    test "returns 100.0 when converting visitors equal unique visitors" do
       assert Analytics.conversion_rate(10, 10) == "100.0"
     end
   end
@@ -248,6 +249,65 @@ defmodule Tymeslot.AnalyticsTest do
       assert twitter.visits == 1
       assert twitter.unique_visitors == 1
       assert twitter.bookings == 1
+      # No visitor_hash on the meeting → not a converting visitor
+      assert twitter.converting_visitors == 0
+    end
+
+    test "counts distinct converting visitors per source from visitor_hash",
+         %{user: user, from: from, to: to, now: now} do
+      base = DateTime.truncate(DateTime.add(now, 1, :day), :second)
+
+      # One visitor (same hash) books twice from the same source → one
+      # converting visitor across two bookings. Distinct start times avoid the
+      # unique_confirmed_meeting_per_organizer_at_time constraint.
+      for i <- 1..2 do
+        Factory.insert(:meeting,
+          organizer_user_id: user.id,
+          start_time: DateTime.add(base, i * 60, :minute),
+          end_time: DateTime.add(base, i * 60 + 30, :minute),
+          utm_source: "podcast",
+          visitor_hash: "converting-visitor-1"
+        )
+      end
+
+      rows = Analytics.attribution_table(user.id, from, to)
+      podcast = Enum.find(rows, &(&1.utm_source == "podcast"))
+
+      assert podcast.bookings == 2
+      assert podcast.converting_visitors == 1
+    end
+  end
+
+  # TR3 — count_converting_visitors/3 (distinct bookers carrying a visitor_hash)
+  describe "count_converting_visitors/3" do
+    setup do
+      now = DateTime.utc_now()
+      from = DateTime.add(now, -3600, :second)
+      to = DateTime.add(now, 3600, :second)
+      %{from: from, to: to, now: now}
+    end
+
+    test "counts distinct visitor_hash, deduping repeats and ignoring nils",
+         %{user: user, from: from, to: to, now: now} do
+      base = DateTime.truncate(DateTime.add(now, 1, :day), :second)
+
+      # Distinct start times avoid the per-organizer-per-time unique constraint.
+      insert_booking = fn hash, offset ->
+        Factory.insert(:meeting,
+          organizer_user_id: user.id,
+          start_time: DateTime.add(base, offset * 60, :minute),
+          end_time: DateTime.add(base, offset * 60 + 30, :minute),
+          visitor_hash: hash
+        )
+      end
+
+      insert_booking.("visitor-a", 1)
+      insert_booking.("visitor-a", 2)
+      insert_booking.("visitor-b", 3)
+      # Admin/import/API booking with no tracked view → excluded
+      insert_booking.(nil, 4)
+
+      assert Analytics.count_converting_visitors(user.id, from, to) == 2
     end
   end
 

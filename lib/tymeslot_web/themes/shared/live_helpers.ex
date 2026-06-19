@@ -341,10 +341,27 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   def assign_tracking(socket, params) do
     if Analytics.enabled?() do
       referrer = raw_referrer_from_socket(socket)
-      tracking = Analytics.extract_attribution(params, referrer)
+
+      tracking =
+        params
+        |> Analytics.extract_attribution(referrer)
+        |> maybe_put_visitor_hash(socket)
+
       assign(socket, :tracking, tracking)
     else
       assign(socket, :tracking, %{})
+    end
+  end
+
+  # `PageViewHook` (an on_mount hook, so it runs before this mount/3 helper)
+  # computes the cookieless visitor hash and assigns it. Carry it into the
+  # tracking map so it persists onto the booking and lets analytics join the
+  # booking back to its page-view. Absent when the visit was not tracked
+  # (e.g. dead render); then no hash is attached.
+  defp maybe_put_visitor_hash(tracking, socket) do
+    case socket.assigns[:visitor_hash] do
+      hash when is_binary(hash) -> Map.put(tracking, :visitor_hash, hash)
+      _other -> tracking
     end
   end
 

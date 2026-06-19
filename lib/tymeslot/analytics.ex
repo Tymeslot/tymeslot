@@ -81,17 +81,22 @@ defmodule Tymeslot.Analytics do
   @doc """
   Computes the conversion rate as a formatted percentage string.
 
-  Returns the percentage of unique visitors who completed a booking, capped at
-  100.0% and formatted to one decimal place (e.g. `"66.7"`).
+  Returns the percentage of unique visitors who converted, where
+  `converting_visitors` is the count of distinct visitors who booked (visitors
+  carrying a `visitor_hash` that also appears in the page-view events). Because
+  a converting visitor must have viewed the booking page, this is a true subset
+  of `unique_visitors` and the rate is naturally ≤ 100% — the `min/2` cap only
+  guards the rare edge where a booking's page-view write was dropped.
 
-  When `unique_visitors` is zero, returns `"0.0"` to avoid a divide-by-zero.
-  The returned string does not include the `%` character — callers append it.
+  Formatted to one decimal place (e.g. `"66.7"`). When `unique_visitors` is
+  zero, returns `"0.0"` to avoid a divide-by-zero. The returned string does not
+  include the `%` character — callers append it.
   """
   @spec conversion_rate(non_neg_integer(), non_neg_integer()) :: String.t()
-  def conversion_rate(_bookings, 0), do: "0.0"
+  def conversion_rate(_converting_visitors, 0), do: "0.0"
 
-  def conversion_rate(bookings, unique_visitors) do
-    rate = min(100.0, bookings / unique_visitors * 100)
+  def conversion_rate(converting_visitors, unique_visitors) do
+    rate = min(100.0, converting_visitors / unique_visitors * 100)
     :erlang.float_to_binary(rate, decimals: 1)
   end
 
@@ -137,40 +142,50 @@ defmodule Tymeslot.Analytics do
   @spec count_bookings(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
   defdelegate count_bookings(user_id, from, to), to: Meetings
 
+  @spec count_converting_visitors(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
+  defdelegate count_converting_visitors(user_id, from, to), to: Meetings
+
   @doc """
   Returns per-source attribution rows for the given organizer and window.
 
   Each row merges visit counts (with unique-visitor counts) from analytics
-  events with booking counts from meetings, joined on `utm_source`. Sources
-  present in either dataset are included — booking-only sources appear with
-  `visits: 0, unique_visitors: 0`, and visit-only sources appear with
-  `bookings: 0`.
+  events with booking counts and distinct converting-visitor counts from
+  meetings, joined on `utm_source`. Sources present in any dataset are
+  included — booking-only sources appear with `visits: 0, unique_visitors: 0`,
+  and visit-only sources appear with `bookings: 0, converting_visitors: 0`.
+
+  `converting_visitors` (distinct bookers who carry a `visitor_hash`) is the
+  numerator for the per-source conversion rate; `bookings` remains the raw
+  volume of meetings from that source.
 
   Ordering: visits descending, then bookings descending, then utm_source
   ascending for deterministic ties.
 
   Shape: `[%{utm_source: String.t(), visits: non_neg_integer(),
-             unique_visitors: non_neg_integer(), bookings: non_neg_integer()}]`
+             unique_visitors: non_neg_integer(), bookings: non_neg_integer(),
+             converting_visitors: non_neg_integer()}]`
   """
   @spec attribution_table(integer(), DateTime.t(), DateTime.t()) :: [
           %{
             utm_source: String.t(),
             visits: non_neg_integer(),
             unique_visitors: non_neg_integer(),
-            bookings: non_neg_integer()
+            bookings: non_neg_integer(),
+            converting_visitors: non_neg_integer()
           }
         ]
   def attribution_table(user_id, %DateTime{} = from, %DateTime{} = to) do
     visits = EventQueries.top_sources_with_unique(user_id, from, to)
     bookings = Meetings.bookings_by_utm_source(user_id, from, to)
+    converting = Meetings.converting_visitors_by_utm_source(user_id, from, to)
 
     visits_map = Map.new(visits, &{&1.utm_source, &1})
     bookings_map = Map.new(bookings, &{&1.utm_source, &1.bookings})
+    converting_map = Map.new(converting, &{&1.utm_source, &1.converting_visitors})
 
-    all_sources =
-      MapSet.union(MapSet.new(Map.keys(visits_map)), MapSet.new(Map.keys(bookings_map)))
-
-    all_sources
+    [visits_map, bookings_map, converting_map]
+    |> Enum.flat_map(&Map.keys/1)
+    |> MapSet.new()
     |> Enum.map(fn source ->
       visit_row = Map.get(visits_map, source, %{visits: 0, unique_visitors: 0})
 
@@ -178,7 +193,8 @@ defmodule Tymeslot.Analytics do
         utm_source: source,
         visits: visit_row.visits,
         unique_visitors: visit_row.unique_visitors,
-        bookings: Map.get(bookings_map, source, 0)
+        bookings: Map.get(bookings_map, source, 0),
+        converting_visitors: Map.get(converting_map, source, 0)
       }
     end)
     |> Enum.sort_by(&{-&1.visits, -&1.bookings, &1.utm_source})

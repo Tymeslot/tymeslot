@@ -80,6 +80,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           visits={@visits}
           unique_visitors={@unique_visitors}
           bookings={@bookings}
+          converting_visitors={@converting_visitors}
         />
 
         <VisitsChart.chart
@@ -127,6 +128,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
       visits: 0,
       unique_visitors: 0,
       bookings: 0,
+      converting_visitors: 0,
       sources: [],
       visits_by_day: []
     )
@@ -152,6 +154,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
     visits = Analytics.count_visits(user.id, from, to)
     unique_visitors = Analytics.count_unique_visitors(user.id, from, to)
     bookings = Analytics.count_bookings(user.id, from, to)
+    converting_visitors = Analytics.count_converting_visitors(user.id, from, to)
     visits_by_day = Analytics.visits_by_day(user.id, from, to, time_zone)
     sources = Analytics.attribution_table(user.id, from, to)
 
@@ -159,6 +162,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
       visits: visits,
       unique_visitors: unique_visitors,
       bookings: bookings,
+      converting_visitors: converting_visitors,
       visits_by_day: visits_by_day,
       sources: sources
     )

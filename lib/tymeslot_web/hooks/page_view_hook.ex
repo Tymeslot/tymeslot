@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
   import Phoenix.LiveView, only: [connected?: 1, get_connect_info: 2]
 
   alias Tymeslot.Analytics
+  alias Tymeslot.Analytics.Fingerprint
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
 
@@ -38,17 +39,32 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
     socket = assign(socket, :scheduling_referrer, referrer)
 
     if connected?(socket) and Analytics.enabled?() do
-      log_async(params, referrer, socket)
+      {:cont, track_connected(socket, params, referrer)}
+    else
+      {:cont, socket}
     end
-
-    {:cont, socket}
   end
 
-  defp log_async(params, referrer, socket) do
+  # Compute the visitor hash exactly once, here, from this hook's (Cloudflare-
+  # aware) IP/UA extraction. The hash is assigned to the socket so a later
+  # booking can persist the *same* value — `assign_tracking/2` folds it into the
+  # `:tracking` map. The async page-view write recomputes the hash from the
+  # identical (ip, user_agent, session_id) inputs, so the event and the booking
+  # always share one join key. Anything else risks two extractors disagreeing
+  # and the conversion join silently matching nothing.
+  defp track_connected(socket, params, referrer) do
     user_agent = extract_user_agent(socket)
     ip = extract_peer_ip(socket)
     session_id = socket.id
 
+    socket = assign(socket, :visitor_hash, Fingerprint.hash(ip, user_agent, session_id))
+
+    log_async(params, referrer, ip, user_agent, session_id)
+
+    socket
+  end
+
+  defp log_async(params, referrer, ip, user_agent, session_id) do
     Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
       {user_id, meeting_type_id, path} = resolve_target(params)
 

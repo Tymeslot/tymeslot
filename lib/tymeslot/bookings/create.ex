@@ -142,7 +142,8 @@ defmodule Tymeslot.Bookings.Create do
         utm_content: Map.get(meeting_params, :utm_content),
         utm_term: Map.get(meeting_params, :utm_term),
         referrer_host: Map.get(meeting_params, :referrer_host),
-        tracking_params: Map.get(meeting_params, :tracking_params, %{})
+        tracking_params: Map.get(meeting_params, :tracking_params, %{}),
+        visitor_hash: Map.get(meeting_params, :visitor_hash)
       }
 
       {:ok, booking_data}

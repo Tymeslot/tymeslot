@@ -67,6 +67,7 @@ defmodule Tymeslot.Bookings.Policy do
           optional(:utm_term) => String.t() | nil,
           optional(:referrer_host) => String.t() | nil,
           optional(:tracking_params) => map(),
+          optional(:visitor_hash) => String.t() | nil,
           optional(atom()) => term()
         }
 
@@ -113,7 +114,8 @@ defmodule Tymeslot.Bookings.Policy do
           required(:utm_content) => String.t() | nil,
           required(:utm_term) => String.t() | nil,
           required(:referrer_host) => String.t() | nil,
-          required(:tracking_params) => map()
+          required(:tracking_params) => map(),
+          required(:visitor_hash) => String.t() | nil
         }
 
   @typedoc "A meeting record with the fields required by the policy checks."
@@ -194,7 +196,8 @@ defmodule Tymeslot.Bookings.Policy do
         utm_content: Map.get(params, :utm_content),
         utm_term: Map.get(params, :utm_term),
         referrer_host: Map.get(params, :referrer_host),
-        tracking_params: Map.get(params, :tracking_params, %{})
+        tracking_params: Map.get(params, :tracking_params, %{}),
+        visitor_hash: Map.get(params, :visitor_hash)
       },
       build_meeting_action_urls(meeting_uid, org_username)
     )

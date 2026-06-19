@@ -545,29 +545,27 @@ defmodule Tymeslot.Meetings do
   # Analytics Query Functions
   # =====================================
 
-  @doc """
-  Returns the count of bookings created for an organizer within the given window.
-
-  Used by the analytics dashboard to compute total booking counts and
-  conversion rates. Counts all bookings regardless of status.
-  """
+  @doc "Counts all bookings (any status) for an organizer in the window; analytics volume primitive."
   @spec count_bookings(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
   defdelegate count_bookings(organizer_user_id, from, to), to: MeetingQueries
 
-  @doc """
-  Returns the count of bookings grouped by `utm_source` for an organizer
-  within the given window.
-
-  Only returns rows where `utm_source` is set. Intended as a primitive for
-  analytics composition — callers should use `Tymeslot.Analytics.attribution_table/3`
-  rather than interpreting the shape directly.
-  """
+  @doc "Booking counts grouped by `utm_source` (set rows only); primitive for `Analytics.attribution_table/3`."
   @spec bookings_by_utm_source(integer(), DateTime.t(), DateTime.t()) :: [
           %{utm_source: String.t(), bookings: non_neg_integer()}
         ]
   defdelegate bookings_by_utm_source(organizer_user_id, from, to),
     to: MeetingQueries,
     as: :count_by_utm_source
+
+  @doc "Counts distinct converting visitors (bookings carrying a `visitor_hash`) in the window."
+  @spec count_converting_visitors(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
+  defdelegate count_converting_visitors(organizer_user_id, from, to), to: MeetingQueries
+
+  @doc "Distinct converting-visitor counts grouped by `utm_source`; primitive for `Analytics.attribution_table/3`."
+  @spec converting_visitors_by_utm_source(integer(), DateTime.t(), DateTime.t()) :: [
+          %{utm_source: String.t(), converting_visitors: non_neg_integer()}
+        ]
+  defdelegate converting_visitors_by_utm_source(organizer_user_id, from, to), to: MeetingQueries
 
   # =====================================
   # Private Helper Functions
