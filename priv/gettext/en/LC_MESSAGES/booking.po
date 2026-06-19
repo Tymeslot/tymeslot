@@ -1176,9 +1176,9 @@ msgstr "Close"
 #: lib/tymeslot_web/components/layouts.ex:89
 #, elixir-autogen, elixir-format
 msgid "Book a meeting with %{name}. Pick a time that works for you."
-msgstr ""
+msgstr "Book a meeting with %{name}. Pick a time that works for you."
 
 #: lib/tymeslot_web/components/layouts.ex:86
 #, elixir-autogen, elixir-format
 msgid "Pick a time that works for you and book a meeting in seconds."
-msgstr ""
+msgstr "Pick a time that works for you and book a meeting in seconds."
