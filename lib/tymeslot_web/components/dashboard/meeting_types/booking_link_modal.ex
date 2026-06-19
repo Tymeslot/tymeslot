@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.BookingLinkModal do
           )}
         </CoreComponents.info_box>
 
-        <form phx-change="slug_draft_changed" phx-submit="confirm_slug_change" phx-target={@myself} class="space-y-2">
+        <form id="booking-link-slug-form" phx-change="slug_draft_changed" phx-submit="confirm_slug_change" phx-target={@myself} class="space-y-2">
           <label for="booking-link-slug" class="block font-medium text-tymeslot-700">
             {dgettext("dashboard", "Link address")}
           </label>
