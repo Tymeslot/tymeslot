@@ -29,6 +29,14 @@ defmodule TymeslotWeb.Router do
     pipe_through :api
 
     post "/stripe/connect", StripeConnectWebhookController, :handle
+  end
+
+  # Calendar provider webhooks negotiate `text/plain` for their subscription
+  # validation handshake, so they run through `:calendar_webhook` rather than the
+  # json-only `:api` pipeline (which would 406 the handshake — see tymeslot_web.ex).
+  scope "/webhooks", TymeslotWeb do
+    pipe_through :calendar_webhook
+
     post "/google-calendar", GoogleCalendarWebhookController, :webhook
     post "/outlook-calendar", OutlookCalendarWebhookController, :webhook
     post "/outlook-lifecycle", OutlookLifecycleController, :webhook

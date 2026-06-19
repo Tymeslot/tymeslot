@@ -28,9 +28,30 @@ defmodule TymeslotWeb.OutlookLifecycleController do
   alias TymeslotWeb.Helpers.ClientIP
 
   @doc """
-  Receives a Microsoft Graph lifecycle notification.
+  Receives a Microsoft Graph lifecycle notification or validation challenge.
   """
   @spec webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def webhook(conn, %{"validationToken" => token})
+      when is_binary(token) and byte_size(token) > 0 and byte_size(token) <= 256 do
+    # Graph validates the lifecycleNotificationUrl with the same synchronous
+    # handshake it uses for the notificationUrl: echo the token as plain text
+    # with 200, or the whole subscription is rejected.
+    case RateLimiter.check_webhook_rate_limit(ClientIP.get(conn)) do
+      :ok ->
+        if String.printable?(token) do
+          conn
+          |> put_resp_content_type("text/plain")
+          |> send_resp(200, token)
+          |> halt()
+        else
+          conn |> send_resp(400, "") |> halt()
+        end
+
+      {:error, :rate_limited} ->
+        conn |> send_resp(429, "") |> halt()
+    end
+  end
+
   def webhook(conn, _params) do
     case RateLimiter.check_webhook_rate_limit(ClientIP.get(conn)) do
       :ok ->

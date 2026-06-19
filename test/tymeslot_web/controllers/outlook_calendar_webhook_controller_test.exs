@@ -24,6 +24,21 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
       assert hd(get_resp_header(conn, "content-type")) =~ "text/plain"
     end
 
+    test "echoes the token when the provider negotiates text/plain", %{conn: conn} do
+      # Microsoft Graph's subscription-validation handshake sends
+      # `Accept: text/plain`. The json-only pipeline used to reject this with
+      # 406 Not Acceptable, so Graph abandoned the subscription with an HTTP 400
+      # validation error. The route must accept the text/plain handshake.
+      conn =
+        conn
+        |> put_req_header("accept", "text/plain")
+        |> post("/webhooks/outlook-calendar?validationToken=graph-challenge-xyz")
+
+      assert conn.status == 200
+      assert conn.resp_body == "graph-challenge-xyz"
+      assert hd(get_resp_header(conn, "content-type")) =~ "text/plain"
+    end
+
     test "does not enqueue any job for a validation challenge", %{conn: conn} do
       conn
       |> put_req_header("content-type", "application/json")
