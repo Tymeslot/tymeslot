@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Components.Icons.IconComponents do
     [
       :arrow_left,
       :arrow_right,
+      :bar_chart,
       :bell,
       :bolt,
       :calendar,
@@ -464,6 +465,19 @@ defmodule TymeslotWeb.Components.Icons.IconComponents do
         stroke-linejoin="round"
         stroke-width="2"
         d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+      />
+    </svg>
+    """
+  end
+
+  def icon(%{name: :bar_chart} = assigns) do
+    ~H"""
+    <svg class={@class} fill="none" stroke="currentColor" viewBox="0 0 24 24" {@rest}>
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M9 19V9m6 10V5m-12 14V13m18 6H3"
       />
     </svg>
     """

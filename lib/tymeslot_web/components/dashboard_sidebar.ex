@@ -106,6 +106,15 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 <span>Meetings</span>
               </.nav_link>
 
+              <.nav_link
+                patch={~p"/dashboard/analytics"}
+                current={@current_action}
+                action={:analytics}
+              >
+                <IconComponents.icon name={:bar_chart} class="w-5 h-5" />
+                <span>Analytics</span>
+              </.nav_link>
+
             </div>
           </div>
 

@@ -362,7 +362,11 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     # Prepare parameters for orchestrator
     params = %{
       form_data: sanitized_params,
-      meeting_params: build_meeting_params(socket, sanitized_params)
+      meeting_params:
+        Map.merge(
+          build_meeting_params(socket, sanitized_params),
+          socket.assigns[:tracking] || %{}
+        )
     }
 
     opts = [

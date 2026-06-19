@@ -137,6 +137,10 @@ config :tymeslot, :auth, success_redirect_path: "/dashboard"
 config :tymeslot, :google_oauth, state_secret: "test-google-state-secret"
 config :tymeslot, :outlook_oauth, state_secret: "test-outlook-state-secret"
 
+# Analytics fingerprint salt secret — fixed value so fingerprint hashes are
+# stable across test runs on the same day.
+config :tymeslot, :analytics_salt_secret, "test_analytics_salt_secret_fixed_for_repeatability"
+
 # Enable all providers for testing
 config :tymeslot, :video_providers, %{
   mirotalk: [enabled: true],

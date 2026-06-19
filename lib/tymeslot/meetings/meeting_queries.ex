@@ -335,6 +335,37 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Returns the count of bookings created for an organizer within the given
+  window. Used by the analytics dashboard to compute conversion rate.
+  """
+  @spec count_bookings(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
+  def count_bookings(organizer_user_id, %DateTime{} = from, %DateTime{} = to) do
+    Meeting
+    |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> where([m], m.inserted_at >= ^from and m.inserted_at <= ^to)
+    |> Repo.aggregate(:count, :id)
+  end
+
+  @doc """
+  Returns the count of bookings grouped by `utm_source` for an organizer
+  within the given window. Only returns rows where `utm_source` is set.
+  Intended as a primitive for analytics composition — callers should not
+  interpret the shape; use `Tymeslot.Analytics.attribution_table/3` instead.
+  """
+  @spec count_by_utm_source(integer(), DateTime.t(), DateTime.t()) :: [
+          %{utm_source: String.t(), bookings: non_neg_integer()}
+        ]
+  def count_by_utm_source(organizer_user_id, %DateTime{} = from, %DateTime{} = to) do
+    Meeting
+    |> where([m], m.organizer_user_id == ^organizer_user_id)
+    |> where([m], m.inserted_at >= ^from and m.inserted_at <= ^to)
+    |> where([m], not is_nil(m.utm_source))
+    |> group_by([m], m.utm_source)
+    |> select([m], %{utm_source: m.utm_source, bookings: count(m.id)})
+    |> Repo.all()
+  end
+
+  @doc """
   Returns the count of meetings for a specific attendee.
 
   ## Examples

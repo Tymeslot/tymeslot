@@ -428,6 +428,14 @@ if config_env() == :prod do
     end
 
   config :tymeslot, Tymeslot.Mailer, mailer_config
+
+  # Analytics fingerprint salt secret — rotates the daily visitor hash and must
+  # never leave the server. Required so cookie-less unique-visitor counting can
+  # derive a stable per-day salt without persisting any identifier.
+  config :tymeslot,
+         :analytics_salt_secret,
+         System.get_env("ANALYTICS_SALT_SECRET") ||
+           raise("missing ANALYTICS_SALT_SECRET environment variable")
 end
 
 # Configure mailer for non-production environments

@@ -99,6 +99,10 @@ config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 # Webhook verification enabled by default
 config :tymeslot, :skip_webhook_verification, false
 
+# Analytics fingerprint salt secret — fixed dev value. Production must override
+# via the ANALYTICS_SALT_SECRET environment variable (see runtime.exs).
+config :tymeslot, :analytics_salt_secret, "dev_analytics_salt_secret_change_in_prod"
+
 # Opt-in dev calendar stub: when DEV_EMPTY_CALENDAR is set, the seeded demo
 # organiser's slots resolve with no busy events, bypassing real CalDAV — handy
 # for booking-UI and scheduling-theme work. Left unset, dev uses the real

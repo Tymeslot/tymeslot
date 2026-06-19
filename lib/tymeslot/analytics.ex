@@ -1,0 +1,191 @@
+defmodule Tymeslot.Analytics do
+  @moduledoc """
+  Public API for booking analytics.
+
+  All page-view writes funnel through `log_page_view/1`, which applies
+  bot filtering, computes the cookie-less visitor fingerprint, applies
+  rate limiting, and persists the event. Reads delegate to
+  `EventQueries`.
+  """
+
+  alias Tymeslot.Analytics.BotDetector
+  alias Tymeslot.Analytics.EventQueries
+  alias Tymeslot.Analytics.EventSchema
+  alias Tymeslot.Analytics.Fingerprint
+  alias Tymeslot.Analytics.UtmExtractor
+  alias Tymeslot.Meetings
+  alias Tymeslot.Security.RateLimiter.Analytics, as: AnalyticsLimiter
+
+  @type input :: %{
+          required(:path) => String.t(),
+          required(:user_id) => integer() | nil,
+          required(:meeting_type_id) => integer() | nil,
+          required(:ip) => String.t() | nil,
+          required(:user_agent) => String.t() | nil,
+          required(:session_id) => String.t() | nil,
+          required(:params) => map(),
+          required(:referrer) => String.t() | nil
+        }
+
+  @type log_result ::
+          {:ok, EventSchema.t()}
+          | {:ok, :filtered_bot}
+          | {:ok, :filtered_rate_limit}
+          | {:error, Ecto.Changeset.t()}
+
+  @spec log_page_view(input()) :: log_result()
+  def log_page_view(%{user_agent: ua} = input) do
+    if BotDetector.bot?(ua) do
+      {:ok, :filtered_bot}
+    else
+      visitor_hash = Fingerprint.hash(input.ip, ua, input.meeting_type_id)
+
+      with {:allow, _count} <- check_ip_rate(input.ip),
+           {:allow, _count} <- AnalyticsLimiter.check(visitor_hash) do
+        do_insert(input, visitor_hash)
+      else
+        {:deny, _count} -> {:ok, :filtered_rate_limit}
+      end
+    end
+  end
+
+  # Secondary per-IP gate: 300 events per minute regardless of fingerprint.
+  # Guards against clients that cycle user-agents to defeat fingerprinting.
+  @ip_rate_window_ms 60_000
+  @ip_rate_limit 300
+
+  defp check_ip_rate(nil), do: {:allow, 0}
+
+  defp check_ip_rate(ip) do
+    AnalyticsLimiter.check_ip("analytics:ip:" <> ip, @ip_rate_window_ms, @ip_rate_limit)
+  end
+
+  @doc """
+  Computes the conversion rate as a formatted percentage string.
+
+  Returns the percentage of unique visitors who completed a booking, capped at
+  100.0% and formatted to one decimal place (e.g. `"66.7"`).
+
+  When `unique_visitors` is zero, returns `"0.0"` to avoid a divide-by-zero.
+  The returned string does not include the `%` character — callers append it.
+  """
+  @spec conversion_rate(non_neg_integer(), non_neg_integer()) :: String.t()
+  def conversion_rate(_bookings, 0), do: "0.0"
+
+  def conversion_rate(bookings, unique_visitors) do
+    rate = min(100.0, bookings / unique_visitors * 100)
+    :erlang.float_to_binary(rate, decimals: 1)
+  end
+
+  @doc """
+  Extracts UTM parameters, custom tracking params, and referrer host from a
+  request, returning the canonical attribution map used throughout the
+  booking flow.
+
+  `params` is the LiveView URL params map. `referrer` is the raw referrer URL
+  string from the HTTP request header (or `nil`).
+
+  The returned map has the shape:
+  `%{utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+     tracking_params, referrer_host}`
+
+  This is the map assigned to `:tracking` on the socket and later merged
+  into meeting params on booking submission.
+  """
+  @spec extract_attribution(map(), String.t() | nil) :: %{
+          utm_source: String.t() | nil,
+          utm_medium: String.t() | nil,
+          utm_campaign: String.t() | nil,
+          utm_content: String.t() | nil,
+          utm_term: String.t() | nil,
+          tracking_params: map(),
+          referrer_host: String.t() | nil
+        }
+  def extract_attribution(params, referrer) do
+    params
+    |> UtmExtractor.extract()
+    |> Map.put(:referrer_host, UtmExtractor.referrer_host(referrer))
+  end
+
+  @spec count_visits(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
+  defdelegate count_visits(user_id, from, to), to: EventQueries
+
+  @spec count_unique_visitors(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
+  defdelegate count_unique_visitors(user_id, from, to), to: EventQueries
+
+  @spec visits_by_day(integer(), DateTime.t(), DateTime.t(), String.t()) :: [map()]
+  defdelegate visits_by_day(user_id, from, to, time_zone), to: EventQueries
+
+  @spec count_bookings(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
+  defdelegate count_bookings(user_id, from, to), to: Meetings
+
+  @doc """
+  Returns per-source attribution rows for the given organizer and window.
+
+  Each row merges visit counts (with unique-visitor counts) from analytics
+  events with booking counts from meetings, joined on `utm_source`. Sources
+  present in either dataset are included — booking-only sources appear with
+  `visits: 0, unique_visitors: 0`, and visit-only sources appear with
+  `bookings: 0`.
+
+  Ordering: visits descending, then bookings descending, then utm_source
+  ascending for deterministic ties.
+
+  Shape: `[%{utm_source: String.t(), visits: non_neg_integer(),
+             unique_visitors: non_neg_integer(), bookings: non_neg_integer()}]`
+  """
+  @spec attribution_table(integer(), DateTime.t(), DateTime.t()) :: [
+          %{
+            utm_source: String.t(),
+            visits: non_neg_integer(),
+            unique_visitors: non_neg_integer(),
+            bookings: non_neg_integer()
+          }
+        ]
+  def attribution_table(user_id, %DateTime{} = from, %DateTime{} = to) do
+    visits = EventQueries.top_sources_with_unique(user_id, from, to)
+    bookings = Meetings.bookings_by_utm_source(user_id, from, to)
+
+    visits_map = Map.new(visits, &{&1.utm_source, &1})
+    bookings_map = Map.new(bookings, &{&1.utm_source, &1.bookings})
+
+    all_sources =
+      MapSet.union(MapSet.new(Map.keys(visits_map)), MapSet.new(Map.keys(bookings_map)))
+
+    all_sources
+    |> Enum.map(fn source ->
+      visit_row = Map.get(visits_map, source, %{visits: 0, unique_visitors: 0})
+
+      %{
+        utm_source: source,
+        visits: visit_row.visits,
+        unique_visitors: visit_row.unique_visitors,
+        bookings: Map.get(bookings_map, source, 0)
+      }
+    end)
+    |> Enum.sort_by(&{-&1.visits, -&1.bookings, &1.utm_source})
+  end
+
+  defp do_insert(input, visitor_hash) do
+    utm = UtmExtractor.extract(input.params)
+
+    attrs = %{
+      event_type: "booking_page_view",
+      path: input.path,
+      meeting_type_id: input.meeting_type_id,
+      user_id: input.user_id,
+      session_id: input.session_id,
+      visitor_hash: visitor_hash,
+      utm_source: utm.utm_source,
+      utm_medium: utm.utm_medium,
+      utm_campaign: utm.utm_campaign,
+      utm_content: utm.utm_content,
+      utm_term: utm.utm_term,
+      tracking_params: utm.tracking_params,
+      referrer_host: UtmExtractor.referrer_host(input.referrer),
+      user_agent_family: BotDetector.ua_family(input.user_agent)
+    }
+
+    EventQueries.insert(attrs)
+  end
+end

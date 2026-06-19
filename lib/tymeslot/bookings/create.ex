@@ -135,7 +135,14 @@ defmodule Tymeslot.Bookings.Create do
         attendee_locale: Map.get(meeting_params, :attendee_locale) || default_locale(),
         custom_fields_snapshot: Map.get(meeting_params, :custom_fields_snapshot, []),
         custom_field_answers: Map.get(meeting_params, :custom_field_answers, %{}),
-        guest_emails: Map.get(meeting_params, :guest_emails, [])
+        guest_emails: Map.get(meeting_params, :guest_emails, []),
+        utm_source: Map.get(meeting_params, :utm_source),
+        utm_medium: Map.get(meeting_params, :utm_medium),
+        utm_campaign: Map.get(meeting_params, :utm_campaign),
+        utm_content: Map.get(meeting_params, :utm_content),
+        utm_term: Map.get(meeting_params, :utm_term),
+        referrer_host: Map.get(meeting_params, :referrer_host),
+        tracking_params: Map.get(meeting_params, :tracking_params, %{})
       }
 
       {:ok, booking_data}

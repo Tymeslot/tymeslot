@@ -9,6 +9,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
   alias Tymeslot.ChangesetValidators.TimeOrder
+  alias Tymeslot.ChangesetValidators.TrackingParams
   alias Tymeslot.Locales
 
   @type t :: %__MODULE__{
@@ -62,6 +63,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           last_notified_state: map(),
           custom_fields_snapshot: [map()],
           custom_field_answers: map(),
+          utm_source: String.t() | nil,
+          utm_medium: String.t() | nil,
+          utm_campaign: String.t() | nil,
+          utm_content: String.t() | nil,
+          utm_term: String.t() | nil,
+          referrer_host: String.t() | nil,
+          tracking_params: map(),
           organizer_user: any() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -168,6 +176,15 @@ defmodule Tymeslot.Meetings.MeetingSchema do
       on_delete: :delete_all
     )
 
+    # Source attribution
+    field(:utm_source, :string)
+    field(:utm_medium, :string)
+    field(:utm_campaign, :string)
+    field(:utm_content, :string)
+    field(:utm_term, :string)
+    field(:referrer_host, :string)
+    field(:tracking_params, :map, default: %{})
+
     timestamps(type: :utc_datetime)
   end
 
@@ -225,7 +242,14 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :ical_sequence,
     :last_notified_state,
     :custom_fields_snapshot,
-    :custom_field_answers
+    :custom_field_answers,
+    :utm_source,
+    :utm_medium,
+    :utm_campaign,
+    :utm_content,
+    :utm_term,
+    :referrer_host,
+    :tracking_params
   ]
 
   @valid_statuses [
@@ -252,6 +276,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
       message: "is not a supported locale"
     )
     |> TimeOrder.validate_time_order(:start_time, :end_time)
+    |> validate_length(:utm_source, max: 255)
+    |> validate_length(:utm_medium, max: 255)
+    |> validate_length(:utm_campaign, max: 255)
+    |> validate_length(:utm_content, max: 255)
+    |> validate_length(:utm_term, max: 255)
+    |> validate_length(:referrer_host, max: 255)
+    |> TrackingParams.validate_tracking_params(:tracking_params)
     |> calculate_duration()
     |> unique_constraint(:uid)
     |> unique_constraint([:organizer_user_id, :start_time],

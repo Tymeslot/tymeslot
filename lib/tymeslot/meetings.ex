@@ -542,6 +542,34 @@ defmodule Tymeslot.Meetings do
     as: :list_by_provider_event_ids
 
   # =====================================
+  # Analytics Query Functions
+  # =====================================
+
+  @doc """
+  Returns the count of bookings created for an organizer within the given window.
+
+  Used by the analytics dashboard to compute total booking counts and
+  conversion rates. Counts all bookings regardless of status.
+  """
+  @spec count_bookings(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
+  defdelegate count_bookings(organizer_user_id, from, to), to: MeetingQueries
+
+  @doc """
+  Returns the count of bookings grouped by `utm_source` for an organizer
+  within the given window.
+
+  Only returns rows where `utm_source` is set. Intended as a primitive for
+  analytics composition — callers should use `Tymeslot.Analytics.attribution_table/3`
+  rather than interpreting the shape directly.
+  """
+  @spec bookings_by_utm_source(integer(), DateTime.t(), DateTime.t()) :: [
+          %{utm_source: String.t(), bookings: non_neg_integer()}
+        ]
+  defdelegate bookings_by_utm_source(organizer_user_id, from, to),
+    to: MeetingQueries,
+    as: :count_by_utm_source
+
+  # =====================================
   # Private Helper Functions
   # =====================================
 

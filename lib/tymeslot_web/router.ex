@@ -245,6 +245,7 @@ defmodule TymeslotWeb.Router do
       live "/dashboard/theme/customize/:theme_id", DashboardLive, :theme_customization
       live "/dashboard/meetings", DashboardLive, :meetings
       live "/dashboard/embed", DashboardLive, :embed
+      live "/dashboard/analytics", Dashboard.AnalyticsLive, :index
       live "/dashboard/payments", DashboardLive, :payments
     end
 
@@ -336,7 +337,7 @@ defmodule TymeslotWeb.Router do
 
   # Username-based scheduling routes (must be before catch-all)
   scope "/", TymeslotWeb do
-    pipe_through :theme_browser
+    pipe_through [:theme_browser, TymeslotWeb.Plugs.CaptureReferrerPlug]
 
     live_session :username_scheduling,
       session: {__MODULE__, :scheduling_session, []},
@@ -344,7 +345,8 @@ defmodule TymeslotWeb.Router do
         TymeslotWeb.Hooks.EmbedAuthHook,
         TymeslotWeb.Hooks.LocaleHook,
         TymeslotWeb.Hooks.ThemeHook,
-        TymeslotWeb.Hooks.ClientInfoHook
+        TymeslotWeb.Hooks.ClientInfoHook,
+        TymeslotWeb.Hooks.PageViewHook
       ] do
       live "/:username", Themes.Core.Dispatcher, :overview
       live "/:username/thank-you", Themes.Core.Dispatcher, :confirmation
@@ -371,7 +373,8 @@ defmodule TymeslotWeb.Router do
   def scheduling_session(conn) do
     %{
       "locale" => Conn.get_session(conn, "locale"),
-      "embed_token" => conn.assigns[:embed_token]
+      "embed_token" => conn.assigns[:embed_token],
+      "scheduling_referrer" => Conn.get_session(conn, "scheduling_referrer")
     }
   end
 end
