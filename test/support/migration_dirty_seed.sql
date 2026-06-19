@@ -13,7 +13,7 @@
 --
 -- Tables seeded: users, profiles, calendar_integrations, video_integrations,
 --                calendar_events (renamed to provider_calendar_events by migration),
---                connect_accounts, booking_payments
+--                connect_accounts, booking_payments, meetings
 
 -- ============================================================================
 -- USERS
@@ -412,3 +412,45 @@ VALUES (gen_random_uuid(),
         3000,
         NOW() - INTERVAL '7 days',
         NOW() - INTERVAL '7 days');
+
+-- ============================================================================
+-- MEETINGS
+-- ============================================================================
+--
+-- These rows are present before:
+--   * 20260616144719_add_meetings_utm_source_index — builds a partial composite
+--     index on (organizer_user_id, utm_source) WHERE utm_source IS NOT NULL,
+--     CONCURRENTLY. The rows below exercise the index predicate against a
+--     populated table rather than an empty one: duplicate sources, a NULL
+--     source that must be excluded, a 255-byte source at the column's validated
+--     maximum, a multibyte-unicode source, and a NULL organizer (the leading
+--     index column) — all of which the concurrent build must tolerate.
+--
+-- id is a uuid with no default, so each row supplies gen_random_uuid().
+-- organizer_user_id references seed-user-1 via subquery (id-type-agnostic).
+-- meeting_type_id is left NULL to avoid a FK dependency on meeting_types.
+
+-- Rows 1-2: Same organizer + same utm_source. Duplicate keys in a non-unique
+-- partial index — the ordinary booking-attribution shape.
+INSERT INTO meetings (id, uid, title, start_time, end_time, organizer_name, organizer_email, attendee_name, attendee_email, organizer_user_id, utm_source, inserted_at, updated_at)
+VALUES
+  (gen_random_uuid(), 'seed-mtg-utm-1', 'Seed Meeting 1', NOW(), NOW() + INTERVAL '30 minutes', 'Seed Host', 'host-seed@example.com', 'Seed Attendee', 'att-seed-1@example.com', (SELECT id FROM users WHERE email = 'seed-user-1@example.com' LIMIT 1), 'linkedin', NOW(), NOW()),
+  (gen_random_uuid(), 'seed-mtg-utm-2', 'Seed Meeting 2', NOW(), NOW() + INTERVAL '30 minutes', 'Seed Host', 'host-seed@example.com', 'Seed Attendee', 'att-seed-2@example.com', (SELECT id FROM users WHERE email = 'seed-user-1@example.com' LIMIT 1), 'linkedin', NOW(), NOW());
+
+-- Row 3: utm_source NULL — must be EXCLUDED by the partial index predicate.
+INSERT INTO meetings (id, uid, title, start_time, end_time, organizer_name, organizer_email, attendee_name, attendee_email, organizer_user_id, utm_source, inserted_at, updated_at)
+VALUES (gen_random_uuid(), 'seed-mtg-utm-3', 'Seed Meeting 3', NOW(), NOW() + INTERVAL '30 minutes', 'Seed Host', 'host-seed@example.com', 'Seed Attendee', 'att-seed-3@example.com', (SELECT id FROM users WHERE email = 'seed-user-1@example.com' LIMIT 1), NULL, NOW(), NOW());
+
+-- Row 4: utm_source at the 255-byte validated maximum — long btree key entry.
+INSERT INTO meetings (id, uid, title, start_time, end_time, organizer_name, organizer_email, attendee_name, attendee_email, organizer_user_id, utm_source, inserted_at, updated_at)
+VALUES (gen_random_uuid(), 'seed-mtg-utm-4', 'Seed Meeting 4', NOW(), NOW() + INTERVAL '30 minutes', 'Seed Host', 'host-seed@example.com', 'Seed Attendee', 'att-seed-4@example.com', (SELECT id FROM users WHERE email = 'seed-user-1@example.com' LIMIT 1), repeat('a', 255), NOW(), NOW());
+
+-- Row 5: Multibyte-unicode utm_source — verifies byte-vs-char handling.
+INSERT INTO meetings (id, uid, title, start_time, end_time, organizer_name, organizer_email, attendee_name, attendee_email, organizer_user_id, utm_source, inserted_at, updated_at)
+VALUES (gen_random_uuid(), 'seed-mtg-utm-5', 'Seed Meeting 5', NOW(), NOW() + INTERVAL '30 minutes', 'Seed Host', 'host-seed@example.com', 'Seed Attendee', 'att-seed-5@example.com', (SELECT id FROM users WHERE email = 'seed-user-1@example.com' LIMIT 1), 'naïve–utm-源', NOW(), NOW());
+
+-- Row 6: NULL organizer (the leading index column) with a non-null utm_source.
+-- A composite index tolerates NULLs in the leading column; the concurrent build
+-- must not choke on it.
+INSERT INTO meetings (id, uid, title, start_time, end_time, organizer_name, organizer_email, attendee_name, attendee_email, organizer_user_id, utm_source, inserted_at, updated_at)
+VALUES (gen_random_uuid(), 'seed-mtg-utm-6', 'Seed Meeting 6', NOW(), NOW() + INTERVAL '30 minutes', 'Seed Host', 'host-seed@example.com', 'Seed Attendee', 'att-seed-6@example.com', NULL, 'direct', NOW(), NOW());
