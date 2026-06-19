@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
         }
       ]
       |> Enum.filter(& &1.url) %>
+    <% resources_pages = Application.get_env(:tymeslot, :resources_pages, []) %>
     <nav class="bg-white border-b-4 border-turquoise-500 shadow-xl relative z-50">
       <div class="container mx-auto flex justify-between items-center px-6 py-5">
         <%= if external_url?(logo_link(@current_user)) do %>
@@ -62,6 +63,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
               features_url={features_url}
               feature_pages={feature_pages}
             />
+            <.resources_menu :if={resources_pages != []} resources_pages={resources_pages} />
             <.nav_sublink
               :for={link <- marketing_links}
               url={link.url}
@@ -141,6 +143,17 @@ defmodule TymeslotWeb.Components.SiteComponents do
                 features_url={features_url}
                 feature_pages={feature_pages}
               />
+              <.nav_sublink
+                :for={page <- resources_pages}
+                url={page.url}
+                class="group mobile-nav-link flex items-center gap-2.5 px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
+              >
+                <.icon
+                  :if={page[:icon]}
+                  name={page.icon}
+                  class="w-5 h-5 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+                /> {page.label}
+              </.nav_sublink>
               <.nav_sublink
                 :for={link <- marketing_links}
                 url={link.url}
@@ -248,6 +261,50 @@ defmodule TymeslotWeb.Components.SiteComponents do
         </div>
       </div>
     <% end %>
+    """
+  end
+
+  # Desktop "Resources" navigation entry: a hover dropdown grouping content
+  # pages. Unlike Features there is no standalone landing page, so the trigger is
+  # a disclosure button rather than a link; the panel lists each resource page.
+  attr :resources_pages, :list, required: true
+
+  defp resources_menu(assigns) do
+    ~H"""
+    <div class="relative group">
+      <button
+        type="button"
+        class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
+        aria-haspopup="true"
+      >
+        <.icon
+          name="hero-rectangle-stack"
+          class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+        /> Resources
+        <svg
+          class="w-4 h-4 transition-transform duration-200 group-hover:rotate-180"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          stroke-width="2.5"
+          aria-hidden="true"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-all duration-200 absolute left-0 top-full pt-3 z-50">
+        <div class="w-72 bg-white rounded-2xl shadow-xl border border-tymeslot-100 p-2">
+          <.nav_sublink
+            :for={page <- @resources_pages}
+            url={page.url}
+            class="group/feat flex items-center gap-3 px-3 py-2.5 rounded-xl text-tymeslot-700 hover:bg-turquoise-50 hover:text-turquoise-700 font-medium transition-colors"
+          >
+            <.nav_icon_tile :if={page[:icon]} name={page.icon} />
+            {page.label}
+          </.nav_sublink>
+        </div>
+      </div>
+    </div>
     """
   end
 

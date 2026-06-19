@@ -43,6 +43,11 @@ config :tymeslot,
   # the nav then renders a plain "Features" link. SaaS populates this with its
   # single-feature pages.
   feature_pages: [],
+  # Optional entries for a "Resources" navigation dropdown grouping content
+  # pages (use-case guides, etc.). Same %{label, url, icon} shape as
+  # :feature_pages. Empty by default — the nav then omits the "Resources" group
+  # entirely. SaaS populates this (see config/runtime.exs).
+  resources_pages: [],
   pricing_url: nil,
   privacy_policy_url: nil,
   terms_and_conditions_url: nil,
