@@ -22,6 +22,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def humanise(:admin_alerts_enabled), do: dgettext("dashboard", "Admin alerts")
   def humanise(:admin_alert_email), do: dgettext("dashboard", "Admin alert recipient")
   def humanise(:meeting_payments_enabled), do: dgettext("dashboard", "Meeting payments")
+  def humanise(:booking_analytics_enabled), do: dgettext("dashboard", "Booking analytics")
 
   def humanise(key),
     do: key |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
@@ -118,6 +119,13 @@ defmodule TymeslotWeb.AdminLive.Formatters do
     )
   end
 
+  def describe(:booking_analytics_enabled) do
+    dgettext(
+      "dashboard",
+      "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint — no raw IP is stored. Off by default; review your privacy policy before enabling."
+    )
+  end
+
   def describe(_other), do: ""
 
   @doc """
@@ -151,7 +159,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   Section heading a setting row belongs under. Used to group the settings
   page into Authentication / reCAPTCHA / Admin alerts blocks.
   """
-  @spec section(atom()) :: :authentication | :recaptcha | :payments | :admin_alerts
+  @spec section(atom()) :: :authentication | :recaptcha | :payments | :analytics | :admin_alerts
   def section(:registration_enabled), do: :authentication
   def section(:password_auth_enabled), do: :authentication
   def section(:google_auth_enabled), do: :authentication
@@ -162,6 +170,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def section(:recaptcha_signup_min_score), do: :recaptcha
   def section(:recaptcha_booking_min_score), do: :recaptcha
   def section(:meeting_payments_enabled), do: :payments
+  def section(:booking_analytics_enabled), do: :analytics
   def section(:admin_alerts_enabled), do: :admin_alerts
   def section(:admin_alert_email), do: :admin_alerts
 
@@ -170,6 +179,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   def section_label(:authentication), do: dgettext("dashboard", "Authentication")
   def section_label(:recaptcha), do: dgettext("dashboard", "reCAPTCHA")
   def section_label(:payments), do: dgettext("dashboard", "Payments")
+  def section_label(:analytics), do: dgettext("dashboard", "Analytics")
   def section_label(:admin_alerts), do: dgettext("dashboard", "Admin alerts")
 
   @doc """

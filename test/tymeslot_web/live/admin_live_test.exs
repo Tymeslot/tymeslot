@@ -10,6 +10,7 @@ defmodule TymeslotWeb.AdminLiveTest do
 
   alias Ecto.Changeset
   alias Phoenix.Flash
+  alias Tymeslot.Analytics
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
   alias Tymeslot.Auth.UserQueries
@@ -145,6 +146,22 @@ defmodule TymeslotWeb.AdminLiveTest do
       assert Application.get_env(:tymeslot, :registration_enabled) == true
       assert %{registration_enabled: true} = AppSettings.get!()
       assert html =~ "Registration enabled enabled."
+    end
+
+    test "toggling booking analytics persists and flips Analytics.enabled?/0", %{conn: conn} do
+      on_exit(fn -> Application.put_env(:tymeslot, :booking_analytics_enabled, true) end)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+
+      html =
+        lv
+        |> setting_tag(:booking_analytics_enabled, "false")
+        |> render_click()
+
+      assert Application.get_env(:tymeslot, :booking_analytics_enabled) == false
+      assert %{booking_analytics_enabled: false} = AppSettings.get!()
+      refute Analytics.enabled?()
+      assert html =~ "Booking analytics disabled."
     end
 
     test "the tag matching the effective value is disabled so re-clicks are no-ops", %{conn: conn} do

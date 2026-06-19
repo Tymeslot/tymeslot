@@ -7,6 +7,7 @@ defmodule Tymeslot.AppSettingsTest do
   import Tymeslot.Factory
   import Tymeslot.AppSettingsEnvHelpers
 
+  alias Tymeslot.Analytics
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
   alias Tymeslot.Auth.AuthActions
@@ -227,6 +228,14 @@ defmodule Tymeslot.AppSettingsTest do
 
       {:ok, _settings} = AppSettings.update(%{recaptcha_booking_enabled: false})
       refute RecaptchaHelpers.booking_enabled?()
+    end
+
+    test "booking_analytics_enabled flips Analytics.enabled?/0" do
+      {:ok, _settings} = AppSettings.update(%{booking_analytics_enabled: true})
+      assert Analytics.enabled?()
+
+      {:ok, _settings} = AppSettings.update(%{booking_analytics_enabled: false})
+      refute Analytics.enabled?()
     end
 
     test "recaptcha_signup_min_score is what RecaptchaHelpers.signup_min_score/0 returns" do

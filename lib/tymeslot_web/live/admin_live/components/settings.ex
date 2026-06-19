@@ -16,7 +16,7 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   alias Tymeslot.AppSettings
   alias TymeslotWeb.AdminLive.Formatters
 
-  @sections [:authentication, :recaptcha, :payments, :admin_alerts]
+  @sections [:authentication, :recaptcha, :payments, :analytics, :admin_alerts]
 
   attr :effective_values, :map, required: true
 

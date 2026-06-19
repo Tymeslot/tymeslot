@@ -57,6 +57,7 @@ defmodule Tymeslot.AppSettings do
           | :admin_alerts_enabled
           | :admin_alert_email
           | :meeting_payments_enabled
+          | :booking_analytics_enabled
 
   @type effective_source :: :db | :config | :default
   @type effective_value :: %{
@@ -443,6 +444,7 @@ defmodule Tymeslot.AppSettings do
   def default_for(:admin_alerts_enabled), do: false
   def default_for(:admin_alert_email), do: nil
   def default_for(:meeting_payments_enabled), do: false
+  def default_for(:booking_analytics_enabled), do: false
 
   # Projection from setting key to its location in the Application env.
   # Single-atom paths live at the top level; two-atom paths live nested
