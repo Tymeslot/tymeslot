@@ -1,4 +1,20 @@
 
+[1.2.0]
+* core: Add id to booking-link slug form for LiveView form recovery
+* core: Prevent booking page step labels from clipping in themes
+* core: Accept text/plain handshake for calendar webhook validation
+* core: Label footer legal link as "Terms and Conditions"
+* core: Scroll to top reliably when navigating between pages
+* core: Add config-driven Resources navigation menu
+* core: Announce guest attendees and illustrate the booking-link modal
+* core: Add booking-link share previews with organiser photo and details
+* core: Add icons to the navigation menu and Features dropdown
+* core: Support a Features navigation dropdown via :feature_pages config
+* core: Add eligible-user count query to Auth context
+* core: Scroll to top on internal link navigation site-wide
+* core: Add config-gated pricing link to nav and footer
+* core: Add Contact link to desktop site navigation
+* core: Add config-gated pricing link to nav and footer
 [1.1.1]
 * core: Stop Zoom video integration falsely reporting connection issues
 * core: Create Google Meet links without a duplicate calendar event
@@ -6,6 +22,18 @@
 * core: Prevent calendar webhook renewal crash on provider network errors
 * core: Show try-later message when Stripe payment setup is temporarily unavailable
 [1.1.0]
+* core: Improve Quill booking card contrast on bright backgrounds
+* core: Stop hand-rolled space-x/space-y from doubling Tailwind v4 gaps
+* core: Scope hand-rolled utility CSS into cascade layers for Tailwind v4
+* core: Correct wrong English text in notification emails
+* core: Correct English UI labels broken by a stale gettext merge
+* core: Save the booking link slug when pressing Enter
+* core: Stop direct booking links from revealing other meeting types
+* core: Resolve private booking links to the correct meeting type
+* core: Give LiveView forms stable ids for reliable form recovery
+* core: Run provider validation when module not yet loaded
+* core: Give LiveView forms stable ids for reliable form recovery
+* core: Run provider validation when module not yet loaded
 * core: Correct sender identity in host operational alert emails
 * core: Treat unfinished Stripe onboarding as incomplete, not restricted
 * core: Distinguish superseded from expired email verification links
@@ -54,6 +82,10 @@
 * core: Stop false type-change warning when editing a custom question
 * core: Show embed live preview before embed domains are configured
 * core: Copy booking link to clipboard on onboarding ready step
+* core: Surface the guest limit in the meeting type editor
+* core: Refine the guest booking flow across both themes
+* core: Add private and direct booking links for meeting types
+* core: Add guest attendees with email RSVP to bookings
 * core: Show a loading spinner while opening Stripe Connect onboarding
 * core: Auto-save meeting type edits as you change them
 * core: Show price and custom-question count on meeting type cards
