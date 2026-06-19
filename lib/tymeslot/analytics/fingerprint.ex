@@ -8,19 +8,37 @@ defmodule Tymeslot.Analytics.Fingerprint do
   Plausible and similar privacy-friendly analytics products.
   """
 
-  @spec hash(String.t() | nil, String.t() | nil, integer() | nil) :: String.t() | nil
-  def hash(nil, nil, _meeting_type_id), do: nil
+  @doc """
+  Computes a daily-rotated visitor hash from the network identity (IP +
+  user agent).
 
-  def hash(ip, user_agent, meeting_type_id) do
-    inputs = [
-      to_string(ip || ""),
-      to_string(user_agent || ""),
-      to_string(meeting_type_id || 0),
-      daily_salt()
-    ]
+  The hash deliberately excludes the meeting type: the same person is one
+  visitor regardless of how many of an organizer's meeting types they
+  browse, so unique-visitor counts are not inflated per page.
 
+  When both IP and user agent are absent the network identity is unknown,
+  so the hash falls back to the LiveView `session_id`. This keeps every
+  recorded visit attributable to *some* visitor — a null hash would count
+  toward total visits but vanish from `count(DISTINCT)` unique counts,
+  making the two metrics inconsistent. Only when there is nothing to hash
+  at all (no IP, no user agent, no session) does it return `nil`.
+  """
+  @spec hash(String.t() | nil, String.t() | nil, String.t() | nil) :: String.t() | nil
+  def hash(ip, user_agent, session_id \\ nil)
+
+  def hash(nil, nil, nil), do: nil
+
+  def hash(nil, nil, session_id) when is_binary(session_id) do
+    build_hash(["session:" <> session_id])
+  end
+
+  def hash(ip, user_agent, _session_id) do
+    build_hash([to_string(ip || ""), to_string(user_agent || "")])
+  end
+
+  defp build_hash(parts) do
     :sha256
-    |> :crypto.hash(Enum.join(inputs, "|"))
+    |> :crypto.hash(Enum.join(parts ++ [daily_salt()], "|"))
     |> Base.encode16(case: :lower)
   end
 

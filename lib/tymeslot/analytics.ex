@@ -56,7 +56,7 @@ defmodule Tymeslot.Analytics do
         {:ok, :filtered_bot}
 
       true ->
-        visitor_hash = Fingerprint.hash(input.ip, ua, input.meeting_type_id)
+        visitor_hash = Fingerprint.hash(input.ip, ua, input.session_id)
 
         with {:allow, _count} <- check_ip_rate(input.ip),
              {:allow, _count} <- AnalyticsLimiter.check(visitor_hash) do

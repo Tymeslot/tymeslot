@@ -78,7 +78,7 @@ defmodule Tymeslot.AnalyticsTest do
     end
 
     test "drops events when rate limit exceeded", %{user: user} do
-      # Same visitor_hash will be computed for identical (ip, ua, mt_id)
+      # Same visitor_hash will be computed for identical (ip, ua)
       attrs = %{
         path: "/alice/intro",
         user_id: user.id,
