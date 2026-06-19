@@ -8,7 +8,7 @@ Booking pages, calendar sync, video rooms, automated emails — on your server.<
 Built on Elixir/OTP so it keeps running while you're not looking.
 
 [![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)](https://www.elastic.co/licensing/elastic-license)
-[![Elixir](https://img.shields.io/badge/Elixir-1.19-purple.svg)](https://elixir-lang.org)
+[![Elixir](https://img.shields.io/badge/Elixir-1.20-purple.svg)](https://elixir-lang.org)
 [![Phoenix](https://img.shields.io/badge/Phoenix-1.8-orange.svg)](https://phoenixframework.org)
 [![LiveView](https://img.shields.io/badge/LiveView-1.1-red.svg)](https://github.com/phoenixframework/phoenix_live_view)
 [![GitHub stars](https://img.shields.io/github/stars/tymeslot/tymeslot?style=social)](https://github.com/tymeslot/tymeslot/stargazers)
@@ -207,7 +207,7 @@ Once enabled, hosts connect their own Stripe account from **Dashboard → Paymen
 
 <div align="center">
 
-<img src="https://img.shields.io/badge/Elixir-1.19-4B275F?logo=elixir&logoColor=white" alt="Elixir 1.19" />&nbsp;
+<img src="https://img.shields.io/badge/Elixir-1.20-4B275F?logo=elixir&logoColor=white" alt="Elixir 1.20" />&nbsp;
 <img src="https://img.shields.io/badge/OTP-28-A90533?logo=erlang&logoColor=white" alt="Erlang/OTP 28" />&nbsp;
 <img src="https://img.shields.io/badge/Phoenix-1.8-FD4F00?logo=phoenixframework&logoColor=white" alt="Phoenix 1.8" />&nbsp;
 <img src="https://img.shields.io/badge/LiveView-1.1-E34F26?logo=phoenixframework&logoColor=white" alt="LiveView 1.1" />&nbsp;
