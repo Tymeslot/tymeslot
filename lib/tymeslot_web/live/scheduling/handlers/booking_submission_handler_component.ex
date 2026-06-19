@@ -133,6 +133,35 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   end
 
   @doc """
+  Checks the per-recipient booking rate limit.
+
+  Complements the per-IP limit: stops an attacker rotating source IPs from
+  bombing a single attendee mailbox with confirmation emails. Keyed on the
+  validated attendee email address.
+  """
+  @spec check_recipient_rate_limit(Phoenix.LiveView.Socket.t(), map()) ::
+          {:ok, Phoenix.LiveView.Socket.t()} | {:error, Phoenix.LiveView.Socket.t()}
+  def check_recipient_rate_limit(socket, %{"email" => email})
+      when is_binary(email) and email != "" do
+    case RateLimiter.check_booking_recipient_limit(email) do
+      :ok ->
+        {:ok, socket}
+
+      {:error, :rate_limited, _message} ->
+        Logger.warning("Booking recipient rate limit exceeded")
+
+        socket =
+          socket
+          |> assign(:submitting, false)
+          |> Flash.put_flash(:error, "Too many booking attempts. Please try again later.")
+
+        {:error, socket}
+    end
+  end
+
+  def check_recipient_rate_limit(socket, _params), do: {:ok, socket}
+
+  @doc """
   Checks for duplicate submission attempts.
 
   This function prevents duplicate submissions by checking if a submission
@@ -268,6 +297,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     with {:ok, custom_answers} <- CustomFields.validate_answers(snapshot, raw_answers),
          {:ok, socket} <- check_duplicate_submission(socket),
          {:ok, socket} <- check_rate_limit(socket),
+         {:ok, socket} <- check_recipient_rate_limit(socket, sanitized_params),
          :ok <- verify_recaptcha(socket, booking_params) do
       enriched_params =
         sanitized_params

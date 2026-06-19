@@ -94,4 +94,36 @@ defmodule Tymeslot.Security.RateLimiterMultiWindowTest do
       assert AccountLockout.get_failed_attempt_count(email) == 0
     end
   end
+
+  describe "booking recipient multi-window limits (per attendee email)" do
+    test "blocks after 5 bookings to one mailbox within the hour" do
+      email = "victim@example.com"
+
+      Enum.each(1..5, fn _i ->
+        assert :ok = RateLimiter.check_booking_recipient_limit(email)
+      end)
+
+      assert {:error, :rate_limited, _msg} = RateLimiter.check_booking_recipient_limit(email)
+    end
+
+    test "the bucket is per-recipient — a different mailbox is unaffected" do
+      bombed = "bombed@example.com"
+      other = "other-recipient@example.com"
+
+      Enum.each(1..6, fn _i -> RateLimiter.check_booking_recipient_limit(bombed) end)
+
+      assert {:error, :rate_limited, _msg} = RateLimiter.check_booking_recipient_limit(bombed)
+      assert :ok = RateLimiter.check_booking_recipient_limit(other)
+    end
+
+    test "case and whitespace variants of an address share one bucket" do
+      Enum.each(1..5, fn _i ->
+        assert :ok = RateLimiter.check_booking_recipient_limit("Mixed.Case@Example.com")
+      end)
+
+      # A padded, lower-cased variant must not get a fresh allowance.
+      assert {:error, :rate_limited, _msg} =
+               RateLimiter.check_booking_recipient_limit("  mixed.case@example.com  ")
+    end
+  end
 end

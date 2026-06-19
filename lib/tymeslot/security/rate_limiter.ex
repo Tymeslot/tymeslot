@@ -193,6 +193,16 @@ defmodule Tymeslot.Security.RateLimiter do
   def check_booking_submission_limit(client_ip), do: Bookings.check_booking_submission(client_ip)
 
   @doc """
+  Rate limit booking submissions by attendee email (recipient of the
+  confirmation email). Complements the per-IP limit to stop email
+  amplification from an attacker rotating source IPs against one mailbox.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+  """
+  @spec check_booking_recipient_limit(String.t()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_booking_recipient_limit(email), do: Bookings.check_booking_recipient(email)
+
+  @doc """
   Rate limit meeting cancellation attempts.
   Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
 

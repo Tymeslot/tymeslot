@@ -106,6 +106,43 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmissionFlashTest do
     assert render(view) =~ "Too many booking attempts"
   end
 
+  test "blocks a booking when the attendee mailbox is rate-limited from another IP", %{
+    conn: conn,
+    profile: profile,
+    event_type: event_type
+  } do
+    view = navigate_to_booking_form(conn, profile, event_type)
+
+    # Do NOT saturate the per-IP bucket — clear_all/0 in setup leaves it empty,
+    # so the only limit that can trip here is the per-recipient one. This proves
+    # the recipient check stops mailbox bombing even when each request comes from
+    # a fresh source IP (the per-IP bucket alone would not catch that).
+    victim_email = "victim-flash@example.com"
+    saturate_booking_recipient(victim_email)
+
+    params = %{
+      "name" => "Mailbox Bomb",
+      "email" => victim_email,
+      "message" => "",
+      "website" => ""
+    }
+
+    view
+    |> form("form[data-testid='booking-form']", %{"booking" => params})
+    |> render_submit()
+
+    _drain = :sys.get_state(view.pid)
+
+    assert render(view) =~ "Too many booking attempts"
+  end
+
+  defp saturate_booking_recipient(email) do
+    # `check_booking_recipient_limit/1` allows 5 bookings per hour per mailbox.
+    Enum.each(1..5, fn _i ->
+      RateLimiter.check_booking_recipient_limit(email)
+    end)
+  end
+
   defp saturate_booking_rate_limit(client_ip) do
     # `check_booking_submission_limit/1` allows 10 requests per 20 minutes.
     # Burn through the budget so the next call from the LiveView returns
