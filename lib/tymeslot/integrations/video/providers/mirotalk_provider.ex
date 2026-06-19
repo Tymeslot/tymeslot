@@ -93,7 +93,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   defp test_api_connection(base_url, api_key) do
     headers = build_api_headers(api_key)
-    options = [timeout: 5_000]
+    options = [timeout: 5_000, ssrf_protect: true]
 
     # Always try HTTPS first; if it fails due to network/connection, fall back to HTTP
     handle_api_response(
@@ -204,7 +204,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
     # Try HTTPS first, then HTTP
     case HttpHelpers.try_https_then_http(base_url, "/api/v1/meeting", fn url ->
-           http_client().post(url, "", headers, [])
+           http_client().post(url, "", headers, ssrf_protect: true)
          end) do
       {:ok, %Req.Response{status: 200, body: body}} ->
         case Jason.decode(body) do
