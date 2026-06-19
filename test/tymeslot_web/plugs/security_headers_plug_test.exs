@@ -16,8 +16,14 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       assert csp =~ "frame-ancestors 'none'"
       assert get_resp_header(conn, "x-content-type-options") == ["nosniff"]
       assert get_resp_header(conn, "referrer-policy") == ["strict-origin-when-cross-origin"]
-      assert get_resp_header(conn, "strict-transport-security") != []
-      assert get_resp_header(conn, "x-xss-protection") == ["1; mode=block"]
+
+      assert get_resp_header(conn, "strict-transport-security") == [
+               "max-age=31536000; includeSubDomains; preload"
+             ]
+
+      # Legacy headers must no longer be sent (deprecated / obsolete).
+      assert get_resp_header(conn, "x-xss-protection") == []
+      assert get_resp_header(conn, "expect-ct") == []
     end
 
     test "CSP header contains required directives", %{conn: conn} do
@@ -544,8 +550,6 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       assert get_resp_header(conn, "referrer-policy") != []
       assert get_resp_header(conn, "permissions-policy") != []
       assert get_resp_header(conn, "strict-transport-security") != []
-      assert get_resp_header(conn, "x-xss-protection") != []
-      assert get_resp_header(conn, "expect-ct") != []
       assert get_resp_header(conn, "x-frame-options") != []
     end
 
