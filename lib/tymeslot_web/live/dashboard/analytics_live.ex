@@ -22,7 +22,14 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
-    {:ok, assign_default_range(socket)}
+    if Analytics.enabled?() do
+      {:ok, assign_default_range(socket)}
+    else
+      {:ok,
+       socket
+       |> put_flash(:info, "Booking analytics is not enabled on this installation.")
+       |> push_navigate(to: ~p"/dashboard")}
+    end
   end
 
   @impl Phoenix.LiveView

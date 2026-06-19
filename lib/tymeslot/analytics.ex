@@ -29,23 +29,41 @@ defmodule Tymeslot.Analytics do
 
   @type log_result ::
           {:ok, EventSchema.t()}
+          | {:ok, :disabled}
           | {:ok, :filtered_bot}
           | {:ok, :filtered_rate_limit}
           | {:error, Ecto.Changeset.t()}
 
+  @doc """
+  Whether booking analytics collection is enabled for this installation.
+
+  Gated behind the `:booking_analytics_enabled` config flag, which defaults
+  to `false` in Core so self-hosters never collect visitor analytics unless
+  they opt in. The managed SaaS overrides it to `true`. Every collection and
+  read path consults this predicate — Core checks the flag value, never SaaS
+  presence.
+  """
+  @spec enabled?() :: boolean()
+  def enabled?, do: Application.get_env(:tymeslot, :booking_analytics_enabled, false)
+
   @spec log_page_view(input()) :: log_result()
   def log_page_view(%{user_agent: ua} = input) do
-    if BotDetector.bot?(ua) do
-      {:ok, :filtered_bot}
-    else
-      visitor_hash = Fingerprint.hash(input.ip, ua, input.meeting_type_id)
+    cond do
+      not enabled?() ->
+        {:ok, :disabled}
 
-      with {:allow, _count} <- check_ip_rate(input.ip),
-           {:allow, _count} <- AnalyticsLimiter.check(visitor_hash) do
-        do_insert(input, visitor_hash)
-      else
-        {:deny, _count} -> {:ok, :filtered_rate_limit}
-      end
+      BotDetector.bot?(ua) ->
+        {:ok, :filtered_bot}
+
+      true ->
+        visitor_hash = Fingerprint.hash(input.ip, ua, input.meeting_type_id)
+
+        with {:allow, _count} <- check_ip_rate(input.ip),
+             {:allow, _count} <- AnalyticsLimiter.check(visitor_hash) do
+          do_insert(input, visitor_hash)
+        else
+          {:deny, _count} -> {:ok, :filtered_rate_limit}
+        end
     end
   end
 

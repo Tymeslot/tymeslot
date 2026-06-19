@@ -3,6 +3,10 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
   LiveView `on_mount` hook that logs a `booking_page_view` event when
   a connected socket mounts on a public scheduling page.
 
+  No work is scheduled unless booking analytics is enabled
+  (`Tymeslot.Analytics.enabled?/0`); when disabled the hook is a no-op
+  beyond assigning the session referrer.
+
   The hook only fires on `connected?(socket)` — the initial static
   HTML render is skipped, which automatically filters out the bulk
   of crawlers that never establish a WebSocket. Remaining bot user
@@ -33,7 +37,7 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
     referrer = session[@scheduling_referrer_session_key]
     socket = assign(socket, :scheduling_referrer, referrer)
 
-    if connected?(socket) do
+    if connected?(socket) and Analytics.enabled?() do
       log_async(params, referrer, socket)
     end
 

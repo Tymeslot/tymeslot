@@ -141,6 +141,11 @@ config :tymeslot, :outlook_oauth, state_secret: "test-outlook-state-secret"
 # stable across test runs on the same day.
 config :tymeslot, :analytics_salt_secret, "test_analytics_salt_secret_fixed_for_repeatability"
 
+# Booking analytics is enabled by default in the test suite so the analytics
+# tests exercise the live path. Tests covering the disabled path override this
+# per-test with `Application.put_env/3`.
+config :tymeslot, :booking_analytics_enabled, true
+
 # Enable all providers for testing
 config :tymeslot, :video_providers, %{
   mirotalk: [enabled: true],

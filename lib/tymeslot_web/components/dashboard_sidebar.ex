@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   use TymeslotWeb, :html
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Analytics
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias TymeslotWeb.Components.Icons.IconComponents
 
@@ -107,6 +108,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
               </.nav_link>
 
               <.nav_link
+                :if={Analytics.enabled?()}
                 patch={~p"/dashboard/analytics"}
                 current={@current_action}
                 action={:analytics}

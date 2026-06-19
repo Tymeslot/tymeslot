@@ -103,6 +103,9 @@ config :tymeslot, :skip_webhook_verification, false
 # via the ANALYTICS_SALT_SECRET environment variable (see runtime.exs).
 config :tymeslot, :analytics_salt_secret, "dev_analytics_salt_secret_change_in_prod"
 
+# Enable booking analytics in development so the feature is exercisable locally.
+config :tymeslot, :booking_analytics_enabled, true
+
 # Opt-in dev calendar stub: when DEV_EMPTY_CALENDAR is set, the seeded demo
 # organiser's slots resolve with no busy events, bypassing real CalDAV — handy
 # for booking-UI and scheduling-theme work. Left unset, dev uses the real

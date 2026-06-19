@@ -15,6 +15,18 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
     setup_dashboard_user(%{conn: conn})
   end
 
+  describe "when booking analytics is disabled" do
+    setup do
+      Application.put_env(:tymeslot, :booking_analytics_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :booking_analytics_enabled, true) end)
+    end
+
+    test "redirects away from the analytics dashboard", %{conn: conn} do
+      assert {:error, {:live_redirect, %{to: "/dashboard"}}} =
+               live(conn, ~p"/dashboard/analytics")
+    end
+  end
+
   describe "page rendering" do
     test "renders summary cards and date-range controls", %{conn: conn, user: user} do
       seed_visit(user, "linkedin", "hash-a")

@@ -339,9 +339,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   """
   @spec assign_tracking(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_tracking(socket, params) do
-    referrer = raw_referrer_from_socket(socket)
-    tracking = Analytics.extract_attribution(params, referrer)
-    assign(socket, :tracking, tracking)
+    if Analytics.enabled?() do
+      referrer = raw_referrer_from_socket(socket)
+      tracking = Analytics.extract_attribution(params, referrer)
+      assign(socket, :tracking, tracking)
+    else
+      assign(socket, :tracking, %{})
+    end
   end
 
   @doc """

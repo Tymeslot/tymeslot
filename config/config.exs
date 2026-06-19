@@ -423,6 +423,12 @@ config :tymeslot,
   slack_client_id: nil,
   slack_client_secret: nil
 
+# Booking analytics — page-view tracking, cookie-less visitor fingerprinting,
+# UTM/referrer capture on bookings, and the attribution dashboard. Off by
+# default so self-hosters do not collect visitor analytics unless they opt in;
+# the managed SaaS overrides this to `true`.
+config :tymeslot, :booking_analytics_enabled, false
+
 # Analytics — secret used to derive the daily-rotated visitor fingerprint salt.
 # Required in production; dev/test override with fixed values for repeatability.
 config :tymeslot, :analytics_salt_secret, nil

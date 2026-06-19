@@ -17,6 +17,33 @@ defmodule Tymeslot.AnalyticsTest do
     %{user: user}
   end
 
+  describe "when booking analytics is disabled" do
+    setup do
+      Application.put_env(:tymeslot, :booking_analytics_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :booking_analytics_enabled, true) end)
+    end
+
+    test "enabled?/0 returns false" do
+      refute Analytics.enabled?()
+    end
+
+    test "log_page_view/1 short-circuits and persists nothing", %{user: user} do
+      assert {:ok, :disabled} =
+               Analytics.log_page_view(%{
+                 path: "/alice/intro",
+                 user_id: user.id,
+                 meeting_type_id: nil,
+                 ip: "1.2.3.4",
+                 user_agent: "Mozilla/5.0 ... Chrome/126",
+                 session_id: "sess-1",
+                 params: %{"utm_source" => "linkedin"},
+                 referrer: "https://linkedin.com/feed"
+               })
+
+      assert Repo.aggregate(EventSchema, :count, :id) == 0
+    end
+  end
+
   describe "log_page_view/1" do
     test "writes an event when inputs are valid", %{user: user} do
       assert {:ok, %EventSchema{}} =
