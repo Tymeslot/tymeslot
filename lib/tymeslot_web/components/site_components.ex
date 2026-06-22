@@ -43,14 +43,14 @@ defmodule TymeslotWeb.Components.SiteComponents do
         <% end %>
 
     <%!-- Desktop Navigation: marketing links (centre zone) --%>
-        <div class="hidden md:flex flex-1 items-center justify-center gap-1">
+        <div class="hidden lg:flex flex-1 items-center justify-center gap-1">
           <%= if Config.show_marketing_links?() do %>
             <.nav_section :for={section <- menu_sections} section={section} />
           <% end %>
         </div>
 
     <%!-- Desktop Navigation: account actions (right zone) --%>
-        <div class="hidden md:flex items-center gap-3">
+        <div class="hidden lg:flex items-center gap-3">
           <%= if @current_user do %>
             <.link
               navigate={~p"/dashboard"}
@@ -86,7 +86,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
 
     <%!-- Mobile Menu Button --%>
         <button
-          class="md:hidden mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-turquoise-100 hover:bg-turquoise-200 transition-colors"
+          class="lg:hidden mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-turquoise-100 hover:bg-turquoise-200 transition-colors"
           phx-click={
             JS.toggle(to: "#mobile-menu")
             |> JS.toggle_class("mobile-menu-open", to: ".mobile-menu-toggle")
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
     <%!-- Mobile Menu --%>
         <div
           id="mobile-menu"
-          class="mobile-menu md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-md border-t border-tymeslot-200 shadow-lg hidden"
+          class="mobile-menu lg:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-md border-t border-tymeslot-200 shadow-lg hidden"
         >
           <div class="container mx-auto px-4 py-4 space-y-3">
             <%= if Config.show_marketing_links?() do %>
