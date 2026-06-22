@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Demo test account avatar">
+  <defs>
+    <linearGradient id="ts-demo-avatar" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="40" fill="url(#ts-demo-avatar)"/>
+  <circle cx="128" cy="100" r="44" fill="#ffffff" opacity="0.95"/>
+  <path d="M48 224c0-44 36-72 80-72s80 28 80 72z" fill="#ffffff" opacity="0.95"/>
+</svg>
