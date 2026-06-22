@@ -4,6 +4,7 @@ defmodule Tymeslot.Workers.AnalyticsReconciliationWorkerTest do
   @moduletag :analytics
   @moduletag :database
 
+  alias Oban.Cron.Expression
   alias Tymeslot.Workers.AnalyticsReconciliationWorker
 
   test "perform/1 runs reconciliation and returns :ok" do
@@ -65,5 +66,25 @@ defmodule Tymeslot.Workers.AnalyticsReconciliationWorkerTest do
     opts = AnalyticsReconciliationWorker.__opts__()
     assert Keyword.get(opts, :queue) == :monitoring
     assert Keyword.get(opts, :max_attempts) == 3
+  end
+
+  # The crontab is only assembled in runtime.exs (prod) and never loaded in
+  # test, so a typo in the schedule string or worker module would otherwise ship
+  # silently. Guard it by asserting the worker is registered in runtime.exs with
+  # a schedule Oban can actually parse.
+  test "is registered in the runtime crontab with a parseable schedule" do
+    runtime_exs =
+      [__DIR__, "..", "..", "..", "config", "runtime.exs"]
+      |> Path.join()
+      |> Path.expand()
+      |> File.read!()
+
+    pattern =
+      ~r/\{\s*"([^"]+)"\s*,\s*Tymeslot\.Workers\.AnalyticsReconciliationWorker\s*\}/
+
+    assert [_match, schedule] = Regex.run(pattern, runtime_exs),
+           "AnalyticsReconciliationWorker is not registered in the runtime.exs crontab"
+
+    assert {:ok, _expression} = Expression.parse(schedule)
   end
 end
