@@ -165,5 +165,56 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
 
       assert result == "Quarterly review"
     end
+
+    test "appends custom question answers after the attendee message" do
+      meeting =
+        Map.merge(@base_meeting, %{
+          attendee_message: "Please bring slides.",
+          meeting_url: nil,
+          custom_fields_snapshot: [
+            %{"id" => "f1", "type" => "short_text", "label" => "Company"},
+            %{"id" => "f2", "type" => "yes_no", "label" => "First time?"}
+          ],
+          custom_field_answers: %{"f1" => "Acme Ltd", "f2" => true}
+        })
+
+      result = CalendarEventBuilder.build_event_description(meeting)
+
+      assert result ==
+               "Attendee: Alice <alice@example.com>\n\nQuarterly review\n\nMessage from attendee:\nPlease bring slides.\n\nAdditional details:\nCompany: Acme Ltd\nFirst time?: Yes"
+    end
+
+    test "places custom answers before the video meeting link" do
+      meeting =
+        Map.merge(@base_meeting, %{
+          attendee_message: nil,
+          meeting_url: "https://meet.example.com/room",
+          custom_fields_snapshot: [
+            %{"id" => "f1", "type" => "short_text", "label" => "Company"}
+          ],
+          custom_field_answers: %{"f1" => "Acme Ltd"}
+        })
+
+      result = CalendarEventBuilder.build_event_description(meeting)
+
+      assert result ==
+               "Attendee: Alice <alice@example.com>\n\nQuarterly review\n\nAdditional details:\nCompany: Acme Ltd\n\nVideo meeting: https://meet.example.com/room"
+    end
+
+    test "omits the custom answers section when no answer renders a value" do
+      meeting =
+        Map.merge(@base_meeting, %{
+          attendee_message: nil,
+          meeting_url: nil,
+          custom_fields_snapshot: [
+            %{"id" => "f1", "type" => "short_text", "label" => "Company"}
+          ],
+          custom_field_answers: %{}
+        })
+
+      result = CalendarEventBuilder.build_event_description(meeting)
+
+      assert result == "Attendee: Alice <alice@example.com>\n\nQuarterly review"
+    end
   end
 end

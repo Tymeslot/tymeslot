@@ -4,8 +4,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
 
   Transforms a meeting schema into the map format expected by calendar
   providers (CalDAV, Google, Outlook). Handles description assembly
-  including attendee messages and video meeting links.
+  including attendee messages, custom question answers, and video meeting
+  links.
   """
+
+  alias Tymeslot.CustomFields.AnswerRenderer
 
   @doc """
   Builds a calendar event data map from a meeting record.
@@ -45,6 +48,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   if the description didn't carry the attendee's name and email the
   organiser would have no way to see who the meeting is with from inside
   their calendar app.
+
+  Custom question answers are appended directly after the attendee message
+  so the organiser sees what was asked at booking time alongside the rest
+  of the attendee's input, without having to open the email or dashboard.
   """
   @spec build_event_description(map()) :: String.t()
   def build_event_description(meeting) do
@@ -52,12 +59,30 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
       attendee_identity_line(meeting),
       meeting.description,
       if(meeting.attendee_message, do: "\n\nMessage from attendee:\n#{meeting.attendee_message}"),
+      custom_answers_section(meeting),
       if(meeting.meeting_url, do: "\n\nVideo meeting: #{meeting.meeting_url}")
     ]
 
     parts
     |> Enum.filter(& &1)
     |> Enum.join()
+  end
+
+  defp custom_answers_section(meeting) do
+    snapshot = Map.get(meeting, :custom_fields_snapshot) || []
+    answers = Map.get(meeting, :custom_field_answers) || %{}
+
+    lines =
+      for field <- snapshot,
+          value = AnswerRenderer.render(field, Map.get(answers, field["id"])),
+          value != "" do
+        "#{field["label"]}: #{value}"
+      end
+
+    case lines do
+      [] -> nil
+      lines -> "\n\nAdditional details:\n" <> Enum.join(lines, "\n")
+    end
   end
 
   defp attendee_identity_line(%{attendee_email: email} = meeting)
