@@ -64,6 +64,17 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       assert html =~ "Analytics"
       assert html =~ "linkedin"
     end
+
+    test "renders the device breakdown with per-device labels", %{conn: conn, user: user} do
+      seed_visit(user, "linkedin", "hash-a", device_type: "mobile")
+      seed_visit(user, "linkedin", "hash-b", device_type: "desktop")
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/analytics")
+
+      assert html =~ "Devices"
+      assert html =~ "Mobile"
+      assert html =~ "Desktop"
+    end
   end
 
   describe "attribution table with real booking data" do
@@ -126,7 +137,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
     end
   end
 
-  defp seed_visit(user, utm_source, visitor_hash) do
+  defp seed_visit(user, utm_source, visitor_hash, opts \\ []) do
     {:ok, _event} =
       EventQueries.insert(%{
         event_type: "booking_page_view",
@@ -134,6 +145,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
         user_id: user.id,
         visitor_hash: visitor_hash,
         utm_source: utm_source,
+        device_type: Keyword.get(opts, :device_type),
         tracking_params: %{}
       })
   end

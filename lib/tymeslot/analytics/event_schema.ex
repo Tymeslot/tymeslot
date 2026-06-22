@@ -26,6 +26,7 @@ defmodule Tymeslot.Analytics.EventSchema do
           referrer_host: String.t() | nil,
           tracking_params: map(),
           user_agent_family: String.t() | nil,
+          device_type: String.t() | nil,
           inserted_at: DateTime.t() | nil
         }
 
@@ -46,13 +47,15 @@ defmodule Tymeslot.Analytics.EventSchema do
     field(:referrer_host, :string)
     field(:tracking_params, :map, default: %{})
     field(:user_agent_family, :string)
+    field(:device_type, :string)
 
     timestamps(type: :utc_datetime_usec, updated_at: false)
   end
 
   @required ~w(event_type path visitor_hash)a
   @optional ~w(meeting_type_id user_id session_id utm_source utm_medium utm_campaign
-               utm_content utm_term referrer_host tracking_params user_agent_family)a
+               utm_content utm_term referrer_host tracking_params user_agent_family
+               device_type)a
 
   @doc false
   @spec changeset(t(), map()) :: Ecto.Changeset.t()

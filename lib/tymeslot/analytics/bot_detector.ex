@@ -1,14 +1,20 @@
 defmodule Tymeslot.Analytics.BotDetector do
   @moduledoc """
-  User-agent based bot detection.
+  User-agent based classification: bot detection, browser family, and
+  device type.
 
-  This is a deliberately simple denylist that catches declared crawlers
-  (Googlebot, Bingbot, scrapers, scripts). Headless browsers that
+  Bot detection is a deliberately simple denylist that catches declared
+  crawlers (Googlebot, Bingbot, scrapers, scripts). Headless browsers that
   impersonate Chrome are not caught — they are rare against booking
   pages and would require a WAF to filter reliably.
 
   Combined with `connected?(socket)` gating in the mount hook, this
   produces dashboards within ~5% of true human traffic.
+
+  Browser family and device type are coarse, dependency-free heuristics
+  over the user-agent string. They are good enough for understanding the
+  shape of booking-page traffic (e.g. "most visitors are on mobile")
+  without the cost and footprint of a full UA-parsing library.
   """
 
   @bot_patterns [
@@ -53,6 +59,26 @@ defmodule Tymeslot.Analytics.BotDetector do
       ua =~ ~r/Firefox\//i -> "firefox"
       ua =~ ~r/Safari\//i -> "safari"
       true -> "other"
+    end
+  end
+
+  @doc """
+  Classifies the device into `"mobile"`, `"tablet"`, `"desktop"`, or
+  `"unknown"` from the user-agent string.
+
+  Tablets are checked before phones because tablet user agents (notably
+  the iPad) also carry the `Mobile` token, so a naive phone-first check
+  would misclassify every tablet as a phone.
+  """
+  @spec device_type(String.t() | nil) :: String.t()
+  def device_type(nil), do: "unknown"
+  def device_type(""), do: "unknown"
+
+  def device_type(ua) when is_binary(ua) do
+    cond do
+      ua =~ ~r/iPad|Tablet|Nexus 7|Kindle|Silk|PlayBook/i -> "tablet"
+      ua =~ ~r/Mobi|Android.+Mobile|iPhone|iPod|Windows Phone|IEMobile/i -> "mobile"
+      true -> "desktop"
     end
   end
 end

@@ -151,6 +151,9 @@ defmodule Tymeslot.Analytics do
   @spec visits_by_day(integer(), DateTime.t(), DateTime.t(), String.t()) :: [map()]
   defdelegate visits_by_day(user_id, from, to, time_zone), to: EventQueries
 
+  @spec device_breakdown(integer(), DateTime.t(), DateTime.t()) :: [map()]
+  defdelegate device_breakdown(user_id, from, to), to: EventQueries
+
   @spec count_bookings(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
   defdelegate count_bookings(user_id, from, to), to: Meetings
 
@@ -229,7 +232,8 @@ defmodule Tymeslot.Analytics do
       utm_term: utm.utm_term,
       tracking_params: utm.tracking_params,
       referrer_host: UtmExtractor.referrer_host(input.referrer),
-      user_agent_family: BotDetector.ua_family(input.user_agent)
+      user_agent_family: BotDetector.ua_family(input.user_agent),
+      device_type: BotDetector.device_type(input.user_agent)
     }
 
     EventQueries.insert(attrs)

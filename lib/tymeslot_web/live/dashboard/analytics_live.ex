@@ -12,7 +12,9 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   use TymeslotWeb, :live_view
 
   alias Tymeslot.Analytics
+  alias Tymeslot.Analytics.MetricsCache
   alias TymeslotWeb.Components.DashboardLayout
+  alias TymeslotWeb.Dashboard.AnalyticsLive.DeviceBreakdown
   alias TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable
   alias TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards
   alias TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart
@@ -104,6 +106,8 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           time_zone={@time_zone}
         />
 
+        <DeviceBreakdown.breakdown devices={@devices} />
+
         <SourcesTable.table sources={@sources} />
       </div>
     </DashboardLayout.dashboard_layout>
@@ -144,7 +148,8 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
       bookings: 0,
       converting_visitors: 0,
       sources: [],
-      visits_by_day: []
+      visits_by_day: [],
+      devices: []
     )
   end
 
@@ -163,22 +168,25 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   end
 
   defp load_data(
-         %{assigns: %{current_user: user, from: from, to: to, time_zone: time_zone}} = socket
+         %{assigns: %{current_user: user, range: range, from: from, to: to, time_zone: time_zone}} =
+           socket
        ) do
-    visits = Analytics.count_visits(user.id, from, to)
-    unique_visitors = Analytics.count_unique_visitors(user.id, from, to)
-    bookings = Analytics.count_bookings(user.id, from, to)
-    converting_visitors = Analytics.count_converting_visitors(user.id, from, to)
-    visits_by_day = Analytics.visits_by_day(user.id, from, to, time_zone)
-    sources = Analytics.attribution_table(user.id, from, to)
+    # Collapse the ~7 aggregate queries into one cached bundle per
+    # {organizer, range}. MetricsCache keys on user.id, so one organizer can
+    # never be served another's metrics.
+    data =
+      MetricsCache.fetch(user.id, range, fn ->
+        %{
+          visits: Analytics.count_visits(user.id, from, to),
+          unique_visitors: Analytics.count_unique_visitors(user.id, from, to),
+          bookings: Analytics.count_bookings(user.id, from, to),
+          converting_visitors: Analytics.count_converting_visitors(user.id, from, to),
+          visits_by_day: Analytics.visits_by_day(user.id, from, to, time_zone),
+          sources: Analytics.attribution_table(user.id, from, to),
+          devices: Analytics.device_breakdown(user.id, from, to)
+        }
+      end)
 
-    assign(socket,
-      visits: visits,
-      unique_visitors: unique_visitors,
-      bookings: bookings,
-      converting_visitors: converting_visitors,
-      visits_by_day: visits_by_day,
-      sources: sources
-    )
+    assign(socket, Map.to_list(data))
   end
 end

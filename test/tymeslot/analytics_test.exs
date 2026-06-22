@@ -171,6 +171,7 @@ defmodule Tymeslot.AnalyticsTest do
       assert event.tracking_params == %{"ref" => "newsletter"}
       assert event.referrer_host == "www.linkedin.com"
       assert event.user_agent_family == "chrome"
+      assert event.device_type == "desktop"
     end
   end
 
