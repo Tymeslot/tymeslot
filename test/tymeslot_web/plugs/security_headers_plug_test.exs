@@ -396,10 +396,10 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       nonce = conn.assigns.csp_nonce
 
       assert script_src_directive ==
-               "script-src 'self' 'nonce-#{nonce}' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://js.stripe.com"
+               "script-src 'self' 'nonce-#{nonce}' https://www.google.com https://www.gstatic.com https://js.stripe.com"
     end
 
-    test "does not allow 'unsafe-eval' in script-src", %{conn: conn} do
+    test "does not allow 'unsafe-eval' or 'unsafe-inline' in script-src", %{conn: conn} do
       Application.put_env(:tymeslot, :analytics_providers, [])
 
       conn = SecurityHeadersPlug.call(conn, [])
@@ -409,6 +409,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
         Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
 
       refute script_src_directive =~ "unsafe-eval"
+      refute script_src_directive =~ "unsafe-inline"
     end
 
     test "assigns a per-request nonce and embeds the same value in script-src", %{conn: conn} do

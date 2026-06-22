@@ -196,10 +196,6 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
         [
           "'self'",
           "'nonce-#{nonce}'",
-          # 'unsafe-inline' is ignored by modern browsers whenever a nonce is
-          # present; kept here only as a transitional safety net while inline
-          # scripts and on*= handlers are migrated. Removed in a follow-up.
-          "'unsafe-inline'",
           "https://www.google.com",
           "https://www.gstatic.com",
           "https://js.stripe.com"
