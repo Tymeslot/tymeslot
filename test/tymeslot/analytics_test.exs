@@ -42,6 +42,35 @@ defmodule Tymeslot.AnalyticsTest do
 
       assert Repo.aggregate(EventSchema, :count, :id) == 0
     end
+
+    test "log_page_view/1 emits a :disabled telemetry outcome", %{user: user} do
+      test_pid = self()
+      handler_id = "test-analytics-wiring-#{System.unique_integer([:positive])}"
+
+      :telemetry.attach(
+        handler_id,
+        [:tymeslot, :analytics, :page_view],
+        fn _event, _measurements, metadata, _config ->
+          send(test_pid, {:analytics_outcome, metadata.outcome})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      Analytics.log_page_view(%{
+        path: "/alice/intro",
+        user_id: user.id,
+        meeting_type_id: nil,
+        ip: "1.2.3.4",
+        user_agent: "Mozilla/5.0 ... Chrome/126",
+        session_id: "sess-1",
+        params: %{},
+        referrer: nil
+      })
+
+      assert_receive {:analytics_outcome, :disabled}
+    end
   end
 
   describe "log_page_view/1" do
@@ -77,6 +106,7 @@ defmodule Tymeslot.AnalyticsTest do
       assert Repo.aggregate(EventSchema, :count, :id) == 0
     end
 
+    @tag :capture_log
     test "drops events when rate limit exceeded", %{user: user} do
       # Same visitor_hash will be computed for identical (ip, ua)
       attrs = %{
@@ -99,6 +129,7 @@ defmodule Tymeslot.AnalyticsTest do
     # TR5 — per-IP rate gate (300/min) fires independently of the visitor bucket.
     # We exhaust the IP bucket via the limiter directly (avoids a 300-iteration
     # log_page_view loop), then verify a single real call returns :filtered_rate_limit.
+    @tag :capture_log
     test "drops events when the per-IP rate gate is exceeded", %{user: user} do
       ip = "5.6.7.8"
       bucket_key = "analytics:ip:" <> ip

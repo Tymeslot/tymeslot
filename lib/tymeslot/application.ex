@@ -7,6 +7,7 @@ defmodule Tymeslot.Application do
   require Logger
 
   alias Phoenix.PubSub
+  alias Tymeslot.Analytics.Telemetry, as: AnalyticsTelemetry
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth.AdminBootstrap
   alias Tymeslot.Infrastructure.{CrashReporter, Metrics, ObanFailureAlerter, ObanLogger}
@@ -53,6 +54,9 @@ defmodule Tymeslot.Application do
 
     # Set up integration telemetry handlers
     Telemetry.attach_default_handlers()
+
+    # Surface dropped/failed booking-analytics page-view writes in the logs.
+    AnalyticsTelemetry.attach_default_handler()
 
     # Initialize shared email asset cache (ETS)
     # Note: This table is primarily for static assets like logo data URIs.

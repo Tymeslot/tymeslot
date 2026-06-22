@@ -58,7 +58,12 @@ defmodule TymeslotWeb.Telemetry do
       summary("vm.memory.total", unit: {:byte, :kilobyte}),
       summary("vm.total_run_queue_lengths.total"),
       summary("vm.total_run_queue_lengths.cpu"),
-      summary("vm.total_run_queue_lengths.io")
+      summary("vm.total_run_queue_lengths.io"),
+
+      # Booking analytics ingestion — one event per log_page_view/1, tagged
+      # with its outcome (:ok, :filtered_bot, :filtered_rate_limit, :error,
+      # :disabled). Ready for a reporter to track ingestion health and drops.
+      counter("tymeslot.analytics.page_view.count", tags: [:outcome])
     ]
   end
 

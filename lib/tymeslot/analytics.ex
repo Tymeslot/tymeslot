@@ -12,6 +12,7 @@ defmodule Tymeslot.Analytics do
   alias Tymeslot.Analytics.EventQueries
   alias Tymeslot.Analytics.EventSchema
   alias Tymeslot.Analytics.Fingerprint
+  alias Tymeslot.Analytics.Telemetry
   alias Tymeslot.Analytics.UtmExtractor
   alias Tymeslot.Meetings
   alias Tymeslot.Security.RateLimiter.Analytics, as: AnalyticsLimiter
@@ -48,24 +49,33 @@ defmodule Tymeslot.Analytics do
 
   @spec log_page_view(input()) :: log_result()
   def log_page_view(%{user_agent: ua} = input) do
-    cond do
-      not enabled?() ->
-        {:ok, :disabled}
+    result =
+      cond do
+        not enabled?() -> {:ok, :disabled}
+        BotDetector.bot?(ua) -> {:ok, :filtered_bot}
+        true -> insert_if_allowed(input, ua)
+      end
 
-      BotDetector.bot?(ua) ->
-        {:ok, :filtered_bot}
+    # Emit the outcome so otherwise-silent drops are observable — the caller
+    # logs this write in a fire-and-forget Task and discards the result.
+    Telemetry.emit(outcome_tag(result))
+    result
+  end
 
-      true ->
-        visitor_hash = Fingerprint.hash(input.ip, ua, input.session_id)
+  defp insert_if_allowed(input, ua) do
+    visitor_hash = Fingerprint.hash(input.ip, ua, input.session_id)
 
-        with {:allow, _count} <- check_ip_rate(input.ip),
-             {:allow, _count} <- AnalyticsLimiter.check(visitor_hash) do
-          do_insert(input, visitor_hash)
-        else
-          {:deny, _count} -> {:ok, :filtered_rate_limit}
-        end
+    with {:allow, _count} <- check_ip_rate(input.ip),
+         {:allow, _count} <- AnalyticsLimiter.check(visitor_hash) do
+      do_insert(input, visitor_hash)
+    else
+      {:deny, _count} -> {:ok, :filtered_rate_limit}
     end
   end
+
+  defp outcome_tag({:ok, %EventSchema{}}), do: :ok
+  defp outcome_tag({:ok, tag}) when is_atom(tag), do: tag
+  defp outcome_tag({:error, _changeset}), do: :error
 
   # Secondary per-IP gate: 300 events per minute regardless of fingerprint.
   # Guards against clients that cycle user-agents to defeat fingerprinting.
