@@ -72,6 +72,44 @@ defmodule Tymeslot.Infrastructure.HTTPClientSsrfTest do
     assert {:ok, %Req.Response{status: 200}} =
              HTTPClient.request(:get, "https://rebind.example.com/", "", [])
   end
+
+  # Gap H — redirect: false must remain on the guarded path.
+  #
+  # A 3xx from a public host must NOT be followed when ssrf_protect: true is
+  # set: Req would otherwise transparently send a second request to the
+  # Location header's host, which an attacker could point at an internal address
+  # (open-redirect SSRF bypass).  Dropping `redirect: false` from guarded_request
+  # would make this test fail because Req follows redirects by default.
+  test "guarded request does not follow a 3xx redirect — redirect: false prevents open-redirect SSRF bypass" do
+    Application.put_env(:tymeslot, :dns_resolver_module, HttpClientOkResolver)
+
+    # Track whether a second request to the internal host is attempted.
+    # With redirect: false in place, only one request is made and the 302 is
+    # returned directly.  Without it, Req would follow the Location header and
+    # a second call to the stub would arrive.
+    request_count = :counters.new(1, [:atomics])
+
+    ReqTest.stub(:tymeslot_http, fn conn ->
+      :counters.add(request_count, 1, 1)
+      n = :counters.get(request_count, 1)
+
+      if n > 1 do
+        flunk("redirect was followed — a second request reached the internal host")
+      end
+
+      conn
+      |> Conn.put_resp_header("location", "http://169.254.169.254/latest/meta-data/")
+      |> Conn.send_resp(302, "")
+    end)
+
+    assert {:ok, %Req.Response{status: 302}} =
+             HTTPClient.request(:get, "https://public.example.com/resource", "", [],
+               ssrf_protect: true
+             )
+
+    # Confirm that exactly one outbound request was made (no redirect followed).
+    assert :counters.get(request_count, 1) == 1
+  end
 end
 
 defmodule HttpClientOkResolver do
