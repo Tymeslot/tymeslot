@@ -34,11 +34,17 @@ module.exports = plugin(function ({matchComponents, theme}) {
       // must register too, and a standalone checkout simply has fewer app libs.
       // (Production skips this optimisation entirely and loads the full icon set.)
       const appsDir = path.join(__dirname, "../../")
-      const appLibs = fs
-        .readdirSync(appsDir)
+      const appNames = fs.readdirSync(appsDir)
+      const appLibs = appNames
         .map(name => path.join(appsDir, name, "lib"))
         .filter(p => fs.existsSync(p))
-      const searchPaths = [path.join(__dirname, "./js"), ...appLibs]
+      // Config files pick icons too (e.g. the marketing nav dropdown defines its
+      // entries in runtime.exs), and those never appear in lib — scan config so
+      // a config-only icon like the Blog entry's hero-newspaper still registers.
+      const appConfigs = appNames
+        .map(name => path.join(appsDir, name, "config"))
+        .filter(p => fs.existsSync(p))
+      const searchPaths = [path.join(__dirname, "./js"), ...appLibs, ...appConfigs]
       const quoted = searchPaths.map(p => `"${p}"`).join(" ")
       const output = execSync(`grep -rEho "hero-[a-z0-9-]+" ${quoted} | sort | uniq`).toString()
       usedIcons = new Set(output.split("\n").map(line => line.replace(/^hero-/, "").replace(/-(solid|mini|micro)$/, "")))

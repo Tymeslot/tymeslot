@@ -89,7 +89,7 @@
 /* Feature-dropdown icons chosen via the :feature_pages config (see config/config.exs). */
 @source inline("hero-calendar-days hero-code-bracket hero-credit-card hero-server-stack");
 /* Resources-dropdown icons chosen via the :resources_pages config (see config/config.exs). */
-@source inline("hero-user-group");
+@source inline("hero-user-group hero-newspaper");
 
 @theme {
   /* --- Brand + extended palette (formerly theme.extend.colors) --- */
