@@ -116,6 +116,26 @@ describe('RecaptchaV3Hook', () => {
     );
   });
 
+  test('propagates the page CSP nonce onto the injected reCAPTCHA script', () => {
+    // Force the script-injection branch by removing the preloaded grecaptcha.
+    delete window.grecaptcha;
+
+    const meta = document.createElement('meta');
+    meta.name = 'csp-nonce';
+    meta.content = 'test-nonce-123';
+    document.head.appendChild(meta);
+
+    const form = makeForm();
+    mountHook(form);
+
+    const script = document.head.querySelector('script[src*="recaptcha/api.js"]');
+    expect(script).not.toBeNull();
+    expect(script.nonce || script.getAttribute('nonce')).toBe('test-nonce-123');
+
+    script.remove();
+    meta.remove();
+  });
+
   test('destroyed() removes the submit listener', async () => {
     executeMock.mockResolvedValue('token');
 

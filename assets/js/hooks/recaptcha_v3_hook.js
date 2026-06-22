@@ -57,6 +57,15 @@ export const RecaptchaV3Hook = {
     const script = document.createElement('script');
     script.src = `https://www.google.com/recaptcha/api.js?render=${this.siteKey}`;
 
+    // Propagate the page's CSP nonce so grecaptcha can stamp it on the inline
+    // scripts it injects at runtime; without it they are blocked once
+    // script-src drops 'unsafe-inline'.
+    const nonce = document.querySelector('meta[name="csp-nonce"]')?.content;
+    if (nonce) {
+      script.nonce = nonce;
+      script.setAttribute('nonce', nonce);
+    }
+
     let scriptLoaded = false;
 
     script.onload = () => {
