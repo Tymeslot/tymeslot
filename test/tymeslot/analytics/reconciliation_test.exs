@@ -90,7 +90,7 @@ defmodule Tymeslot.Analytics.ReconciliationTest do
         })
 
       user = insert(:user)
-      base = DateTime.truncate(DateTime.utc_now(), :second)
+      base = DateTime.utc_now(:second)
 
       for {hash, i} <- Enum.with_index(["v1", "v2"], 1) do
         insert(:meeting,

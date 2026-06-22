@@ -7,7 +7,9 @@ defmodule Tymeslot.Analytics.ReconciliationQueriesTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Analytics.EventQueries
+  alias Tymeslot.Analytics.EventSchema
   alias Tymeslot.Analytics.ReconciliationQueries
 
   setup do
@@ -30,7 +32,7 @@ defmodule Tymeslot.Analytics.ReconciliationQueriesTest do
   end
 
   defp insert_booking(user, visitor_hash, offset_min) do
-    base = DateTime.truncate(DateTime.utc_now(), :second)
+    base = DateTime.utc_now(:second)
 
     insert(:meeting,
       organizer_user_id: user.id,
@@ -68,13 +70,13 @@ defmodule Tymeslot.Analytics.ReconciliationQueriesTest do
     old_event_at = DateTime.add(from, -1, :day)
 
     {:ok, _event} =
-      %Tymeslot.Analytics.EventSchema{}
-      |> Tymeslot.Analytics.EventSchema.changeset(%{
+      %EventSchema{}
+      |> EventSchema.changeset(%{
         event_type: "booking_page_view",
         path: "/alice/intro",
         visitor_hash: "v1"
       })
-      |> Ecto.Changeset.put_change(:inserted_at, old_event_at)
+      |> Changeset.put_change(:inserted_at, old_event_at)
       |> Repo.insert()
 
     totals = ReconciliationQueries.instance_totals(from, to)
