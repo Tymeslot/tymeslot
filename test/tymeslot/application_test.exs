@@ -54,12 +54,6 @@ defmodule Tymeslot.ApplicationTest do
     end
   end
 
-  describe "email asset cache" do
-    test "tymeslot_email_assets ETS table exists" do
-      assert :ets.whereis(:tymeslot_email_assets) != :undefined
-    end
-  end
-
   describe "Oban queue configuration" do
     setup do
       # Save original config

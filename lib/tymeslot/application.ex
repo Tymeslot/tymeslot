@@ -58,14 +58,6 @@ defmodule Tymeslot.Application do
     # Surface dropped/failed booking-analytics page-view writes in the logs.
     AnalyticsTelemetry.attach_default_handler()
 
-    # Initialize shared email asset cache (ETS)
-    # Note: This table is primarily for static assets like logo data URIs.
-    # If used for dynamic data, consider adding a cleanup mechanism or using CacheStore.
-    # Guard against application restart within the same BEAM (named table already exists)
-    if :ets.whereis(:tymeslot_email_assets) == :undefined do
-      :ets.new(:tymeslot_email_assets, [:set, :public, :named_table, read_concurrency: true])
-    end
-
     # Base children that are always started
     base_children = [
       TymeslotWeb.Telemetry,
