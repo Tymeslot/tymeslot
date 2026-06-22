@@ -148,7 +148,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         {:ok, socket}
 
       {:error, :rate_limited, _message} ->
-        Logger.warning("Booking recipient rate limit exceeded")
+        Logger.warning("Booking recipient rate limit exceeded",
+          operation: "booking",
+          limit_type: "recipient"
+        )
 
         socket =
           socket
@@ -297,8 +300,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     with {:ok, custom_answers} <- CustomFields.validate_answers(snapshot, raw_answers),
          {:ok, socket} <- check_duplicate_submission(socket),
          {:ok, socket} <- check_rate_limit(socket),
-         {:ok, socket} <- check_recipient_rate_limit(socket, sanitized_params),
-         :ok <- verify_recaptcha(socket, booking_params) do
+         :ok <- verify_recaptcha(socket, booking_params),
+         {:ok, socket} <- check_recipient_rate_limit(socket, sanitized_params) do
       enriched_params =
         sanitized_params
         |> Map.put("custom_fields_snapshot", snapshot)
