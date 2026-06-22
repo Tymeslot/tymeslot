@@ -15,28 +15,26 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
   setup :verify_on_exit!
 
   describe "create_meeting_room/1" do
-    test "successfully creates a meeting room" do
+    test "creates a standalone Meet space and returns the space id and join URL" do
       config = %{
         access_token: "valid_token",
         refresh_token: "refresh_token",
         token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
       }
 
-      event_response = %{
-        "id" => "event123",
-        "conferenceData" => %{
-          "entryPoints" => [
-            %{"entryPointType" => "video", "uri" => "https://meet.google.com/abc-defg-hij"}
-          ]
-        }
-      }
-
-      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 200, body: Jason.encode!(event_response)}}
+      # The Meet REST API is called — not the Calendar API — and no calendar
+      # event payload is sent (an empty body provisions a default space).
+      expect(HTTPClientMock, :request, fn :post, url, body, _headers, _opts ->
+        assert url == "https://meet.googleapis.com/v2/spaces"
+        assert body == "{}"
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(space_response())}}
       end)
 
       assert {:ok, room_data} = GoogleMeetProvider.create_meeting_room(config)
-      assert room_data.room_id == "abc-defg-hij"
+
+      # room_id is the space id (the segment after "spaces/"), which is what
+      # endActiveConference requires on cancellation — not the meeting code.
+      assert room_data.room_id == "NgPxrxVDQF8B"
       assert room_data.meeting_url == "https://meet.google.com/abc-defg-hij"
     end
 
@@ -51,118 +49,55 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
       assert message =~ "Invalid JSON"
     end
 
-    test "returns error when conference data is missing" do
+    test "returns error when the space response has no meeting URL" do
       config = valid_token_config()
 
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => "event123"})}}
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"name" => "spaces/abc123"})}}
       end)
 
       assert {:error, message} = GoogleMeetProvider.create_meeting_room(config)
-      assert String.contains?(message, "did not return conference data")
+      assert message =~ "did not return a meeting URL"
     end
 
-    test "handles malformed or unexpected conference data structure" do
+    test "returns error when the space response has no space identifier" do
       config = valid_token_config()
 
-      # Case 1: entryPoints is not a list
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
          %Req.Response{
            status: 200,
-           body: Jason.encode!(%{"conferenceData" => %{"entryPoints" => "not_a_list"}})
+           body: Jason.encode!(%{"meetingUri" => "https://meet.google.com/abc-defg-hij"})
          }}
       end)
 
-      assert {:error, "Google Calendar did not return conference data"} =
-               GoogleMeetProvider.create_meeting_room(config)
-
-      # Case 2: entryPoints is empty list
-      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 200,
-           body: Jason.encode!(%{"conferenceData" => %{"entryPoints" => []}})
-         }}
-      end)
-
-      assert {:error, "No meeting URL returned from Google"} =
-               GoogleMeetProvider.create_meeting_room(config)
-
-      # Case 3: entryPoints lacks video type
-      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 200,
-           body:
-             Jason.encode!(%{
-               "conferenceData" => %{
-                 "entryPoints" => [%{"entryPointType" => "phone", "uri" => "tel:+123"}]
-               }
-             })
-         }}
-      end)
-
-      assert {:error, "No meeting URL returned from Google"} =
-               GoogleMeetProvider.create_meeting_room(config)
+      assert {:error, message} = GoogleMeetProvider.create_meeting_room(config)
+      assert message =~ "did not return a space identifier"
     end
 
-    test "uses :event_details summary/times/attendees in the Calendar API write" do
-      start_time = ~U[2026-06-01 09:00:00Z]
-      end_time = ~U[2026-06-01 10:00:00Z]
+    test "surfaces a clear error when the Meet API is disabled (403)" do
+      config = valid_token_config()
 
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: ~s({"error":{"status":"SERVICE_DISABLED"}})}}
+      end)
+
+      assert {:error, message} = GoogleMeetProvider.create_meeting_room(config)
+      assert message =~ "HTTP 403"
+    end
+
+    test "ignores :event_details — no calendar event payload is sent" do
       config =
         Map.put(valid_token_config(), :event_details, %{
           summary: "Quarterly Review",
-          description: "Plan Q3",
-          start_time: start_time,
-          end_time: end_time,
-          attendees: [%{email: "alice@example.com"}, "bob@example.com"]
+          attendees: [%{email: "alice@example.com"}]
         })
 
-      event_response = %{
-        "conferenceData" => %{
-          "entryPoints" => [
-            %{"entryPointType" => "video", "uri" => "https://meet.google.com/xyz-pqrs-uvw"}
-          ]
-        }
-      }
-
-      expect(HTTPClientMock, :request, fn :post, _url, body, _headers, _opts ->
-        decoded = Jason.decode!(body)
-
-        assert decoded["summary"] == "Quarterly Review"
-        assert decoded["description"] == "Plan Q3"
-        assert decoded["start"]["dateTime"] == DateTime.to_iso8601(start_time)
-        assert decoded["end"]["dateTime"] == DateTime.to_iso8601(end_time)
-
-        assert Enum.sort(Enum.map(decoded["attendees"], & &1["email"])) ==
-                 ["alice@example.com", "bob@example.com"]
-
-        {:ok, %Req.Response{status: 200, body: Jason.encode!(event_response)}}
-      end)
-
-      assert {:ok, _room} = GoogleMeetProvider.create_meeting_room(config)
-    end
-
-    test "falls back to placeholder summary and stub times when :event_details is absent" do
-      config = valid_token_config()
-
-      event_response = %{
-        "conferenceData" => %{
-          "entryPoints" => [
-            %{"entryPointType" => "video", "uri" => "https://meet.google.com/qaz-wsx-edc"}
-          ]
-        }
-      }
-
-      expect(HTTPClientMock, :request, fn :post, _url, body, _headers, _opts ->
-        decoded = Jason.decode!(body)
-
-        assert decoded["summary"] == "Tymeslot - Temporary Event for Google Meet"
-        assert decoded["attendees"] == []
-
-        {:ok, %Req.Response{status: 200, body: Jason.encode!(event_response)}}
+      expect(HTTPClientMock, :request, fn :post, url, body, _headers, _opts ->
+        assert url == "https://meet.googleapis.com/v2/spaces"
+        # No summary/attendees/conferenceData leak into the request.
+        assert body == "{}"
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(space_response())}}
       end)
 
       assert {:ok, _room} = GoogleMeetProvider.create_meeting_room(config)
@@ -201,18 +136,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
       end)
 
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 200,
-           body:
-             Jason.encode!(%{
-               "conferenceData" => %{
-                 "entryPoints" => [
-                   %{"entryPointType" => "video", "uri" => "https://meet.google.com/abc-defg-hij"}
-                 ]
-               }
-             })
-         }}
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(space_response())}}
       end)
 
       assert {:ok, _result} = GoogleMeetProvider.create_meeting_room(config)
@@ -254,23 +178,70 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
       # DB token and the HTTP call must use it.
       expect(HTTPClientMock, :request, fn :post, _url, _body, headers, _opts ->
         assert {"Authorization", "Bearer fresh-token-from-other-process"} in headers
-
-        {:ok,
-         %Req.Response{
-           status: 200,
-           body:
-             Jason.encode!(%{
-               "conferenceData" => %{
-                 "entryPoints" => [
-                   %{"entryPointType" => "video", "uri" => "https://meet.google.com/abc-defg-hij"}
-                 ]
-               }
-             })
-         }}
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(space_response())}}
       end)
 
       assert {:ok, _room} = GoogleMeetProvider.create_meeting_room(config)
     end
+  end
+
+  describe "delete_meeting_room/2" do
+    test "ends the active conference for the given space id" do
+      config = valid_token_config()
+
+      expect(HTTPClientMock, :request, fn :post, url, body, _headers, _opts ->
+        assert url == "https://meet.googleapis.com/v2/spaces/NgPxrxVDQF8B:endActiveConference"
+        assert body == "{}"
+        {:ok, %Req.Response{status: 200, body: "{}"}}
+      end)
+
+      assert :ok = GoogleMeetProvider.delete_meeting_room("NgPxrxVDQF8B", config)
+    end
+
+    test "treats 'no active conference' (400) as success" do
+      config = valid_token_config()
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 400, body: ~s({"error":{"status":"FAILED_PRECONDITION"}})}}
+      end)
+
+      assert :ok = GoogleMeetProvider.delete_meeting_room("NgPxrxVDQF8B", config)
+    end
+
+    test "treats a legacy meeting-code id (403) as a no-op" do
+      config = valid_token_config()
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: ~s({"error":{"status":"PERMISSION_DENIED"}})}}
+      end)
+
+      assert :ok = GoogleMeetProvider.delete_meeting_room("abc-defg-hij", config)
+    end
+
+    test "is a no-op when no space id is stored" do
+      assert :ok = GoogleMeetProvider.delete_meeting_room(nil, valid_token_config())
+      assert :ok = GoogleMeetProvider.delete_meeting_room("", valid_token_config())
+    end
+
+    test "returns an error on an unexpected status so the worker can retry" do
+      config = valid_token_config()
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 500, body: "boom"}}
+      end)
+
+      assert {:error, message} = GoogleMeetProvider.delete_meeting_room("NgPxrxVDQF8B", config)
+      assert message =~ "HTTP 500"
+    end
+  end
+
+  # Mirrors the shape returned by POST https://meet.googleapis.com/v2/spaces.
+  defp space_response do
+    %{
+      "name" => "spaces/NgPxrxVDQF8B",
+      "meetingUri" => "https://meet.google.com/abc-defg-hij",
+      "meetingCode" => "abc-defg-hij"
+    }
   end
 
   defp valid_token_config do

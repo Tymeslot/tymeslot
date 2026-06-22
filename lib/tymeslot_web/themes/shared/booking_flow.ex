@@ -55,7 +55,8 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
            put_flash(
              socket,
              :info,
-             gettext(
+             dgettext(
+               "booking",
                "Booking submitted successfully! You'll receive a confirmation email shortly."
              )
            )}

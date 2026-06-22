@@ -70,6 +70,19 @@ defmodule TymeslotWeb do
         plug TymeslotWeb.Plugs.SetLoggerMetadata
       end
 
+      # Calendar providers (Microsoft Graph, Google) confirm a new push
+      # subscription with a synchronous validation handshake: they call the
+      # notification URL and negotiate for `text/plain`, expecting the challenge
+      # token echoed back verbatim. The json-only `:api` pipeline rejects that
+      # request with `406 Not Acceptable`, so the provider abandons the
+      # subscription with an `HTTP 400` validation error. Accepting `text/plain`
+      # alongside `json` lets the handshake through to the controller.
+      pipeline :calendar_webhook do
+        plug :accepts, ["json", "txt"]
+        plug TymeslotWeb.Plugs.SecurityHeadersPlug
+        plug TymeslotWeb.Plugs.SetLoggerMetadata
+      end
+
       pipeline :webhook do
         plug TymeslotWeb.Plugs.StripeWebhookPlug
         plug :accepts, ["json"]

@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   @moduledoc "Grid view function components for the calendar grid (week/day and month)."
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -25,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   attr :sync_total, :integer, required: true
   attr :sync_completed, :integer, required: true
   attr :date, :any, required: true
+  attr :guest_rsvp_summaries, :map, default: %{}
   attr :myself, :any, required: true
 
   @spec week_day_view(map()) :: Phoenix.LiveView.Rendered.t()
@@ -145,6 +147,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                 alt="Tymeslot"
                 class="absolute top-0.5 right-0.5 w-3 h-3 opacity-60"
               />
+              <.event_guest_badge summary={guest_summary_for_event(@guest_rsvp_summaries, event)} />
               <%!-- Enlarged invisible resize hit-target for touch; visual handle revealed on hover --%>
               <div data-resize-handle class="absolute bottom-0 left-0 right-0 h-3 cursor-s-resize touch-none" aria-hidden="true">
                 <div class="absolute bottom-0 left-0 right-0 h-2 opacity-0 group-hover:opacity-100 bg-black/10 rounded-b"></div>
@@ -213,6 +216,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
       <summary class="flex flex-col gap-0.5 list-none cursor-default">
         <div
           :for={event <- @shown}
+          id={"allday-event-#{event.id}"}
+          phx-hook="StopClickPropagation"
           class={"rounded px-1 text-token-xs font-medium text-white truncate cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
           phx-click="show_event"
           phx-value-event-id={event.id}
@@ -220,7 +225,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
           role="button"
           tabindex="0"
           aria-label={"All-day: #{event.summary || "Untitled event"}"}
-          onclick="event.stopPropagation()"
         >
           <img
             :if={Map.get(event, :created_by_tymeslot)}
@@ -326,6 +330,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   attr :date, :any, required: true
   attr :user_timezone, :string, required: true
   attr :preferences, :any
+  attr :guest_rsvp_summaries, :map, default: %{}
   attr :myself, :any, required: true
 
   @spec month_view(map()) :: Phoenix.LiveView.Rendered.t()
@@ -414,7 +419,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
             src="/images/brand/logo.svg"
             alt=""
             class="inline-block w-3 h-3 opacity-60 mr-0.5 align-text-bottom"
-          /><%= event.summary || "(No title)" %>
+          /><%= event.summary || "(No title)" %><span
+            :if={guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)}
+            class={["inline-block w-1.5 h-1.5 rounded-full ml-0.5 align-middle", guest_dot_tone(guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event))]}
+            title={guest_badge_title(guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event))}
+          ></span>
         </div>
         <div :if={length(@day_events) > 3} class="text-token-xs text-tymeslot-400 mt-0.5">
           +<%= length(@day_events) - 3 %> more
@@ -447,6 +456,69 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
 
   defp day_number_class(_is_today, false = _is_current_month), do: "text-tymeslot-300"
   defp day_number_class(_is_today, _is_current_month), do: "text-tymeslot-600"
+
+  # ---------- Guest RSVP indicator ----------
+
+  # Compact accepted/total pill shown on Tymeslot-created timed event blocks.
+  attr :summary, :map, default: nil
+
+  defp event_guest_badge(assigns) do
+    ~H"""
+    <span
+      :if={@summary}
+      class={[
+        "absolute bottom-0.5 left-0.5 inline-flex items-center gap-0.5 rounded-full px-1 py-px text-[10px] font-bold leading-none",
+        guest_badge_tone(@summary)
+      ]}
+      title={guest_badge_title(@summary)}
+    >
+      <svg viewBox="0 0 16 16" fill="currentColor" class="w-2.5 h-2.5" aria-hidden="true">
+        <path d="M8 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM3.5 14a4.5 4.5 0 0 1 9 0 .5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5Z" />
+      </svg>
+      {@summary.accepted}/{@summary.total}
+    </span>
+    """
+  end
+
+  # Returns the RSVP summary for a Tymeslot-created event, or nil.
+  defp guest_summary_for_event(summaries, event) do
+    if Map.get(event, :created_by_tymeslot) do
+      Map.get(summaries || %{}, Map.get(event, :uid))
+    end
+  end
+
+  defp guest_badge_tone(%{declined: declined}) when declined > 0, do: "bg-red-500/90 text-white"
+
+  defp guest_badge_tone(%{total: total, accepted: accepted}) when total > 0 and accepted == total,
+    do: "bg-green-600/90 text-white"
+
+  defp guest_badge_tone(_summary), do: "bg-amber-500/90 text-white"
+
+  defp guest_dot_tone(%{declined: declined}) when declined > 0, do: "bg-red-500"
+
+  defp guest_dot_tone(%{total: total, accepted: accepted}) when total > 0 and accepted == total,
+    do: "bg-green-500"
+
+  defp guest_dot_tone(_summary), do: "bg-amber-500"
+
+  defp guest_badge_title(%{accepted: accepted, total: total, declined: declined}) do
+    base =
+      dgettext("dashboard", "%{accepted} of %{total} guests going",
+        accepted: accepted,
+        total: total
+      )
+
+    if declined > 0 do
+      declined_fragment =
+        dngettext("dashboard", ", %{count} declined", ", %{count} declined", declined,
+          count: declined
+        )
+
+      base <> declined_fragment
+    else
+      base
+    end
+  end
 
   # ---------- Status banners ----------
 

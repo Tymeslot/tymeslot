@@ -31,7 +31,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     oban_job_failure: %{category: "Queue", severity: :error},
     unhandled_crash: %{category: "System", severity: :error},
     reconciliation_discrepancies: %{category: "Payment", severity: :warning},
-    subscription_not_in_database: %{category: "Payment", severity: :warning}
+    subscription_not_in_database: %{category: "Payment", severity: :warning},
+    analytics_tracking_anomaly: %{category: "Analytics", severity: :warning}
   }
 
   @doc "Returns the full registry map for enumeration and lookup."
@@ -77,6 +78,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     else
       format_message(:unhandled_crash, metadata)
     end
+  end
+
+  # Anomaly messages embed per-run counts, so dedup on the anomaly kind instead.
+  # A recurring daily anomaly of the same kind collapses to one alert per window.
+  def dedup_key(:analytics_tracking_anomaly, metadata) do
+    "analytics_tracking_anomaly:#{Map.get(metadata, :kind, "unknown")}"
   end
 
   def dedup_key(type, metadata), do: format_message(type, metadata)
@@ -170,6 +177,11 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     reason = Map.get(metadata, :reason, "unknown")
     event_id = Map.get(metadata, :event_id) || Map.get(metadata, :event_uid, "unknown")
     "Invalid #{provider} calendar event (event_id: #{event_id}): #{reason}"
+  end
+
+  def format_message(:analytics_tracking_anomaly, metadata) do
+    kind = Map.get(metadata, :kind, "unknown")
+    "Booking analytics tracking anomaly: #{kind}"
   end
 
   def format_message(:unhandled_crash, metadata) do

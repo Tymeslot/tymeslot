@@ -29,6 +29,14 @@ defmodule TymeslotWeb.Router do
     pipe_through :api
 
     post "/stripe/connect", StripeConnectWebhookController, :handle
+  end
+
+  # Calendar provider webhooks negotiate `text/plain` for their subscription
+  # validation handshake, so they run through `:calendar_webhook` rather than the
+  # json-only `:api` pipeline (which would 406 the handshake — see tymeslot_web.ex).
+  scope "/webhooks", TymeslotWeb do
+    pipe_through :calendar_webhook
+
     post "/google-calendar", GoogleCalendarWebhookController, :webhook
     post "/outlook-calendar", OutlookCalendarWebhookController, :webhook
     post "/outlook-lifecycle", OutlookLifecycleController, :webhook
@@ -125,6 +133,12 @@ defmodule TymeslotWeb.Router do
 
     # Email change verification route
     get "/email-change/:token", EmailChangeController, :verify
+
+    # Public guest RSVP (accept/decline) from the tokenised email link.
+    # GET renders a confirmation landing page (no mutation — safe for link prefetchers).
+    # POST performs the RSVP write (CSRF-protected via the :browser pipeline).
+    get "/guest/:token/:response", GuestRsvpController, :confirm
+    post "/guest/:token/:response", GuestRsvpController, :submit
 
     # OAuth routes (must remain as controllers for external redirects)
     get "/auth/:provider", OAuthController, :request

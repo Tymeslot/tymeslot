@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.Hooks.PageViewHook
 
   @moduletag :scheduling
   @moduletag :live
@@ -70,6 +71,32 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
 
       :ok = wait_quiet()
       assert Repo.aggregate(EventSchema, :count, :id) == 0
+    end
+  end
+
+  describe "resilient connect_info handling" do
+    # Regression: under the deployed endpoint config, `connect_info`'s
+    # `:x_headers` arrives as bare header-name strings rather than
+    # `{name, value}` tuples. The hook used to pattern-match `{k, v}` and crash
+    # the mount of every public scheduling page once analytics was enabled.
+    test "mounts without crashing when x_headers are bare strings", %{ctx: ctx} do
+      connect_info = %{
+        x_headers: ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "origin"],
+        peer_data: %{address: {127, 0, 0, 1}, port: 0, ssl_cert: nil},
+        user_agent: "Mozilla/5.0 (X11; Linux x86_64) Chrome/126.0.0.0 Safari/537.36"
+      }
+
+      base = %Phoenix.LiveView.Socket{transport_pid: self()}
+      socket = Map.update!(base, :private, &Map.put(&1, :connect_info, connect_info))
+
+      params = %{"username" => ctx.username, "slug" => ctx.slug}
+
+      assert {:cont, %Phoenix.LiveView.Socket{} = result} =
+               PageViewHook.on_mount(:default, params, %{}, socket)
+
+      # The hash was still computed (from peer_data, since the string headers
+      # yield no forwarded IP) and assigned for the booking flow to reuse.
+      assert result.assigns.visitor_hash =~ ~r/^[0-9a-f]{64}$/
     end
   end
 

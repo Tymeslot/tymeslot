@@ -1,0 +1,136 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: it\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:103
+#, elixir-autogen, elixir-format
+msgid "%{current} / %{total}"
+msgstr "%{current} / %{total}"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:76
+#, elixir-autogen, elixir-format
+msgid "Account settings and log out are here in the top-right."
+msgstr "Le impostazioni dell'account e il logout si trovano qui in alto a destra."
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:95
+#: lib/tymeslot_web/components/tour_overlay.ex:53
+#, elixir-autogen, elixir-format
+msgid "Back"
+msgstr "Indietro"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:64
+#, elixir-autogen, elixir-format
+msgid "Common tasks"
+msgstr "Attività comuni"
+
+#: lib/tymeslot_web/components/step_navigation.ex:48
+#, elixir-autogen, elixir-format
+msgid "Confirmation"
+msgstr "Conferma"
+
+#: lib/tymeslot_web/components/step_navigation.ex:30
+#, elixir-autogen, elixir-format
+msgid "Date & Time"
+msgstr "Data e orario"
+
+#: lib/tymeslot_web/components/step_navigation.ex:39
+#, elixir-autogen, elixir-format
+msgid "Details"
+msgstr "Dettagli"
+
+#: lib/tymeslot_web/components/step_navigation.ex:21
+#, elixir-autogen, elixir-format
+msgid "Duration"
+msgstr "Durata"
+
+#: lib/tymeslot_web/components/tour_overlay.ex:69
+#, elixir-autogen, elixir-format
+msgid "Finish"
+msgstr "Fine"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:83
+#, elixir-autogen, elixir-format
+msgid "Go create your first event type — and let people book you."
+msgstr "Vai a creare il tuo primo tipo di evento — e fatti prenotare."
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:117
+#: lib/tymeslot_web/components/announcement_modal_component.ex:121
+#, elixir-autogen, elixir-format
+msgid "Got it"
+msgstr "Capito"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:62
+#, elixir-autogen, elixir-format
+msgid "New feature"
+msgstr "Nuova funzione"
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:128
+#: lib/tymeslot_web/components/announcement_modal_component.ex:132
+#: lib/tymeslot_web/components/tour_overlay.ex:61
+#, elixir-autogen, elixir-format
+msgid "Next"
+msgstr "Avanti"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:55
+#, elixir-autogen, elixir-format
+msgid "Profile, availability, integrations, and automation — all one click away."
+msgstr "Profilo, disponibilità, integrazioni e automazioni — tutto a un solo clic."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:66
+#, elixir-autogen, elixir-format
+msgid "Quick links to set up your profile, availability, and meeting types. Start here."
+msgstr "Collegamenti rapidi per configurare il profilo, la disponibilità e i tipi di incontro. Inizia da qui."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:53
+#, elixir-autogen, elixir-format
+msgid "Settings live in the sidebar"
+msgstr "Le impostazioni si trovano nella barra laterale"
+
+#: lib/tymeslot_web/components/tour_overlay.ex:47
+#, elixir-autogen, elixir-format
+msgid "Skip"
+msgstr "Salta"
+
+#: lib/tymeslot_web/components/tour_overlay.ex:40
+#, elixir-autogen, elixir-format
+msgid "Step %{n} of %{total}"
+msgstr "Passaggio %{n} di %{total}"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:44
+#, elixir-autogen, elixir-format
+msgid "Switch between Scheduling (your event types) and Calendar (your bookings)."
+msgstr "Passa tra Pianificazione (i tuoi tipi di evento) e Calendario (le tue prenotazioni)."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:36
+#, elixir-autogen, elixir-format
+msgid "Take 30 seconds to learn where everything lives."
+msgstr "Prenditi 30 secondi per scoprire dove si trova ogni cosa."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:42
+#, elixir-autogen, elixir-format
+msgid "Two modes"
+msgstr "Due modalità"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:35
+#, elixir-autogen, elixir-format
+msgid "Welcome to your Tymeslot dashboard"
+msgstr "Benvenuto nella tua Dashboard Tymeslot"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:82
+#, elixir-autogen, elixir-format
+msgid "You're set"
+msgstr "Tutto pronto"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:75
+#, elixir-autogen, elixir-format
+msgid "Your account"
+msgstr "Il tuo account"

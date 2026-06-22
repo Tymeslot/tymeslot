@@ -18,7 +18,7 @@ defmodule TymeslotWeb.StepNavigation do
       <.step_item
         step={1}
         current_step={@current_step}
-        label={gettext("Duration")}
+        label={dgettext("onboarding", "Duration")}
         clickable={@current_step > 1}
       />
 
@@ -27,7 +27,7 @@ defmodule TymeslotWeb.StepNavigation do
       <.step_item
         step={2}
         current_step={@current_step}
-        label={gettext("Date & Time")}
+        label={dgettext("onboarding", "Date & Time")}
         clickable={@current_step > 2 && @slug != nil}
       />
 
@@ -36,7 +36,7 @@ defmodule TymeslotWeb.StepNavigation do
       <.step_item
         step={3}
         current_step={@current_step}
-        label={gettext("Details")}
+        label={dgettext("onboarding", "Details")}
         clickable={@current_step > 3 && @slug != nil}
       />
 
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.StepNavigation do
       <.step_item
         step={4}
         current_step={@current_step}
-        label={gettext("Confirmation")}
+        label={dgettext("onboarding", "Confirmation")}
         clickable={false}
       />
     </div>
@@ -87,7 +87,7 @@ defmodule TymeslotWeb.StepNavigation do
   end
 
   defp step_class(step, current) when step <= current do
-    "step-circle--active w-8 h-8 rounded-full bg-gradient-to-r from-purple-800 to-purple-900 text-white flex items-center justify-center shadow-lg border border-white/20 transition-all duration-300 scale-110"
+    "step-circle--active w-8 h-8 rounded-full bg-linear-to-r from-purple-800 to-purple-900 text-white flex items-center justify-center shadow-lg border border-white/20 transition-all duration-300 scale-110"
   end
 
   defp step_class(_step, _current) do
@@ -95,7 +95,7 @@ defmodule TymeslotWeb.StepNavigation do
   end
 
   defp connector_class(step, current) when step < current do
-    "step-connector--active w-4 sm:w-8 md:w-12 h-0.5 sm:h-1 bg-gradient-to-r from-purple-800 to-purple-900 rounded shadow-sm transition-all duration-500"
+    "step-connector--active w-4 sm:w-8 md:w-12 h-0.5 sm:h-1 bg-linear-to-r from-purple-800 to-purple-900 rounded shadow-sm transition-all duration-500"
   end
 
   defp connector_class(_step, _current) do

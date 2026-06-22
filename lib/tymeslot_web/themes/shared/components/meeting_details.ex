@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingDetails do
         </div>
         <div class="meeting-detail-info">
           <span class="meeting-detail-value">{@date}</span>
-          <span class="meeting-detail-label">{gettext("Date")}</span>
+          <span class="meeting-detail-label">{dgettext("booking", "Date")}</span>
         </div>
       </div>
       <div class="meeting-detail-row">
@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.MeetingDetails do
             <.icon name="hero-user" class="meeting-detail-icon" />
           </div>
           <div class="meeting-detail-info">
-            <span class="meeting-detail-label">{gettext("Meeting with")}</span>
+            <span class="meeting-detail-label">{dgettext("booking", "Meeting with")}</span>
             <span class="meeting-detail-value">{@organizer_name}</span>
           </div>
         </div>

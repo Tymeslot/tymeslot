@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
               "relative rounded-token-md border-2 transition-colors duration-200 group",
               "w-10 h-10 flex items-center justify-center overflow-hidden",
               if(@selected_icon == icon_value,
-                do: "bg-gradient-to-br from-teal-50 to-teal-100 border-teal-500 shadow-md",
+                do: "bg-linear-to-br from-teal-50 to-teal-100 border-teal-500 shadow-md",
                 else: "bg-white/50 border-tymeslot-300/50 hover:border-teal-400/50 hover:bg-white/70"
               )
             ]}
@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
           <div class="flex items-center justify-center">
             <span class={[
               "hero-user selector-icon",
-              if(@meeting_mode == "personal", do: "!text-white")
+              if(@meeting_mode == "personal", do: "text-white!")
             ]} />
             <span class="font-medium">In-Person</span>
           </div>
@@ -130,7 +130,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
           <div class="flex items-center justify-center">
             <span class={[
               "hero-video-camera selector-icon",
-              if(@meeting_mode == "video", do: "!text-white")
+              if(@meeting_mode == "video", do: "text-white!")
             ]} />
             <span class="font-medium">Video Meeting</span>
           </div>
@@ -163,7 +163,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                     )
                   }
                   class={[
-                    "glass-selector !h-20",
+                    "glass-selector h-20!",
                     if(@selected_video_integration_id == integration.id, do: "glass-selector--active")
                   ]}
                   title={integration.name}
@@ -238,7 +238,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                     )
                   }
                   class={[
-                    "glass-selector !h-20",
+                    "glass-selector h-20!",
                     if(@selected_calendar_integration_id == integration.id, do: "glass-selector--active"),
                     if(not integration.is_active, do: "opacity-60"),
                     if(@refreshing_calendars, do: "opacity-50 cursor-not-allowed")

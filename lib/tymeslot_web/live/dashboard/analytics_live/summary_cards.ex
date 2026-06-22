@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
   attr :visits, :integer, required: true
   attr :unique_visitors, :integer, required: true
   attr :bookings, :integer, required: true
+  attr :converting_visitors, :integer, required: true
 
   @spec cards(map()) :: Phoenix.LiveView.Rendered.t()
   def cards(assigns) do
@@ -17,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
       assign(
         assigns,
         :conversion_rate,
-        Analytics.conversion_rate(assigns.bookings, assigns.unique_visitors)
+        Analytics.conversion_rate(assigns.converting_visitors, assigns.unique_visitors)
       )
 
     ~H"""
@@ -25,7 +26,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
       <.stat_card label="Visits" value={@visits} />
       <.stat_card label="Unique visitors" value={@unique_visitors} />
       <.stat_card label="Bookings" value={@bookings} />
-      <.stat_card label="Conversion" value={"#{@conversion_rate}%"} />
+      <.stat_card label="Conversion (est.)" value={"#{@conversion_rate}%"} />
     </div>
     """
   end

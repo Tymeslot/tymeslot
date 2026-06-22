@@ -49,9 +49,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             <span
               :if={@type.is_private}
               class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-token-full bg-tymeslot-100 text-tymeslot-600 text-token-xs font-medium"
-              title={gettext("Hidden from your public booking page; reachable only by its direct link")}
+              title={dgettext("dashboard", "Hidden from your public booking page; reachable only by its direct link")}
             >
-              <span class="hero-eye-slash-mini w-3 h-3" />{gettext("Unlisted")}
+              <span class="hero-eye-slash-mini w-3 h-3" />{dgettext("dashboard", "Unlisted")}
             </span>
           </div>
           <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-token-xs text-tymeslot-600">

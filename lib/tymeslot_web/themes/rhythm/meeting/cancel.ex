@@ -58,11 +58,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                     </div>
 
                     <h1 class="confirmation-headline">
-                      {gettext("Meeting Confirmed")}
+                      {dgettext("booking", "Meeting Confirmed")}
                     </h1>
 
                     <p class="confirmation-message">
-                      {gettext("Great! Your meeting is still scheduled as planned.")}
+                      {dgettext("booking", "Great! Your meeting is still scheduled as planned.")}
                     </p>
                   <% else %>
                     <div class="success-badge success-badge--transparent">
@@ -84,18 +84,18 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                     </div>
 
                     <h1 class="confirmation-headline">
-                      {gettext("Cancel Appointment")}
+                      {dgettext("booking", "Cancel Appointment")}
                     </h1>
 
                     <p class="confirmation-message">
-                      {gettext("Are you sure you want to cancel this appointment?")}
+                      {dgettext("booking", "Are you sure you want to cancel this appointment?")}
                     </p>
                   <% end %>
                 </div>
                 
                 <div class="meeting-ticket">
                   <div class="ticket-header">
-                    <span class="ticket-label">{gettext("Meeting Details")}</span>
+                    <span class="ticket-label">{dgettext("booking", "Meeting Details")}</span>
                     <span class="ticket-badge">{@meeting.duration} min</span>
                   </div>
 
@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                           />
                         </svg>
-                        <span>{gettext("We look forward to seeing you at the scheduled time.")}</span>
+                        <span>{dgettext("booking", "We look forward to seeing you at the scheduled time.")}</span>
                       </div>
                     </div>
                   <% else %>
@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                           />
                         </svg>
-                        <span>{gettext("A cancellation email will be sent to all participants")}</span>
+                        <span>{dgettext("booking", "A cancellation email will be sent to all participants")}</span>
                       </div>
                     </div>
                   <% end %>
@@ -150,7 +150,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                       class="action-button-primary action-button-success"
                       type="button"
                     >
-                      {gettext("Done")}
+                      {dgettext("booking", "Done")}
                     </button>
                   </div>
                 <% else %>
@@ -163,9 +163,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                       disabled={@loading}
                     >
                       <%= if @loading do %>
-                        {gettext("Cancelling...")}
+                        {dgettext("booking", "Cancelling...")}
                       <% else %>
-                        {gettext("Yes, Cancel Meeting")}
+                        {dgettext("booking", "Yes, Cancel Meeting")}
                       <% end %>
                     </button>
 
@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                       data-testid="keep-meeting"
                       disabled={@loading}
                     >
-                      {gettext("Keep Meeting")}
+                      {dgettext("booking", "Keep Meeting")}
                     </button>
                   </div>
                 <% end %>

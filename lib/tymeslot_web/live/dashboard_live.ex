@@ -149,6 +149,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Components.TourOverlay
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
   alias TymeslotWeb.Dashboard.CalendarEventHandlers
+  alias TymeslotWeb.Dashboard.CalendarGridComponent
   alias TymeslotWeb.Dashboard.ComponentDispatch
   alias TymeslotWeb.Dashboard.MeetingFormMessages
   alias TymeslotWeb.Dashboard.PaymentsHandlers
@@ -175,10 +176,10 @@ defmodule TymeslotWeb.DashboardLive do
     socket =
       if connected?(socket) && action == :calendar &&
            !socket.assigns[:calendar_pubsub_subscribed] do
-        Phoenix.PubSub.subscribe(
-          Tymeslot.PubSub,
-          "calendar_events:#{socket.assigns.current_user.id}"
-        )
+        user_id = socket.assigns.current_user.id
+
+        Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{user_id}")
+        Phoenix.PubSub.subscribe(Tymeslot.PubSub, "dashboard_guests:#{user_id}")
 
         assign(socket, :calendar_pubsub_subscribed, true)
       else
@@ -392,6 +393,16 @@ defmodule TymeslotWeb.DashboardLive do
   end
 
   # Calendar-specific handle_info clauses — delegated to CalendarEventHandlers.
+
+  def handle_info({:guest_rsvp_updated, _meeting_id}, socket) do
+    send_update(
+      CalendarGridComponent,
+      id: ComponentDispatch.component_id(:calendar),
+      action: :refresh_guest_summaries
+    )
+
+    {:noreply, socket}
+  end
 
   def handle_info(:tick, socket),
     do: CalendarEventHandlers.handle_tick(socket)

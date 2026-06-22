@@ -56,8 +56,32 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
   defp connect_error_message(plan_error) when plan_error in [:pro_required, :insufficient_plan],
     do: "Meeting payments require an upgraded plan."
 
+  defp connect_error_message(%Stripe.Error{} = error) do
+    if account_creation_restricted?(error) do
+      "Payment setup is temporarily unavailable. Please try again later."
+    else
+      "Could not start Stripe connection. Please try again."
+    end
+  end
+
   defp connect_error_message(_reason),
     do: "Could not start Stripe connection. Please try again."
+
+  # Stripe's risk system can place a temporary hold on the platform account's
+  # ability to create new connected accounts ("…temporarily restricted your
+  # ability to create this type of connected account…"). This is an
+  # operator-side hold, lifted only from the Stripe Dashboard — an immediate
+  # client retry cannot succeed, so we surface "try again later" rather than
+  # the generic "try again". The message text is the only signal Stripe gives
+  # to distinguish this from other invalid_request errors.
+  defp account_creation_restricted?(%Stripe.Error{
+         code: :invalid_request_error,
+         message: message
+       })
+       when is_binary(message),
+       do: String.contains?(message, "temporarily restricted")
+
+  defp account_creation_restricted?(_error), do: false
 
   # The user's profile currently carries no country field. Fall back to the
   # operator-configured default (MEETING_PAYMENTS_DEFAULT_COUNTRY env var,

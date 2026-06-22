@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
       duration_minutes: 30,
       icon: "hero-bolt",
       is_active: true,
+      is_private: false,
       allow_video: false,
       payment_required: false,
       price_cents: nil,

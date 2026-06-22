@@ -37,20 +37,20 @@ defmodule TymeslotWeb.Components.TourOverlay do
         aria-labelledby="dashboard-tour-title"
       >
         <p class="dashboard-tour__progress">
-          {gettext("Step %{n} of %{total}", n: @step_index + 1, total: @total_steps)}
+          {dgettext("onboarding", "Step %{n} of %{total}", n: @step_index + 1, total: @total_steps)}
         </p>
         <h2 id="dashboard-tour-title" class="dashboard-tour__title">{@step.title}</h2>
         <p class="dashboard-tour__body">{@step.body}</p>
 
         <div class="dashboard-tour__actions">
           <.action_button variant={:outline} phx-click="tour:skip">
-            {gettext("Skip")}
+            {dgettext("onboarding", "Skip")}
           </.action_button>
 
           <div class="dashboard-tour__spacer"></div>
 
           <.action_button :if={@step_index > 0} variant={:secondary} phx-click="tour:back">
-            {gettext("Back")}
+            {dgettext("onboarding", "Back")}
           </.action_button>
 
           <.action_button
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Components.TourOverlay do
             variant={:primary}
             phx-click="tour:next"
           >
-            {gettext("Next")}
+            {dgettext("onboarding", "Next")}
           </.action_button>
 
           <.action_button
@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Components.TourOverlay do
             variant={:primary}
             phx-click="tour:finish"
           >
-            {gettext("Finish")}
+            {dgettext("onboarding", "Finish")}
           </.action_button>
         </div>
       </div>

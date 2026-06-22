@@ -10,6 +10,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
+  alias TymeslotWeb.Themes.Shared.Components.GuestField
+  alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
 
@@ -46,6 +48,36 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("toggle_guests", _params, socket) do
+    send(self(), {:step_event, :booking, :toggle_guests, nil})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("close_guests", _params, socket) do
+    send(self(), {:step_event, :booking, :close_guests, nil})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("guest_input_change", params, socket) do
+    send(self(), {:step_event, :booking, :guest_input, params["guest_email"] || ""})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("add_guest", params, socket) do
+    send(self(), {:step_event, :booking, :add_guest, params["guest_email"] || ""})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("remove_guest", %{"email" => email}, socket) do
+    send(self(), {:step_event, :booking, :remove_guest, email})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="scheduling-box" data-locale={@locale}>
@@ -66,7 +98,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                   <.icon name="hero-calendar" class="summary-icon hero-icon hero-icon--md" />
                   <div>
                     <div class="summary-value">{LocalizationHelpers.format_date(@selected_date)}</div>
-                    <div class="summary-label">{@selected_time || gettext("No time selected")}</div>
+                    <div class="summary-label">{@selected_time || dgettext("booking", "No time selected")}</div>
                   </div>
                 </div>
                 <div class="summary-item">
@@ -77,9 +109,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                     </div>
                     <div class="summary-label">
                       <%= if @meeting_type do %>
-                        {LocalizationHelpers.format_duration(@meeting_type.duration_minutes)} {gettext("meeting")}
+                        {LocalizationHelpers.format_duration(@meeting_type.duration_minutes)} {dgettext("booking", "meeting")}
                       <% else %>
-                        {LocalizationHelpers.format_duration(@selected_duration)} {gettext("meeting")}
+                        {LocalizationHelpers.format_duration(@selected_duration)} {dgettext("booking", "meeting")}
                       <% end %>
                     </div>
                   </div>
@@ -103,8 +135,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
               <.input
                 field={f[:name]}
-                label={gettext("name")}
-                placeholder={gettext("enter_full_name")}
+                label={dgettext("booking", "name")}
+                placeholder={dgettext("booking", "enter_full_name")}
                 errors={FormValidationHelpers.field_errors(@validation_errors, :name)}
                 phx-debounce="blur"
                 phx-blur="field_blur"
@@ -114,9 +146,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
               <.input
                 field={f[:email]}
-                label={gettext("email")}
+                label={dgettext("booking", "email")}
                 type="email"
-                placeholder={gettext("enter_email")}
+                placeholder={dgettext("booking", "enter_email")}
                 errors={FormValidationHelpers.field_errors(@validation_errors, :email)}
                 phx-debounce="blur"
                 phx-blur="field_blur"
@@ -127,8 +159,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               <.input
                 field={f[:message]}
                 type="textarea"
-                label={gettext("message_optional")}
-                placeholder={gettext("add_details")}
+                label={dgettext("booking", "message_optional")}
+                placeholder={dgettext("booking", "add_details")}
                 errors={FormValidationHelpers.field_errors(@validation_errors, :message)}
                 rows={4}
                 phx-debounce="blur"
@@ -137,26 +169,40 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 phx-target={@myself}
               />
 
-              <SecurityFields.recaptcha_fields id_prefix="booking" param_root="booking" />
+              <SecurityFields.recaptcha_token_field id_prefix="booking" param_root="booking" />
+            </.form>
 
-              <div class="slide-actions horizontal">
-                <button
-                  type="button"
-                  class="prev-button"
-                  phx-click="prev_slide"
-                  phx-target={@myself}
-                  data-testid="back-step"
-                  disabled={@submitting}
-                >
-                  ← {gettext("back")}
-                </button>
-                <button
-                  type="submit"
-                  class="submit-button"
-                  data-testid="submit-booking"
-                  disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
-                >
-                  <%= if @submitting do %>
+            <GuestField.guest_field
+              :if={guests_allowed?(assigns)}
+              guest_emails={@guest_emails}
+              guest_input={@guest_input}
+              guest_error={@guest_error}
+              guests_open={@guests_open}
+              max_guests={@max_guests}
+              target={@myself}
+            />
+
+            <SecurityFields.recaptcha_notice_block />
+
+            <div class="slide-actions horizontal">
+              <button
+                type="button"
+                class="prev-button"
+                phx-click="prev_slide"
+                phx-target={@myself}
+                data-testid="back-step"
+                disabled={@submitting}
+              >
+                ← {dgettext("booking", "back")}
+              </button>
+              <button
+                type="submit"
+                form="booking-form"
+                class="submit-button"
+                data-testid="submit-booking"
+                disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
+              >
+                <%= if @submitting do %>
                     <svg
                       class="loading-spinner icon-sm"
                       xmlns="http://www.w3.org/2000/svg"
@@ -179,17 +225,18 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                       >
                       </path>
                     </svg>
-                    <span>{gettext("Verifying...")}</span>
+                    <span>{dgettext("booking", "Verifying...")}</span>
                   <% else %>
-                    {if @is_rescheduling, do: gettext("reschedule_meeting"), else: gettext("submit")}
+                    {if @is_rescheduling, do: dgettext("booking", "reschedule_meeting"), else: dgettext("booking", "submit")}
                   <% end %>
                 </button>
-              </div>
-            </.form>
+            </div>
           </div>
         </div>
       </div>
     </div>
     """
   end
+
+  defp guests_allowed?(assigns), do: GuestBooking.guests_allowed?(assigns)
 end

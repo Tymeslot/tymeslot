@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
             <td class="px-4 py-3">{row.utm_source || "(direct / unknown)"}</td>
             <td class="px-4 py-3 text-right tabular-nums">{row.visits}</td>
             <td class="px-4 py-3 text-right tabular-nums">{row.bookings}</td>
-            <td class="px-4 py-3 text-right tabular-nums">{Analytics.conversion_rate(row.bookings, row.unique_visitors)}%</td>
+            <td class="px-4 py-3 text-right tabular-nums">{Analytics.conversion_rate(row.converting_visitors, row.unique_visitors)}%</td>
           </tr>
           <tr :if={@sources == []}>
             <td colspan="4" class="px-4 py-8 text-center text-tymeslot-400">

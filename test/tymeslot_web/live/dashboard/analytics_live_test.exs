@@ -15,6 +15,18 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
     setup_dashboard_user(%{conn: conn})
   end
 
+  describe "when booking analytics is disabled" do
+    setup do
+      Application.put_env(:tymeslot, :booking_analytics_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :booking_analytics_enabled, true) end)
+    end
+
+    test "redirects away from the analytics dashboard", %{conn: conn} do
+      assert {:error, {:live_redirect, %{to: "/dashboard"}}} =
+               live(conn, ~p"/dashboard/analytics")
+    end
+  end
+
   describe "page rendering" do
     test "renders summary cards and date-range controls", %{conn: conn, user: user} do
       seed_visit(user, "linkedin", "hash-a")
@@ -52,6 +64,17 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       assert html =~ "Analytics"
       assert html =~ "linkedin"
     end
+
+    test "renders the device breakdown with per-device labels", %{conn: conn, user: user} do
+      seed_visit(user, "linkedin", "hash-a", device_type: "mobile")
+      seed_visit(user, "linkedin", "hash-b", device_type: "desktop")
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/analytics")
+
+      assert html =~ "Devices"
+      assert html =~ "Mobile"
+      assert html =~ "Desktop"
+    end
   end
 
   describe "attribution table with real booking data" do
@@ -65,12 +88,16 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       seed_visit(user, "linkedin", "hash-uv-3")
       seed_visit(user, "linkedin", "hash-uv-3")
 
-      # 2 booked meetings attributed to linkedin, distinct start times to dodge unique constraint
+      # 2 booked meetings attributed to linkedin, distinct start times to dodge
+      # unique constraint. Each carries the visitor_hash of one of the viewers
+      # above, so they count as 2 distinct converting visitors — conversion is
+      # measured from converting visitors, not raw booking volume.
       base = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
 
       insert(:meeting,
         organizer_user_id: user.id,
         utm_source: "linkedin",
+        visitor_hash: "hash-uv-1",
         start_time: base,
         end_time: DateTime.add(base, 60, :minute)
       )
@@ -78,6 +105,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       insert(:meeting,
         organizer_user_id: user.id,
         utm_source: "linkedin",
+        visitor_hash: "hash-uv-2",
         start_time: DateTime.add(base, 3600, :second),
         end_time: DateTime.add(base, 3600 + 60 * 60, :second)
       )
@@ -109,7 +137,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
     end
   end
 
-  defp seed_visit(user, utm_source, visitor_hash) do
+  defp seed_visit(user, utm_source, visitor_hash, opts \\ []) do
     {:ok, _event} =
       EventQueries.insert(%{
         event_type: "booking_page_view",
@@ -117,6 +145,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
         user_id: user.id,
         visitor_hash: visitor_hash,
         utm_source: utm_source,
+        device_type: Keyword.get(opts, :device_type),
         tracking_params: %{}
       })
   end

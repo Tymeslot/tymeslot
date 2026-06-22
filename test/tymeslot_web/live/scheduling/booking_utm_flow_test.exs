@@ -116,6 +116,45 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
     assert meeting.utm_medium == "social"
     assert meeting.utm_campaign == "spring"
     assert meeting.tracking_params == %{"ref" => "newsletter"}
+
+    # The cookieless join key is captured at mount and persisted on the booking,
+    # letting analytics join this meeting back to its page-view for conversion.
+    assert meeting.visitor_hash =~ ~r/^[0-9a-f]{64}$/
+  end
+
+  @tag :capture_log
+  test "no UTM or tracking params are persisted when booking analytics is disabled", %{
+    conn: conn,
+    profile: profile,
+    meeting_type: meeting_type
+  } do
+    Application.put_env(:tymeslot, :booking_analytics_enabled, false)
+    on_exit(fn -> Application.put_env(:tymeslot, :booking_analytics_enabled, true) end)
+
+    conn = put_req_header(conn, "user-agent", "Mozilla/5.0 (Macintosh) Chrome/126.0.0.0")
+
+    view = navigate_to_booking_form_with_tracking(conn, profile, meeting_type)
+
+    view
+    |> form("form[phx-submit='submit']", %{
+      "booking" => %{
+        "name" => "No UTM User",
+        "email" => "no-utm-user@example.com",
+        "message" => "Hi from a campaign"
+      }
+    })
+    |> render_submit()
+
+    _drain = :sys.get_state(view.pid)
+
+    [meeting] = MeetingQueries.list_meetings_by_attendee_email("no-utm-user@example.com")
+
+    assert is_nil(meeting.utm_source)
+    assert is_nil(meeting.utm_medium)
+    assert is_nil(meeting.utm_campaign)
+    assert meeting.tracking_params == %{}
+    # Feature off → no visitor hash captured or persisted.
+    assert is_nil(meeting.visitor_hash)
   end
 
   # Mirrors `Tymeslot.BookingTestHelpers.navigate_to_booking_form/3` but

@@ -357,7 +357,9 @@ if config_env() == :prod do
          # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
          {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
          # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
-         {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments}
+         {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments},
+         # Run daily at 04:30 UTC to cross-check booking analytics against bookings
+         {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker}
        ]}
     ]
 

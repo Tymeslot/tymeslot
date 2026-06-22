@@ -10,6 +10,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+  alias TymeslotWeb.Themes.Shared.Components.GuestField
+  alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
 
@@ -49,6 +51,36 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("toggle_guests", _params, socket) do
+    send(self(), {:step_event, :booking, :toggle_guests, nil})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("close_guests", _params, socket) do
+    send(self(), {:step_event, :booking, :close_guests, nil})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("guest_input_change", params, socket) do
+    send(self(), {:step_event, :booking, :guest_input, params["guest_email"] || ""})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("add_guest", params, socket) do
+    send(self(), {:step_event, :booking, :add_guest, params["guest_email"] || ""})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("remove_guest", %{"email" => email}, socket) do
+    send(self(), {:step_event, :booking, :remove_guest, email})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="container flex-1" data-locale={@locale}>
@@ -68,16 +100,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     class="booking-heading-wrapper"
                     title_class="section-header booking-heading"
                   >
-                    {gettext("Enter Your Details")}
+                    {dgettext("booking", "Enter Your Details")}
                   </.section_header>
 
                   <p class="booking-subtitle text-quill-primary">
                     <%= if @organizer_profile do %>
-                      {gettext("You're booking a %{duration} meeting with %{name}",
+                      {dgettext("booking", "You're booking a %{duration} meeting with %{name}",
                         duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: Duration.format(@duration)),
                         name: get_organizer_name(@organizer_profile, @username_context))}
                     <% else %>
-                      {gettext("You're booking a %{duration} meeting",
+                      {dgettext("booking", "You're booking a %{duration} meeting",
                         duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: Duration.format(@duration)))}
                     <% end %>
                   </p>
@@ -103,8 +135,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     <div class="booking-inline-fields">
                       <.input
                         field={f[:name]}
-                        label={gettext("Your Name")}
-                        placeholder={gettext("John Doe")}
+                        label={dgettext("booking", "Your Name")}
+                        placeholder={dgettext("booking", "John Doe")}
                         errors={FormValidationHelpers.field_errors(@validation_errors, :name)}
                         required
                         phx-debounce="blur"
@@ -115,9 +147,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
 
                       <.input
                         field={f[:email]}
-                        label={gettext("Email Address")}
+                        label={dgettext("booking", "Email Address")}
                         type="email"
-                        placeholder={gettext("john@example.com")}
+                        placeholder={dgettext("booking", "john@example.com")}
                         errors={FormValidationHelpers.field_errors(@validation_errors, :email)}
                         required
                         phx-debounce="blur"
@@ -130,8 +162,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     <.input
                       field={f[:message]}
                       type="textarea"
-                      label={gettext("Additional Message (Optional)")}
-                      placeholder={gettext("Let me know what you'd like to discuss...")}
+                      label={dgettext("booking", "Additional Message (Optional)")}
+                      placeholder={dgettext("booking", "Let me know what you'd like to discuss...")}
                       errors={FormValidationHelpers.field_errors(@validation_errors, :message)}
                       rows={3}
                       phx-debounce="blur"
@@ -140,35 +172,48 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       phx-target={@myself}
                     />
 
-                    <SecurityFields.recaptcha_fields id_prefix="booking" param_root="booking" />
-
-                    <div class="booking-actions">
-                      <.action_button
-                        type="button"
-                        phx-click="back_step"
-                        phx-target={@myself}
-                        data-testid="back-step"
-                        variant={:secondary}
-                        disabled={@submitting}
-                        class="flex-1"
-                      >
-                        ← {gettext("back")}
-                      </.action_button>
-
-                      <.loading_button
-                        type="submit"
-                        id="submit-booking-button"
-                        loading={@submitting}
-                        loading_text={gettext("Verifying...")}
-                        disabled={!OrganizerHelpers.form_valid?(@form)}
-                        data-testid="submit-booking"
-                        class="flex-1"
-                        title={get_submit_title(@submitting, @form)}
-                      >
-                        {if @is_rescheduling, do: gettext("reschedule_meeting"), else: gettext("book_meeting")} 🎆
-                      </.loading_button>
-                    </div>
+                    <SecurityFields.recaptcha_token_field id_prefix="booking" param_root="booking" />
                   </.form>
+
+                  <GuestField.guest_field
+                    :if={guests_allowed?(assigns)}
+                    guest_emails={@guest_emails}
+                    guest_input={@guest_input}
+                    guest_error={@guest_error}
+                    guests_open={@guests_open}
+                    max_guests={@max_guests}
+                    target={@myself}
+                  />
+
+                  <SecurityFields.recaptcha_notice_block />
+
+                  <div class="booking-actions">
+                    <.action_button
+                      type="button"
+                      phx-click="back_step"
+                      phx-target={@myself}
+                      data-testid="back-step"
+                      variant={:secondary}
+                      disabled={@submitting}
+                      class="flex-1"
+                    >
+                      ← {dgettext("booking", "back")}
+                    </.action_button>
+
+                    <.loading_button
+                      type="submit"
+                      form="booking-form"
+                      id="submit-booking-button"
+                      loading={@submitting}
+                      loading_text={dgettext("booking", "Verifying...")}
+                      disabled={!OrganizerHelpers.form_valid?(@form)}
+                      data-testid="submit-booking"
+                      class="flex-1"
+                      title={get_submit_title(@submitting, @form)}
+                    >
+                      {if @is_rescheduling, do: dgettext("booking", "reschedule_meeting"), else: dgettext("booking", "book_meeting")} 🎆
+                    </.loading_button>
+                  </div>
                 </div>
               </.glass_morphism_card>
             </div>
@@ -180,15 +225,22 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   end
 
   # Helper functions
+  defp guests_allowed?(assigns), do: GuestBooking.guests_allowed?(assigns)
+
   defp get_organizer_name(organizer_profile, username_context) do
     Profiles.display_name(organizer_profile) || username_context
   end
 
   defp get_submit_title(submitting, form) do
     cond do
-      submitting -> gettext("Verifying slot availability and creating your meeting...")
-      !OrganizerHelpers.form_valid?(form) -> gettext("Please fill in all required fields")
-      true -> gettext("Click to schedule your meeting")
+      submitting ->
+        dgettext("booking", "Verifying slot availability and creating your meeting...")
+
+      !OrganizerHelpers.form_valid?(form) ->
+        dgettext("booking", "Please fill in all required fields")
+
+      true ->
+        dgettext("booking", "Click to schedule your meeting")
     end
   end
 end

@@ -36,6 +36,19 @@ config :tymeslot,
   repo: Tymeslot.Repo,
   contact_url: nil,
   features_url: nil,
+  # Optional sub-pages for a "Features" navigation dropdown. Each entry is a
+  # %{label: string, url: string, icon: string} map; `icon` is an optional
+  # heroicon name (e.g. "hero-calendar-days") shown beside the label — add new
+  # icons to the @source inline safelist in assets/css/app.css. Empty by default —
+  # the nav then renders a plain "Features" link. SaaS populates this with its
+  # single-feature pages.
+  feature_pages: [],
+  # Optional entries for a "Resources" navigation dropdown grouping content
+  # pages (use-case guides, etc.). Same %{label, url, icon} shape as
+  # :feature_pages. Empty by default — the nav then omits the "Resources" group
+  # entirely. SaaS populates this (see config/runtime.exs).
+  resources_pages: [],
+  pricing_url: nil,
   privacy_policy_url: nil,
   terms_and_conditions_url: nil,
   # Base URL for documentation articles. Self-hosted instances link to the public SaaS docs.
@@ -409,6 +422,12 @@ config :tymeslot,
   slack_oauth_available: false,
   slack_client_id: nil,
   slack_client_secret: nil
+
+# Booking analytics — page-view tracking, cookie-less visitor fingerprinting,
+# UTM/referrer capture on bookings, and the attribution dashboard. Off by
+# default so self-hosters do not collect visitor analytics unless they opt in;
+# the managed SaaS overrides this to `true`.
+config :tymeslot, :booking_analytics_enabled, false
 
 # Analytics — secret used to derive the daily-rotated visitor fingerprint salt.
 # Required in production; dev/test override with fixed values for repeatability.

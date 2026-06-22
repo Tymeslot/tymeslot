@@ -41,22 +41,22 @@ defmodule TymeslotWeb.Themes.Shared.Components.AwaitingPayment do
           </svg>
         </div>
         <h1 class="awaiting-payment-heading">
-          {gettext("Complete your payment in the new tab")}
+          {dgettext("booking", "Complete your payment in the new tab")}
         </h1>
         <p class="awaiting-payment-message">
-          {gettext(
+          {dgettext("booking", 
             "We opened Stripe Checkout in a new browser tab. Once your payment is confirmed, this page updates automatically."
           )}
         </p>
         <p class="awaiting-payment-fallback">
-          {gettext("Did the new tab not open?")}
+          {dgettext("booking", "Did the new tab not open?")}
           <a
             href={@checkout_url}
             target="_blank"
             rel="noopener noreferrer"
             data-testid="awaiting-payment-fallback-link"
           >
-            {gettext("Open Stripe Checkout")}
+            {dgettext("booking", "Open Stripe Checkout")}
           </a>
         </p>
       </div>

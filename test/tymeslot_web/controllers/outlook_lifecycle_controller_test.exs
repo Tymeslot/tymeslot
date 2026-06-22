@@ -44,6 +44,36 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
     insert(:calendar_integration, Map.to_list(Map.merge(defaults, Map.new(attrs))))
   end
 
+  describe "webhook/2 - validation challenge" do
+    test "returns 200 echoing the validationToken as plain text", %{conn: conn} do
+      # Graph validates the lifecycleNotificationUrl with the same handshake as
+      # the notificationUrl when creating a subscription. The endpoint must echo
+      # the token with 200, or the entire subscription is rejected (HTTP 400).
+      conn = post(conn, "#{@lifecycle_path}?validationToken=lifecycle-challenge-abc")
+
+      assert conn.status == 200
+      assert conn.resp_body == "lifecycle-challenge-abc"
+      assert hd(get_resp_header(conn, "content-type")) =~ "text/plain"
+    end
+
+    test "echoes the token when the provider negotiates text/plain", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("accept", "text/plain")
+        |> post("#{@lifecycle_path}?validationToken=lifecycle-text-plain")
+
+      assert conn.status == 200
+      assert conn.resp_body == "lifecycle-text-plain"
+    end
+
+    test "does not enqueue any job for a validation challenge", %{conn: conn} do
+      post(conn, "#{@lifecycle_path}?validationToken=lifecycle-no-jobs")
+
+      refute_enqueued(worker: TokenRefreshJob)
+      refute_enqueued(worker: ReregisterOutlookSubscriptionWorker)
+    end
+  end
+
   describe "webhook/2 - reauthorizationRequired" do
     @tag capture_log: true
     test "returns 202 and enqueues TokenRefreshJob and ReregisterOutlookSubscriptionWorker", %{

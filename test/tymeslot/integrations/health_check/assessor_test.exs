@@ -216,6 +216,32 @@ defmodule Tymeslot.Integrations.HealthCheck.AssessorTest do
       assert {:ok, _message} = result
       assert is_integer(duration)
     end
+
+    test "returns success for valid zoom integration" do
+      user = insert(:user)
+
+      # Regression: the assessor previously had no Zoom config builder, so the
+      # health check validated an empty config and always failed with
+      # "Missing required fields: access_token, refresh_token, token_expires_at"
+      # regardless of the stored tokens. Delegating to the provider's build_config/3
+      # forwards the decrypted credentials, so a valid integration now passes.
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+        )
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn config ->
+        assert %{access_token: "test-access-token", refresh_token: "test-refresh-token"} = config
+        {:ok, :valid}
+      end)
+
+      {result, duration} = Assessor.assess(:video, integration)
+
+      assert {:ok, _message} = result
+      assert is_integer(duration)
+    end
   end
 
   describe "telemetry recording" do

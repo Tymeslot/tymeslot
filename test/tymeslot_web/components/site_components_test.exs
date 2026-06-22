@@ -59,17 +59,27 @@ defmodule TymeslotWeb.Components.SiteComponentsTest do
       assert html =~ "All rights reserved"
     end
 
-    test "renders configured marketing links" do
+    test "renders every configured footer link" do
       html = render_component(&SiteComponents.site_footer/1, %{})
 
-      # Marketing links appear when their URLs are configured. In the umbrella
-      # test environment the SaaS config enables them; in standalone Core they are nil.
-      if Application.get_env(:tymeslot, :privacy_policy_url) do
-        assert html =~ "Privacy Policy"
-      end
-
-      if Application.get_env(:tymeslot, :terms_and_conditions_url) do
-        assert html =~ "Terms of Service"
+      # The Product and Legal columns are rendered from a data-driven list, so
+      # each entry should appear whenever its URL is configured. In the umbrella
+      # test environment the SaaS config enables them; in standalone Core they
+      # are nil and the loop simply drops them.
+      for {key, label} <- [
+            {:features_url, "Features"},
+            {:pricing_url, "Pricing"},
+            {:docs_url, "Docs"},
+            {:changelog_url, "Changelog"},
+            {:contact_url, "Contact"},
+            {:privacy_policy_url, "Privacy Policy"},
+            {:terms_and_conditions_url, "Terms and Conditions"},
+            {:sitemap_url, "Sitemap"}
+          ] do
+        if url = Application.get_env(:tymeslot, key) do
+          assert html =~ label
+          assert html =~ url
+        end
       end
     end
   end

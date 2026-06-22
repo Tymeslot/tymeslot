@@ -63,6 +63,9 @@ defmodule Tymeslot.Emails.EmailService do
     to: AppointmentEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_guest_confirmation(guest_email, appointment_details), to: AppointmentEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_appointment_confirmations(appointment_details), to: AppointmentEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour

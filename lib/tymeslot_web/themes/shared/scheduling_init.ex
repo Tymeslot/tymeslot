@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
   alias Phoenix.LiveView
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
+  alias TymeslotWeb.Themes.Shared.GuestBooking
 
   @spec assign_theme_state(LiveView.Socket.t(), String.t()) :: LiveView.Socket.t()
   def assign_theme_state(socket, theme_id) do
@@ -84,5 +85,6 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     # defaults the render raises a KeyError.
     |> assign(:custom_fields_snapshot, [])
     |> assign(:custom_field_answers, %{})
+    |> GuestBooking.assign_defaults()
   end
 end

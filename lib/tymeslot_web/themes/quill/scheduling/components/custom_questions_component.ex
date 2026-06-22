@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
                 <div class="booking-card-body">
                   <%= if @total > 1 do %>
                     <p class="text-quill-secondary text-sm mb-2 custom-questions-progress">
-                      {gettext("Question %{n} of %{m}", n: @index + 1, m: @total)}
+                      {dgettext("booking", "Question %{n} of %{m}", n: @index + 1, m: @total)}
                     </p>
                   <% end %>
 
@@ -71,7 +71,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
                       variant={:secondary}
                       class="flex-1"
                     >
-                      <span class="custom-question-cta-nowrap">← {gettext("back")}</span>
+                      <span class="custom-question-cta-nowrap">← {dgettext("booking", "back")}</span>
                     </.action_button>
 
                     <.action_button
@@ -82,9 +82,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
                     >
                       <span class="custom-question-cta-nowrap">
                         <%= if @last? do %>
-                          {gettext("Continue")} →
+                          {dgettext("booking", "Continue")} →
                         <% else %>
-                          {gettext("next")} →
+                          {dgettext("booking", "next")} →
                         <% end %>
                       </span>
                     </.action_button>

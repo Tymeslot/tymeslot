@@ -5,7 +5,8 @@ defmodule TymeslotWeb.Helpers.ClientIP do
 
   Handles various scenarios including:
   - Direct connections
-  - Reverse proxy headers (X-Real-IP, X-Forwarded-For)
+  - Reverse proxy headers (CF-Connecting-IP, X-Real-IP, X-Forwarded-For)
+  - Cloudflare deployments (CF-Connecting-IP takes highest precedence)
   - LiveView socket assigns
   - Fallback to "unknown" when IP cannot be determined
   """
@@ -130,21 +131,30 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   end
 
   defp get_real_ip_header(conn) do
-    # Check X-Real-IP first (more specific)
-    case Conn.get_req_header(conn, "x-real-ip") do
-      [real_ip | _rest] ->
-        {:ok, String.trim(real_ip)}
+    # Last-resort fallback: effectively unreachable in production behind Plug.RemoteIp,
+    # which always sets conn.remote_ip to a tuple (causing get_remote_ip/1 to succeed).
+    # Retained for bare %Plug.Conn{} construction in tests or unusual deployment
+    # configurations where RemoteIp is not in the plug pipeline.
+    # Precedence: cf-connecting-ip > x-real-ip > x-forwarded-for.
+    case Conn.get_req_header(conn, "cf-connecting-ip") do
+      [cf_ip | _rest] ->
+        {:ok, String.trim(cf_ip)}
 
       [] ->
-        # Then check X-Forwarded-For
-        case Conn.get_req_header(conn, "x-forwarded-for") do
-          [forwarded | _rest] ->
-            # X-Forwarded-For can contain multiple IPs, take the first (original client)
-            ip = forwarded |> String.split(",") |> List.first() |> String.trim()
-            {:ok, ip}
+        case Conn.get_req_header(conn, "x-real-ip") do
+          [real_ip | _rest] ->
+            {:ok, String.trim(real_ip)}
 
           [] ->
-            :error
+            case Conn.get_req_header(conn, "x-forwarded-for") do
+              [forwarded | _rest] ->
+                # X-Forwarded-For can contain multiple IPs, take the first (original client)
+                ip = forwarded |> String.split(",") |> List.first() |> String.trim()
+                {:ok, ip}
+
+              [] ->
+                :error
+            end
         end
     end
   end
@@ -210,18 +220,57 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   end
 
   # Only call from get_from_mount/1
-  # Reads x-headers from connect_info (configured in endpoint.ex socket options)
+  # Reads x-headers from connect_info (configured in endpoint.ex socket options).
+  # Forwarded headers are only trusted when the direct peer (socket's TCP source)
+  # is a private/loopback address — i.e. a trusted local reverse proxy. A client
+  # connecting directly from a public IP cannot inject a spoofed forwarded header.
   defp get_forwarded_from_socket(socket) do
-    # LiveView's :x_headers option provides headers as a list of {name, value} tuples
-    case LiveView.get_connect_info(socket, :x_headers) do
-      headers when is_list(headers) ->
-        extract_forwarded_ip_from_tuples(headers)
+    peer_address =
+      case LiveView.get_connect_info(socket, :peer_data) do
+        %{address: addr} -> addr
+        _other -> nil
+      end
 
-      _other ->
-        # Fallback to connect_params (client-side headers)
-        get_forwarded_from_connect_params(socket)
+    if trusted_peer?(peer_address) do
+      case LiveView.get_connect_info(socket, :x_headers) do
+        headers when is_list(headers) ->
+          extract_forwarded_ip_from_tuples(headers)
+
+        _other ->
+          # Fallback to connect_params (client-supplied headers); only reached
+          # when connect_info is unavailable (e.g. embed socket without session).
+          get_forwarded_from_connect_params(socket)
+      end
+    else
+      # Direct connection from a non-private peer: ignore forwarded headers to
+      # prevent IP spoofing; caller will use peer_data instead.
+      "unknown"
     end
   end
+
+  # Returns true when address is a loopback or RFC-1918/4193 private range —
+  # the same ranges that Plug.RemoteIp trusts on the conn path in production.
+  defp trusted_peer?(nil), do: false
+
+  # IPv4 loopback: 127.0.0.0/8
+  defp trusted_peer?({127, _b, _c, _d}), do: true
+
+  # IPv4 private: 10.0.0.0/8
+  defp trusted_peer?({10, _b, _c, _d}), do: true
+
+  # IPv4 private: 172.16.0.0/12 (172.16.0.0 – 172.31.255.255)
+  defp trusted_peer?({172, b, _c, _d}) when b in 16..31, do: true
+
+  # IPv4 private: 192.168.0.0/16
+  defp trusted_peer?({192, 168, _c, _d}), do: true
+
+  # IPv6 loopback: ::1
+  defp trusted_peer?({0, 0, 0, 0, 0, 0, 0, 1}), do: true
+
+  # IPv6 unique-local (fc00::/7 covers fc00:: and fd00::)
+  defp trusted_peer?({fc, _b, _c, _d, _e, _f, _g, _h}) when fc in 0xFC00..0xFDFF, do: true
+
+  defp trusted_peer?(_addr), do: false
 
   defp get_forwarded_from_connect_params(socket) do
     with %{} = connect_params <- LiveView.get_connect_params(socket),
@@ -234,7 +283,12 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   end
 
   defp extract_forwarded_ip_from_tuples(headers) do
-    # Headers are [{name, value}, ...] tuples from :x_headers connect_info
+    # Headers are [{name, value}, ...] tuples from :x_headers connect_info.
+    # Phoenix's :x_headers collects only headers whose name starts with "x-",
+    # so CF-Connecting-IP (no "x-" prefix) is never present on the socket path.
+    # Resolution uses x-real-ip (trusted upstream proxy, e.g. Nginx) then
+    # x-forwarded-for (first hop only). Only called when the direct peer is a
+    # trusted private/loopback address (see get_forwarded_from_socket/1).
     x_real_ip = find_header(headers, "x-real-ip")
     x_forwarded_for = find_header(headers, "x-forwarded-for")
 
@@ -259,8 +313,12 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   end
 
   defp extract_forwarded_ip_from_map(headers) do
-    # Check for various header formats (headers might be lowercase)
+    # Check for various header formats (headers might be lowercase).
+    # Same precedence as extract_forwarded_ip_from_tuples/1.
     cond do
+      Map.has_key?(headers, "cf-connecting-ip") ->
+        String.trim(Map.get(headers, "cf-connecting-ip"))
+
       Map.has_key?(headers, "x-real-ip") ->
         String.trim(Map.get(headers, "x-real-ip"))
 

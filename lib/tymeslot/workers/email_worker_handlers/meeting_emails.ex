@@ -6,7 +6,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
   require Logger
 
+  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Emails.AppointmentBuilder
+  alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Utils.ReminderUtils
 
@@ -207,8 +209,43 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           {:ok, :skipped}
         end
 
+      # Guest confirmations are sent alongside the attendee email. Each guest is
+      # stamped with `confirmation_sent_at` after a successful send, so Oban
+      # retries only re-attempt unsent guests. Failures are logged but never
+      # block the organiser/attendee confirmation result.
+      if need_attendee?, do: send_guest_confirmations(meeting, appointment_details, email_service)
+
       process_email_results(meeting, organizer_result, attendee_result, :confirmation)
     end
+  end
+
+  defp send_guest_confirmations(meeting, appointment_details, email_service) do
+    meeting.id
+    |> GuestQueries.list_unsent_for_meeting()
+    |> Enum.each(fn guest ->
+      details = guest_appointment_details(appointment_details, guest)
+
+      case email_service.send_guest_confirmation(guest.email, details) do
+        {:ok, _result} ->
+          GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
+
+        other ->
+          Logger.error("Guest confirmation email failed",
+            meeting_id: meeting.id,
+            guest_email: guest.email,
+            result: inspect(other)
+          )
+      end
+    end)
+  end
+
+  defp guest_appointment_details(appointment_details, guest) do
+    urls = Policy.guest_rsvp_urls(guest.rsvp_token)
+
+    appointment_details
+    |> Map.put(:guest_name, guest.name || guest.email)
+    |> Map.put(:guest_accept_url, urls.accept_url)
+    |> Map.put(:guest_decline_url, urls.decline_url)
   end
 
   defp send_reminder_emails(meeting, reminder_value, reminder_unit) do

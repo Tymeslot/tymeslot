@@ -105,12 +105,18 @@ function showBundleError(bundleName, message) {
       </div>
       <div class="flex-1 min-w-0">
         <p class="text-sm font-bold leading-relaxed">${message}</p>
-        <button class="mt-2 text-sm underline hover:no-underline" onclick="location.reload()">
+        <button class="mt-2 text-sm underline hover:no-underline" data-bundle-reload>
           Refresh Page
         </button>
       </div>
     </div>
   `;
+
+  // Inline `onclick` handlers are blocked by the CSP (no 'unsafe-inline'), so
+  // wire the reload up via a real listener after the markup is inserted.
+  errorDiv
+    .querySelector('[data-bundle-reload]')
+    ?.addEventListener('click', () => location.reload());
 
   container.appendChild(errorDiv);
 }

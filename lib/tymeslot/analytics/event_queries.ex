@@ -51,6 +51,22 @@ defmodule Tymeslot.Analytics.EventQueries do
     |> Repo.all()
   end
 
+  @spec device_breakdown(integer(), DateTime.t(), DateTime.t()) :: [
+          %{device_type: String.t(), visits: non_neg_integer()}
+        ]
+  def device_breakdown(user_id, from, to) do
+    EventSchema
+    |> where([e], e.user_id == ^user_id)
+    |> where([e], e.inserted_at >= ^from and e.inserted_at <= ^to)
+    |> group_by([e], e.device_type)
+    |> select([e], %{
+      device_type: coalesce(e.device_type, "unknown"),
+      visits: count(e.id)
+    })
+    |> order_by([e], desc: count(e.id))
+    |> Repo.all()
+  end
+
   @spec visits_by_day(integer(), DateTime.t(), DateTime.t(), String.t()) :: [
           %{day: Date.t(), visits: non_neg_integer()}
         ]

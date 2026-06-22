@@ -16,9 +16,24 @@ defmodule Tymeslot.Announcements.Catalog do
   @private_links_published_at ~U[2026-06-16 00:00:00Z]
   @private_links_expires_at ~U[2026-07-16 00:00:00Z]
 
+  @guests_published_at ~U[2026-06-19 00:00:00Z]
+  @guests_expires_at ~U[2026-07-19 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     [
+      %Announcement{
+        key: "guest_attendees_rsvp",
+        title: "Invite guests to any booking",
+        body:
+          "Bookings can now include additional guests. Each guest gets their own email " <>
+            "invitation and can RSVP with a tap, so everyone who needs to be there is on the " <>
+            "invite — without anyone booking a second time. Set a guest limit per meeting " <>
+            "type to keep group sizes in check.",
+        image_path: "/images/announcements/guest-rsvp.svg",
+        published_at: @guests_published_at,
+        expires_at: @guests_expires_at
+      },
       %Announcement{
         key: "private_booking_links",
         title: "Share private booking links",
@@ -27,6 +42,7 @@ defmodule Tymeslot.Announcements.Catalog do
             "booking it — without showing your other meeting types. Mark a type as unlisted " <>
             "to keep it off your public page, and randomise its link any time to make it " <>
             "unguessable or to retire an old one.",
+        image_path: "/images/announcements/private-booking-links.svg",
         published_at: @private_links_published_at,
         expires_at: @private_links_expires_at
       },

@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                 <div class="h-64 relative overflow-hidden">
                   <ThemePreview.render theme_id={theme_id} />
 
-                  <div class="absolute inset-0 bg-gradient-to-t from-tymeslot-900/60 via-transparent to-transparent opacity-60 group-hover/theme:opacity-40 transition-opacity">
+                  <div class="absolute inset-0 bg-linear-to-t from-tymeslot-900/60 via-transparent to-transparent opacity-60 group-hover/theme:opacity-40 transition-opacity">
                   </div>
 
                   <div class="absolute bottom-6 left-6 right-6 flex items-center justify-between">
@@ -136,10 +136,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
 
               <div class="flex gap-4">
                 <%= if LinkAccessPolicy.can_link?(@profile, @integration_status) do %>
-                  <button
-                    type="button"
+                  <a
+                    href={"#{LinkAccessPolicy.scheduling_path(@profile)}?theme=#{theme_id}"}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     class="btn btn-secondary flex-1 py-3 px-4 text-token-sm"
-                    onclick={"window.open('#{LinkAccessPolicy.scheduling_path(@profile)}?theme=#{theme_id}', '_blank')"}
                   >
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
@@ -156,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                       />
                     </svg>
                     Live Preview
-                  </button>
+                  </a>
                 <% else %>
                   <button
                     type="button"

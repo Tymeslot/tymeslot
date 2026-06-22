@@ -1,0 +1,27 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: uk\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex:15
+#, elixir-autogen, elixir-format
+msgid "No"
+msgstr "Ні"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex:14
+#, elixir-autogen, elixir-format
+msgid "Yes"
+msgstr "Так"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex:31
+#, elixir-autogen, elixir-format
+msgid "✓ Acknowledged (%{at})"
+msgstr "✓ Підтверджено (%{at})"

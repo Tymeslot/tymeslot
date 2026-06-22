@@ -43,6 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   """
   use TymeslotWeb, :live_component
 
+  alias Tymeslot.Meetings
   alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
@@ -101,6 +102,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
       |> assign(:pending_notification, false)
       |> assign(:owned_integration_ids, MapSet.new())
       |> assign(:visible_events, [])
+      |> assign(:guest_rsvp_summaries, %{})
       |> assign(:visible_days, [])
       |> assign(:user_timezone, "UTC")
       |> assign(:timezone_display, "UTC")
@@ -170,8 +172,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: UpdateHandlers.handle_integration_synced(assigns, socket)
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket),
-    do: UpdateHandlers.handle_initial(assigns, socket)
+  def update(%{action: :refresh_guest_summaries}, socket),
+    do: {:ok, assign_guest_rsvp_summaries(socket)}
+
+  @impl Phoenix.LiveComponent
+  def update(assigns, socket) do
+    was_initialized = socket.assigns[:_initialized]
+    {:ok, socket} = UpdateHandlers.handle_initial(assigns, socket)
+    just_initialized = socket.assigns[:_initialized] && !was_initialized
+
+    socket =
+      if just_initialized do
+        assign_guest_rsvp_summaries(socket)
+      else
+        socket
+      end
+
+    {:ok, socket}
+  end
+
+  # Loads the `meeting_uid => RSVP summary` map for the calendar owner so
+  # Tymeslot-created event blocks can show a guest indicator.
+  defp assign_guest_rsvp_summaries(socket) do
+    case socket.assigns[:current_user] do
+      %{id: user_id} ->
+        assign(socket, :guest_rsvp_summaries, Meetings.guest_rsvp_summaries_for_user(user_id))
+
+      _other ->
+        socket
+    end
+  end
 
   # --- Event handlers (delegated to focused modules) ---
 
@@ -442,6 +472,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           sync_total={@sync_total}
           sync_completed={@sync_completed}
           date={@date}
+          guest_rsvp_summaries={@guest_rsvp_summaries}
           myself={@myself}
         />
         <GridViews.month_view
@@ -454,6 +485,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           date={@date}
           user_timezone={@user_timezone}
           preferences={@preferences}
+          guest_rsvp_summaries={@guest_rsvp_summaries}
           myself={@myself}
         />
         <CreateEventModal.create_event_modal
@@ -550,7 +582,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           </div>
         </div>
         <%!-- Gradient fade overlay --%>
-        <div class="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-white/50"></div>
+        <div class="absolute inset-0 bg-linear-to-b from-white/40 via-transparent to-white/50"></div>
       </div>
       <%!-- Centred content --%>
       <div class="absolute inset-0 flex flex-col items-center justify-center px-6">

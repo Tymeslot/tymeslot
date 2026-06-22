@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" fill="none" role="img" aria-label="Private and direct booking links">
+  <defs>
+    <linearGradient id="pbl-bg" x1="0" y1="0" x2="640" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ecfeff"/>
+      <stop offset="1" stop-color="#f0fdfa"/>
+    </linearGradient>
+    <filter id="pbl-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d9488" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="640" height="240" fill="url(#pbl-bg)"/>
+  <g filter="url(#pbl-shadow)">
+    <rect x="180" y="36" width="280" height="168" rx="18" fill="#ffffff"/>
+  </g>
+  <rect x="204" y="60" width="104" height="16" rx="8" fill="#0d9488"/>
+
+  <!-- address bar with padlock -->
+  <rect x="204" y="92" width="232" height="34" rx="17" fill="#f1f5f9" stroke="#e2e8f0"/>
+  <rect x="216" y="106" width="15" height="11" rx="2" fill="#0d9488"/>
+  <path d="M219.5 106 v-3 a4 4 0 0 1 8 0 v3" stroke="#0d9488" stroke-width="2.5" fill="none"/>
+  <rect x="244" y="105" width="112" height="8" rx="4" fill="#cbd5e1"/>
+  <rect x="406" y="103" width="11" height="11" rx="2" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+  <rect x="411" y="108" width="11" height="11" rx="2" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+
+  <!-- unlisted indicator -->
+  <rect x="204" y="142" width="150" height="30" rx="15" fill="#ccfbf1"/>
+  <path d="M214 157 q10 -8 20 0 q-10 8 -20 0" fill="none" stroke="#0d9488" stroke-width="2.5"/>
+  <circle cx="224" cy="157" r="2.5" fill="#0d9488"/>
+  <line x1="213" y1="166" x2="235" y2="148" stroke="#ccfbf1" stroke-width="4.5"/>
+  <line x1="213" y1="166" x2="235" y2="148" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="244" y="153" width="92" height="8" rx="4" fill="#2dd4bf"/>
+
+  <!-- link badge -->
+  <circle cx="452" cy="56" r="22" fill="#22d3ee"/>
+  <g transform="translate(452 56) rotate(-45)">
+    <rect x="-15" y="-7" width="20" height="14" rx="7" fill="none" stroke="#ffffff" stroke-width="3"/>
+    <rect x="-5" y="-7" width="20" height="14" rx="7" fill="none" stroke="#ffffff" stroke-width="3"/>
+  </g>
+</svg>

@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
             socket
             |> assign(:form, Component.to_form(booking_params))
             |> assign(:validation_errors, errors)
-            |> Flash.put_flash(:error, gettext("Please correct the errors below."))
+            |> Flash.put_flash(:error, dgettext("booking", "Please correct the errors below."))
 
           {:error, socket}
       end
@@ -209,6 +209,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> assign(:email, validated_data["email"])
       |> assign(:custom_fields_snapshot, Map.get(validated_data, "custom_fields_snapshot", []))
       |> assign(:custom_field_answers, Map.get(validated_data, "custom_field_answers", %{}))
+      |> assign(:guest_emails, socket.assigns[:guest_emails] || [])
       |> Flash.put_flash(:info, success_message)
 
     {:ok, socket}
@@ -281,7 +282,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         socket =
           socket
           |> assign(:validation_errors, %{custom_fields: field_errors})
-          |> Flash.put_flash(:error, gettext("Please correct the errors below."))
+          |> Flash.put_flash(:error, dgettext("booking", "Please correct the errors below."))
 
         {:error, socket}
 
@@ -358,25 +359,14 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     form = Component.to_form(sanitized_params)
     socket = assign(socket, :form, form)
 
-    base_meeting_params = %{
-      date: socket.assigns.selected_date,
-      time: socket.assigns.selected_time,
-      duration: resolve_duration_minutes(socket),
-      user_timezone: socket.assigns.user_timezone,
-      organizer_user_id: socket.assigns.organizer_user_id,
-      meeting_type_id: get_meeting_type_id(socket),
-      attendee_locale:
-        socket.assigns[:locale] || Application.get_env(:tymeslot, :locales)[:default] || "en",
-      # Always true for public booking flow
-      with_video_room: true,
-      custom_fields_snapshot: Map.get(sanitized_params, "custom_fields_snapshot", []),
-      custom_field_answers: Map.get(sanitized_params, "custom_field_answers", %{})
-    }
-
     # Prepare parameters for orchestrator
     params = %{
       form_data: sanitized_params,
-      meeting_params: Map.merge(base_meeting_params, socket.assigns[:tracking] || %{})
+      meeting_params:
+        Map.merge(
+          build_meeting_params(socket, sanitized_params),
+          socket.assigns[:tracking] || %{}
+        )
     }
 
     opts = [
@@ -405,7 +395,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
           |> assign(:submission_processed, false)
           |> Flash.put_flash(
             :error,
-            gettext("Please correct the errors below before submitting.")
+            dgettext("booking", "Please correct the errors below before submitting.")
           )
 
         {:error, socket}
@@ -413,6 +403,24 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       {:error, reason} ->
         handle_booking_error(socket, reason)
     end
+  end
+
+  defp build_meeting_params(socket, sanitized_params) do
+    %{
+      date: socket.assigns.selected_date,
+      time: socket.assigns.selected_time,
+      duration: resolve_duration_minutes(socket),
+      user_timezone: socket.assigns.user_timezone,
+      organizer_user_id: socket.assigns.organizer_user_id,
+      meeting_type_id: get_meeting_type_id(socket),
+      attendee_locale:
+        socket.assigns[:locale] || Application.get_env(:tymeslot, :locales)[:default] || "en",
+      # Always true for public booking flow
+      with_video_room: true,
+      custom_fields_snapshot: Map.get(sanitized_params, "custom_fields_snapshot", []),
+      custom_field_answers: Map.get(sanitized_params, "custom_field_answers", %{}),
+      guest_emails: socket.assigns[:guest_emails] || []
+    }
   end
 
   defp handle_payment_required(socket, meeting, url, sanitized_params) do
@@ -459,6 +467,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> assign(:awaiting_payment_checkout_url, url)
       |> assign(:custom_fields_snapshot, Map.get(sanitized_params, "custom_fields_snapshot", []))
       |> assign(:custom_field_answers, Map.get(sanitized_params, "custom_field_answers", %{}))
+      |> assign(:guest_emails, socket.assigns[:guest_emails] || [])
       |> LiveView.push_event("payment_redirect_open_tab", %{url: url})
 
     {:awaiting_payment, socket}

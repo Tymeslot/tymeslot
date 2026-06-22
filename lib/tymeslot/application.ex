@@ -7,6 +7,7 @@ defmodule Tymeslot.Application do
   require Logger
 
   alias Phoenix.PubSub
+  alias Tymeslot.Analytics.Telemetry, as: AnalyticsTelemetry
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth.AdminBootstrap
   alias Tymeslot.Infrastructure.{CrashReporter, Metrics, ObanFailureAlerter, ObanLogger}
@@ -54,13 +55,8 @@ defmodule Tymeslot.Application do
     # Set up integration telemetry handlers
     Telemetry.attach_default_handlers()
 
-    # Initialize shared email asset cache (ETS)
-    # Note: This table is primarily for static assets like logo data URIs.
-    # If used for dynamic data, consider adding a cleanup mechanism or using CacheStore.
-    # Guard against application restart within the same BEAM (named table already exists)
-    if :ets.whereis(:tymeslot_email_assets) == :undefined do
-      :ets.new(:tymeslot_email_assets, [:set, :public, :named_table, read_concurrency: true])
-    end
+    # Surface dropped/failed booking-analytics page-view writes in the logs.
+    AnalyticsTelemetry.attach_default_handler()
 
     # Base children that are always started
     base_children = [
@@ -69,13 +65,7 @@ defmodule Tymeslot.Application do
       {DNSCluster, query: Application.get_env(:tymeslot, :dns_cluster_query) || :ignore},
       {PubSub, name: Tymeslot.PubSub},
       # Start the Finch HTTP client (used by Req for all HTTP requests).
-      # pool_max_idle_time evicts connections that remote servers silently
-      # close after their keep-alive timeout, preventing "socket closed" errors.
-      # conn_opts timeout caps the TCP connect handshake at 10s, preventing
-      # OS-level TCP timeout (75-120s) from dominating when endpoints are unreachable.
-      {Finch,
-       name: Tymeslot.Finch,
-       pools: %{default: [pool_max_idle_time: 30_000, conn_opts: [timeout: 10_000]]}},
+      {Finch, name: Tymeslot.Finch, pools: %{default: finch_default_pool()}},
       # Start token refresh lock manager
       {Lock, []},
       # Task Supervisor for async operations
@@ -94,6 +84,10 @@ defmodule Tymeslot.Application do
           Tymeslot.Infrastructure.AvailabilityCache,
           # Start webhook idempotency cache
           Tymeslot.Payments.Webhooks.IdempotencyCache,
+          # Start booking-analytics dashboard cache
+          Tymeslot.Analytics.MetricsCache,
+          # Start calendar discovery cache
+          Tymeslot.Integrations.Calendar.Shared.DiscoveryCache,
           # Start calendar request coalescer
           Tymeslot.Integrations.Calendar.RequestCoalescer,
           # Start Oban for background job processing
@@ -114,6 +108,10 @@ defmodule Tymeslot.Application do
           Tymeslot.Infrastructure.AvailabilityCache,
           # Start webhook idempotency cache
           Tymeslot.Payments.Webhooks.IdempotencyCache,
+          # Start booking-analytics dashboard cache (ETS table needed in tests too)
+          Tymeslot.Analytics.MetricsCache,
+          # Start calendar discovery cache (ETS table needed in tests too)
+          Tymeslot.Integrations.Calendar.Shared.DiscoveryCache,
           # Start Hammer-backed rate limiter (ETS sliding window)
           {Tymeslot.Security.RateLimit, clean_period: :timer.minutes(5)},
           # Own the account lockout ETS table (AccountLockout is a plain module)
@@ -166,6 +164,25 @@ defmodule Tymeslot.Application do
         Logger.error("Failed to start Tymeslot application", reason: inspect(reason))
         error
     end
+  end
+
+  # Connection pool for all outbound HTTP (Req → Finch). `size`/`count` are read
+  # from config so deployments with more headroom (SaaS) can run a larger per-host
+  # pool than a small self-hosted Core box; the defaults below are the safe Core
+  # values and SaaS overrides them via `config :tymeslot, :finch_default_pool`.
+  #
+  # `conn_max_idle_time` (NOT `pool_max_idle_time`) evicts individual connections
+  # the remote silently closed after its keep-alive timeout, preventing "socket
+  # closed" errors. `pool_max_idle_time` would instead tear the whole pool down
+  # when idle and churn pool restarts — surfacing as transient
+  # `:pool_not_available` errors when traffic resumes — so it is left at its
+  # `:infinity` default. `conn_opts` caps the TCP connect handshake at 10s,
+  # preventing OS-level TCP timeouts (75-120s) from dominating when an endpoint
+  # is unreachable.
+  defp finch_default_pool do
+    [size: 50, count: 1, conn_max_idle_time: 30_000]
+    |> Keyword.merge(Application.get_env(:tymeslot, :finch_default_pool, []))
+    |> Keyword.put(:conn_opts, timeout: 10_000)
   end
 
   defp validate_config! do

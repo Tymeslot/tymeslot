@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   use TymeslotWeb, :html
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Analytics
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias TymeslotWeb.Components.Icons.IconComponents
 
@@ -54,7 +55,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             :if={LinkAccessPolicy.can_link?(@profile, @integration_status)}
             href={LinkAccessPolicy.scheduling_path(@profile)}
             target="_blank"
-            class="dashboard-nav-link flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-black rounded-2xl transition-all duration-300 bg-gradient-to-br from-turquoise-600 to-cyan-600 text-white hover:text-white hover:translate-x-0 shadow-lg shadow-turquoise-500/30 hover:shadow-xl hover:shadow-turquoise-500/40 hover:from-turquoise-700 hover:to-cyan-700 group"
+            class="dashboard-nav-link flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-black rounded-2xl transition-all duration-300 bg-linear-to-br from-turquoise-600 to-cyan-600 text-white hover:text-white hover:translate-x-0 shadow-lg shadow-turquoise-500/30 hover:shadow-xl hover:shadow-turquoise-500/40 hover:from-turquoise-700 hover:to-cyan-700 group"
           >
             <IconComponents.icon name={:external_link} class="w-5 h-5 text-white" />
             <span class="text-white">View Page</span>
@@ -107,6 +108,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
               </.nav_link>
 
               <.nav_link
+                :if={Analytics.enabled?()}
                 patch={~p"/dashboard/analytics"}
                 current={@current_action}
                 action={:analytics}

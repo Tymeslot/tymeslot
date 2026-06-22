@@ -31,10 +31,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
     ~H"""
     <.link
       navigate={@to}
-      class="text-sm transition duration-200"
-      style="color: rgba(255,255,255,0.7); text-decoration: underline;"
-      onmouseover="this.style.color='rgba(255,255,255,0.9)'"
-      onmouseout="this.style.color='rgba(255,255,255,0.7)'"
+      class="text-sm underline text-white/70 hover:text-white/90 transition duration-200"
     >
       {render_slot(@inner_block)}
     </.link>
@@ -94,7 +91,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
                 "flex items-center gap-2 px-6 py-3 rounded-token-xl font-bold text-token-sm transition-all duration-300",
                 if(@active_tab == tab.id,
                   do:
-                    "bg-gradient-to-r from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/30 transform scale-105",
+                    "bg-linear-to-r from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/30 transform scale-105",
                   else:
                     "text-tymeslot-600 hover:bg-tymeslot-50 hover:text-turquoise-700"
                 )

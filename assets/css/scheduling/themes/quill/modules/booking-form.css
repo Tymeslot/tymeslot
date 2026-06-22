@@ -72,7 +72,8 @@
 .quill-theme-wrapper .input,
 .quill-theme-wrapper input.input,
 .quill-theme-wrapper textarea.input,
-.quill-theme-wrapper select.input {
+.quill-theme-wrapper select.input,
+.quill-theme-wrapper .guest-add__input {
   width: 100%;
   max-width: 100%;
   padding: var(--input-padding);
@@ -87,14 +88,16 @@
 
 .quill-theme-wrapper .input::placeholder,
 .quill-theme-wrapper input.input::placeholder,
-.quill-theme-wrapper textarea.input::placeholder {
+.quill-theme-wrapper textarea.input::placeholder,
+.quill-theme-wrapper .guest-add__input::placeholder {
   color: rgba(15, 23, 42, 0.45);
 }
 
 .quill-theme-wrapper .input:hover,
 .quill-theme-wrapper input.input:hover,
 .quill-theme-wrapper textarea.input:hover,
-.quill-theme-wrapper select.input:hover {
+.quill-theme-wrapper select.input:hover,
+.quill-theme-wrapper .guest-add__input:hover {
   background: white;
   border-color: rgba(255, 255, 255, 0.45);
 }
@@ -102,7 +105,8 @@
 .quill-theme-wrapper .input:focus,
 .quill-theme-wrapper input.input:focus,
 .quill-theme-wrapper textarea.input:focus,
-.quill-theme-wrapper select.input:focus {
+.quill-theme-wrapper select.input:focus,
+.quill-theme-wrapper .guest-add__input:focus {
   outline: none;
   background: white;
   border-color: var(--theme-primary);
@@ -120,7 +124,8 @@
 
 .quill-theme-wrapper .input::placeholder,
 .quill-theme-wrapper input.input::placeholder,
-.quill-theme-wrapper textarea.input::placeholder {
+.quill-theme-wrapper textarea.input::placeholder,
+.quill-theme-wrapper .guest-add__input::placeholder {
   color: var(--input-placeholder-glass);
 }
 
@@ -303,6 +308,190 @@
   .booking-subtitle {
     font-size: var(--theme-font-size-xl);
   }
+}
+
+/* ===== Add Guests field ===== */
+/* A collapsible token/chip field; scoped to the Quill wrapper so it inherits
+   the theme's glass surfaces, radii and cyan accent. */
+
+.quill-theme-wrapper .guest-field {
+  margin-top: var(--space-sm);
+}
+
+/* Quiet "+ Add guests" link shown while collapsed.
+   Uses the high-contrast text colour (not --theme-primary, which is a
+   user-chosen colour that can sit low-contrast on the card) with an underline
+   to keep the link affordance regardless of the booking page's palette. */
+.quill-theme-wrapper .guest-field__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: var(--space-3xs) 0;
+  background: transparent;
+  border: none;
+  color: var(--text-opacity-medium-high);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.quill-theme-wrapper .guest-field__toggle:hover {
+  color: var(--text-opacity-high);
+}
+
+.quill-theme-wrapper .guest-field__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xs);
+}
+
+.quill-theme-wrapper .guest-field__label {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-opacity-medium-high);
+}
+
+.quill-theme-wrapper .guest-field__header-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.quill-theme-wrapper .guest-field__count {
+  font-size: var(--theme-font-size-2xs);
+  color: var(--text-opacity-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.quill-theme-wrapper .guest-field__close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--text-opacity-subtle);
+  font-size: var(--theme-font-size-md);
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.quill-theme-wrapper .guest-field__close:hover {
+  color: white;
+  background: var(--theme-danger);
+}
+
+/* Chip list */
+.quill-theme-wrapper .guest-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  margin: 0 0 var(--space-xs);
+  padding: 0;
+  list-style: none;
+}
+
+.quill-theme-wrapper .guest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  max-width: 100%;
+  padding: var(--space-hairline) var(--space-2xs) var(--space-hairline) var(--space-hairline);
+  background: var(--surface-light);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+}
+
+.quill-theme-wrapper .guest-chip__avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-full);
+  background: var(--theme-primary);
+  color: white;
+  font-size: var(--theme-font-size-3xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
+.quill-theme-wrapper .guest-chip__email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--theme-font-size-2xs);
+  color: var(--text-opacity-medium-high);
+}
+
+.quill-theme-wrapper .guest-chip__remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--text-opacity-low);
+  font-size: var(--theme-font-size-base);
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.quill-theme-wrapper .guest-chip__remove:hover {
+  color: white;
+  background: var(--theme-danger);
+}
+
+/* Add-guest input row (its own form, sibling of the booking form) */
+.quill-theme-wrapper .guest-add {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: stretch;
+}
+
+.quill-theme-wrapper .guest-add__input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.quill-theme-wrapper .guest-add__button {
+  flex: none;
+  padding: var(--button-padding-sm);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--button-radius-sm);
+  background: var(--surface-light);
+  color: var(--text-opacity-high);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+.quill-theme-wrapper .guest-add__button:hover {
+  background: var(--surface-medium);
+  border-color: var(--theme-primary);
+}
+
+.quill-theme-wrapper .guest-field__error {
+  display: block;
+  margin-top: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-danger);
+  font-weight: var(--font-weight-medium);
 }
 
 /* ===== Container Queries ===== */

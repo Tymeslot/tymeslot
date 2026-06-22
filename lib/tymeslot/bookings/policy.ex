@@ -67,6 +67,7 @@ defmodule Tymeslot.Bookings.Policy do
           optional(:utm_term) => String.t() | nil,
           optional(:referrer_host) => String.t() | nil,
           optional(:tracking_params) => map(),
+          optional(:visitor_hash) => String.t() | nil,
           optional(atom()) => term()
         }
 
@@ -113,7 +114,8 @@ defmodule Tymeslot.Bookings.Policy do
           required(:utm_content) => String.t() | nil,
           required(:utm_term) => String.t() | nil,
           required(:referrer_host) => String.t() | nil,
-          required(:tracking_params) => map()
+          required(:tracking_params) => map(),
+          required(:visitor_hash) => String.t() | nil
         }
 
   @typedoc "A meeting record with the fields required by the policy checks."
@@ -194,7 +196,8 @@ defmodule Tymeslot.Bookings.Policy do
         utm_content: Map.get(params, :utm_content),
         utm_term: Map.get(params, :utm_term),
         referrer_host: Map.get(params, :referrer_host),
-        tracking_params: Map.get(params, :tracking_params, %{})
+        tracking_params: Map.get(params, :tracking_params, %{}),
+        visitor_hash: Map.get(params, :visitor_hash)
       },
       build_meeting_action_urls(meeting_uid, org_username)
     )
@@ -433,6 +436,17 @@ defmodule Tymeslot.Bookings.Policy do
   @spec app_url() :: String.t()
   def app_url do
     Endpoint.url()
+  end
+
+  @doc """
+  Builds the public accept/decline RSVP URLs for a guest's token.
+  """
+  @spec guest_rsvp_urls(String.t()) :: %{accept_url: String.t(), decline_url: String.t()}
+  def guest_rsvp_urls(token) when is_binary(token) do
+    %{
+      accept_url: app_url() <> "/guest/#{token}/accept",
+      decline_url: app_url() <> "/guest/#{token}/decline"
+    }
   end
 
   defp default_locale, do: Locales.default_locale()

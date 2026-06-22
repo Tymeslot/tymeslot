@@ -9,8 +9,12 @@ defmodule TymeslotWeb.Layouts do
   `use TymeslotWeb, :live_view`.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import TymeslotWeb.Components.CoreComponents
 
+  alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileSchema
   alias TymeslotWeb.Endpoint
 
   embed_templates "layouts/*"
@@ -39,6 +43,60 @@ defmodule TymeslotWeb.Layouts do
         else: path
 
     Endpoint.url() <> normalized_path
+  end
+
+  @doc """
+  Returns the absolute URL of the social-share (Open Graph) image for a
+  scheduling page.
+
+  Resolves in layers: the organiser's uploaded profile photo → a neutral
+  default avatar → the Tymeslot brand card. The brand card is a defensive
+  fallback used only when there is no organiser context (e.g. error pages).
+  """
+  @spec booking_og_image(map()) :: String.t()
+  def booking_og_image(assigns) do
+    Endpoint.url() <> booking_og_image_path(assigns[:organizer_profile])
+  end
+
+  defp booking_og_image_path(%ProfileSchema{} = profile) do
+    Profiles.uploaded_avatar_path(profile) || ~p"/images/brand/default-avatar.png"
+  end
+
+  defp booking_og_image_path(_profile), do: ~p"/images/brand/og-image.png"
+
+  @doc """
+  Returns the Twitter card type for a scheduling page.
+
+  A square avatar/photo pairs with the `summary` card; the wide brand fallback
+  (no organiser context) pairs with `summary_large_image`.
+  """
+  @spec booking_twitter_card(map()) :: String.t()
+  def booking_twitter_card(assigns) do
+    if assigns[:organizer_profile], do: "summary", else: "summary_large_image"
+  end
+
+  @doc """
+  Returns the social-share description for a scheduling page, personalised with
+  the organiser's name when available.
+  """
+  @spec booking_og_description(map()) :: String.t()
+  def booking_og_description(assigns) do
+    case booking_organizer_name(assigns) do
+      nil ->
+        dgettext("booking", "Pick a time that works for you and book a meeting in seconds.")
+
+      name ->
+        dgettext("booking", "Book a meeting with %{name}. Pick a time that works for you.",
+          name: name
+        )
+    end
+  end
+
+  defp booking_organizer_name(assigns) do
+    case assigns[:organizer_profile] do
+      %ProfileSchema{} = profile -> Profiles.display_name(profile) || assigns[:username_context]
+      _no_organizer -> nil
+    end
   end
 
   @doc """
@@ -112,13 +170,15 @@ defmodule TymeslotWeb.Layouts do
     values: [:application, :scheduling_page],
     doc: "Static context identifier (atom) for the error message"
 
+  attr :nonce, :string, default: nil, doc: "Per-request CSP nonce"
+
   @spec nomodule_fallback(map()) :: Phoenix.LiveView.Rendered.t()
   def nomodule_fallback(assigns) do
     # Convert atom to human-readable string safely
     assigns = assign(assigns, :context_str, context_to_string(assigns.context))
 
     ~H"""
-    <script nomodule>
+    <script nomodule nonce={@nonce}>
       document.body.innerHTML = '<div style="padding: 2rem; text-align: center; font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 4rem auto;">' +
         '<svg style="width: 64px; height: 64px; margin: 0 auto 1.5rem; color: #dc2626;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>' +
         '<h1 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 0.75rem;">Browser Not Supported</h1>' +

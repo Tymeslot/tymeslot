@@ -18,6 +18,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           is_private: boolean(),
           slug: String.t() | nil,
           allow_video: boolean(),
+          allow_guests: boolean(),
           sort_order: integer(),
           reminder_config: [map()],
           payment_required: boolean(),
@@ -41,6 +42,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:is_private, :boolean, default: false)
     field(:slug, :string)
     field(:allow_video, :boolean, default: false)
+    field(:allow_guests, :boolean, default: false)
     field(:sort_order, :integer, default: 0)
     field(:target_calendar_id, :string)
     field(:reminder_config, {:array, :map}, default: nil)
@@ -107,6 +109,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :is_private,
       :slug,
       :allow_video,
+      :allow_guests,
       :sort_order,
       :user_id,
       :video_integration_id,

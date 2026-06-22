@@ -180,7 +180,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   defp custom_input_toggle(assigns) do
     ~H"""
     <%= if @custom_mode or @current_value not in @preset_values do %>
-      <div class={"btn-tag-selector btn-tag-selector-#{@style_variant}--active !p-0 overflow-hidden"}>
+      <div class={"btn-tag-selector btn-tag-selector-#{@style_variant}--active p-0! overflow-hidden"}>
         <input
           type="number"
           min={@constraints.min}

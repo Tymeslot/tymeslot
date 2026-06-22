@@ -33,10 +33,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
 
       <div class="flex items-center justify-between gap-3 md:justify-start">
         <%= if @profile && @profile.username do %>
-          <button
-            type="button"
+          <a
+            href={"#{LinkAccessPolicy.scheduling_path(@profile)}?theme=#{@theme_id}"}
+            target="_blank"
+            rel="noopener noreferrer"
             class="btn btn-secondary py-2.5 px-5 text-token-sm"
-            onclick={"window.open('#{LinkAccessPolicy.scheduling_path(@profile)}?theme=#{@theme_id}', '_blank')"}
           >
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -53,7 +54,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
               />
             </svg>
             Live Preview
-          </button>
+          </a>
         <% end %>
         <button
           phx-click="close_customization"

@@ -28,11 +28,19 @@ module.exports = plugin(function ({matchComponents, theme}) {
   if (process.env.NODE_ENV !== "production") {
     try {
       const {execSync} = require("child_process")
-      // Search for hero- prefixes in lib and js directories
-      // We use a simple regex to find potential icon names
-      const searchPath = path.join(__dirname, "../lib")
-      const jsPath = path.join(__dirname, "./js")
-      const output = execSync(`grep -rEho "hero-[a-z0-9-]+" "${searchPath}" "${jsPath}" | sort | uniq`).toString()
+      // Search for hero- prefixes across the source that feeds this shared asset
+      // bundle: this app's JS, plus every app library in the project. Icons used
+      // in a sibling app — including ones chosen via config, e.g. a nav dropdown —
+      // must register too, and a standalone checkout simply has fewer app libs.
+      // (Production skips this optimisation entirely and loads the full icon set.)
+      const appsDir = path.join(__dirname, "../../")
+      const appLibs = fs
+        .readdirSync(appsDir)
+        .map(name => path.join(appsDir, name, "lib"))
+        .filter(p => fs.existsSync(p))
+      const searchPaths = [path.join(__dirname, "./js"), ...appLibs]
+      const quoted = searchPaths.map(p => `"${p}"`).join(" ")
+      const output = execSync(`grep -rEho "hero-[a-z0-9-]+" ${quoted} | sort | uniq`).toString()
       usedIcons = new Set(output.split("\n").map(line => line.replace(/^hero-/, "").replace(/-(solid|mini|micro)$/, "")))
     } catch (e) {
       // Fallback to full library if grep fails

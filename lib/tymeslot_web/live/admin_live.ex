@@ -50,7 +50,8 @@ defmodule TymeslotWeb.AdminLive do
          {:ok, parsed} <- parse_setting_value(state) do
       handle_setting_update(socket, atom_key, parsed, state)
     else
-      _other -> {:noreply, put_flash(socket, :error, gettext("Could not update setting."))}
+      _other ->
+        {:noreply, put_flash(socket, :error, dgettext("dashboard", "Could not update setting."))}
     end
   end
 
@@ -66,9 +67,14 @@ defmodule TymeslotWeb.AdminLive do
          :changed <- detect_change(socket, atom_key, value) do
       handle_typed_setting_update(socket, atom_key, value)
     else
-      :unchanged -> {:noreply, socket}
-      :invalid -> {:noreply, put_flash(socket, :error, value_invalid_message(key))}
-      _other -> {:noreply, put_flash(socket, :error, gettext("Could not update setting."))}
+      :unchanged ->
+        {:noreply, socket}
+
+      :invalid ->
+        {:noreply, put_flash(socket, :error, value_invalid_message(key))}
+
+      _other ->
+        {:noreply, put_flash(socket, :error, dgettext("dashboard", "Could not update setting."))}
     end
   end
 
@@ -104,7 +110,7 @@ defmodule TymeslotWeb.AdminLive do
         {:noreply, put_flash(socket, :error, lock_out_message(atom_key, parsed))}
 
       {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, gettext("Could not update setting."))}
+        {:noreply, put_flash(socket, :error, dgettext("dashboard", "Could not update setting."))}
     end
   end
 
@@ -113,7 +119,7 @@ defmodule TymeslotWeb.AdminLive do
   # exists, so an SSO toggle rejection never shows a password-auth message.
   defp lock_out_message(key, value) do
     Formatters.lock_reason(key, value) ||
-      gettext("That change would lock everyone out and was not applied.")
+      dgettext("dashboard", "That change would lock everyone out and was not applied.")
   end
 
   # --- Settings helpers ---
@@ -129,17 +135,20 @@ defmodule TymeslotWeb.AdminLive do
   defp parse_setting_value(_other), do: :error
 
   defp setting_change_message(key, "true"),
-    do: gettext("%{name} enabled.", name: Formatters.humanise(key))
+    do: dgettext("dashboard", "%{name} enabled.", name: Formatters.humanise(key))
 
   defp setting_change_message(key, "false"),
-    do: gettext("%{name} disabled.", name: Formatters.humanise(key))
+    do: dgettext("dashboard", "%{name} disabled.", name: Formatters.humanise(key))
 
   defp handle_typed_setting_update(socket, key, value) do
     case AppSettings.update(%{key => value}) do
       {:ok, _settings} ->
         {:noreply,
          socket
-         |> put_flash(:info, gettext("%{name} updated.", name: Formatters.humanise(key)))
+         |> put_flash(
+           :info,
+           dgettext("dashboard", "%{name} updated.", name: Formatters.humanise(key))
+         )
          |> push_event("ts:setting-saved", %{key: Atom.to_string(key)})
          |> load_data()}
 
@@ -147,7 +156,7 @@ defmodule TymeslotWeb.AdminLive do
         {:noreply, put_flash(socket, :error, changeset_message(changeset, key))}
 
       {:error, _other} ->
-        {:noreply, put_flash(socket, :error, gettext("Could not update setting."))}
+        {:noreply, put_flash(socket, :error, dgettext("dashboard", "Could not update setting."))}
     end
   end
 
@@ -190,13 +199,13 @@ defmodule TymeslotWeb.AdminLive do
     case parse_setting_key(key) do
       {:ok, atom_key} ->
         case Formatters.kind(atom_key) do
-          :score -> gettext("Enter a number between 0.0 and 1.0.")
-          :email -> gettext("Enter a valid email address.")
-          _other -> gettext("Could not update setting.")
+          :score -> dgettext("dashboard", "Enter a number between 0.0 and 1.0.")
+          :email -> dgettext("dashboard", "Enter a valid email address.")
+          _other -> dgettext("dashboard", "Could not update setting.")
         end
 
       _other ->
-        gettext("Could not update setting.")
+        dgettext("dashboard", "Could not update setting.")
     end
   end
 
@@ -208,7 +217,7 @@ defmodule TymeslotWeb.AdminLive do
   defp changeset_message(%Ecto.Changeset{errors: errors}, key) do
     case Keyword.get(errors, key) do
       {_message, _meta} -> value_invalid_message(Atom.to_string(key))
-      nil -> gettext("Could not update setting.")
+      nil -> dgettext("dashboard", "Could not update setting.")
     end
   end
 
@@ -220,18 +229,18 @@ defmodule TymeslotWeb.AdminLive do
         {:noreply, assign(socket, :pending_action, %{kind: kind, id: user_id, email: email})}
 
       :error ->
-        {:noreply, put_flash(socket, :error, gettext("Invalid user id."))}
+        {:noreply, put_flash(socket, :error, dgettext("dashboard", "Invalid user id."))}
     end
   end
 
   defp open_pending_action(_kind, _params, socket) do
-    {:noreply, put_flash(socket, :error, gettext("Invalid request."))}
+    {:noreply, put_flash(socket, :error, dgettext("dashboard", "Invalid request."))}
   end
 
   defp with_user_id(id, socket, fun) do
     case parse_user_id(id) do
       {:ok, user_id} -> fun.(user_id)
-      :error -> {:noreply, put_flash(socket, :error, gettext("Invalid user id."))}
+      :error -> {:noreply, put_flash(socket, :error, dgettext("dashboard", "Invalid user id."))}
     end
   end
 
@@ -250,7 +259,7 @@ defmodule TymeslotWeb.AdminLive do
         {:noreply,
          socket
          |> clear_pending_action()
-         |> put_flash(:info, gettext("User promoted to admin."))
+         |> put_flash(:info, dgettext("dashboard", "User promoted to admin."))
          |> push_patch(to: ~p"/admin/users")}
 
       {:error, reason} ->
@@ -272,14 +281,14 @@ defmodule TymeslotWeb.AdminLive do
         {:noreply,
          socket
          |> clear_pending_action()
-         |> put_flash(:info, gettext("You have been demoted from admin."))
+         |> put_flash(:info, dgettext("dashboard", "You have been demoted from admin."))
          |> redirect(to: ~p"/dashboard")}
 
       {:ok, _user} ->
         {:noreply,
          socket
          |> clear_pending_action()
-         |> put_flash(:info, gettext("User demoted from admin."))
+         |> put_flash(:info, dgettext("dashboard", "User demoted from admin."))
          |> push_patch(to: ~p"/admin/users")}
 
       {:error, reason} ->
@@ -290,19 +299,20 @@ defmodule TymeslotWeb.AdminLive do
     end
   end
 
-  defp role_change_error_message(_action, :not_found), do: gettext("User not found.")
+  defp role_change_error_message(_action, :not_found),
+    do: dgettext("dashboard", "User not found.")
 
   defp role_change_error_message(_action, :admin_ui_disabled),
-    do: gettext("Admin UI is disabled.")
+    do: dgettext("dashboard", "Admin UI is disabled.")
 
   defp role_change_error_message(:demote, :last_admin),
-    do: gettext("Cannot demote the last admin. Promote someone else first.")
+    do: dgettext("dashboard", "Cannot demote the last admin. Promote someone else first.")
 
   defp role_change_error_message(:promote, %Ecto.Changeset{}),
-    do: gettext("Could not promote user.")
+    do: dgettext("dashboard", "Could not promote user.")
 
   defp role_change_error_message(:demote, %Ecto.Changeset{}),
-    do: gettext("Could not demote user.")
+    do: dgettext("dashboard", "Could not demote user.")
 
   defp clear_pending_action(socket) do
     socket

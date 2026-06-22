@@ -163,4 +163,34 @@ defmodule Tymeslot.Analytics.EventQueriesTest do
                EventQueries.visits_by_day(user.id, from, to, "Etc/UTC")
     end
   end
+
+  describe "device_breakdown/3" do
+    test "counts visits per device type, descending, with nil as unknown", %{user: user} do
+      insert_event(%{user_id: user.id, device_type: "mobile"})
+      insert_event(%{user_id: user.id, device_type: "mobile"})
+      insert_event(%{user_id: user.id, device_type: "desktop"})
+      insert_event(%{user_id: user.id, device_type: nil})
+
+      from = DateTime.add(DateTime.utc_now(), -3600, :second)
+      to = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      result = EventQueries.device_breakdown(user.id, from, to)
+
+      assert [%{device_type: "mobile", visits: 2} | rest] = result
+      assert %{device_type: "desktop", visits: 1} in rest
+      assert %{device_type: "unknown", visits: 1} in rest
+    end
+
+    test "scopes to the given user", %{user: user} do
+      other_user = Factory.insert(:user)
+      insert_event(%{user_id: user.id, device_type: "mobile"})
+      insert_event(%{user_id: other_user.id, device_type: "desktop"})
+
+      from = DateTime.add(DateTime.utc_now(), -3600, :second)
+      to = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      assert [%{device_type: "mobile", visits: 1}] =
+               EventQueries.device_breakdown(user.id, from, to)
+    end
+  end
 end

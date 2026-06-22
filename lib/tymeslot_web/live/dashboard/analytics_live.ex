@@ -12,7 +12,9 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   use TymeslotWeb, :live_view
 
   alias Tymeslot.Analytics
+  alias Tymeslot.Analytics.MetricsCache
   alias TymeslotWeb.Components.DashboardLayout
+  alias TymeslotWeb.Dashboard.AnalyticsLive.DeviceBreakdown
   alias TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable
   alias TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards
   alias TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart
@@ -22,7 +24,14 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
-    {:ok, assign_default_range(socket)}
+    if Analytics.enabled?() do
+      {:ok, assign_default_range(socket)}
+    else
+      {:ok,
+       socket
+       |> put_flash(:info, "Booking analytics is not enabled on this installation.")
+       |> push_navigate(to: ~p"/dashboard")}
+    end
   end
 
   @impl Phoenix.LiveView
@@ -73,7 +82,22 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           visits={@visits}
           unique_visitors={@unique_visitors}
           bookings={@bookings}
+          converting_visitors={@converting_visitors}
         />
+
+        <p class="text-token-xs leading-relaxed text-tymeslot-400">
+          <%!--
+            Be honest about the cookieless model: the daily-rotated fingerprint
+            means a visitor is counted once per UTC day, so multi-day "unique
+            visitors" is a sum of daily uniques rather than truly distinct
+            people, and conversion compares two such counts. Labelled as an
+            estimate so the numbers aren't read as exact.
+          --%>
+          Unique visitors and conversion are cookieless estimates: each visitor is
+          counted once per day, so totals over a longer range approximate the number
+          of distinct people. Conversion is the share of visitors who went on to book
+          and is indicative, not exact.
+        </p>
 
         <VisitsChart.chart
           points={@visits_by_day}
@@ -81,6 +105,8 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           to={@to}
           time_zone={@time_zone}
         />
+
+        <DeviceBreakdown.breakdown devices={@devices} />
 
         <SourcesTable.table sources={@sources} />
       </div>
@@ -120,8 +146,10 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
       visits: 0,
       unique_visitors: 0,
       bookings: 0,
+      converting_visitors: 0,
       sources: [],
-      visits_by_day: []
+      visits_by_day: [],
+      devices: []
     )
   end
 
@@ -140,20 +168,25 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   end
 
   defp load_data(
-         %{assigns: %{current_user: user, from: from, to: to, time_zone: time_zone}} = socket
+         %{assigns: %{current_user: user, range: range, from: from, to: to, time_zone: time_zone}} =
+           socket
        ) do
-    visits = Analytics.count_visits(user.id, from, to)
-    unique_visitors = Analytics.count_unique_visitors(user.id, from, to)
-    bookings = Analytics.count_bookings(user.id, from, to)
-    visits_by_day = Analytics.visits_by_day(user.id, from, to, time_zone)
-    sources = Analytics.attribution_table(user.id, from, to)
+    # Collapse the ~7 aggregate queries into one cached bundle per
+    # {organizer, range}. MetricsCache keys on user.id, so one organizer can
+    # never be served another's metrics.
+    data =
+      MetricsCache.fetch(user.id, range, fn ->
+        %{
+          visits: Analytics.count_visits(user.id, from, to),
+          unique_visitors: Analytics.count_unique_visitors(user.id, from, to),
+          bookings: Analytics.count_bookings(user.id, from, to),
+          converting_visitors: Analytics.count_converting_visitors(user.id, from, to),
+          visits_by_day: Analytics.visits_by_day(user.id, from, to, time_zone),
+          sources: Analytics.attribution_table(user.id, from, to),
+          devices: Analytics.device_breakdown(user.id, from, to)
+        }
+      end)
 
-    assign(socket,
-      visits: visits,
-      unique_visitors: unique_visitors,
-      bookings: bookings,
-      visits_by_day: visits_by_day,
-      sources: sources
-    )
+    assign(socket, Map.to_list(data))
   end
 end

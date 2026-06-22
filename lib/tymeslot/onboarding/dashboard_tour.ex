@@ -32,31 +32,39 @@ defmodule Tymeslot.Onboarding.DashboardTour do
         id: :welcome,
         anchor: nil,
         placement: :center,
-        title: gettext("Welcome to your Tymeslot dashboard"),
-        body: gettext("Take 30 seconds to learn where everything lives.")
+        title: dgettext("onboarding", "Welcome to your Tymeslot dashboard"),
+        body: dgettext("onboarding", "Take 30 seconds to learn where everything lives.")
       },
       %{
         id: :mode_tabs,
         anchor: "mode-tabs",
         placement: :bottom,
-        title: gettext("Two modes"),
+        title: dgettext("onboarding", "Two modes"),
         body:
-          gettext("Switch between Scheduling (your event types) and Calendar (your bookings).")
+          dgettext(
+            "onboarding",
+            "Switch between Scheduling (your event types) and Calendar (your bookings)."
+          )
       },
       %{
         id: :sidebar_nav,
         anchor: "sidebar-nav",
         placement: :right,
-        title: gettext("Settings live in the sidebar"),
-        body: gettext("Profile, availability, integrations, and automation — all one click away.")
+        title: dgettext("onboarding", "Settings live in the sidebar"),
+        body:
+          dgettext(
+            "onboarding",
+            "Profile, availability, integrations, and automation — all one click away."
+          )
       },
       %{
         id: :quick_actions,
         anchor: "quick-actions",
         placement: :top,
-        title: gettext("Common tasks"),
+        title: dgettext("onboarding", "Common tasks"),
         body:
-          gettext(
+          dgettext(
+            "onboarding",
             "Quick links to set up your profile, availability, and meeting types. Start here."
           )
       },
@@ -64,15 +72,15 @@ defmodule Tymeslot.Onboarding.DashboardTour do
         id: :user_menu,
         anchor: "user-menu",
         placement: :bottom_end,
-        title: gettext("Your account"),
-        body: gettext("Account settings and log out are here in the top-right.")
+        title: dgettext("onboarding", "Your account"),
+        body: dgettext("onboarding", "Account settings and log out are here in the top-right.")
       },
       %{
         id: :done,
         anchor: nil,
         placement: :center,
-        title: gettext("You're set"),
-        body: gettext("Go create your first event type — and let people book you.")
+        title: dgettext("onboarding", "You're set"),
+        body: dgettext("onboarding", "Go create your first event type — and let people book you.")
       }
     ]
   end

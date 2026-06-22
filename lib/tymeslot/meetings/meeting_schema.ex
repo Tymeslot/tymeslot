@@ -70,10 +70,12 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           utm_term: String.t() | nil,
           referrer_host: String.t() | nil,
           tracking_params: map(),
+          visitor_hash: String.t() | nil,
           organizer_user: any() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           meeting_type_ref: any() | Ecto.Association.NotLoaded.t() | nil,
+          guests: [Tymeslot.Meetings.GuestSchema.t()] | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -168,6 +170,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:custom_fields_snapshot, {:array, :map}, default: [])
     field(:custom_field_answers, :map, default: %{})
 
+    # Guests added by the attendee at booking time
+    has_many(:guests, Tymeslot.Meetings.GuestSchema,
+      foreign_key: :meeting_id,
+      preload_order: [asc: :inserted_at],
+      on_delete: :delete_all
+    )
+
     # Source attribution
     field(:utm_source, :string)
     field(:utm_medium, :string)
@@ -175,6 +184,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:utm_content, :string)
     field(:utm_term, :string)
     field(:referrer_host, :string)
+    # Cookieless join key to the booking-page view in analytics_events.
+    field(:visitor_hash, :string)
     field(:tracking_params, :map, default: %{})
 
     timestamps(type: :utc_datetime)
@@ -241,7 +252,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :utm_content,
     :utm_term,
     :referrer_host,
-    :tracking_params
+    :tracking_params,
+    :visitor_hash
   ]
 
   @valid_statuses [
@@ -274,6 +286,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> validate_length(:utm_content, max: 255)
     |> validate_length(:utm_term, max: 255)
     |> validate_length(:referrer_host, max: 255)
+    |> validate_length(:visitor_hash, max: 64)
     |> TrackingParams.validate_tracking_params(:tracking_params)
     |> calculate_duration()
     |> unique_constraint(:uid)

@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
     <%= if Config.logo_links_to_marketing?() do %>
       <a
         href={Config.site_home_path()}
-        class="hidden sm:flex fixed top-6 left-6 items-center px-6 py-3 text-base font-bold bg-gradient-to-br from-turquoise-600 to-cyan-600 text-white rounded-token-2xl shadow-lg shadow-turquoise-500/20 hover:from-turquoise-700 hover:to-cyan-700 hover:-translate-y-1 hover:shadow-xl hover:shadow-turquoise-500/40 transition-glass duration-300 group z-50"
+        class="hidden sm:flex fixed top-6 left-6 items-center px-6 py-3 text-base font-bold bg-linear-to-br from-turquoise-600 to-cyan-600 text-white rounded-token-2xl shadow-lg shadow-turquoise-500/20 hover:from-turquoise-700 hover:to-cyan-700 hover:-translate-y-1 hover:shadow-xl hover:shadow-turquoise-500/40 transition-glass duration-300 group z-50"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -91,7 +91,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
     <main class="min-h-screen relative overflow-hidden flex items-center justify-center p-4 sm:p-6">
       <%!-- Video Background --%>
       <div class="video-background-container" id="auth-video-container" phx-hook="AuthVideo">
-        <div class="absolute inset-0 bg-gradient-to-br from-turquoise-600 to-blue-600 opacity-20"></div>
+        <div class="absolute inset-0 bg-linear-to-br from-turquoise-600 to-blue-600 opacity-20"></div>
         <%= for {video_id, index} <- Enum.with_index(AuthVideoConfig.auth_video_ids(), 1) do %>
           <video
             class={"video-background-video #{if index == 1, do: "active", else: "inactive"}"}
@@ -118,7 +118,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
 
       <%!-- Content Overlay --%>
       <div class="w-full max-w-[500px] relative z-10 animate-in fade-in zoom-in-95 duration-700">
-        <div class="auth-glass-card !max-w-none">
+        <div class="auth-glass-card max-w-none!">
           <.auth_logo_header title={@title} subtitle={@subtitle} />
           
           <%= if assigns[:heading], do: render_slot(@heading) %>

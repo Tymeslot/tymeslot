@@ -49,4 +49,42 @@ defmodule Tymeslot.Analytics.BotDetectorTest do
       assert BotDetector.ua_family(nil) == "unknown"
     end
   end
+
+  describe "device_type/1" do
+    test "classifies phones as mobile" do
+      assert BotDetector.device_type(
+               "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148"
+             ) == "mobile"
+
+      assert BotDetector.device_type(
+               "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/126.0.0.0 Mobile Safari/537.36"
+             ) == "mobile"
+    end
+
+    test "classifies tablets as tablet, even though their UA also says Mobile" do
+      # iPad UAs carry the `Mobile` token, so tablet detection must win.
+      assert BotDetector.device_type(
+               "Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1"
+             ) == "tablet"
+
+      assert BotDetector.device_type(
+               "Mozilla/5.0 (Linux; Android 13; Nexus 7) AppleWebKit/537.36 Safari/537.36"
+             ) == "tablet"
+    end
+
+    test "classifies a desktop browser as desktop" do
+      assert BotDetector.device_type(
+               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36"
+             ) == "desktop"
+
+      assert BotDetector.device_type(
+               "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 Version/17.5 Safari/605.1.15"
+             ) == "desktop"
+    end
+
+    test "returns unknown for nil or empty" do
+      assert BotDetector.device_type(nil) == "unknown"
+      assert BotDetector.device_type("") == "unknown"
+    end
+  end
 end

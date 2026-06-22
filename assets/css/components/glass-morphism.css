@@ -176,8 +176,8 @@ body {
   color: inherit !important;
 }
 
-.auth-light-mode button.bg-gradient-to-r,
-.auth-light-mode a.bg-gradient-to-r {
+.auth-light-mode button.bg-linear-to-r,
+.auth-light-mode a.bg-linear-to-r {
   color: white !important;
 }
 
@@ -221,7 +221,7 @@ body {
 }
 
 .brand-nav .simple-nav-link.turquoise-accent {
-  @apply text-white bg-gradient-to-r from-turquoise-600 to-cyan-600 shadow-lg shadow-turquoise-500/20 font-black;
+  @apply text-white bg-linear-to-r from-turquoise-600 to-cyan-600 shadow-lg shadow-turquoise-500/20 font-black;
 }
 
 /* Sidebar */

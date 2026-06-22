@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 selected_duration={@selected_duration}
               />
               <div class="timezone-selector-container">
-                <label class="timezone-label">{gettext("Your timezone")}:</label>
+                <label class="timezone-label">{dgettext("booking", "Your timezone")}:</label>
                 <div class="timezone-dropdown-wrapper">
                   <.dropdown
                     id="rhythm-timezone-dropdown"
@@ -115,11 +115,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                     on_close="close_timezone_dropdown"
                     target={@myself}
                     role="dialog"
-                    panel_label={gettext("Select timezone")}
+                    panel_label={dgettext("booking", "Select timezone")}
                     trigger_class="timezone-trigger"
                     class="timezone-dropdown"
                     unstyled={true}
-                    aria-label={gettext("Select timezone")}
+                    aria-label={dgettext("booking", "Select timezone")}
                   >
                   <:trigger>
                     <div class="timezone-display">
@@ -141,7 +141,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       <input
                         id="timezone-search-input"
                         type="text"
-                        placeholder={gettext("Search cities, countries, or timezones...")}
+                        placeholder={dgettext("booking", "Search cities, countries, or timezones...")}
                         class="timezone-search"
                         phx-keyup="search_timezone"
                         phx-target={@myself}
@@ -200,7 +200,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
-                        {gettext("Service slow")}
+                        {dgettext("booking", "Service slow")}
                       </div>
                     <% end %>
                     <button
@@ -238,13 +238,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
               </div>
 
               <div class="time-slots-section">
-                <h3 class="time-slots-section-heading">{gettext("Available Times")}</h3>
+                <h3 class="time-slots-section-heading">{dgettext("booking", "Available Times")}</h3>
                 <% normalized_slots = MeetingUtils.normalize_slot_list(@available_slots) %>
                 <div class="time-slots-grid scroll-y">
                   <%= if @selected_date do %>
                     <%= if @loading_slots do %>
                       <div class="loading-slots">
-                        <span>{gettext("Loading available times...")}</span>
+                        <span>{dgettext("booking", "Loading available times...")}</span>
                       </div>
                     <% else %>
                       <%= if @calendar_error do %>
@@ -280,15 +280,15 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       <% else %>
                         <%= if !@calendar_error do %>
                           <div class="no-slots">
-                            <p>{gettext("This date is fully booked")}</p>
-                            <p>{gettext("Please select another date")}</p>
+                            <p>{dgettext("booking", "This date is fully booked")}</p>
+                            <p>{dgettext("booking", "Please select another date")}</p>
                           </div>
                         <% end %>
                       <% end %>
                     <% end %>
                   <% else %>
                     <div class="no-slots">
-                      <p>{gettext("Please select a date to see available times")}</p>
+                      <p>{dgettext("booking", "Please select a date to see available times")}</p>
                     </div>
                   <% end %>
                 </div>
@@ -303,7 +303,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 phx-target={@myself}
                 data-testid="back-step"
               >
-                ← {gettext("back")}
+                ← {dgettext("booking", "back")}
               </button>
               <button
                 class={
@@ -314,7 +314,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 data-testid="next-step"
                 disabled={is_nil(@selected_date) or is_nil(@selected_time)}
               >
-                {gettext("next")} →
+                {dgettext("booking", "next")} →
               </button>
             </div>
           </div>

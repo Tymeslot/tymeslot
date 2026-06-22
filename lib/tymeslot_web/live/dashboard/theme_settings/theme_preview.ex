@@ -23,11 +23,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemePreview do
           src={@theme.preview_image}
           alt={"#{@theme.name} Theme Preview"}
           class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"
+          data-img-fallback
         />
         <%!-- Fallback content when image fails to load --%>
         <div
-          class="w-full h-full bg-gradient-to-br from-tymeslot-100 to-turquoise-50 flex items-center justify-center"
+          class="w-full h-full bg-linear-to-br from-tymeslot-100 to-turquoise-50 flex items-center justify-center"
           style="display: none;"
         >
           <div class="text-center p-4">

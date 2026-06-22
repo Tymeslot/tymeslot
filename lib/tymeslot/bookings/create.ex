@@ -13,6 +13,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Locales
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
@@ -134,13 +135,15 @@ defmodule Tymeslot.Bookings.Create do
         attendee_locale: Map.get(meeting_params, :attendee_locale) || default_locale(),
         custom_fields_snapshot: Map.get(meeting_params, :custom_fields_snapshot, []),
         custom_field_answers: Map.get(meeting_params, :custom_field_answers, %{}),
+        guest_emails: Map.get(meeting_params, :guest_emails, []),
         utm_source: Map.get(meeting_params, :utm_source),
         utm_medium: Map.get(meeting_params, :utm_medium),
         utm_campaign: Map.get(meeting_params, :utm_campaign),
         utm_content: Map.get(meeting_params, :utm_content),
         utm_term: Map.get(meeting_params, :utm_term),
         referrer_host: Map.get(meeting_params, :referrer_host),
-        tracking_params: Map.get(meeting_params, :tracking_params, %{})
+        tracking_params: Map.get(meeting_params, :tracking_params, %{}),
+        visitor_hash: Map.get(meeting_params, :visitor_hash)
       }
 
       {:ok, booking_data}
@@ -273,30 +276,39 @@ defmodule Tymeslot.Bookings.Create do
   end
 
   defp create_meeting_and_all_side_effects_atomically(booking_data, opts) do
+    booking_data = put_meeting_type_record(booking_data)
     meeting_attrs = Policy.build_meeting_attributes(booking_data)
 
     if paid_meeting_type?(booking_data) do
-      create_paid_booking(meeting_attrs)
+      create_paid_booking(meeting_attrs, booking_data)
     else
       meeting_attrs
-      |> run_meeting_transaction(opts)
+      |> run_meeting_transaction(booking_data, opts)
       |> map_transaction_result()
     end
   end
 
-  defp paid_meeting_type?(%{meeting_type_id: nil}), do: false
-
-  defp paid_meeting_type?(%{meeting_type_id: type_id, organizer_user_id: user_id})
-       when is_integer(user_id) do
-    case MeetingTypes.get_meeting_type(type_id, user_id) do
-      %{payment_required: true} -> true
-      _other -> false
-    end
+  # Resolves the meeting-type record once up front and stashes it on
+  # `booking_data`, so the paid? and guests-allowed? predicates (the latter
+  # running inside the booking transaction) read it from memory instead of each
+  # issuing its own identical query.
+  defp put_meeting_type_record(%{meeting_type_id: nil} = booking_data) do
+    Map.put(booking_data, :meeting_type, nil)
   end
 
+  defp put_meeting_type_record(
+         %{meeting_type_id: type_id, organizer_user_id: user_id} = booking_data
+       )
+       when is_integer(user_id) do
+    Map.put(booking_data, :meeting_type, MeetingTypes.get_meeting_type(type_id, user_id))
+  end
+
+  defp put_meeting_type_record(booking_data), do: Map.put(booking_data, :meeting_type, nil)
+
+  defp paid_meeting_type?(%{meeting_type: %{payment_required: true}}), do: true
   defp paid_meeting_type?(_other), do: false
 
-  defp create_paid_booking(meeting_attrs) do
+  defp create_paid_booking(meeting_attrs, booking_data) do
     paid_attrs = Map.put(meeting_attrs, :status, "awaiting_payment")
 
     # The Stripe checkout call deliberately runs OUTSIDE any DB transaction:
@@ -308,12 +320,30 @@ defmodule Tymeslot.Bookings.Create do
     # released immediately rather than waiting on the reconciliation sweep —
     # the sweeper remains the net for failures we cannot observe here (e.g. a
     # crash between session creation and the client redirect).
-    with {:ok, meeting} <- create_meeting(paid_attrs),
-         {:ok, %{checkout_url: url}} <- create_checkout_or_expire(meeting) do
-      emit_booking_created()
-      {:ok, :payment_required, %{meeting: meeting, checkout_url: url}}
-    else
-      {:error, reason} -> {:error, map_error_to_message(reason)}
+    #
+    # Guest insertion runs after the meeting is committed, so on guest failure
+    # we also expire the meeting immediately rather than leaving an orphaned
+    # awaiting_payment record holding the slot until the reconciliation sweep.
+    case create_meeting(paid_attrs) do
+      {:ok, meeting} ->
+        case create_guests(meeting, booking_data) do
+          {:ok, _guests} ->
+            case create_checkout_or_expire(meeting) do
+              {:ok, %{checkout_url: url}} ->
+                emit_booking_created()
+                {:ok, :payment_required, %{meeting: meeting, checkout_url: url}}
+
+              {:error, reason} ->
+                {:error, map_error_to_message(reason)}
+            end
+
+          {:error, reason} ->
+            expire_unpaid_meeting(meeting, reason)
+            {:error, map_error_to_message(reason)}
+        end
+
+      {:error, reason} ->
+        {:error, map_error_to_message(reason)}
     end
   end
 
@@ -344,9 +374,10 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  defp run_meeting_transaction(meeting_attrs, opts) do
+  defp run_meeting_transaction(meeting_attrs, booking_data, opts) do
     Repo.transaction(fn ->
       with {:ok, meeting} <- create_meeting(meeting_attrs),
+           {:ok, _guests} <- create_guests(meeting, booking_data),
            {:ok, _result} <- schedule_calendar_job(meeting) do
         # Post-creation side effects (emails/video) are now part of the transaction
         # This ensures that if meeting creation fails due to a race condition (unique index),
@@ -359,6 +390,24 @@ defmodule Tymeslot.Bookings.Create do
       end
     end)
   end
+
+  # Persists the attendee-added guests, but only when the meeting type allows
+  # guests. Sanitisation (format, de-dup, self-exclusion, cap) is re-applied
+  # here server-side — the client list is never trusted. Runs inside the
+  # booking transaction so a guest failure rolls the whole booking back.
+  defp create_guests(meeting, booking_data) do
+    if guests_allowed?(booking_data) do
+      booking_data
+      |> Map.get(:guest_emails, [])
+      |> Guests.sanitize_emails(meeting.attendee_email)
+      |> then(&Guests.create_for_meeting(meeting.id, &1))
+    else
+      {:ok, []}
+    end
+  end
+
+  defp guests_allowed?(%{meeting_type: %{allow_guests: true}}), do: true
+  defp guests_allowed?(_booking_data), do: false
 
   defp create_meeting(meeting_attrs) do
     case Scheduling.create_meeting_with_conflict_check(meeting_attrs) do

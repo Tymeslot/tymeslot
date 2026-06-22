@@ -24,6 +24,12 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   def call(conn, opts) do
     allow_embedding = Keyword.get(opts, :allow_embedding, false)
 
+    # Per-request CSP nonce. Generated here so the same plug that builds the
+    # CSP header also owns the value the templates render — a page either gets
+    # both the header and the nonce assign, or neither, so they can never drift.
+    nonce = generate_nonce()
+    conn = assign(conn, :csp_nonce, nonce)
+
     # Determine frame-ancestors based on the profile's allowed domains.
     # CSP frame-ancestors is the primary source of truth for modern browsers.
     {frame_ancestors, x_frame_options} =
@@ -35,7 +41,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
 
     conn =
       conn
-      |> put_resp_header("content-security-policy", csp_header(frame_ancestors))
+      |> put_resp_header("content-security-policy", csp_header(frame_ancestors, nonce))
       |> put_resp_header("x-content-type-options", "nosniff")
       |> put_resp_header("referrer-policy", "strict-origin-when-cross-origin")
       |> put_resp_header("permissions-policy", permissions_policy())
@@ -176,15 +182,20 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
     |> Enum.uniq()
   end
 
-  defp csp_header(frame_ancestors) do
+  # 18 random bytes → 24-char base64url. Enough entropy to make the nonce
+  # unguessable per request, which is the whole point of a CSP nonce.
+  defp generate_nonce do
+    18 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
+  end
+
+  defp csp_header(frame_ancestors, nonce) do
     extra_script_origins = analytics_script_origins()
 
     script_src =
       Enum.join(
         [
           "'self'",
-          "'unsafe-inline'",
-          "'unsafe-eval'",
+          "'nonce-#{nonce}'",
           "https://www.google.com",
           "https://www.gstatic.com",
           "https://js.stripe.com"
@@ -210,7 +221,8 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
     Enum.join(
       [
         "default-src 'self'",
-        # Phoenix LiveView requires unsafe-inline, reCAPTCHA + Stripe require external domains
+        # Inline scripts are authorised by a per-request nonce; reCAPTCHA +
+        # Stripe require their external origins.
         "script-src #{script_src}",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "img-src 'self' data: https:",

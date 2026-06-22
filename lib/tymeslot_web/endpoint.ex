@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Endpoint do
     websocket: [
       connect_info: [
         :peer_data,
-        {:x_headers, ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "origin"]},
+        :x_headers,
         :user_agent,
         session: @session_options
       ],
@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Endpoint do
     longpoll: [
       connect_info: [
         :peer_data,
-        {:x_headers, ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "origin"]},
+        :x_headers,
         :user_agent,
         session: @session_options
       ]
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Endpoint do
     websocket: [
       connect_info: [
         :peer_data,
-        {:x_headers, ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "origin"]},
+        :x_headers,
         :user_agent
       ],
       timeout: 60_000,
@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Endpoint do
     longpoll: [
       connect_info: [
         :peer_data,
-        {:x_headers, ["x-forwarded-for", "x-real-ip", "cf-connecting-ip", "origin"]},
+        :x_headers,
         :user_agent
       ]
     ]
@@ -140,6 +140,7 @@ defmodule TymeslotWeb.Endpoint do
   def request_log_level(%Plug.Conn{path_info: ["auth", "verify-complete" | _rest]}), do: false
   def request_log_level(%Plug.Conn{path_info: ["auth", "reset-password", _token]}), do: false
   def request_log_level(%Plug.Conn{path_info: ["email-change", _token]}), do: false
+  def request_log_level(%Plug.Conn{path_info: ["guest", _token, _response]}), do: false
   def request_log_level(_conn), do: :info
 
   # Use custom body reader to cache raw body for webhooks needed for signature verification

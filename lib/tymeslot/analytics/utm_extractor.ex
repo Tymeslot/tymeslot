@@ -1,15 +1,40 @@
 defmodule Tymeslot.Analytics.UtmExtractor do
   @moduledoc """
-  Extracts UTM and arbitrary tracking parameters from query params.
+  Extracts UTM and known attribution parameters from query params.
 
   Standard UTM fields land in their own typed keys (so they get dedicated
-  columns and indexes). Any other string-valued param is preserved in a
-  `tracking_params` map, beating Cal.com's pattern of requiring users to
-  define a hidden booking question per custom param.
+  columns and indexes). A small **allowlist** of well-known ad-network and
+  click-identifier params is preserved in a `tracking_params` map.
+
+  The allowlist is deliberate: `tracking_params` is persisted both to
+  `analytics_events` and — on booking — onto the invitee's `meetings` row
+  next to their name and email, indefinitely. Capturing *arbitrary* query
+  params there would silently persist visitor PII (e.g. `?email=`, `?phone=`,
+  session tokens) onto a personal-data record. Only recognised attribution
+  identifiers are kept; everything else is dropped.
   """
 
   @utm_keys ~w(utm_source utm_medium utm_campaign utm_content utm_term)
-  @routing_keys ~w(username slug meeting_uid step locale theme tz)
+
+  # Allowlist of non-UTM attribution params preserved in `tracking_params`.
+  # Limited to recognised ad-network / click identifiers and the generic
+  # `ref` referral tag — none of which carry personal data. Add new entries
+  # here as new ad networks appear; never widen this to "any param".
+  @tracking_keys ~w(
+    gclid gbraid wbraid gclsrc dclid
+    fbclid
+    msclkid
+    ttclid
+    twclid
+    li_fat_id
+    igshid
+    yclid
+    rdt_cid
+    epik
+    mc_cid mc_eid
+    ref
+  )
+
   @max_value_length 255
   @max_tracking_keys 16
 
@@ -67,17 +92,20 @@ defmodule Tymeslot.Analytics.UtmExtractor do
     Map.put(acc, String.to_existing_atom(key), value)
   end
 
-  defp place(acc, key, _value) when key in @routing_keys, do: acc
-
-  defp place(acc, key, value) do
+  defp place(acc, key, value) when key in @tracking_keys do
     Map.update!(acc, :tracking_params, fn params ->
       if map_size(params) >= @max_tracking_keys do
         params
       else
-        Map.put(params, truncate(key), value)
+        Map.put(params, key, value)
       end
     end)
   end
+
+  # Anything outside the UTM set and the attribution allowlist is dropped —
+  # routing params (username, slug, …) and any unrecognised param that could
+  # carry visitor PII never reach the persisted tracking map.
+  defp place(acc, _key, _value), do: acc
 
   defp truncate(value) when byte_size(value) <= @max_value_length, do: value
   defp truncate(value), do: String.slice(value, 0, @max_value_length)

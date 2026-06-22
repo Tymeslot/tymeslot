@@ -116,6 +116,7 @@
   --radius-xl: 1rem;       /* 16px */
   --radius-2xl: 1.5rem;    /* 24px */
   --radius-3xl: 2rem;      /* 32px */
+  --radius-full: 9999px;   /* pills and circular avatars */
 
   /* Border Width Scale */
   --border-width-thin: 1px;
@@ -265,7 +266,7 @@
   --glass-blur-lg: 15px;
   --glass-opacity: 0.1;
   --glass-border: rgba(255, 255, 255, 0.2);
-  --glass-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  --glass-shadow: 0 24px 48px rgba(0, 0, 0, 0.28), 0 8px 16px rgba(0, 0, 0, 0.16);
 
   /* Card Border Radius (legacy - use radius tokens) */
   --card-border-radius: 1.5rem;

@@ -86,6 +86,10 @@
 /* Meeting-type and UI icons selected by runtime string interpolation, so static
    scanning cannot see them (formerly the safelist hero-* entries). */
 @source inline("hero-bolt hero-chat-bubble-left-right hero-hand-raised hero-chart-bar hero-flag hero-clock hero-phone hero-light-bulb hero-wrench-screwdriver hero-book-open hero-rocket-launch hero-beaker hero-clipboard-document-check hero-presentation-chart-line hero-calendar hero-user hero-video-camera hero-link");
+/* Feature-dropdown icons chosen via the :feature_pages config (see config/config.exs). */
+@source inline("hero-calendar-days hero-code-bracket hero-credit-card hero-server-stack");
+/* Resources-dropdown icons chosen via the :resources_pages config (see config/config.exs). */
+@source inline("hero-user-group");
 
 @theme {
   /* --- Brand + extended palette (formerly theme.extend.colors) --- */

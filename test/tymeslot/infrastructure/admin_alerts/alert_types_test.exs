@@ -287,5 +287,52 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
 
       refute key_a == key_b
     end
+
+    # analytics_tracking_anomaly dedup_key/2 — spam-prevention invariant:
+    # two payloads with the same :kind but different per-run counts must produce
+    # an identical key so that a recurring daily anomaly collapses to one alert
+    # per dedup window.
+    test "analytics_tracking_anomaly is stable across different per-run counts" do
+      key_a =
+        AlertTypes.dedup_key(:analytics_tracking_anomaly, %{
+          kind: :converting_exceeds_unique,
+          converting_visitors: 10,
+          unique_visitors: 8
+        })
+
+      key_b =
+        AlertTypes.dedup_key(:analytics_tracking_anomaly, %{
+          kind: :converting_exceeds_unique,
+          converting_visitors: 999,
+          unique_visitors: 1
+        })
+
+      assert key_a == key_b
+      assert key_a =~ "analytics_tracking_anomaly"
+      assert key_a =~ "converting_exceeds_unique"
+    end
+
+    test "analytics_tracking_anomaly differs across anomaly kinds" do
+      key_a =
+        AlertTypes.dedup_key(:analytics_tracking_anomaly, %{
+          kind: :converting_exceeds_unique,
+          converting_visitors: 5,
+          unique_visitors: 3
+        })
+
+      key_b =
+        AlertTypes.dedup_key(:analytics_tracking_anomaly, %{
+          kind: :high_untracked_ratio,
+          converting_visitors: 5,
+          unique_visitors: 3
+        })
+
+      refute key_a == key_b
+    end
+
+    test "analytics_tracking_anomaly falls back to 'unknown' when :kind is absent" do
+      key = AlertTypes.dedup_key(:analytics_tracking_anomaly, %{converting_visitors: 5})
+      assert key == "analytics_tracking_anomaly:unknown"
+    end
   end
 end

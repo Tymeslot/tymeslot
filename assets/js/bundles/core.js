@@ -11,10 +11,18 @@ import {LiveSocket} from "phoenix_live_view"
 import topbar from "../../vendor/topbar.cjs"
 
 // Core utility hooks used everywhere
-import { ConfirmDelete, PageReload } from "../ui_interaction_hooks"
-import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick } from "../utility_hooks"
+import { ConfirmDelete, PageReload, VideoHoverPreview, StopClickPropagation } from "../ui_interaction_hooks"
+import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick, scrollPageToTop, shouldScrollToTopOnNavigate } from "../utility_hooks"
 import { ClipboardCopy } from "../clipboard_hook"
 import { installAnalytics, installEventBridge, installClickTracking } from "../analytics"
+import { installImageFallback } from "../image_fallback"
+import { installClipboardCopy } from "../clipboard_copy"
+
+// Reveal image fallbacks on load error (replaces inline onerror handlers).
+installImageFallback()
+
+// Copy [data-clipboard-text] elements on click (replaces inline clipboard handlers).
+installClipboardCopy()
 
 // CSRF token
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
@@ -33,6 +41,8 @@ const CoreHooks = {
   // UI interactions
   ConfirmDelete,
   PageReload,
+  VideoHoverPreview,
+  StopClickPropagation,
 
   // Utilities
   Flash,
@@ -61,6 +71,13 @@ let liveSocket = new LiveSocket(socketPath, Socket, {
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+
+// Scroll to top on forward live navigation (e.g. clicking an internal
+// `navigate` link, including a link to the page you're already on). The guard
+// keeps patch navigations and back/forward at their existing scroll position.
+window.addEventListener("phx:navigate", ({ detail }) => {
+  if (shouldScrollToTopOnNavigate(detail)) scrollPageToTop()
+})
 
 // Global event handlers
 window.addEventListener("phx:reset-form", (e) => {
