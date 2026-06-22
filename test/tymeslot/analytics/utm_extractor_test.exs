@@ -25,7 +25,7 @@ defmodule Tymeslot.Analytics.UtmExtractorTest do
              }
     end
 
-    test "puts any non-UTM string params into tracking_params" do
+    test "keeps allowlisted attribution params (click IDs, ref) in tracking_params" do
       params = %{
         "utm_source" => "linkedin",
         "ref" => "newsletter-42",
@@ -38,13 +38,29 @@ defmodule Tymeslot.Analytics.UtmExtractorTest do
       assert result.tracking_params == %{"ref" => "newsletter-42", "gclid" => "abc"}
     end
 
+    test "drops non-allowlisted params so visitor PII is never persisted" do
+      params = %{
+        "utm_source" => "linkedin",
+        "ref" => "keep-me",
+        "email" => "invitee@example.com",
+        "phone" => "+15555550123",
+        "session" => "secret-token",
+        "anything_custom" => "nope"
+      }
+
+      result = UtmExtractor.extract(params)
+
+      assert result.utm_source == "linkedin"
+      assert result.tracking_params == %{"ref" => "keep-me"}
+    end
+
     test "ignores non-string param values to prevent JSON pollution" do
       params = %{"ref" => "x", "blob" => %{nested: "thing"}}
       result = UtmExtractor.extract(params)
       assert result.tracking_params == %{"ref" => "x"}
     end
 
-    test "ignores Phoenix routing keys (username, slug, etc.)" do
+    test "drops Phoenix routing keys (username, slug, etc.)" do
       params = %{"username" => "alice", "slug" => "intro", "utm_source" => "x"}
       result = UtmExtractor.extract(params)
       assert result.utm_source == "x"
@@ -57,12 +73,10 @@ defmodule Tymeslot.Analytics.UtmExtractorTest do
       assert String.length(result.utm_source) == 255
     end
 
-    test "truncates tracking_param keys longer than 255 bytes" do
-      long_key = String.duplicate("k", 1000)
-      result = UtmExtractor.extract(%{long_key => "value"})
-      [{stored_key, stored_val}] = Map.to_list(result.tracking_params)
-      assert byte_size(stored_key) == 255
-      assert stored_val == "value"
+    test "truncates over-long allowlisted tracking values to 255 bytes" do
+      long_value = String.duplicate("v", 1000)
+      result = UtmExtractor.extract(%{"ref" => long_value})
+      assert byte_size(result.tracking_params["ref"]) == 255
     end
 
     test "handles nil and empty maps" do
