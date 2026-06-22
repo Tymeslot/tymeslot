@@ -60,4 +60,53 @@ defmodule TymeslotWeb.Helpers.ClientIPTest do
       assert ClientIP.get_user_agent_from_mount(socket) == "disconnected-agent"
     end
   end
+
+  describe "get_from_mount/1" do
+    @peer_data %{address: {127, 0, 0, 1}, port: 0, ssl_cert: nil}
+
+    test "resolves the client IP from x-real-ip in connect_info x_headers" do
+      socket =
+        mock_socket(
+          connect_info: %{
+            peer_data: @peer_data,
+            x_headers: [{"x-real-ip", "203.0.113.7"}, {"x-forwarded-for", "203.0.113.7"}]
+          }
+        )
+
+      assert ClientIP.get_from_mount(socket) == "203.0.113.7"
+    end
+
+    test "takes the first hop of x-forwarded-for when x-real-ip is absent" do
+      socket =
+        mock_socket(
+          connect_info: %{
+            peer_data: @peer_data,
+            x_headers: [{"x-forwarded-for", "203.0.113.9, 10.0.0.1"}]
+          }
+        )
+
+      assert ClientIP.get_from_mount(socket) == "203.0.113.9"
+    end
+
+    test "falls back to the peer address when no forwarded headers are present" do
+      socket = mock_socket(connect_info: %{peer_data: @peer_data, x_headers: []})
+
+      assert ClientIP.get_from_mount(socket) == "127.0.0.1"
+    end
+
+    test "degrades to the peer address if x_headers arrive as bare strings" do
+      # Guards against the legacy {:x_headers, [...]} static-injection shape:
+      # no tuple matches, so resolution falls through to peer_data rather than
+      # crashing or returning a header name.
+      socket =
+        mock_socket(
+          connect_info: %{
+            peer_data: @peer_data,
+            x_headers: ["x-forwarded-for", "x-real-ip"]
+          }
+        )
+
+      assert ClientIP.get_from_mount(socket) == "127.0.0.1"
+    end
+  end
 end
