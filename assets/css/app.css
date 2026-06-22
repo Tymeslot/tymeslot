@@ -47,11 +47,11 @@
    must precede every at-rule below.
    =========================================================================== */
 
-/* Plugins. @tailwindcss/forms is bundled inside the v4 standalone binary;
-   the heroicons mask-image plugin is loaded from its own module (the v4 CLI
-   loads individual @plugin files even though it cannot load a full @config). */
+/* Plugins. @tailwindcss/forms is bundled inside the v4 standalone binary.
+   Heroicons are no longer a Tailwind plugin: they render as inline SVG from
+   TymeslotWeb.Components.CoreComponents.Heroicons, so there is no .hero-* mask
+   utility to compile and no hero-* safelist to maintain. */
 @plugin "@tailwindcss/forms";
-@plugin "../heroicons.js";
 
 /* LiveView state variants (formerly addVariant() plugins in tailwind.config.js).
    Lets classes like `phx-submit-loading:opacity-50` apply while the parent
@@ -83,15 +83,6 @@
 @source inline("display-xl display-lg display-md");
 @source inline("bg-calendar-{1,2,3,4,5,6,7,8} bg-calendar-fallback");
 @source inline("w-6 h-6 w-8 h-8 w-10 h-10 h-16 h-20 box-border");
-/* Meeting-type and UI icons selected by runtime string interpolation, so static
-   scanning cannot see them (formerly the safelist hero-* entries). */
-@source inline("hero-bolt hero-chat-bubble-left-right hero-hand-raised hero-chart-bar hero-flag hero-clock hero-phone hero-light-bulb hero-wrench-screwdriver hero-book-open hero-rocket-launch hero-beaker hero-clipboard-document-check hero-presentation-chart-line hero-calendar hero-user hero-video-camera hero-link");
-/* Feature-dropdown icons chosen via the :feature_pages config (see config/config.exs). */
-@source inline("hero-calendar-days hero-code-bracket hero-credit-card hero-server-stack");
-/* Resources-dropdown icons chosen via the :resources_pages config (see config/config.exs). */
-@source inline("hero-user-group");
-/* About page (SaaS marketing) — principle cards, founder card, contributors CTA. */
-@source inline("hero-paint-brush hero-star hero-arrow-right");
 
 @theme {
   /* --- Brand + extended palette (formerly theme.extend.colors) --- */

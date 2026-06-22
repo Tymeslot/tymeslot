@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   use Gettext, backend: TymeslotWeb.Gettext
   import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
+  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Icons.ProviderIcon
 
   @doc """
@@ -51,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-token-full bg-tymeslot-100 text-tymeslot-600 text-token-xs font-medium"
               title={dgettext("dashboard", "Hidden from your public booking page; reachable only by its direct link")}
             >
-              <span class="hero-eye-slash-mini w-3 h-3" />{dgettext("dashboard", "Unlisted")}
+              <Icons.icon name="hero-eye-slash-mini" class="w-3 h-3" />{dgettext("dashboard", "Unlisted")}
             </span>
           </div>
           <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-token-xs text-tymeslot-600">
@@ -68,7 +69,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             </span>
             <%= if paid?(@type) do %>
               <span class="flex items-center shrink-0 font-medium text-emerald-600">
-                <span class="hero-banknotes-mini w-3.5 h-3.5 mr-1" />
+                <Icons.icon name="hero-banknotes-mini" class="w-3.5 h-3.5 mr-1" />
                 {format_amount(@type.price_cents, @currency)}
               </span>
             <% end %>
@@ -125,7 +126,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             <% end %>
             <%= if custom_question_count(@type) > 0 do %>
               <span class="flex items-center shrink-0 text-tymeslot-500">
-                <span class="hero-question-mark-circle-mini w-3.5 h-3.5 mr-1" />
+                <Icons.icon name="hero-question-mark-circle-mini" class="w-3.5 h-3.5 mr-1" />
                 {custom_questions_label(@type)}
               </span>
             <% end %>
