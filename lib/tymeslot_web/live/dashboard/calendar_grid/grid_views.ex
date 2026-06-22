@@ -216,6 +216,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
       <summary class="flex flex-col gap-0.5 list-none cursor-default">
         <div
           :for={event <- @shown}
+          id={"allday-event-#{event.id}"}
+          phx-hook="StopClickPropagation"
           class={"rounded px-1 text-token-xs font-medium text-white truncate cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
           phx-click="show_event"
           phx-value-event-id={event.id}
@@ -223,7 +225,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
           role="button"
           tabindex="0"
           aria-label={"All-day: #{event.summary || "Untitled event"}"}
-          onclick="event.stopPropagation()"
         >
           <img
             :if={Map.get(event, :created_by_tymeslot)}

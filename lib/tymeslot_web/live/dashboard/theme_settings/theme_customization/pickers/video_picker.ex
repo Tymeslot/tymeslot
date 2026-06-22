@@ -31,15 +31,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
               phx-target={@myself}
             >
               <div
+                id={"video-hover-#{video_id}"}
+                phx-hook="VideoHoverPreview"
                 class="aspect-video bg-tymeslot-900 relative overflow-hidden video-hover-container"
-                onmouseenter="this.querySelector('.video-preview').currentTime=0; this.querySelector('.video-preview').play().catch(()=>{});"
-                onmouseleave="this.querySelector('.video-preview').pause();"
               >
                 <img
                   src={"/videos/thumbnails/#{video.thumbnail}"}
                   alt={video.name}
                   class="video-thumbnail w-full h-full object-cover absolute inset-0 z-10 transition-transform duration-700 group-hover/video:scale-110"
-                  onerror="this.style.display='none'; this.parentElement.querySelector('[data-fallback-thumbnail]').style.display='flex';"
+                  data-img-fallback
+                  data-fallback-selector="[data-fallback-thumbnail]"
                 />
                 <video
                   src={"/videos/backgrounds/#{video.file}"}

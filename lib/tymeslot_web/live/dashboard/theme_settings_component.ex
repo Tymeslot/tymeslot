@@ -136,10 +136,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
 
               <div class="flex gap-4">
                 <%= if LinkAccessPolicy.can_link?(@profile, @integration_status) do %>
-                  <button
-                    type="button"
+                  <a
+                    href={"#{LinkAccessPolicy.scheduling_path(@profile)}?theme=#{theme_id}"}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     class="btn btn-secondary flex-1 py-3 px-4 text-token-sm"
-                    onclick={"window.open('#{LinkAccessPolicy.scheduling_path(@profile)}?theme=#{theme_id}', '_blank')"}
                   >
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
@@ -156,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                       />
                     </svg>
                     Live Preview
-                  </button>
+                  </a>
                 <% else %>
                   <button
                     type="button"

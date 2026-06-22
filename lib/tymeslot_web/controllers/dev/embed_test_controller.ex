@@ -40,6 +40,7 @@ defmodule TymeslotWeb.Dev.EmbedTestController do
       |> HTML.safe_to_string()
 
     base_url = Endpoint.url()
+    nonce = conn.assigns[:csp_nonce]
 
     html(conn, """
     <!DOCTYPE html>
@@ -95,7 +96,7 @@ defmodule TymeslotWeb.Dev.EmbedTestController do
         </div>
         <div class="control-group">
           <label>&nbsp;</label>
-          <button onclick="reload()" style="padding: 8px 20px; background: #14b8a6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Reload All</button>
+          <button id="reload-btn" style="padding: 8px 20px; background: #14b8a6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Reload All</button>
         </div>
       </div>
 
@@ -147,7 +148,7 @@ defmodule TymeslotWeb.Dev.EmbedTestController do
       </div>
 
       <script src="#{base_url}/embed.js"></script>
-      <script>
+      <script nonce="#{nonce}">
         function getUsername() {
           return document.getElementById('username').value || 'demo';
         }
@@ -188,6 +189,9 @@ defmodule TymeslotWeb.Dev.EmbedTestController do
             TymeslotBooking.embed('#' + id, user, opts);
           });
         }
+
+        // Reload button (listener instead of inline onclick for CSP compliance)
+        document.getElementById('reload-btn').addEventListener('click', reload);
 
         // Initial load
         document.addEventListener('DOMContentLoaded', function() {

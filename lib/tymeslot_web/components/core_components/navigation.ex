@@ -31,10 +31,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
     ~H"""
     <.link
       navigate={@to}
-      class="text-sm transition duration-200"
-      style="color: rgba(255,255,255,0.7); text-decoration: underline;"
-      onmouseover="this.style.color='rgba(255,255,255,0.9)'"
-      onmouseout="this.style.color='rgba(255,255,255,0.7)'"
+      class="text-sm underline text-white/70 hover:text-white/90 transition duration-200"
     >
       {render_slot(@inner_block)}
     </.link>

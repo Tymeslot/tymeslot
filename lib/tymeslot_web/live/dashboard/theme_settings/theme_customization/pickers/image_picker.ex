@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
                   src={"/images/ui/backgrounds/#{image.file}"}
                   alt={image.name}
                   class="w-full h-full object-cover transition-transform duration-700 group-hover/image:scale-110"
-                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                  data-img-fallback
                 />
                 <div class="absolute inset-0 bg-linear-to-br from-tymeslot-100 to-tymeslot-200 items-center justify-center hidden">
                   <svg class="w-12 h-12 text-tymeslot-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
