@@ -104,14 +104,23 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
 
   # Check proxy headers in priority order: x-forwarded-for (first IP),
   # x-real-ip, then cf-connecting-ip (Cloudflare).
+  #
+  # `connect_info` may deliver `:x_headers` as `{name, value}` tuples or, under
+  # some endpoint configurations, as bare header-name strings — the function
+  # clause must tolerate both, returning nil for anything that is not a
+  # name/value pair rather than crashing the mount.
   defp find_forwarded_ip(headers) do
     Enum.find_value(
       ["x-forwarded-for", "x-real-ip", "cf-connecting-ip"],
       fn name ->
-        Enum.find_value(headers, fn {k, v} ->
-          if String.downcase(to_string(k)) == name do
-            v |> String.split(",") |> List.first() |> String.trim()
-          end
+        Enum.find_value(headers, fn
+          {k, v} ->
+            if String.downcase(to_string(k)) == name do
+              v |> String.split(",") |> List.first() |> String.trim()
+            end
+
+          _other ->
+            nil
         end)
       end
     )
@@ -120,8 +129,9 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
   defp extract_header(socket, name) do
     case get_connect_info(socket, :x_headers) do
       headers when is_list(headers) ->
-        Enum.find_value(headers, fn {k, v} ->
-          if String.downcase(to_string(k)) == name, do: v
+        Enum.find_value(headers, fn
+          {k, v} -> if String.downcase(to_string(k)) == name, do: v
+          _other -> nil
         end)
 
       _other ->
