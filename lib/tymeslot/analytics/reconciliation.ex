@@ -8,11 +8,16 @@ defmodule Tymeslot.Analytics.Reconciliation do
 
   This is the production tracking-error gauge. The checks:
 
-    * `unique_visitors <= visits` — distinct can never exceed total; a breach
-      means data corruption.
-    * `converting_visitors <= unique_visitors` — every booker viewed the page
-      first, so distinct bookers can't exceed distinct viewers; a breach means
-      bookings are being recorded without their page-view.
+    * `unique_visitors <= visits` — distinct can never exceed total within the
+      same table/window; a breach means data corruption.
+    * `converting_visitors` materially exceeding `unique_visitors` — bookers and
+      viewers are counted from different tables, and because the visitor hash
+      salt rotates daily a viewer/booker straddling UTC midnight hashes
+      differently in each, so a *small* excess is expected on healthy data.
+      Only an excess on a sample of at least `converting_excess_min_sample`
+      distinct bookers is treated as a signal that bookings are being recorded
+      without their page-view; smaller excesses are ignored as salt-boundary
+      noise.
     * untracked ratio — the share of distinct bookers with no matching page-view
       event. A small ratio is normal (admin/API bookings, the odd dropped
       write); a large one means the page-view pipeline is likely broken.
@@ -35,6 +40,7 @@ defmodule Tymeslot.Analytics.Reconciliation do
   @default_window_days 7
   @default_untracked_ratio_threshold 0.5
   @default_untracked_min_sample 10
+  @default_converting_excess_min_sample 10
 
   @type anomaly :: %{kind: atom(), severity: :warning | :error, detail: String.t()}
 
@@ -93,12 +99,16 @@ defmodule Tymeslot.Analytics.Reconciliation do
 
   defp check_converting_vs_unique(%{converting_visitors: converting, unique_visitors: unique})
        when converting > unique do
-    %{
-      kind: :converting_exceeds_unique,
-      severity: :warning,
-      detail:
-        "#{converting} converting visitors exceed #{unique} unique visitors — bookings recorded without a page-view"
-    }
+    min_sample = config(:converting_excess_min_sample, @default_converting_excess_min_sample)
+
+    if converting >= min_sample do
+      %{
+        kind: :converting_exceeds_unique,
+        severity: :warning,
+        detail:
+          "#{converting} converting visitors exceed #{unique} unique visitors — bookings recorded without a page-view"
+      }
+    end
   end
 
   defp check_converting_vs_unique(_totals), do: nil

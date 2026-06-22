@@ -36,16 +36,31 @@ defmodule Tymeslot.Analytics.ReconciliationTest do
                Reconciliation.detect_anomalies(totals)
     end
 
-    test "flags converting visitors exceeding unique visitors" do
+    test "flags converting visitors materially exceeding unique visitors" do
       totals = %{
-        visits: 10,
+        visits: 30,
         unique_visitors: 3,
-        converting_visitors: 5,
+        converting_visitors: 12,
         untracked_converting_visitors: 0
       }
 
       kinds = totals |> Reconciliation.detect_anomalies() |> Enum.map(& &1.kind)
       assert :converting_exceeds_unique in kinds
+    end
+
+    test "ignores a small converting excess as daily-salt boundary noise" do
+      # A handful more bookers than viewers is expected when a visit and its
+      # booking straddle UTC midnight (different daily salts → different hashes),
+      # so a sub-threshold excess must not raise an alert.
+      totals = %{
+        visits: 10,
+        unique_visitors: 3,
+        converting_visitors: 4,
+        untracked_converting_visitors: 0
+      }
+
+      kinds = totals |> Reconciliation.detect_anomalies() |> Enum.map(& &1.kind)
+      refute :converting_exceeds_unique in kinds
     end
 
     test "flags a high untracked ratio once the sample is large enough" do
@@ -81,23 +96,24 @@ defmodule Tymeslot.Analytics.ReconciliationTest do
     end
 
     test "logs and raises an admin alert when bookings outnumber tracked visitors" do
-      # One distinct viewer, two distinct bookers → converting (2) > unique (1).
+      # One distinct viewer, twelve distinct bookers → converting (12) > unique (1),
+      # comfortably past the boundary-noise sample gate.
       {:ok, _event} =
         EventQueries.insert(%{
           event_type: "booking_page_view",
           path: "/alice/intro",
-          visitor_hash: "v1"
+          visitor_hash: "v0"
         })
 
       user = insert(:user)
       base = DateTime.utc_now(:second)
 
-      for {hash, i} <- Enum.with_index(["v1", "v2"], 1) do
+      for i <- 1..12 do
         insert(:meeting,
           organizer_user_id: user.id,
           start_time: DateTime.add(base, i * 60, :minute),
           end_time: DateTime.add(base, i * 60 + 30, :minute),
-          visitor_hash: hash
+          visitor_hash: "v#{i}"
         )
       end
 
