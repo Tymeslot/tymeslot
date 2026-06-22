@@ -23,20 +23,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
   @spec navigation(map()) :: Phoenix.LiveView.Rendered.t()
   def navigation(assigns) do
     ~H"""
-    <% features_url = Application.get_env(:tymeslot, :features_url) %>
-    <% feature_pages = Application.get_env(:tymeslot, :feature_pages, []) %>
-    <% marketing_links =
-      [
-        %{url: Application.get_env(:tymeslot, :pricing_url), label: "Pricing", icon: "hero-tag"},
-        %{url: Application.get_env(:tymeslot, :docs_url), label: "Docs", icon: "hero-book-open"},
-        %{
-          url: Application.get_env(:tymeslot, :contact_url),
-          label: "Contact",
-          icon: "hero-envelope"
-        }
-      ]
-      |> Enum.filter(& &1.url) %>
-    <% resources_pages = Application.get_env(:tymeslot, :resources_pages, []) %>
+    <% menu_sections = nav_menu_sections() %>
     <nav class="bg-white border-b-4 border-turquoise-500 shadow-xl relative z-50">
       <div class="container mx-auto flex justify-between items-center px-6 py-5">
         <%= if external_url?(logo_link(@current_user)) do %>
@@ -58,22 +45,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
     <%!-- Desktop Navigation: marketing links (centre zone) --%>
         <div class="hidden md:flex flex-1 items-center justify-center gap-1">
           <%= if Config.show_marketing_links?() do %>
-            <.feature_menu
-              :if={features_url}
-              features_url={features_url}
-              feature_pages={feature_pages}
-            />
-            <.resources_menu :if={resources_pages != []} resources_pages={resources_pages} />
-            <.nav_sublink
-              :for={link <- marketing_links}
-              url={link.url}
-              class="group px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
-            >
-              <.icon
-                name={link.icon}
-                class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
-              /> {link.label}
-            </.nav_sublink>
+            <.nav_section :for={section <- menu_sections} section={section} />
           <% end %>
         </div>
 
@@ -138,32 +110,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
         >
           <div class="container mx-auto px-4 py-4 space-y-3">
             <%= if Config.show_marketing_links?() do %>
-              <.feature_menu_mobile
-                :if={features_url}
-                features_url={features_url}
-                feature_pages={feature_pages}
-              />
-              <.nav_sublink
-                :for={page <- resources_pages}
-                url={page.url}
-                class="group mobile-nav-link flex items-center gap-2.5 px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
-              >
-                <.icon
-                  :if={page[:icon]}
-                  name={page.icon}
-                  class="w-5 h-5 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
-                /> {page.label}
-              </.nav_sublink>
-              <.nav_sublink
-                :for={link <- marketing_links}
-                url={link.url}
-                class="group mobile-nav-link flex items-center gap-2.5 px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
-              >
-                <.icon
-                  name={link.icon}
-                  class="w-5 h-5 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
-                /> {link.label}
-              </.nav_sublink>
+              <.nav_section_mobile :for={section <- menu_sections} section={section} />
             <% end %>
             <%= if @current_user do %>
               <.link
@@ -201,101 +148,147 @@ defmodule TymeslotWeb.Components.SiteComponents do
     """
   end
 
-  # Desktop "Features" navigation entry. Renders a plain link when there are no
-  # sub-pages, or a hover dropdown listing each feature page when `feature_pages`
-  # is populated.
-  attr :features_url, :string, required: true
-  attr :feature_pages, :list, required: true
+  # Single source of truth for the top-level marketing navigation. Both the
+  # desktop and mobile menus iterate this list, so a new entry appears in both
+  # without being wired up twice. Each entry is either:
+  #
+  #   * `%{kind: :menu, ...}` — a grouped menu rendered as a desktop hover
+  #     dropdown / mobile accordion. Carries an optional landing `url`, an
+  #     optional `overview` row (a highlighted link to that landing page), and
+  #     the `pages` it groups. A `:menu` with no `pages` collapses to a plain
+  #     link to its `url`.
+  #   * `%{kind: :link, ...}` — a flat top-level link (Pricing, Docs, Contact).
+  @spec nav_menu_sections() :: [map()]
+  defp nav_menu_sections do
+    features_url = Application.get_env(:tymeslot, :features_url)
+    feature_pages = Application.get_env(:tymeslot, :feature_pages, [])
+    resources_pages = Application.get_env(:tymeslot, :resources_pages, [])
 
-  defp feature_menu(assigns) do
+    marketing_links =
+      Enum.filter(
+        [
+          %{
+            kind: :link,
+            url: Application.get_env(:tymeslot, :pricing_url),
+            label: "Pricing",
+            icon: "hero-tag"
+          },
+          %{
+            kind: :link,
+            url: Application.get_env(:tymeslot, :docs_url),
+            label: "Docs",
+            icon: "hero-book-open"
+          },
+          %{
+            kind: :link,
+            url: Application.get_env(:tymeslot, :contact_url),
+            label: "Contact",
+            icon: "hero-envelope"
+          }
+        ],
+        & &1.url
+      )
+
+    feature_section =
+      features_url &&
+        %{
+          kind: :menu,
+          label: "Features",
+          icon: "hero-sparkles",
+          url: features_url,
+          overview: %{label: "All features", icon: "hero-squares-2x2-solid", url: features_url},
+          pages: feature_pages
+        }
+
+    resources_section =
+      resources_pages != [] &&
+        %{
+          kind: :menu,
+          label: "Resources",
+          icon: "hero-rectangle-stack",
+          url: nil,
+          overview: nil,
+          pages: resources_pages
+        }
+
+    Enum.filter([feature_section, resources_section | marketing_links], & &1)
+  end
+
+  # Desktop navigation entry. A `:link` renders as a flat top-level link; a
+  # `:menu` with no sub-pages collapses to a plain link to its landing page;
+  # otherwise it renders a hover dropdown grouping the section's pages.
+  attr :section, :map, required: true
+
+  defp nav_section(%{section: %{kind: :link}} = assigns) do
     ~H"""
-    <%= if @feature_pages == [] do %>
-      <.nav_sublink
-        url={@features_url}
-        class="group px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
-      >
-        <.icon
-          name="hero-sparkles"
-          class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
-        /> Features
-      </.nav_sublink>
-    <% else %>
-      <div class="relative group">
-        <.nav_sublink
-          url={@features_url}
-          class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
-        >
-          <.icon
-          name="hero-sparkles"
-          class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
-        /> Features
-          <svg
-            class="w-4 h-4 transition-transform duration-200 group-hover:rotate-180"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            stroke-width="2.5"
-            aria-hidden="true"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </.nav_sublink>
-        <div class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-all duration-200 absolute left-0 top-full pt-3 z-50">
-          <div class="w-80 bg-white rounded-2xl shadow-xl border border-tymeslot-100 p-2">
-            <.nav_sublink
-              url={@features_url}
-              class="group/feat flex items-center gap-3 px-3 py-2.5 rounded-xl text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-700 font-bold transition-colors"
-            >
-              <.nav_icon_tile name="hero-squares-2x2-solid" variant={:solid} /> All features
-            </.nav_sublink>
-            <div class="my-1 h-px bg-tymeslot-100" aria-hidden="true"></div>
-            <.nav_sublink
-              :for={page <- @feature_pages}
-              url={page.url}
-              class="group/feat flex items-center gap-3 px-3 py-2.5 rounded-xl text-tymeslot-700 hover:bg-turquoise-50 hover:text-turquoise-700 font-medium transition-colors"
-            >
-              <.nav_icon_tile :if={page[:icon]} name={page.icon} />
-              {page.label}
-            </.nav_sublink>
-          </div>
-        </div>
-      </div>
-    <% end %>
+    <.nav_sublink
+      url={@section.url}
+      class="group px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
+    >
+      <.icon
+        name={@section.icon}
+        class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+      /> {@section.label}
+    </.nav_sublink>
     """
   end
 
-  # Desktop "Resources" navigation entry: a hover dropdown grouping content
-  # pages. Unlike Features there is no standalone landing page, so the trigger is
-  # a disclosure button rather than a link; the panel lists each resource page.
-  attr :resources_pages, :list, required: true
+  defp nav_section(%{section: %{kind: :menu, pages: []}} = assigns) do
+    ~H"""
+    <.nav_sublink
+      url={@section.url}
+      class="group px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
+    >
+      <.icon
+        name={@section.icon}
+        class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+      /> {@section.label}
+    </.nav_sublink>
+    """
+  end
 
-  defp resources_menu(assigns) do
+  defp nav_section(%{section: %{kind: :menu}} = assigns) do
     ~H"""
     <div class="relative group">
+      <%!-- Trigger: a link when the menu has a landing page, a disclosure button otherwise. --%>
+      <.nav_sublink
+        :if={@section.url}
+        url={@section.url}
+        class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
+      >
+        <.icon
+          name={@section.icon}
+          class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+        /> {@section.label}
+        <.nav_chevron />
+      </.nav_sublink>
       <button
+        :if={!@section.url}
         type="button"
         class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl inline-flex items-center gap-2"
         aria-haspopup="true"
       >
         <.icon
-          name="hero-rectangle-stack"
+          name={@section.icon}
           class="w-4 h-4 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
-        /> Resources
-        <svg
-          class="w-4 h-4 transition-transform duration-200 group-hover:rotate-180"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          stroke-width="2.5"
-          aria-hidden="true"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
+        /> {@section.label}
+        <.nav_chevron />
       </button>
       <div class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-all duration-200 absolute left-0 top-full pt-3 z-50">
-        <div class="w-72 bg-white rounded-2xl shadow-xl border border-tymeslot-100 p-2">
+        <div class={[
+          "bg-white rounded-2xl shadow-xl border border-tymeslot-100 p-2",
+          if(@section.overview, do: "w-80", else: "w-72")
+        ]}>
           <.nav_sublink
-            :for={page <- @resources_pages}
+            :if={@section.overview}
+            url={@section.overview.url}
+            class="group/feat flex items-center gap-3 px-3 py-2.5 rounded-xl text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-700 font-bold transition-colors"
+          >
+            <.nav_icon_tile name={@section.overview.icon} variant={:solid} /> {@section.overview.label}
+          </.nav_sublink>
+          <div :if={@section.overview} class="my-1 h-px bg-tymeslot-100" aria-hidden="true"></div>
+          <.nav_sublink
+            :for={page <- @section.pages}
             url={page.url}
             class="group/feat flex items-center gap-3 px-3 py-2.5 rounded-xl text-tymeslot-700 hover:bg-turquoise-50 hover:text-turquoise-700 font-medium transition-colors"
           >
@@ -308,33 +301,109 @@ defmodule TymeslotWeb.Components.SiteComponents do
     """
   end
 
-  # Mobile "Features" navigation entry: a top-level Features link followed by an
-  # indented list of feature sub-pages.
-  attr :features_url, :string, required: true
-  attr :feature_pages, :list, required: true
+  # Mobile navigation entry. Mirrors `nav_section` for the same data: a flat
+  # link, a collapsed plain link, or — for a populated `:menu` — a tappable
+  # accordion that toggles its grouped sub-pages.
+  attr :section, :map, required: true
 
-  defp feature_menu_mobile(assigns) do
+  defp nav_section_mobile(%{section: %{kind: :link}} = assigns) do
+    ~H"""
+    <.nav_sublink
+      url={@section.url}
+      class="group mobile-nav-link flex items-center gap-2.5 px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
+    >
+      <.icon
+        name={@section.icon}
+        class="w-5 h-5 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+      /> {@section.label}
+    </.nav_sublink>
+    """
+  end
+
+  defp nav_section_mobile(%{section: %{kind: :menu, pages: []}} = assigns) do
+    ~H"""
+    <.nav_sublink
+      url={@section.url}
+      class="group mobile-nav-link flex items-center gap-2.5 px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
+    >
+      <.icon
+        name={@section.icon}
+        class="w-5 h-5 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
+      /> {@section.label}
+    </.nav_sublink>
+    """
+  end
+
+  defp nav_section_mobile(%{section: %{kind: :menu}} = assigns) do
+    assigns = assign(assigns, :panel_id, "mobile-nav-#{nav_slug(assigns.section.label)}")
+
     ~H"""
     <div>
-      <.nav_sublink
-        url={@features_url}
-        class="group mobile-nav-link flex items-center gap-2.5 px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
+      <button
+        type="button"
+        class="group/acc w-full mobile-nav-link flex items-center gap-2.5 px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
+        aria-controls={@panel_id}
+        phx-click={
+          JS.toggle(to: "##{@panel_id}")
+          |> JS.toggle_class("rotate-180", to: "##{@panel_id}-chevron")
+        }
       >
         <.icon
-          name="hero-sparkles"
-          class="w-5 h-5 shrink-0 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors"
-        /> Features
-      </.nav_sublink>
-      <.nav_sublink
-        :for={page <- @feature_pages}
-        url={page.url}
-        class="group/feat mobile-nav-link flex items-center gap-3 px-4 py-2.5 text-token-sm text-tymeslot-600 hover:bg-turquoise-50 hover:text-turquoise-700 rounded-lg transition-colors"
-      >
-        <.nav_icon_tile :if={page[:icon]} name={page.icon} class="w-8 h-8" icon_class="w-4 h-4" />
-        {page.label}
-      </.nav_sublink>
+          name={@section.icon}
+          class="w-5 h-5 shrink-0 text-tymeslot-400 group-hover/acc:text-turquoise-600 transition-colors"
+        />
+        <span class="flex-1 text-left">{@section.label}</span>
+        <.nav_chevron id={"#{@panel_id}-chevron"} />
+      </button>
+      <div id={@panel_id} class="hidden pl-2 space-y-1">
+        <.nav_sublink
+          :if={@section.overview}
+          url={@section.overview.url}
+          class="group/feat mobile-nav-link flex items-center gap-3 px-4 py-2.5 text-tymeslot-700 hover:bg-turquoise-50 hover:text-turquoise-700 font-bold rounded-lg transition-colors"
+        >
+          <.nav_icon_tile name={@section.overview.icon} variant={:solid} class="w-8 h-8" icon_class="w-4 h-4" />
+          {@section.overview.label}
+        </.nav_sublink>
+        <.nav_sublink
+          :for={page <- @section.pages}
+          url={page.url}
+          class="group/feat mobile-nav-link flex items-center gap-3 px-4 py-2.5 text-token-sm text-tymeslot-600 hover:bg-turquoise-50 hover:text-turquoise-700 rounded-lg transition-colors"
+        >
+          <.nav_icon_tile :if={page[:icon]} name={page.icon} class="w-8 h-8" icon_class="w-4 h-4" />
+          {page.label}
+        </.nav_sublink>
+      </div>
     </div>
     """
+  end
+
+  # Downward chevron used by menu triggers. Rotates 180° on desktop hover; the
+  # mobile accordion toggles the rotation via an explicit `id` and `JS`.
+  attr :id, :string, default: nil
+
+  defp nav_chevron(assigns) do
+    ~H"""
+    <svg
+      id={@id}
+      class={[
+        "w-4 h-4 transition-transform duration-200",
+        is_nil(@id) && "group-hover:rotate-180"
+      ]}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      stroke-width="2.5"
+      aria-hidden="true"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+    """
+  end
+
+  # Turns a menu label into a DOM-id-safe slug for the mobile accordion panel.
+  @spec nav_slug(String.t()) :: String.t()
+  defp nav_slug(label) do
+    label |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-")
   end
 
   # Brand "icon tile" for the Features navigation dropdown. `:soft` (default)
