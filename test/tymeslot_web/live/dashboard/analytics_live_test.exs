@@ -77,12 +77,16 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       seed_visit(user, "linkedin", "hash-uv-3")
       seed_visit(user, "linkedin", "hash-uv-3")
 
-      # 2 booked meetings attributed to linkedin, distinct start times to dodge unique constraint
+      # 2 booked meetings attributed to linkedin, distinct start times to dodge
+      # unique constraint. Each carries the visitor_hash of one of the viewers
+      # above, so they count as 2 distinct converting visitors — conversion is
+      # measured from converting visitors, not raw booking volume.
       base = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
 
       insert(:meeting,
         organizer_user_id: user.id,
         utm_source: "linkedin",
+        visitor_hash: "hash-uv-1",
         start_time: base,
         end_time: DateTime.add(base, 60, :minute)
       )
@@ -90,6 +94,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       insert(:meeting,
         organizer_user_id: user.id,
         utm_source: "linkedin",
+        visitor_hash: "hash-uv-2",
         start_time: DateTime.add(base, 3600, :second),
         end_time: DateTime.add(base, 3600 + 60 * 60, :second)
       )

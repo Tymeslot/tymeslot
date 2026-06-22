@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
       <.stat_card label="Visits" value={@visits} />
       <.stat_card label="Unique visitors" value={@unique_visitors} />
       <.stat_card label="Bookings" value={@bookings} />
-      <.stat_card label="Conversion" value={"#{@conversion_rate}%"} />
+      <.stat_card label="Conversion (est.)" value={"#{@conversion_rate}%"} />
     </div>
     """
   end

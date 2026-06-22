@@ -83,6 +83,20 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           converting_visitors={@converting_visitors}
         />
 
+        <p class="text-token-xs leading-relaxed text-tymeslot-400">
+          <%!--
+            Be honest about the cookieless model: the daily-rotated fingerprint
+            means a visitor is counted once per UTC day, so multi-day "unique
+            visitors" is a sum of daily uniques rather than truly distinct
+            people, and conversion compares two such counts. Labelled as an
+            estimate so the numbers aren't read as exact.
+          --%>
+          Unique visitors and conversion are cookieless estimates: each visitor is
+          counted once per day, so totals over a longer range approximate the number
+          of distinct people. Conversion is the share of visitors who went on to book
+          and is indicative, not exact.
+        </p>
+
         <VisitsChart.chart
           points={@visits_by_day}
           from={@from}
