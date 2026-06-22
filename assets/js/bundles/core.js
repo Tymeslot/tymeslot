@@ -16,9 +16,13 @@ import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick, scrollPag
 import { ClipboardCopy } from "../clipboard_hook"
 import { installAnalytics, installEventBridge } from "../analytics"
 import { installImageFallback } from "../image_fallback"
+import { installClipboardCopy } from "../clipboard_copy"
 
 // Reveal image fallbacks on load error (replaces inline onerror handlers).
 installImageFallback()
+
+// Copy [data-clipboard-text] elements on click (replaces inline clipboard handlers).
+installClipboardCopy()
 
 // CSRF token
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
