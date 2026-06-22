@@ -45,9 +45,10 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
       |> put_resp_header("x-content-type-options", "nosniff")
       |> put_resp_header("referrer-policy", "strict-origin-when-cross-origin")
       |> put_resp_header("permissions-policy", permissions_policy())
-      |> put_resp_header("strict-transport-security", "max-age=31536000; includeSubDomains")
-      |> put_resp_header("x-xss-protection", "1; mode=block")
-      |> put_resp_header("expect-ct", "max-age=86400, enforce")
+      |> put_resp_header(
+        "strict-transport-security",
+        "max-age=31536000; includeSubDomains; preload"
+      )
 
     if x_frame_options do
       put_resp_header(conn, "x-frame-options", x_frame_options)

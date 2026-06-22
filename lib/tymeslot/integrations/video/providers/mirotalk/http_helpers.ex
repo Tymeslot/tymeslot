@@ -1,12 +1,17 @@
 defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers do
   @moduledoc false
 
+  alias Tymeslot.Security.SsrfBlockedError
+
   @doc """
   Attempts an HTTPS request first; falls back to the original base URL on
   connection errors.
 
   `fun` receives the fully-built URL and must return
   `{:ok, %Req.Response{}}` or `{:error, reason}`.
+
+  An `%SsrfBlockedError{}` is treated as terminal — the HTTP fallback is
+  skipped, because the host is blocked regardless of scheme.
   """
   @spec try_https_then_http(String.t(), String.t(), (String.t() ->
                                                        {:ok, term()} | {:error, term()})) ::
@@ -17,6 +22,9 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers do
     case fun.(https_url) do
       {:ok, %Req.Response{} = resp} ->
         {:ok, resp}
+
+      {:error, %SsrfBlockedError{} = blocked} ->
+        {:error, blocked}
 
       {:error, exception} when is_exception(exception) ->
         fallback_url = base_url <> path

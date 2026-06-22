@@ -8,6 +8,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
 
   require Logger
   alias Tymeslot.Infrastructure.{Metrics, ProxyConfig}
+  alias Tymeslot.Security.{SsrfBlockedError, SsrfGuard}
 
   @operation_timeouts %{
     # Read operations get standard timeout
@@ -101,11 +102,11 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   def request(method, url, body \\ "", headers \\ [], options \\ [])
 
   def request(method, url, body, headers, options) when is_atom(method) do
-    req_options = build_req_options(method, url, body, headers, options)
-
-    track_request(method, url, fn ->
-      Req.request(req_options)
-    end)
+    if Keyword.get(options, :ssrf_protect, false) do
+      guarded_request(method, url, body, headers, options)
+    else
+      do_request(method, url, body, headers, options)
+    end
   end
 
   def request(method, url, body, headers, options) when is_binary(method) do
@@ -125,6 +126,51 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   end
 
   # Private functions
+
+  @spec do_request(atom(), String.t(), any(), list(), keyword()) ::
+          {:ok, Req.Response.t()} | {:error, Exception.t()}
+  defp do_request(method, url, body, headers, options) do
+    req_options = build_req_options(method, url, body, headers, options)
+
+    track_request(method, url, fn ->
+      Req.request(req_options)
+    end)
+  end
+
+  # Request-time SSRF protection for user-supplied hosts (CalDAV, self-hosted
+  # video). Validates that the URL does not resolve to a private/local address
+  # *immediately before* connecting (closing the DNS-rebinding gap), and
+  # disables Req's automatic redirect following so a 3xx from a public host
+  # cannot silently bounce the request onto an internal address.
+  @spec guarded_request(atom(), String.t(), any(), list(), keyword()) ::
+          {:ok, Req.Response.t()} | {:error, Exception.t()}
+  defp guarded_request(method, url, body, headers, options) do
+    guard_opts =
+      case Keyword.fetch(options, :ssrf_allow_private) do
+        {:ok, allow_private} -> [allow_private: allow_private]
+        :error -> []
+      end
+
+    case SsrfGuard.validate(url, guard_opts) do
+      :ok ->
+        safe_options =
+          options
+          |> Keyword.drop([:ssrf_protect, :ssrf_allow_private])
+          |> Keyword.put(:redirect, false)
+
+        do_request(method, url, body, headers, safe_options)
+
+      {:error, reason} ->
+        %URI{scheme: scheme, host: host} = URI.parse(url)
+
+        Logger.warning("Blocked outbound request by SSRF protection",
+          url: "#{scheme}://#{host}",
+          reason: inspect(reason)
+        )
+
+        {:error, %SsrfBlockedError{url: url, reason: reason}}
+    end
+  end
 
   # Standard HTTP methods that Finch accepts as atoms.
   # Non-standard methods (e.g. PROPFIND, REPORT) must be passed as uppercase strings.
