@@ -63,9 +63,13 @@ defmodule Tymeslot.Analytics.ReconciliationQueriesTest do
     assert totals.untracked_converting_visitors == 1
   end
 
-  test "untracked count ignores events outside the window", %{user: user, from: from, to: to} do
-    # v1 has a matching event but only OUTSIDE the window → still untracked.
+  test "untracked count ignores events outside the window when same-day tracking is active",
+       %{user: user, from: from, to: to} do
+    # v1 has a matching event only OUTSIDE the window. A second visitor (v2)
+    # has a same-day event, proving tracking was active today. v1 is still
+    # counted as untracked because there is no same-day event for v1.
     insert_booking(user, "v1", 1)
+    insert_event("v2")
 
     old_event_at = DateTime.add(from, -1, :day)
 
@@ -83,5 +87,48 @@ defmodule Tymeslot.Analytics.ReconciliationQueriesTest do
 
     assert totals.converting_visitors == 1
     assert totals.untracked_converting_visitors == 1
+  end
+
+  test "cross-day booking (page-view on prior day) is not counted as untracked when no same-day events exist",
+       %{user: user, from: from, to: to} do
+    # Simulates a visitor who browsed on a prior UTC day (different salt →
+    # different hash) and booked today. Because no same-day events exist, we
+    # cannot verify whether the booking was tracked or not, so it must NOT be
+    # counted as untracked (unverifiable, not lost).
+    insert_booking(user, "v1", 1)
+
+    prior_day_at = DateTime.add(DateTime.utc_now(), -1, :day)
+
+    # Event on a prior day — same visitor hash value is used here to represent
+    # "what the hash would have been yesterday" (in practice the salt differs,
+    # but from the query's perspective there is simply no event on today's date).
+    {:ok, _event} =
+      %EventSchema{}
+      |> EventSchema.changeset(%{
+        event_type: "booking_page_view",
+        path: "/alice/intro",
+        visitor_hash: "v1"
+      })
+      |> Changeset.put_change(:inserted_at, prior_day_at)
+      |> Repo.insert()
+
+    totals = ReconciliationQueries.instance_totals(from, to)
+
+    assert totals.converting_visitors == 1
+    # No same-day events → unverifiable → excluded from untracked numerator.
+    assert totals.untracked_converting_visitors == 0
+  end
+
+  test "same-day page-view is found and booking is not counted as untracked",
+       %{user: user, from: from, to: to} do
+    # Both event and booking on the same UTC day → salt matches → correctly
+    # counted as tracked.
+    insert_event("v1")
+    insert_booking(user, "v1", 1)
+
+    totals = ReconciliationQueries.instance_totals(from, to)
+
+    assert totals.converting_visitors == 1
+    assert totals.untracked_converting_visitors == 0
   end
 end
