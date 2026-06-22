@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
+    <meta name="csp-nonce" content={assigns[:csp_nonce]} />
     <link rel="canonical" href={TymeslotWeb.Layouts.current_url(assigns)} />
     <%= if assigns[:meta_description] do %>
       <meta name="description" content={@meta_description} />
@@ -24,7 +25,7 @@
       </script>
     <% else %>
       <%!-- Fallback: connect LiveSocket with core-only hooks for pages without route bundles --%>
-      <script type="module">
+      <script type="module" nonce={assigns[:csp_nonce]}>
         // Wait for core bundle to load, then connect LiveSocket
         (async function() {
           let retries = 0;
@@ -42,7 +43,7 @@
         })();
       </script>
     <% end %>
-    <.nomodule_fallback />
+    <.nomodule_fallback nonce={assigns[:csp_nonce]} />
     <.analytics_scripts />
   </head>
   <body>

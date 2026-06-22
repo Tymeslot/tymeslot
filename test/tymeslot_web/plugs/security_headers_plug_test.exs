@@ -393,8 +393,10 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       [script_src_directive] =
         Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
 
+      nonce = conn.assigns.csp_nonce
+
       assert script_src_directive ==
-               "script-src 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://js.stripe.com"
+               "script-src 'self' 'nonce-#{nonce}' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://js.stripe.com"
     end
 
     test "does not allow 'unsafe-eval' in script-src", %{conn: conn} do
@@ -407,6 +409,23 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
         Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
 
       refute script_src_directive =~ "unsafe-eval"
+    end
+
+    test "assigns a per-request nonce and embeds the same value in script-src", %{conn: conn} do
+      conn = SecurityHeadersPlug.call(conn, [])
+      [csp] = get_resp_header(conn, "content-security-policy")
+
+      nonce = conn.assigns.csp_nonce
+
+      assert is_binary(nonce) and byte_size(nonce) >= 20
+      assert csp =~ "'nonce-#{nonce}'"
+    end
+
+    test "generates a fresh nonce on each request", %{conn: conn} do
+      nonce1 = SecurityHeadersPlug.call(conn, []).assigns.csp_nonce
+      nonce2 = SecurityHeadersPlug.call(conn, []).assigns.csp_nonce
+
+      refute nonce1 == nonce2
     end
 
     test "deduplicates origins when two providers share the same host", %{conn: conn} do

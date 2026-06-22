@@ -170,13 +170,15 @@ defmodule TymeslotWeb.Layouts do
     values: [:application, :scheduling_page],
     doc: "Static context identifier (atom) for the error message"
 
+  attr :nonce, :string, default: nil, doc: "Per-request CSP nonce"
+
   @spec nomodule_fallback(map()) :: Phoenix.LiveView.Rendered.t()
   def nomodule_fallback(assigns) do
     # Convert atom to human-readable string safely
     assigns = assign(assigns, :context_str, context_to_string(assigns.context))
 
     ~H"""
-    <script nomodule>
+    <script nomodule nonce={@nonce}>
       document.body.innerHTML = '<div style="padding: 2rem; text-align: center; font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 4rem auto;">' +
         '<svg style="width: 64px; height: 64px; margin: 0 auto 1.5rem; color: #dc2626;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>' +
         '<h1 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 0.75rem;">Browser Not Supported</h1>' +

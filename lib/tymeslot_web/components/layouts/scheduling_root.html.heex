@@ -9,6 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
     <meta name="csrf-token" content={get_csrf_token()} />
+    <meta name="csp-nonce" content={assigns[:csp_nonce]} />
     <.live_title suffix=" · Tymeslot">
       {assigns[:page_title] || "Schedule a Meeting"}
     </.live_title>
@@ -43,7 +44,7 @@
     </script>
     <script phx-track-static type="module" src={~p"/assets/iframe_embed.js"}>
     </script>
-    <.nomodule_fallback context={:scheduling_page} />
+    <.nomodule_fallback context={:scheduling_page} nonce={assigns[:csp_nonce]} />
     <.analytics_scripts />
   </head>
   <body class={"theme-#{assigns[:theme_id] || "1"} #{theme_class(assigns[:theme_id] || "1")}"}>
