@@ -38,6 +38,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
           | :dispute_lost
           | :reconciliation_discrepancies
           | :subscription_not_in_database
+          | :analytics_tracking_anomaly
           | :unhandled_crash
           | atom()
 
