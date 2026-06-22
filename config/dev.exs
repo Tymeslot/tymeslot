@@ -59,7 +59,7 @@ config :tymeslot, Tymeslot.Repo,
   database: "tymeslot_dev#{System.get_env("DB_SUFFIX")}",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
-  pool_size: 60
+  pool_size: 80
 
 # Configure Oban for development
 # Queue definitions in config.exs are loaded at runtime by application.ex
