@@ -5,11 +5,33 @@
   background: transparent;
 }
 
+/* Image background. Presets render `background-image: url(...)` inline; uploads
+   set the `--theme-background-image` custom property which this rule paints. */
 .main-gradient[style*="--theme-background-image"] {
   background-image: var(--theme-background-image);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+}
+
+/* Darkening veil over any image background. The glass content is tuned for the
+   dark default gradient, so a bright photo leaves card text, the step heading,
+   and the floating chrome under-contrasted. `isolation` turns the background
+   layer into a stacking context, so the z-index:-1 veil sits above the image but
+   below every piece of content — no per-element z-index needed. */
+.main-gradient[style*="background-image"],
+.main-gradient[style*="--theme-background-image"] {
+  isolation: isolate;
+}
+
+.main-gradient[style*="background-image"]::after,
+.main-gradient[style*="--theme-background-image"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--background-media-scrim);
 }
 
 /* Video Background */
@@ -22,6 +44,17 @@
   overflow: hidden;
   z-index: -1;
   background: var(--theme-background);
+}
+
+/* The same veil over a playing video — an overlay above the <video> child but
+   below the page content (the video layer owns its own stacking context at
+   z-index: -1, so this never covers the booking card). */
+.video-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--background-media-scrim);
+  pointer-events: none;
 }
 
 /* Apply custom background image if set */

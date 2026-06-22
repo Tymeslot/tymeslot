@@ -259,6 +259,12 @@
   --theme-background: linear-gradient(135deg, #1a1b3a 0%, #2d1b69 100%);
   --theme-background-image: none;
 
+  /* Background media veil — a dark layer composited over image/video
+     backgrounds so the glass content keeps the contrast it has over the default
+     dark gradient. Without it a bright photo or video leaves card text, the step
+     heading, and the floating chrome under-contrasted. */
+  --background-media-scrim: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55));
+
   /* Glassmorphism Effects */
   --glass-blur: 20px;
   --glass-blur-sm: 8px;
