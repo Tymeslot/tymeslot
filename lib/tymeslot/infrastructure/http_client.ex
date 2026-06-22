@@ -161,8 +161,10 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         do_request(method, url, body, headers, safe_options)
 
       {:error, reason} ->
+        %URI{scheme: scheme, host: host} = URI.parse(url)
+
         Logger.warning("Blocked outbound request by SSRF protection",
-          url: url,
+          url: "#{scheme}://#{host}",
           reason: inspect(reason)
         )
 

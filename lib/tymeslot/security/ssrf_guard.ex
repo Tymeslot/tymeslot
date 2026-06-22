@@ -19,15 +19,18 @@ defmodule Tymeslot.Security.SsrfGuard do
 
   Where `Tymeslot.Security.UrlValidation` runs at changeset/save time against
   the URL *string*, this guard runs immediately before the request leaves the
-  application and additionally resolves the hostname via DNS, rejecting it when
-  the resolved address falls in a private, loopback, or link-local range
-  (including the 169.254.169.254 cloud-metadata endpoint).
+  application and additionally resolves the hostname via DNS (all A and AAAA
+  records), rejecting it when any resolved address falls in a private, loopback,
+  or link-local range (including the 169.254.169.254 cloud-metadata endpoint).
 
-  Running at request time is what closes the DNS-rebinding (TOCTOU) gap: a host
-  that resolved to a public address when the integration was saved cannot later
-  be re-pointed at an internal address and have a recurring sync follow it
-  there. It mirrors the posture already enforced for outbound webhooks by
-  `Tymeslot.Webhooks.SsrfValidator`.
+  **Residual TOCTOU window:** this guard validates DNS before handing the URL
+  to Req/Finch, but Finch performs its own independent DNS resolution at connect
+  time.  A sufficiently fast DNS-rebinding attack could still swap the address
+  between the two lookups.  True connection-IP pinning (resolve once, pin the IP
+  for the actual TCP connect) would require a custom Finch transport and is not
+  currently implemented — this matches the posture of
+  `Tymeslot.Webhooks.SsrfValidator`.  The multi-record variant of DNS-based SSRF
+  is fully closed by checking all returned records.
 
   Enforcement is gated to `:prod` — the environment in which the managed SaaS
   and self-hosted deployments run — so that local development and tests can

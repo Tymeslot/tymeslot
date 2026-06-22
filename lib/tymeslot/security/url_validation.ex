@@ -3,9 +3,7 @@ defmodule Tymeslot.Security.UrlValidation do
   Shared HTTP/HTTPS URL validation helpers for security-sensitive inputs.
   """
 
-  import Bitwise, only: [band: 2, bsr: 2]
-
-  alias Tymeslot.Security.PrivateIPv4
+  alias Tymeslot.Security.{PrivateIPv4, PrivateIPv6}
 
   @default_invalid_message "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
   @default_length_error "URL must be 2000 characters or less"
@@ -140,25 +138,8 @@ defmodule Tymeslot.Security.UrlValidation do
       |> hd()
 
     case :inet.parse_strict_address(to_charlist(bare)) do
-      {:ok, {0, 0, 0, 0, 0, 0, 0, 1}} ->
-        # ::1 loopback
-        true
-
-      {:ok, {0, 0, 0, 0, 0, 0xFFFF, hi, lo}} ->
-        # IPv4-mapped ::ffff:x.x.x.x — classify the embedded IPv4 numerically
-        a = bsr(hi, 8)
-        b = band(hi, 0xFF)
-        c = bsr(lo, 8)
-        d = band(lo, 0xFF)
-        PrivateIPv4.private?({a, b, c, d})
-
-      {:ok, {s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} when band(s1, 0xFFC0) == 0xFE80 ->
-        # fe80::/10 link-local
-        true
-
-      {:ok, {s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} when band(s1, 0xFE00) == 0xFC00 ->
-        # fc00::/7 unique local
-        true
+      {:ok, tuple} when tuple_size(tuple) == 8 ->
+        PrivateIPv6.private?(tuple)
 
       {:ok, _tuple} ->
         false

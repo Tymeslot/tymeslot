@@ -11,9 +11,16 @@ defmodule Tymeslot.Security.DnsResolution do
   @moduledoc """
   DNS-resolving SSRF protection for server-side HTTP requests.
 
-  Resolves a URL's hostname via `:inet.getaddr/2` and checks whether the
-  resolved IP falls within private or local network ranges. Use this at
-  request time (not changeset time) to avoid TOCTOU gaps.
+  Resolves a URL's hostname via `:inet.getaddrs/2` (plural) for both IPv4 and
+  IPv6, and rejects the URL if **any** of the returned addresses falls within a
+  private, loopback, link-local, or unspecified range.  Using the plural form
+  closes the multi-record variant of DNS-based SSRF: an attacker cannot hide a
+  private address behind a round-robin set that includes a public address.
+
+  Note: a residual TOCTOU window exists between this check and the TCP connect
+  performed by Finch, which re-resolves DNS independently.  This matches the
+  posture of `Tymeslot.Webhooks.SsrfValidator`.  True connection-IP pinning
+  would require a custom Mint/Finch transport and is deferred.
 
   For string-based (non-resolving) private IP checks at changeset time,
   use `Tymeslot.Security.UrlValidation` with `block_private_ips: true`.
@@ -21,7 +28,7 @@ defmodule Tymeslot.Security.DnsResolution do
 
   @behaviour Tymeslot.Security.DnsResolutionBehaviour
 
-  alias Tymeslot.Security.PrivateIPv4
+  alias Tymeslot.Security.{PrivateIPv4, PrivateIPv6}
 
   @default_error "URL resolves to a private or local network address"
 
@@ -37,15 +44,22 @@ defmodule Tymeslot.Security.DnsResolution do
     end
   end
 
+  # Resolve via both families and reject if any returned address is private.
+  # Using getaddrs/2 (plural) ensures all A/AAAA records are inspected —
+  # a single getaddr/2 call only returns one record and could miss a private
+  # address hidden in a multi-record response.
   defp resolve_and_check(host_charlist, error_message) do
-    ipv4_result = ipv4_private?(host_charlist)
-    ipv6_result = ipv6_private?(host_charlist)
+    ipv4_addrs = getaddrs(host_charlist, :inet)
+    ipv6_addrs = getaddrs(host_charlist, :inet6)
 
     cond do
-      ipv4_result or ipv6_result ->
+      Enum.any?(ipv4_addrs, &PrivateIPv4.private?/1) ->
         {:error, error_message}
 
-      not resolvable?(host_charlist) ->
+      Enum.any?(ipv6_addrs, &PrivateIPv6.private?/1) ->
+        {:error, error_message}
+
+      ipv4_addrs == [] and ipv6_addrs == [] ->
         {:error, error_message}
 
       true ->
@@ -53,53 +67,11 @@ defmodule Tymeslot.Security.DnsResolution do
     end
   end
 
-  defp resolvable?(host_charlist) do
-    match?({:ok, _addr}, :inet.getaddr(host_charlist, :inet)) or
-      match?({:ok, _addr}, :inet.getaddr(host_charlist, :inet6))
-  end
-
-  defp ipv4_private?(host_charlist) do
-    case :inet.getaddr(host_charlist, :inet) do
-      {:ok, tuple} -> PrivateIPv4.private?(tuple)
-      _other -> false
-    end
-  end
-
-  defp ipv6_private?(host_charlist) do
-    case :inet.getaddr(host_charlist, :inet6) do
-      {:ok, {0, 0, 0, 0, 0, 0, 0, 1}} ->
-        true
-
-      # fe80::/10 — link-local (first hextet 0xFE80..0xFEBF)
-      {:ok, {s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} when Bitwise.band(s1, 0xFFC0) == 0xFE80 ->
-        true
-
-      # fc00::/7 — unique local (first hextet 0xFC00..0xFDFF)
-      {:ok, {s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} when Bitwise.band(s1, 0xFE00) == 0xFC00 ->
-        true
-
-      {:ok, {0, 0, 0, 0, 0, 0xFFFF, hi, lo}} ->
-        ipv4_mapped_private?(hi, lo)
-
-      _other ->
-        false
-    end
-  end
-
-  defp ipv4_mapped_private?(hi, lo) do
-    a = Bitwise.bsr(hi, 8)
-    b = Bitwise.band(hi, 0xFF)
-    _c = Bitwise.bsr(lo, 8)
-    _d = Bitwise.band(lo, 0xFF)
-
-    case {a, b} do
-      {127, _b} -> true
-      {10, _b} -> true
-      {172, x} when x >= 16 and x <= 31 -> true
-      {192, 168} -> true
-      {169, 254} -> true
-      {0, 0} -> true
-      _other -> false
+  # Returns all resolved addresses for the given family, or [] on failure.
+  defp getaddrs(host_charlist, family) do
+    case :inet.getaddrs(host_charlist, family) do
+      {:ok, addrs} -> addrs
+      {:error, _reason} -> []
     end
   end
 end
