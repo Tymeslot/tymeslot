@@ -1,32 +1,15 @@
 defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
   @moduledoc """
-  Shared calendar discovery service with caching support.
+  Shared calendar discovery service for CalDAV-based providers.
 
-  Provides unified discovery logic for CalDAV-based providers with
-  result caching to improve performance and reduce server load.
+  Provides unified discovery logic, delegating result caching (and concurrent
+  request coalescing) to
+  `Tymeslot.Integrations.Calendar.Shared.DiscoveryCache`.
   """
-
-  require Logger
 
   alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.Shared.DiscoveryCache
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
-
-  # Cache discovery results for 5 minutes
-  @cache_ttl_seconds 300
-  @cache_table :calendar_discovery_cache
-
-  @doc """
-  Initializes the discovery cache ETS table.
-  Should be called during application startup.
-  """
-  @spec init_cache() :: :ok
-  def init_cache do
-    if :ets.info(@cache_table) == :undefined do
-      :ets.new(@cache_table, [:set, :public, :named_table, {:read_concurrency, true}])
-    end
-
-    :ok
-  end
 
   @doc """
   Discovers calendars with caching support.
@@ -52,25 +35,23 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
           keyword()
         ) :: {:ok, list(map())} | {:error, String.t()}
   def discover_calendars(provider, config, opts \\ []) do
-    force_refresh = Keyword.get(opts, :force_refresh, false)
     cache_key = build_cache_key(provider, config)
 
-    if force_refresh do
-      perform_discovery(provider, config)
-    else
-      with :miss <- get_cached_result(cache_key),
-           {:ok, calendars} = result <- perform_discovery(provider, config) do
-        Logger.debug("Cache miss, performing discovery", provider: provider)
-        cache_result(cache_key, calendars)
-        result
-      else
-        {:ok, calendars} ->
-          Logger.debug("Using cached discovery results", provider: provider)
-          {:ok, calendars}
+    # A forced refresh drops any cached value so the fresh result is recomputed
+    # and re-stored (rather than bypassing the cache entirely).
+    if Keyword.get(opts, :force_refresh, false) do
+      DiscoveryCache.invalidate(cache_key)
+    end
 
-        error ->
-          error
-      end
+    case DiscoveryCache.get_or_compute(cache_key, fn -> perform_discovery(provider, config) end) do
+      {:ok, _calendars} = result ->
+        result
+
+      error ->
+        # Never retain transient failures: a single network blip would
+        # otherwise block rediscovery for the whole TTL.
+        DiscoveryCache.invalidate(cache_key)
+        error
     end
   end
 
@@ -103,41 +84,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
       :unknown -> {:error, "Unsupported provider: #{integration.provider}"}
       _other -> discover_calendars(provider, config, opts)
     end
-  end
-
-  @doc """
-  Clears the discovery cache for a specific provider and user.
-
-  ## Parameters
-  - `provider` - The provider type
-  - `config` - Configuration map with user credentials
-  """
-  @spec clear_cache(atom(), map()) :: :ok
-  def clear_cache(provider, config) do
-    cache_key = build_cache_key(provider, config)
-    :ets.delete(@cache_table, cache_key)
-    :ok
-  end
-
-  @doc """
-  Clears all expired cache entries.
-  Should be called periodically by a background job.
-  """
-  @spec clear_expired_cache() :: :ok
-  def clear_expired_cache do
-    ensure_cache_exists()
-
-    current_time = System.system_time(:second)
-
-    :ets.select_delete(@cache_table, [
-      {
-        {:"$1", {:"$2", :"$3"}},
-        [{:<, :"$3", current_time}],
-        [true]
-      }
-    ])
-
-    :ok
   end
 
   @doc """
@@ -198,37 +144,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
   defp extract_domain(url) do
     uri = URI.parse(url)
     uri.host || url
-  end
-
-  defp get_cached_result(cache_key) do
-    ensure_cache_exists()
-
-    case :ets.lookup(@cache_table, cache_key) do
-      [{^cache_key, {calendars, expiry}}] ->
-        if System.system_time(:second) < expiry do
-          {:ok, calendars}
-        else
-          :ets.delete(@cache_table, cache_key)
-          :miss
-        end
-
-      [] ->
-        :miss
-    end
-  end
-
-  defp cache_result(cache_key, calendars) do
-    ensure_cache_exists()
-
-    expiry = System.system_time(:second) + @cache_ttl_seconds
-    :ets.insert(@cache_table, {cache_key, {calendars, expiry}})
-    :ok
-  end
-
-  defp ensure_cache_exists do
-    if :ets.info(@cache_table) == :undefined do
-      init_cache()
-    end
   end
 
   defp build_config_from_integration(integration) do

@@ -94,6 +94,8 @@ defmodule Tymeslot.Application do
           Tymeslot.Payments.Webhooks.IdempotencyCache,
           # Start booking-analytics dashboard cache
           Tymeslot.Analytics.MetricsCache,
+          # Start calendar discovery cache
+          Tymeslot.Integrations.Calendar.Shared.DiscoveryCache,
           # Start calendar request coalescer
           Tymeslot.Integrations.Calendar.RequestCoalescer,
           # Start Oban for background job processing
@@ -116,6 +118,8 @@ defmodule Tymeslot.Application do
           Tymeslot.Payments.Webhooks.IdempotencyCache,
           # Start booking-analytics dashboard cache (ETS table needed in tests too)
           Tymeslot.Analytics.MetricsCache,
+          # Start calendar discovery cache (ETS table needed in tests too)
+          Tymeslot.Integrations.Calendar.Shared.DiscoveryCache,
           # Start Hammer-backed rate limiter (ETS sliding window)
           {Tymeslot.Security.RateLimit, clean_period: :timer.minutes(5)},
           # Own the account lockout ETS table (AccountLockout is a plain module)
