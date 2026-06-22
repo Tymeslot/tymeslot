@@ -44,6 +44,21 @@ defmodule Tymeslot.Analytics.FingerprintTest do
       assert Fingerprint.hash(nil, nil) == nil
     end
 
+    test "treats the \"unknown\"/blank sentinels as an absent network identity" do
+      # A caller passing the raw "unknown" sentinel must derive the *same* hash as
+      # a caller that pre-normalised to nil — otherwise a visitor's page-view and
+      # booking would split across two join keys.
+      assert Fingerprint.hash("unknown", "unknown", "session-abc") ==
+               Fingerprint.hash(nil, nil, "session-abc")
+
+      assert Fingerprint.hash("", "", "session-abc") ==
+               Fingerprint.hash(nil, nil, "session-abc")
+
+      # Engaging the session fallback, distinct sessions stay distinct.
+      assert Fingerprint.hash("unknown", "unknown", "session-abc") !=
+               Fingerprint.hash("unknown", "unknown", "session-xyz")
+    end
+
     test "returns a hash when ip is present but user_agent is nil" do
       hash = Fingerprint.hash("1.2.3.4", nil)
       assert is_binary(hash)

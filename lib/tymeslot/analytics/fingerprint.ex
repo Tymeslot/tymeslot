@@ -22,19 +22,33 @@ defmodule Tymeslot.Analytics.Fingerprint do
   toward total visits but vanish from `count(DISTINCT)` unique counts,
   making the two metrics inconsistent. Only when there is nothing to hash
   at all (no IP, no user agent, no session) does it return `nil`.
+
+  An unresolved network identity may arrive as the sentinel string
+  `"unknown"` (from `ClientIP`) or an empty string rather than `nil`. These
+  are normalised to `nil` here so the session fallback engages consistently
+  regardless of which form the caller passes — without this, distinct
+  visitors with no resolvable IP/UA would all collapse onto a single
+  `"unknown|unknown"` hash, and callers that pre-normalise would disagree
+  with callers that don't, splitting one visitor's page-view and booking
+  across two different join keys.
   """
   @spec hash(String.t() | nil, String.t() | nil, String.t() | nil) :: String.t() | nil
-  def hash(ip, user_agent, session_id \\ nil)
+  def hash(ip, user_agent, session_id \\ nil) do
+    do_hash(blank_to_nil(ip), blank_to_nil(user_agent), session_id)
+  end
 
-  def hash(nil, nil, nil), do: nil
+  defp do_hash(nil, nil, nil), do: nil
 
-  def hash(nil, nil, session_id) when is_binary(session_id) do
+  defp do_hash(nil, nil, session_id) when is_binary(session_id) do
     build_hash(["session:" <> session_id])
   end
 
-  def hash(ip, user_agent, _session_id) do
-    build_hash([to_string(ip || ""), to_string(user_agent || "")])
+  defp do_hash(ip, user_agent, _session_id) do
+    build_hash([to_string(ip), to_string(user_agent)])
   end
+
+  defp blank_to_nil(value) when value in ["unknown", ""], do: nil
+  defp blank_to_nil(value), do: value
 
   defp build_hash(parts) do
     :sha256
