@@ -58,15 +58,15 @@ defmodule TymeslotWeb.Components.CoreComponents.Layout do
     <footer class="footer-gradient text-center">
       <p style="color: rgba(255,255,255,0.8);">
         Made with <span style="color: #ef4444;">❤</span>
-        by
+        by the
         <a
-          href="https://lukabreitig.com"
+          href="https://github.com/tymeslot/tymeslot"
           target="_blank"
           rel="noopener noreferrer"
           class="underline hover:text-white transition-colors"
           style="color: rgba(255,255,255,0.9);"
         >
-          Luka Breitig
+          Tymeslot team
         </a>
       </p>
     </footer>

@@ -35,6 +35,7 @@ config :tymeslot,
   site_home_path: "/dashboard",
   repo: Tymeslot.Repo,
   contact_url: nil,
+  about_url: nil,
   features_url: nil,
   # Optional sub-pages for a "Features" navigation dropdown. Each entry is a
   # %{label: string, url: string, icon: string} map; `icon` is an optional

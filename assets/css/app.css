@@ -90,6 +90,8 @@
 @source inline("hero-calendar-days hero-code-bracket hero-credit-card hero-server-stack");
 /* Resources-dropdown icons chosen via the :resources_pages config (see config/config.exs). */
 @source inline("hero-user-group");
+/* About page (SaaS marketing) — principle cards, founder card, contributors CTA. */
+@source inline("hero-paint-brush hero-star hero-arrow-right");
 
 @theme {
   /* --- Brand + extended palette (formerly theme.extend.colors) --- */
