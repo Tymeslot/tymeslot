@@ -394,7 +394,19 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
         Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
 
       assert script_src_directive ==
-               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://js.stripe.com"
+               "script-src 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://js.stripe.com"
+    end
+
+    test "does not allow 'unsafe-eval' in script-src", %{conn: conn} do
+      Application.put_env(:tymeslot, :analytics_providers, [])
+
+      conn = SecurityHeadersPlug.call(conn, [])
+      [csp] = get_resp_header(conn, "content-security-policy")
+
+      [script_src_directive] =
+        Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
+
+      refute script_src_directive =~ "unsafe-eval"
     end
 
     test "deduplicates origins when two providers share the same host", %{conn: conn} do
