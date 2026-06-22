@@ -91,12 +91,14 @@ defmodule Tymeslot.Analytics do
   @doc """
   Computes the conversion rate as a formatted percentage string.
 
-  Returns the percentage of unique visitors who converted, where
-  `converting_visitors` is the count of distinct visitors who booked (visitors
-  carrying a `visitor_hash` that also appears in the page-view events). Because
-  a converting visitor must have viewed the booking page, this is a true subset
-  of `unique_visitors` and the rate is naturally ≤ 100% — the `min/2` cap only
-  guards the rare edge where a booking's page-view write was dropped.
+  `converting_visitors` is counted independently from the `meetings` table as
+  the number of distinct `visitor_hash` values on booked meetings. It is NOT
+  derived from the `analytics_events` table and is therefore NOT strictly a
+  subset of `unique_visitors` (which counts distinct hashes in page-view
+  events). The two counts use separate tables, different time windows, and
+  different hash salts (rotated daily), so converting visitors can legitimately
+  exceed unique visitors in production. The `min/2` cap is a structural guard,
+  not a rare edge case.
 
   Formatted to one decimal place (e.g. `"66.7"`). When `unique_visitors` is
   zero, returns `"0.0"` to avoid a divide-by-zero. The returned string does not
