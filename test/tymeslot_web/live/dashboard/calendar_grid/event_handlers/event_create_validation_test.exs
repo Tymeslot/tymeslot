@@ -136,6 +136,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
     end
   end
 
+  describe "handle_save_event/2 — reminders" do
+    test "threads reminders into the execute-create payload" do
+      socket =
+        build_socket(
+          creating_overrides: %{
+            reminders: [%{method: :popup, minutes_before: 10}]
+          }
+        )
+
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert_received {:execute_create_event, payload}
+      assert payload.creating.reminders == [%{method: :popup, minutes_before: 10}]
+    end
+  end
+
   describe "handle_save_event/2 — all-day events" do
     test "schedules an all-day create with Date start/end and all_day: true" do
       socket =

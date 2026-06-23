@@ -195,6 +195,66 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     end
   end
 
+  @spec handle_add_event_reminder(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_add_event_reminder(params, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      event ->
+        with {:ok, reminder} <- Shared.parse_reminder(params),
+             existing = event.reminders || [],
+             false <- reminder in existing,
+             :ok <- EditWorkflow.assert_owns_event(socket, event),
+             :ok <- Shared.check_edit_rate_limit(socket) do
+          push_reminders_change(socket, event, existing ++ [reminder])
+        else
+          true ->
+            {:noreply, socket}
+
+          {:error, :unauthorized} ->
+            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+            {:noreply, socket}
+
+          {:error, :rate_limited, _message} ->
+            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+            {:noreply, socket}
+
+          :error ->
+            {:noreply, socket}
+        end
+    end
+  end
+
+  @spec handle_remove_event_reminder(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_remove_event_reminder(params, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      event ->
+        with {:ok, index} <- Shared.parse_int(params["index"]),
+             :ok <- EditWorkflow.assert_owns_event(socket, event),
+             :ok <- Shared.check_edit_rate_limit(socket) do
+          new_reminders = List.delete_at(event.reminders || [], index)
+          push_reminders_change(socket, event, new_reminders)
+        else
+          {:error, :unauthorized} ->
+            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+            {:noreply, socket}
+
+          {:error, :rate_limited, _message} ->
+            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+            {:noreply, socket}
+
+          :error ->
+            {:noreply, socket}
+        end
+    end
+  end
+
   @spec handle_update_event_calendar(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_event_calendar(params, socket) do
@@ -338,6 +398,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         start_at: nil,
         end_at: nil
     }
+  end
+
+  defp push_reminders_change(socket, original_event, new_reminders) do
+    optimistic_event = %{original_event | reminders: new_reminders}
+
+    updated_events =
+      Enum.map(socket.assigns.events, fn e ->
+        if e.id == original_event.id, do: optimistic_event, else: e
+      end)
+
+    socket =
+      socket
+      |> assign(:selected_event, optimistic_event)
+      |> assign(:events, updated_events)
+      |> Helpers.precompute_derived()
+      |> Updates.update_reminders_async(original_event, new_reminders)
+
+    send(self(), {:flash, {:info, "Changes saved."}})
+    {:noreply, socket}
   end
 
   defp push_all_day_change(socket, original_event, optimistic_event) do

@@ -30,6 +30,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
         else: base
 
     base
+    |> add_reminder(event_data)
     |> Enum.reject(fn {_k, v} -> is_nil(v) or v == "" end)
     |> Map.new()
   end
@@ -143,5 +144,25 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   defp all_day_event?(event_data) do
     start_time = extract_field(event_data, :start_time, "start_time")
     match?(%Date{}, start_time)
+  end
+
+  # Microsoft Graph models a single lead-time reminder per event via
+  # `reminderMinutesBeforeStart` + `isReminderOn` — it has no per-reminder
+  # method and cannot represent multiple reminders. Only the first reminder's
+  # lead time round-trips; additional reminders are dropped on the Outlook path.
+  defp add_reminder(base, event_data) do
+    # Reminders may be atom-keyed (freshly built) or string-keyed (round-tripped
+    # through the JSONB cache column); read both forms.
+    case extract_field(event_data, :reminders, "reminders") do
+      [first | _rest] when is_map(first) ->
+        minutes = first[:minutes_before] || first["minutes_before"]
+
+        base
+        |> Map.put("isReminderOn", true)
+        |> Map.put("reminderMinutesBeforeStart", minutes)
+
+      _none ->
+        Map.put(base, "isReminderOn", false)
+    end
   end
 end

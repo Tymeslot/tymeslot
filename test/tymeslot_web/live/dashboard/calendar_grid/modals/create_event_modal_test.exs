@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModalTest do
     calendar_id: "primary",
     attendees: [],
     attendee_input: "",
+    reminders: [],
     video_integration_id: nil
   }
 
@@ -84,6 +85,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModalTest do
     assert html =~ ~s(id="create-event-end-date")
     refute html =~ ~s(id="create-event-start-time")
     refute html =~ ~s(id="create-event-end-time")
+  end
+
+  test "renders the reminders editor" do
+    html = render_component(&CreateEventModal.create_event_modal/1, base_assigns())
+
+    assert html =~ "Reminders"
+    assert html =~ "Add reminder"
+    assert html =~ ~s(phx-submit="add_create_reminder")
+  end
+
+  test "renders existing reminders" do
+    assigns =
+      base_assigns(%{
+        creating_event:
+          Map.put(@creating_event, :reminders, [%{method: :popup, minutes_before: 10}])
+      })
+
+    html = render_component(&CreateEventModal.create_event_modal/1, assigns)
+
+    assert html =~ "Notification 10 minutes before"
   end
 
   test "renders attendee section" do

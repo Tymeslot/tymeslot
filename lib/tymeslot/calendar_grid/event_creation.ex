@@ -141,6 +141,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       start_time: start_at,
       end_time: end_at,
       all_day: Map.get(creating, :all_day, false),
+      reminders: Map.get(creating, :reminders, []),
       calendar_integration_id: creating.integration_id,
       calendar_id: creating[:calendar_id],
       description: description

@@ -76,6 +76,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
     run_update_async(socket, original_event, event_data, cache_row)
   end
 
+  @doc """
+  Pushes a reminder-list change to the provider.
+
+  Reminders are synced to the provider only — Tymeslot never fires the
+  notification itself. The provider mappers serialise `:reminders` into Google
+  overrides, Outlook's single `reminderMinutesBeforeStart`, or CalDAV VALARMs.
+  """
+  @spec update_reminders_async(Phoenix.LiveView.Socket.t(), map(), [map()]) ::
+          Phoenix.LiveView.Socket.t()
+  def update_reminders_async(socket, event, reminders) do
+    event_data =
+      event
+      |> base_timing_event_data()
+      |> Map.put(:reminders, reminders)
+
+    cache_row = build_cache_row(event, %{reminders: reminders})
+
+    run_update_async(socket, event, event_data, cache_row)
+  end
+
   @spec update_attendees_async(Phoenix.LiveView.Socket.t(), map(), [map()]) ::
           Phoenix.LiveView.Socket.t()
   def update_attendees_async(socket, event, attendees) do
@@ -140,6 +160,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
 
     EventOperations.tag_for_offline_retry(meeting, :update, event_data)
   end
+
+  # Provider event_data carrying the event's current timing (date-only for
+  # all-day, datetime for timed). Used by updates that change a non-timing field
+  # (e.g. reminders) but must still send the unchanged times to the provider.
+  defp base_timing_event_data(event), do: build_all_day_event_data(event)
 
   defp build_all_day_event_data(%{all_day: true} = event) do
     %{
@@ -221,6 +246,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
       location: event.location,
       description: event.description,
       attendees: event.attendees || [],
+      reminders: event.reminders || [],
       status: event.status,
       provider_metadata: event.provider_metadata,
       synced_at: DateTime.utc_now(:microsecond)

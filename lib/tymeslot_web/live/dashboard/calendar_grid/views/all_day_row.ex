@@ -44,6 +44,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow do
             src="/images/brand/logo.svg"
             alt=""
             class="inline-block w-3 h-3 opacity-60 mr-0.5 align-text-bottom"
+          /><.icon
+            :if={(Map.get(event, :reminders) || []) != []}
+            name="hero-bell-micro"
+            class="inline-block w-3 h-3 opacity-70 mr-0.5 align-text-bottom"
           /><%= event.summary || "(No title)" %>
         </div>
         <span

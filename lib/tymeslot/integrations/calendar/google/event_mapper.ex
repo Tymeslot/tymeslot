@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     |> extract_event_fields()
     |> add_google_event_id(event_data)
     |> maybe_add_conference_data(event_data)
+    |> maybe_add_reminders(event_data)
     |> remove_nil_values()
   end
 
@@ -155,6 +156,36 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
 
   defp stringify_keys(list) when is_list(list), do: Enum.map(list, &stringify_keys/1)
   defp stringify_keys(other), do: other
+
+  # Reminders sync to Google as explicit overrides (`useDefault: false`). When no
+  # reminders are present the key is omitted entirely, so Google applies the
+  # calendar's default reminders. The canonical inbound shape is
+  # `%{method: :popup | :email, minutes_before: integer}`.
+  defp maybe_add_reminders(base_data, event_data) do
+    case get_field_value(event_data, :reminders) do
+      reminders when is_list(reminders) and reminders != [] ->
+        Map.put(base_data, "reminders", %{
+          "useDefault" => false,
+          "overrides" => Enum.map(reminders, &reminder_override/1)
+        })
+
+      _none ->
+        base_data
+    end
+  end
+
+  # Reminder maps reach here either atom-keyed (freshly built in the create/edit
+  # flow) or string-keyed (round-tripped through the JSONB cache column), so both
+  # key forms are read.
+  defp reminder_override(reminder) do
+    method = reminder[:method] || reminder["method"]
+    minutes = reminder[:minutes_before] || reminder["minutes_before"]
+    %{"method" => google_reminder_method(method), "minutes" => minutes}
+  end
+
+  defp google_reminder_method(:email), do: "email"
+  defp google_reminder_method("email"), do: "email"
+  defp google_reminder_method(_popup_or_other), do: "popup"
 
   defp to_string_or_default(nil, default), do: default
   defp to_string_or_default(value, _default) when is_binary(value), do: value

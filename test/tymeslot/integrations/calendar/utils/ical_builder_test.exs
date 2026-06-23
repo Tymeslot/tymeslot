@@ -320,6 +320,102 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
       refute String.contains?(ical, "ATTENDEE")
       refute String.contains?(ical, "CONTACT:")
     end
+
+    # Reminders are synced to the provider as VALARMs; the CalDAV write path
+    # goes through build_simple_event/2, so the VALARM block must be wired in
+    # there (build_event/1 already emits it). The canonical reminder shape is
+    # `%{method: :popup | :email, minutes_before: integer}`.
+    test "emits a VALARM (ACTION:DISPLAY) for a :popup reminder" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z],
+        reminders: [%{method: :popup, minutes_before: 10}]
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-rem-1", event_data)
+
+      assert String.contains?(ical, "BEGIN:VALARM")
+      assert String.contains?(ical, "TRIGGER:-PT10M")
+      assert String.contains?(ical, "ACTION:DISPLAY")
+      assert String.contains?(ical, "END:VALARM")
+    end
+
+    test "maps an :email reminder method to ACTION:EMAIL" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z],
+        reminders: [%{method: :email, minutes_before: 30}]
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-rem-2", event_data)
+
+      assert String.contains?(ical, "TRIGGER:-PT30M")
+      assert String.contains?(ical, "ACTION:EMAIL")
+    end
+
+    test "emits one VALARM per reminder" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z],
+        reminders: [
+          %{method: :popup, minutes_before: 10},
+          %{method: :email, minutes_before: 1440}
+        ]
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-rem-3", event_data)
+
+      valarm_count =
+        ical |> String.split("BEGIN:VALARM") |> length() |> Kernel.-(1)
+
+      assert valarm_count == 2
+      assert String.contains?(ical, "TRIGGER:-PT10M")
+      assert String.contains?(ical, "TRIGGER:-PT1440M")
+    end
+
+    test "emits no VALARM when reminders are absent" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z]
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-rem-4", event_data)
+
+      refute String.contains?(ical, "BEGIN:VALARM")
+    end
+  end
+
+  describe "build_event/1 — reminder VALARM shape" do
+    test "reads the :method key (popup → DISPLAY) for the VALARM ACTION" do
+      ical =
+        ICalBuilder.build_event(%{
+          summary: "Reminder Meeting",
+          start_time: ~U[2024-01-15 10:00:00Z],
+          end_time: ~U[2024-01-15 11:00:00Z],
+          reminders: [%{method: :popup, minutes_before: 10}]
+        })
+
+      assert String.contains?(ical, "BEGIN:VALARM")
+      assert String.contains?(ical, "TRIGGER:-PT10M")
+      assert String.contains?(ical, "ACTION:DISPLAY")
+    end
+
+    test "maps :email method to ACTION:EMAIL" do
+      ical =
+        ICalBuilder.build_event(%{
+          summary: "Reminder Meeting",
+          start_time: ~U[2024-01-15 10:00:00Z],
+          end_time: ~U[2024-01-15 11:00:00Z],
+          reminders: [%{method: :email, minutes_before: 60}]
+        })
+
+      assert String.contains?(ical, "ACTION:EMAIL")
+      assert String.contains?(ical, "TRIGGER:-PT60M")
+    end
   end
 
   describe "generate_uid/0" do

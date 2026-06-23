@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
 
   attr :selected_event, :map, required: true
   attr :integrations, :list, required: true
@@ -333,6 +334,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             target={@myself}
             phx_event="update_edit_video"
           />
+        </div>
+      </div>
+
+      <%!-- Reminders --%>
+      <RemindersEditor.reminders_editor
+        :if={@editable}
+        reminders={Map.get(@selected_event, :reminders) || []}
+        myself={@myself}
+        add_event="add_event_reminder"
+        remove_event="remove_event_reminder"
+      />
+      <div :if={!@editable and (Map.get(@selected_event, :reminders) || []) != []} class="flex items-start gap-3 mb-3">
+        <.icon name="hero-bell" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
+        <div class="flex-1">
+          <p :for={reminder <- Map.get(@selected_event, :reminders) || []} class="text-token-sm text-tymeslot-600 leading-snug">
+            <%= RemindersEditor.reminder_label(reminder) %>
+          </p>
         </div>
       </div>
 

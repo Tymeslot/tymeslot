@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
 
   attr :creating_event, :map, required: true
   attr :integrations, :list, required: true
@@ -99,6 +100,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         myself={@myself}
         event_name="update_create_integration"
       />
+
+      <%!-- Reminders --%>
+      <div class="border-t border-tymeslot-200 pt-3 mt-3">
+        <RemindersEditor.reminders_editor
+          reminders={@creating_event[:reminders] || []}
+          myself={@myself}
+          add_event="add_create_reminder"
+          remove_event="remove_create_reminder"
+        />
+      </div>
 
       <%!-- Attendee section --%>
       <div class="space-y-3 border-t border-tymeslot-200 pt-3 mt-3">

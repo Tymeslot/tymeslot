@@ -128,6 +128,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
         summary: creating.title,
         description: description,
         all_day: all_day,
+        reminders: Map.get(creating, :reminders, []),
         video_link: meeting_url,
         video_integration_id: creating[:video_integration_id]
       })

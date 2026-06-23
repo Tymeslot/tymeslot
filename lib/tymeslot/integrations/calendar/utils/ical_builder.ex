@@ -133,6 +133,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
           build_exdate(event_data),
           build_organizer_line(event_data),
           build_attendee_lines(event_data),
+          build_reminders(event_data),
           "END:VEVENT",
           "END:VCALENDAR"
         ],
@@ -538,21 +539,41 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp build_reminders(_no_reminders), do: ""
 
-  defp build_reminder(%{minutes_before: minutes, type: type}) do
-    type = String.upcase(to_string(type))
+  # The canonical reminder shape is `%{method: :popup | :email, minutes_before:}`
+  # (emitted by the provider normalisers). `:popup` → DISPLAY, `:email` → EMAIL
+  # for the VALARM ACTION. A permissive fallback keeps any legacy/raw reminder
+  # (e.g. a bare `minutes_before`, or the historical `:type` key) building a
+  # DISPLAY alarm rather than crashing the whole iCal write.
+  defp build_reminder(%{minutes_before: minutes, method: method}) do
+    build_valarm(minutes, valarm_action(method))
+  end
 
+  defp build_reminder(%{minutes_before: minutes, type: type}) do
+    build_valarm(minutes, String.upcase(to_string(type)))
+  end
+
+  defp build_reminder(%{minutes_before: minutes}) do
+    build_valarm(minutes, "DISPLAY")
+  end
+
+  # String-keyed reminders round-tripped through the JSONB cache column.
+  defp build_reminder(%{"minutes_before" => minutes} = reminder) do
+    build_valarm(minutes, valarm_action(reminder["method"]))
+  end
+
+  defp build_valarm(minutes, action) do
     String.trim("""
     BEGIN:VALARM
     TRIGGER:-PT#{minutes}M
-    ACTION:#{type}
+    ACTION:#{action}
     DESCRIPTION:Reminder
     END:VALARM
     """)
   end
 
-  defp build_reminder(%{minutes_before: minutes}) do
-    build_reminder(%{minutes_before: minutes, type: "DISPLAY"})
-  end
+  defp valarm_action(:email), do: "EMAIL"
+  defp valarm_action("email"), do: "EMAIL"
+  defp valarm_action(_popup_or_other), do: "DISPLAY"
 
   defp sanitize_ical_value(value) when is_binary(value) do
     String.replace(value, ~r/[\r\n\x00-\x1f]/, "")

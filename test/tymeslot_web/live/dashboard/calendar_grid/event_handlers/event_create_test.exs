@@ -52,6 +52,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
                "Event created. Attendees have been invited."
     end
 
+    test "persists reminders on the cached event" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      result =
+        build_result(integration,
+          attendees: [],
+          reminders: [%{method: :popup, minutes_before: 10}]
+        )
+
+      socket = build_socket()
+
+      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, result}, socket)
+
+      {:ok, cached} = CalendarGrid.get_cached_event(integration.id, result.uid)
+      assert cached.reminders == [%{method: :popup, minutes_before: 10}]
+    end
+
     test "persists video_integration_id and description on the cached event" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, is_active: true)
@@ -145,6 +163,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
     description = Keyword.get(opts, :description, nil)
     warning = Keyword.get(opts, :warning, nil)
     reauth_required = Keyword.get(opts, :reauth_required, false)
+    reminders = Keyword.get(opts, :reminders, [])
 
     base = %{
       uid: "uid-" <> Integer.to_string(System.unique_integer([:positive])),
@@ -152,6 +171,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
         title: "New Event",
         integration_id: integration.id,
         calendar_id: "primary",
+        reminders: reminders,
         video_integration_id: video_integration_id
       },
       start_at: ~U[2026-04-06 09:00:00Z],

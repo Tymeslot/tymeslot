@@ -62,4 +62,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   end
 
   def valid_email?(_other), do: false
+
+  # Allowed reminder lead times (minutes before the event start) offered as
+  # presets in the editor. Values outside this set are rejected so the UI
+  # cannot feed arbitrary integers into the provider write.
+  @reminder_minutes_presets [5, 10, 30, 60, 1440]
+
+  @doc """
+  Returns the allowed reminder lead times in minutes, ordered ascending.
+  """
+  @spec reminder_minutes_presets() :: [pos_integer()]
+  def reminder_minutes_presets, do: @reminder_minutes_presets
+
+  @doc """
+  Parses a reminder from `phx-value-method` / `phx-value-minutes` params into the
+  canonical `%{method: :popup | :email, minutes_before: integer}` shape. Returns
+  `:error` for an unknown method or a lead time outside the allowed presets.
+  """
+  @spec parse_reminder(map()) :: {:ok, %{method: atom(), minutes_before: pos_integer()}} | :error
+  def parse_reminder(params) do
+    with {:ok, method} <- parse_reminder_method(params["method"]),
+         {:ok, minutes} <- parse_int(params["minutes"]),
+         true <- minutes in @reminder_minutes_presets do
+      {:ok, %{method: method, minutes_before: minutes}}
+    else
+      _invalid -> :error
+    end
+  end
+
+  defp parse_reminder_method("popup"), do: {:ok, :popup}
+  defp parse_reminder_method("email"), do: {:ok, :email}
+  defp parse_reminder_method(_other), do: :error
 end

@@ -148,7 +148,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
               data-start-minutes={DateTime.shift_zone!(event.start_at, @user_timezone) |> then(&(&1.hour * 60 + &1.minute))}
               data-duration-minutes={max(15, round(DateTime.diff(Map.get(event, :display_end_at, event.end_at), Map.get(event, :display_start_at, event.start_at), :second) / 60))}
             >
-              <div class="truncate font-semibold"><%= event.summary || "(No title)" %></div>
+              <div class="truncate font-semibold">
+                <.icon
+                  :if={(Map.get(event, :reminders) || []) != []}
+                  name="hero-bell-micro"
+                  class="inline-block w-3 h-3 opacity-70 mr-0.5 align-text-bottom"
+                />{event.summary || "(No title)"}
+              </div>
               <div class="opacity-80"><%= Helpers.format_display_time_range(event, Helpers.time_format(assigns), @user_timezone) %></div>
               <img
                 :if={Map.get(event, :created_by_tymeslot)}

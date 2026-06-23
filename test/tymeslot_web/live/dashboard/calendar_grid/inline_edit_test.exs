@@ -649,6 +649,76 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
     end
   end
 
+  describe "event reminders" do
+    setup %{user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      today = Date.utc_today()
+
+      event =
+        insert_event(integration, %{
+          summary: "Sprint Review",
+          start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(today, ~T[11:00:00], "Etc/UTC"),
+          all_day: false,
+          reminders: []
+        })
+
+      {:ok, integration: integration, event: event}
+    end
+
+    test "renders the reminders editor in the editable detail modal", %{conn: conn, event: event} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      assert html =~ "Reminders"
+      assert html =~ "Add reminder"
+    end
+
+    test "adding a reminder shows it in the editor (optimistic update)", %{
+      conn: conn,
+      event: event
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("add_event_reminder", %{"method" => "popup", "minutes" => "10"})
+
+      assert html =~ "Notification 10 minutes before"
+    end
+
+    test "removing a reminder clears it from the editor", %{conn: conn, event: event} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("add_event_reminder", %{"method" => "email", "minutes" => "30"})
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("remove_event_reminder", %{"index" => "0"})
+
+      refute html =~ "Email 30 minutes before"
+    end
+
+    test "rejects a lead time outside the allowed presets", %{conn: conn, event: event} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("add_event_reminder", %{"method" => "popup", "minutes" => "7"})
+
+      refute html =~ "7 minutes before"
+    end
+  end
+
   defp insert_event(integration, attrs) do
     insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end

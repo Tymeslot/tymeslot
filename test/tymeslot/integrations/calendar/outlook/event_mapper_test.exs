@@ -151,4 +151,52 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
       assert [%{"value" => "tymeslot"}] = result["singleValueExtendedProperties"]
     end
   end
+
+  # Outlook only supports a single lead-time reminder per event
+  # (`reminderMinutesBeforeStart` + `isReminderOn`), so only the first reminder
+  # round-trips; method is not representable on Graph.
+  describe "format_event_data/1 — reminders" do
+    test "maps the first reminder's minutes to reminderMinutesBeforeStart and turns the reminder on" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        reminders: [
+          %{method: :popup, minutes_before: 15},
+          %{method: :email, minutes_before: 60}
+        ]
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["reminderMinutesBeforeStart"] == 15
+      assert result["isReminderOn"] == true
+    end
+
+    test "sets isReminderOn to false when there are no reminders" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z]
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["isReminderOn"] == false
+      refute Map.has_key?(result, "reminderMinutesBeforeStart")
+    end
+
+    test "sets isReminderOn to false for an empty reminders list" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        reminders: []
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["isReminderOn"] == false
+    end
+  end
 end

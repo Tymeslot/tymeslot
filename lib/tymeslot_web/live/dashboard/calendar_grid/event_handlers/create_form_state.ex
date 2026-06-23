@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
           EditWorkflow.default_calendar_id(socket.assigns.integrations, default_int_id),
         attendees: [],
         attendee_input: "",
+        reminders: [],
         video_integration_id: nil
       }
 
@@ -101,6 +102,52 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       creating ->
         updated = Map.put(creating, :all_day, not Map.get(creating, :all_day, false))
         {:noreply, assign(socket, :creating_event, updated)}
+    end
+  end
+
+  @spec handle_add_create_reminder(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_add_create_reminder(params, socket) do
+    case socket.assigns.creating_event do
+      nil ->
+        {:noreply, socket}
+
+      creating ->
+        case Shared.parse_reminder(params) do
+          {:ok, reminder} ->
+            existing = Map.get(creating, :reminders, [])
+
+            updated =
+              if reminder in existing do
+                creating
+              else
+                Map.put(creating, :reminders, existing ++ [reminder])
+              end
+
+            {:noreply, assign(socket, :creating_event, updated)}
+
+          :error ->
+            {:noreply, socket}
+        end
+    end
+  end
+
+  @spec handle_remove_create_reminder(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_remove_create_reminder(params, socket) do
+    case socket.assigns.creating_event do
+      nil ->
+        {:noreply, socket}
+
+      creating ->
+        case Shared.parse_int(params["index"]) do
+          {:ok, index} ->
+            reminders = creating |> Map.get(:reminders, []) |> List.delete_at(index)
+            {:noreply, assign(socket, :creating_event, Map.put(creating, :reminders, reminders))}
+
+          :error ->
+            {:noreply, socket}
+        end
     end
   end
 

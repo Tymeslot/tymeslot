@@ -367,4 +367,52 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
       refute EventMapper.requires_conference_data_version?(%{conference_data: %{}})
     end
   end
+
+  describe "format_event_data/1 — reminders" do
+    test "maps reminders to non-default overrides with method and minutes" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        reminders: [
+          %{method: :popup, minutes_before: 10},
+          %{method: :email, minutes_before: 60}
+        ]
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["reminders"]["useDefault"] == false
+
+      assert result["reminders"]["overrides"] == [
+               %{"method" => "popup", "minutes" => 10},
+               %{"method" => "email", "minutes" => 60}
+             ]
+    end
+
+    test "omits the reminders key when no reminders are present" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z]
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      refute Map.has_key?(result, "reminders")
+    end
+
+    test "omits the reminders key for an empty reminders list" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        reminders: []
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      refute Map.has_key?(result, "reminders")
+    end
+  end
 end
