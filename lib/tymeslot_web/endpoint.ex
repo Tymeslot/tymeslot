@@ -74,10 +74,15 @@ defmodule TymeslotWeb.Endpoint do
   # when deploying your static files in production.
   plug :serve_robots
 
+  # gzip serves precompiled `*.gz` files (written by `mix phx.digest`) in
+  # preference to the plain asset. In dev the Tailwind/esbuild watchers rebuild
+  # the plain file but never the `.gz`, so a stale `.gz` from a prior
+  # `assets.deploy` would be served instead of fresh CSS. Only enable where
+  # phx.digest runs — production.
   plug Plug.Static,
     at: "/",
     from: :tymeslot,
-    gzip: true,
+    gzip: Application.compile_env(:tymeslot, :environment) == :prod,
     only: TymeslotWeb.static_paths() ++ ["embed.js"],
     # embed.js is a standalone file at the root (not under /assets/).
     # `only` handles the canonical /embed.js path.
