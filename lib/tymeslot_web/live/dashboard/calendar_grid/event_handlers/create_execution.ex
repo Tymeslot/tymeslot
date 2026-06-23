@@ -29,35 +29,68 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       send(self(), {:flash, {:error, "Invalid calendar selected"}})
       {:noreply, socket}
     else
-      tz = socket.assigns.user_timezone
-
       with {:ok, start_date} <- Date.from_iso8601(creating.date),
            {:ok, end_date} <- Date.from_iso8601(creating.end_date) do
-        start_at = Shared.to_utc(start_date, creating.start_hour, creating.start_minute, tz)
-        end_at = Shared.to_utc(end_date, creating.end_hour, creating.end_minute, tz)
-
-        if DateTime.compare(end_at, start_at) != :gt do
-          send(self(), {:flash, {:error, "End time must be after start time"}})
-          {:noreply, socket}
-        else
-          send(
-            self(),
-            {:execute_create_event,
-             %{
-               creating: creating,
-               user_id: socket.assigns.current_user.id,
-               start_at: start_at,
-               end_at: end_at
-             }}
-          )
-
-          {:noreply, assign(socket, :saving_event, true)}
-        end
+        save_resolved(creating, start_date, end_date, socket)
       else
         {:error, _reason} ->
           send(self(), {:flash, {:error, "Invalid date"}})
           {:noreply, socket}
       end
+    end
+  end
+
+  # All-day events round-trip start/end as Dates (and `all_day: true`) so the
+  # provider mappers emit date-only values. Timed events resolve to UTC
+  # datetimes in the user's timezone.
+  #
+  # The form's end date is the inclusive last day the user picked; storage and
+  # the provider mappers expect an exclusive `end_date` (iCal `DTEND;VALUE=DATE`
+  # / Google `end.date` are both exclusive), so a single-day all-day event is
+  # written as `end_date = start_date + 1`.
+  defp save_resolved(%{all_day: true} = creating, start_date, end_date, socket) do
+    if Date.compare(end_date, start_date) == :lt do
+      send(self(), {:flash, {:error, "End date must not be before start date"}})
+      {:noreply, socket}
+    else
+      send(
+        self(),
+        {:execute_create_event,
+         %{
+           creating: creating,
+           user_id: socket.assigns.current_user.id,
+           all_day: true,
+           start_at: start_date,
+           end_at: Date.add(end_date, 1)
+         }}
+      )
+
+      {:noreply, assign(socket, :saving_event, true)}
+    end
+  end
+
+  defp save_resolved(creating, start_date, end_date, socket) do
+    tz = socket.assigns.user_timezone
+    start_at = Shared.to_utc(start_date, creating.start_hour, creating.start_minute, tz)
+    end_at = Shared.to_utc(end_date, creating.end_hour, creating.end_minute, tz)
+
+    if DateTime.compare(end_at, start_at) != :gt do
+      send(self(), {:flash, {:error, "End time must be after start time"}})
+      {:noreply, socket}
+    else
+      send(
+        self(),
+        {:execute_create_event,
+         %{
+           creating: creating,
+           user_id: socket.assigns.current_user.id,
+           all_day: false,
+           start_at: start_at,
+           end_at: end_at
+         }}
+      )
+
+      {:noreply, assign(socket, :saving_event, true)}
     end
   end
 
@@ -82,19 +115,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
     provider_calendar_id =
       creating[:calendar_id] || default_booking_calendar_id || "primary"
 
-    CalendarGrid.cache_created_event(%{
-      uid: uid,
-      calendar_integration_id: creating.integration_id,
-      provider: provider,
-      provider_calendar_id: provider_calendar_id,
-      summary: creating.title,
-      description: description,
-      start_at: start_at,
-      end_at: end_at,
-      all_day: false,
-      video_link: meeting_url,
-      video_integration_id: creating[:video_integration_id]
-    })
+    all_day = Map.get(creating, :all_day, false)
+
+    timing = cache_timing(all_day, start_at, end_at)
+
+    CalendarGrid.cache_created_event(
+      Map.merge(timing, %{
+        uid: uid,
+        calendar_integration_id: creating.integration_id,
+        provider: provider,
+        provider_calendar_id: provider_calendar_id,
+        summary: creating.title,
+        description: description,
+        all_day: all_day,
+        video_link: meeting_url,
+        video_integration_id: creating[:video_integration_id]
+      })
+    )
 
     send_update(CalendarGridComponent,
       id: "calendar",
@@ -143,6 +180,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
     {:noreply, put_flash(socket, :error, "Failed to create event")}
   end
+
+  # All-day events store `start_date`/`end_date` (the cache row leaves
+  # `start_at`/`end_at` null); timed events store `start_at`/`end_at`.
+  defp cache_timing(true, %Date{} = start_date, %Date{} = end_date),
+    do: %{start_date: start_date, end_date: end_date}
+
+  defp cache_timing(_all_day, start_at, end_at),
+    do: %{start_at: start_at, end_at: end_at}
 
   defp maybe_flash_warning(socket, nil), do: socket
   defp maybe_flash_warning(socket, msg), do: put_flash(socket, :warning, msg)

@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
         start_minute: start_minute,
         end_hour: end_hour,
         end_minute: end_minute,
+        all_day: false,
         title: "",
         integration_id: default_int_id,
         calendar_id:
@@ -86,6 +87,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
           |> maybe_update_time(params["start-time"], :start_hour, :start_minute)
           |> maybe_update_time(params["end-time"], :end_hour, :end_minute)
 
+        {:noreply, assign(socket, :creating_event, updated)}
+    end
+  end
+
+  @spec handle_toggle_create_all_day(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_toggle_create_all_day(_params, socket) do
+    case socket.assigns.creating_event do
+      nil ->
+        {:noreply, socket}
+
+      creating ->
+        updated = Map.put(creating, :all_day, not Map.get(creating, :all_day, false))
         {:noreply, assign(socket, :creating_event, updated)}
     end
   end

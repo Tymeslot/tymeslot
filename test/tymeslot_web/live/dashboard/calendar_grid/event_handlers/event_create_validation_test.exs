@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
           title: "Standup",
           integration_id: integration.id,
           calendar_id: "primary",
+          all_day: false,
           date: "2026-04-10",
           end_date: "2026-04-10",
           start_hour: 10,
@@ -132,6 +133,44 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
       assert payload.creating.title == "Standup"
       assert DateTime.compare(payload.start_at, ~U[2026-04-10 07:00:00Z]) == :eq
       assert DateTime.compare(payload.end_at, ~U[2026-04-10 08:00:00Z]) == :eq
+    end
+  end
+
+  describe "handle_save_event/2 — all-day events" do
+    test "schedules an all-day create with Date start/end and all_day: true" do
+      socket =
+        build_socket(
+          creating_overrides: %{
+            all_day: true,
+            date: "2026-04-18",
+            # Inclusive last day picked by the user; stored exclusively as +1.
+            end_date: "2026-04-18"
+          }
+        )
+
+      {:noreply, updated_socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert updated_socket.assigns.saving_event == true
+      assert_received {:execute_create_event, payload}
+      assert payload.all_day == true
+      assert payload.start_at == ~D[2026-04-18]
+      # end_date is exclusive: a single-day all-day event ends on the next day.
+      assert payload.end_at == ~D[2026-04-19]
+    end
+
+    test "rejects an all-day event whose end date precedes its start date" do
+      socket =
+        build_socket(
+          creating_overrides: %{
+            all_day: true,
+            date: "2026-04-19",
+            end_date: "2026-04-18"
+          }
+        )
+
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert_received {:flash, {:error, "End date must not be before start date"}}
     end
   end
 

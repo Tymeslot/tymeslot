@@ -16,8 +16,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
           Phoenix.LiveView.Socket.t()
   def update_event_async(socket, original_event, optimistic_event, new_start, new_end, opts \\ []) do
     recurrence_scope = Keyword.get(opts, :recurrence_scope)
-    user_id = socket.assigns.current_user.id
-    lv_pid = self()
 
     base_event_data = %{
       summary: optimistic_event.summary || "",
@@ -35,97 +33,52 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
         base_event_data
       end
 
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
-      result =
-        CalendarEvents.update_event(
-          original_event.uid,
-          event_data,
-          {original_event.calendar_integration_id, user_id}
-        )
+    cache_row =
+      build_cache_row(original_event, %{
+        start_at: new_start,
+        end_at: new_end,
+        start_date: optimistic_event.start_date,
+        end_date: optimistic_event.end_date,
+        all_day: optimistic_event.all_day,
+        summary: optimistic_event.summary,
+        location: optimistic_event.location || original_event.location,
+        description: optimistic_event.description || original_event.description
+      })
 
-      case result do
-        :ok ->
-          timing =
-            if optimistic_event.all_day do
-              %{start_date: optimistic_event.start_date, end_date: optimistic_event.end_date}
-            else
-              %{start_at: new_start, end_at: new_end}
-            end
-
-          CalendarGrid.update_cached_event(
-            Map.merge(timing, %{
-              uid: original_event.uid,
-              calendar_integration_id: original_event.calendar_integration_id,
-              provider: original_event.provider,
-              provider_calendar_id: original_event.provider_calendar_id,
-              provider_event_id: original_event.provider_event_id,
-              summary: optimistic_event.summary,
-              all_day: optimistic_event.all_day,
-              location: optimistic_event.location || original_event.location,
-              description: optimistic_event.description || original_event.description,
-              attendees: original_event.attendees || [],
-              status: original_event.status,
-              provider_metadata: original_event.provider_metadata,
-              synced_at: DateTime.utc_now(:microsecond)
-            })
-          )
-
-          send(lv_pid, {:event_update_result, :ok})
-
-        {:error, reason} ->
-          tag_update_for_offline_retry(original_event, event_data)
-
-          send(
-            lv_pid,
-            {:event_update_result, {:error, original_event: original_event, reason: reason}}
-          )
-      end
-    end)
-
-    socket
+    run_update_async(socket, original_event, event_data, cache_row)
   end
 
   @spec update_field_async(Phoenix.LiveView.Socket.t(), map(), atom(), String.t()) ::
           Phoenix.LiveView.Socket.t()
   def update_field_async(socket, original_event, field, new_value)
       when field in [:summary, :location, :description] do
-    user_id = socket.assigns.current_user.id
-    lv_pid = self()
     event_data = build_field_event_data(original_event, field, new_value)
     cache_row = build_field_cache_row(original_event, field, new_value)
 
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
-      result =
-        CalendarEvents.update_event(
-          original_event.uid,
-          event_data,
-          {original_event.calendar_integration_id, user_id}
-        )
+    run_update_async(socket, original_event, event_data, cache_row)
+  end
 
-      case result do
-        :ok ->
-          CalendarGrid.update_cached_event(cache_row)
-          send(lv_pid, {:event_update_result, :ok})
+  @doc """
+  Pushes an all-day toggle (or all-day date-range change) to the provider.
 
-        {:error, reason} ->
-          tag_update_for_offline_retry(original_event, event_data)
+  `optimistic_event` carries the post-toggle state: when `all_day` is true its
+  `start_date`/`end_date` drive a date-only provider write; when false its
+  `start_at`/`end_at` drive a timed write. The provider mappers emit the correct
+  date-only or datetime representation from the `start_time`/`end_time` value
+  (a `Date` for all-day, a `DateTime` for timed).
+  """
+  @spec toggle_all_day_async(Phoenix.LiveView.Socket.t(), map(), map()) ::
+          Phoenix.LiveView.Socket.t()
+  def toggle_all_day_async(socket, original_event, optimistic_event) do
+    event_data = build_all_day_event_data(optimistic_event)
+    cache_row = build_cache_row(optimistic_event, %{})
 
-          send(
-            lv_pid,
-            {:event_update_result, {:error, original_event: original_event, reason: reason}}
-          )
-      end
-    end)
-
-    socket
+    run_update_async(socket, original_event, event_data, cache_row)
   end
 
   @spec update_attendees_async(Phoenix.LiveView.Socket.t(), map(), [map()]) ::
           Phoenix.LiveView.Socket.t()
   def update_attendees_async(socket, event, attendees) do
-    user_id = socket.assigns.current_user.id
-    lv_pid = self()
-
     event_data = %{
       summary: event.summary || "",
       start_time: event.start_at,
@@ -136,36 +89,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
       attendees: attendees
     }
 
-    timing =
-      if event.all_day do
-        %{start_date: event.start_date, end_date: event.end_date}
-      else
-        %{start_at: event.start_at, end_at: event.end_at}
-      end
+    cache_row = build_cache_row(event, %{attendees: attendees})
 
-    cache_row =
-      Map.merge(timing, %{
-        uid: event.uid,
-        calendar_integration_id: event.calendar_integration_id,
-        provider: event.provider,
-        provider_calendar_id: event.provider_calendar_id,
-        provider_event_id: event.provider_event_id,
-        summary: event.summary,
-        all_day: event.all_day,
-        location: event.location,
-        description: event.description,
-        attendees: attendees,
-        status: event.status,
-        provider_metadata: event.provider_metadata,
-        synced_at: DateTime.utc_now(:microsecond)
-      })
+    run_update_async(socket, event, event_data, cache_row)
+  end
+
+  # Runs a provider update in a supervised Task, then refreshes the cache and
+  # reports the outcome to the LiveView. On failure it tags the event for
+  # offline retry (CalDAV) and reports the error. Shared by every async update
+  # that has already precomputed its `event_data` and `cache_row`.
+  defp run_update_async(socket, original_event, event_data, cache_row) do
+    user_id = socket.assigns.current_user.id
+    lv_pid = self()
 
     Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
       result =
         CalendarEvents.update_event(
-          event.uid,
+          original_event.uid,
           event_data,
-          {event.calendar_integration_id, user_id}
+          {original_event.calendar_integration_id, user_id}
         )
 
       case result do
@@ -174,11 +116,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
           send(lv_pid, {:event_update_result, :ok})
 
         {:error, reason} ->
-          tag_update_for_offline_retry(event, event_data)
+          tag_update_for_offline_retry(original_event, event_data)
 
           send(
             lv_pid,
-            {:event_update_result, {:error, original_event: event, reason: reason}}
+            {:event_update_result, {:error, original_event: original_event, reason: reason}}
           )
       end
     end)
@@ -199,6 +141,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
     EventOperations.tag_for_offline_retry(meeting, :update, event_data)
   end
 
+  defp build_all_day_event_data(%{all_day: true} = event) do
+    %{
+      summary: event.summary || "",
+      start_time: event.start_date,
+      end_time: event.end_date,
+      all_day: true,
+      description: event.description || "",
+      location: event.location || "",
+      provider_event_id: event.provider_event_id
+    }
+  end
+
+  defp build_all_day_event_data(event) do
+    %{
+      summary: event.summary || "",
+      start_time: event.start_at,
+      end_time: event.end_at,
+      all_day: false,
+      description: event.description || "",
+      location: event.location || "",
+      provider_event_id: event.provider_event_id
+    }
+  end
+
   defp build_field_event_data(event, field, new_value) do
     base = %{
       summary: event.summary || "",
@@ -217,30 +183,51 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
   end
 
   defp build_field_cache_row(event, field, new_value) do
+    build_cache_row(event, %{field => new_value})
+  end
+
+  # Builds a cache row from a canonical event source, applying `overrides` last.
+  # Timing keys (`start_at`/`end_at` vs `start_date`/`end_date`) follow the
+  # `all_day` flag of the resulting row (override-aware), so a toggle that flips
+  # `all_day` and supplies the new timing keys produces a consistent row.
+  defp build_cache_row(event, overrides) do
+    all_day = Map.get(overrides, :all_day, event.all_day)
+
     timing =
-      if event.all_day do
-        %{start_date: event.start_date, end_date: event.end_date}
+      if all_day do
+        %{
+          start_date: Map.get(overrides, :start_date, event.start_date),
+          end_date: Map.get(overrides, :end_date, event.end_date),
+          start_at: nil,
+          end_at: nil
+        }
       else
-        %{start_at: event.start_at, end_at: event.end_at}
+        %{
+          start_at: Map.get(overrides, :start_at, event.start_at),
+          end_at: Map.get(overrides, :end_at, event.end_at),
+          start_date: nil,
+          end_date: nil
+        }
       end
 
-    base =
-      Map.merge(timing, %{
-        uid: event.uid,
-        calendar_integration_id: event.calendar_integration_id,
-        provider: event.provider,
-        provider_calendar_id: event.provider_calendar_id,
-        provider_event_id: event.provider_event_id,
-        summary: event.summary,
-        all_day: event.all_day,
-        location: event.location,
-        description: event.description,
-        attendees: event.attendees || [],
-        status: event.status,
-        provider_metadata: event.provider_metadata,
-        synced_at: DateTime.utc_now(:microsecond)
-      })
+    base = %{
+      uid: event.uid,
+      calendar_integration_id: event.calendar_integration_id,
+      provider: event.provider,
+      provider_calendar_id: event.provider_calendar_id,
+      provider_event_id: event.provider_event_id,
+      summary: event.summary,
+      all_day: all_day,
+      location: event.location,
+      description: event.description,
+      attendees: event.attendees || [],
+      status: event.status,
+      provider_metadata: event.provider_metadata,
+      synced_at: DateTime.utc_now(:microsecond)
+    }
 
-    Map.put(base, field, new_value)
+    base
+    |> Map.merge(overrides)
+    |> Map.merge(timing)
   end
 end

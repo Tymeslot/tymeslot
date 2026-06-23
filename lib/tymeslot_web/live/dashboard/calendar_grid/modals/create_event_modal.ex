@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.Icons.ProviderIcon
+  alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
@@ -42,6 +43,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         />
       </div>
 
+      <div class="mb-3 flex items-center justify-between">
+        <p class="text-token-sm font-medium text-tymeslot-700">All day</p>
+        <StatusSwitch.status_switch
+          id="create-event-all-day"
+          checked={@creating_event[:all_day] || false}
+          on_change="toggle_create_all_day"
+          target={@myself}
+          size={:small}
+        />
+      </div>
+
       <div class="mb-3">
         <form id="create-event-time-form" phx-change="update_create_time" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm text-tymeslot-600">
           <input
@@ -52,6 +64,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
           <input
+            :if={!@creating_event[:all_day]}
             type="time"
             id="create-event-start-time"
             name="start-time"
@@ -67,13 +80,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
           <input
+            :if={!@creating_event[:all_day]}
             type="time"
             id="create-event-end-time"
             name="end-time"
             value={EditWorkflow.format_time_value(@creating_event.end_hour, @creating_event.end_minute)}
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
-          <span class="text-token-xs font-normal text-tymeslot-400 ml-1"><%= Helpers.tz_abbr(@user_timezone) %></span>
+          <span :if={!@creating_event[:all_day]} class="text-token-xs font-normal text-tymeslot-400 ml-1"><%= Helpers.tz_abbr(@user_timezone) %></span>
         </form>
       </div>
 

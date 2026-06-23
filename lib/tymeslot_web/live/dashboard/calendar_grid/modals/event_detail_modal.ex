@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.Icons.ProviderIcon
+  alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
 
@@ -99,6 +100,34 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         <div class="flex-1">
           <% start_parts = Helpers.datetime_to_local_parts(@selected_event.start_at, @user_timezone) %>
           <% end_parts = Helpers.datetime_to_local_parts(@selected_event.end_at, @user_timezone) %>
+          <div :if={@editable} class="flex items-center justify-between mb-2">
+            <span class="text-token-xs font-medium text-tymeslot-400">All day</span>
+            <StatusSwitch.status_switch
+              id="event-all-day"
+              checked={@selected_event.all_day || false}
+              on_change="toggle_event_all_day"
+              target={@myself}
+              size={:small}
+            />
+          </div>
+          <form id="event-all-day-form" :if={@editable and @selected_event.all_day} phx-change="update_event_all_day_range" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm">
+            <input
+              type="date"
+              id="event-all-day-start"
+              name="start-date"
+              value={@selected_event.start_date && Date.to_iso8601(@selected_event.start_date)}
+              class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            />
+            <span class="text-tymeslot-400">&ndash;</span>
+            <%!-- end_date is stored exclusively; show the inclusive last day. --%>
+            <input
+              type="date"
+              id="event-all-day-end"
+              name="end-date"
+              value={@selected_event.end_date && Date.to_iso8601(Date.add(@selected_event.end_date, -1))}
+              class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            />
+          </form>
           <form id="event-time-form" :if={@editable and not @selected_event.all_day} phx-change="update_event_time" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm">
             <input
               type="date"
@@ -131,7 +160,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             />
             <span class="text-token-xs font-normal text-tymeslot-400 ml-1"><%= Helpers.tz_abbr(@user_timezone) %></span>
           </form>
-          <div :if={!@editable or @selected_event.all_day}>
+          <div :if={!@editable}>
             <p class="text-token-sm font-medium text-tymeslot-700">
               <span :if={@selected_event.all_day}>All day</span>
               <span :if={!@selected_event.all_day}>

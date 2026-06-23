@@ -240,6 +240,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: InlineEdit.handle_update_event_time(params, socket)
 
   @impl Phoenix.LiveComponent
+  def handle_event("toggle_event_all_day", params, socket),
+    do: InlineEdit.handle_toggle_event_all_day(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_event_all_day_range", params, socket),
+    do: InlineEdit.handle_update_event_all_day_range(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("prev_period", params, socket),
     do: Navigation.handle_prev_period(params, socket)
 
@@ -306,6 +314,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("update_create_time", params, socket),
     do: EventCrud.handle_update_create_time(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_create_all_day", params, socket),
+    do: EventCrud.handle_toggle_create_all_day(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("update_create_integration", params, socket),

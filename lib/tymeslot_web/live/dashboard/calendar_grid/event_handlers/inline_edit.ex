@@ -130,6 +130,71 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     end
   end
 
+  @spec handle_toggle_event_all_day(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_toggle_event_all_day(_params, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      event ->
+        with :ok <- EditWorkflow.assert_owns_event(socket, event),
+             :ok <- Shared.check_edit_rate_limit(socket) do
+          optimistic_event = toggle_all_day(event, socket.assigns.user_timezone)
+          push_all_day_change(socket, event, optimistic_event)
+        else
+          {:error, :unauthorized} ->
+            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+            {:noreply, socket}
+
+          {:error, :rate_limited, _message} ->
+            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+            {:noreply, socket}
+        end
+    end
+  end
+
+  @spec handle_update_event_all_day_range(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_event_all_day_range(params, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      %{all_day: true} = event ->
+        with {:ok, start_date} <- Date.from_iso8601(params["start-date"]),
+             {:ok, end_date} <- parse_end_date(params["end-date"], start_date),
+             :ok <- EditWorkflow.assert_owns_event(socket, event),
+             :ok <- Shared.check_edit_rate_limit(socket) do
+          # The form presents inclusive dates; storage keeps `end_date`
+          # exclusive, so a single-day range (start == end) is stored as +1.
+          exclusive_end = Date.add(end_date, 1)
+
+          if Date.compare(start_date, event.start_date) == :eq and
+               Date.compare(exclusive_end, event.end_date) == :eq do
+            {:noreply, socket}
+          else
+            optimistic_event = %{event | start_date: start_date, end_date: exclusive_end}
+            push_all_day_change(socket, event, optimistic_event)
+          end
+        else
+          {:error, :unauthorized} ->
+            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+            {:noreply, socket}
+
+          {:error, :rate_limited, _message} ->
+            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+            {:noreply, socket}
+
+          _error ->
+            {:noreply, socket}
+        end
+
+      _timed ->
+        {:noreply, socket}
+    end
+  end
+
   @spec handle_update_event_calendar(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_event_calendar(params, socket) do
@@ -232,6 +297,79 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
   defp normalize_time(t) when byte_size(t) == 5, do: t <> ":00"
   defp normalize_time(t), do: t
+
+  # Converts a timed event to all-day (deriving the date range from the local
+  # start/end) and vice versa (defaulting a single-day all-day event to a
+  # 09:00–10:00 timed slot in the user's timezone).
+  #
+  # `end_date` is stored exclusively (matching the iCal/Google/Outlook all-day
+  # convention and the grid's render filter), so a single-day all-day event has
+  # `end_date == start_date + 1`. The conversions translate between that
+  # exclusive boundary and the inclusive last day a timed event touches.
+  defp toggle_all_day(%{all_day: true} = event, tz) do
+    start_date = event.start_date
+    # Exclusive end_date → inclusive last day the event covers.
+    last_day = Date.add(event.end_date, -1)
+    last_day = if Date.compare(last_day, start_date) == :lt, do: start_date, else: last_day
+    start_at = Shared.to_utc(start_date, 9, 0, tz)
+    end_at = Shared.to_utc(last_day, 10, 0, tz)
+
+    %{
+      event
+      | all_day: false,
+        start_at: start_at,
+        end_at: end_at,
+        start_date: nil,
+        end_date: nil
+    }
+  end
+
+  defp toggle_all_day(event, tz) do
+    start_date = event.start_at |> DateTime.shift_zone!(tz) |> DateTime.to_date()
+    last_day = event.end_at |> DateTime.shift_zone!(tz) |> DateTime.to_date()
+    # Inclusive last day → exclusive end_date.
+    end_date = Date.add(last_day, 1)
+
+    %{
+      event
+      | all_day: true,
+        start_date: start_date,
+        end_date: end_date,
+        start_at: nil,
+        end_at: nil
+    }
+  end
+
+  defp push_all_day_change(socket, original_event, optimistic_event) do
+    updated_events =
+      Enum.map(socket.assigns.events, fn e ->
+        if e.id == original_event.id, do: optimistic_event, else: e
+      end)
+
+    socket =
+      socket
+      |> assign(:selected_event, optimistic_event)
+      |> assign(:events, updated_events)
+      |> Helpers.precompute_derived()
+      |> Updates.toggle_all_day_async(original_event, optimistic_event)
+
+    send(self(), {:flash, {:info, "Changes saved."}})
+    {:noreply, socket}
+  end
+
+  defp parse_end_date(end_str, start_date) do
+    case Date.from_iso8601(end_str) do
+      {:ok, end_date} ->
+        if Date.compare(end_date, start_date) == :lt do
+          {:ok, start_date}
+        else
+          {:ok, end_date}
+        end
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
 
   defp apply_time_change(socket, event, _new_start, _raw_end) when event.all_day == true do
     send(self(), {:flash, {:info, "Time editing is not available for all-day events."}})

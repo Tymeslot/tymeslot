@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModalTest do
 
   @creating_event %{
     title: "Team Standup",
+    all_day: false,
     date: "2026-04-06",
     end_date: "2026-04-06",
     start_hour: 9,
@@ -62,6 +63,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModalTest do
     assert html =~ "2026-04-06"
     assert html =~ "09:00"
     assert html =~ "09:30"
+  end
+
+  test "renders an all-day toggle and time inputs when not all-day" do
+    html = render_component(&CreateEventModal.create_event_modal/1, base_assigns())
+
+    assert html =~ "All day"
+    assert html =~ ~s(id="create-event-all-day")
+    assert html =~ ~s(id="create-event-start-time")
+    assert html =~ ~s(id="create-event-end-time")
+  end
+
+  test "hides time inputs when all-day is enabled" do
+    assigns =
+      base_assigns(%{creating_event: Map.put(@creating_event, :all_day, true)})
+
+    html = render_component(&CreateEventModal.create_event_modal/1, assigns)
+
+    assert html =~ ~s(id="create-event-start-date")
+    assert html =~ ~s(id="create-event-end-date")
+    refute html =~ ~s(id="create-event-start-time")
+    refute html =~ ~s(id="create-event-end-time")
   end
 
   test "renders attendee section" do

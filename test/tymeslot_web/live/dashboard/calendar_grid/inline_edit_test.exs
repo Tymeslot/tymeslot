@@ -575,6 +575,80 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
     end
   end
 
+  describe "all-day toggling" do
+    setup %{user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      today = Date.utc_today()
+
+      timed_event =
+        insert_event(integration, %{
+          summary: "Sprint Review",
+          start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(today, ~T[11:00:00], "Etc/UTC"),
+          all_day: false
+        })
+
+      all_day_event =
+        insert_event(integration, %{
+          summary: "Company Offsite",
+          start_at: nil,
+          end_at: nil,
+          start_date: today,
+          # end_date is exclusive, so a single-day all-day event ends on the
+          # following day.
+          end_date: Date.add(today, 1),
+          all_day: true
+        })
+
+      {:ok, timed_event: timed_event, all_day_event: all_day_event}
+    end
+
+    test "renders an all-day switch in the editable detail modal", %{
+      conn: conn,
+      timed_event: event
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      assert html =~ ~s(id="event-all-day")
+      assert html =~ "All day"
+    end
+
+    test "toggling a timed event to all-day shows the date-range editor", %{
+      conn: conn,
+      timed_event: event
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("toggle_event_all_day", %{})
+
+      assert html =~ ~s(id="event-all-day-form")
+      assert html =~ ~s(id="event-all-day-start")
+      refute html =~ ~s(id="event-time-form")
+    end
+
+    test "toggling an all-day event back to timed shows the time editor", %{
+      conn: conn,
+      all_day_event: event
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("#allday-event-#{event.id}") |> render_click()
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("toggle_event_all_day", %{})
+
+      assert html =~ ~s(id="event-time-form")
+      refute html =~ ~s(id="event-all-day-form")
+    end
+  end
+
   defp insert_event(integration, attrs) do
     insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end
