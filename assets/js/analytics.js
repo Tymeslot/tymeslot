@@ -51,6 +51,32 @@ export function installClickTracking(target = window, root = document) {
 }
 
 /**
+ * LiveView hook that fires a single analytics event when its element is mounted
+ * on the connected client — the "view" counterpart to the click handler above.
+ * Reads `data-analytics-event` and optional `data-analytics-props` (a JSON object
+ * of categorical dimensions — never user ids, emails, or free text). Use on a
+ * hidden beacon element to record a page impression. Re-runs on each LiveView
+ * mount (including live navigation); never fires on the static/dead render.
+ * Safe no-op when no analytics provider is present.
+ */
+export const AnalyticsView = {
+  mounted() {
+    const name = this.el.dataset.analyticsEvent;
+    if (!name) return;
+    let props = {};
+    const raw = this.el.dataset.analyticsProps;
+    if (raw) {
+      try {
+        props = JSON.parse(raw);
+      } catch (_e) {
+        props = {};
+      }
+    }
+    window.analytics?.track(name, props);
+  },
+};
+
+/**
  * Bridges server-pushed events to the facade. LiveView's
  * `push_event(socket, "ts:analytics", %{name, props})` is dispatched on the
  * window as `phx:ts:analytics`; forward it to analytics.track.

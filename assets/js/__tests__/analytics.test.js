@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { installAnalytics, installEventBridge, installClickTracking } from "../analytics";
+import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView } from "../analytics";
 
 describe("installAnalytics", () => {
   beforeEach(() => { delete window.analytics; delete window.umami; });
@@ -59,6 +59,41 @@ describe("installClickTracking", () => {
     document.body.appendChild(el);
 
     expect(() => el.click()).not.toThrow();
+  });
+});
+
+describe("AnalyticsView", () => {
+  beforeEach(() => { delete window.analytics; delete window.umami; });
+  afterEach(() => { delete window.analytics; delete window.umami; });
+
+  test("fires the event and parsed props on mount", () => {
+    window.umami = { track: vi.fn() };
+    installAnalytics();
+
+    const el = document.createElement("div");
+    el.dataset.analyticsEvent = "booking_page_viewed";
+    el.dataset.analyticsProps = JSON.stringify({ tier: "free" });
+
+    AnalyticsView.mounted.call({ el });
+
+    expect(window.umami.track).toHaveBeenCalledWith("booking_page_viewed", { tier: "free" });
+  });
+
+  test("does nothing without an event name", () => {
+    window.umami = { track: vi.fn() };
+    installAnalytics();
+
+    const el = document.createElement("div");
+    AnalyticsView.mounted.call({ el });
+
+    expect(window.umami.track).not.toHaveBeenCalled();
+  });
+
+  test("is a safe no-op when no provider is present", () => {
+    const el = document.createElement("div");
+    el.dataset.analyticsEvent = "booking_page_viewed";
+
+    expect(() => AnalyticsView.mounted.call({ el })).not.toThrow();
   });
 });
 
