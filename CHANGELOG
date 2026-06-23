@@ -1,4 +1,63 @@
 
+[1.2.1]
+* core: Only require ANALYTICS_SALT_SECRET when booking analytics is enabled
+* core: Stop button icons wrapping onto their own line
+* core: Include config-referenced heroicons in the asset bundle
+* core: Keep Quill booking content readable over image backgrounds
+* core: Show hamburger nav on tablets, not just phones
+* core: Match mobile nav menu structure to desktop
+* core: Verify reCAPTCHA before consuming per-recipient booking limit
+* core: Validate every resolved address in SSRF guard
+* core: Rate-limit booking confirmations per recipient to curb email abuse
+* core: Block SSRF to internal hosts on CalDAV and video integrations
+* core: Drop 'unsafe-inline' from CSP script-src
+* core: Propagate CSP nonce to the reCAPTCHA loader script
+* core: Drop unused 'unsafe-eval' from CSP script-src
+* core: Present booking-analytics visitors and conversion as estimates
+* core: Suppress false booking-analytics anomaly alerts on small samples
+* core: Stop capturing arbitrary query parameters in booking analytics
+* core: Stop false booking-analytics anomaly alerts across day boundaries
+* core: Count booking-page visitors consistently when the client IP is unknown
+* core: Trust forwarded IP headers only from known proxies on live connections
+* core: Resolve the real client IP on live connections behind a proxy
+* core: Prevent scheduling page crash when booking analytics is enabled
+* core: Base booking-analytics conversion on actual converting visitors
+* core: Count a booking-page visitor once across meeting types
+* core: Bound persisted tracking-param size at the data layer
+* core: Harden booking analytics ingestion and dashboard
+* core: Stabilise top_sources tiebreak order
+* core: Refine and gate the booking analytics dashboard
+* core: Exclude an organizer's own page visits from booking analytics
+* core: Add vendor-neutral analytics view-on-mount hook
+* core: Show custom question answers in synced calendar events
+* core: Add per-request CSP nonce to script-src
+* core: Add device-type breakdown to booking analytics
+* core: Add admin toggle for booking analytics
+* core: Make booking analytics opt-in via config flag
+* core: Add generic data-analytics-event click tracking
+* core: Emit booking-page-published telemetry on first publish
+* core: Emit booking-created telemetry on guest bookings
+* core: Emit calendar-connected telemetry with provider
+* core: Emit onboarding-completed telemetry
+* core: Add analytics dashboard with sources and visits over time
+* core: Add VisitsChart component for analytics dashboard
+* core: Add SourcesTable component for analytics dashboard
+* core: Add SummaryCards component for analytics dashboard
+* core: Persist UTM and tracking params on bookings end-to-end
+* core: Log page views on public scheduling routes
+* core: Persist UTM and tracking parameters on bookings
+* core: Cast UTM and tracking fields on meetings
+* core: Add UTM and tracking columns to meetings
+* core: Add Analytics context with log_page_view and reads
+* core: Add UtmExtractor for UTM and custom tracking params
+* core: Add Analytics rate limiter for event ingestion
+* core: Add BotDetector for UA-based bot filtering
+* core: Add daily-salted Fingerprint for cookie-less analytics
+* core: Add EventQueries for analytics reads
+* core: Add EventSchema for analytics events
+* core: Add analytics_events table for booking analytics
+
+
 [1.2.0]
 * core: Add id to booking-link slug form for LiveView form recovery
 * core: Prevent booking page step labels from clipping in themes

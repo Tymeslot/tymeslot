@@ -1303,6 +1303,53 @@
       "publishState": "published",
       "ts": "Fri, 13 Mar 2026 15:07:27 GMT"
     },
+    "1.2.1": {
+      "creationDate": "Tue, 23 Jun 2026 16:53:16 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* core: Only require ANALYTICS_SALT_SECRET when booking analytics is enabled\n* core: Stop button icons wrapping onto their own line\n* core: Include config-referenced heroicons in the asset bundle\n* core: Keep Quill booking content readable over image backgrounds\n* core: Show hamburger nav on tablets, not just phones\n* core: Match mobile nav menu structure to desktop\n* core: Verify reCAPTCHA before consuming per-recipient booking limit\n* core: Validate every resolved address in SSRF guard\n* core: Rate-limit booking confirmations per recipient to curb email abuse\n* core: Block SSRF to internal hosts on CalDAV and video integrations\n* core: Drop 'unsafe-inline' from CSP script-src\n* core: Propagate CSP nonce to the reCAPTCHA loader script\n* core: Drop unused 'unsafe-eval' from CSP script-src\n* core: Present booking-analytics visitors and conversion as estimates\n* core: Suppress false booking-analytics anomaly alerts on small samples\n* core: Stop capturing arbitrary query parameters in booking analytics\n* core: Stop false booking-analytics anomaly alerts across day boundaries\n* core: Count booking-page visitors consistently when the client IP is unknown\n* core: Trust forwarded IP headers only from known proxies on live connections\n* core: Resolve the real client IP on live connections behind a proxy\n* core: Prevent scheduling page crash when booking analytics is enabled\n* core: Base booking-analytics conversion on actual converting visitors\n* core: Count a booking-page visitor once across meeting types\n* core: Bound persisted tracking-param size at the data layer\n* core: Harden booking analytics ingestion and dashboard\n* core: Stabilise top_sources tiebreak order\n* core: Refine and gate the booking analytics dashboard\n* core: Exclude an organizer's own page visits from booking analytics\n* core: Add vendor-neutral analytics view-on-mount hook\n* core: Show custom question answers in synced calendar events\n* core: Add per-request CSP nonce to script-src\n* core: Add device-type breakdown to booking analytics\n* core: Add admin toggle for booking analytics\n* core: Make booking analytics opt-in via config flag\n* core: Add generic data-analytics-event click tracking\n* core: Emit booking-page-published telemetry on first publish\n* core: Emit booking-created telemetry on guest bookings\n* core: Emit calendar-connected telemetry with provider\n* core: Emit onboarding-completed telemetry\n* core: Add analytics dashboard with sources and visits over time\n* core: Add VisitsChart component for analytics dashboard\n* core: Add SourcesTable component for analytics dashboard\n* core: Add SummaryCards component for analytics dashboard\n* core: Persist UTM and tracking params on bookings end-to-end\n* core: Log page views on public scheduling routes\n* core: Persist UTM and tracking parameters on bookings\n* core: Cast UTM and tracking fields on meetings\n* core: Add UTM and tracking columns to meetings\n* core: Add Analytics context with log_page_view and reads\n* core: Add UtmExtractor for UTM and custom tracking params\n* core: Add Analytics rate limiter for event ingestion\n* core: Add BotDetector for UA-based bot filtering\n* core: Add daily-salted Fingerprint for cookie-less analytics\n* core: Add EventQueries for analytics reads\n* core: Add EventSchema for analytics events\n* core: Add analytics_events table for booking analytics",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.2.1",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.2.1",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Tue, 23 Jun 2026 16:53:16 GMT"
+    },
     "1.2.0": {
       "creationDate": "Fri, 19 Jun 2026 11:05:35 GMT",
       "manifest": {
