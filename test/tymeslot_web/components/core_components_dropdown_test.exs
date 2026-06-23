@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Components.CoreComponents.DropdownTest do
   import Phoenix.LiveViewTest
 
   alias TymeslotWeb.Components.CoreComponents.Dropdown
+  alias TymeslotWeb.Components.CoreComponents.Heroicons
 
   defp render_dropdown(extra \\ %{}) do
     assigns =
@@ -304,7 +305,10 @@ defmodule TymeslotWeb.Components.CoreComponents.DropdownTest do
         %{}
       )
 
-    assert html =~ "hero-cog-6-tooth"
+    # Heroicons render as inline SVG (no `hero-*` class), so assert the
+    # cog-6-tooth glyph's path markup was inlined rather than the obsolete name.
+    {:ok, %{body: body}} = Heroicons.fetch("hero-cog-6-tooth")
+    assert html =~ body
     assert html =~ "dropdown-item__icon"
   end
 

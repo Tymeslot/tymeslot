@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.MeetingTicketTest do
   import Phoenix.LiveViewTest
   import Phoenix.Component
   alias Floki
+  alias TymeslotWeb.Components.CoreComponents.Heroicons
   alias TymeslotWeb.Themes.Rhythm.Shared.MeetingTicket
 
   describe "meeting_ticket/1" do
@@ -41,7 +42,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.MeetingTicketTest do
 
       html = render_component(&MeetingTicket.meeting_ticket/1, assigns)
 
-      assert html =~ "hero-calendar"
+      assert html =~ icon_body("hero-calendar")
       assert html =~ "March 1, 2026"
       assert html =~ "Date"
     end
@@ -58,7 +59,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.MeetingTicketTest do
 
       html = render_component(&MeetingTicket.meeting_ticket/1, assigns)
 
-      assert html =~ "hero-clock"
+      assert html =~ icon_body("hero-clock")
       assert html =~ "3:30 PM"
       assert html =~ "Europe/London"
     end
@@ -77,7 +78,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.MeetingTicketTest do
       html = render_component(&MeetingTicket.meeting_ticket/1, assigns)
       doc = Floki.parse_document!(html)
 
-      assert html =~ "hero-user"
+      assert html =~ icon_body("hero-user")
       assert Floki.text(doc) =~ "John Doe"
       assert Floki.text(doc) =~ "Meeting with"
     end
@@ -206,5 +207,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.MeetingTicketTest do
         assert Floki.text(doc) =~ label
       end
     end
+  end
+
+  # Heroicons render as inline SVG with no `hero-*` class, so a specific icon is
+  # verified by asserting its inlined path markup appears in the output.
+  defp icon_body(name) do
+    {:ok, %{body: body}} = Heroicons.fetch(name)
+    body
   end
 end
