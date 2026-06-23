@@ -51,6 +51,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Search
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shortcuts
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility
   alias TymeslotWeb.Dashboard.CalendarGrid.GridViews
@@ -117,6 +118,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
       |> assign(:sync_completed, 0)
       |> assign(:stale_integrations, [])
       |> assign(:oldest_sync_at, nil)
+      |> assign(:search_term, "")
+      |> assign(:search_results, [])
+      |> assign(:search_open, false)
       |> assign(:_initialized, false)
 
     {:ok, socket}
@@ -281,6 +285,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("navigate_to_day", params, socket),
     do: Navigation.handle_navigate_to_day(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("search", params, socket),
+    do: Search.handle_search(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("goto_search_result", params, socket),
+    do: Search.handle_goto_search_result(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("close_search", params, socket),
+    do: Search.handle_close_search(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_shortcuts_help", params, socket),
@@ -502,6 +518,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           timezone_display={@timezone_display}
           timezone_country_code={@timezone_country_code}
           preferences={@preferences}
+          search_term={@search_term}
+          search_results={@search_results}
+          search_open={@search_open}
+          user_timezone={@user_timezone}
           myself={@myself}
         />
         <GridViews.week_day_view

@@ -32,6 +32,57 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
     |> Repo.all()
   end
 
+  @default_search_limit 50
+
+  @doc """
+  Searches a user's cached calendar events by a free-text term.
+
+  Performs a case-insensitive `ILIKE` match against the event `summary`,
+  `description`, and `location`. Results are scoped to the user's active
+  calendar integrations and exclude any integration whose id appears in
+  `:hidden_integration_ids`. Matches are ordered by start time ascending
+  (timed events by `start_at`, all-day events by `start_date`) and capped
+  at `:limit` (default #{@default_search_limit}).
+
+  A blank or whitespace-only term returns `[]` without touching the database.
+
+  ## Options
+
+  - `:hidden_integration_ids` — list of integration ids to exclude (default `[]`).
+  - `:limit` — maximum number of rows to return (default #{@default_search_limit}).
+  """
+  @spec search(integer(), String.t(), keyword()) :: [ProviderCalendarEventSchema.t()]
+  def search(user_id, term, opts \\ []) when is_integer(user_id) do
+    trimmed = String.trim(to_string(term))
+
+    if trimmed == "" do
+      []
+    else
+      hidden_ids = Keyword.get(opts, :hidden_integration_ids, [])
+      limit = Keyword.get(opts, :limit, @default_search_limit)
+      pattern = "%" <> escape_like(trimmed) <> "%"
+
+      ProviderCalendarEventSchema
+      |> join(:inner, [e], i in assoc(e, :calendar_integration))
+      |> where([_e, i], i.user_id == ^user_id and i.is_active == true)
+      |> where([e, _i], e.calendar_integration_id not in ^hidden_ids)
+      |> where(
+        [e, _i],
+        ilike(e.summary, ^pattern) or ilike(e.description, ^pattern) or
+          ilike(e.location, ^pattern)
+      )
+      |> order_by([e, _i], asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)))
+      |> limit(^limit)
+      |> Repo.all()
+    end
+  end
+
+  # Escapes LIKE/ILIKE wildcard metacharacters so a user-typed term is matched
+  # literally rather than as a pattern.
+  defp escape_like(term) do
+    String.replace(term, ~r/[\\%_]/, "\\\\\\0")
+  end
+
   @doc """
   Upserts a list of event attribute maps.
 

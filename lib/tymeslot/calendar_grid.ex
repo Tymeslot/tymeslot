@@ -44,6 +44,19 @@ defmodule Tymeslot.CalendarGrid do
   end
 
   @doc """
+  Searches the user's cached calendar events by a free-text term.
+
+  Matches case-insensitively against event title, description, and location,
+  scoped to the user's active integrations. Pass `:hidden_integration_ids` in
+  `opts` to exclude calendars the user has toggled off; results are ordered by
+  start time and capped at a sensible limit. A blank term returns `[]`.
+  """
+  @spec search_events(integer(), String.t(), keyword()) :: [ProviderCalendarEventSchema.t()]
+  def search_events(user_id, term, opts \\ []) do
+    ProviderCalendarEventQueries.search(user_id, term, opts)
+  end
+
+  @doc """
   Enqueues sync workers for all active integrations belonging to the user.
 
   Each integration is dispatched to the appropriate worker based on its provider:
