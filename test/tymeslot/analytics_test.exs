@@ -90,6 +90,42 @@ defmodule Tymeslot.AnalyticsTest do
       assert Repo.aggregate(EventSchema, :count, :id) == 1
     end
 
+    test "drops an organizer's visit to their own booking page", %{user: user} do
+      assert {:ok, :filtered_owner} =
+               Analytics.log_page_view(%{
+                 path: "/alice/intro",
+                 user_id: user.id,
+                 meeting_type_id: nil,
+                 ip: "1.2.3.4",
+                 user_agent: "Mozilla/5.0 ... Chrome/126",
+                 session_id: "sess-owner",
+                 params: %{},
+                 referrer: nil,
+                 viewer_user_id: user.id
+               })
+
+      assert Repo.aggregate(EventSchema, :count, :id) == 0
+    end
+
+    test "records a signed-in visitor viewing a different organizer's page", %{user: user} do
+      other = Factory.insert(:user)
+
+      assert {:ok, %EventSchema{}} =
+               Analytics.log_page_view(%{
+                 path: "/alice/intro",
+                 user_id: user.id,
+                 meeting_type_id: nil,
+                 ip: "1.2.3.4",
+                 user_agent: "Mozilla/5.0 ... Chrome/126",
+                 session_id: "sess-other",
+                 params: %{},
+                 referrer: nil,
+                 viewer_user_id: other.id
+               })
+
+      assert Repo.aggregate(EventSchema, :count, :id) == 1
+    end
+
     test "drops events from declared bots", %{user: user} do
       assert {:ok, :filtered_bot} =
                Analytics.log_page_view(%{

@@ -25,12 +25,14 @@ defmodule Tymeslot.Analytics do
           required(:user_agent) => String.t() | nil,
           required(:session_id) => String.t() | nil,
           required(:params) => map(),
-          required(:referrer) => String.t() | nil
+          required(:referrer) => String.t() | nil,
+          optional(:viewer_user_id) => integer() | nil
         }
 
   @type log_result ::
           {:ok, EventSchema.t()}
           | {:ok, :disabled}
+          | {:ok, :filtered_owner}
           | {:ok, :filtered_bot}
           | {:ok, :filtered_rate_limit}
           | {:error, Ecto.Changeset.t()}
@@ -52,6 +54,7 @@ defmodule Tymeslot.Analytics do
     result =
       cond do
         not enabled?() -> {:ok, :disabled}
+        owner_view?(input) -> {:ok, :filtered_owner}
         BotDetector.bot?(ua) -> {:ok, :filtered_bot}
         true -> insert_if_allowed(input, ua)
       end
@@ -61,6 +64,17 @@ defmodule Tymeslot.Analytics do
     Telemetry.emit(outcome_tag(result))
     result
   end
+
+  # An organizer viewing their own booking page should not inflate their own
+  # analytics. The viewer is identified upstream (in the web layer) from the
+  # session; here we only compare the two ids. Anonymous visitors and visitors
+  # to *other* organizers' pages carry no matching `viewer_user_id`, so the
+  # common path falls straight through to `false`.
+  defp owner_view?(%{viewer_user_id: viewer_id, user_id: user_id})
+       when is_integer(viewer_id) and is_integer(user_id),
+       do: viewer_id == user_id
+
+  defp owner_view?(_input), do: false
 
   defp insert_if_allowed(input, ua) do
     visitor_hash = Fingerprint.hash(input.ip, ua, input.session_id)

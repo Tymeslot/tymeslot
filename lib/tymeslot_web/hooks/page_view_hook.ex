@@ -27,11 +27,13 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
 
   alias Tymeslot.Analytics
   alias Tymeslot.Analytics.Fingerprint
+  alias Tymeslot.Auth.Authentication
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias TymeslotWeb.Helpers.ClientIP
 
   @scheduling_referrer_session_key "scheduling_referrer"
+  @user_token_session_key "user_token"
 
   @spec on_mount(:default, map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()}
@@ -40,7 +42,7 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
     socket = assign(socket, :scheduling_referrer, referrer)
 
     if connected?(socket) and Analytics.enabled?() do
-      {:cont, track_connected(socket, params, referrer)}
+      {:cont, track_connected(socket, params, referrer, session[@user_token_session_key])}
     else
       {:cont, socket}
     end
@@ -53,7 +55,7 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
   # identical (ip, user_agent, session_id) inputs, so the event and the booking
   # always share one join key. Anything else risks two extractors disagreeing
   # and the conversion join silently matching nothing.
-  defp track_connected(socket, params, referrer) do
+  defp track_connected(socket, params, referrer, user_token) do
     user_agent = ClientIP.get_user_agent_from_mount(socket)
     ip = ClientIP.get_from_mount(socket)
     session_id = socket.id
@@ -63,12 +65,12 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
     # so the event and the booking always derive one identical join key.
     socket = assign(socket, :visitor_hash, Fingerprint.hash(ip, user_agent, session_id))
 
-    log_async(params, referrer, ip, user_agent, session_id)
+    log_async(params, referrer, ip, user_agent, session_id, user_token)
 
     socket
   end
 
-  defp log_async(params, referrer, ip, user_agent, session_id) do
+  defp log_async(params, referrer, ip, user_agent, session_id, user_token) do
     Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
       {user_id, meeting_type_id, path} = resolve_target(params)
 
@@ -80,9 +82,23 @@ defmodule TymeslotWeb.Hooks.PageViewHook do
         user_agent: user_agent,
         session_id: session_id,
         params: params,
-        referrer: referrer
+        referrer: referrer,
+        viewer_user_id: resolve_viewer(user_token)
       })
     end)
+  end
+
+  # The signed-in viewer, if any — used by `Analytics.log_page_view/1` to skip an
+  # organizer's visits to their own booking page. Resolved here (off the mount
+  # path) so the auth lookup never adds latency to the LiveView mount, and so
+  # Core's Analytics module stays free of any auth-token concern.
+  defp resolve_viewer(nil), do: nil
+
+  defp resolve_viewer(user_token) do
+    case Authentication.get_user_by_session_token(user_token) do
+      %{id: id} -> id
+      _other -> nil
+    end
   end
 
   defp resolve_target(%{"username" => username} = params) when is_binary(username) do

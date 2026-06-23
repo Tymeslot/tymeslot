@@ -374,7 +374,11 @@ defmodule TymeslotWeb.Router do
     %{
       "locale" => Conn.get_session(conn, "locale"),
       "embed_token" => conn.assigns[:embed_token],
-      "scheduling_referrer" => Conn.get_session(conn, "scheduling_referrer")
+      "scheduling_referrer" => Conn.get_session(conn, "scheduling_referrer"),
+      # Forwarded so PageViewHook can recognise an organizer viewing their own
+      # booking page and skip logging that self-visit. Resolved to a user off
+      # the mount path, inside the async page-view Task.
+      "user_token" => Conn.get_session(conn, "user_token")
     }
   end
 end

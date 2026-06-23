@@ -4,8 +4,8 @@ defmodule Tymeslot.Analytics.Telemetry do
 
   `Tymeslot.Analytics.log_page_view/1` emits one
   `[:tymeslot, :analytics, :page_view]` event per call, tagged with the
-  outcome (`:ok`, `:disabled`, `:filtered_bot`, `:filtered_rate_limit`,
-  `:error`). The page-view write happens in a fire-and-forget Task whose
+  outcome (`:ok`, `:disabled`, `:filtered_owner`, `:filtered_bot`,
+  `:filtered_rate_limit`, `:error`). The page-view write happens in a fire-and-forget Task whose
   return value is discarded, so without this every dropped or failed write
   was silent. The attached handler logs the outcomes that represent lost or
   dropped data; the healthy paths are counted only, to avoid per-request log
