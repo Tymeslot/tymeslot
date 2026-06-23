@@ -207,7 +207,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                   type="button"
                   phx-click="hide_add_break_form"
                   phx-target={@myself}
-                  class="btn-secondary px-3 py-3"
+                  class="btn-secondary inline-flex items-center justify-center px-3 py-3"
                   title="Cancel"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

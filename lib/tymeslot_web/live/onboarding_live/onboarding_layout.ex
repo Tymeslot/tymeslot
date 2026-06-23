@@ -64,7 +64,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
           <%!-- Navigation --%>
           <div class="onboarding-nav">
             <%= if StepConfig.show_back_button?(@current_step) do %>
-              <button type="button" phx-click="previous_step" class="btn-secondary px-5 py-2.5">
+              <button type="button" phx-click="previous_step" class="btn-secondary inline-flex items-center px-5 py-2.5">
                 <.icon name="hero-arrow-left-mini" class="w-4 h-4 mr-1" />
                 Back
               </button>
@@ -72,7 +72,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
 
             <div class="onboarding-nav-spacer" />
 
-            <button type="button" phx-click="next_step" class="btn-primary px-6 py-2.5">
+            <button type="button" phx-click="next_step" class="btn-primary inline-flex items-center px-6 py-2.5">
               {StepConfig.next_button_text(@current_step)}
               <.icon name="hero-arrow-right-mini" class="w-4 h-4 ml-1" />
             </button>
