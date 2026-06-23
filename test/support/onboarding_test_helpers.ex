@@ -94,6 +94,12 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
     |> element("button[phx-click='next_step']")
     |> render_click()
 
+    # connect_calendar is a forced choice — select "skip" before Continue,
+    # otherwise next_step is a no-op on this step.
+    view
+    |> element(~s{button[phx-value-option="skip"]})
+    |> render_click()
+
     # connect_calendar to buffer_time
     view
     |> element("button[phx-click='next_step']")

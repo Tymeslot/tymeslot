@@ -10,6 +10,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
 
   alias Phoenix.Component
   alias Phoenix.LiveView
+  alias Tymeslot.Auth
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
 
@@ -21,9 +22,15 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   @spec handle_connect_google(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_connect_google(socket) do
-    user_id = socket.assigns.current_user.id
+    user = socket.assigns.current_user
 
-    case Calendar.initiate_google_oauth(user_id, return_to: ~p"/onboarding/connect_calendar") do
+    opts =
+      maybe_put_login_hint(
+        [return_to: ~p"/onboarding/connect_calendar"],
+        Auth.google_signup_login_hint(user)
+      )
+
+    case Calendar.initiate_google_oauth(user.id, opts) do
       {:ok, url} ->
         {:noreply, LiveView.redirect(socket, external: url)}
 
@@ -31,6 +38,9 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
         {:noreply, LiveView.put_flash(socket, :error, msg)}
     end
   end
+
+  defp maybe_put_login_hint(opts, nil), do: opts
+  defp maybe_put_login_hint(opts, email), do: Keyword.put(opts, :login_hint, email)
 
   @doc """
   Initiates Outlook Calendar OAuth and redirects the user externally.
@@ -50,13 +60,18 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   end
 
   @doc """
-  Switches to the CalDAV credential form.
+  Records the user's pending calendar choice without connecting. The actual
+  connection (or skip) happens when the user presses Continue. Selecting the
+  already-chosen option toggles it off, clearing the selection.
   """
-  @spec handle_show_caldav_form(Phoenix.LiveView.Socket.t()) ::
+  @spec handle_select_option(String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_show_caldav_form(socket) do
-    {:noreply, Component.assign(socket, :calendar_state, :connecting_caldav)}
+  def handle_select_option(option, socket) when option in ~w(google outlook caldav skip) do
+    choice = if socket.assigns.calendar_choice == option, do: nil, else: option
+    {:noreply, Component.assign(socket, :calendar_choice, choice)}
   end
+
+  def handle_select_option(_option, socket), do: {:noreply, socket}
 
   @doc """
   Cancels CalDAV form and returns to provider selection.
@@ -103,19 +118,6 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
     else
       discover_and_create_caldav(socket, form_data)
     end
-  end
-
-  @doc """
-  Resets calendar state to provider selection for adding another calendar.
-  """
-  @spec handle_add_another(Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_add_another(socket) do
-    {:noreply,
-     socket
-     |> Component.assign(:calendar_state, :adding)
-     |> Component.assign(:caldav_form_data, %{})
-     |> Component.assign(:caldav_form_errors, %{})}
   end
 
   # -------------------------------------------------------------------
@@ -174,6 +176,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
              socket
              |> Component.assign(:connected_calendars, connected)
              |> Component.assign(:calendar_state, :selecting)
+             |> Component.assign(:calendar_choice, nil)
              |> Component.assign(:caldav_form_data, %{})
              |> Component.assign(:caldav_form_errors, %{})}
 

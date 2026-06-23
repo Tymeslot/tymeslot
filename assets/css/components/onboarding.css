@@ -286,6 +286,48 @@
   background-color: var(--color-primary-50);
 }
 
+/* Selected option in the forced-choice calendar step */
+.onboarding-choice-card--selected {
+  border-color: var(--color-primary-400);
+  background-color: var(--color-primary-50);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+.onboarding-choice-card--selected:hover {
+  border-color: var(--color-primary-500);
+}
+
+/* Radio indicator on each selectable choice */
+.onboarding-choice-radio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  margin-left: auto;
+  border: 2px solid var(--color-neutral-200);
+  border-radius: var(--radius-full);
+  transition: all 0.15s ease;
+}
+
+.onboarding-choice-radio--selected {
+  border-color: var(--color-primary-500);
+  background-color: var(--color-primary-500);
+}
+
+.onboarding-provider-badge {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-primary-700);
+  background-color: var(--color-primary-100);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
 .onboarding-provider-icon {
   width: 36px;
   height: 36px;
@@ -311,28 +353,6 @@
   border: 2px solid var(--color-success, #10b981);
   border-radius: var(--radius-token-xl);
   background-color: #f0fdf4;
-}
-
-.onboarding-add-calendar-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3);
-  border: 2px dashed var(--color-neutral-200);
-  border-radius: var(--radius-token-xl);
-  color: var(--color-neutral-400);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  background: none;
-}
-
-.onboarding-add-calendar-btn:hover {
-  border-color: var(--color-primary-300);
-  color: var(--color-primary-600);
-  background-color: var(--color-primary-50);
 }
 
 /* Ready step — URL display */

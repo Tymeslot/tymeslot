@@ -2,10 +2,13 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
   @moduledoc """
   Calendar connection step component for the onboarding flow.
 
-  Supports three states:
-  - Provider selection (Google, Outlook, CalDAV)
-  - Inline CalDAV credential form
-  - Connected calendar list with option to add more
+  Forced-choice model: the user selects exactly one option — a calendar
+  provider or "Not right now" — and nothing connects until they press
+  Continue. Already-connected calendars render as read-only "connected" rows.
+
+  Two states:
+  - `:selecting` — provider/opt-out choices plus any connected calendars
+  - `:connecting_caldav` — inline CalDAV credential form
   """
 
   use Phoenix.Component
@@ -20,72 +23,152 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
 
   * `calendar_state` - Current state atom (`:selecting` or `:connecting_caldav`)
   * `connected_calendars` - List of connected calendar integrations
+  * `calendar_choice` - The currently selected option (`"google"`, `"outlook"`,
+    `"caldav"`, `"skip"`) or `nil` when nothing is selected yet
+  * `google_signup_email` - Google account email when the user signed up via
+    Google (`nil` otherwise); surfaces the Recommended badge and one-click hint
   * `caldav_form_data` - CalDAV form field values
   * `caldav_form_errors` - CalDAV form validation errors
   """
   attr :calendar_state, :atom, required: true
   attr :connected_calendars, :list, required: true
+  attr :calendar_choice, :string, default: nil
+  attr :google_signup_email, :string, default: nil
   attr :caldav_form_data, :map, required: true
   attr :caldav_form_errors, :map, required: true
 
   @spec connect_calendar_step(map()) :: Phoenix.LiveView.Rendered.t()
   def connect_calendar_step(assigns) do
+    connected_providers = Enum.map(assigns.connected_calendars, & &1.provider)
+
+    assigns =
+      assigns
+      |> assign(:google_connected?, "google" in connected_providers)
+      |> assign(:outlook_connected?, "outlook" in connected_providers)
+      |> assign(
+        :caldav_connected?,
+        Enum.any?(connected_providers, &(&1 not in ["google", "outlook"]))
+      )
+
     ~H"""
     <div>
-      <%= case @calendar_state do %>
-        <% :adding -> %>
-          <.provider_selection />
-        <% :connecting_caldav -> %>
-          <.caldav_form
-            caldav_form_data={@caldav_form_data}
-            caldav_form_errors={@caldav_form_errors}
-          />
-        <% _selecting -> %>
-          <%= if @connected_calendars != [] do %>
-            <.connected_view connected_calendars={@connected_calendars} />
-          <% else %>
-            <.provider_selection />
+      <%= if @calendar_state == :connecting_caldav do %>
+        <.caldav_form
+          caldav_form_data={@caldav_form_data}
+          caldav_form_errors={@caldav_form_errors}
+        />
+      <% else %>
+        <div class="onboarding-provider-cards">
+          <%= for calendar <- @connected_calendars do %>
+            <.connected_row calendar={calendar} />
           <% end %>
+
+          <.choice_card
+            :if={not @google_connected?}
+            option="google"
+            selected={@calendar_choice == "google"}
+            icon="hero-calendar-days"
+            icon_class="bg-blue-50 text-blue-600"
+            name="Google Calendar"
+            label={google_label(@google_signup_email)}
+            recommended={@google_signup_email != nil}
+          />
+
+          <.choice_card
+            :if={not @outlook_connected?}
+            option="outlook"
+            selected={@calendar_choice == "outlook"}
+            icon="hero-calendar"
+            icon_class="bg-cyan-50 text-cyan-600"
+            name="Outlook Calendar"
+            label="Connect via Microsoft"
+          />
+
+          <.choice_card
+            :if={not @caldav_connected?}
+            option="caldav"
+            selected={@calendar_choice == "caldav"}
+            icon="hero-server"
+            icon_class="bg-tymeslot-100 text-tymeslot-600"
+            name="CalDAV"
+            label="Nextcloud, Radicale, or any CalDAV server"
+          />
+
+          <.choice_card
+            :if={@connected_calendars == []}
+            option="skip"
+            selected={@calendar_choice == "skip"}
+            icon="hero-clock"
+            icon_class="bg-tymeslot-50 text-tymeslot-500"
+            name="Not right now"
+            label="I'll connect a calendar later"
+          />
+        </div>
       <% end %>
     </div>
     """
   end
 
-  defp provider_selection(assigns) do
+  attr :option, :string, required: true
+  attr :selected, :boolean, default: false
+  attr :icon, :string, required: true
+  attr :icon_class, :string, default: ""
+  attr :name, :string, required: true
+  attr :label, :string, required: true
+  attr :recommended, :boolean, default: false
+
+  defp choice_card(assigns) do
     ~H"""
-    <div class="onboarding-provider-cards">
-      <button type="button" phx-click="connect_google_calendar" class="onboarding-provider-card">
-        <div class="onboarding-provider-icon flex items-center justify-center rounded-lg bg-blue-50">
-          <.icon name="hero-calendar-days" class="w-5 h-5 text-blue-600" />
+    <button
+      type="button"
+      phx-click="select_calendar_option"
+      phx-value-option={@option}
+      aria-pressed={to_string(@selected)}
+      class={[
+        "onboarding-provider-card onboarding-choice-card",
+        @selected && "onboarding-choice-card--selected"
+      ]}
+    >
+      <div class={["onboarding-provider-icon flex items-center justify-center rounded-lg", @icon_class]}>
+        <.icon name={@icon} class="w-5 h-5" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+          <div class="onboarding-provider-name">{@name}</div>
+          <span :if={@recommended} class="onboarding-provider-badge">Recommended</span>
         </div>
-        <div>
-          <div class="onboarding-provider-name">Google Calendar</div>
-          <div class="onboarding-provider-label">Connect via OAuth — takes seconds</div>
-        </div>
-      </button>
+        <div class="onboarding-provider-label truncate">{@label}</div>
+      </div>
+      <span class={[
+        "onboarding-choice-radio",
+        @selected && "onboarding-choice-radio--selected"
+      ]}>
+        <.icon :if={@selected} name="hero-check-mini" class="w-3.5 h-3.5 text-white" />
+      </span>
+    </button>
+    """
+  end
 
-      <button type="button" phx-click="connect_outlook_calendar" class="onboarding-provider-card">
-        <div class="onboarding-provider-icon flex items-center justify-center rounded-lg bg-cyan-50">
-          <.icon name="hero-calendar" class="w-5 h-5 text-cyan-600" />
-        </div>
-        <div>
-          <div class="onboarding-provider-name">Outlook Calendar</div>
-          <div class="onboarding-provider-label">Connect via OAuth — takes seconds</div>
-        </div>
-      </button>
+  attr :calendar, :map, required: true
 
-      <button type="button" phx-click="show_caldav_form" class="onboarding-provider-card">
-        <div class="onboarding-provider-icon flex items-center justify-center rounded-lg bg-tymeslot-100">
-          <.icon name="hero-server" class="w-5 h-5 text-tymeslot-600" />
+  defp connected_row(assigns) do
+    ~H"""
+    <div class="onboarding-connected-calendar">
+      <.icon name="hero-check-circle-solid" class="w-5 h-5 text-green-600 shrink-0" />
+      <div class="flex-1 min-w-0">
+        <div class="text-token-base font-bold text-tymeslot-800 truncate">
+          {@calendar.provider_account_email || @calendar.name}
         </div>
-        <div>
-          <div class="onboarding-provider-name">CalDAV</div>
-          <div class="onboarding-provider-label">Nextcloud, Radicale, or any CalDAV server</div>
+        <div class="text-token-sm text-tymeslot-400">
+          {String.capitalize(@calendar.provider)} · Connected
         </div>
-      </button>
+      </div>
     </div>
     """
   end
+
+  defp google_label(nil), do: "Connect via Google"
+  defp google_label(email), do: "One click — connect #{email}"
 
   defp caldav_form(assigns) do
     ~H"""
@@ -170,31 +253,6 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
         </button>
       </div>
     </.form>
-    """
-  end
-
-  defp connected_view(assigns) do
-    ~H"""
-    <div class="space-y-3">
-      <%= for calendar <- @connected_calendars do %>
-        <div class="onboarding-connected-calendar">
-          <.icon name="hero-check-circle-solid" class="w-5 h-5 text-green-600 shrink-0" />
-          <div class="flex-1 min-w-0">
-            <div class="text-token-base font-bold text-tymeslot-800 truncate">
-              {calendar.name}
-            </div>
-            <div class="text-token-sm text-tymeslot-400">
-              {String.capitalize(calendar.provider)}
-            </div>
-          </div>
-        </div>
-      <% end %>
-
-      <button type="button" phx-click="add_another_calendar" class="onboarding-add-calendar-btn w-full">
-        <.icon name="hero-plus" class="w-4 h-4" />
-        Add another calendar
-      </button>
-    </div>
     """
   end
 end

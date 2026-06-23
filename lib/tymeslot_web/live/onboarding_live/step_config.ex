@@ -248,20 +248,6 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   def scheduling_step?(_step), do: false
 
   @doc """
-  Returns whether a skip link should be shown for a given step.
-  """
-  @spec show_skip_link?(step()) :: boolean()
-  def show_skip_link?(:connect_calendar), do: true
-  def show_skip_link?(_step), do: false
-
-  @doc """
-  Returns the skip link text for a given step, or an empty string if none.
-  """
-  @spec skip_link_text(step()) :: String.t()
-  def skip_link_text(:connect_calendar), do: "I'll do this later"
-  def skip_link_text(_step), do: ""
-
-  @doc """
   Returns the illustration SVG filename for a given step.
   """
   @spec illustration_file(step()) :: String.t()

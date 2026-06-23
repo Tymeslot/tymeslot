@@ -47,8 +47,9 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
 
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      # skip the calendar step
-      view |> element("button[phx-click='skip_step']") |> render_click()
+      # skip the calendar step: select "Not right now" then Continue
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
 
       assert_push_event view, "ts:analytics", %{
         name: "onboarding_step_completed",

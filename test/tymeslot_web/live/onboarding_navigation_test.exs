@@ -53,7 +53,9 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       # Verify calendar step
       assert has_element?(view, ".onboarding-provider-cards")
 
-      # Continue to buffer_time
+      # Continue to buffer_time — forced choice, select "Not right now" first
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+
       view
       |> element("button[phx-click='next_step']")
       |> render_click()
@@ -100,7 +102,9 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
 
       assert render(view) =~ StepConfig.next_button_text(:connect_calendar)
 
-      # Navigate to buffer_time
+      # Navigate to buffer_time — forced choice, select "Not right now" first
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+
       view
       |> element("button[phx-click='next_step']")
       |> render_click()
@@ -124,6 +128,8 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
       fill_basic_settings(view, "Test", "testuser456")
       view |> element("button[phx-click='next_step']") |> render_click()
+      # connect_calendar is a forced choice — skip before Continue
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Verify buffer_time step
@@ -235,7 +241,7 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       assert user.onboarding_completed_at != nil
     end
 
-    test "connect_calendar step has skip link", %{conn: conn} do
+    test "connect_calendar step has skip choice", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
       # Navigate to profile
@@ -245,11 +251,11 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       # Navigate to connect_calendar
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      # Skip link should be present on calendar step
-      assert has_element?(view, "button[phx-click='skip_step']")
+      # The "Not right now" skip choice should be present on the calendar step
+      assert has_element?(view, ~s{button[phx-value-option="skip"]})
     end
 
-    test "skip_step on connect_calendar advances to buffer_time", %{conn: conn} do
+    test "skipping connect_calendar advances to buffer_time", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
 
       # Navigate to connect_calendar
@@ -257,8 +263,9 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       fill_basic_settings(view, "Test", "testuser789b")
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      # Use skip_step to skip calendar connection
-      view |> element("button[phx-click='skip_step']") |> render_click()
+      # Select skip, then Continue, to skip calendar connection
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
 
       # Should now be at buffer_time
       assert has_element?(view, "button[phx-value-buffer_minutes]")

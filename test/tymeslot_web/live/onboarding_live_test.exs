@@ -58,7 +58,10 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       # Should now be at connect_calendar step
       assert has_element?(view, ".onboarding-provider-cards")
 
-      # Step 3: Connect Calendar -> Buffer Time
+      # Step 3: Connect Calendar -> Buffer Time. Forced choice — select
+      # "Not right now" before Continue, otherwise next_step is a no-op.
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+
       view
       |> element("button[phx-click='next_step']")
       |> render_click()
@@ -118,8 +121,11 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       })
       |> render_change()
 
-      # Continue through connect_calendar, buffer_time, booking_window, minimum_notice, ready
+      # profile -> connect_calendar
       view |> element("button[phx-click='next_step']") |> render_click()
+      # connect_calendar is a forced choice — skip before Continue
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+      # connect_calendar -> buffer_time -> booking_window -> minimum_notice -> ready
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
@@ -166,6 +172,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
 
       # Navigate through connect_calendar to buffer_time
       view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Buffer time step — click custom
@@ -269,9 +276,14 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       })
       |> render_change()
 
-      # Profile -> connect_calendar -> buffer_time -> booking_window ->
-      # minimum_notice -> ready (five advances).
-      Enum.each(1..5, fn _step ->
+      # Profile -> connect_calendar
+      view |> element("button[phx-click='next_step']") |> render_click()
+      # connect_calendar is a forced choice — skip before Continue.
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+
+      # connect_calendar -> buffer_time -> booking_window -> minimum_notice
+      # -> ready (four advances).
+      Enum.each(1..4, fn _step ->
         view |> element("button[phx-click='next_step']") |> render_click()
       end)
 

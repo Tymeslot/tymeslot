@@ -17,13 +17,14 @@ defmodule TymeslotWeb.OnboardingCompositionTest do
   This file pins the two composition seams that are genuinely
   uncovered:
 
-    * `skip_step` → `previous_step` round trip — the user skips a step,
-      immediately changes their mind, and hits Back. The combination
-      is never exercised; each handler is tested in isolation.
-    * `add_another_calendar` — a user with an already-connected
-      calendar clicks "Add another calendar"; the handler must flip
-      the calendar state back to the provider grid while keeping the
-      connected list intact.
+    * skip → `previous_step` round trip — the user selects "Not right
+      now" on connect_calendar, presses Continue, immediately changes
+      their mind, and hits Back. The combination is never exercised;
+      each handler is tested in isolation.
+    * connected calendar row — a user with an already-connected
+      calendar sees it rendered as a read-only "connected" row, and an
+      existing connection enables Continue without a fresh provider
+      selection.
 
   It also tightens the `skip_onboarding` coverage by asserting the
   `ensure_username` auto-assignment side effect, which the existing
@@ -43,7 +44,7 @@ defmodule TymeslotWeb.OnboardingCompositionTest do
     * `update_scheduling_preferences` with negative values —
       covered at `onboarding_edge_cases_test.exs:40` ("negative
       buffer_minutes value is rejected").
-    * `show_caldav_form` → `validate_caldav` →
+    * CalDAV form → `validate_caldav` →
       `discover_caldav_calendars` with network timeout — the CalDAV
       discovery chain is already pinned at the domain level by
       Task 28 in `test/remaining-gaps`
@@ -110,8 +111,9 @@ defmodule TymeslotWeb.OnboardingCompositionTest do
       view |> element("button[phx-click='next_step']") |> render_click()
       assert has_element?(view, ".onboarding-provider-cards")
 
-      # connect_calendar → skip → buffer_time
-      view |> element("button[phx-click='skip_step']") |> render_click()
+      # connect_calendar → select skip → Continue → buffer_time
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
       assert has_element?(view, "button[phx-value-buffer_minutes]")
 
       # buffer_time → previous → connect_calendar
@@ -149,8 +151,8 @@ defmodule TymeslotWeb.OnboardingCompositionTest do
     end
   end
 
-  describe "add_another_calendar" do
-    test "clears the inline form and preserves the connected list",
+  describe "connected calendar row" do
+    test "renders connected calendars read-only and enables Continue",
          %{conn: conn} do
       user = insert(:user, onboarding_completed_at: nil)
 
@@ -158,6 +160,7 @@ defmodule TymeslotWeb.OnboardingCompositionTest do
         insert(:calendar_integration,
           user: user,
           provider: "caldav",
+          provider_account_email: "work@example.com",
           name: "Existing Work Calendar"
         )
 
@@ -166,27 +169,22 @@ defmodule TymeslotWeb.OnboardingCompositionTest do
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, ~p"/onboarding?step=connect_calendar")
 
-      # Sanity: the "connected_view" branch is rendering (has the
-      # Add button), which is the only surface that emits
-      # `add_another_calendar`.
-      assert render(view) =~ "Existing Work Calendar"
-      assert has_element?(view, "button[phx-click='add_another_calendar']")
-
-      view
-      |> element("button[phx-click='add_another_calendar']")
-      |> render_click()
-
       html = render(view)
 
-      # The provider grid is now visible again (calendar_state
-      # flipped to :adding).
-      assert html =~ "Google Calendar"
-      assert html =~ "Outlook Calendar"
-      assert html =~ "CalDAV"
+      # The connected calendar renders as a read-only row, not a button.
+      assert has_element?(view, "div.onboarding-connected-calendar")
+      assert html =~ "work@example.com"
+      assert html =~ "Caldav · Connected"
 
-      # And the already-connected calendar must still exist in the
-      # DB — a regression that delete-on-add-another would surface
-      # here as the row vanishing.
+      # An existing connection enables Continue (it is not disabled), even
+      # without selecting a provider choice.
+      refute has_element?(view, "button[phx-click='next_step'][disabled]")
+
+      # The "Not right now" choice is hidden once a calendar is connected;
+      # the user can still add more by selecting another provider's card.
+      refute has_element?(view, ~s{button[phx-value-option="skip"]})
+
+      # The connected calendar still exists in the DB.
       assert {:ok, _refreshed} = Calendar.get_integration(existing_calendar.id, user.id)
       assert length(Calendar.list_integrations(user.id)) == 1
     end

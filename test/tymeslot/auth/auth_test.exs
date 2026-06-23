@@ -203,4 +203,34 @@ defmodule Tymeslot.AuthTest do
       refute Auth.marketing_unsubscribed?(second)
     end
   end
+
+  describe "google_signup_login_hint/1" do
+    test "returns the provider email for Google-signup users" do
+      user =
+        build(:user,
+          provider: "google",
+          google_user_id: "google-123",
+          provider_email: "alice@gmail.com",
+          email: "alice@work.example"
+        )
+
+      assert Auth.google_signup_login_hint(user) == "alice@gmail.com"
+    end
+
+    test "falls back to the account email when the provider email is missing" do
+      user =
+        build(:user,
+          provider: "google",
+          google_user_id: "google-123",
+          provider_email: nil,
+          email: "alice@work.example"
+        )
+
+      assert Auth.google_signup_login_hint(user) == "alice@work.example"
+    end
+
+    test "returns nil for users without a Google account" do
+      assert Auth.google_signup_login_hint(build(:user, google_user_id: nil)) == nil
+    end
+  end
 end

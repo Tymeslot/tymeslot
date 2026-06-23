@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.OnboardingLive do
   use TymeslotWeb, :live_view
 
+  alias Tymeslot.Auth
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Onboarding
@@ -70,6 +71,10 @@ defmodule TymeslotWeb.OnboardingLive do
       current_step={@current_step}
       steps={@steps}
       show_skip_modal={@show_skip_modal}
+      next_disabled={
+        @current_step == :connect_calendar and is_nil(@calendar_choice) and
+          @connected_calendars == []
+      }
     >
       <%= case @current_step do %>
         <% :welcome -> %>
@@ -87,6 +92,8 @@ defmodule TymeslotWeb.OnboardingLive do
           <ConnectCalendarStep.connect_calendar_step
             calendar_state={@calendar_state}
             connected_calendars={@connected_calendars}
+            calendar_choice={@calendar_choice}
+            google_signup_email={@google_signup_email}
             caldav_form_data={@caldav_form_data}
             caldav_form_errors={@caldav_form_errors}
           />
@@ -131,10 +138,6 @@ defmodule TymeslotWeb.OnboardingLive do
     NavigationHandlers.handle_previous_step(socket)
   end
 
-  def handle_event("skip_step", _params, socket) do
-    NavigationHandlers.handle_skip_step(socket)
-  end
-
   def handle_event("show_skip_modal", _params, socket) do
     NavigationHandlers.handle_show_skip_modal(socket)
   end
@@ -163,16 +166,8 @@ defmodule TymeslotWeb.OnboardingLive do
   # Event handlers — Calendar connection
   # ------------------------------------------------------------------
 
-  def handle_event("connect_google_calendar", _params, socket) do
-    CalendarHandlers.handle_connect_google(socket)
-  end
-
-  def handle_event("connect_outlook_calendar", _params, socket) do
-    CalendarHandlers.handle_connect_outlook(socket)
-  end
-
-  def handle_event("show_caldav_form", _params, socket) do
-    CalendarHandlers.handle_show_caldav_form(socket)
+  def handle_event("select_calendar_option", %{"option" => option}, socket) do
+    CalendarHandlers.handle_select_option(option, socket)
   end
 
   def handle_event("cancel_caldav", _params, socket) do
@@ -185,10 +180,6 @@ defmodule TymeslotWeb.OnboardingLive do
 
   def handle_event("discover_caldav_calendars", params, socket) do
     CalendarHandlers.handle_discover_caldav(params, socket)
-  end
-
-  def handle_event("add_another_calendar", _params, socket) do
-    CalendarHandlers.handle_add_another(socket)
   end
 
   # ------------------------------------------------------------------
@@ -297,7 +288,9 @@ defmodule TymeslotWeb.OnboardingLive do
     |> assign(:form_errors, %{})
     |> assign(:custom_input_mode, CustomInputModeHelper.default_custom_mode())
     |> assign(:calendar_state, :selecting)
+    |> assign(:calendar_choice, nil)
     |> assign(:connected_calendars, connected_calendars)
+    |> assign(:google_signup_email, Auth.google_signup_login_hint(user))
     |> assign(:caldav_form_data, %{})
     |> assign(:caldav_form_errors, %{})
     |> assign(:booking_url, build_booking_url(profile))

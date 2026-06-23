@@ -16,6 +16,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias TymeslotWeb.Analytics
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
+  alias TymeslotWeb.OnboardingLive.CalendarHandlers
   alias TymeslotWeb.OnboardingLive.StepConfig
 
   @doc """
@@ -30,16 +31,55 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       :profile ->
         handle_profile_next(socket)
 
+      :connect_calendar ->
+        handle_calendar_continue(socket)
+
       :ready ->
         handle_complete_onboarding(socket, redirect_to: ~p"/dashboard")
 
       step ->
+        {:noreply, advance_step(socket, step)}
+    end
+  end
+
+  # Continue on the calendar step is a forced choice: act on the selected
+  # option rather than blindly advancing. OAuth providers redirect out; CalDAV
+  # opens the inline form; "skip" (or an already-connected calendar) advances.
+  defp handle_calendar_continue(socket) do
+    case socket.assigns.calendar_choice do
+      "google" ->
+        CalendarHandlers.handle_connect_google(socket)
+
+      "outlook" ->
+        CalendarHandlers.handle_connect_outlook(socket)
+
+      "caldav" ->
+        {:noreply, Component.assign(socket, :calendar_state, :connecting_caldav)}
+
+      "skip" ->
         {:noreply,
          socket
-         |> Component.assign(:current_step, StepConfig.next_step(step))
-         |> Analytics.push("onboarding_step_completed", %{step: to_string(step)})
+         |> Component.assign(:current_step, StepConfig.next_step(:connect_calendar))
+         |> Analytics.push("onboarding_step_completed", %{
+           step: "connect_calendar",
+           skipped: true
+         })
          |> LiveView.clear_flash()}
+
+      _none ->
+        if socket.assigns.connected_calendars == [] do
+          {:noreply, socket}
+        else
+          {:noreply, advance_step(socket, :connect_calendar)}
+        end
     end
+  end
+
+  defp advance_step(socket, step) do
+    socket
+    |> Component.assign(:current_step, StepConfig.next_step(step))
+    |> Analytics.push("onboarding_step_completed", %{step: to_string(step)})
+    |> LiveView.clear_flash()
   end
 
   @doc """
@@ -82,27 +122,6 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
           prev ->
             {:noreply, socket |> Component.assign(:current_step, prev) |> LiveView.clear_flash()}
         end
-    end
-  end
-
-  @doc """
-  Handles skipping the current step (e.g. calendar connection).
-  Advances to the next step without validation.
-  """
-  @spec handle_skip_step(Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_skip_step(socket) do
-    skipped = socket.assigns.current_step
-
-    case StepConfig.next_step(skipped) do
-      nil ->
-        {:noreply, socket}
-
-      next ->
-        {:noreply,
-         socket
-         |> Component.assign(:current_step, next)
-         |> Analytics.push("onboarding_step_completed", %{step: to_string(skipped), skipped: true})
-         |> LiveView.clear_flash()}
     end
   end
 

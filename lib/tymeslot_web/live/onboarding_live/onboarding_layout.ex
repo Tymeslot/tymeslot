@@ -29,6 +29,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   attr :current_step, :atom, required: true
   attr :steps, :list, required: true
   attr :show_skip_modal, :boolean, default: false
+  attr :next_disabled, :boolean, default: false
 
   slot :inner_block, required: true
 
@@ -64,25 +65,28 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
           <%!-- Navigation --%>
           <div class="onboarding-nav">
             <%= if StepConfig.show_back_button?(@current_step) do %>
-              <button type="button" phx-click="previous_step" class="btn-secondary inline-flex items-center px-5 py-2.5">
-                <.icon name="hero-arrow-left-mini" class="w-4 h-4 mr-1" />
+              <button
+                type="button"
+                phx-click="previous_step"
+                class="btn-secondary px-5 py-2.5 inline-flex items-center justify-center whitespace-nowrap"
+              >
+                <.icon name="hero-arrow-left-mini" class="w-4 h-4 mr-1 shrink-0" />
                 Back
               </button>
             <% end %>
 
             <div class="onboarding-nav-spacer" />
 
-            <button type="button" phx-click="next_step" class="btn-primary inline-flex items-center px-6 py-2.5">
+            <button
+              type="button"
+              phx-click="next_step"
+              disabled={@next_disabled}
+              class="btn-primary px-6 py-2.5 inline-flex items-center justify-center whitespace-nowrap"
+            >
               {StepConfig.next_button_text(@current_step)}
-              <.icon name="hero-arrow-right-mini" class="w-4 h-4 ml-1" />
+              <.icon name="hero-arrow-right-mini" class="w-4 h-4 ml-1 shrink-0" />
             </button>
           </div>
-
-          <%= if StepConfig.show_skip_link?(@current_step) do %>
-            <button type="button" phx-click="skip_step" class="onboarding-skip-link">
-              {StepConfig.skip_link_text(@current_step)}
-            </button>
-          <% end %>
         </div>
       </div>
 

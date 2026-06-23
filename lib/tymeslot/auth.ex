@@ -245,6 +245,22 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
+  Returns the Google account email to use as an OAuth `login_hint` when the user
+  signed up (or linked an account) via Google, or `nil` otherwise.
+
+  Passing this hint to the calendar OAuth flow lets Google skip the account
+  picker, so a Google-authenticated user can connect their calendar in one click
+  instead of re-selecting the account they just signed in with.
+  """
+  @spec google_signup_login_hint(Ecto.Schema.t()) :: String.t() | nil
+  def google_signup_login_hint(%{google_user_id: nil}), do: nil
+
+  def google_signup_login_hint(%{google_user_id: _id} = user),
+    do: user.provider_email || user.email
+
+  def google_signup_login_hint(_user), do: nil
+
+  @doc """
   Marks the post-onboarding dashboard tour as seen. Idempotent.
   """
   @spec mark_dashboard_tour_seen(Ecto.Schema.t()) ::
