@@ -168,6 +168,8 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
       # …until the organizer refreshes, which drops the cache entry and recomputes.
       html = view |> element("button[phx-click=\"refresh\"]") |> render_click()
       assert html =~ "newsletter"
+      # The dashboard shows an "Updated <time>" stamp so the refresh is visibly felt.
+      assert html =~ "Updated"
     end
   end
 

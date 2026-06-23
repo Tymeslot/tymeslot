@@ -74,11 +74,20 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   # (it would otherwise fall past the mount-time `to`) is included.
   def handle_event("refresh", _params, %{assigns: %{current_user: user, range: range}} = socket) do
     MetricsCache.invalidate(user.id, range)
+    # Data reloads immediately; the spin is held briefly so the refresh is
+    # perceptible even when the recompute returns in a few milliseconds.
+    Process.send_after(self(), :stop_refresh_spin, 600)
 
     {:noreply,
      socket
+     |> assign(:refreshing?, true)
      |> assign_window_for(range)
      |> load_data()}
+  end
+
+  @impl Phoenix.LiveView
+  def handle_info(:stop_refresh_spin, socket) do
+    {:noreply, assign(socket, :refreshing?, false)}
   end
 
   @impl Phoenix.LiveView
@@ -119,10 +128,18 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
               aria-label="Refresh analytics"
               class="rounded-md bg-tymeslot-50 p-2 text-tymeslot-700 transition-colors hover:bg-tymeslot-100"
             >
-              <.icon name="hero-arrow-path" class="h-4 w-4" />
+              <.icon name="hero-arrow-path" class={"h-4 w-4 #{if @refreshing?, do: "animate-spin"}"} />
             </button>
           </div>
         </div>
+
+        <p
+          :if={@loaded? and @refreshed_at}
+          class="text-token-xs tabular-nums text-tymeslot-400"
+          aria-live="polite"
+        >
+          Updated {format_refreshed_at(@refreshed_at, @time_zone)}
+        </p>
 
         <div
           :if={@partial_window?}
@@ -206,6 +223,8 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
       # `handle_params` loads real data. `loaded?` gates the skeletons so these
       # zeros are never shown as numbers — see the component `loading?` attrs.
       loaded?: false,
+      refreshed_at: nil,
+      refreshing?: false,
       visits: 0,
       unique_visitors: 0,
       bookings: 0,
@@ -273,5 +292,15 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
     socket
     |> assign(Map.to_list(data))
     |> assign(:loaded?, true)
+    |> assign(:refreshed_at, DateTime.utc_now())
   end
+
+  defp format_refreshed_at(%DateTime{} = dt, time_zone) do
+    case DateTime.shift_zone(dt, time_zone || "Etc/UTC") do
+      {:ok, local} -> Calendar.strftime(local, "%H:%M:%S")
+      {:error, _reason} -> Calendar.strftime(dt, "%H:%M:%S")
+    end
+  end
+
+  defp format_refreshed_at(_other, _time_zone), do: ""
 end
