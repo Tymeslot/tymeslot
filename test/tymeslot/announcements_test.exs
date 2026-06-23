@@ -317,8 +317,9 @@ defmodule Tymeslot.AnnouncementsTest do
 
   describe "Announcements.list_for/1 query short-circuit" do
     test "does not query user_seen_announcements when the catalog yields no candidates" do
+      previous = Application.get_env(:tymeslot, :announcement_catalogs, [])
       Application.put_env(:tymeslot, :announcement_catalogs, [AllExpiredTestCatalog])
-      on_exit(fn -> Application.put_env(:tymeslot, :announcement_catalogs, []) end)
+      on_exit(fn -> Application.put_env(:tymeslot, :announcement_catalogs, previous) end)
 
       user = insert(:user, inserted_at: ~N[2018-01-01 00:00:00])
 
@@ -346,8 +347,9 @@ defmodule Tymeslot.AnnouncementsTest do
     end
 
     test "does query user_seen_announcements when a candidate exists" do
+      previous = Application.get_env(:tymeslot, :announcement_catalogs, [])
       Application.put_env(:tymeslot, :announcement_catalogs, [AnnouncementsTestCatalog])
-      on_exit(fn -> Application.put_env(:tymeslot, :announcement_catalogs, []) end)
+      on_exit(fn -> Application.put_env(:tymeslot, :announcement_catalogs, previous) end)
 
       user = insert(:user, inserted_at: ~N[2025-12-01 00:00:00])
 
