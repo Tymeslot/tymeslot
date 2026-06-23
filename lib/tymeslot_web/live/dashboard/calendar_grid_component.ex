@@ -67,6 +67,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ShortcutsHelpModal
   alias TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers
+  alias TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.EmptyState
 
   attr :current_user, :map, required: true, doc: "Owns calendar preferences and integrations."
@@ -555,6 +556,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           user_timezone={@user_timezone}
           preferences={@preferences}
           guest_rsvp_summaries={@guest_rsvp_summaries}
+          myself={@myself}
+        />
+        <AgendaView.agenda_view
+          view={@view}
+          visible_days={@visible_days}
+          visible_events={@visible_events}
+          integration_colors={@integration_colors}
+          user_timezone={@user_timezone}
+          preferences={@preferences}
           myself={@myself}
         />
         <CreateEventModal.create_event_modal

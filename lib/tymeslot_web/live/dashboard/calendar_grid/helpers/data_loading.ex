@@ -9,6 +9,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   alias Tymeslot.Timezones
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
 
+  # Number of days the agenda view looks ahead from the current date.
+  @agenda_window_days 30
+
   @spec load_integrations(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def load_integrations(socket) do
     user_id = socket.assigns.current_user.id
@@ -127,6 +130,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     {range_start, range_end}
   end
 
+  # Agenda window: the current date forward 30 days. A one-day pad on each side
+  # keeps timezone-boundary events that touch the window's edge in range.
+  def range_for_view(%{view: :agenda, date: date}) do
+    range_start = Date.add(date, -1)
+    range_end = Date.add(date, @agenda_window_days + 1)
+
+    {DateTime.new!(range_start, ~T[00:00:00], "Etc/UTC"),
+     DateTime.new!(range_end, ~T[00:00:00], "Etc/UTC")}
+  end
+
   # Private helpers
 
   defp do_visible_events(events, []), do: events
@@ -150,6 +163,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
 
   defp visible_days(%{view: :three_day, date: date}),
     do: Enum.map(0..2, &Date.add(date, &1))
+
+  defp visible_days(%{view: :agenda, date: date}),
+    do: Enum.map(0..@agenda_window_days, &Date.add(date, &1))
 
   defp visible_days(%{view: :month, date: date} = assigns) do
     first_of_month = Date.new!(date.year, date.month, 1)

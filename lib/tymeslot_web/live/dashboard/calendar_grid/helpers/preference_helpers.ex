@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   def col_count(%{view: :three_day}), do: 3
   def col_count(%{view: :day}), do: 1
   def col_count(%{view: :month}), do: 7
+  def col_count(%{view: :agenda}), do: 1
 
   @spec day_header_class(Date.t()) :: String.t()
   def day_header_class(day) do
@@ -40,6 +41,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
     Calendar.strftime(date, "%B %Y")
   end
 
+  def period_label(%{view: :agenda}), do: "Next 30 days"
+
   defp range_label(start_date, end_date) do
     start_str = Calendar.strftime(start_date, "%B %-d")
 
@@ -58,6 +61,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   def view_label(:three_day), do: "3 Days"
   def view_label(:week), do: "Week"
   def view_label(:month), do: "Month"
+  def view_label(:agenda), do: "Agenda"
 
   @spec navigate_month(Date.t(), integer()) :: Date.t()
   def navigate_month(date, delta) do
@@ -89,10 +93,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
     "week" => :week,
     "three_day" => :three_day,
     "day" => :day,
-    "month" => :month
+    "month" => :month,
+    "agenda" => :agenda
   }
 
-  @spec safe_view_atom(String.t()) :: :week | :three_day | :day | :month
+  @spec safe_view_atom(String.t()) :: :week | :three_day | :day | :month | :agenda
   def safe_view_atom(view) when is_binary(view), do: Map.get(@valid_views, view, :week)
   def safe_view_atom(_view), do: :week
 

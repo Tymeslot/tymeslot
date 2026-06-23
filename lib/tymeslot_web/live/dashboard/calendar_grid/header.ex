@@ -224,7 +224,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   end
 
   defp view_options do
-    [{:day, "Day"}, {:three_day, "3 Days"}, {:week, "Week"}, {:month, "Month"}]
+    [
+      {:day, "Day"},
+      {:three_day, "3 Days"},
+      {:week, "Week"},
+      {:month, "Month"},
+      {:agenda, "Agenda"}
+    ]
   end
 
   attr :myself, :any, required: true

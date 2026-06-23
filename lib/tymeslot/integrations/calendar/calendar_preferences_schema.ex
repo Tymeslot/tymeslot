@@ -29,7 +29,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     timestamps()
   end
 
-  @valid_views ~w(week day month)
+  @valid_views ~w(week day month agenda)
   @valid_week_starts ~w(monday sunday)
   @valid_time_formats ~w(12h 24h)
 
