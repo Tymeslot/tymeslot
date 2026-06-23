@@ -68,6 +68,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
     Date.shift(Date.new!(date.year, date.month, 1), month: delta)
   end
 
+  @doc """
+  6×7 day matrix for the month containing `date`.
+
+  Returns 42 consecutive `Date` structs starting from the first day of the week
+  that contains the first of the month (honouring `week_start`), so the grid
+  always spans six full weeks. Shared by the month view and the mini-month
+  picker so both render the same cells.
+  """
+  @spec month_matrix(Date.t(), :monday | :sunday) :: [Date.t()]
+  def month_matrix(date, week_start) when week_start in [:monday, :sunday] do
+    first_of_month = Date.new!(date.year, date.month, 1)
+    grid_start = Date.beginning_of_week(first_of_month, week_start)
+    Enum.map(0..41, &Date.add(grid_start, &1))
+  end
+
   @spec month_cell_class(Date.t(), map()) :: String.t()
   def month_cell_class(day, assigns) do
     if day.month != assigns.date.month, do: "bg-tymeslot-50", else: "bg-white"

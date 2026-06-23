@@ -48,6 +48,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.MiniMonth
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences
@@ -69,6 +70,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.EmptyState
+
+  @mini_month_events ~w(toggle_mini_month close_mini_month mini_month_prev mini_month_next)
 
   attr :current_user, :map, required: true, doc: "Owns calendar preferences and integrations."
 
@@ -92,6 +95,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
       |> assign(:preferences, nil)
       |> assign(:show_calendar_list, false)
       |> assign(:show_view_menu, false)
+      |> assign(:mini_month_open, false)
+      |> assign(:mini_month_cursor, nil)
       |> assign(:show_settings, false)
       |> assign(:show_shortcuts_help, false)
       |> assign(:creating_event, nil)
@@ -286,6 +291,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("navigate_to_day", params, socket),
     do: Navigation.handle_navigate_to_day(params, socket)
+
+  def handle_event(event, params, socket) when event in @mini_month_events,
+    do: MiniMonth.handle_event(event, params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("search", params, socket),
@@ -515,6 +523,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           hidden_integration_ids={@hidden_integration_ids}
           show_calendar_list={@show_calendar_list}
           show_view_menu={@show_view_menu}
+          mini_month_open={@mini_month_open}
+          mini_month_cursor={@mini_month_cursor}
           syncing={@syncing}
           timezone_display={@timezone_display}
           timezone_country_code={@timezone_country_code}

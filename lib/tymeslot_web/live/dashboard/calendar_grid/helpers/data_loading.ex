@@ -168,12 +168,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
     do: Enum.map(0..@agenda_window_days, &Date.add(date, &1))
 
   defp visible_days(%{view: :month, date: date} = assigns) do
-    first_of_month = Date.new!(date.year, date.month, 1)
-    start_atom = PreferenceHelpers.week_start_atom(assigns)
-
-    grid_start = Date.beginning_of_week(first_of_month, start_atom)
-    # Always show 6 weeks = 42 days
-    Enum.map(0..41, &Date.add(grid_start, &1))
+    # Always show 6 weeks = 42 days; shared with the mini-month picker.
+    PreferenceHelpers.month_matrix(date, PreferenceHelpers.week_start_atom(assigns))
   end
 
   defp weekend?(date), do: Date.day_of_week(date) in [6, 7]

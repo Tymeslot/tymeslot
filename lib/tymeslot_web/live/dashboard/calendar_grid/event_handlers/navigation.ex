@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
   require Logger
 
   alias Tymeslot.CalendarGrid
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.MiniMonth
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec handle_prev_period(map(), Phoenix.LiveView.Socket.t()) ::
@@ -69,7 +70,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
   def handle_navigate_to_day(%{"date" => date_str}, socket) do
     case Date.from_iso8601(date_str) do
       {:ok, date} ->
-        socket = socket |> assign(:view, :day) |> assign(:date, date) |> Helpers.load_events()
+        socket =
+          socket
+          |> assign(:view, :day)
+          |> assign(:date, date)
+          |> MiniMonth.close()
+          |> Helpers.load_events()
+
         {:noreply, socket}
 
       {:error, _reason} ->

@@ -64,6 +64,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   defdelegate assign_view_from_preferences(socket), to: PreferenceHelpers
   defdelegate week_number(date), to: PreferenceHelpers
   defdelegate day_name_headers(assigns), to: PreferenceHelpers
+  defdelegate month_matrix(date, week_start), to: PreferenceHelpers
 
   # Overlap layout
 

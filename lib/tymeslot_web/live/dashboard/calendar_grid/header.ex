@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Availability.Helpers, as: AvailabilityHelpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover
 
   attr :view, :atom, required: true
   attr :date, :any, required: true
@@ -14,6 +15,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   attr :hidden_integration_ids, :list, required: true
   attr :show_calendar_list, :boolean, required: true
   attr :show_view_menu, :boolean, required: true
+  attr :mini_month_open, :boolean, default: false
+  attr :mini_month_cursor, :any, default: nil
   attr :syncing, :boolean, required: true
   attr :timezone_display, :string, required: true
   attr :timezone_country_code, :string
@@ -59,10 +62,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             }
             class="px-2.5 py-1.5 md:px-3 text-token-sm border border-tymeslot-200 rounded hover:bg-tymeslot-50 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
           >Today</button>
-          <h2 class="text-token-sm md:text-token-base font-semibold text-tymeslot-800 ml-1 md:ml-2 min-w-0 truncate">
-            <%= Helpers.period_label(assigns) %>
-            <span :if={Helpers.show_week_numbers?(assigns) and @view in [:week, :three_day, :day]} class="ml-1 text-token-xs font-normal text-tymeslot-400">W<%= Helpers.week_number(@date) %></span>
-          </h2>
+          <MiniMonthPopover.mini_month_popover
+            open={@mini_month_open}
+            view={@view}
+            date={@date}
+            cursor={@mini_month_cursor}
+            preferences={@preferences}
+            user_timezone={@user_timezone}
+            myself={@myself}
+          />
           <div class="hidden md:block ml-1">
             <AvailabilityHelpers.timezone_display timezone_display={@timezone_display} country_code={@timezone_country_code} />
           </div>
