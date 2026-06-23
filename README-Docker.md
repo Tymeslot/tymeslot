@@ -354,6 +354,28 @@ ENABLE_GOOGLE_AUTH=false     # Enable Google login/signup
 ENABLE_GITHUB_AUTH=false     # Enable GitHub login/signup
 ```
 
+### Booking Analytics (optional)
+
+Booking analytics — page-view tracking, cookie-less visitor counting, and the
+attribution dashboard — is **disabled by default**. Most self-hosters do not
+enable it and can ignore this section entirely.
+
+If you opt in (`config :tymeslot, :booking_analytics_enabled, true`), then
+`ANALYTICS_SALT_SECRET` becomes **required** and the app will **fail fast at
+boot** if it is missing:
+
+```bash
+# Required ONLY when booking analytics is enabled.
+# Keys the cookie-less daily visitor fingerprint. Generate ONCE with:
+#   openssl rand -base64 48
+# It must stay constant across deployments — changing it re-hashes the same
+# visitor and double-counts uniques.
+ANALYTICS_SALT_SECRET=<paste_generated_secret>
+```
+
+When analytics is left disabled (the default), this variable is not read and
+need not be set.
+
 ### Generate Secrets
 
 ```bash

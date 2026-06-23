@@ -431,13 +431,34 @@ if config_env() == :prod do
 
   config :tymeslot, Tymeslot.Mailer, mailer_config
 
-  # Analytics fingerprint salt secret — rotates the daily visitor hash and must
-  # never leave the server. Required so cookie-less unique-visitor counting can
-  # derive a stable per-day salt without persisting any identifier.
-  config :tymeslot,
-         :analytics_salt_secret,
-         System.get_env("ANALYTICS_SALT_SECRET") ||
-           raise("missing ANALYTICS_SALT_SECRET environment variable")
+  # Analytics fingerprint salt secret — keys the cookie-less daily visitor hash
+  # and must never leave the server. It is required ONLY when booking analytics
+  # is enabled (`config :tymeslot, :booking_analytics_enabled, true`); self-hosters
+  # who never opt into analytics are not forced to set it.
+  #
+  # When the feature IS enabled we fail fast at boot rather than silently fall
+  # back to a weak, per-restart-random salt: an unstable salt would re-hash the
+  # same visitor across deployments and corrupt unique-visitor counts. The
+  # secret must be a single, high-entropy value that stays constant for the life
+  # of the deployment (generate once with `openssl rand -base64 48`).
+  if Application.get_env(:tymeslot, :booking_analytics_enabled, false) do
+    config :tymeslot,
+           :analytics_salt_secret,
+           System.get_env("ANALYTICS_SALT_SECRET") ||
+             raise("""
+             missing ANALYTICS_SALT_SECRET environment variable
+
+             Booking analytics is enabled (config :tymeslot, :booking_analytics_enabled, true)
+             but ANALYTICS_SALT_SECRET is not set. This secret keys the cookie-less
+             visitor fingerprint and must be a stable, high-entropy value that does
+             not change between deployments. Generate one once with:
+
+                 openssl rand -base64 48
+
+             and set it as a persistent environment variable. If you do not want
+             booking analytics, leave it disabled and this variable is not required.
+             """)
+  end
 end
 
 # Configure mailer for non-production environments
