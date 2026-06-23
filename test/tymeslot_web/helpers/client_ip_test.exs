@@ -260,7 +260,7 @@ defmodule TymeslotWeb.Helpers.ClientIPTest do
     test "ignores forwarded headers when peer is a public (untrusted) IP" do
       # A client connecting directly — not through a reverse proxy — must not be
       # able to spoof their IP via x-forwarded-for.
-      public_peer = %{address: {203, 0, 113, 50}, port: 12345, ssl_cert: nil}
+      public_peer = %{address: {203, 0, 113, 50}, port: 12_345, ssl_cert: nil}
 
       socket =
         mock_socket(

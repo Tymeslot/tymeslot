@@ -290,7 +290,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
       now = DateTime.utc_now()
       from = DateTime.add(now, -3600, :second)
       to = DateTime.add(now, 3600, :second)
-      base = DateTime.add(now, 1, :day) |> DateTime.truncate(:second)
+      base = DateTime.truncate(DateTime.add(now, 1, :day), :second)
 
       insert_meeting_at(user.id, base)
       insert_meeting_at(user.id, DateTime.add(base, 3600, :second))
@@ -303,7 +303,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
     test "excludes bookings outside the date range" do
       user = insert(:user)
       now = DateTime.utc_now()
-      base = DateTime.add(now, 1, :day) |> DateTime.truncate(:second)
+      base = DateTime.truncate(DateTime.add(now, 1, :day), :second)
 
       insert_meeting_at(user.id, base)
 
@@ -329,7 +329,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
       now = DateTime.utc_now()
       from = DateTime.add(now, -3600, :second)
       to = DateTime.add(now, 3600, :second)
-      base = DateTime.add(now, 1, :day) |> DateTime.truncate(:second)
+      base = DateTime.truncate(DateTime.add(now, 1, :day), :second)
 
       insert_meeting_at(user.id, base, utm_source: "linkedin")
       insert_meeting_at(user.id, DateTime.add(base, 3600, :second), utm_source: "linkedin")
@@ -349,7 +349,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
       now = DateTime.utc_now()
       from = DateTime.add(now, -3600, :second)
       to = DateTime.add(now, 3600, :second)
-      base = DateTime.add(now, 1, :day) |> DateTime.truncate(:second)
+      base = DateTime.truncate(DateTime.add(now, 1, :day), :second)
 
       insert_meeting_at(user.id, base, utm_source: nil)
       insert_meeting_at(user.id, DateTime.add(base, 3600, :second), utm_source: "linkedin")
@@ -366,7 +366,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
       now = DateTime.utc_now()
       from = DateTime.add(now, -3600, :second)
       to = DateTime.add(now, 3600, :second)
-      base = DateTime.add(now, 1, :day) |> DateTime.truncate(:second)
+      base = DateTime.truncate(DateTime.add(now, 1, :day), :second)
 
       insert_meeting_at(user.id, base, utm_source: "linkedin")
       insert_meeting_at(other_user.id, base, utm_source: "twitter")

@@ -60,7 +60,7 @@ defmodule Mix.Tasks.Tymeslot.RefreshHeroicons do
     Mix.shell().info("Refreshed #{count} SVGs to Heroicons #{tag}. Review and commit the diff.")
   end
 
-  def run(_) do
+  def run(_args) do
     Mix.raise("Usage: mix tymeslot.refresh_heroicons <tag>  (e.g. v2.2.0)")
   end
 
@@ -89,7 +89,7 @@ defmodule Mix.Tasks.Tymeslot.RefreshHeroicons do
 
   defp git!(args) do
     case System.cmd("git", args, stderr_to_stdout: true, env: []) do
-      {_, 0} -> :ok
+      {_output, 0} -> :ok
       {out, code} -> Mix.raise("git #{Enum.join(args, " ")} failed (#{code}):\n#{out}")
     end
   end

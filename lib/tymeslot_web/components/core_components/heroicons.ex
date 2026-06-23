@@ -47,14 +47,14 @@ defmodule TymeslotWeb.Components.CoreComponents.Heroicons do
 
             view_box =
               case Regex.run(~r/viewBox="([^"]*)"/, content) do
-                [_, vb] -> vb
-                _ -> "0 0 #{size} #{size}"
+                [_match, vb] -> vb
+                _no_viewbox -> "0 0 #{size} #{size}"
               end
 
             body =
               case Regex.run(~r/<svg[^>]*>(.*)<\/svg>/s, content) do
-                [_, inner] -> String.trim(inner)
-                _ -> ""
+                [_match, inner] -> String.trim(inner)
+                _no_svg -> ""
               end
 
             name = "hero-" <> Path.basename(file, ".svg") <> suffix

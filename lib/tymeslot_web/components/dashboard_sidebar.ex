@@ -237,8 +237,10 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     """
   end
 
+  @spec close_sidebar_js() :: Phoenix.LiveView.JS.t()
   def close_sidebar_js do
-    JS.remove_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
+    %JS{}
+    |> JS.remove_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
     |> JS.add_class("hidden", to: "#dashboard-sidebar-overlay")
   end
 
