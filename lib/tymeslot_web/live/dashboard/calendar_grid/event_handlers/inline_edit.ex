@@ -255,6 +255,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     end
   end
 
+  @spec handle_update_event_recurrence(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_event_recurrence(params, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      event ->
+        new_rule = Shared.compose_recurrence_rule(params)
+
+        if new_rule == event.recurrence_rule do
+          {:noreply, socket}
+        else
+          with :ok <- EditWorkflow.assert_owns_event(socket, event),
+               :ok <- Shared.check_edit_rate_limit(socket) do
+            push_recurrence_change(socket, event, new_rule)
+          else
+            {:error, :unauthorized} ->
+              send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+              {:noreply, socket}
+
+            {:error, :rate_limited, _message} ->
+              send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+              {:noreply, socket}
+          end
+        end
+    end
+  end
+
   @spec handle_update_event_calendar(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_event_calendar(params, socket) do
@@ -417,6 +446,41 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
     send(self(), {:flash, {:info, "Changes saved."}})
     {:noreply, socket}
+  end
+
+  # Applies a recurrence-rule change. When the event is already part of a
+  # recurring series, the scope prompt (this / this-and-following / all events)
+  # is shown first and the actual write is deferred to confirmation; otherwise
+  # the rule is written straight away.
+  defp push_recurrence_change(socket, original_event, new_rule) do
+    optimistic_event = %{original_event | recurrence_rule: new_rule}
+
+    updated_events =
+      Enum.map(socket.assigns.events, fn e ->
+        if e.id == original_event.id, do: optimistic_event, else: e
+      end)
+
+    socket =
+      socket
+      |> assign(:selected_event, optimistic_event)
+      |> assign(:events, updated_events)
+      |> Helpers.precompute_derived()
+
+    if original_event.recurring_event_id do
+      prompt = %{
+        kind: :recurrence_rule,
+        event: original_event,
+        optimistic_event: optimistic_event,
+        recurrence_rule: new_rule,
+        original_event: original_event
+      }
+
+      {:noreply, assign(socket, :recurrence_prompt, prompt)}
+    else
+      socket = Updates.update_recurrence_async(socket, original_event, new_rule)
+      send(self(), {:flash, {:info, "Changes saved."}})
+      {:noreply, socket}
+    end
   end
 
   defp push_all_day_change(socket, original_event, optimistic_event) do

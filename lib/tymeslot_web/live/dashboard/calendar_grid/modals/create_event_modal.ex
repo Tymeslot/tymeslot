@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
 
   attr :creating_event, :map, required: true
@@ -100,6 +101,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         myself={@myself}
         event_name="update_create_integration"
       />
+
+      <%!-- Repeat --%>
+      <div class="border-t border-tymeslot-200 pt-3 mt-3">
+        <RecurrenceEditor.recurrence_editor
+          recurrence_rule={@creating_event[:recurrence_rule]}
+          myself={@myself}
+          change_event="update_create_recurrence"
+        />
+      </div>
 
       <%!-- Reminders --%>
       <div class="border-t border-tymeslot-200 pt-3 mt-3">

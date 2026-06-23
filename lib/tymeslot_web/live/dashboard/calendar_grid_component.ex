@@ -256,6 +256,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: InlineEdit.handle_remove_event_reminder(params, socket)
 
   @impl Phoenix.LiveComponent
+  def handle_event("update_event_recurrence", params, socket),
+    do: InlineEdit.handle_update_event_recurrence(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("prev_period", params, socket),
     do: Navigation.handle_prev_period(params, socket)
 
@@ -354,6 +358,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("remove_create_reminder", params, socket),
     do: EventCrud.handle_remove_create_reminder(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_create_recurrence", params, socket),
+    do: EventCrud.handle_update_create_recurrence(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("add_event_attendee", params, socket),

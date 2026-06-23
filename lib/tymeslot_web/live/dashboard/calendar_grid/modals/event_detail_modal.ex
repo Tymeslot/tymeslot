@@ -4,10 +4,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   use TymeslotWeb, :html
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
 
   attr :selected_event, :map, required: true
@@ -337,6 +339,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         </div>
       </div>
 
+      <%!-- Repeat --%>
+      <div :if={@editable} class="mb-3">
+        <RecurrenceEditor.recurrence_editor
+          recurrence_rule={Map.get(@selected_event, :recurrence_rule)}
+          myself={@myself}
+          change_event="update_event_recurrence"
+        />
+      </div>
+      <div
+        :if={!@editable and recurrence_summary(@selected_event) != nil}
+        class="flex items-start gap-3 mb-3"
+      >
+        <.icon name="hero-arrow-path" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
+        <div class="flex-1">
+          <p class="text-token-sm text-tymeslot-600 leading-snug">
+            {recurrence_summary(@selected_event)}
+          </p>
+        </div>
+      </div>
+
       <%!-- Reminders --%>
       <RemindersEditor.reminders_editor
         :if={@editable}
@@ -384,6 +406,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       </div>
     </.modal>
     """
+  end
+
+  # Read-only human-readable summary of an event's recurrence rule, or nil when
+  # the event does not repeat.
+  defp recurrence_summary(event) do
+    case Map.get(event, :recurrence_rule) do
+      rule when is_binary(rule) and rule != "" ->
+        rule |> RRule.parse() |> RecurrenceEditor.summary()
+
+      _none ->
+        nil
+    end
   end
 
   attr :video_integrations, :list, required: true

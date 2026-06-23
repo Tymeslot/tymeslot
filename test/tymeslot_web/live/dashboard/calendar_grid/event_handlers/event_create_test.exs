@@ -70,6 +70,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       assert cached.reminders == [%{method: :popup, minutes_before: 10}]
     end
 
+    test "persists the recurrence rule on the cached event" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      result =
+        build_result(integration,
+          attendees: [],
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=MO,WE"
+        )
+
+      socket = build_socket()
+
+      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, result}, socket)
+
+      {:ok, cached} = CalendarGrid.get_cached_event(integration.id, result.uid)
+      assert cached.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO,WE"
+    end
+
     test "persists video_integration_id and description on the cached event" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, is_active: true)
@@ -164,6 +182,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
     warning = Keyword.get(opts, :warning, nil)
     reauth_required = Keyword.get(opts, :reauth_required, false)
     reminders = Keyword.get(opts, :reminders, [])
+    recurrence_rule = Keyword.get(opts, :recurrence_rule, nil)
 
     base = %{
       uid: "uid-" <> Integer.to_string(System.unique_integer([:positive])),
@@ -172,6 +191,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
         integration_id: integration.id,
         calendar_id: "primary",
         reminders: reminders,
+        recurrence_rule: recurrence_rule,
         video_integration_id: video_integration_id
       },
       start_at: ~U[2026-04-06 09:00:00Z],

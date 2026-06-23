@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   """
 
   alias Tymeslot.Integrations.Calendar.EventTimeFormatter
+  alias Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter
 
   @outlook_tymeslot_property_id "String {00020329-0000-0000-C000-000000000046} Name createdBy"
 
@@ -31,6 +32,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
 
     base
     |> add_reminder(event_data)
+    |> add_recurrence(event_data)
     |> Enum.reject(fn {_k, v} -> is_nil(v) or v == "" end)
     |> Map.new()
   end
@@ -163,6 +165,32 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
 
       _none ->
         Map.put(base, "isReminderOn", false)
+    end
+  end
+
+  # Microsoft Graph requires a structured `recurrence` object (pattern + range)
+  # rather than an RRULE string; the converter builds it from the canonical
+  # `recurrence_rule` field. The range needs the event's start date, derived from
+  # `start_time` (a Date for all-day events, otherwise a DateTime). Omitted when
+  # no rule is present or the start date cannot be determined.
+  defp add_recurrence(base, event_data) do
+    rrule = extract_field(event_data, :recurrence_rule, "recurrence_rule")
+
+    with rrule when is_binary(rrule) and rrule != "" <- rrule,
+         %Date{} = start_date <- recurrence_start_date(event_data),
+         recurrence when is_map(recurrence) <-
+           RecurrenceConverter.rrule_to_outlook(rrule, start_date) do
+      Map.put(base, "recurrence", recurrence)
+    else
+      _none -> base
+    end
+  end
+
+  defp recurrence_start_date(event_data) do
+    case extract_field(event_data, :start_time, "start_time") do
+      %Date{} = date -> date
+      %DateTime{} = dt -> DateTime.to_date(dt)
+      _other -> nil
     end
   end
 end

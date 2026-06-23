@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter
   alias Tymeslot.Timezones
 
   @outlook_tymeslot_property_id "String {00020329-0000-0000-C000-000000000046} Name createdBy"
@@ -133,15 +134,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
 
   defp map_reminders(_other), do: []
 
-  defp map_recurrence_rule(%{"pattern" => pattern, "range" => range}) do
-    type = Map.get(pattern, "type", "")
-    interval = Map.get(pattern, "interval", 1)
-    range_type = Map.get(range, "type", "")
-
-    "FREQ=#{String.upcase(type)};INTERVAL=#{interval};RANGE_TYPE=#{range_type}"
-  end
-
-  defp map_recurrence_rule(_other), do: nil
+  defp map_recurrence_rule(recurrence), do: RecurrenceConverter.outlook_to_rrule(recurrence)
 
   defp parse_timing(%{
          "isAllDay" => true,

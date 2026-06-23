@@ -96,6 +96,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
     run_update_async(socket, event, event_data, cache_row)
   end
 
+  @doc """
+  Pushes a recurrence-rule change to the provider.
+
+  The `recurrence_rule` is the canonical RRULE string (or `nil` to clear the
+  rule). `recurrence_scope` (`"this"`, `"following"`, `"all"`) is forwarded when
+  the edit applies to an existing recurring series, so the provider knows which
+  occurrences the rule change affects. The provider mappers serialise the rule
+  into Google's `recurrence` list, Outlook's pattern/range object, or a CalDAV
+  RRULE line.
+  """
+  @spec update_recurrence_async(Phoenix.LiveView.Socket.t(), map(), String.t() | nil, keyword()) ::
+          Phoenix.LiveView.Socket.t()
+  def update_recurrence_async(socket, event, recurrence_rule, opts \\ []) do
+    recurrence_scope = Keyword.get(opts, :recurrence_scope)
+
+    event_data =
+      event
+      |> base_timing_event_data()
+      |> Map.put(:recurrence_rule, recurrence_rule)
+      |> maybe_put_scope(recurrence_scope)
+
+    cache_row = build_cache_row(event, %{recurrence_rule: recurrence_rule})
+
+    run_update_async(socket, event, event_data, cache_row)
+  end
+
+  defp maybe_put_scope(event_data, nil), do: event_data
+  defp maybe_put_scope(event_data, scope), do: Map.put(event_data, :recurrence_scope, scope)
+
   @spec update_attendees_async(Phoenix.LiveView.Socket.t(), map(), [map()]) ::
           Phoenix.LiveView.Socket.t()
   def update_attendees_async(socket, event, attendees) do
@@ -247,6 +276,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
       description: event.description,
       attendees: event.attendees || [],
       reminders: event.reminders || [],
+      recurrence_rule: event.recurrence_rule,
       status: event.status,
       provider_metadata: event.provider_metadata,
       synced_at: DateTime.utc_now(:microsecond)

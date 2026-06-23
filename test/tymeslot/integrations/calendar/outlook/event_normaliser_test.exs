@@ -161,17 +161,34 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliserTest do
       end
     end
 
-    test "maps recurrence pattern" do
+    test "maps recurrence pattern to a real RRULE string" do
       raw =
         build_raw_event(%{
           "recurrence" => %{
             "pattern" => %{"type" => "daily", "interval" => 2},
-            "range" => %{"type" => "endDate"}
+            "range" => %{"type" => "endDate", "endDate" => "2026-12-31"}
           }
         })
 
       assert {:ok, [event]} = EventNormaliser.normalise_events([raw], @context)
-      assert event.recurrence_rule == "FREQ=DAILY;INTERVAL=2;RANGE_TYPE=endDate"
+      assert event.recurrence_rule == "FREQ=DAILY;INTERVAL=2;UNTIL=20261231T235959Z"
+    end
+
+    test "maps a weekly recurrence pattern with daysOfWeek" do
+      raw =
+        build_raw_event(%{
+          "recurrence" => %{
+            "pattern" => %{
+              "type" => "weekly",
+              "interval" => 1,
+              "daysOfWeek" => ["monday", "wednesday"]
+            },
+            "range" => %{"type" => "noEnd"}
+          }
+        })
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events([raw], @context)
+      assert event.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO,WE"
     end
 
     test "invalid event is skipped with warning and admin alert" do

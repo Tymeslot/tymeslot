@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
         attendees: [],
         attendee_input: "",
         reminders: [],
+        recurrence_rule: nil,
         video_integration_id: nil
       }
 
@@ -148,6 +149,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
           :error ->
             {:noreply, socket}
         end
+    end
+  end
+
+  @spec handle_update_create_recurrence(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_recurrence(params, socket) do
+    case socket.assigns.creating_event do
+      nil ->
+        {:noreply, socket}
+
+      creating ->
+        rule = Shared.compose_recurrence_rule(params)
+        {:noreply, assign(socket, :creating_event, Map.put(creating, :recurrence_rule, rule))}
     end
   end
 

@@ -719,6 +719,88 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
     end
   end
 
+  describe "event recurrence editing" do
+    setup %{user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      today = Date.utc_today()
+
+      event =
+        insert_event(integration, %{
+          summary: "Standup",
+          start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(today, ~T[10:15:00], "Etc/UTC"),
+          all_day: false
+        })
+
+      {:ok, integration: integration, event: event}
+    end
+
+    test "renders the recurrence editor in the editable detail modal", %{
+      conn: conn,
+      event: event
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      assert html =~ "Repeat"
+      assert html =~ "Does not repeat"
+    end
+
+    test "setting a weekly repeat shows the summary (optimistic update)", %{
+      conn: conn,
+      event: event
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("update_event_recurrence", %{
+          "freq" => "weekly",
+          "interval" => "1",
+          "by_day" => ["mo", "we"],
+          "end_type" => "never"
+        })
+
+      assert html =~ "Repeats weekly on Mon, Wed"
+    end
+
+    test "editing the rule of a recurring series opens the scope prompt", %{
+      conn: conn,
+      integration: integration
+    } do
+      today = Date.utc_today()
+
+      recurring =
+        insert_event(integration, %{
+          summary: "Recurring standup",
+          start_at: DateTime.new!(today, ~T[09:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(today, ~T[09:15:00], "Etc/UTC"),
+          all_day: false,
+          recurrence_rule: "FREQ=DAILY",
+          recurring_event_id: "series-1"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{recurring.id}-']") |> render_click()
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("update_event_recurrence", %{
+          "freq" => "weekly",
+          "interval" => "1",
+          "by_day" => ["mo"],
+          "end_type" => "never"
+        })
+
+      # The recurrence-scope prompt (this / this-and-following / all events) gates
+      # the change rather than writing immediately.
+      assert html =~ "confirm_recurrence_scope"
+    end
+  end
+
   defp insert_event(integration, attrs) do
     insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end

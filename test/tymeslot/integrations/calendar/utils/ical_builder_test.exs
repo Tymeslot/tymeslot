@@ -387,6 +387,48 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
 
       refute String.contains?(ical, "BEGIN:VALARM")
     end
+
+    # Recurrence rules are synced via the CalDAV write path, which goes through
+    # build_simple_event/2, so the RRULE line must be emitted from the canonical
+    # `recurrence_rule` field.
+    test "emits an RRULE line for the recurrence_rule field" do
+      event_data = %{
+        summary: "Standup",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 10:15:00Z],
+        recurrence_rule: "FREQ=WEEKLY;BYDAY=MO,WE,FR"
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-rrule-1", event_data)
+
+      assert String.contains?(ical, "RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR")
+    end
+
+    test "strips an existing RRULE: prefix so it is not doubled" do
+      event_data = %{
+        summary: "Standup",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 10:15:00Z],
+        recurrence_rule: "RRULE:FREQ=DAILY"
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-rrule-2", event_data)
+
+      assert String.contains?(ical, "RRULE:FREQ=DAILY")
+      refute String.contains?(ical, "RRULE:RRULE:")
+    end
+
+    test "emits no RRULE line when recurrence_rule is absent" do
+      event_data = %{
+        summary: "Once",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z]
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-rrule-3", event_data)
+
+      refute String.contains?(ical, "RRULE:")
+    end
   end
 
   describe "build_event/1 — reminder VALARM shape" do

@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     |> add_google_event_id(event_data)
     |> maybe_add_conference_data(event_data)
     |> maybe_add_reminders(event_data)
+    |> maybe_add_recurrence(event_data)
     |> remove_nil_values()
   end
 
@@ -181,6 +182,22 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     method = reminder[:method] || reminder["method"]
     minutes = reminder[:minutes_before] || reminder["minutes_before"]
     %{"method" => google_reminder_method(method), "minutes" => minutes}
+  end
+
+  # Google expects `recurrence` as a list of RRULE strings, each prefixed with
+  # `RRULE:`. The canonical `recurrence_rule` field may or may not already carry
+  # that prefix (the Google normaliser keeps it on read; CalDAV stores it bare),
+  # so any existing prefix is stripped before re-adding exactly one. Omitted
+  # entirely when no rule is present.
+  defp maybe_add_recurrence(base_data, event_data) do
+    case get_field_value(event_data, :recurrence_rule) do
+      rrule when is_binary(rrule) and rrule != "" ->
+        bare = String.replace_prefix(rrule, "RRULE:", "")
+        Map.put(base_data, "recurrence", ["RRULE:#{bare}"])
+
+      _none ->
+        base_data
+    end
   end
 
   defp google_reminder_method(:email), do: "email"

@@ -15,19 +15,34 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
 
       prompt ->
         socket = assign(socket, :recurrence_prompt, nil)
-
-        socket =
-          Updates.update_event_async(
-            socket,
-            prompt.event,
-            prompt.optimistic_event,
-            prompt.new_start,
-            prompt.new_end,
-            recurrence_scope: scope
-          )
-
-        {:noreply, socket}
+        {:noreply, replay_with_scope(prompt, scope, socket)}
     end
+  end
+
+  # The scope prompt gates two kinds of edit on a recurring series: a timing
+  # change (the default, original behaviour) and a recurrence-rule change.
+  defp replay_with_scope(%{kind: :recurrence_rule} = prompt, scope, socket) do
+    socket =
+      Updates.update_recurrence_async(
+        socket,
+        prompt.event,
+        prompt.recurrence_rule,
+        recurrence_scope: scope
+      )
+
+    send(self(), {:flash, {:info, "Changes saved."}})
+    socket
+  end
+
+  defp replay_with_scope(prompt, scope, socket) do
+    Updates.update_event_async(
+      socket,
+      prompt.event,
+      prompt.optimistic_event,
+      prompt.new_start,
+      prompt.new_end,
+      recurrence_scope: scope
+    )
   end
 
   @spec handle_cancel_recurrence_prompt(map(), Phoenix.LiveView.Socket.t()) ::

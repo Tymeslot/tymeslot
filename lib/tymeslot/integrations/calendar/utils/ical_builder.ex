@@ -330,8 +330,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp build_class(_event), do: nil
 
+  # The canonical `recurrence_rule` may arrive bare (CalDAV/Outlook) or with a
+  # leading `RRULE:` (Google's normaliser keeps the prefix on read); strip any
+  # existing prefix so exactly one is emitted.
   defp build_rrule_line(%{recurrence_rule: rrule}) when is_binary(rrule) and rrule != "",
-    do: "RRULE:#{rrule}"
+    do: "RRULE:#{String.replace_prefix(rrule, "RRULE:", "")}"
 
   defp build_rrule_line(_event), do: nil
 
