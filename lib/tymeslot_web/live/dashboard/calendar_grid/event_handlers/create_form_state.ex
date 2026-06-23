@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   @spec handle_show_create_form(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_show_create_form(params, socket) do
+  def handle_show_create_form(%{"start-hour" => _start_hour} = params, socket) do
     with {:ok, start_hour} <- Shared.parse_int(params["start-hour"]),
          {:ok, start_minute} <- Shared.parse_int(params["start-minute"]),
          {:ok, end_hour} <- Shared.parse_int(params["end-hour"]),
@@ -31,6 +31,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     else
       :error -> {:noreply, socket}
     end
+  end
+
+  # No time params (e.g. the `c` keyboard shortcut): open the create modal at the
+  # next whole hour from "now" in the user's timezone, for a one-hour slot.
+  def handle_show_create_form(_params, socket) do
+    now = DateTime.shift_zone!(DateTime.utc_now(), socket.assigns.user_timezone)
+    start_hour = if now.minute == 0, do: now.hour, else: rem(now.hour + 1, 24)
+    today = Date.to_iso8601(DateTime.to_date(now))
+
+    creating =
+      base_creating(socket, %{
+        date: today,
+        end_date: today,
+        start_hour: start_hour,
+        start_minute: 0,
+        end_hour: rem(start_hour + 1, 24),
+        end_minute: 0
+      })
+
+    {:noreply, assign(socket, :creating_event, creating)}
   end
 
   @doc """

@@ -86,6 +86,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           />
           <.refresh_button syncing={@syncing} myself={@myself} />
           <button
+            phx-click="toggle_shortcuts_help"
+            phx-target={@myself}
+            class="hidden md:flex min-w-[40px] min-h-[40px] items-center justify-center text-token-sm font-semibold text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts (?)"
+          >
+            ?
+          </button>
+          <button
             phx-click="toggle_settings"
             phx-target={@myself}
             class="min-w-[40px] min-h-[40px] flex items-center justify-center text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
@@ -225,6 +234,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           <.icon name="hero-plus-circle-mini" class="w-4 h-4" />
         </span>
         <input
+          id="calendar-quick-add-input"
           type="text"
           name="text"
           value=""

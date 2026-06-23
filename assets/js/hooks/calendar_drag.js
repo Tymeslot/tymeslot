@@ -566,14 +566,27 @@ export const CalendarMobile = {
         return
       }
 
+      // `?` (shift + /) toggles the shortcuts help overlay. This is the one
+      // shift-combination we honour, so handle it before the modifier guard in
+      // _shouldIgnoreKey rejects it. We still respect focus/modal context.
+      if (e.key === '?' && !this._inEditableOrModalContext(e)) {
+        this.pushEventTo(this.el, 'toggle_shortcuts_help', {})
+        e.preventDefault()
+        return
+      }
+
       if (this._shouldIgnoreKey(e)) return
 
       let handled = true
       switch (e.key) {
         case 'ArrowLeft':
+        case 'p':
+        case 'P':
           this.pushEventTo(this.el, 'prev_period', {})
           break
         case 'ArrowRight':
+        case 'n':
+        case 'N':
           this.pushEventTo(this.el, 'next_period', {})
           break
         case 't':
@@ -581,17 +594,31 @@ export const CalendarMobile = {
           this.pushEventTo(this.el, 'today', {})
           document.getElementById('calendar-drag-zone')?.dispatchEvent(new CustomEvent('calendar:scroll-to-current'))
           break
+        case 'c':
+        case 'C':
+          this.pushEventTo(this.el, 'show_create_form', {})
+          break
         case 'd':
         case 'D':
+        case '1':
           this.pushEventTo(this.el, 'set_view', { view: 'day' })
           break
         case 'w':
         case 'W':
+        case '2':
           this.pushEventTo(this.el, 'set_view', { view: 'week' })
           break
         case 'm':
         case 'M':
+        case '3':
           this.pushEventTo(this.el, 'set_view', { view: 'month' })
+          break
+        case '4':
+          // Agenda view is not yet wired server-side; this no-ops safely until it lands.
+          this.pushEventTo(this.el, 'set_view', { view: 'agenda' })
+          break
+        case '/':
+          this._focusSearch()
           break
         default:
           handled = false
@@ -603,14 +630,29 @@ export const CalendarMobile = {
 
   _shouldIgnoreKey(e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return true
+    return this._inEditableOrModalContext(e)
+  },
+
+  // True when focus is in a text-entry field or a modal is open — contexts where
+  // single-key shortcuts must not fire. Unlike _shouldIgnoreKey this ignores the
+  // shift modifier, so the `?` overlay toggle can still pass through.
+  _inEditableOrModalContext(e) {
     const t = e.target
-    if (!t) return false
-    const tag = t.tagName
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true
-    if (t.isContentEditable) return true
-    // Ignore keys while a modal is open.
+    if (t) {
+      const tag = t.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true
+      if (t.isContentEditable) return true
+    }
     if (document.querySelector('[role="dialog"][aria-modal="true"]')) return true
     return false
+  },
+
+  // `/` focuses the search input when present, falling back to the quick-add
+  // input. Prevent default in the caller so the slash isn't typed.
+  _focusSearch() {
+    const el = document.getElementById('calendar-search-input')
+      || document.getElementById('calendar-quick-add-input')
+    el?.focus()
   },
 
   destroyed() {

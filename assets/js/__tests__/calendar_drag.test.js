@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { snapToGrid, minutesFromY, pointerXY, CalendarCreate } from '../hooks/calendar_drag';
+import { snapToGrid, minutesFromY, pointerXY, CalendarCreate, CalendarMobile } from '../hooks/calendar_drag';
 
 const HOUR_HEIGHT_PX = 64;
 
@@ -245,5 +245,143 @@ describe('CalendarCreate: drag-to-create span', () => {
     document.dispatchEvent(mouse('mouseup', 10 * HOUR_HEIGHT_PX));
 
     expect(hook.pushEventTo).not.toHaveBeenCalled();
+  });
+});
+
+describe('CalendarMobile: keyboard shortcuts', () => {
+  // The global keydown handler turns single keystrokes into LiveView events. The
+  // tests drive real keydown events through jsdom and assert the right
+  // pushEventTo call (event name + payload), plus that the focus/modal guards
+  // still suppress shortcuts.
+
+  let hook;
+  let el;
+
+  function key(k, opts = {}) {
+    return new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...opts });
+  }
+
+  // Returns the calls made *after* the mount-time responsive-view push (if any).
+  function shortcutCalls() {
+    return hook.pushEventTo.mock.calls.filter(([, event]) => event !== 'set_responsive_view');
+  }
+
+  beforeEach(() => {
+    el = document.createElement('div');
+    el.id = 'calendar-grid';
+    document.body.appendChild(el);
+
+    hook = Object.assign(Object.create(CalendarMobile), {
+      el,
+      pushEventTo: vi.fn(),
+    });
+    hook.mounted();
+  });
+
+  afterEach(() => {
+    hook.destroyed();
+    el.remove();
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  test.each([
+    ['c', 'show_create_form', {}],
+    ['n', 'next_period', {}],
+    ['p', 'prev_period', {}],
+    ['1', 'set_view', { view: 'day' }],
+    ['2', 'set_view', { view: 'week' }],
+    ['3', 'set_view', { view: 'month' }],
+    ['4', 'set_view', { view: 'agenda' }],
+  ])('key "%s" dispatches %s', (k, event, payload) => {
+    document.dispatchEvent(key(k));
+
+    expect(shortcutCalls()).toHaveLength(1);
+    const [target, name, args] = shortcutCalls()[0];
+    expect(target).toBe(el);
+    expect(name).toBe(event);
+    expect(args).toEqual(payload);
+  });
+
+  test('existing d/w/m aliases still set the view', () => {
+    document.dispatchEvent(key('d'));
+    document.dispatchEvent(key('w'));
+    document.dispatchEvent(key('m'));
+
+    expect(shortcutCalls().map(([, , args]) => args.view)).toEqual(['day', 'week', 'month']);
+  });
+
+  test('"?" (shift+/) toggles the shortcuts help overlay', () => {
+    document.dispatchEvent(key('?', { shiftKey: true }));
+
+    expect(shortcutCalls()).toHaveLength(1);
+    expect(shortcutCalls()[0][1]).toBe('toggle_shortcuts_help');
+  });
+
+  test('"/" focuses the quick-add input fallback and is prevented', () => {
+    const input = document.createElement('input');
+    input.id = 'calendar-quick-add-input';
+    document.body.appendChild(input);
+    const focusSpy = vi.spyOn(input, 'focus');
+
+    const e = key('/');
+    document.dispatchEvent(e);
+
+    expect(focusSpy).toHaveBeenCalled();
+    expect(e.defaultPrevented).toBe(true);
+    // Focusing must not push a server event.
+    expect(shortcutCalls()).toHaveLength(0);
+  });
+
+  test('"/" prefers a dedicated search input when present', () => {
+    const search = document.createElement('input');
+    search.id = 'calendar-search-input';
+    const quick = document.createElement('input');
+    quick.id = 'calendar-quick-add-input';
+    document.body.append(search, quick);
+    const searchSpy = vi.spyOn(search, 'focus');
+    const quickSpy = vi.spyOn(quick, 'focus');
+
+    document.dispatchEvent(key('/'));
+
+    expect(searchSpy).toHaveBeenCalled();
+    expect(quickSpy).not.toHaveBeenCalled();
+  });
+
+  test('suppresses shortcuts while typing in an input', () => {
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+
+    input.dispatchEvent(key('c'));
+
+    expect(shortcutCalls()).toHaveLength(0);
+  });
+
+  test('suppresses "?" while typing in an input', () => {
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+
+    input.dispatchEvent(key('?', { shiftKey: true }));
+
+    expect(shortcutCalls()).toHaveLength(0);
+  });
+
+  test('suppresses shortcuts when modifier keys are held', () => {
+    document.dispatchEvent(key('c', { metaKey: true }));
+    document.dispatchEvent(key('n', { ctrlKey: true }));
+
+    expect(shortcutCalls()).toHaveLength(0);
+  });
+
+  test('suppresses shortcuts while a modal dialog is open', () => {
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    document.body.appendChild(dialog);
+
+    document.dispatchEvent(key('c'));
+    document.dispatchEvent(key('?', { shiftKey: true }));
+
+    expect(shortcutCalls()).toHaveLength(0);
   });
 });
