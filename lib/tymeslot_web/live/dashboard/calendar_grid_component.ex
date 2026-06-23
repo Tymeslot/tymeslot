@@ -45,10 +45,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   alias Tymeslot.Meetings
   alias TymeslotWeb.Components.Icons.IconComponents
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility
   alias TymeslotWeb.Dashboard.CalendarGrid.GridViews
@@ -327,35 +329,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("add_event_attendee", params, socket),
-    do: InlineEdit.handle_add_event_attendee(params, socket)
+    do: AttendeeManagement.handle_add_event_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("request_remove_attendee", params, socket),
-    do: InlineEdit.handle_request_remove_attendee(params, socket)
+    do: AttendeeManagement.handle_request_remove_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("confirm_remove_attendee", params, socket),
-    do: InlineEdit.handle_confirm_remove_attendee(params, socket)
+    do: AttendeeManagement.handle_confirm_remove_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("cancel_remove_attendee", params, socket),
-    do: InlineEdit.handle_cancel_remove_attendee(params, socket)
+    do: AttendeeManagement.handle_cancel_remove_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("remove_pending_attendee", params, socket),
-    do: InlineEdit.handle_remove_pending_attendee(params, socket)
+    do: AttendeeManagement.handle_remove_pending_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("discard_pending_attendees", params, socket),
-    do: InlineEdit.handle_discard_pending_attendees(params, socket)
+    do: AttendeeManagement.handle_discard_pending_attendees(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("cancel_discard_attendees", params, socket),
-    do: InlineEdit.handle_cancel_discard_attendees(params, socket)
+    do: AttendeeManagement.handle_cancel_discard_attendees(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("update_attendee_input", params, socket),
-    do: InlineEdit.handle_update_attendee_input(params, socket)
+    do: AttendeeManagement.handle_update_attendee_input(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("save_event", params, socket),
@@ -423,15 +425,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("notify_prompt_confirm", params, socket),
-    do: InlineEdit.handle_notify_prompt_confirm(params, socket)
+    do: NotificationFlows.handle_notify_prompt_confirm(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("notify_prompt_cancel", params, socket),
-    do: InlineEdit.handle_notify_prompt_cancel(params, socket)
+    do: NotificationFlows.handle_notify_prompt_cancel(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("cancel_pending_notification", params, socket),
-    do: InlineEdit.handle_cancel_pending_notification(params, socket)
+    do: NotificationFlows.handle_cancel_pending_notification(params, socket)
 
   # --- Render ---
 

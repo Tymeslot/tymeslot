@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution
 
   describe "handle_create_result/2" do
     test "flashes 'Event created.' when there are no attendees" do
@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       result = build_result(integration, attendees: [])
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       assert updated_socket.assigns.flash["info"] == "Event created."
     end
@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       result = build_result(integration, attendees: [%{email: "a@x.com"}])
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       assert updated_socket.assigns.flash["info"] ==
                "Event created. Attendees have been invited."
@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
 
       socket = build_socket()
 
-      {:noreply, _socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       {:ok, cached} = CalendarGrid.get_cached_event(integration.id, result.uid)
       assert cached.description =~ "https://meet.example.com/abc"
@@ -88,7 +88,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
 
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       assert updated_socket.assigns.flash["info"] == "Event created."
       assert updated_socket.assigns.flash["warning"] =~ "Meet link"
@@ -101,7 +101,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       result = build_result(integration, attendees: [])
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       assert updated_socket.assigns.flash["info"] == "Event created."
       assert is_nil(updated_socket.assigns.flash["warning"])
@@ -116,7 +116,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       result = build_result(integration, attendees: [], reauth_required: true)
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       # The event still saved, so the success info flash is present…
       assert updated_socket.assigns.flash["info"] == "Event created."
@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       result = build_result(integration, attendees: [], reauth_required: false)
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       assert is_nil(updated_socket.assigns.flash["error"])
     end

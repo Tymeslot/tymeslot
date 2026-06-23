@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
 
   import Tymeslot.Factory
 
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution
 
   defp build_socket(opts \\ []) do
     user = insert(:user)
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
       socket =
         build_socket(creating_overrides: %{integration_id: 999_999})
 
-      {:noreply, _socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
 
       assert_received {:flash, {:error, "Invalid calendar selected"}}
     end
@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
     test "flashes when start date cannot be parsed" do
       socket = build_socket(creating_overrides: %{date: "not-a-date"})
 
-      {:noreply, _socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
 
       assert_received {:flash, {:error, "Invalid date"}}
     end
@@ -81,7 +81,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
     test "flashes when end date cannot be parsed" do
       socket = build_socket(creating_overrides: %{end_date: "13-04-2026"})
 
-      {:noreply, _socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
 
       assert_received {:flash, {:error, "Invalid date"}}
     end
@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
           }
         )
 
-      {:noreply, _socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
 
       assert_received {:flash, {:error, "End time must be after start time"}}
     end
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
           }
         )
 
-      {:noreply, _socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
 
       assert_received {:flash, {:error, "End time must be after start time"}}
     end
@@ -125,7 +125,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
     test "schedules the create-event execute message when validation passes" do
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_save_event(%{}, socket)
 
       assert updated_socket.assigns.saving_event == true
       assert_received {:execute_create_event, payload}
@@ -141,7 +141,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
         assigns: %{__changed__: %{}, flash: %{}, creating_event: nil}
       }
 
-      {:noreply, returned_socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, returned_socket} = CreateExecution.handle_save_event(%{}, socket)
       assert returned_socket == socket
 
       refute_received {:flash, _}
