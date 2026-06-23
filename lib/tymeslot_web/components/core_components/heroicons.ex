@@ -18,9 +18,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Heroicons do
   just the icons actually rendered.
   """
 
-  # heroicons is declared `app: false, compile: false` in mix.exs, so it is just
-  # SVG files under deps/heroicons/optimized — resolve relative to this module.
-  @optimized_dir Path.expand("../../../../deps/heroicons/optimized", __DIR__)
+  # The SVGs are vendored into priv (see priv/heroicons/README.md) rather than
+  # pulled from a git dep: a dep checkout was only reliably present in the main
+  # checkout, so fresh worktrees compiled an empty map and silently rendered
+  # blank tiles. priv is resolved relative to this module so the read is valid
+  # whenever the source is compiled (this all happens at compile time — the map
+  # is baked into the BEAM, the path is never consulted at runtime).
+  @optimized_dir Path.expand("../../../../priv/heroicons", __DIR__)
 
   # {name suffix, sub-directory, outline?, intrinsic px} — mirrors the four
   # styles the old plugin produced (default / -solid / -mini / -micro).
@@ -37,7 +41,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Heroicons do
               file <- File.ls!(dir),
               String.ends_with?(file, ".svg"),
               into: %{} do
-            content = dir |> Path.join(file) |> File.read!()
+            path = Path.join(dir, file)
+            @external_resource path
+            content = File.read!(path)
 
             view_box =
               case Regex.run(~r/viewBox="([^"]*)"/, content) do
@@ -54,6 +60,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Heroicons do
             name = "hero-" <> Path.basename(file, ".svg") <> suffix
             {name, %{view_box: view_box, body: body, outline?: outline?, size: size}}
           end)
+
+  # Fail the build loudly rather than silently shipping blank icon tiles — the
+  # exact failure mode that motivated vendoring the SVGs into priv.
+  if @icons == %{} do
+    raise "No heroicons compiled from #{@optimized_dir}. " <>
+            "Expected vendored SVGs (run `mix tymeslot.refresh_heroicons`); see priv/heroicons/README.md."
+  end
 
   @doc """
   Looks up a heroicon by its `hero-*` name.
