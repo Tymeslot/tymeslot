@@ -126,6 +126,14 @@
     const isFirstTime = !hasPosted;
     hasPosted = true;
     try {
+      // PUBLIC EMBED PROTOCOL — do not rename without updating consumers.
+      // The "tymeslot-resize" message type is a stable public contract:
+      //   - embed.js (this repo) keys off it to size every embed, and
+      //   - the official WordPress plugin uses the first such message as the
+      //     signal that framing succeeded (its "is this domain allow-listed?"
+      //     check). See that plugin's admin/js/admin.js (TS_READY_MESSAGE).
+      // Renaming it breaks every embed in the wild and the WP integration, so
+      // treat it as versioned API, not an internal detail.
       window.parent.postMessage(
         { type: "tymeslot-resize", height: height, isFirstTime: isFirstTime },
         targetOrigin
