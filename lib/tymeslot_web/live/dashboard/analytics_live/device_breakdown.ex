@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.DeviceBreakdown do
   use TymeslotWeb, :html
 
   attr :devices, :list, required: true
+  attr :loading?, :boolean, default: false
 
   @spec breakdown(map()) :: Phoenix.LiveView.Rendered.t()
   def breakdown(assigns) do
@@ -24,10 +25,14 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.DeviceBreakdown do
       <div class="mb-4 text-token-sm font-black uppercase tracking-widest text-tymeslot-400">
         Devices
       </div>
-      <div :if={@rows == []} class="text-token-sm text-tymeslot-400">
+      <div :if={@loading?} class="space-y-3" aria-hidden="true">
+        <div :for={i <- 1..3} class="h-7 w-full animate-pulse rounded-token-md bg-tymeslot-100" id={"device-skeleton-#{i}"}>
+        </div>
+      </div>
+      <div :if={!@loading? and @rows == []} class="text-token-sm text-tymeslot-400">
         No traffic in this period yet.
       </div>
-      <div :if={@rows != []} class="space-y-3">
+      <div :if={!@loading? and @rows != []} class="space-y-3">
         <div :for={row <- @rows}>
           <div class="mb-1 flex items-center justify-between text-token-sm">
             <span class="font-semibold text-tymeslot-900">{row.label}</span>

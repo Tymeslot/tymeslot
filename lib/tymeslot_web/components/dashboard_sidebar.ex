@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   attr :integration_status, :map, default: %{}
   attr :profile, :any, default: nil
   attr :automations_allowed, :boolean, default: true
+  attr :analytics_allowed, :boolean, default: true
   attr :payments_allowed, :boolean, default: false
   attr :sidebar_extensions, :list, default: []
 
@@ -112,9 +113,11 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 patch={~p"/dashboard/analytics"}
                 current={@current_action}
                 action={:analytics}
+                locked={!@analytics_allowed}
               >
                 <IconComponents.icon name={:bar_chart} class="w-5 h-5" />
                 <span>Analytics</span>
+                <.pro_badge :if={!@analytics_allowed} data-testid="analytics-pro-badge" />
               </.nav_link>
 
             </div>

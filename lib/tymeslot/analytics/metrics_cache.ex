@@ -37,6 +37,16 @@ defmodule Tymeslot.Analytics.MetricsCache do
   end
 
   @doc """
+  Drops the cached metrics for one organizer/window so the next `fetch/3`
+  recomputes from the database. Backs the dashboard's manual "Refresh" action,
+  which must reflect just-recorded visits without waiting out the TTL.
+  """
+  @spec invalidate(integer(), String.t()) :: true
+  def invalidate(user_id, range) when is_integer(user_id) and is_binary(range) do
+    invalidate(key(user_id, range))
+  end
+
+  @doc """
   Cache key for an organizer's metrics over a named range (e.g. `"30d"`).
   """
   @spec key(integer(), String.t()) :: {:analytics_metrics, integer(), String.t()}

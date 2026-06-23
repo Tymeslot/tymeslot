@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   attr :current_action, :atom, required: true
   attr :integration_status, :map, default: %{}
   attr :automations_allowed, :boolean, default: true
+  attr :analytics_allowed, :boolean, default: true
   attr :payments_allowed, :boolean, default: false
   attr :full_width, :boolean, default: false
   attr :sidebar_extensions, :list, default: []
@@ -61,6 +62,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
             integration_status={@integration_status}
             profile={@profile}
             automations_allowed={@automations_allowed}
+            analytics_allowed={@analytics_allowed}
             payments_allowed={@payments_allowed}
             sidebar_extensions={@sidebar_extensions}
           />

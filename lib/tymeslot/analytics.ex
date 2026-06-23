@@ -91,6 +91,17 @@ defmodule Tymeslot.Analytics do
   defp outcome_tag({:ok, tag}) when is_atom(tag), do: tag
   defp outcome_tag({:error, _changeset}), do: :error
 
+  @doc """
+  The date booking analytics began collecting for this installation, or `nil`.
+
+  Read from `:booking_analytics_launch_date`. When set, the dashboard explains
+  that windows reaching before this date are empty because no data existed yet
+  — without it, a freshly launched installation looks broken rather than new.
+  Defaults to `nil` in Core (no note); the managed SaaS sets the go-live date.
+  """
+  @spec launch_date() :: Date.t() | nil
+  def launch_date, do: Application.get_env(:tymeslot, :booking_analytics_launch_date)
+
   # Secondary per-IP gate: 300 events per minute regardless of fingerprint.
   # Guards against clients that cycle user-agents to defeat fingerprinting.
   @ip_rate_window_ms 60_000

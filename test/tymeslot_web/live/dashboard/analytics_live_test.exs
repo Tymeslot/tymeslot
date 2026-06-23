@@ -125,6 +125,74 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLiveTest do
     end
   end
 
+  describe "when analytics is not allowed on the plan" do
+    setup do
+      original = Application.get_env(:tymeslot, :feature_assigns, [])
+
+      Application.put_env(
+        :tymeslot,
+        :feature_assigns,
+        Keyword.put(original, :analytics_allowed, false)
+      )
+
+      on_exit(fn -> Application.put_env(:tymeslot, :feature_assigns, original) end)
+    end
+
+    test "shows the upgrade placeholder instead of the metrics dashboard", %{
+      conn: conn,
+      user: user
+    } do
+      seed_visit(user, "linkedin", "hash-a")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/analytics")
+
+      # The metrics UI (range selector + refresh) must not render when locked…
+      refute has_element?(view, "button[phx-click='refresh']")
+      refute has_element?(view, "button[phx-value-range='7d']")
+      # …and the sidebar flags Analytics as a Pro feature.
+      assert has_element?(view, "[data-testid='analytics-pro-badge']")
+    end
+  end
+
+  describe "refresh" do
+    test "reflects visits recorded after the initial (cached) load", %{conn: conn, user: user} do
+      seed_visit(user, "linkedin", "hash-a")
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/analytics")
+      refute html =~ "newsletter"
+
+      # A source recorded after the first load is hidden by the 60s metrics cache…
+      seed_visit(user, "newsletter", "hash-b")
+      refute render(view) =~ "newsletter"
+
+      # …until the organizer refreshes, which drops the cache entry and recomputes.
+      html = view |> element("button[phx-click=\"refresh\"]") |> render_click()
+      assert html =~ "newsletter"
+    end
+  end
+
+  describe "collection start notice" do
+    test "explains empty history when the window predates the launch date", %{conn: conn} do
+      launch = Date.utc_today()
+      Application.put_env(:tymeslot, :booking_analytics_launch_date, launch)
+      on_exit(fn -> Application.delete_env(:tymeslot, :booking_analytics_launch_date) end)
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/analytics")
+
+      assert html =~ "Booking analytics started collecting on"
+      assert html =~ Calendar.strftime(launch, "%d %b %Y")
+    end
+
+    test "shows no notice once the window starts after the launch date", %{conn: conn} do
+      Application.put_env(:tymeslot, :booking_analytics_launch_date, ~D[2000-01-01])
+      on_exit(fn -> Application.delete_env(:tymeslot, :booking_analytics_launch_date) end)
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/analytics")
+
+      refute html =~ "Booking analytics started collecting on"
+    end
+  end
+
   describe "empty / zero-data state" do
     test "renders zeroed summary and empty-state messaging with no data", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/analytics")

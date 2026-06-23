@@ -18,30 +18,43 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   alias TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable
   alias TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards
   alias TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart
+  alias TymeslotWeb.Dashboard.ComponentDispatch
 
   @ranges %{"7d" => 7, "30d" => 30, "90d" => 90}
   @default_range "30d"
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
-    if Analytics.enabled?() do
-      {:ok, assign_default_range(socket)}
-    else
-      {:ok,
-       socket
-       |> put_flash(:info, "Booking analytics is not enabled on this installation.")
-       |> push_navigate(to: ~p"/dashboard")}
+    cond do
+      not Analytics.enabled?() ->
+        {:ok,
+         socket
+         |> put_flash(:info, "Booking analytics is not enabled on this installation.")
+         |> push_navigate(to: ~p"/dashboard")}
+
+      # Data is still collected for this organizer (collection is ungated); the
+      # dashboard itself is a paid feature, so a free user sees the upgrade
+      # prompt instead and no metrics are computed. `analytics_allowed` is set
+      # by the feature-assigns hook chain (default `true` in Core; SaaS overrides
+      # it per subscription).
+      not analytics_allowed?(socket) ->
+        {:ok, socket}
+
+      true ->
+        {:ok, assign_default_range(socket)}
     end
   end
 
   @impl Phoenix.LiveView
   def handle_params(_params, _uri, socket) do
-    if connected?(socket) do
+    if connected?(socket) and analytics_allowed?(socket) do
       {:noreply, load_data(socket)}
     else
       {:noreply, socket}
     end
   end
+
+  defp analytics_allowed?(socket), do: Map.get(socket.assigns, :analytics_allowed, true)
 
   @impl Phoenix.LiveView
   def handle_event("set_range", %{"range" => range}, socket) when is_map_key(@ranges, range) do
@@ -54,6 +67,20 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
 
   def handle_event("set_range", _params, socket), do: {:noreply, socket}
 
+  # Metrics are cached for 60s, so a just-recorded visit may not show on a plain
+  # reload. Refresh drops the cache entry and recomputes, giving the organizer an
+  # explicit way to see fresh numbers without waiting out the TTL. The window end
+  # is re-derived to *now* as well, so a visit made after the dashboard was opened
+  # (it would otherwise fall past the mount-time `to`) is included.
+  def handle_event("refresh", _params, %{assigns: %{current_user: user, range: range}} = socket) do
+    MetricsCache.invalidate(user.id, range)
+
+    {:noreply,
+     socket
+     |> assign_window_for(range)
+     |> load_data()}
+  end
+
   @impl Phoenix.LiveView
   def render(assigns) do
     ~H"""
@@ -63,19 +90,49 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
       current_action={:analytics}
       integration_status={@integration_status}
       automations_allowed={@automations_allowed}
+      analytics_allowed={@analytics_allowed}
       sidebar_extensions={@sidebar_extensions}
       unseen_announcements={@unseen_announcements}
     >
-      <div class="space-y-6">
+      <ComponentDispatch.feature_placeholder
+        :if={!@analytics_allowed}
+        section={:analytics}
+        current_user={@current_user}
+        feature_placeholder_components={@feature_placeholder_components}
+      />
+
+      <div :if={@analytics_allowed} class="space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h1 class="text-2xl font-black tracking-tight text-tymeslot-900">
             Analytics
           </h1>
-          <div class="flex gap-2" role="group" aria-label="Date range">
-            <.range_button label="7 days" value="7d" current={@range} />
-            <.range_button label="30 days" value="30d" current={@range} />
-            <.range_button label="90 days" value="90d" current={@range} />
+          <div class="flex items-center gap-2">
+            <div class="flex gap-2" role="group" aria-label="Date range">
+              <.range_button label="7 days" value="7d" current={@range} />
+              <.range_button label="30 days" value="30d" current={@range} />
+              <.range_button label="90 days" value="90d" current={@range} />
+            </div>
+            <button
+              type="button"
+              phx-click="refresh"
+              title="Refresh"
+              aria-label="Refresh analytics"
+              class="rounded-md bg-tymeslot-50 p-2 text-tymeslot-700 transition-colors hover:bg-tymeslot-100"
+            >
+              <.icon name="hero-arrow-path" class="h-4 w-4" />
+            </button>
           </div>
+        </div>
+
+        <div
+          :if={@partial_window?}
+          class="flex items-start gap-2 rounded-token-lg bg-turquoise-50 px-4 py-3 text-token-sm text-tymeslot-700"
+        >
+          <.icon name="hero-information-circle" class="mt-0.5 h-5 w-5 shrink-0 text-turquoise-500" />
+          <span>
+            Booking analytics started collecting on {format_launch_date(@launch_date)}. Dates before
+            then show no data, so longer ranges will look sparse until more history builds up.
+          </span>
         </div>
 
         <SummaryCards.cards
@@ -83,6 +140,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           unique_visitors={@unique_visitors}
           bookings={@bookings}
           converting_visitors={@converting_visitors}
+          loading?={!@loaded?}
         />
 
         <p class="text-token-xs leading-relaxed text-tymeslot-400">
@@ -104,11 +162,12 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           from={@from}
           to={@to}
           time_zone={@time_zone}
+          loading?={!@loaded?}
         />
 
-        <DeviceBreakdown.breakdown devices={@devices} />
+        <DeviceBreakdown.breakdown devices={@devices} loading?={!@loaded?} />
 
-        <SourcesTable.table sources={@sources} />
+        <SourcesTable.table sources={@sources} loading?={!@loaded?} />
       </div>
     </DashboardLayout.dashboard_layout>
     """
@@ -143,6 +202,10 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
     |> assign(:range, @default_range)
     |> assign_window_for(@default_range)
     |> assign(
+      # Placeholder values for the dead render and the connected mount before
+      # `handle_params` loads real data. `loaded?` gates the skeletons so these
+      # zeros are never shown as numbers — see the component `loading?` attrs.
+      loaded?: false,
       visits: 0,
       unique_visitors: 0,
       bookings: 0,
@@ -157,8 +220,28 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
     days = Map.get(@ranges, range, @ranges[@default_range])
     now = DateTime.utc_now()
     from = DateTime.add(now, -days * 86_400, :second)
-    assign(socket, from: from, to: now, time_zone: organizer_time_zone(socket))
+
+    socket
+    |> assign(from: from, to: now, time_zone: organizer_time_zone(socket))
+    |> assign_collection_notice(from)
   end
+
+  # When the window reaches back before booking analytics began collecting, the
+  # earlier days are necessarily empty — explain that rather than letting a
+  # freshly launched installation look broken. Driven by the configured launch
+  # date (`Analytics.launch_date/0`); absent that, no notice is shown.
+  defp assign_collection_notice(socket, from) do
+    launch_date = Analytics.launch_date()
+    from_date = DateTime.to_date(from)
+
+    partial_window? =
+      match?(%Date{}, launch_date) and Date.compare(from_date, launch_date) == :lt
+
+    assign(socket, launch_date: launch_date, partial_window?: partial_window?)
+  end
+
+  defp format_launch_date(%Date{} = date), do: Calendar.strftime(date, "%d %b %Y")
+  defp format_launch_date(_other), do: ""
 
   defp organizer_time_zone(socket) do
     case socket.assigns do
@@ -187,6 +270,8 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
         }
       end)
 
-    assign(socket, Map.to_list(data))
+    socket
+    |> assign(Map.to_list(data))
+    |> assign(:loaded?, true)
   end
 end
