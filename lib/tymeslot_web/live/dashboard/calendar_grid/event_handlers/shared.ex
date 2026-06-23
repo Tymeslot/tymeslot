@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   @moduledoc "Shared helpers used across EventHandlers submodules."
 
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Security.RateLimiter
 
@@ -24,6 +25,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   end
 
   def parse_int(_not_binary), do: :error
+
+  # Normalises an incoming colour-picker value to a stored colour. A recognised
+  # palette key passes through unchanged; the "default" sentinel, an empty
+  # string, or any unrecognised value clears the override (`nil`).
+  @spec parse_colour(term()) :: String.t() | nil
+  def parse_colour(value) do
+    if EventColour.valid_key?(value), do: value, else: nil
+  end
 
   # Constructs a UTC DateTime from a date and time in the user's display timezone.
   # The calendar grid renders events in the user's timezone, so drag/drop/create

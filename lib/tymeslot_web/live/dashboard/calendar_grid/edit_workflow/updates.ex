@@ -125,6 +125,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
   defp maybe_put_scope(event_data, nil), do: event_data
   defp maybe_put_scope(event_data, scope), do: Map.put(event_data, :recurrence_scope, scope)
 
+  @doc """
+  Pushes a per-event colour override to the provider.
+
+  `colour` is a Tymeslot palette key (e.g. `"tomato"`) or `nil` to clear the
+  override. The provider mappers translate the key into Google's `colorId` or
+  CalDAV's `COLOR` property at the boundary; `nil` leaves the provider's colour
+  untouched. The unchanged timing is always sent so the provider write is valid.
+  """
+  @spec update_colour_async(Phoenix.LiveView.Socket.t(), map(), String.t() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def update_colour_async(socket, event, colour) do
+    event_data =
+      event
+      |> base_timing_event_data()
+      |> Map.put(:colour, colour)
+
+    cache_row = build_cache_row(event, %{colour: colour})
+
+    run_update_async(socket, event, event_data, cache_row)
+  end
+
   @spec update_attendees_async(Phoenix.LiveView.Socket.t(), map(), [map()]) ::
           Phoenix.LiveView.Socket.t()
   def update_attendees_async(socket, event, attendees) do
@@ -274,6 +295,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
       all_day: all_day,
       location: event.location,
       description: event.description,
+      colour: Map.get(event, :colour),
       attendees: event.attendees || [],
       reminders: event.reminders || [],
       recurrence_rule: event.recurrence_rule,

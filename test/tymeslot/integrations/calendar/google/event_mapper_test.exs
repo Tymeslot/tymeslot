@@ -277,6 +277,49 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
     end
   end
 
+  describe "format_event_data/1 — colour" do
+    test "maps a palette colour key to a Google colorId" do
+      event_data = %{
+        summary: "Coloured",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC",
+        colour: "tomato"
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["colorId"] == "11"
+    end
+
+    test "omits colorId when no colour override is set" do
+      event_data = %{
+        summary: "Default",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC"
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      refute Map.has_key?(result, "colorId")
+    end
+
+    test "omits colorId for an unrecognised colour value" do
+      event_data = %{
+        summary: "Raw",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC",
+        colour: "11"
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      refute Map.has_key?(result, "colorId")
+    end
+  end
+
   describe "format_event_data/1 — all-day events" do
     test "produces date-only format for Date start/end" do
       event_data = %{

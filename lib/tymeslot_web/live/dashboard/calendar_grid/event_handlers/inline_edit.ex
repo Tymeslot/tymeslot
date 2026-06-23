@@ -284,6 +284,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     end
   end
 
+  @spec handle_update_event_colour(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_event_colour(params, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      event ->
+        new_colour = Shared.parse_colour(params["colour"])
+
+        if new_colour == Map.get(event, :colour) do
+          {:noreply, socket}
+        else
+          with :ok <- EditWorkflow.assert_owns_event(socket, event),
+               :ok <- Shared.check_edit_rate_limit(socket) do
+            push_colour_change(socket, event, new_colour)
+          else
+            {:error, :unauthorized} ->
+              send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+              {:noreply, socket}
+
+            {:error, :rate_limited, _message} ->
+              send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+              {:noreply, socket}
+          end
+        end
+    end
+  end
+
   @spec handle_update_event_calendar(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_event_calendar(params, socket) do
@@ -427,6 +456,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         start_at: nil,
         end_at: nil
     }
+  end
+
+  defp push_colour_change(socket, original_event, new_colour) do
+    optimistic_event = Map.put(original_event, :colour, new_colour)
+
+    updated_events =
+      Enum.map(socket.assigns.events, fn e ->
+        if e.id == original_event.id, do: optimistic_event, else: e
+      end)
+
+    socket =
+      socket
+      |> assign(:selected_event, optimistic_event)
+      |> assign(:events, updated_events)
+      |> Helpers.precompute_derived()
+      |> Updates.update_colour_async(original_event, new_colour)
+
+    send(self(), {:flash, {:info, "Changes saved."}})
+    {:noreply, socket}
   end
 
   defp push_reminders_change(socket, original_event, new_reminders) do

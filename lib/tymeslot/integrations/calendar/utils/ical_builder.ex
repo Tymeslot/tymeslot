@@ -13,6 +13,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   - Alarm/reminder support
   """
 
+  alias Tymeslot.Integrations.Calendar.EventColour
+
   @type ical_event_data :: %{
           required(:summary) => String.t(),
           required(:start_time) => DateTime.t(),
@@ -129,6 +131,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
           build_transp(event_data),
           build_status(event_data),
           build_class(event_data),
+          build_colour_line(event_data),
           build_rrule_line(event_data),
           build_exdate(event_data),
           build_organizer_line(event_data),
@@ -329,6 +332,18 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     do: "CLASS:CONFIDENTIAL"
 
   defp build_class(_event), do: nil
+
+  # Emits the RFC 7986 COLOR property from the canonical `:colour` palette key,
+  # mapped to a CSS3 colour name. An unrecognised value (e.g. a raw inbound
+  # provider colour) maps to nil and is omitted.
+  defp build_colour_line(%{colour: colour}) do
+    case EventColour.css_colour(colour) do
+      nil -> nil
+      css_name -> "COLOR:#{css_name}"
+    end
+  end
+
+  defp build_colour_line(_event), do: nil
 
   # The canonical `recurrence_rule` may arrive bare (CalDAV/Outlook) or with a
   # leading `RRULE:` (Google's normaliser keeps the prefix on read); strip any

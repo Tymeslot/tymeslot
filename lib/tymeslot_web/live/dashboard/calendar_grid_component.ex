@@ -73,6 +73,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   @mini_month_events ~w(toggle_mini_month close_mini_month mini_month_prev mini_month_next)
 
+  # Detail-modal inline-edit events, each delegated to a focused `InlineEdit`
+  # handler. Grouped here so adding a field is a one-line map entry rather than
+  # a new `handle_event/3` clause (keeps this component lean).
+  @inline_edit_events %{
+    "show_event" => :handle_show_event,
+    "close_event_detail" => :handle_close_event_detail,
+    "update_event_title" => :handle_update_event_title,
+    "update_event_location" => :handle_update_event_location,
+    "update_event_description" => :handle_update_event_description,
+    "update_event_calendar" => :handle_update_event_calendar,
+    "update_event_colour" => :handle_update_event_colour,
+    "update_edit_video" => :handle_update_edit_video,
+    "update_event_time" => :handle_update_event_time,
+    "toggle_event_all_day" => :handle_toggle_event_all_day,
+    "update_event_all_day_range" => :handle_update_event_all_day_range,
+    "add_event_reminder" => :handle_add_event_reminder,
+    "remove_event_reminder" => :handle_remove_event_reminder,
+    "update_event_recurrence" => :handle_update_event_recurrence
+  }
+
   attr :current_user, :map, required: true, doc: "Owns calendar preferences and integrations."
 
   attr :profile, :any,
@@ -221,56 +241,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   # --- Event handlers (delegated to focused modules) ---
 
   @impl Phoenix.LiveComponent
-  def handle_event("show_event", params, socket),
-    do: InlineEdit.handle_show_event(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("close_event_detail", params, socket),
-    do: InlineEdit.handle_close_event_detail(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_event_title", params, socket),
-    do: InlineEdit.handle_update_event_title(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_event_location", params, socket),
-    do: InlineEdit.handle_update_event_location(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_event_description", params, socket),
-    do: InlineEdit.handle_update_event_description(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_event_calendar", params, socket),
-    do: InlineEdit.handle_update_event_calendar(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_edit_video", params, socket),
-    do: InlineEdit.handle_update_edit_video(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_event_time", params, socket),
-    do: InlineEdit.handle_update_event_time(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("toggle_event_all_day", params, socket),
-    do: InlineEdit.handle_toggle_event_all_day(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_event_all_day_range", params, socket),
-    do: InlineEdit.handle_update_event_all_day_range(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("add_event_reminder", params, socket),
-    do: InlineEdit.handle_add_event_reminder(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("remove_event_reminder", params, socket),
-    do: InlineEdit.handle_remove_event_reminder(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_event_recurrence", params, socket),
-    do: InlineEdit.handle_update_event_recurrence(params, socket)
+  def handle_event(event, params, socket) when is_map_key(@inline_edit_events, event),
+    do: apply(InlineEdit, Map.fetch!(@inline_edit_events, event), [params, socket])
 
   @impl Phoenix.LiveComponent
   def handle_event("prev_period", params, socket),

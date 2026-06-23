@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   API event format. Pure data transformations with no side effects.
   """
 
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.EventTimeFormatter
 
   @doc """
@@ -20,6 +21,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     |> maybe_add_conference_data(event_data)
     |> maybe_add_reminders(event_data)
     |> maybe_add_recurrence(event_data)
+    |> maybe_add_colour(event_data)
     |> remove_nil_values()
   end
 
@@ -197,6 +199,18 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
 
       _none ->
         base_data
+    end
+  end
+
+  # The canonical `:colour` field carries a Tymeslot palette key (e.g.
+  # `"tomato"`). Google events use a numeric `colorId` ("1".."11"), so the key
+  # is mapped at the boundary. An unrecognised value (e.g. a raw inbound
+  # colorId round-tripped from the cache) maps to nil and is omitted, leaving
+  # Google's default colour untouched.
+  defp maybe_add_colour(base_data, event_data) do
+    case EventColour.google_color_id(get_field_value(event_data, :colour)) do
+      nil -> base_data
+      color_id -> Map.put(base_data, "colorId", color_id)
     end
   end
 

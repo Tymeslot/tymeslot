@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
   @moduledoc "CSS positioning helpers for timed calendar events: top offset, height, column layout, and colour assignment."
 
+  alias Tymeslot.Integrations.Calendar.EventColour
+
   @spec top_rem(DateTime.t(), String.t()) :: float()
   def top_rem(dt, tz \\ "UTC") do
     local_dt = DateTime.shift_zone!(dt, tz)
@@ -35,9 +37,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning do
     color_class_for_integration(assigns.integration_colors, integration.id)
   end
 
+  # Prefers the event's own palette colour override (mapped to a Tailwind class
+  # via `EventColour`) when set; otherwise falls back to the per-integration
+  # colour. An unrecognised stored value (e.g. a raw inbound provider colour)
+  # resolves to a neutral class via `EventColour` and never crashes.
   @spec color_for_event(map(), map()) :: String.t()
   def color_for_event(assigns, event) do
-    color_class_for_integration(assigns.integration_colors, event.calendar_integration_id)
+    case EventColour.tailwind_class(Map.get(event, :colour)) do
+      nil ->
+        color_class_for_integration(assigns.integration_colors, event.calendar_integration_id)
+
+      class ->
+        class
+    end
   end
 
   @spec event_display_date(map(), String.t()) :: Date.t()
