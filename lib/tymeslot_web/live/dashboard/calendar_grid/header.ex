@@ -75,6 +75,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           <div class="md:hidden">
             <AvailabilityHelpers.timezone_display timezone_display={@timezone_display} country_code={@timezone_country_code} />
           </div>
+          <.quick_add myself={@myself} />
           <.view_switcher view={@view} show_view_menu={@show_view_menu} myself={@myself} />
           <.calendar_list_dropdown
             integrations={@integrations}
@@ -202,6 +203,39 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
 
   defp view_options do
     [{:day, "Day"}, {:three_day, "3 Days"}, {:week, "Week"}, {:month, "Month"}]
+  end
+
+  attr :myself, :any, required: true
+
+  defp quick_add(assigns) do
+    ~H"""
+    <%!--
+      Single-line natural-language quick-add. Submitting parses the text
+      server-side and opens the create modal pre-filled (e.g. "Lunch 1pm for 90m").
+      The input is cleared after submit; if nothing time-like parses, the modal
+      still opens with the typed text as the title.
+    --%>
+    <form
+      phx-submit="quick_add"
+      phx-target={@myself}
+      class="hidden sm:flex items-center"
+    >
+      <div class="relative">
+        <span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-tymeslot-400">
+          <.icon name="hero-plus-circle-mini" class="w-4 h-4" />
+        </span>
+        <input
+          type="text"
+          name="text"
+          value=""
+          autocomplete="off"
+          placeholder="Quick add — e.g. Lunch 1pm"
+          aria-label="Quick add event"
+          class="w-44 lg:w-56 pl-8 pr-2 py-1.5 text-token-sm text-tymeslot-700 placeholder:text-tymeslot-400 border border-tymeslot-200 rounded-md focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:border-turquoise-400"
+        />
+      </div>
+    </form>
+    """
   end
 
   attr :syncing, :boolean, required: true

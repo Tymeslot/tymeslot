@@ -7,8 +7,10 @@
  * the wrong time, so these are the highest-value units to lock down.
  */
 
-import { describe, expect, test } from 'vitest';
-import { snapToGrid, minutesFromY, pointerXY } from '../hooks/calendar_drag';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { snapToGrid, minutesFromY, pointerXY, CalendarCreate } from '../hooks/calendar_drag';
+
+const HOUR_HEIGHT_PX = 64;
 
 describe('snapToGrid', () => {
   // 15-minute grid (SNAP_MINUTES = 15)
@@ -122,5 +124,126 @@ describe('combined: typical drag-drop pipeline', () => {
     const rawEnd = minutesFromY(dragYIntoStart);
     const snappedEnd = Math.max(startMinutes + 15, snapToGrid(rawEnd));
     expect(snappedEnd).toBeGreaterThanOrEqual(startMinutes + 15);
+  });
+});
+
+describe('CalendarCreate: drag-to-create span', () => {
+  // The hook turns a press-and-drag on the empty grid into a time *span*. These
+  // tests drive the real hook through jsdom pointer events and assert the
+  // payload pushed to the server carries start AND end from the drag — a plain
+  // click must still fall back to the default 30-minute duration.
+
+  let hook;
+  let zone;
+  let col;
+
+  // jsdom returns all-zero rects; give the day column a deterministic geometry so
+  // pixel→minute maths is exercised. The column top is at y=0, so a clientY of N
+  // pixels maps directly to N px down the grid.
+  function stubColumnRect(el) {
+    el.getBoundingClientRect = () => ({
+      top: 0, left: 0, right: 80, bottom: 24 * HOUR_HEIGHT_PX,
+      width: 80, height: 24 * HOUR_HEIGHT_PX, x: 0, y: 0,
+    });
+  }
+
+  function mouse(type, y) {
+    const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: 40, clientY: y });
+    return e;
+  }
+
+  beforeEach(() => {
+    zone = document.createElement('div');
+    zone.id = 'calendar-create-zone';
+
+    col = document.createElement('div');
+    col.setAttribute('data-day-col', '2026-06-22');
+    stubColumnRect(col);
+    zone.appendChild(col);
+    document.body.appendChild(zone);
+
+    // _findDayColAt relies on elementFromPoint, absent in jsdom — resolve to the
+    // single column so same-day drags behave as in a browser.
+    document.elementFromPoint = vi.fn(() => col);
+
+    hook = Object.assign(Object.create(CalendarCreate), {
+      el: zone,
+      pushEventTo: vi.fn(),
+    });
+    hook.mounted();
+  });
+
+  afterEach(() => {
+    hook.destroyed();
+    zone.remove();
+    vi.restoreAllMocks();
+  });
+
+  test('dragging from 09:00 to 10:30 pushes a span payload', () => {
+    // pointerdown at y = 9h = 576px (09:00), drag to y = 10.5h = 672px (10:30).
+    col.dispatchEvent(mouse('mousedown', 9 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mousemove', 10.5 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mouseup', 10.5 * HOUR_HEIGHT_PX));
+
+    expect(hook.pushEventTo).toHaveBeenCalledTimes(1);
+    const [, event, payload] = hook.pushEventTo.mock.calls[0];
+    expect(event).toBe('show_create_form');
+    expect(payload).toMatchObject({
+      'date': '2026-06-22',
+      'start-hour': '9',
+      'start-minute': '0',
+      'end-hour': '10',
+      'end-minute': '30',
+    });
+  });
+
+  test('end time snaps to the 15-minute grid', () => {
+    // Drag end at y = 580px → 543.75 min → snaps to 09:00... start; choose a
+    // clearer case: start 14:00 (896px), end at 901px ≈ 14:04 → snaps to 14:00,
+    // but minEnd forces start + 15 = 14:15.
+    col.dispatchEvent(mouse('mousedown', 14 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mousemove', 14 * HOUR_HEIGHT_PX + 5));
+    document.dispatchEvent(mouse('mouseup', 14 * HOUR_HEIGHT_PX + 5));
+
+    const [, , payload] = hook.pushEventTo.mock.calls[0];
+    expect(payload['start-hour']).toBe('14');
+    expect(payload['start-minute']).toBe('0');
+    expect(payload['end-hour']).toBe('14');
+    expect(payload['end-minute']).toBe('15');
+  });
+
+  test('a plain click (no movement) falls back to a 30-minute default', () => {
+    col.dispatchEvent(mouse('mousedown', 11 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mouseup', 11 * HOUR_HEIGHT_PX));
+
+    expect(hook.pushEventTo).toHaveBeenCalledTimes(1);
+    const [, , payload] = hook.pushEventTo.mock.calls[0];
+    expect(payload['start-hour']).toBe('11');
+    expect(payload['start-minute']).toBe('0');
+    expect(payload['end-hour']).toBe('11');
+    expect(payload['end-minute']).toBe('30');
+  });
+
+  test('does not start a drag on an existing event block', () => {
+    const eventBlock = document.createElement('div');
+    eventBlock.setAttribute('data-draggable', 'true');
+    col.appendChild(eventBlock);
+
+    eventBlock.dispatchEvent(mouse('mousedown', 9 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mousemove', 10 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mouseup', 10 * HOUR_HEIGHT_PX));
+
+    expect(hook.pushEventTo).not.toHaveBeenCalled();
+  });
+
+  test('does not start a drag on a resize handle', () => {
+    const handle = document.createElement('div');
+    handle.setAttribute('data-resize-handle', '');
+    col.appendChild(handle);
+
+    handle.dispatchEvent(mouse('mousedown', 9 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mouseup', 10 * HOUR_HEIGHT_PX));
+
+    expect(hook.pushEventTo).not.toHaveBeenCalled();
   });
 });

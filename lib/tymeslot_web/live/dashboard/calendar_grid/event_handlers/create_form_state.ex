@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.CalendarGrid.QuickAddParser
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -14,33 +15,118 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
          {:ok, start_minute} <- Shared.parse_int(params["start-minute"]),
          {:ok, end_hour} <- Shared.parse_int(params["end-hour"]),
          {:ok, end_minute} <- Shared.parse_int(params["end-minute"]) do
-      default_int_id = EditWorkflow.default_integration_id(socket)
-
       end_date = params["end-date"] || params["date"]
 
-      creating = %{
-        date: params["date"],
-        end_date: end_date,
-        start_hour: start_hour,
-        start_minute: start_minute,
-        end_hour: end_hour,
-        end_minute: end_minute,
-        all_day: false,
-        title: "",
-        integration_id: default_int_id,
-        calendar_id:
-          EditWorkflow.default_calendar_id(socket.assigns.integrations, default_int_id),
-        attendees: [],
-        attendee_input: "",
-        reminders: [],
-        recurrence_rule: nil,
-        video_integration_id: nil
-      }
+      creating =
+        base_creating(socket, %{
+          date: params["date"],
+          end_date: end_date,
+          start_hour: start_hour,
+          start_minute: start_minute,
+          end_hour: end_hour,
+          end_minute: end_minute
+        })
 
       {:noreply, assign(socket, :creating_event, creating)}
     else
       :error -> {:noreply, socket}
     end
+  end
+
+  @doc """
+  Opens the create modal pre-filled from a natural-language quick-add line.
+
+  When the parser recognises a time, the modal opens with the date/time/title
+  filled in; otherwise it opens with just the title so the user can finish the
+  details in the full form. Blank input is a no-op.
+  """
+  @spec handle_quick_add(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_quick_add(%{"text" => raw_text}, socket) do
+    case sanitize_quick_add(raw_text) do
+      {:ok, ""} ->
+        {:noreply, socket}
+
+      {:ok, text} ->
+        parsed =
+          QuickAddParser.parse(text,
+            now: DateTime.utc_now(),
+            timezone: socket.assigns.user_timezone
+          )
+
+        {:noreply, assign(socket, :creating_event, creating_from_parsed(socket, parsed))}
+
+      :error ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_quick_add(_params, socket), do: {:noreply, socket}
+
+  defp sanitize_quick_add(raw_text) do
+    case UniversalSanitizer.sanitize_and_validate(raw_text, mode: :plain_text, max_length: 500) do
+      {:ok, sanitised} -> {:ok, String.trim(sanitised)}
+      {:error, _reason} -> :error
+    end
+  end
+
+  # Timed draft: convert the parser's UTC times into the user's display timezone,
+  # which is the timezone the create form fields operate in.
+  defp creating_from_parsed(socket, %{start_at: %DateTime{}} = parsed) do
+    tz = socket.assigns.user_timezone
+    start_local = DateTime.shift_zone!(parsed.start_at, tz)
+    end_local = DateTime.shift_zone!(parsed.end_at, tz)
+
+    base_creating(socket, %{
+      title: parsed.title,
+      date: Date.to_iso8601(DateTime.to_date(start_local)),
+      end_date: Date.to_iso8601(DateTime.to_date(end_local)),
+      start_hour: start_local.hour,
+      start_minute: start_local.minute,
+      end_hour: end_local.hour,
+      end_minute: end_local.minute
+    })
+  end
+
+  # All-day draft.
+  defp creating_from_parsed(socket, %{all_day: true, start_date: %Date{} = date} = parsed) do
+    base_creating(socket, %{
+      title: parsed.title,
+      date: Date.to_iso8601(date),
+      end_date: Date.to_iso8601(date),
+      all_day: true
+    })
+  end
+
+  # Nothing time-like parsed: open the modal with just the title.
+  defp creating_from_parsed(socket, parsed) do
+    base_creating(socket, %{title: parsed.title})
+  end
+
+  # Builds a `creating_event` map, filling defaults for any field the caller omits.
+  defp base_creating(socket, overrides) do
+    default_int_id = EditWorkflow.default_integration_id(socket)
+    today = Date.to_iso8601(Date.utc_today())
+
+    defaults = %{
+      date: today,
+      end_date: today,
+      start_hour: 9,
+      start_minute: 0,
+      end_hour: 10,
+      end_minute: 0,
+      all_day: false,
+      title: "",
+      integration_id: default_int_id,
+      calendar_id: EditWorkflow.default_calendar_id(socket.assigns.integrations, default_int_id),
+      attendees: [],
+      attendee_input: "",
+      reminders: [],
+      recurrence_rule: nil,
+      video_integration_id: nil
+    }
+
+    Map.merge(defaults, overrides)
   end
 
   @spec handle_close_create_form(map(), Phoenix.LiveView.Socket.t()) ::
