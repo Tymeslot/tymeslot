@@ -3,13 +3,19 @@ defmodule TymeslotWeb.FallbackControllerTest do
   @moduletag :utils
 
   describe "GET / (fallback)" do
-    test "redirects to root path", %{conn: conn} do
+    test "returns a real 404 for unmatched paths", %{conn: conn} do
       # We need to trigger the fallback.
       # Paths like "/foo" are caught by the /:username route.
       # Paths with multiple segments like "/foo/bar" should hit the fallback.
 
       conn = get(conn, "/invalid/path/to/trigger/fallback")
-      assert redirected_to(conn) == "/"
+      assert conn.status == 404
+      assert response(conn, 404) =~ "Not Found"
+    end
+
+    test "does not redirect (no soft-404)", %{conn: conn} do
+      conn = get(conn, "/invalid/path/to/trigger/fallback")
+      refute conn.status in 300..399
     end
   end
 end

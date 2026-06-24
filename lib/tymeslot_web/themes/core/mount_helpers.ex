@@ -44,10 +44,10 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
           {:ok, Phoenix.LiveView.Socket.t()}
   def mount_without_profile(params, session, socket, delegate_fn) do
     if params["username"] && is_nil(socket.assigns[:organizer_profile]) do
-      {:ok,
-       socket
-       |> LiveView.put_flash(:error, "Page not found. Redirected to homepage.")
-       |> LiveView.redirect(to: ~p"/")}
+      # Unknown organizer: raise a real 404 rather than a soft-404 redirect to
+      # "/". Raising in mount is handled by Plug.Exception on the dead render,
+      # so crawlers and clients see the correct status.
+      raise TymeslotWeb.NotFoundError, "No organizer found for #{inspect(params["username"])}"
     else
       case Context.from_params(params) do
         %Context{} = context ->
