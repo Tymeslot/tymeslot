@@ -55,7 +55,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
       aria-label="Pick a date"
     >
       <:trigger>
-        <span class="text-token-sm md:text-token-base font-semibold text-tymeslot-800 truncate">
+        <span
+          id="calendar-period-label"
+          class="text-token-sm md:text-token-base font-semibold text-tymeslot-800 truncate"
+        >
           {Helpers.period_label(%{view: @view, date: @date, preferences: @preferences})}
         </span>
         <span

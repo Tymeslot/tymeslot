@@ -332,7 +332,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
   describe "shortcuts help overlay" do
     test "toggle_shortcuts_help opens the overlay", %{conn: conn} do
       {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
-      refute html =~ "Keyboard shortcuts"
+      # "Keyboard shortcuts" also labels the header affordance button, so assert
+      # on the modal marker rather than the bare string.
+      refute html =~ "calendar-shortcuts-help-modal"
 
       html =
         lv
@@ -390,9 +392,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
     end
   end
 
-  # Extracts the text content of the first <h2> element found in HTML.
+  # Extracts the calendar period label, which renders inside the mini-month
+  # popover trigger (`#calendar-period-label`).
   defp extract_period_label(html) do
-    case Regex.run(~r/<h2[^>]*>(.*?)<\/h2>/s, html) do
+    case Regex.run(~r/<span[^>]*id="calendar-period-label"[^>]*>(.*?)<\/span>/s, html) do
       [_match, text] -> String.trim(text)
       _no_match -> ""
     end
