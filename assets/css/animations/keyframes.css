@@ -274,6 +274,8 @@
 .animate-spin { animation: spin var(--duration-1000) linear infinite; }
 .animate-pulse { animation: pulse var(--duration-1000) ease-in-out infinite; }
 .animate-bounce { animation: bounce var(--duration-1000) ease-in-out infinite; }
+.animate-float-gentle { animation: floatGentle 6s ease-in-out infinite; }
+.animate-float-slow { animation: floatSlow 9s ease-in-out infinite; }
 
 /* Flash Message Animation Classes */
 .animate-flash-message { animation: flashSlideIn 0.3s ease-out forwards; }
