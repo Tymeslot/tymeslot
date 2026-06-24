@@ -151,7 +151,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         {:noreply, socket}
 
       :ok ->
-        do_cancel_meeting(socket, params)
+        ModalHook.with_modal_data(socket, :cancel_meeting, fn meeting ->
+          do_cancel_meeting(socket, meeting, params)
+        end)
     end
   end
 
@@ -197,7 +199,9 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         {:noreply, socket}
 
       :ok ->
-        do_send_reschedule_request(socket)
+        ModalHook.with_modal_data(socket, :reschedule_request, fn meeting ->
+          do_send_reschedule_request(socket, meeting)
+        end)
     end
   end
 
@@ -266,7 +270,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="space-y-10 pb-20">
+    <div id="bookings-management" class="space-y-10 pb-20">
       <div>
         <.section_header icon={:calendar} title="Meetings" />
 
@@ -340,8 +344,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   # Private functions
 
-  defp do_cancel_meeting(socket, params) do
-    meeting = socket.assigns.cancel_meeting_modal_data
+  defp do_cancel_meeting(socket, meeting, params) do
     booking_payment = socket.assigns.cancel_booking_payment
 
     case prepare_refund_action(booking_payment, params) do
@@ -470,8 +473,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   defp cancel_error_flash(_reason), do: "Failed to cancel meeting. Please try again."
 
-  defp do_send_reschedule_request(socket) do
-    meeting = socket.assigns.reschedule_request_modal_data
+  defp do_send_reschedule_request(socket, meeting) do
     socket = assign(socket, :sending_reschedule, meeting.id)
 
     case Meetings.send_reschedule_request(meeting) do

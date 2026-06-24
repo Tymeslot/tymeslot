@@ -243,6 +243,37 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert updated_meeting.status == "cancelled"
     end
 
+    test "a duplicate cancel confirmation after cancellation is a no-op, not a crash",
+         %{conn: conn, user: user} do
+      meeting =
+        insert(:meeting,
+          organizer_user: user,
+          organizer_email: user.email,
+          attendee_name: "Double Click"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+      assert render(view) =~ "Are you sure you want to cancel"
+
+      # First confirmation cancels the meeting and clears the modal data.
+      view |> form("#cancel-meeting-form") |> render_submit()
+      assert render(view) =~ "Meeting cancelled successfully"
+
+      # A queued duplicate confirm event (double-click / Enter twice) arrives
+      # after the modal data has been cleared. Dispatched through an element
+      # owned by the component, it must be a harmless no-op rather than a
+      # BadMapError crash.
+      html =
+        view
+        |> with_target("#bookings-management")
+        |> render_submit("confirm_cancel_meeting", %{})
+
+      assert html =~ "No upcoming meetings"
+      assert Repo.get(MeetingSchema, meeting.id).status == "cancelled"
+    end
+
     test "dismissing the cancel modal does not cancel the meeting", %{conn: conn, user: user} do
       meeting =
         insert(:meeting,

@@ -230,18 +230,18 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     user_id = socket.assigns.current_user.id
 
     with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
-      type = socket.assigns.delete_meeting_type_modal_data
+      ModalHook.with_modal_data(socket, :delete_meeting_type, fn type ->
+        case MeetingTypes.delete_meeting_type(type) do
+          {:ok, _result} ->
+            send(self(), {:meeting_type_changed})
+            Flash.info("Meeting type deleted")
+            {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
 
-      case MeetingTypes.delete_meeting_type(type) do
-        {:ok, _result} ->
-          send(self(), {:meeting_type_changed})
-          Flash.info("Meeting type deleted")
-          {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
-
-        {:error, _reason} ->
-          Flash.error("Failed to delete meeting type")
-          {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
-      end
+          {:error, _reason} ->
+            Flash.error("Failed to delete meeting type")
+            {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
+        end
+      end)
     end)
   end
 

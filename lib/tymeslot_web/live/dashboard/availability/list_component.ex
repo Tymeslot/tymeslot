@@ -192,19 +192,19 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
   end
 
   def handle_event("confirm_delete_break", _params, socket) do
-    break_data = socket.assigns.delete_break_modal_data
+    ModalHook.with_modal_data(socket, :delete_break, fn break_data ->
+      case AvailabilityActions.delete_break(break_data.id, profile_id(socket)) do
+        {:ok, _break} ->
+          Flash.info("Break deleted")
+          send(self(), {:reload_schedule})
 
-    case AvailabilityActions.delete_break(break_data.id, profile_id(socket)) do
-      {:ok, _break} ->
-        Flash.info("Break deleted")
-        send(self(), {:reload_schedule})
+          {:noreply, ModalHook.hide_modal(socket, :delete_break)}
 
-        {:noreply, ModalHook.hide_modal(socket, :delete_break)}
-
-      {:error, _reason} ->
-        Flash.error("Failed to delete break")
-        {:noreply, socket}
-    end
+        {:error, _reason} ->
+          Flash.error("Failed to delete break")
+          {:noreply, socket}
+      end
+    end)
   end
 
   def handle_event(
@@ -302,19 +302,19 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
   end
 
   def handle_event("confirm_clear_day", _params, socket) do
-    day_data = socket.assigns.clear_day_modal_data
+    ModalHook.with_modal_data(socket, :clear_day, fn day_data ->
+      case AvailabilityActions.clear_day_settings(profile_id(socket), day_data.day) do
+        {:ok, _result} ->
+          Flash.info("#{day_data.day_name} settings cleared")
+          send(self(), {:reload_schedule})
 
-    case AvailabilityActions.clear_day_settings(profile_id(socket), day_data.day) do
-      {:ok, _result} ->
-        Flash.info("#{day_data.day_name} settings cleared")
-        send(self(), {:reload_schedule})
+          {:noreply, ModalHook.hide_modal(socket, :clear_day)}
 
-        {:noreply, ModalHook.hide_modal(socket, :clear_day)}
-
-      {:error, _reason} ->
-        Flash.error("Failed to clear day settings")
-        {:noreply, socket}
-    end
+        {:error, _reason} ->
+          Flash.error("Failed to clear day settings")
+          {:noreply, socket}
+      end
+    end)
   end
 
   # Helper Functions

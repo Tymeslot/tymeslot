@@ -38,6 +38,32 @@ defmodule TymeslotWeb.Hooks.ModalHook do
     |> Component.assign(data_key, nil)
   end
 
+  @doc """
+  Runs `fun` with the modal's data assign, guarding against duplicate confirm
+  events.
+
+  Confirm handlers read their `*_modal_data` assign and dereference it, then
+  call `hide_modal/2` on success — which resets that assign to `nil`. A queued
+  duplicate confirm event (double-click, or Enter pressed twice before the
+  button disables) would otherwise read `nil` and crash with a `BadMapError`.
+
+  This helper centralises the guard for every modal: when the data is already
+  gone the confirmation has been handled, so the stray event becomes a harmless
+  `{:noreply, socket}` no-op. Otherwise `fun` is invoked with the present data
+  and its result is returned verbatim.
+  """
+  @spec with_modal_data(Phoenix.LiveView.Socket.t(), atom() | String.t(), (term() -> result)) ::
+          result | {:noreply, Phoenix.LiveView.Socket.t()}
+        when result: term()
+  def with_modal_data(socket, modal_name, fun) when is_function(fun, 1) do
+    {_show_key, data_key} = resolve_keys(modal_name)
+
+    case socket.assigns[data_key] do
+      nil -> {:noreply, socket}
+      data -> fun.(data)
+    end
+  end
+
   @spec reset_modal_state(Phoenix.LiveView.Socket.t(), atom() | String.t()) ::
           Phoenix.LiveView.Socket.t()
   def reset_modal_state(socket, modal_name) do
