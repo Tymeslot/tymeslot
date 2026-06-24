@@ -203,11 +203,11 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   end
 
   defp advance(dt, %{freq: :daily, interval: interval}) do
-    DateTime.add(dt, interval, :day)
+    shift_calendar_days(dt, interval)
   end
 
   defp advance(dt, %{freq: :weekly, interval: interval, by_day: nil}) do
-    DateTime.add(dt, 7 * interval, :day)
+    shift_calendar_days(dt, 7 * interval)
   end
 
   defp advance(dt, %{freq: :weekly, by_day: by_day} = rule) do
@@ -215,17 +215,13 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   end
 
   defp advance(dt, %{freq: :monthly, interval: interval}) do
-    date = DateTime.to_date(dt)
-    time = DateTime.to_time(dt)
-    new_date = shift_months(date, interval)
-    DateTime.new!(new_date, time, "Etc/UTC")
+    new_date = shift_months(DateTime.to_date(dt), interval)
+    rebuild_in_zone(dt, new_date)
   end
 
   defp advance(dt, %{freq: :yearly, interval: interval}) do
-    date = DateTime.to_date(dt)
-    time = DateTime.to_time(dt)
-    new_date = shift_months(date, 12 * interval)
-    DateTime.new!(new_date, time, "Etc/UTC")
+    new_date = shift_months(DateTime.to_date(dt), 12 * interval)
+    rebuild_in_zone(dt, new_date)
   end
 
   defp advance_to_next_byday(dt, by_day, interval) do
@@ -243,7 +239,43 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
         DateTime.add(dt, days_ahead, :day)
 
       next_number ->
-        DateTime.add(dt, next_number - current_number, :day)
+        shift_calendar_days(dt, next_number - current_number)
+    end
+  end
+
+  # Advances `dt` by a whole number of calendar days while preserving the
+  # wall-clock time-of-day in the event's own timezone. Adding the days to the
+  # naive datetime (which has no DST) and re-resolving in the zone is what keeps
+  # "every day at 15:00" at 15:00 local across a daylight-saving transition —
+  # unlike DateTime.add/3, which advances the absolute instant and lets the
+  # local time silently drift by an hour after the clocks change.
+  defp shift_calendar_days(dt, days) do
+    dt
+    |> DateTime.to_naive()
+    |> NaiveDateTime.add(days, :day)
+    |> resolve_in_zone(dt.time_zone)
+  end
+
+  # Rebuilds an occurrence at `new_date` keeping `dt`'s wall-clock time-of-day
+  # and timezone (monthly/yearly stepping, where the date jumps but the local
+  # time and zone are held fixed).
+  defp rebuild_in_zone(dt, new_date) do
+    new_date
+    |> NaiveDateTime.new!(DateTime.to_time(dt))
+    |> resolve_in_zone(dt.time_zone)
+  end
+
+  # Resolves a naive wall-time into `zone`, mirroring the DST policy used when
+  # the user first picks a time (see EventHandlers.Shared.to_utc/4):
+  #   - spring-forward gap  → the first valid instant after the gap
+  #   - fall-back ambiguity → the earlier (pre-transition) instant
+  # On any other error fall back to UTC so an occurrence is never silently lost.
+  defp resolve_in_zone(naive, zone) do
+    case DateTime.from_naive(naive, zone) do
+      {:ok, dt} -> dt
+      {:gap, _just_before, just_after} -> just_after
+      {:ambiguous, first, _second} -> first
+      {:error, _reason} -> DateTime.from_naive!(naive, "Etc/UTC")
     end
   end
 

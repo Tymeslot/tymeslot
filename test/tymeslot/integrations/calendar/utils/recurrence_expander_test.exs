@@ -496,6 +496,80 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderTest do
     end
   end
 
+  describe "expand/4 across daylight-saving transitions" do
+    # A recurring event must keep its *local wall-clock* time across a DST
+    # change. "Every Monday at 15:00 Berlin" stays 15:00 even after the clocks
+    # change — the absolute UTC instant is what shifts by an hour, not the time
+    # the user sees. The regression these pin: stepping with DateTime.add/3
+    # (instant arithmetic) holds the UTC instant fixed and silently drifts the
+    # local time, so a 15:00 series would show as 14:00 after the autumn change.
+
+    test "weekly series keeps its local time across the autumn fall-back" do
+      # Europe/Berlin falls back from CEST (+02:00) to CET (+01:00) on
+      # 2026-10-25. The series is anchored two weeks before, in summer time.
+      anchor = DateTime.new!(~D[2026-10-12], ~T[15:00:00], "Europe/Berlin")
+
+      event = %{
+        uid: "dst-weekly",
+        summary: "Weekly sync",
+        start_time: anchor,
+        end_time: DateTime.new!(~D[2026-10-12], ~T[16:00:00], "Europe/Berlin"),
+        recurrence_rule: "FREQ=WEEKLY;INTERVAL=1"
+      }
+
+      occurrences =
+        RecurrenceExpander.expand(
+          event,
+          ~U[2026-10-01 00:00:00Z],
+          ~U[2026-11-15 23:59:59Z]
+        )
+
+      # Every occurrence reads 15:00 local, on both sides of the transition.
+      assert Enum.all?(occurrences, &(DateTime.to_time(&1.start_time) == ~T[15:00:00]))
+
+      utc_by_date =
+        Map.new(occurrences, fn occ ->
+          {DateTime.to_date(occ.start_time), DateTime.shift_zone!(occ.start_time, "Etc/UTC")}
+        end)
+
+      # Before the change: 15:00 CEST == 13:00 UTC.
+      assert utc_by_date[~D[2026-10-19]] == ~U[2026-10-19 13:00:00Z]
+      # After the change: 15:00 CET == 14:00 UTC (the instant moved, not the clock).
+      assert utc_by_date[~D[2026-10-26]] == ~U[2026-10-26 14:00:00Z]
+      assert utc_by_date[~D[2026-11-02]] == ~U[2026-11-02 14:00:00Z]
+    end
+
+    test "monthly series keeps its local time across a DST transition" do
+      anchor = DateTime.new!(~D[2026-09-15], ~T[09:30:00], "Europe/Berlin")
+
+      event = %{
+        uid: "dst-monthly",
+        summary: "Monthly review",
+        start_time: anchor,
+        end_time: DateTime.new!(~D[2026-09-15], ~T[10:30:00], "Europe/Berlin"),
+        recurrence_rule: "FREQ=MONTHLY;INTERVAL=1"
+      }
+
+      occurrences =
+        RecurrenceExpander.expand(
+          event,
+          ~U[2026-09-01 00:00:00Z],
+          ~U[2026-11-30 23:59:59Z]
+        )
+
+      assert Enum.all?(occurrences, &(DateTime.to_time(&1.start_time) == ~T[09:30:00]))
+
+      utc_by_date =
+        Map.new(occurrences, fn occ ->
+          {DateTime.to_date(occ.start_time), DateTime.shift_zone!(occ.start_time, "Etc/UTC")}
+        end)
+
+      # September (CEST): 09:30 == 07:30 UTC. November (CET): 09:30 == 08:30 UTC.
+      assert utc_by_date[~D[2026-09-15]] == ~U[2026-09-15 07:30:00Z]
+      assert utc_by_date[~D[2026-11-15]] == ~U[2026-11-15 08:30:00Z]
+    end
+  end
+
   describe "expand/4 preserves event fields" do
     test "copies all original fields to each occurrence" do
       event = %{
