@@ -90,13 +90,11 @@ defmodule Tymeslot.CalendarGrid.QuickAddParser do
   # --- assembly ----------------------------------------------------------------
 
   defp build(%{all_day?: true} = parsed) do
-    date = parsed.date || nil
-
     %__MODULE__{
       title: parsed.title,
       all_day: true,
-      start_date: date,
-      end_date: date
+      start_date: parsed.date,
+      end_date: parsed.date
     }
   end
 
