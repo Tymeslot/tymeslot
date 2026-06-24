@@ -264,6 +264,53 @@ defmodule TymeslotWeb.Layouts do
     """
   end
 
+  @doc """
+  Renders `preconnect` resource hints for the configured analytics origins so the
+  DNS/TCP/TLS handshake to the tracker host overlaps with page render, rather than
+  stalling the `defer`red analytics request. Renders nothing when analytics is
+  unconfigured, and skips same-origin (relative) script URLs, which need no
+  preconnect. Place it early in `<head>` for maximum overlap.
+  """
+  @spec analytics_preconnect(map()) :: Phoenix.LiveView.Rendered.t()
+  def analytics_preconnect(assigns) do
+    origins =
+      :tymeslot
+      |> Application.get_env(:analytics_providers, nil)
+      |> filter_valid_providers()
+      |> Enum.map(fn %{script_url: url} -> analytics_origin(url) end)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+
+    assigns = assign(assigns, :origins, origins)
+
+    ~H"""
+    <%= for origin <- @origins do %>
+      <link rel="preconnect" href={origin} />
+    <% end %>
+    """
+  end
+
+  # Origin (scheme://host[:port]) of an analytics script URL, or nil for a
+  # same-origin (relative) URL, which needs no preconnect.
+  defp analytics_origin(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme, host: host, port: port}
+      when scheme in ["http", "https"] and is_binary(host) and host != "" ->
+        default_port = if scheme == "https", do: 443, else: 80
+
+        if port && port != default_port do
+          "#{scheme}://#{host}:#{port}"
+        else
+          "#{scheme}://#{host}"
+        end
+
+      _uri ->
+        nil
+    end
+  end
+
+  defp analytics_origin(_url), do: nil
+
   defp render_provider_script(%{provider: :umami, script_url: url, website_id: id}, assigns)
        when is_binary(url) and is_binary(id) do
     assigns =
