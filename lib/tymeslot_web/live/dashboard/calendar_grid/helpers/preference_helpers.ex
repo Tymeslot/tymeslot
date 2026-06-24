@@ -100,8 +100,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   def show_week_numbers?(%{preferences: %{show_week_numbers: true}}), do: true
   def show_week_numbers?(_assigns), do: false
 
+  # Accepts either an assigns map (`%{preferences: %{time_format: …}}`) or a bare
+  # preferences map (`%{time_format: …}`), so view helpers can pass whichever
+  # they hold without re-deriving the fallback.
   @spec time_format(map()) :: String.t()
   def time_format(%{preferences: %{time_format: fmt}}), do: fmt
+  def time_format(%{time_format: fmt}) when is_binary(fmt), do: fmt
   def time_format(_assigns), do: "12h"
 
   @valid_views %{

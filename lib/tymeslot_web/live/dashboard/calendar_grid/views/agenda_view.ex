@@ -102,9 +102,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
   defp time_label(%{all_day: true}, _tz, _prefs), do: "All day"
 
   defp time_label(event, tz, prefs) do
-    Helpers.format_time_range_in_tz(event, tz, time_format(prefs))
+    Helpers.format_time_range_in_tz(event, tz, Helpers.time_format(prefs))
   end
-
-  defp time_format(%{time_format: fmt}) when is_binary(fmt), do: fmt
-  defp time_format(_prefs), do: "12h"
 end
