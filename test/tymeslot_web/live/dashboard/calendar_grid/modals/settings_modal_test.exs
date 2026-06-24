@@ -12,7 +12,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModalTest do
     time_format: "24h",
     default_view: "week",
     show_week_numbers: false,
-    show_weekends: true
+    show_weekends: true,
+    desktop_reminders_enabled: false
   }
 
   defp base_assigns(overrides \\ %{}) do
@@ -34,6 +35,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModalTest do
     assert html =~ "Default view"
     assert html =~ "Week numbers"
     assert html =~ "Show weekends"
+    assert html =~ "Desktop reminders"
   end
 
   test "renders toggle options for week start" do

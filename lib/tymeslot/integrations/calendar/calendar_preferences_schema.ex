@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
           time_format: String.t(),
           show_week_numbers: boolean(),
           show_weekends: boolean(),
+          desktop_reminders_enabled: boolean(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -25,6 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     field :time_format, :string, default: "12h"
     field :show_week_numbers, :boolean, default: false
     field :show_weekends, :boolean, default: true
+    field :desktop_reminders_enabled, :boolean, default: false
 
     timestamps()
   end
@@ -40,7 +42,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     :week_start_day,
     :time_format,
     :show_week_numbers,
-    :show_weekends
+    :show_weekends,
+    :desktop_reminders_enabled
   ]
 
   @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()

@@ -32,6 +32,31 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
     |> Repo.all()
   end
 
+  @upcoming_reminder_limit 200
+
+  @doc """
+  Returns upcoming *timed* cached events for the given integration IDs whose
+  start falls in `[now, window_end)`, ordered by start time and capped.
+
+  Only timed events are returned — all-day events have no meaningful clock time
+  to fire a desktop reminder against. Reminder filtering (events that actually
+  carry reminders) is done by the caller after normalisation.
+  """
+  @spec list_upcoming_timed([integer()], DateTime.t(), DateTime.t()) :: [
+          ProviderCalendarEventSchema.t()
+        ]
+  def list_upcoming_timed([], _now, _window_end), do: []
+
+  def list_upcoming_timed(integration_ids, now, window_end) do
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id in ^integration_ids)
+    |> where([e], e.all_day == false and not is_nil(e.start_at))
+    |> where([e], e.start_at >= ^now and e.start_at < ^window_end)
+    |> order_by([e], asc: e.start_at)
+    |> limit(@upcoming_reminder_limit)
+    |> Repo.all()
+  end
+
   @default_search_limit 50
 
   @doc """

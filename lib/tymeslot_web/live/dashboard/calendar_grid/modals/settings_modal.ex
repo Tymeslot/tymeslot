@@ -103,6 +103,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
             size={:small}
           />
         </div>
+
+        <%!-- Desktop reminders --%>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-token-sm font-medium text-tymeslot-700">Desktop reminders</p>
+            <p class="text-token-xs text-tymeslot-400">
+              Show browser notifications before events while Tymeslot is open
+            </p>
+          </div>
+          <StatusSwitch.status_switch
+            id="desktop-reminders-switch"
+            checked={@preferences.desktop_reminders_enabled}
+            on_change="toggle_desktop_reminders"
+            target={@myself}
+            size={:small}
+          />
+        </div>
       </div>
     </.modal>
     """

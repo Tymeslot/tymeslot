@@ -25,11 +25,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.EmptyState
 
-  @doc "Renders the calendar grid: toolbar, views, and the modal stack."
+  @doc "Renders the calendar grid: desktop-reminder hook, toolbar, views, and the modal stack."
   @spec grid(map()) :: Phoenix.LiveView.Rendered.t()
   def grid(assigns) do
     ~H"""
     <div id="calendar-grid" class="flex flex-col h-full relative" phx-hook="CalendarMobile" phx-target={@myself}>
+      <%!-- Drives browser desktop reminders while the calendar is open. The hook
+            reads the JSON feed and fires Notifications on its own timer; the feed
+            refreshes on every 60s tick. --%>
+      <div
+        id="desktop-reminders"
+        phx-hook="DesktopReminders"
+        data-enabled={to_string(@preferences != nil and @preferences.desktop_reminders_enabled)}
+        data-reminders={Jason.encode!(@desktop_reminders_feed)}
+        hidden
+      >
+      </div>
       <EmptyState.no_calendars_banner :if={@_initialized && @integrations == []} />
       <div :if={@_initialized && @integrations != []} class="flex-1 flex flex-col min-h-0">
         <Header.toolbar

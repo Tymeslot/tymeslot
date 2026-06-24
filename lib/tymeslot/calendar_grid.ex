@@ -14,6 +14,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncDebugCalendarWorker
@@ -43,6 +44,33 @@ defmodule Tymeslot.CalendarGrid do
           [ProviderCalendarEventSchema.t()]
   def list_events_for_range(integration_ids, start_dt, end_dt) do
     ProviderCalendarEventQueries.list_for_range(integration_ids, start_dt, end_dt)
+  end
+
+  # How far ahead the desktop-reminder feed looks. Wide enough to cover the
+  # longest reminder lead time (a week) while keeping the payload bounded.
+  @reminder_feed_window_days 8
+
+  @doc """
+  Returns the user's upcoming timed events that carry at least one reminder,
+  within `[now, now + #{@reminder_feed_window_days}d)`, scoped to the given
+  (already visibility-filtered) integration IDs.
+
+  Reminders are normalised to the canonical `%{method:, minutes_before:}` shape,
+  so callers can read `minutes_before` regardless of how the row was stored.
+  """
+  @spec list_upcoming_events_with_reminders([integer()], DateTime.t()) ::
+          [ProviderCalendarEventSchema.t()]
+  def list_upcoming_events_with_reminders(integration_ids, now) do
+    window_end = DateTime.add(now, @reminder_feed_window_days, :day)
+
+    integration_ids
+    |> ProviderCalendarEventQueries.list_upcoming_timed(now, window_end)
+    |> Enum.map(&normalise_event_reminders/1)
+    |> Enum.reject(&(&1.reminders == []))
+  end
+
+  defp normalise_event_reminders(event) do
+    %{event | reminders: Enum.map(event.reminders, &Reminder.normalise/1)}
   end
 
   @doc """
