@@ -137,7 +137,12 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
     {method, sequence} =
       IcalMethod.for(ical_action(action_atom), current_sequence: event.ical_sequence)
 
-    recipients = recipients_for(summary, action_atom)
+    declined = declined_emails(event)
+
+    recipients =
+      summary
+      |> recipients_for(action_atom)
+      |> Enum.reject(fn attendee -> recipient_email(attendee) in declined end)
 
     Enum.each(recipients, fn attendee ->
       CalendarScheduler.schedule_event_update_notification(%{
@@ -168,6 +173,31 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
 
   defp ical_action(:update), do: :event_updated
   defp ical_action(:delete), do: :event_deleted
+
+  # Emails (lower-cased) of attendees who have declined on the current event.
+  # A guest who said no should not receive update or cancellation notices.
+  # Attendee maps come from the cached provider event, so keys/values may be
+  # atoms (in-memory) or strings (after a JSONB round-trip).
+  defp declined_emails(%{attendees: list}) when is_list(list) do
+    for attendee <- list, declined?(attendee), email = recipient_email(attendee), email != nil do
+      email
+    end
+    |> MapSet.new()
+  end
+
+  defp declined_emails(_event), do: MapSet.new()
+
+  defp declined?(attendee) do
+    status = Map.get(attendee, :response_status) || Map.get(attendee, "response_status")
+    status in [:declined, "declined"]
+  end
+
+  defp recipient_email(attendee) do
+    case Map.get(attendee, :email) || Map.get(attendee, "email") do
+      email when is_binary(email) -> email |> String.trim() |> String.downcase()
+      _other -> nil
+    end
+  end
 
   defp user_id_for(%{organizer_user_id: id}) when is_integer(id), do: id
   defp user_id_for(%{calendar_integration: %{user_id: id}}) when is_integer(id), do: id
