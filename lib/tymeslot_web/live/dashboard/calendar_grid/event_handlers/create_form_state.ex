@@ -223,14 +223,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
         case Shared.parse_reminder(params) do
           {:ok, reminder} ->
             existing = Map.get(creating, :reminders, [])
-
-            updated =
-              if reminder in existing do
-                creating
-              else
-                Map.put(creating, :reminders, existing ++ [reminder])
-              end
-
+            new_reminders = Shared.add_reminder(existing, reminder)
+            updated = Map.put(creating, :reminders, new_reminders)
             {:noreply, assign(socket, :creating_event, updated)}
 
           :error ->
@@ -350,7 +344,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     if is_nil(creating) do
       {:noreply, socket}
     else
-      updated = maybe_put_int(creating, :video_integration_id, params["video_integration_id"])
+      updated =
+        Map.put(
+          creating,
+          :video_integration_id,
+          Shared.parse_optional_int(params["video_integration_id"])
+        )
+
       {:noreply, assign(socket, :creating_event, updated)}
     end
   end
@@ -384,14 +384,4 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   end
 
   defp maybe_update_time(creating, _time_str, _hour_key, _minute_key), do: creating
-
-  defp maybe_put_int(map, _key, nil), do: map
-  defp maybe_put_int(map, key, ""), do: Map.put(map, key, nil)
-
-  defp maybe_put_int(map, key, val) when is_binary(val) do
-    case Integer.parse(val) do
-      {int, ""} -> Map.put(map, key, int)
-      _other -> map
-    end
-  end
 end

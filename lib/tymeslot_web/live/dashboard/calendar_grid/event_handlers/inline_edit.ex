@@ -67,24 +67,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         {:noreply, socket}
 
       event ->
-        new_id = parse_video_integration_id(params["video_integration_id"])
+        new_id = Shared.parse_optional_int(params["video_integration_id"])
         updated_event = Map.put(event, :video_integration_id, new_id)
         {:noreply, assign(socket, :selected_event, updated_event)}
     end
   end
-
-  defp parse_video_integration_id(nil), do: nil
-  defp parse_video_integration_id(""), do: nil
-
-  defp parse_video_integration_id(val) when is_binary(val) do
-    case Integer.parse(val) do
-      {int, ""} -> int
-      _other -> nil
-    end
-  end
-
-  defp parse_video_integration_id(val) when is_integer(val), do: val
-  defp parse_video_integration_id(_other), do: nil
 
   @spec handle_update_event_location(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -116,16 +103,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
           raw_end = Shared.to_utc(end_date, end_time.hour, end_time.minute, tz)
           apply_time_change(socket, event, new_start, raw_end)
         else
-          {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-            {:noreply, socket}
-
-          {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-            {:noreply, socket}
-
-          _error ->
-            {:noreply, socket}
+          {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
+          {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
+          _error -> {:noreply, socket}
         end
     end
   end
@@ -143,13 +123,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
           optimistic_event = toggle_all_day(event, socket.assigns.user_timezone)
           push_all_day_change(socket, event, optimistic_event)
         else
-          {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-            {:noreply, socket}
-
-          {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-            {:noreply, socket}
+          {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
+          {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
         end
     end
   end
@@ -178,16 +153,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             push_all_day_change(socket, event, optimistic_event)
           end
         else
-          {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-            {:noreply, socket}
-
-          {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-            {:noreply, socket}
-
-          _error ->
-            {:noreply, socket}
+          {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
+          {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
+          _error -> {:noreply, socket}
         end
 
       _timed ->
@@ -205,21 +173,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       event ->
         with {:ok, reminder} <- Shared.parse_reminder(params),
              existing = event.reminders || [],
-             false <- reminder in existing,
+             new_reminders = Shared.add_reminder(existing, reminder),
+             true <- new_reminders != existing,
              :ok <- EditWorkflow.assert_owns_event(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
-          push_reminders_change(socket, event, existing ++ [reminder])
+          push_reminders_change(socket, event, new_reminders)
         else
-          true ->
+          false ->
             {:noreply, socket}
 
-          {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-            {:noreply, socket}
+          {:error, :unauthorized} = error ->
+            Shared.flash_guard_error(socket, error)
 
-          {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-            {:noreply, socket}
+          {:error, :rate_limited, _message} = error ->
+            Shared.flash_guard_error(socket, error)
 
           :error ->
             {:noreply, socket}
@@ -241,16 +208,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
           new_reminders = List.delete_at(event.reminders || [], index)
           push_reminders_change(socket, event, new_reminders)
         else
-          {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-            {:noreply, socket}
-
-          {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-            {:noreply, socket}
-
-          :error ->
-            {:noreply, socket}
+          {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
+          {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
+          :error -> {:noreply, socket}
         end
     end
   end
@@ -272,13 +232,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
                :ok <- Shared.check_edit_rate_limit(socket) do
             push_recurrence_change(socket, event, new_rule)
           else
-            {:error, :unauthorized} ->
-              send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-              {:noreply, socket}
-
-            {:error, :rate_limited, _message} ->
-              send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-              {:noreply, socket}
+            {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
+            {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
           end
         end
     end
@@ -301,13 +256,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
                :ok <- Shared.check_edit_rate_limit(socket) do
             push_colour_change(socket, event, new_colour)
           else
-            {:error, :unauthorized} ->
-              send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-              {:noreply, socket}
-
-            {:error, :rate_limited, _message} ->
-              send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-              {:noreply, socket}
+            {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
+            {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
           end
         end
     end
@@ -330,11 +280,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         with :ok <- EditWorkflow.assert_owns_event(socket, event),
              :ok <- Shared.check_move_rate_limit(socket) do
           updated_event = %{event | calendar_integration_id: new_id}
-
-          updated_events =
-            Enum.map(socket.assigns.events, fn e ->
-              if e.id == event.id, do: updated_event, else: e
-            end)
+          updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
 
           socket =
             socket
@@ -375,11 +321,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
              :ok <- EditWorkflow.assert_owns_event(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           updated_event = Map.put(event, field, trimmed)
-
-          updated_events =
-            Enum.map(socket.assigns.events, fn e ->
-              if e.id == event.id, do: updated_event, else: e
-            end)
+          updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
 
           socket =
             socket
@@ -393,13 +335,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
           true ->
             {:noreply, socket}
 
-          {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-            {:noreply, socket}
+          {:error, :unauthorized} = error ->
+            Shared.flash_guard_error(socket, error)
 
-          {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-            {:noreply, socket}
+          {:error, :rate_limited, _message} = error ->
+            Shared.flash_guard_error(socket, error)
 
           {:error, reason} when is_binary(reason) ->
             message =
@@ -461,52 +401,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   defp push_colour_change(socket, original_event, new_colour) do
     optimistic_event = Map.put(original_event, :colour, new_colour)
 
-    updated_events =
-      Enum.map(socket.assigns.events, fn e ->
-        if e.id == original_event.id, do: optimistic_event, else: e
+    result =
+      Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
+        Updates.update_colour_async(s, original_event, new_colour)
       end)
 
-    socket =
-      socket
-      |> assign(:selected_event, optimistic_event)
-      |> assign(:events, updated_events)
-      |> Helpers.precompute_derived()
-      |> Updates.update_colour_async(original_event, new_colour)
-
     send(self(), {:flash, {:info, "Changes saved."}})
-    {:noreply, socket}
+    result
   end
 
   defp push_reminders_change(socket, original_event, new_reminders) do
     optimistic_event = %{original_event | reminders: new_reminders}
 
-    updated_events =
-      Enum.map(socket.assigns.events, fn e ->
-        if e.id == original_event.id, do: optimistic_event, else: e
+    result =
+      Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
+        Updates.update_reminders_async(s, original_event, new_reminders)
       end)
 
-    socket =
-      socket
-      |> assign(:selected_event, optimistic_event)
-      |> assign(:events, updated_events)
-      |> Helpers.precompute_derived()
-      |> Updates.update_reminders_async(original_event, new_reminders)
-
     send(self(), {:flash, {:info, "Changes saved."}})
-    {:noreply, socket}
+    result
   end
 
   # Applies a recurrence-rule change. When the event is already part of a
   # recurring series, the scope prompt (this / this-and-following / all events)
   # is shown first and the actual write is deferred to confirmation; otherwise
   # the rule is written straight away.
+  #
+  # Recurrence changes deviate from the standard `apply_optimistic_update`
+  # pattern: the async step is conditional on whether the event belongs to a
+  # series, so the update and the flash are handled inline here.
   defp push_recurrence_change(socket, original_event, new_rule) do
     optimistic_event = %{original_event | recurrence_rule: new_rule}
 
     updated_events =
-      Enum.map(socket.assigns.events, fn e ->
-        if e.id == original_event.id, do: optimistic_event, else: e
-      end)
+      Shared.replace_event(socket.assigns.events, original_event.id, optimistic_event)
 
     socket =
       socket
@@ -532,20 +460,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   end
 
   defp push_all_day_change(socket, original_event, optimistic_event) do
-    updated_events =
-      Enum.map(socket.assigns.events, fn e ->
-        if e.id == original_event.id, do: optimistic_event, else: e
+    result =
+      Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
+        Updates.toggle_all_day_async(s, original_event, optimistic_event)
       end)
 
-    socket =
-      socket
-      |> assign(:selected_event, optimistic_event)
-      |> assign(:events, updated_events)
-      |> Helpers.precompute_derived()
-      |> Updates.toggle_all_day_async(original_event, optimistic_event)
-
     send(self(), {:flash, {:info, "Changes saved."}})
-    {:noreply, socket}
+    result
   end
 
   defp parse_end_date(end_str, start_date) do

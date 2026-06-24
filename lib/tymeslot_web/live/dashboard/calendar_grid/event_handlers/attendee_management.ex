@@ -28,11 +28,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
           new_attendee = %{"email" => email, "name" => nil, "status" => "needs_action"}
           new_attendees = (event.attendees || []) ++ [new_attendee]
           updated_event = %{event | attendees: new_attendees}
-
-          updated_events =
-            Enum.map(socket.assigns.events, fn e ->
-              if e.id == event.id, do: updated_event, else: e
-            end)
+          updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
 
           {:ok, _result} =
             AttendeeNotifications.attendees_added(event, [%{email: email, name: nil}])
@@ -49,16 +45,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
 
           {:noreply, socket}
         else
-          {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-            {:noreply, socket}
-
-          {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-            {:noreply, socket}
-
-          _invalid ->
-            {:noreply, socket}
+          {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
+          {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
+          _invalid -> {:noreply, socket}
         end
     end
   end
@@ -78,11 +67,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
       Enum.split_with(event.attendees || [], &(attendee_email(&1) == email))
 
     updated_event = %{event | attendees: new_attendees}
-
-    updated_events =
-      Enum.map(socket.assigns.events, fn e ->
-        if e.id == event.id, do: updated_event, else: e
-      end)
+    updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
 
     normalised_removed = Enum.map(removed, &normalise_attendee/1)
 
@@ -112,9 +97,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
             {:noreply,
              assign(socket, :confirm_remove_attendee, %{email: email, event_id: event.id})}
 
-          {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-            {:noreply, socket}
+          {:error, :unauthorized} = error ->
+            Shared.flash_guard_error(socket, error)
         end
     end
   end
@@ -134,9 +118,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
           :ok ->
             {:noreply, apply_remove_attendee(socket, event, email)}
 
-          {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-            {:noreply, assign(socket, :confirm_remove_attendee, nil)}
+          {:error, :rate_limited, _message} = error ->
+            socket = assign(socket, :confirm_remove_attendee, nil)
+            Shared.flash_guard_error(socket, error)
         end
 
       {%{email: _email, event_id: _stored_id}, _mismatched_event} ->

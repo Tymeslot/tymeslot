@@ -1,9 +1,12 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   @moduledoc "Shared helpers used across EventHandlers submodules."
 
+  import Phoenix.Component, only: [assign: 3]
+
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @weekday_atoms %{
     "mo" => :mo,
@@ -177,4 +180,117 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   end
 
   defp put_end_condition(opts, _never_or_other, _params), do: opts
+
+  # ---------------------------------------------------------------------------
+  # Refactor 1 — optimistic-update plumbing
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Replaces the event whose `id` matches `id` in `events` with `new_event`.
+  Events whose id does not match are kept unchanged.
+  """
+  @spec replace_event([map()], integer(), map()) :: [map()]
+  def replace_event(events, id, new_event) do
+    Enum.map(events, fn e -> if e.id == id, do: new_event, else: e end)
+  end
+
+  @doc """
+  Applies a standard optimistic-update cycle on the socket and fires an async
+  update.
+
+  Steps (order preserved from original `push_*` private functions in
+  `InlineEdit`):
+    1. Replace the event in `:events` by id.
+    2. Assign `:selected_event` with the optimistic event.
+    3. Assign `:events` with the updated list.
+    4. Run `Helpers.precompute_derived/1`.
+    5. Call `async_fun.(socket)` — the async function receives the
+       post-assign socket and returns it after scheduling the task.
+
+  Returns `{:noreply, socket}` — the standard LiveView reply tuple.
+  """
+  @spec apply_optimistic_update(
+          Phoenix.LiveView.Socket.t(),
+          map(),
+          (Phoenix.LiveView.Socket.t() -> Phoenix.LiveView.Socket.t())
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def apply_optimistic_update(socket, optimistic_event, async_fun) do
+    updated_events =
+      replace_event(socket.assigns.events, optimistic_event.id, optimistic_event)
+
+    socket =
+      socket
+      |> assign(:selected_event, optimistic_event)
+      |> assign(:events, updated_events)
+      |> Helpers.precompute_derived()
+      |> async_fun.()
+
+    {:noreply, socket}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Refactor 2 — shared guard-error flash handler
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Sends a flash message for guard errors that are duplicated across handlers
+  and returns `{:noreply, socket}`.
+
+  Handled errors:
+
+    * `{:error, :unauthorized}` — "You don't have permission to modify this event"
+    * `{:error, :rate_limited, _message}` — "Too many edits. Please wait a moment."
+
+  Flash messages are sent via `send(self(), {:flash, ...})` (the LiveComponent
+  pattern; `put_flash/3` does not propagate from LiveComponents).
+  """
+  @spec flash_guard_error(Phoenix.LiveView.Socket.t(), term()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def flash_guard_error(socket, {:error, :unauthorized}) do
+    send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+    {:noreply, socket}
+  end
+
+  def flash_guard_error(socket, {:error, :rate_limited, _message}) do
+    send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+    {:noreply, socket}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Refactor 3 — optional int parsing and reminder-list helpers
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Parses an optional integer from a string, binary, or integer value.
+
+  Returns an integer when the input is a non-empty string that parses cleanly,
+  or an integer passed through. Returns `nil` for `nil`, `""`, or any value
+  that does not parse as a bare integer.
+
+  Identical logic to the private `parse_video_integration_id/1` in
+  `InlineEdit` and `maybe_put_int/3` in `CreateFormState`.
+  """
+  @spec parse_optional_int(nil | binary() | integer()) :: integer() | nil
+  def parse_optional_int(nil), do: nil
+  def parse_optional_int(""), do: nil
+
+  def parse_optional_int(val) when is_binary(val) do
+    case Integer.parse(val) do
+      {int, ""} -> int
+      _other -> nil
+    end
+  end
+
+  def parse_optional_int(val) when is_integer(val), do: val
+  def parse_optional_int(_other), do: nil
+
+  @doc """
+  Adds `reminder` to `reminders` if it is not already present (dedup).
+
+  Returns the updated list unchanged when `reminder` is already in it.
+  """
+  @spec add_reminder([map()], map()) :: [map()]
+  def add_reminder(reminders, reminder) do
+    if reminder in reminders, do: reminders, else: reminders ++ [reminder]
+  end
 end

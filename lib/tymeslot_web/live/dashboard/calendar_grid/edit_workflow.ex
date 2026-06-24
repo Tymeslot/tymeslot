@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec default_integration_id(Phoenix.LiveView.Socket.t()) :: integer() | nil
@@ -79,12 +80,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   @spec apply_event_change(Phoenix.LiveView.Socket.t(), map(), map(), DateTime.t(), DateTime.t()) ::
           Phoenix.LiveView.Socket.t()
   def apply_event_change(socket, event, optimistic_event, new_start, new_end) do
-    original_events = socket.assigns.events
-
-    new_events =
-      Enum.map(original_events, fn e ->
-        if e.id == event.id, do: optimistic_event, else: e
-      end)
+    new_events = Shared.replace_event(socket.assigns.events, event.id, optimistic_event)
 
     socket =
       socket

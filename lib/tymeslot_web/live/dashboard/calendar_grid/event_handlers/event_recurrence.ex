@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
   import Phoenix.Component, only: [assign: 3]
 
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec handle_confirm_recurrence_scope(map(), Phoenix.LiveView.Socket.t()) ::
@@ -54,9 +55,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
 
       prompt ->
         reverted_events =
-          Enum.map(socket.assigns.events, fn e ->
-            if e.id == prompt.original_event.id, do: prompt.original_event, else: e
-          end)
+          Shared.replace_event(
+            socket.assigns.events,
+            prompt.original_event.id,
+            prompt.original_event
+          )
 
         socket =
           socket
