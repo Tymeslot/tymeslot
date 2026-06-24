@@ -125,7 +125,15 @@ defmodule Tymeslot.Application do
         ]
       end
 
-    children = base_children ++ production_children ++ [TymeslotWeb.Endpoint]
+    # Interactive dev calendar rule store. Started only when opted in via
+    # config/dev.exs (DEV_CALENDAR / DEV_EMPTY_CALENDAR); the module is compiled
+    # solely under dev/support, so this never runs in test or release builds.
+    dev_children =
+      if Application.get_env(:tymeslot, :dev_calendar_enabled, false),
+        do: [Tymeslot.Dev.Calendar.Store],
+        else: []
+
+    children = base_children ++ production_children ++ dev_children ++ [TymeslotWeb.Endpoint]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

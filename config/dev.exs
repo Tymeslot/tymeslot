@@ -108,10 +108,26 @@ config :tymeslot, :analytics_salt_secret, "dev_analytics_salt_secret_change_in_p
 # Enable booking analytics in development so the feature is exercisable locally.
 config :tymeslot, :booking_analytics_enabled, true
 
-# Opt-in dev calendar stub: when DEV_EMPTY_CALENDAR is set, the seeded demo
-# organiser's slots resolve with no busy events, bypassing real CalDAV — handy
-# for booking-UI and scheduling-theme work. Left unset, dev uses the real
-# calendar so genuine sync can be exercised. See Tymeslot.Dev.EmptyCalendar.
-if System.get_env("DEV_EMPTY_CALENDAR") in ~w(1 true) do
-  config :tymeslot, :calendar_module, Tymeslot.Dev.EmptyCalendar
+# Opt-in dev calendar stub: bypasses real CalDAV/Google/Outlook and computes
+# availability against a controllable, in-memory busy set — handy for booking-UI
+# and scheduling-theme work. Adjust it live from IEx (block dates, add busy
+# periods) via Tymeslot.Dev.Calendar. Left unset, dev uses the real calendar so
+# genuine sync can be exercised.
+#
+#   * DEV_CALENDAR=1       → starts with a realistic recurring weekly pattern.
+#   * DEV_EMPTY_CALENDAR=1 → starts empty (every slot free), preserving the
+#     previous behaviour.
+cond do
+  System.get_env("DEV_CALENDAR") in ~w(1 true) ->
+    config :tymeslot, :calendar_module, Tymeslot.Dev.Calendar
+    config :tymeslot, :dev_calendar_enabled, true
+    config :tymeslot, :dev_calendar_default_pattern, :default
+
+  System.get_env("DEV_EMPTY_CALENDAR") in ~w(1 true) ->
+    config :tymeslot, :calendar_module, Tymeslot.Dev.Calendar
+    config :tymeslot, :dev_calendar_enabled, true
+    config :tymeslot, :dev_calendar_default_pattern, :empty
+
+  true ->
+    :ok
 end
