@@ -37,8 +37,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SearchTest do
 
       html =
         lv
-        |> element("#calendar-search-input")
-        |> render_keyup(%{"term" => "strategy"})
+        |> form("#calendar-search-form", %{"term" => "strategy"})
+        |> render_change()
 
       assert html =~ "calendar-search-results"
       assert html =~ "Quarterly Strategy Review"
@@ -58,8 +58,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SearchTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
       lv
-      |> element("#calendar-search-input")
-      |> render_keyup(%{"term" => "strategy"})
+      |> form("#calendar-search-form", %{"term" => "strategy"})
+      |> render_change()
 
       html =
         lv
@@ -78,8 +78,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SearchTest do
 
       html =
         lv
-        |> element("#calendar-search-input")
-        |> render_keyup(%{"term" => "   "})
+        |> form("#calendar-search-form", %{"term" => "   "})
+        |> render_change()
 
       refute html =~ "calendar-search-results"
     end

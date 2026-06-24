@@ -32,7 +32,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
       class="relative hidden sm:flex items-center"
       phx-click-away={@search_open && JS.push("close_search", target: @myself)}
     >
-      <div class="relative">
+      <form
+        id="calendar-search-form"
+        phx-change="search"
+        phx-target={@myself}
+        class="relative"
+      >
         <span class="pointer-events-none absolute inset-y-0 left-2 flex items-center text-tymeslot-400">
           <.icon name="hero-magnifying-glass-mini" class="w-4 h-4" />
         </span>
@@ -44,12 +49,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
           autocomplete="off"
           placeholder="Search events"
           aria-label="Search events"
-          phx-keyup="search"
           phx-debounce="300"
-          phx-target={@myself}
           class="w-40 lg:w-52 pl-8 pr-2 py-1.5 text-token-sm text-tymeslot-700 placeholder:text-tymeslot-400 border border-tymeslot-200 rounded-md focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:border-turquoise-400"
         />
-      </div>
+      </form>
       <div
         :if={@search_open}
         id="calendar-search-results"
