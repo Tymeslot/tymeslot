@@ -1,4 +1,13 @@
 
+[1.2.3]
+* core: Add id to guest-add form for LiveView form recovery
+* core: Prevent calendar crash on stale create-event integration change
+* core: Prevent crash when a dashboard modal is confirmed twice
+* core: Point WordPress users to the official plugin from the embed dashboard
+* core: Add a controllable in-memory dev calendar
+* core: Show a notice instead of the homepage when an embed is blocked
+
+
 [1.2.2]
 * core: Serve gzip static assets only in production
 * core: Give the analytics dashboard refresh visible feedback
