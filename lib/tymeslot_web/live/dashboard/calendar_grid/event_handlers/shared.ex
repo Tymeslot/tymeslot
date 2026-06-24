@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   #   - Other errors: propagated as `{:error, reason}` so callers can surface
   #     a flash instead of crashing the LiveView.
   @spec to_utc(Date.t(), non_neg_integer(), non_neg_integer(), String.t()) ::
-          {:ok, DateTime.t()} | {:error, :dst_gap | :ambiguous | term()}
+          {:ok, DateTime.t()} | {:error, term()}
   def to_utc(date, hour, minute, timezone) do
     time = Time.new!(hour, minute, 0, {0, 6})
 
@@ -305,17 +305,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
 
   def flash_guard_error(socket, {:error, :rate_limited, _message}) do
     send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-    {:noreply, socket}
-  end
-
-  def flash_guard_error(socket, {:error, :dst_gap}) do
-    send(
-      self(),
-      {:flash,
-       {:error,
-        "The selected time falls in a daylight-saving gap — please choose a different time."}}
-    )
-
     {:noreply, socket}
   end
 

@@ -144,10 +144,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
 
       # The month/week views are always present in the DOM (just hidden), so
       # scope the assertion to the agenda container to test its ordering alone.
-      [_, agenda_html] = String.split(html, ~s(id="calendar-agenda"), parts: 2)
+      [_before, agenda_html] = String.split(html, ~s(id="calendar-agenda"), parts: 2)
 
-      alpha_pos = :binary.match(agenda_html, "Alpha Offsite") |> elem(0)
-      zeta_pos = :binary.match(agenda_html, "Zeta Conference") |> elem(0)
+      alpha_pos = elem(:binary.match(agenda_html, "Alpha Offsite"), 0)
+      zeta_pos = elem(:binary.match(agenda_html, "Zeta Conference"), 0)
 
       assert alpha_pos < zeta_pos,
              "Alpha Offsite should appear before Zeta Conference in the rendered output"

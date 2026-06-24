@@ -102,7 +102,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         else
           {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
           {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
-          {:error, :dst_gap} = error -> Shared.flash_guard_error(socket, error)
           _error -> {:noreply, socket}
         end
     end

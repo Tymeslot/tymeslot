@@ -78,18 +78,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop do
     end
   end
 
-  # Maps a failed drag/resize `with` clause to the resulting socket. A DST-gap
-  # time surfaces a flash; malformed params (`:error`) are silently ignored.
-  defp drop_failure({:error, :dst_gap}, socket) do
-    send(
-      self(),
-      {:flash,
-       {:error,
-        "The selected time falls in a daylight-saving gap — please choose a different time."}}
-    )
-
-    socket
-  end
-
+  # Maps a failed drag/resize `with` clause to the resulting socket. Malformed
+  # params (`:error`) are silently ignored — the event simply stays put.
   defp drop_failure(_other, socket), do: socket
 end

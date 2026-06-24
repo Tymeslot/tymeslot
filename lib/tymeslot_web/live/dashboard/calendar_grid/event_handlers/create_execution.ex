@@ -95,16 +95,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
         {:noreply, assign(socket, :saving_event, true)}
       end
     else
-      {:error, :dst_gap} ->
-        send(
-          self(),
-          {:flash,
-           {:error,
-            "The selected time falls in a daylight-saving gap — please choose a different time."}}
-        )
-
-        {:noreply, socket}
-
       {:error, _reason} ->
         send(self(), {:flash, {:error, "Invalid time"}})
         {:noreply, socket}
