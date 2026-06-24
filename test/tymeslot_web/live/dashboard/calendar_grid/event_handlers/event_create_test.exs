@@ -137,6 +137,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
     end
   end
 
+  describe "handle_update_create_integration/2" do
+    test "is a no-op when the create form has already been closed (creating_event is nil)" do
+      # A duplicate/queued integration-change event can arrive after the create
+      # form closed and cleared creating_event. It must not crash on Map.put(nil).
+      socket = %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}, creating_event: nil}}
+
+      assert {:noreply, ^socket} =
+               EventCreate.handle_update_create_integration(
+                 %{"integration-id" => "1", "calendar-id" => "primary"},
+                 socket
+               )
+    end
+  end
+
   # Helpers
 
   defp build_result(integration, opts) do

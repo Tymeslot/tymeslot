@@ -98,23 +98,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
   @spec handle_update_create_integration(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_create_integration(params, socket) do
-    id_str = params["integration-id"] || params["integration_id"]
-    cal_id = params["calendar-id"]
-
-    case Shared.parse_int(id_str) do
-      {:ok, id} ->
-        creating =
-          socket.assigns.creating_event
-          |> Map.put(:integration_id, id)
-          |> Map.put(
-            :calendar_id,
-            cal_id || EditWorkflow.default_calendar_id(socket.assigns.integrations, id)
-          )
-
-        {:noreply, assign(socket, :creating_event, creating)}
-
-      :error ->
+    case socket.assigns.creating_event do
+      nil ->
         {:noreply, socket}
+
+      creating_event ->
+        id_str = params["integration-id"] || params["integration_id"]
+        cal_id = params["calendar-id"]
+
+        case Shared.parse_int(id_str) do
+          {:ok, id} ->
+            creating =
+              creating_event
+              |> Map.put(:integration_id, id)
+              |> Map.put(
+                :calendar_id,
+                cal_id || EditWorkflow.default_calendar_id(socket.assigns.integrations, id)
+              )
+
+            {:noreply, assign(socket, :creating_event, creating)}
+
+          :error ->
+            {:noreply, socket}
+        end
     end
   end
 
