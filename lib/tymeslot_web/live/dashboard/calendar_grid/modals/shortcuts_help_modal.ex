@@ -10,8 +10,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ShortcutsHelpModal do
   @shortcut_groups [
     {"Navigation",
      [
-       {["←", "n"], "Next period"},
-       {["→", "p"], "Previous period"},
+       {["→", "n"], "Next period"},
+       {["←", "p"], "Previous period"},
        {["t"], "Jump to today"}
      ]},
     {"Views",
