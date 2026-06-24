@@ -17,7 +17,7 @@ Deploy Tymeslot using Docker with an embedded PostgreSQL database. This provides
 ## System Requirements
 
 - **Docker** (version 20.10+ recommended)
-- **500MB RAM** minimum (1GB+ recommended)
+- **500MB RAM** minimum (1GB recommended)
 - **Domain name** (optional, for production use)
 
 ---

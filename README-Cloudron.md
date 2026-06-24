@@ -413,7 +413,7 @@ cloudron exec --app tymeslot.yourdomain.com -- bin/tymeslot remote
 ### Performance Optimization
 
 #### 1. Resource Allocation
-- **Memory**: Minimum 512MB, recommended 1GB+
+- **Memory**: Minimum 500MB, recommended 1GB
 - **CPU**: 1+ cores recommended for multiple users
 - Configure via Cloudron **Resources** tab
 
