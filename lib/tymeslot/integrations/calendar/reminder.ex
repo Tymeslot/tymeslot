@@ -54,7 +54,7 @@ defmodule Tymeslot.Integrations.Calendar.Reminder do
   def normalise(%{} = reminder) do
     %{
       method: method(reminder),
-      minutes_before: reminder[:minutes_before] || reminder["minutes_before"]
+      minutes_before: fetch_minutes_before(reminder)
     }
   end
 
@@ -102,7 +102,7 @@ defmodule Tymeslot.Integrations.Calendar.Reminder do
   """
   @spec minutes_before(map()) :: non_neg_integer() | nil
   def minutes_before(%{} = reminder) do
-    reminder[:minutes_before] || reminder["minutes_before"]
+    fetch_minutes_before(reminder)
   end
 
   # --- Private helpers ---
@@ -112,4 +112,11 @@ defmodule Tymeslot.Integrations.Calendar.Reminder do
   defp method_atom(:sms), do: :sms
   defp method_atom("sms"), do: :sms
   defp method_atom(_popup_or_other), do: :popup
+
+  # Returns the `minutes_before` value, correctly handling `0`.
+  # `||` is not used here because `0` is falsy in Elixir; pattern-matching on
+  # the map key avoids silently promoting a `0` to the fallback branch.
+  defp fetch_minutes_before(%{minutes_before: v}), do: v
+  defp fetch_minutes_before(%{"minutes_before" => v}), do: v
+  defp fetch_minutes_before(_reminder), do: nil
 end

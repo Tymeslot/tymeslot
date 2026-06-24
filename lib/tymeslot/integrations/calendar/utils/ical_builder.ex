@@ -207,13 +207,31 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   end
 
   @doc """
-  Builds a recurrence rule (RRULE) string.
+  Builds a recurrence rule (RRULE) string from a legacy string-keyed map.
+
+  This is the *legacy* RRULE serialiser used by `build_event/1` (the
+  `maybe_add_property/3` recurrence path). Its input format uses string/atom
+  keys with uppercase frequency strings: `%{frequency: "WEEKLY", ...}`.
+
+  The production CalDAV write path uses `build_simple_event/2` instead, which
+  reads the canonical `recurrence_rule` string field and emits it via
+  `build_rrule_line/1` (a private function that delegates to
+  `RRule.strip_prefix/1`). The two serialisers coexist because they serve
+  different data shapes:
+    - `build_rrule/1` — legacy `%{frequency: "WEEKLY", by_day: ["MO"]}` map
+    - `build_rrule_line/1` → `RRule.build/2` — canonical `%{freq: :weekly, ...}` map
+
+  Note: `build_rrule/1` always emits UNTIL as a UTC date-time even for all-day
+  events. This is acceptable because the only production call site
+  (`build_event/1`) is not used by the CalDAV write path. For correct all-day
+  UNTIL handling on the CalDAV path, the canonical RRULE string is built via
+  `RRule.build/2` with `all_day: true`.
 
   ## Options
   - `:frequency` - DAILY, WEEKLY, MONTHLY, YEARLY (required)
   - `:interval` - Interval between recurrences (default: 1)
   - `:count` - Number of occurrences
-  - `:until` - End date for recurrence
+  - `:until` - End date/time for recurrence
   - `:by_day` - List of days (MO, TU, WE, TH, FR, SA, SU)
   - `:by_month` - List of months (1-12)
 
@@ -289,8 +307,32 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     "DTSTART:#{format_datetime(DateTime.shift_zone!(dt, "Etc/UTC"))}"
   end
 
+  # RFC 5545 §3.6.1: for a DATE-form DTEND (all-day event), the value is
+  # exclusive — the event ends at the start of that day, not during it. A
+  # single-day all-day event therefore has DTEND = DTSTART + 1.
+  #
+  # The production CalDAV create path (create_execution.ex) already adds +1
+  # before calling this function, so in practice `end_time` is always
+  # exclusive. This guard catches callers that supply `end_time == start_time`
+  # (e.g. direct test callers or future create paths that forget to add +1),
+  # ensuring we never silently emit a zero-length all-day event.
+  defp build_dtend(%{end_time: %Date{} = date, start_time: %Date{} = start}) do
+    exclusive = if Date.compare(date, start) == :eq, do: Date.add(date, 1), else: date
+    "DTEND;VALUE=DATE:#{format_date(exclusive)}"
+  end
+
   defp build_dtend(%{end_time: %Date{} = date}) do
     "DTEND;VALUE=DATE:#{format_date(date)}"
+  end
+
+  defp build_dtend(%{all_day: true, end_time: end_time, start_time: start_time}) do
+    end_date = DateTime.to_date(end_time)
+    start_date = DateTime.to_date(start_time)
+
+    exclusive =
+      if Date.compare(end_date, start_date) == :eq, do: Date.add(end_date, 1), else: end_date
+
+    "DTEND;VALUE=DATE:#{format_date(exclusive)}"
   end
 
   defp build_dtend(%{all_day: true, end_time: end_time}) do

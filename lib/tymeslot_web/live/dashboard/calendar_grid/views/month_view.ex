@@ -7,6 +7,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges
 
+  # Vertical rhythm for the bar band, in rem. The day number occupies the top
+  # `@band_top`; each multi-day/all-day bar lane is `@lane_h` tall with the bar
+  # itself `@bar_h`. Single-day chips are pushed below the reserved lane band.
+  @band_top 1.5
+  @lane_h 1.25
+  @bar_h 1.1
+
   attr :view, :atom, required: true
   attr :visible_days, :list, required: true
   attr :visible_events, :list, required: true
@@ -33,25 +40,76 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
         </div>
       </div>
 
-      <%!-- 6×7 day cells (keyed on date to retrigger fade on navigation) --%>
+      <%!-- One row per week (keyed on month to retrigger fade on navigation).
+            Each week is its own positioning context so multi-day / all-day bars
+            can span its day columns. --%>
+      <div id={"month-grid-#{@date.year}-#{@date.month}"} class="animate-fade-in border-l border-t border-tymeslot-100">
+        <.month_week
+          :for={week_days <- Enum.chunk_every(@visible_days, 7)}
+          week_days={week_days}
+          assigns_ref={assigns}
+          user_timezone={@user_timezone}
+          myself={@myself}
+        />
+      </div>
+    </div>
+    """
+  end
+
+  attr :week_days, :list, required: true
+  attr :assigns_ref, :map, required: true
+  attr :user_timezone, :string, required: true
+  attr :myself, :any, required: true
+
+  defp month_week(assigns) do
+    layout = Helpers.week_layout(assigns.assigns_ref, assigns.week_days)
+
+    assigns =
+      assigns
+      |> assign(:segments, layout.segments)
+      |> assign(:lane_count, layout.lane_count)
+
+    ~H"""
+    <div class="flex">
       <div
-        id={"month-grid-#{@date.year}-#{@date.month}"}
-        class="grid animate-fade-in"
-        style={if Helpers.show_week_numbers?(assigns), do: "grid-template-columns: 2rem repeat(7, 1fr)", else: "grid-template-columns: repeat(7, 1fr)"}
-      >
-        <%= for {week_days, _week_idx} <- @visible_days |> Enum.chunk_every(7) |> Enum.with_index() do %>
-          <div
-            :if={Helpers.show_week_numbers?(assigns)}
-            class="text-token-xs text-tymeslot-400 flex items-start justify-center pt-1 border-b border-r border-tymeslot-100"
-          ><%= Helpers.week_number(List.first(week_days)) %></div>
+        :if={Helpers.show_week_numbers?(@assigns_ref)}
+        class="w-8 shrink-0 text-token-xs text-tymeslot-400 flex items-start justify-center pt-1 border-b border-r border-tymeslot-100"
+      ><%= Helpers.week_number(List.first(@week_days)) %></div>
+
+      <div class="relative flex-1">
+        <%!-- Day cells (define the row height) --%>
+        <div class="grid grid-cols-7">
           <.month_cell
-            :for={day <- week_days}
+            :for={day <- @week_days}
             day={day}
-            assigns_ref={assigns}
+            assigns_ref={@assigns_ref}
+            lane_count={@lane_count}
             user_timezone={@user_timezone}
             myself={@myself}
           />
-        <% end %>
+        </div>
+
+        <%!-- Spanning bars overlaid across the week's columns. The layer ignores
+              pointer events so empty band area still navigates the cell beneath;
+              each bar re-enables them to open the event. --%>
+        <div class="absolute inset-0 pointer-events-none">
+          <div
+            :for={seg <- @segments}
+            class={"absolute px-1 flex items-center text-token-2xs text-white truncate cursor-pointer pointer-events-auto #{bar_round_class(seg)} #{Helpers.color_for_event(@assigns_ref, seg.event)}"}
+            style={bar_style(seg)}
+            phx-click="show_event"
+            phx-value-event-id={seg.event.id}
+            phx-target={@myself}
+            title={seg.event.summary || "(No title)"}
+          >
+            <img
+              :if={Map.get(seg.event, :created_by_tymeslot)}
+              src="/images/brand/logo.svg"
+              alt=""
+              class="inline-block w-3 h-3 opacity-70 mr-0.5 shrink-0"
+            /><span class="truncate"><%= seg.event.summary || "(No title)" %></span>
+          </div>
+        </div>
       </div>
     </div>
     """
@@ -59,11 +117,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
 
   attr :day, :any, required: true
   attr :assigns_ref, :map, required: true
+  attr :lane_count, :integer, required: true
   attr :user_timezone, :string, required: true
   attr :myself, :any, required: true
 
   defp month_cell(assigns) do
-    day_events = Helpers.day_events(assigns.assigns_ref, assigns.day)
+    chips = Helpers.chip_events(assigns.assigns_ref, assigns.day)
 
     today =
       DateTime.utc_now() |> DateTime.shift_zone!(assigns.user_timezone) |> DateTime.to_date()
@@ -73,28 +132,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
 
     assigns =
       assigns
-      |> assign(:day_events, day_events)
+      |> assign(:chips, chips)
       |> assign(:is_today, is_today)
       |> assign(:is_current_month, is_current_month)
 
     ~H"""
     <div
-      class={"min-h-16 sm:min-h-24 border-b border-r border-tymeslot-100 p-1 cursor-pointer hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-inset #{Helpers.month_cell_class(@day, @assigns_ref)}"}
+      class={"relative min-h-16 sm:min-h-24 border-b border-r border-tymeslot-100 p-1 cursor-pointer hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-inset #{Helpers.month_cell_class(@day, @assigns_ref)}"}
+      style={cell_padding_top(@lane_count)}
       phx-click="navigate_to_day"
       phx-value-date={Date.to_iso8601(@day)}
       phx-target={@myself}
       role="button"
       tabindex="0"
-      aria-label={Calendar.strftime(@day, "%A, %B %-d") <> ", #{length(@day_events)} events"}
+      aria-label={Calendar.strftime(@day, "%A, %B %-d") <> ", #{length(@chips)} events"}
     >
-      <div class={"text-token-xs font-medium mb-0.5 #{day_number_class(@is_today, @is_current_month)}"}>
+      <div class={"absolute top-1 left-1 text-token-xs font-medium #{day_number_class(@is_today, @is_current_month)}"}>
         <%= @day.day %>
       </div>
 
-      <%!-- Desktop: up to 3 event titles --%>
+      <%!-- Desktop: up to 3 single-day event titles --%>
       <div class="hidden sm:block">
         <div
-          :for={event <- Enum.take(@day_events, 3)}
+          :for={event <- Enum.take(@chips, 3)}
           class={"rounded px-1 text-token-xs text-white truncate mb-0.5 cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
           phx-click="show_event"
           phx-value-event-id={event.id}
@@ -111,30 +171,50 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
             title={EventBadges.guest_badge_title(EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event))}
           ></span>
         </div>
-        <div :if={length(@day_events) > 3} class="text-token-xs text-tymeslot-400 mt-0.5">
-          +<%= length(@day_events) - 3 %> more
+        <div :if={length(@chips) > 3} class="text-token-xs text-tymeslot-400 mt-0.5">
+          +<%= length(@chips) - 3 %> more
         </div>
       </div>
 
-      <%!-- Mobile: first title (truncated) + coloured chip with count --%>
-      <div class="sm:hidden flex flex-col gap-0.5 mt-0.5">
+      <%!-- Mobile: first single-day title + coloured chip with count --%>
+      <div class="sm:hidden flex flex-col gap-0.5">
         <div
-          :if={List.first(@day_events)}
-          class={"rounded px-1 text-token-2xs text-white truncate #{Helpers.color_for_event(@assigns_ref, List.first(@day_events))}"}
-        ><%= List.first(@day_events).summary || "(No title)" %></div>
+          :if={List.first(@chips)}
+          class={"rounded px-1 text-token-2xs text-white truncate #{Helpers.color_for_event(@assigns_ref, List.first(@chips))}"}
+        ><%= List.first(@chips).summary || "(No title)" %></div>
         <div
-          :if={length(@day_events) > 1}
+          :if={length(@chips) > 1}
           class="inline-flex items-center gap-0.5 text-token-2xs text-tymeslot-500 leading-none"
         >
-          <span :for={event <- @day_events |> Enum.drop(1) |> Enum.take(3)}
+          <span :for={event <- @chips |> Enum.drop(1) |> Enum.take(3)}
             class={"w-1.5 h-1.5 rounded-full #{Helpers.color_for_event(@assigns_ref, event)}"}
           ></span>
-          <span :if={length(@day_events) > 4} class="ml-0.5">+<%= length(@day_events) - 4 %></span>
+          <span :if={length(@chips) > 4} class="ml-0.5">+<%= length(@chips) - 4 %></span>
         </div>
       </div>
     </div>
     """
   end
+
+  # Reserve vertical room above the chips for the week's bar lanes.
+  defp cell_padding_top(lane_count) do
+    "padding-top: #{@band_top + lane_count * @lane_h}rem"
+  end
+
+  # Absolute placement of a spanning bar across the week's 7 columns.
+  defp bar_style(seg) do
+    left = Float.round(seg.start_col * 100 / 7, 4)
+    width = Float.round((seg.end_col - seg.start_col + 1) * 100 / 7, 4)
+    top = @band_top + seg.lane * @lane_h
+    "left: #{left}%; width: #{width}%; top: #{top}rem; height: #{@bar_h}rem"
+  end
+
+  # Round only the ends that actually start/finish within this week; a bar that
+  # continues into an adjacent week keeps a flat edge so it reads as continuous.
+  defp bar_round_class(%{continues_left: false, continues_right: false}), do: "rounded"
+  defp bar_round_class(%{continues_left: true, continues_right: false}), do: "rounded-r"
+  defp bar_round_class(%{continues_left: false, continues_right: true}), do: "rounded-l"
+  defp bar_round_class(%{continues_left: true, continues_right: true}), do: "rounded-none"
 
   defp day_number_class(true = _is_today, _is_current_month),
     do:

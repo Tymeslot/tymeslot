@@ -13,9 +13,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   def col_count(%{view: :month}), do: 7
   def col_count(%{view: :agenda}), do: 1
 
-  @spec day_header_class(Date.t()) :: String.t()
-  def day_header_class(day) do
-    if Date.compare(day, Date.utc_today()) == :eq do
+  @spec day_header_class(Date.t(), String.t()) :: String.t()
+  def day_header_class(day, timezone \\ "Etc/UTC") do
+    today =
+      DateTime.utc_now()
+      |> DateTime.shift_zone!(timezone)
+      |> DateTime.to_date()
+
+    if Date.compare(day, today) == :eq do
       "font-bold text-turquoise-600"
     else
       "text-tymeslot-600"
@@ -41,7 +46,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
     Calendar.strftime(date, "%B %Y")
   end
 
-  def period_label(%{view: :agenda}), do: "Next 30 days"
+  def period_label(%{view: :agenda, date: date} = assigns) do
+    tz = Map.get(assigns, :user_timezone, "Etc/UTC")
+
+    today =
+      DateTime.utc_now()
+      |> DateTime.shift_zone!(tz)
+      |> DateTime.to_date()
+
+    if Date.compare(date, today) == :eq do
+      "Next 30 days"
+    else
+      range_label(date, Date.add(date, 30))
+    end
+  end
 
   defp range_label(start_date, end_date) do
     start_str = Calendar.strftime(start_date, "%B %-d")

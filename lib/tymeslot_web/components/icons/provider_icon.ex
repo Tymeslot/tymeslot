@@ -47,6 +47,11 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
     """
   end
 
+  # The in-memory debug calendar (dev only) has no branded logo. Point at a
+  # bundled demo SVG — which scales to any size — so it renders an icon instead
+  # of a broken `<img>` for the missing `debug.png`.
+  defp build_icon_path("debug", _type, _size), do: "/icons/providers/calendar/debug.svg"
+
   defp build_icon_path(provider, type, size) do
     # Determine the type based on provider if not explicitly set
     provider_type = type || determine_provider_type(provider)

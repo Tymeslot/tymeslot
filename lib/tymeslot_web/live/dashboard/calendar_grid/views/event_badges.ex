@@ -15,14 +15,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
     <span
       :if={@summary}
       class={[
-        "absolute bottom-0.5 left-0.5 inline-flex items-center gap-0.5 rounded-full px-1 py-px text-[10px] font-bold leading-none",
+        "absolute bottom-0.5 left-0.5 inline-flex items-center gap-0.5 rounded-full px-1 py-px text-token-2xs font-bold leading-none",
         guest_badge_tone(@summary)
       ]}
       title={guest_badge_title(@summary)}
     >
-      <svg viewBox="0 0 16 16" fill="currentColor" class="w-2.5 h-2.5" aria-hidden="true">
-        <path d="M8 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM3.5 14a4.5 4.5 0 0 1 9 0 .5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5Z" />
-      </svg>
+      <.icon name="hero-user-mini" class="w-2.5 h-2.5" />
       {@summary.accepted}/{@summary.total}
     </span>
     """

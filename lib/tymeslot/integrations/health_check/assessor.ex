@@ -36,6 +36,12 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
   Tests the health of an integration by attempting a connection.
   """
   @spec test_integration(integration_type(), integration()) :: check_result()
+  # The in-memory debug calendar (dev only) has nothing to probe — it never
+  # talks to an external server — so report it healthy and skip the connection
+  # test, which would otherwise treat its placeholder URL as a real CalDAV
+  # endpoint and fail with a DNS error.
+  def test_integration(:calendar, %{provider: "debug"}), do: {:ok, :debug}
+
   def test_integration(:calendar, integration) do
     decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
     Diagnostics.test_connection(decrypted)

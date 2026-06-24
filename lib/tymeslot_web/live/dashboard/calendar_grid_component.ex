@@ -320,10 +320,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: EventCrud.handle_show_create_form(params, socket)
 
   @impl Phoenix.LiveComponent
-  def handle_event("quick_add", params, socket),
-    do: EventCrud.handle_quick_add(params, socket)
-
-  @impl Phoenix.LiveComponent
   def handle_event("close_create_form", params, socket),
     do: EventCrud.handle_close_create_form(params, socket)
 

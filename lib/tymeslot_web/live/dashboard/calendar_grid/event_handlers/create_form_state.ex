@@ -3,7 +3,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.CalendarGrid.QuickAddParser
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -51,76 +50,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       })
 
     {:noreply, assign(socket, :creating_event, creating)}
-  end
-
-  @doc """
-  Opens the create modal pre-filled from a natural-language quick-add line.
-
-  When the parser recognises a time, the modal opens with the date/time/title
-  filled in; otherwise it opens with just the title so the user can finish the
-  details in the full form. Blank input is a no-op.
-  """
-  @spec handle_quick_add(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_quick_add(%{"text" => raw_text}, socket) do
-    case sanitize_quick_add(raw_text) do
-      {:ok, ""} ->
-        {:noreply, socket}
-
-      {:ok, text} ->
-        parsed =
-          QuickAddParser.parse(text,
-            now: DateTime.utc_now(),
-            timezone: socket.assigns.user_timezone
-          )
-
-        {:noreply, assign(socket, :creating_event, creating_from_parsed(socket, parsed))}
-
-      :error ->
-        {:noreply, socket}
-    end
-  end
-
-  def handle_quick_add(_params, socket), do: {:noreply, socket}
-
-  defp sanitize_quick_add(raw_text) do
-    case UniversalSanitizer.sanitize_and_validate(raw_text, mode: :plain_text, max_length: 500) do
-      {:ok, sanitised} -> {:ok, String.trim(sanitised)}
-      {:error, _reason} -> :error
-    end
-  end
-
-  # Timed draft: convert the parser's UTC times into the user's display timezone,
-  # which is the timezone the create form fields operate in.
-  defp creating_from_parsed(socket, %{start_at: %DateTime{}} = parsed) do
-    tz = socket.assigns.user_timezone
-    start_local = DateTime.shift_zone!(parsed.start_at, tz)
-    end_local = DateTime.shift_zone!(parsed.end_at, tz)
-
-    base_creating(socket, %{
-      title: parsed.title,
-      date: Date.to_iso8601(DateTime.to_date(start_local)),
-      end_date: Date.to_iso8601(DateTime.to_date(end_local)),
-      start_hour: start_local.hour,
-      start_minute: start_local.minute,
-      end_hour: end_local.hour,
-      end_minute: end_local.minute
-    })
-  end
-
-  # All-day draft.
-  defp creating_from_parsed(socket, %{all_day: true, start_date: %Date{} = date} = parsed) do
-    base_creating(socket, %{
-      title: parsed.title,
-      date: Date.to_iso8601(date),
-      end_date: Date.to_iso8601(date),
-      all_day: true
-    })
-  end
-
-  # Nothing time-like parsed: open the modal with just the title.
-  defp creating_from_parsed(socket, parsed) do
-    base_creating(socket, %{title: parsed.title})
   end
 
   # Builds a `creating_event` map, filling defaults for any field the caller omits.

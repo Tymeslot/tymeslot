@@ -629,4 +629,62 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
       refute String.contains?(ical, "DTEND;TZID=")
     end
   end
+
+  describe "build_event/1 — all-day DTEND exclusivity (issue #4)" do
+    test "single-day all-day event: DTEND is start + 1 (not start == end)" do
+      # When end_time == start_time (inclusive end passed in), DTEND must be +1.
+      event_data = %{
+        summary: "One-day event",
+        start_time: ~D[2026-07-10],
+        end_time: ~D[2026-07-10]
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      assert String.contains?(ical, "DTSTART;VALUE=DATE:20260710")
+      assert String.contains?(ical, "DTEND;VALUE=DATE:20260711")
+      refute String.contains?(ical, "DTEND;VALUE=DATE:20260710")
+    end
+
+    test "multi-day all-day event with already-exclusive end is not double-incremented" do
+      # end_time is already exclusive (start + 2 for a 2-night stay).
+      event_data = %{
+        summary: "Two-night stay",
+        start_time: ~D[2026-07-10],
+        end_time: ~D[2026-07-12]
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      assert String.contains?(ical, "DTSTART;VALUE=DATE:20260710")
+      assert String.contains?(ical, "DTEND;VALUE=DATE:20260712")
+    end
+  end
+
+  describe "build_simple_event/2 — all-day DTEND exclusivity (issue #4)" do
+    test "single-day all-day: DTEND is bumped to start + 1 when end == start" do
+      event_data = %{
+        summary: "Single day",
+        start_time: ~D[2026-07-10],
+        end_time: ~D[2026-07-10]
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-allday-1", event_data)
+
+      assert String.contains?(ical, "DTSTART;VALUE=DATE:20260710")
+      assert String.contains?(ical, "DTEND;VALUE=DATE:20260711")
+    end
+
+    test "multi-day all-day: already-exclusive end is not double-incremented" do
+      event_data = %{
+        summary: "Multi day",
+        start_time: ~D[2026-07-10],
+        end_time: ~D[2026-07-12]
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-allday-2", event_data)
+
+      assert String.contains?(ical, "DTEND;VALUE=DATE:20260712")
+    end
+  end
 end

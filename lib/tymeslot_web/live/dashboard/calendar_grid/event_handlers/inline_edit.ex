@@ -93,20 +93,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       event ->
         tz = socket.assigns.user_timezone
 
-        with {:ok, start_date} <- Date.from_iso8601(params["start-date"]),
-             {:ok, start_time} <- Time.from_iso8601(normalize_time(params["start-time"])),
-             {:ok, end_date} <- Date.from_iso8601(params["end-date"]),
-             {:ok, end_time} <- Time.from_iso8601(normalize_time(params["end-time"])),
+        with {:ok, {start_date, start_time, end_date, end_time}} <- parse_time_inputs(params),
              :ok <- EditWorkflow.assert_owns_event(socket, event),
-             :ok <- Shared.check_edit_rate_limit(socket) do
-          new_start = Shared.to_utc(start_date, start_time.hour, start_time.minute, tz)
-          raw_end = Shared.to_utc(end_date, end_time.hour, end_time.minute, tz)
+             :ok <- Shared.check_edit_rate_limit(socket),
+             {:ok, new_start} <- Shared.to_utc(start_date, start_time.hour, start_time.minute, tz),
+             {:ok, raw_end} <- Shared.to_utc(end_date, end_time.hour, end_time.minute, tz) do
           apply_time_change(socket, event, new_start, raw_end)
         else
           {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
           {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
+          {:error, :dst_gap} = error -> Shared.flash_guard_error(socket, error)
           _error -> {:noreply, socket}
         end
+    end
+  end
+
+  # Parses the four raw date/time form fields into a tuple, short-circuiting on
+  # the first malformed value. Keeps the caller's `with` chain flat.
+  defp parse_time_inputs(params) do
+    with {:ok, start_date} <- Date.from_iso8601(params["start-date"]),
+         {:ok, start_time} <- Time.from_iso8601(normalize_time(params["start-time"])),
+         {:ok, end_date} <- Date.from_iso8601(params["end-date"]),
+         {:ok, end_time} <- Time.from_iso8601(normalize_time(params["end-time"])) do
+      {:ok, {start_date, start_time, end_date, end_time}}
     end
   end
 
@@ -223,20 +232,43 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         {:noreply, socket}
 
       event ->
-        new_rule = Shared.compose_recurrence_rule(params)
+        event_context = %{
+          all_day: Map.get(event, :all_day, false),
+          start_date: recurrence_start_date(event)
+        }
 
-        if new_rule == event.recurrence_rule do
-          {:noreply, socket}
-        else
-          with :ok <- EditWorkflow.assert_owns_event(socket, event),
-               :ok <- Shared.check_edit_rate_limit(socket) do
-            push_recurrence_change(socket, event, new_rule)
-          else
-            {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
-            {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
-          end
+        case Shared.compose_recurrence_rule(params, event_context) do
+          {:error, :until_before_start} = error ->
+            Shared.flash_guard_error(socket, error)
+
+          new_rule ->
+            if new_rule == event.recurrence_rule do
+              {:noreply, socket}
+            else
+              with :ok <- EditWorkflow.assert_owns_event(socket, event),
+                   :ok <- Shared.check_edit_rate_limit(socket) do
+                push_recurrence_change(socket, event, new_rule)
+              else
+                {:error, :unauthorized} = error ->
+                  Shared.flash_guard_error(socket, error)
+
+                {:error, :rate_limited, _message} = error ->
+                  Shared.flash_guard_error(socket, error)
+              end
+            end
         end
     end
+  end
+
+  # The selected event is a schema struct (no Access behaviour), so read its
+  # fields with `Map.get/2` rather than bracket syntax. Falls back to the
+  # timed start instant's date when the event has no all-day start_date.
+  defp recurrence_start_date(event) do
+    Map.get(event, :start_date) ||
+      case Map.get(event, :start_at) do
+        %DateTime{} = start_at -> DateTime.to_date(start_at)
+        _other -> nil
+      end
   end
 
   @spec handle_update_event_colour(map(), Phoenix.LiveView.Socket.t()) ::
@@ -369,8 +401,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     # Exclusive end_date → inclusive last day the event covers.
     last_day = Date.add(event.end_date, -1)
     last_day = if Date.compare(last_day, start_date) == :lt, do: start_date, else: last_day
-    start_at = Shared.to_utc(start_date, 9, 0, tz)
-    end_at = Shared.to_utc(last_day, 10, 0, tz)
+
+    # DST gap/ambiguous is extremely unlikely at 09:00/10:00, but we default
+    # gracefully rather than crashing: on gap the shifted `just_after` is used,
+    # and on ambiguous the DST-side is picked — both are acceptable defaults
+    # when toggling the all-day flag programmatically.
+    {:ok, start_at} = Shared.to_utc(start_date, 9, 0, tz)
+    {:ok, end_at} = Shared.to_utc(last_day, 10, 0, tz)
 
     %{
       event

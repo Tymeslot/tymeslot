@@ -109,6 +109,49 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
       refute html =~ "Old Standup"
       assert html =~ "No upcoming events"
     end
+
+    test "all-day events on the same day render in stable alphabetical order", %{
+      conn: conn,
+      user: user
+    } do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      # Choose a day outside the default week view (today..+6) but inside the
+      # 30-day agenda window, so only the agenda renders these events — the
+      # whole-page match would otherwise also see the week all-day row.
+      day = Date.add(Date.utc_today(), 20)
+
+      # Insert in reverse alphabetical order — stable sort must normalise this.
+      insert_event(integration, %{
+        summary: "Zeta Conference",
+        start_date: day,
+        end_date: Date.add(day, 1),
+        start_at: DateTime.new!(day, ~T[00:00:00], "Etc/UTC"),
+        end_at: DateTime.new!(Date.add(day, 1), ~T[00:00:00], "Etc/UTC"),
+        all_day: true
+      })
+
+      insert_event(integration, %{
+        summary: "Alpha Offsite",
+        start_date: day,
+        end_date: Date.add(day, 1),
+        start_at: DateTime.new!(day, ~T[00:00:00], "Etc/UTC"),
+        end_at: DateTime.new!(Date.add(day, 1), ~T[00:00:00], "Etc/UTC"),
+        all_day: true
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      html = lv |> element("#calendar-grid") |> render_hook("set_view", %{"view" => "agenda"})
+
+      # The month/week views are always present in the DOM (just hidden), so
+      # scope the assertion to the agenda container to test its ordering alone.
+      [_, agenda_html] = String.split(html, ~s(id="calendar-agenda"), parts: 2)
+
+      alpha_pos = :binary.match(agenda_html, "Alpha Offsite") |> elem(0)
+      zeta_pos = :binary.match(agenda_html, "Zeta Conference") |> elem(0)
+
+      assert alpha_pos < zeta_pos,
+             "Alpha Offsite should appear before Zeta Conference in the rendered output"
+    end
   end
 
   defp insert_event(integration, attrs) do

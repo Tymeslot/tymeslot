@@ -71,26 +71,43 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
   defp save_resolved(creating, start_date, end_date, socket) do
     tz = socket.assigns.user_timezone
-    start_at = Shared.to_utc(start_date, creating.start_hour, creating.start_minute, tz)
-    end_at = Shared.to_utc(end_date, creating.end_hour, creating.end_minute, tz)
 
-    if DateTime.compare(end_at, start_at) != :gt do
-      send(self(), {:flash, {:error, "End time must be after start time"}})
-      {:noreply, socket}
+    with {:ok, start_at} <-
+           Shared.to_utc(start_date, creating.start_hour, creating.start_minute, tz),
+         {:ok, end_at} <-
+           Shared.to_utc(end_date, creating.end_hour, creating.end_minute, tz) do
+      if DateTime.compare(end_at, start_at) != :gt do
+        send(self(), {:flash, {:error, "End time must be after start time"}})
+        {:noreply, socket}
+      else
+        send(
+          self(),
+          {:execute_create_event,
+           %{
+             creating: creating,
+             user_id: socket.assigns.current_user.id,
+             all_day: false,
+             start_at: start_at,
+             end_at: end_at
+           }}
+        )
+
+        {:noreply, assign(socket, :saving_event, true)}
+      end
     else
-      send(
-        self(),
-        {:execute_create_event,
-         %{
-           creating: creating,
-           user_id: socket.assigns.current_user.id,
-           all_day: false,
-           start_at: start_at,
-           end_at: end_at
-         }}
-      )
+      {:error, :dst_gap} ->
+        send(
+          self(),
+          {:flash,
+           {:error,
+            "The selected time falls in a daylight-saving gap — please choose a different time."}}
+        )
 
-      {:noreply, assign(socket, :saving_event, true)}
+        {:noreply, socket}
+
+      {:error, _reason} ->
+        send(self(), {:flash, {:error, "Invalid time"}})
+        {:noreply, socket}
     end
   end
 

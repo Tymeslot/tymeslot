@@ -16,6 +16,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
+  alias Tymeslot.Workers.SyncDebugCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
   @palette_size 8
@@ -31,6 +32,7 @@ defmodule Tymeslot.CalendarGrid do
     3 => 90
   }
   @caldav_default_stale_minutes 25
+  @debug_stale_minutes 15
 
   @doc """
   Returns all cached calendar events for the given integration IDs within a time range.
@@ -246,6 +248,8 @@ defmodule Tymeslot.CalendarGrid do
     DateTime.before?(integration.last_external_sync_at, cutoff)
   end
 
+  defp stale_threshold_minutes(%{provider: "debug"}), do: @debug_stale_minutes
+
   defp stale_threshold_minutes(%{provider: provider, caldav_sync_tier: tier})
        when provider in @caldav_providers do
     Map.get(@caldav_tier_stale_minutes, tier, @caldav_default_stale_minutes)
@@ -262,6 +266,12 @@ defmodule Tymeslot.CalendarGrid do
   defp enqueue_sync_worker(%{provider: "outlook"} = integration) do
     %{"calendar_integration_id" => integration.id}
     |> RefreshOutlookCalendarWorker.new()
+    |> Oban.insert()
+  end
+
+  defp enqueue_sync_worker(%{provider: "debug"} = integration) do
+    %{"calendar_integration_id" => integration.id}
+    |> SyncDebugCalendarWorker.new()
     |> Oban.insert()
   end
 

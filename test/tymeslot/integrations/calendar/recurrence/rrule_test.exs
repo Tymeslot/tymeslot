@@ -128,6 +128,35 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRuleTest do
     end
   end
 
+  describe "build/2 — UNTIL value-type for all-day rules (issue #5)" do
+    test "all-day rule emits UNTIL as bare YYYYMMDD (no time, no Z suffix)" do
+      result = RRule.build(%{freq: :weekly, until: ~D[2026-12-31]}, all_day: true)
+      assert String.contains?(result, "UNTIL=20261231")
+      refute String.contains?(result, "T235959Z")
+    end
+
+    test "timed rule keeps UNTIL as UTC date-time (…T235959Z)" do
+      result = RRule.build(%{freq: :weekly, until: ~D[2026-12-31]}, all_day: false)
+      assert result == "FREQ=WEEKLY;UNTIL=20261231T235959Z"
+    end
+
+    test "timed rule (no all_day option) defaults to UTC date-time form" do
+      result = RRule.build(%{freq: :daily, until: ~D[2026-06-30]})
+      assert String.contains?(result, "UNTIL=20260630T235959Z")
+    end
+
+    test "COUNT is unaffected by all_day flag" do
+      result = RRule.build(%{freq: :daily, count: 5}, all_day: true)
+      assert result == "FREQ=DAILY;COUNT=5"
+    end
+
+    test "all-day UNTIL round-trips through parse/1 correctly" do
+      rrule = RRule.build(%{freq: :weekly, until: ~D[2027-01-15]}, all_day: true)
+      parsed = RRule.parse(rrule)
+      assert parsed.until == ~D[2027-01-15]
+    end
+  end
+
   describe "round-trip build ∘ parse" do
     for rule <- [
           %{freq: :daily},

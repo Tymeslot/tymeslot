@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
 
       <ol :if={@groups != []} class="divide-y divide-tymeslot-100 animate-fade-in">
         <li :for={group <- @groups} class="px-3 md:px-4 py-3">
-          <h3 class={"text-token-sm font-semibold mb-2 #{Helpers.day_header_class(group.date)}"}>
+          <h3 class={"text-token-sm font-semibold mb-2 #{Helpers.day_header_class(group.date, @user_timezone)}"}>
             <%= Calendar.strftime(group.date, "%a %-d %B") %>
           </h3>
           <ul class="flex flex-col gap-1">
@@ -94,7 +94,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
   end
 
   defp events_for_day(assigns, date) do
-    all_day = Helpers.all_day_events_for_day(assigns, date)
+    all_day =
+      assigns
+      |> Helpers.all_day_events_for_day(date)
+      |> Enum.sort_by(&{&1.summary || "", &1.id})
+
     timed = assigns |> Helpers.day_events(date) |> Enum.sort_by(& &1.start_at, DateTime)
     all_day ++ timed
   end

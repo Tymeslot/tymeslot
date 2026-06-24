@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
           <div class="flex items-center justify-end pr-2 sticky left-0 bg-white z-10">
             <span class="text-token-xs text-tymeslot-400"><%= Helpers.user_tz_abbr(assigns) %></span>
           </div>
-          <div :for={day <- @visible_days} class={"text-center py-2 border-l border-tymeslot-100 #{Helpers.day_header_class(day)}"}>
+          <div :for={day <- @visible_days} class={"text-center py-2 border-l border-tymeslot-100 #{Helpers.day_header_class(day, @user_timezone)}"}>
             <span :if={@view == :day} class="text-token-sm font-medium hidden sm:inline"><%= Calendar.strftime(day, "%A, %B %-d, %Y") %></span>
             <span :if={@view == :day} class="text-token-sm font-medium sm:hidden"><%= Calendar.strftime(day, "%a %-d") %></span>
             <span :if={@view != :day} class="text-token-sm"><%= Calendar.strftime(day, "%a %-d") %></span>

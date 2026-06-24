@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { snapToGrid, minutesFromY, pointerXY, CalendarCreate, CalendarMobile } from '../hooks/calendar_drag';
+import { snapToGrid, minutesFromY, pointerXY, CalendarCreate, CalendarMobile, CalendarDrag } from '../hooks/calendar_drag';
 
 const HOUR_HEIGHT_PX = 64;
 
@@ -318,11 +318,11 @@ describe('CalendarMobile: keyboard shortcuts', () => {
     expect(shortcutCalls()[0][1]).toBe('toggle_shortcuts_help');
   });
 
-  test('"/" focuses the quick-add input fallback and is prevented', () => {
-    const input = document.createElement('input');
-    input.id = 'calendar-quick-add-input';
-    document.body.appendChild(input);
-    const focusSpy = vi.spyOn(input, 'focus');
+  test('"/" focuses the search input and is prevented', () => {
+    const search = document.createElement('input');
+    search.id = 'calendar-search-input';
+    document.body.appendChild(search);
+    const focusSpy = vi.spyOn(search, 'focus');
 
     const e = key('/');
     document.dispatchEvent(e);
@@ -333,19 +333,12 @@ describe('CalendarMobile: keyboard shortcuts', () => {
     expect(shortcutCalls()).toHaveLength(0);
   });
 
-  test('"/" prefers a dedicated search input when present', () => {
-    const search = document.createElement('input');
-    search.id = 'calendar-search-input';
-    const quick = document.createElement('input');
-    quick.id = 'calendar-quick-add-input';
-    document.body.append(search, quick);
-    const searchSpy = vi.spyOn(search, 'focus');
-    const quickSpy = vi.spyOn(quick, 'focus');
+  test('"/" is still prevented (no slash typed) when no search input is present', () => {
+    const e = key('/');
+    document.dispatchEvent(e);
 
-    document.dispatchEvent(key('/'));
-
-    expect(searchSpy).toHaveBeenCalled();
-    expect(quickSpy).not.toHaveBeenCalled();
+    expect(e.defaultPrevented).toBe(true);
+    expect(shortcutCalls()).toHaveLength(0);
   });
 
   test('suppresses shortcuts while typing in an input', () => {
@@ -383,5 +376,91 @@ describe('CalendarMobile: keyboard shortcuts', () => {
     document.dispatchEvent(key('?', { shiftKey: true }));
 
     expect(shortcutCalls()).toHaveLength(0);
+  });
+});
+
+describe('CalendarDrag: scroll-to-current survives the post-refresh reset', () => {
+  // Regression (verified in a real browser): the refresh button fires
+  // `calendar:scroll-to-current` alongside the server push. The accompanying
+  // re-render natively resets the scroll container's scrollTop to 0 a frame or
+  // two later, so a one-shot scroll loses the race and the calendar snaps to the
+  // top. `_handleScrollToCurrent` re-asserts the current-time position over a
+  // short window so it wins — but only while the scroll has been zeroed, so a
+  // user scrolling away during the window is left alone.
+  //
+  // currentTopRem 54 → 54 * 16 (rem fallback) − 64 (HOUR_HEIGHT_PX) = 800.
+  const EXPECTED_TOP = 800;
+
+  let rafQueue;
+  let now;
+
+  beforeEach(() => {
+    rafQueue = [];
+    now = 0;
+    vi.stubGlobal('requestAnimationFrame', (cb) => rafQueue.push(cb));
+    vi.stubGlobal('cancelAnimationFrame', () => {});
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  // Run every frame currently queued; frames scheduled during the flush queue up
+  // for the next explicit flush (mirrors how rAF batches across paints).
+  function flushFrames() {
+    const due = rafQueue;
+    rafQueue = [];
+    due.forEach((cb) => cb());
+  }
+
+  function makeHook(scrollTop = 0) {
+    const el = { scrollTop, dataset: { currentTopRem: '54' } };
+    return Object.assign(Object.create(CalendarDrag), {
+      el,
+      _updateJumpToNowVisibility: vi.fn(),
+    });
+  }
+
+  test('re-asserts the current-time scroll after the patch zeroes it', () => {
+    const hook = makeHook(0);
+
+    hook._handleScrollToCurrent();
+    expect(hook.el.scrollTop).toBe(EXPECTED_TOP); // initial assert
+
+    // The server re-render natively resets the scroll to the top.
+    hook.el.scrollTop = 0;
+
+    // A frame within the window restores it.
+    now = 100;
+    flushFrames();
+    expect(hook.el.scrollTop).toBe(EXPECTED_TOP);
+  });
+
+  test('leaves a user-chosen non-zero position alone during the window', () => {
+    const hook = makeHook(0);
+    hook._handleScrollToCurrent();
+
+    // User scrolls somewhere deliberate (non-zero) before the next frame.
+    hook.el.scrollTop = 500;
+    now = 100;
+    flushFrames();
+
+    expect(hook.el.scrollTop).toBe(500);
+  });
+
+  test('stops re-asserting once the window has elapsed', () => {
+    const hook = makeHook(0);
+    hook._handleScrollToCurrent();
+
+    // Advance past the re-assert deadline, then drain the scheduled frame.
+    now = 5000;
+    flushFrames();
+
+    // A later stray reset must no longer be corrected — the loop has stopped.
+    hook.el.scrollTop = 0;
+    flushFrames();
+    expect(hook.el.scrollTop).toBe(0);
   });
 });

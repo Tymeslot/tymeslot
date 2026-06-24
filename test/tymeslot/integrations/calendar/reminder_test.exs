@@ -142,6 +142,39 @@ defmodule Tymeslot.Integrations.Calendar.ReminderTest do
     test "returns nil when key is absent" do
       assert Reminder.minutes_before(%{method: :popup}) == nil
     end
+
+    test "preserves 0 for atom-keyed at-time-of-event reminder" do
+      assert Reminder.minutes_before(%{minutes_before: 0}) == 0
+    end
+
+    test "preserves 0 for string-keyed at-time-of-event reminder (JSONB round-trip)" do
+      assert Reminder.minutes_before(%{"minutes_before" => 0}) == 0
+    end
+  end
+
+  describe "normalise/1 — zero-minute (at time of event) reminder" do
+    test "preserves minutes_before: 0 for atom-keyed map" do
+      reminder = %{method: :popup, minutes_before: 0}
+      assert Reminder.normalise(reminder) == %{method: :popup, minutes_before: 0}
+    end
+
+    test "preserves minutes_before: 0 for string-keyed map (JSONB round-trip)" do
+      reminder = %{"method" => "popup", "minutes_before" => 0}
+      assert Reminder.normalise(reminder) == %{method: :popup, minutes_before: 0}
+    end
+
+    test "normalised 0-minute reminder returns 0 from minutes_before/1 (Google projection)" do
+      reminder = %{method: :popup, minutes_before: 0}
+      normalised = Reminder.normalise(reminder)
+      assert Reminder.minutes_before(normalised) == 0
+    end
+
+    test "normalised 0-minute reminder returns 0 from minutes_before/1 (Outlook projection)" do
+      # Outlook uses only minutes_before; 0 must survive the full normalise→minutes_before path
+      reminder = %{"method" => "popup", "minutes_before" => 0}
+      normalised = Reminder.normalise(reminder)
+      assert Reminder.minutes_before(normalised) == 0
+    end
   end
 
   describe ":sms degradation consistency" do

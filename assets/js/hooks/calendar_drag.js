@@ -6,6 +6,10 @@
 // - CalendarMobile: mobile viewport detection and swipe navigation
 
 const HOUR_HEIGHT_PX = 64  // 4rem at 16px base (h-16 in Tailwind)
+// How long to keep re-asserting the current-time scroll after a
+// `calendar:scroll-to-current` request, so it survives the server re-render
+// that accompanies a refresh (which natively resets scrollTop a frame later).
+const SCROLL_REASSERT_MS = 1200
 const SNAP_MINUTES = 15
 const TOUCH_HOLD_MS = 200       // long-press threshold before a touch becomes a drag
 const DRAG_THRESHOLD_PX = 5     // pointer movement before drag starts (mouse)
@@ -50,8 +54,9 @@ export const CalendarDrag = {
     // Track scroll position to toggle "jump to now" pill visibility.
     this.el.addEventListener('scroll', this._onScroll, { passive: true })
 
+    this._scrollAssertRaf = null
     this._scrollToCurrentTime()
-    this._onScrollToCurrent = () => this._scrollToCurrentTime()
+    this._onScrollToCurrent = this._handleScrollToCurrent.bind(this)
     this.el.addEventListener('calendar:scroll-to-current', this._onScrollToCurrent)
 
     // Initial pill visibility check after layout settles.
@@ -73,6 +78,7 @@ export const CalendarDrag = {
     document.removeEventListener('touchcancel', this._onPointerUp)
     this.el.removeEventListener('scroll', this._onScroll)
     this.el.removeEventListener('calendar:scroll-to-current', this._onScrollToCurrent)
+    if (this._scrollAssertRaf) cancelAnimationFrame(this._scrollAssertRaf)
     this._clearTouchHold()
   },
 
@@ -82,6 +88,26 @@ export const CalendarDrag = {
     const remInPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
     this.el.scrollTop = Math.max(0, topRem * remInPx - HOUR_HEIGHT_PX)
     requestAnimationFrame(() => this._updateJumpToNowVisibility())
+  },
+
+  // Handler for the `calendar:scroll-to-current` event (refresh button + "jump
+  // to now" pill). A plain one-shot scroll loses a race: the same refresh pushes
+  // a server re-render whose patch natively resets `scrollTop` to 0 a frame or
+  // two later, landing on the top of the calendar. Re-assert the current-time
+  // position over a short window so it wins — but only when the scroll has been
+  // zeroed, so a user scrolling away during the window is left alone.
+  _handleScrollToCurrent() {
+    this._scrollToCurrentTime()
+
+    const deadline = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + SCROLL_REASSERT_MS
+    if (this._scrollAssertRaf) cancelAnimationFrame(this._scrollAssertRaf)
+
+    const tick = () => {
+      if (Math.round(this.el.scrollTop) === 0) this._scrollToCurrentTime()
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+      this._scrollAssertRaf = now < deadline ? requestAnimationFrame(tick) : null
+    }
+    this._scrollAssertRaf = requestAnimationFrame(tick)
   },
 
   _handleScroll() {
@@ -614,7 +640,6 @@ export const CalendarMobile = {
           this.pushEventTo(this.el, 'set_view', { view: 'month' })
           break
         case '4':
-          // Agenda view is not yet wired server-side; this no-ops safely until it lands.
           this.pushEventTo(this.el, 'set_view', { view: 'agenda' })
           break
         case '/':
@@ -647,12 +672,10 @@ export const CalendarMobile = {
     return false
   },
 
-  // `/` focuses the search input when present, falling back to the quick-add
-  // input. Prevent default in the caller so the slash isn't typed.
+  // `/` focuses the search input. Prevent default in the caller so the slash
+  // isn't typed.
   _focusSearch() {
-    const el = document.getElementById('calendar-search-input')
-      || document.getElementById('calendar-quick-add-input')
-    el?.focus()
+    document.getElementById('calendar-search-input')?.focus()
   },
 
   destroyed() {

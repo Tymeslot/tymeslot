@@ -55,16 +55,26 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
 
   Parts are emitted in a stable order: `FREQ`, `INTERVAL` (only when > 1),
   `BYDAY` (only when non-empty), then the end condition. `COUNT` wins over
-  `UNTIL` when both are supplied. `UNTIL` is serialised as an end-of-day UTC
-  timestamp so the supplied calendar date is fully included.
+  `UNTIL` when both are supplied.
+
+  The optional `all_day:` keyword controls the `UNTIL` value type (RFC 5545
+  §3.3.10): when `true`, UNTIL is emitted as a bare date (`YYYYMMDD`) to match
+  the DATE-form `DTSTART` of an all-day event. When `false` (the default),
+  UNTIL is an end-of-day UTC timestamp (`YYYYMMDDТ235959Z`) so the supplied
+  calendar date is fully included.
+
+  ## Options
+    - `:all_day` — boolean, default `false`
   """
-  @spec build(opts()) :: String.t()
-  def build(opts) do
+  @spec build(opts(), keyword()) :: String.t()
+  def build(opts, extra \\ []) do
+    all_day = Keyword.get(extra, :all_day, false)
+
     [
       build_freq(opts),
       build_interval(opts),
       build_by_day(opts),
-      build_end_condition(opts)
+      build_end_condition(opts, all_day)
     ]
     |> Enum.reject(&is_nil/1)
     |> Enum.join(";")
@@ -107,15 +117,22 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
 
   defp build_by_day(_opts), do: nil
 
-  defp build_end_condition(%{count: count}) when is_integer(count) and count > 0,
+  defp build_end_condition(%{count: count}, _all_day) when is_integer(count) and count > 0,
     do: "COUNT=#{count}"
 
-  defp build_end_condition(%{until: %Date{} = until}),
-    do: "UNTIL=#{format_until(until)}"
+  defp build_end_condition(%{until: %Date{} = until}, all_day),
+    do: "UNTIL=#{format_until(until, all_day)}"
 
-  defp build_end_condition(_opts), do: nil
+  defp build_end_condition(_opts, _all_day), do: nil
 
-  defp format_until(%Date{} = date) do
+  # RFC 5545 §3.3.10: UNTIL MUST be the same value type as DTSTART.
+  # All-day events use DATE-form DTSTART, so UNTIL must also be a bare date.
+  # Timed events use DATE-TIME DTSTART, so UNTIL uses an end-of-day UTC stamp.
+  defp format_until(%Date{} = date, true) do
+    "#{pad(date.year, 4)}#{pad(date.month, 2)}#{pad(date.day, 2)}"
+  end
+
+  defp format_until(%Date{} = date, _all_day) do
     "#{pad(date.year, 4)}#{pad(date.month, 2)}#{pad(date.day, 2)}T235959Z"
   end
 
