@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       assert {:halt, updated_socket} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
 
-      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+      assert updated_socket.redirected == {:redirect, %{to: "/embed-unavailable", status: 302}}
     end
 
     test "assigns embedded=true when parent_origin matches allowed domain" do
@@ -89,7 +89,9 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       assert {:halt, updated_socket} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
 
-      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+      assert updated_socket.redirected ==
+               {:redirect,
+                %{to: "/embed-unavailable?parent-origin=https%3A%2F%2Fevil.com", status: 302}}
     end
 
     test "halts with redirect for expired token" do
@@ -106,7 +108,7 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       assert {:halt, updated_socket} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => expired_token}, socket)
 
-      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+      assert updated_socket.redirected == {:redirect, %{to: "/embed-unavailable", status: 302}}
     end
 
     test "halts with redirect for tampered token" do
@@ -115,7 +117,7 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       assert {:halt, updated_socket} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => "tampered"}, socket)
 
-      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+      assert updated_socket.redirected == {:redirect, %{to: "/embed-unavailable", status: 302}}
     end
 
     test "halts with redirect for tampered token on disconnected render" do
@@ -124,7 +126,7 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       assert {:halt, updated_socket} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => "tampered"}, socket)
 
-      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+      assert updated_socket.redirected == {:redirect, %{to: "/embed-unavailable", status: 302}}
     end
 
     test "halts when profile not found for token username" do
@@ -134,7 +136,9 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       assert {:halt, updated_socket} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
 
-      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+      assert updated_socket.redirected ==
+               {:redirect,
+                %{to: "/embed-unavailable?parent-origin=https%3A%2F%2Fexample.com", status: 302}}
     end
   end
 
@@ -143,8 +147,8 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       # Regression: the dashboard "Live Preview" iframe loads the booking page
       # from tymeslot's own origin. A freshly created account has no
       # allowed_embed_domains, so without the preview exemption the connected
-      # render would redirect the iframe to "/", which is then served with
-      # frame-ancestors 'none' and blocked by the browser.
+      # render would redirect the iframe to the embed-unavailable notice
+      # instead of showing the account's own live preview.
       user = insert(:user)
 
       profile =
@@ -196,7 +200,9 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       assert {:halt, updated_socket} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
 
-      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+      assert updated_socket.redirected ==
+               {:redirect,
+                %{to: "/embed-unavailable?parent-origin=https%3A%2F%2Fevil.com", status: 302}}
     end
   end
 
@@ -327,7 +333,9 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       assert {:halt, updated_socket} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
 
-      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+      assert updated_socket.redirected ==
+               {:redirect,
+                %{to: "/embed-unavailable?parent-origin=https%3A%2F%2Fexample.com", status: 302}}
     end
 
     test "halts when profile has empty allowed domains" do
@@ -342,7 +350,9 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       assert {:halt, updated_socket} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
 
-      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+      assert updated_socket.redirected ==
+               {:redirect,
+                %{to: "/embed-unavailable?parent-origin=https%3A%2F%2Fexample.com", status: 302}}
     end
 
     test "halts when profile has nil allowed_embed_domains" do
@@ -357,7 +367,9 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       assert {:halt, updated_socket} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
 
-      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+      assert updated_socket.redirected ==
+               {:redirect,
+                %{to: "/embed-unavailable?parent-origin=https%3A%2F%2Fexample.com", status: 302}}
     end
   end
 end

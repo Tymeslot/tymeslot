@@ -42,6 +42,27 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
     end
   end
 
+  describe "security headers with universal framing (:any)" do
+    test "omits frame-ancestors so the page frames on any origin", %{conn: conn} do
+      conn = SecurityHeadersPlug.call(conn, allow_embedding: :any)
+
+      assert [csp] = get_resp_header(conn, "content-security-policy")
+      refute csp =~ "frame-ancestors"
+      # Other directives are still present.
+      assert csp =~ "default-src 'self'"
+      assert csp =~ "script-src"
+    end
+
+    test "sends no X-Frame-Options, deleting any set upstream", %{conn: conn} do
+      conn =
+        conn
+        |> put_resp_header("x-frame-options", "SAMEORIGIN")
+        |> SecurityHeadersPlug.call(allow_embedding: :any)
+
+      assert get_resp_header(conn, "x-frame-options") == []
+    end
+  end
+
   describe "security headers with embedding enabled (configured domains)" do
     setup do
       user = insert(:user)

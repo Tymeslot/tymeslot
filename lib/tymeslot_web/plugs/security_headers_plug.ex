@@ -30,13 +30,20 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
     nonce = generate_nonce()
     conn = assign(conn, :csp_nonce, nonce)
 
-    # Determine frame-ancestors based on the profile's allowed domains.
+    # Determine frame-ancestors based on the mode:
+    #   :any  → universally frameable (no frame-ancestors directive, no
+    #           X-Frame-Options). Used only for the deliberately public,
+    #           content-free embed-unavailable notice, which must render in an
+    #           iframe on ANY origin — including the ones embedding is blocked
+    #           on — so it can replace the marketing-homepage fallback.
+    #   true  → frame-ancestors from the profile's allowed_embed_domains.
+    #   false → block framing entirely.
     # CSP frame-ancestors is the primary source of truth for modern browsers.
     {frame_ancestors, x_frame_options} =
-      if allow_embedding do
-        get_embed_security_headers(conn)
-      else
-        {"'none'", "DENY"}
+      case allow_embedding do
+        :any -> {nil, nil}
+        true -> get_embed_security_headers(conn)
+        _other -> {"'none'", "DENY"}
       end
 
     conn =
@@ -50,12 +57,19 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
         "max-age=31536000; includeSubDomains; preload"
       )
 
-    if x_frame_options do
-      put_resp_header(conn, "x-frame-options", x_frame_options)
-    else
-      # If X-Frame-Options is nil, we omit it to let CSP frame-ancestors
-      # be the sole authority for modern browsers.
-      conn
+    cond do
+      allow_embedding == :any ->
+        # Drop any X-Frame-Options an upstream plug set (e.g.
+        # put_secure_browser_headers' SAMEORIGIN) so the notice frames anywhere.
+        delete_resp_header(conn, "x-frame-options")
+
+      x_frame_options ->
+        put_resp_header(conn, "x-frame-options", x_frame_options)
+
+      true ->
+        # X-Frame-Options nil: omit it so CSP frame-ancestors is the sole
+        # authority for modern browsers.
+        conn
     end
   end
 
@@ -219,25 +233,26 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
           extra_connect_suffix
       end
 
-    Enum.join(
-      [
-        "default-src 'self'",
-        # Inline scripts are authorised by a per-request nonce; reCAPTCHA +
-        # Stripe require their external origins.
-        "script-src #{script_src}",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "img-src 'self' data: https:",
-        "font-src 'self' data: https://fonts.gstatic.com",
-        # Allow connections to reCAPTCHA, Google services, and Stripe
-        "connect-src #{connect_src}",
-        # Allow reCAPTCHA and Stripe frames
-        "frame-src 'self' https://www.google.com https://accounts.google.com https://js.stripe.com https://hooks.stripe.com",
-        "frame-ancestors #{frame_ancestors}",
-        "base-uri 'self'",
-        "form-action 'self' https://billing.stripe.com https://checkout.stripe.com"
-      ],
-      "; "
-    )
+    [
+      "default-src 'self'",
+      # Inline scripts are authorised by a per-request nonce; reCAPTCHA +
+      # Stripe require their external origins.
+      "script-src #{script_src}",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: https:",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      # Allow connections to reCAPTCHA, Google services, and Stripe
+      "connect-src #{connect_src}",
+      # Allow reCAPTCHA and Stripe frames
+      "frame-src 'self' https://www.google.com https://accounts.google.com https://js.stripe.com https://hooks.stripe.com",
+      # nil frame_ancestors → omit the directive entirely (universally
+      # frameable). Otherwise pin the computed value.
+      frame_ancestors && "frame-ancestors #{frame_ancestors}",
+      "base-uri 'self'",
+      "form-action 'self' https://billing.stripe.com https://checkout.stripe.com"
+    ]
+    |> Enum.reject(&(&1 == nil))
+    |> Enum.join("; ")
   end
 
   # Returns both the domain and its www counterpart so CSP frame-ancestors

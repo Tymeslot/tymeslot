@@ -335,6 +335,16 @@ defmodule TymeslotWeb.Router do
     end
   end
 
+  # Public notice shown inside the iframe when an embed is rejected (the
+  # embedding origin isn't allow-listed). Must be declared before the
+  # `/:username` catch-all so it isn't shadowed by a username route, and runs
+  # through its own pipeline so it frames on any origin.
+  scope "/", TymeslotWeb do
+    pipe_through :embed_notice
+
+    get "/embed-unavailable", EmbedBlockedController, :index
+  end
+
   # Username-based scheduling routes (must be before catch-all)
   scope "/", TymeslotWeb do
     pipe_through [:theme_browser, TymeslotWeb.Plugs.CaptureReferrerPlug]

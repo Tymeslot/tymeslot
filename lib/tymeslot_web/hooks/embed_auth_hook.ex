@@ -57,7 +57,8 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
 
           # Same-origin dashboard preview — skip the third-party allowlist so a
           # freshly created account (no allowed_embed_domains yet) can still see
-          # its own live preview instead of being redirected to "/".
+          # its own live preview instead of being redirected to the
+          # embed-unavailable notice.
           preview? ->
             {:cont, assign(socket, :embedded, true)}
 
@@ -77,15 +78,25 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
                   parent_origin: parent_origin
                 )
 
-                {:halt, redirect(socket, to: "/")}
+                {:halt, redirect(socket, to: embed_unavailable_path(parent_origin))}
             end
         end
 
       {:error, reason} ->
         Logger.warning("Embed auth rejected", reason: reason)
-        {:halt, redirect(socket, to: "/")}
+        {:halt, redirect(socket, to: embed_unavailable_path(nil))}
     end
   end
+
+  # Where a rejected embedded render is sent. This dedicated notice replaces the
+  # old redirect to "/" (the marketing homepage), which would otherwise render
+  # inside the embedding site. The parent origin is forwarded so the notice can
+  # post `tymeslot-embed-blocked` back to the embedder.
+  defp embed_unavailable_path(parent_origin) when is_binary(parent_origin) do
+    "/embed-unavailable?" <> URI.encode_query(%{"parent-origin" => parent_origin})
+  end
+
+  defp embed_unavailable_path(_parent_origin), do: "/embed-unavailable"
 
   defp verify_embedding(_username, nil), do: {:error, :missing_origin}
 

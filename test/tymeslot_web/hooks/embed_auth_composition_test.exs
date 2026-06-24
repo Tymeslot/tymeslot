@@ -74,7 +74,9 @@ defmodule TymeslotWeb.Hooks.EmbedAuthCompositionTest do
       # `{:halt, redirect(...)}` as an `{:error, {:redirect, _}}`
       # tuple. If the hook failed to re-validate, this would return
       # `{:ok, view, html}` and the attacker would get a live session.
-      assert {:error, {:redirect, %{to: "/"}}} = live(conn)
+      assert {:error,
+              {:redirect, %{to: "/embed-unavailable?parent-origin=https%3A%2F%2Fattacker.com"}}} =
+               live(conn)
     end
 
     test "connected mount succeeds when the embed request Referer is in the profile's allowlist",

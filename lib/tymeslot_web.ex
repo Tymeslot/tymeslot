@@ -64,6 +64,16 @@ defmodule TymeslotWeb do
         plug TymeslotWeb.Plugs.ThemeProtectionPlug
       end
 
+      # Minimal pipeline for the public, content-free embed-unavailable notice.
+      # SecurityHeadersPlug runs in `:any` mode so the page frames on ANY
+      # origin (including ones embedding is blocked on) — that's the whole
+      # point: it replaces the marketing-homepage fallback inside the iframe.
+      pipeline :embed_notice do
+        plug :accepts, ["html"]
+        plug :put_secure_browser_headers
+        plug TymeslotWeb.Plugs.SecurityHeadersPlug, allow_embedding: :any
+      end
+
       pipeline :api do
         plug :accepts, ["json"]
         plug TymeslotWeb.Plugs.SecurityHeadersPlug
