@@ -68,6 +68,7 @@ defmodule TymeslotWeb.Themes.Shared.Components.GuestField do
 
         <form
           :if={length(@guest_emails) < @max_guests}
+          id="guest-add-form"
           class="guest-add"
           phx-submit="add_guest"
           phx-change="guest_input_change"
