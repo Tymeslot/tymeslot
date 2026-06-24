@@ -44,6 +44,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   use TymeslotWeb, :live_component
 
   alias Tymeslot.Meetings
+  alias TymeslotWeb.Dashboard.CalendarGrid.ComponentView
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
@@ -55,21 +56,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Search
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shortcuts
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility
-  alias TymeslotWeb.Dashboard.CalendarGrid.GridViews
-  alias TymeslotWeb.Dashboard.CalendarGrid.Header
-  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDiscardAttendeesModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmRemoveAttendeeModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.NotifyPromptModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ShortcutsHelpModal
+  alias TymeslotWeb.Dashboard.CalendarGrid.InitialState
   alias TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers
-  alias TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView
-  alias TymeslotWeb.Dashboard.CalendarGrid.Views.EmptyState
 
   @mini_month_events ~w(toggle_mini_month close_mini_month mini_month_prev mini_month_next)
 
@@ -101,55 +89,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
-    socket =
-      socket
-      |> assign(:view, :week)
-      |> assign(:date, Date.utc_today())
-      |> assign(:events, [])
-      |> assign(:integrations, [])
-      |> assign(:integration_colors, %{})
-      |> assign(:loading, false)
-      |> assign(:selected_event, nil)
-      |> assign(:current_time, DateTime.utc_now())
-      |> assign(:hidden_integration_ids, [])
-      |> assign(:preferences, nil)
-      |> assign(:show_calendar_list, false)
-      |> assign(:show_view_menu, false)
-      |> assign(:mini_month_open, false)
-      |> assign(:mini_month_cursor, nil)
-      |> assign(:show_settings, false)
-      |> assign(:show_shortcuts_help, false)
-      |> assign(:creating_event, nil)
-      |> assign(:recurrence_prompt, nil)
-      |> assign(:confirm_delete_event, nil)
-      |> assign(:confirm_delete_linked_to_booking, false)
-      |> assign(:saving_event, false)
-      |> assign(:deleting_event, false)
-      |> assign(:video_integrations, [])
-      |> assign(:confirm_remove_attendee, nil)
-      |> assign(:pending_attendees, [])
-      |> assign(:confirm_discard_attendees, false)
-      |> assign(:attendee_input, "")
-      |> assign(:notify_prompt, nil)
-      |> assign(:pending_notification, false)
-      |> assign(:owned_integration_ids, MapSet.new())
-      |> assign(:visible_events, [])
-      |> assign(:guest_rsvp_summaries, %{})
-      |> assign(:visible_days, [])
-      |> assign(:user_timezone, "UTC")
-      |> assign(:timezone_display, "UTC")
-      |> assign(:timezone_country_code, nil)
-      |> assign(:syncing, false)
-      |> assign(:sync_total, 0)
-      |> assign(:sync_completed, 0)
-      |> assign(:stale_integrations, [])
-      |> assign(:oldest_sync_at, nil)
-      |> assign(:search_term, "")
-      |> assign(:search_results, [])
-      |> assign(:search_open, false)
-      |> assign(:_initialized, false)
-
-    {:ok, socket}
+    {:ok, assign(socket, InitialState.defaults())}
   end
 
   # --- Update action handlers (delegated to UpdateHandlers) ---
@@ -478,140 +418,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   # --- Render ---
 
   @impl Phoenix.LiveComponent
-  def render(assigns) do
-    ~H"""
-    <div id="calendar-grid" class="flex flex-col h-full relative" phx-hook="CalendarMobile" phx-target={@myself}>
-      <EmptyState.no_calendars_banner :if={@_initialized && @integrations == []} />
-      <div :if={@_initialized && @integrations != []} class="flex-1 flex flex-col min-h-0">
-        <Header.toolbar
-          view={@view}
-          date={@date}
-          integrations={@integrations}
-          integration_colors={@integration_colors}
-          hidden_integration_ids={@hidden_integration_ids}
-          show_calendar_list={@show_calendar_list}
-          show_view_menu={@show_view_menu}
-          mini_month_open={@mini_month_open}
-          mini_month_cursor={@mini_month_cursor}
-          syncing={@syncing}
-          timezone_display={@timezone_display}
-          timezone_country_code={@timezone_country_code}
-          preferences={@preferences}
-          search_term={@search_term}
-          search_results={@search_results}
-          search_open={@search_open}
-          user_timezone={@user_timezone}
-          myself={@myself}
-        />
-        <GridViews.week_day_view
-          view={@view}
-          visible_days={@visible_days}
-          visible_events={@visible_events}
-          events={@events}
-          integrations={@integrations}
-          integration_colors={@integration_colors}
-          hidden_integration_ids={@hidden_integration_ids}
-          current_time={@current_time}
-          user_timezone={@user_timezone}
-          preferences={@preferences}
-          stale_integrations={@stale_integrations}
-          oldest_sync_at={@oldest_sync_at}
-          syncing={@syncing}
-          sync_total={@sync_total}
-          sync_completed={@sync_completed}
-          date={@date}
-          guest_rsvp_summaries={@guest_rsvp_summaries}
-          myself={@myself}
-        />
-        <GridViews.month_view
-          view={@view}
-          visible_days={@visible_days}
-          visible_events={@visible_events}
-          integrations={@integrations}
-          integration_colors={@integration_colors}
-          hidden_integration_ids={@hidden_integration_ids}
-          date={@date}
-          user_timezone={@user_timezone}
-          preferences={@preferences}
-          guest_rsvp_summaries={@guest_rsvp_summaries}
-          myself={@myself}
-        />
-        <AgendaView.agenda_view
-          view={@view}
-          visible_days={@visible_days}
-          visible_events={@visible_events}
-          integration_colors={@integration_colors}
-          user_timezone={@user_timezone}
-          preferences={@preferences}
-          myself={@myself}
-        />
-        <CreateEventModal.create_event_modal
-          :if={@creating_event}
-          creating_event={@creating_event}
-          integrations={@integrations}
-          integration_colors={@integration_colors}
-          saving={@saving_event}
-          user_timezone={@user_timezone}
-          myself={@myself}
-          video_integrations={@video_integrations}
-        />
-        <RecurrencePromptModal.recurrence_prompt_modal
-          :if={@recurrence_prompt}
-          recurrence_prompt={@recurrence_prompt}
-          myself={@myself}
-        />
-        <SettingsModal.settings_modal
-          :if={@show_settings}
-          preferences={@preferences}
-          myself={@myself}
-        />
-        <ShortcutsHelpModal.shortcuts_help_modal
-          :if={@show_shortcuts_help}
-          myself={@myself}
-        />
-        <EventDetailModal.event_detail_modal
-          :if={@selected_event}
-          selected_event={@selected_event}
-          integrations={@integrations}
-          integration_colors={@integration_colors}
-          user_timezone={@user_timezone}
-          time_format={Helpers.time_format(assigns)}
-          myself={@myself}
-          editable={MapSet.member?(@owned_integration_ids, @selected_event.calendar_integration_id)}
-          attendee_input={@attendee_input}
-          pending_attendees={@pending_attendees}
-          video_integrations={@video_integrations}
-          pending_notification={@pending_notification}
-        />
-        <NotifyPromptModal.notify_prompt_modal
-          :if={@notify_prompt}
-          notify_prompt={@notify_prompt}
-          kind={@notify_prompt.kind}
-          myself={@myself}
-        />
-        <ConfirmDeleteModal.confirm_delete_modal
-          :if={@confirm_delete_event}
-          event={@confirm_delete_event}
-          deleting={@deleting_event}
-          linked_to_booking={@confirm_delete_linked_to_booking}
-          myself={@myself}
-        />
-        <ConfirmRemoveAttendeeModal.confirm_remove_attendee_modal
-          :if={@confirm_remove_attendee}
-          confirm_remove_attendee={@confirm_remove_attendee}
-          myself={@myself}
-        />
-        <ConfirmDiscardAttendeesModal.confirm_discard_attendees_modal
-          :if={@confirm_discard_attendees}
-          count={
-            if @selected_event,
-              do: length(@pending_attendees),
-              else: length((@creating_event || %{})[:attendees] || [])
-          }
-          myself={@myself}
-        />
-      </div>
-    </div>
-    """
-  end
+  def render(assigns), do: ComponentView.grid(assigns)
 end
