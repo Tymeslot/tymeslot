@@ -18,44 +18,32 @@ defmodule Tymeslot.Integrations.Calendar.Utils.EventValidator do
     end
   end
 
-  defp validate_timed(attrs) do
-    types = %{
-      uid: :string,
-      summary: :string,
-      description: :string,
-      location: :string,
-      start_time: :utc_datetime,
-      end_time: :utc_datetime,
-      timezone: :string,
-      attendee_name: :string,
-      attendee_email: :string
-    }
+  defp validate_timed(attrs),
+    do: do_validate(attrs, :utc_datetime, &ensure_end_after_start/1)
+
+  defp validate_all_day(attrs),
+    do: do_validate(attrs, :date, &ensure_end_not_before_start/1)
+
+  defp do_validate(attrs, time_type, comparator_fun) do
+    types = Map.merge(base_types(), %{start_time: time_type, end_time: time_type})
 
     {%{}, types}
     |> cast(attrs, Map.keys(types))
     |> validate_required([:start_time, :end_time])
-    |> ensure_end_after_start()
+    |> comparator_fun.()
     |> finalise(attrs)
   end
 
-  defp validate_all_day(attrs) do
-    types = %{
+  defp base_types do
+    %{
       uid: :string,
       summary: :string,
       description: :string,
       location: :string,
-      start_time: :date,
-      end_time: :date,
       timezone: :string,
       attendee_name: :string,
       attendee_email: :string
     }
-
-    {%{}, types}
-    |> cast(attrs, Map.keys(types))
-    |> validate_required([:start_time, :end_time])
-    |> ensure_end_not_before_start()
-    |> finalise(attrs)
   end
 
   defp finalise(%Ecto.Changeset{valid?: true}, attrs), do: {:ok, attrs}

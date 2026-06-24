@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
 
   alias Tymeslot.Integrations.Calendar.EventTimeFormatter
   alias Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter
+  alias Tymeslot.Integrations.Calendar.Reminder
 
   @outlook_tymeslot_property_id "String {00020329-0000-0000-C000-000000000046} Name createdBy"
 
@@ -153,15 +154,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   # method and cannot represent multiple reminders. Only the first reminder's
   # lead time round-trips; additional reminders are dropped on the Outlook path.
   defp add_reminder(base, event_data) do
-    # Reminders may be atom-keyed (freshly built) or string-keyed (round-tripped
-    # through the JSONB cache column); read both forms.
     case extract_field(event_data, :reminders, "reminders") do
       [first | _rest] when is_map(first) ->
-        minutes = first[:minutes_before] || first["minutes_before"]
-
         base
         |> Map.put("isReminderOn", true)
-        |> Map.put("reminderMinutesBeforeStart", minutes)
+        |> Map.put("reminderMinutesBeforeStart", Reminder.minutes_before(first))
 
       _none ->
         Map.put(base, "isReminderOn", false)

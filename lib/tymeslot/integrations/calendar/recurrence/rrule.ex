@@ -123,8 +123,17 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
 
   # --- parse helpers ---
 
-  defp strip_prefix("RRULE:" <> rest), do: rest
-  defp strip_prefix(rrule), do: rrule
+  @doc """
+  Strips a leading `RRULE:` prefix from an RRULE string, if present.
+
+  Used by the iCal builder and Google event mapper to ensure exactly one
+  `RRULE:` prefix is emitted regardless of whether the stored rule already
+  carries one (Google's normaliser keeps the prefix on read; CalDAV and Outlook
+  store the bare rule body).
+  """
+  @spec strip_prefix(String.t()) :: String.t()
+  def strip_prefix("RRULE:" <> rest), do: rest
+  def strip_prefix(rrule), do: rrule
 
   defp parse_token(token, acc) do
     case String.split(token, "=", parts: 2) do

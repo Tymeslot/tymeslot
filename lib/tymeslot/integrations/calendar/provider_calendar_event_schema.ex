@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
 
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Reminder
 
   @timestamps_opts [type: :utc_datetime_usec]
 
@@ -291,27 +292,14 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
 
   # Reminders are stored in a JSONB column, so even atom-keyed maps written by
   # the dashboard come back string-keyed. Normalise to the canonical
-  # `%{method: :popup | :email, minutes_before: integer}` shape that the UI and
-  # the provider mappers expect.
+  # `%{method: :popup | :email | :sms, minutes_before: integer}` shape that the
+  # UI and the provider mappers expect.
   defp normalise_reminders(nil), do: []
 
   defp normalise_reminders(reminders) when is_list(reminders),
-    do: Enum.map(reminders, &normalise_reminder/1)
+    do: Enum.map(reminders, &Reminder.normalise/1)
 
   defp normalise_reminders(_other), do: []
-
-  defp normalise_reminder(%{} = reminder) do
-    method = reminder[:method] || reminder["method"]
-    minutes = reminder[:minutes_before] || reminder["minutes_before"]
-
-    %{method: reminder_method_atom(method), minutes_before: minutes}
-  end
-
-  defp reminder_method_atom(:email), do: :email
-  defp reminder_method_atom("email"), do: :email
-  defp reminder_method_atom(:sms), do: :sms
-  defp reminder_method_atom("sms"), do: :sms
-  defp reminder_method_atom(_popup_or_other), do: :popup
 
   defp safe_to_atom(nil), do: nil
   defp safe_to_atom(value) when is_atom(value), do: value

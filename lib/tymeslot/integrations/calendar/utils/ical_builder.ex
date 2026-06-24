@@ -14,6 +14,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   """
 
   alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Integrations.Calendar.Reminder
 
   @type ical_event_data :: %{
           required(:summary) => String.t(),
@@ -349,7 +351,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   # leading `RRULE:` (Google's normaliser keeps the prefix on read); strip any
   # existing prefix so exactly one is emitted.
   defp build_rrule_line(%{recurrence_rule: rrule}) when is_binary(rrule) and rrule != "",
-    do: "RRULE:#{String.replace_prefix(rrule, "RRULE:", "")}"
+    do: "RRULE:#{RRule.strip_prefix(rrule)}"
 
   defp build_rrule_line(_event), do: nil
 
@@ -557,13 +559,14 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp build_reminders(_no_reminders), do: ""
 
-  # The canonical reminder shape is `%{method: :popup | :email, minutes_before:}`
-  # (emitted by the provider normalisers). `:popup` → DISPLAY, `:email` → EMAIL
-  # for the VALARM ACTION. A permissive fallback keeps any legacy/raw reminder
-  # (e.g. a bare `minutes_before`, or the historical `:type` key) building a
-  # DISPLAY alarm rather than crashing the whole iCal write.
+  # The canonical reminder shape is `%{method: :popup | :email | :sms, minutes_before:}`
+  # (emitted by the provider normalisers). `:popup` → DISPLAY, `:email` → EMAIL,
+  # `:sms` → DISPLAY for the VALARM ACTION. A permissive fallback keeps any
+  # legacy/raw reminder (e.g. a bare `minutes_before`, or the historical `:type`
+  # key) building a DISPLAY alarm rather than crashing the whole iCal write.
+  # Both atom-keyed and string-keyed maps are handled via Reminder.
   defp build_reminder(%{minutes_before: minutes, method: method}) do
-    build_valarm(minutes, valarm_action(method))
+    build_valarm(minutes, Reminder.ical_action(method))
   end
 
   defp build_reminder(%{minutes_before: minutes, type: type}) do
@@ -576,7 +579,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   # String-keyed reminders round-tripped through the JSONB cache column.
   defp build_reminder(%{"minutes_before" => minutes} = reminder) do
-    build_valarm(minutes, valarm_action(reminder["method"]))
+    build_valarm(minutes, Reminder.ical_action(Reminder.method(reminder)))
   end
 
   defp build_valarm(minutes, action) do
@@ -588,10 +591,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     END:VALARM
     """)
   end
-
-  defp valarm_action(:email), do: "EMAIL"
-  defp valarm_action("email"), do: "EMAIL"
-  defp valarm_action(_popup_or_other), do: "DISPLAY"
 
   defp sanitize_ical_value(value) when is_binary(value) do
     String.replace(value, ~r/[\r\n\x00-\x1f]/, "")

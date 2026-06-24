@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
 
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.EventTimeFormatter
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Integrations.Calendar.Reminder
 
   @doc """
   Formats internal event data into a Google Calendar API event body.
@@ -178,12 +180,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   end
 
   # Reminder maps reach here either atom-keyed (freshly built in the create/edit
-  # flow) or string-keyed (round-tripped through the JSONB cache column), so both
-  # key forms are read.
+  # flow) or string-keyed (round-tripped through the JSONB cache column). Key
+  # reading and provider projection are delegated to Reminder.
   defp reminder_override(reminder) do
-    method = reminder[:method] || reminder["method"]
-    minutes = reminder[:minutes_before] || reminder["minutes_before"]
-    %{"method" => google_reminder_method(method), "minutes" => minutes}
+    %{
+      "method" => Reminder.google_method(Reminder.method(reminder)),
+      "minutes" => Reminder.minutes_before(reminder)
+    }
   end
 
   # Google expects `recurrence` as a list of RRULE strings, each prefixed with
@@ -194,8 +197,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   defp maybe_add_recurrence(base_data, event_data) do
     case get_field_value(event_data, :recurrence_rule) do
       rrule when is_binary(rrule) and rrule != "" ->
-        bare = String.replace_prefix(rrule, "RRULE:", "")
-        Map.put(base_data, "recurrence", ["RRULE:#{bare}"])
+        Map.put(base_data, "recurrence", ["RRULE:#{RRule.strip_prefix(rrule)}"])
 
       _none ->
         base_data
@@ -213,10 +215,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
       color_id -> Map.put(base_data, "colorId", color_id)
     end
   end
-
-  defp google_reminder_method(:email), do: "email"
-  defp google_reminder_method("email"), do: "email"
-  defp google_reminder_method(_popup_or_other), do: "popup"
 
   defp to_string_or_default(nil, default), do: default
   defp to_string_or_default(value, _default) when is_binary(value), do: value
