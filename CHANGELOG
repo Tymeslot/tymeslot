@@ -1,4 +1,10 @@
 
+[1.2.2]
+* core: Serve gzip static assets only in production
+* core: Give the analytics dashboard refresh visible feedback
+* core: Add one-click Google Calendar connect to onboarding
+
+
 [1.2.1]
 * core: Only require ANALYTICS_SALT_SECRET when booking analytics is enabled
 * core: Stop button icons wrapping onto their own line
