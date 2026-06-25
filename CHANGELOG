@@ -1,4 +1,12 @@
 
+[1.2.4]
+* core: Redirect to login after self-service password change
+* core: End live sessions immediately on logout and credential changes
+* core: Add missing float animation utility classes
+* core: Return a real 404 for unknown URLs instead of redirecting home
+* core: Record users' last activity timestamp
+
+
 [1.2.3]
 * core: Add id to guest-add form for LiveView form recovery
 * core: Prevent calendar crash on stale create-event integration change
