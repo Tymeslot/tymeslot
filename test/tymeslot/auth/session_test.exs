@@ -6,6 +6,7 @@ defmodule Tymeslot.Auth.SessionTest do
   alias Phoenix.Socket.Broadcast
   alias Tymeslot.Auth.Session
   alias Tymeslot.Auth.UserSessionQueries
+  alias Tymeslot.Repo
   alias TymeslotWeb.Endpoint
 
   import Plug.Conn, only: [get_session: 2, put_session: 3]
@@ -44,7 +45,7 @@ defmodule Tymeslot.Auth.SessionTest do
 
       {:ok, _conn, _token} = Session.create_session(init_test_session(build_conn(), %{}), user)
 
-      assert %DateTime{} = Tymeslot.Repo.reload!(user).last_active_at
+      assert %DateTime{} = Repo.reload!(user).last_active_at
     end
   end
 
@@ -96,13 +97,16 @@ defmodule Tymeslot.Auth.SessionTest do
       insert(:user_session, user: user, token: "tok-a")
       insert(:user_session, user: user, token: "tok-b")
 
-      Endpoint.subscribe(live_socket_topic("tok-a"))
-      Endpoint.subscribe(live_socket_topic("tok-b"))
+      topic_a = live_socket_topic("tok-a")
+      topic_b = live_socket_topic("tok-b")
+
+      Endpoint.subscribe(topic_a)
+      Endpoint.subscribe(topic_b)
 
       Session.revoke_all_sessions(user.id)
 
-      assert_receive %Broadcast{topic: "users_sessions:" <> _a, event: "disconnect"}
-      assert_receive %Broadcast{topic: "users_sessions:" <> _b, event: "disconnect"}
+      assert_receive %Broadcast{topic: ^topic_a, event: "disconnect"}
+      assert_receive %Broadcast{topic: ^topic_b, event: "disconnect"}
     end
 
     test "does not disconnect another user's sessions" do
