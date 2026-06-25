@@ -202,4 +202,24 @@ defmodule Tymeslot.Auth.UserQueriesTest do
       assert second.dashboard_tour_seen_at
     end
   end
+
+  describe "touch_last_active_at/1" do
+    test "stamps last_active_at for the user" do
+      user = insert(:user)
+      assert is_nil(user.last_active_at)
+
+      assert :ok == UserQueries.touch_last_active_at(user.id)
+
+      assert %DateTime{} = Tymeslot.Repo.reload!(user).last_active_at
+    end
+
+    test "only touches the given user" do
+      user = insert(:user)
+      other = insert(:user)
+
+      UserQueries.touch_last_active_at(user.id)
+
+      assert is_nil(Tymeslot.Repo.reload!(other).last_active_at)
+    end
+  end
 end

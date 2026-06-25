@@ -41,6 +41,7 @@ defmodule Tymeslot.Auth.UserSchema do
           onboarding_completed_at: DateTime.t() | nil,
           dashboard_tour_seen_at: DateTime.t() | nil,
           marketing_unsubscribed_at: DateTime.t() | nil,
+          last_active_at: DateTime.t() | nil,
           is_admin: boolean(),
           profile: ProfileSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integrations: [CalendarIntegrationSchema.t()] | Ecto.Association.NotLoaded.t(),
@@ -77,6 +78,7 @@ defmodule Tymeslot.Auth.UserSchema do
     field(:onboarding_completed_at, :utc_datetime)
     field(:dashboard_tour_seen_at, :utc_datetime)
     field(:marketing_unsubscribed_at, :utc_datetime)
+    field(:last_active_at, :utc_datetime)
     field(:is_admin, :boolean, default: false)
 
     has_one(:profile, Tymeslot.Profiles.ProfileSchema, foreign_key: :user_id)

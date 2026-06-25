@@ -7,7 +7,7 @@ defmodule Tymeslot.Auth.Session do
   require Logger
   alias Phoenix.Component
   alias Plug.Conn
-  alias Tymeslot.Auth.UserSessionQueries
+  alias Tymeslot.Auth.{UserQueries, UserSessionQueries}
   alias Tymeslot.Security.{SecurityLogger, Token}
   alias TymeslotWeb.Endpoint
 
@@ -34,6 +34,9 @@ defmodule Tymeslot.Auth.Session do
 
     case UserSessionQueries.create_session(user.id, token, expires_at) do
       {:ok, _session} ->
+        # Record login as the user's most recent activity (inactivity tracking).
+        UserQueries.touch_last_active_at(user.id)
+
         result =
           case conn_or_socket do
             %Conn{} = conn ->

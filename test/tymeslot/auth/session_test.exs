@@ -37,6 +37,15 @@ defmodule Tymeslot.Auth.SessionTest do
       # Token should work now
       assert %{id: _id} = UserSessionQueries.get_user_by_session_token(token)
     end
+
+    test "records the login as the user's last activity" do
+      user = insert(:user)
+      assert is_nil(user.last_active_at)
+
+      {:ok, _conn, _token} = Session.create_session(init_test_session(build_conn(), %{}), user)
+
+      assert %DateTime{} = Tymeslot.Repo.reload!(user).last_active_at
+    end
   end
 
   describe "delete_session/1" do

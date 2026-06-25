@@ -400,6 +400,21 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
+  Stamps `last_active_at` with the current UTC time for the given user id.
+
+  Called when a session is created (i.e. on login). Because sessions are
+  short-lived and non-renewing, login time is a sufficient proxy for activity
+  when measuring account inactivity. Uses `update_all` so it neither loads the
+  user nor bumps `updated_at`.
+  """
+  @spec touch_last_active_at(integer()) :: :ok
+  def touch_last_active_at(user_id) do
+    query = from(u in UserSchema, where: u.id == ^user_id)
+    Repo.update_all(query, set: [last_active_at: DateTime.utc_now(:second)])
+    :ok
+  end
+
+  @doc """
   Sets or clears a user's marketing unsubscribe timestamp.
 
   Pass a `DateTime` to mark the user as unsubscribed, or `nil` to resubscribe.
