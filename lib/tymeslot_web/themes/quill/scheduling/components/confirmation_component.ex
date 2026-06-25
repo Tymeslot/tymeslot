@@ -91,7 +91,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     <.booking_details
                       date={@selected_date}
                       time={@selected_time}
-                      duration={@duration}
+                      duration={if @meeting_type, do: @meeting_type.duration_minutes, else: @duration}
                       timezone={@user_timezone}
                       variant={:compact}
                     />
@@ -199,7 +199,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
   attr :date, :string, required: true
   attr :time, :string, required: true
-  attr :duration, :string, required: true
+  attr :duration, :any, required: true
   attr :timezone, :string, required: true
   attr :variant, :atom, default: :compact, values: [:compact, :expanded]
 

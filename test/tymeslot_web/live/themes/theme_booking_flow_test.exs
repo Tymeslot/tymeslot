@@ -134,7 +134,15 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
         wait_until(fn -> has_element?(view, "[data-testid='confirmation-heading']") end, 10_000)
 
-        assert render(view) =~ attendee_email
+        confirmation_html = render(view)
+        assert confirmation_html =~ attendee_email
+
+        # The confirmation must show the meeting type's real duration, derived from
+        # `duration_minutes` — never parsed from the URL slug. A named type like
+        # "Quick Chat" has the slug "quick-chat", which carries no minutes, so a
+        # slug-based duration previously rendered "Unknown duration" on Quill.
+        assert confirmation_html =~ "30 min"
+        refute confirmation_html =~ "Unknown duration"
 
         meeting =
           Repo.get_by!(MeetingSchema, organizer_user_id: user.id, attendee_email: attendee_email)
