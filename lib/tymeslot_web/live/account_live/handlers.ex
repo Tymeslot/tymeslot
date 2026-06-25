@@ -4,6 +4,8 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   Handles form validation, email updates, and password changes.
   """
 
+  use TymeslotWeb, :verified_routes
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Phoenix.LiveView
@@ -123,7 +125,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     with {:ok, sanitized_params} <-
            validate_password_change_input(params, metadata),
          :ok <- RateLimiter.check_auth_rate_limit(user.email, metadata[:ip]),
-         {:ok, updated_user} <-
+         {:ok, _updated_user} <-
            Auth.update_user_password(
              user,
              sanitized_params["current_password"],
@@ -132,8 +134,11 @@ defmodule TymeslotWeb.AccountLive.Handlers do
            ) do
       {:noreply,
        socket
-       |> LiveView.put_flash(:info, "Password updated successfully.")
-       |> Helpers.reset_form_state(:password, updated_user)}
+       |> LiveView.put_flash(
+         :info,
+         "Your password has been changed. Please sign in again with your new password."
+       )
+       |> LiveView.redirect(to: ~p"/auth/login")}
     else
       {:error, :rate_limited, message} ->
         {:noreply,

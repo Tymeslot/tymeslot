@@ -129,7 +129,7 @@ defmodule TymeslotWeb.AccountLiveTest do
   end
 
   describe "Password Changes" do
-    test "updates password with valid data", %{conn: conn} do
+    test "redirects to login with explanatory flash on successful password change", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
       view |> element("button", "Change Password") |> render_click()
@@ -144,8 +144,10 @@ defmodule TymeslotWeb.AccountLiveTest do
       })
       |> render_submit()
 
-      assert render(view) =~ "Password updated successfully"
-      refute has_element?(view, "form[phx-submit='update_password']")
+      flash = assert_redirect(view, ~p"/auth/login")
+
+      assert flash["info"] =~
+               "Your password has been changed. Please sign in again with your new password."
     end
 
     test "shows error for password mismatch", %{conn: conn} do
