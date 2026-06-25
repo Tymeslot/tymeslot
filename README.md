@@ -1,29 +1,51 @@
 <div align="center">
 
-<img src="./priv/static/images/brand/logo-with-text.svg" alt="Tymeslot" height="72" />
+<img src="./priv/static/images/brand/logo-with-text.svg" alt="Tymeslot" height="76" />
 
-### Open-source appointment scheduling. Self-host in minutes.
+<h3>Scheduling software that stays yours.</h3>
 
-Booking pages, calendar sync, video rooms, automated emails — on your server.<br>
-Built on Elixir/OTP so it keeps running while you're not looking.
+<p>
+Booking pages, calendar sync, video rooms and automated emails — running on <b>your</b> server, under your control.<br />
+Built on Elixir/OTP, so it keeps running while you sleep.
+</p>
 
-[![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)](https://www.elastic.co/licensing/elastic-license)
-[![Elixir](https://img.shields.io/badge/Elixir-1.20-purple.svg)](https://elixir-lang.org)
-[![Phoenix](https://img.shields.io/badge/Phoenix-1.8-orange.svg)](https://phoenixframework.org)
-[![LiveView](https://img.shields.io/badge/LiveView-1.1-red.svg)](https://github.com/phoenixframework/phoenix_live_view)
-[![GitHub stars](https://img.shields.io/github/stars/tymeslot/tymeslot?style=social)](https://github.com/tymeslot/tymeslot/stargazers)
+<p>
+<a href="https://www.elastic.co/licensing/elastic-license"><img src="https://img.shields.io/badge/Licence-Elastic--2.0-1F6FEB.svg" alt="Licence: Elastic-2.0" /></a>
+<a href="https://elixir-lang.org"><img src="https://img.shields.io/badge/Elixir-1.20-4B275F.svg?logo=elixir&logoColor=white" alt="Elixir" /></a>
+<a href="https://phoenixframework.org"><img src="https://img.shields.io/badge/Phoenix-1.8-FD4F00.svg?logo=phoenixframework&logoColor=white" alt="Phoenix" /></a>
+<a href="https://github.com/phoenixframework/phoenix_live_view"><img src="https://img.shields.io/badge/LiveView-1.1-E34F26.svg" alt="LiveView" /></a>
+<a href="https://github.com/tymeslot/tymeslot/releases"><img src="https://img.shields.io/github/v/release/tymeslot/tymeslot?label=release&color=2ea043" alt="Latest release" /></a>
+<a href="https://github.com/tymeslot/tymeslot/commits"><img src="https://img.shields.io/github/last-commit/tymeslot/tymeslot?label=last%20commit&color=2ea043" alt="Last commit" /></a>
+<a href="https://github.com/tymeslot/tymeslot/stargazers"><img src="https://img.shields.io/github/stars/tymeslot/tymeslot?style=social" alt="GitHub stars" /></a>
+</p>
 
-[**Self-host with Docker →**](README-Docker.md) &nbsp;·&nbsp; [**Try the Cloud →**](https://tymeslot.app) &nbsp;·&nbsp; [**Docs →**](https://tymeslot.app/docs) &nbsp;·&nbsp; [**Issues →**](https://github.com/tymeslot/tymeslot/issues)
+<p>
+<b><a href="#quick-start">Self-host with Docker →</a></b> &nbsp;·&nbsp;
+<b><a href="https://tymeslot.app">Try the Cloud →</a></b> &nbsp;·&nbsp;
+<b><a href="https://tymeslot.app/demo-theme-1">Live demo →</a></b> &nbsp;·&nbsp;
+<b><a href="https://tymeslot.app/docs">Docs →</a></b> &nbsp;·&nbsp;
+<b><a href="https://github.com/tymeslot/tymeslot/issues">Issues →</a></b>
+</p>
 
-<br>
+<br />
 
-<img src="./priv/static/images/screenshots/dashboard.png" alt="Tymeslot dashboard" width="900" />
+<img src="./priv/static/images/demo/quill.gif" alt="Booking a meeting on a Tymeslot page — pick a duration, choose a time, confirm" width="900" />
+
+<sub>A real booking, start to finish: pick a duration, choose a time, done. &nbsp;·&nbsp; <a href="./priv/static/images/demo/quill.mp4">Watch in HD →</a></sub>
 
 </div>
+
+<br />
+
+> **Source-available, and staying that way.** Calendly is closed SaaS. Cal.com relicensed away from open source in 2026. Tymeslot's source stays public and self-hostable under the [Elastic Licence 2.0](LICENSE) — what you run today, you can keep running tomorrow.
+>
+> **Actively developed.** Tymeslot is the engine behind [tymeslot.app](https://tymeslot.app), our managed cloud — so the code you self-host is the same code we run in production for paying customers. New releases ship regularly; see the [releases](https://github.com/tymeslot/tymeslot/releases).
 
 ---
 
 ## Quick start
+
+One command. Postgres is bundled, so there is nothing else to install.
 
 ```bash
 docker run --name tymeslot \
@@ -35,154 +57,110 @@ docker run --name tymeslot \
   luka1thb/tymeslot:latest
 ```
 
-Open [http://localhost:4000](http://localhost:4000) — your scheduling platform is live. For SMTP, TLS, reverse proxy, and external Postgres, see the [Docker guide](README-Docker.md).
+Open **[http://localhost:4000](http://localhost:4000)** — your scheduling platform is live. The first account you create becomes the admin. For SMTP, TLS, a reverse proxy and external Postgres, see the [Docker guide](README-Docker.md).
 
-> **Keep `tymeslot_pg` as a named volume.** Replacing it with a host path can fail on Docker Desktop, rootless Docker, and SELinux hosts. If you need a specific path, use [external Postgres](README-Docker.md#using-an-external-database).
+> **Keep `tymeslot_pg` as a named volume.** Swapping it for a host path can fail on Docker Desktop, rootless Docker and SELinux hosts. If you need a specific location, use [external Postgres](README-Docker.md#using-an-external-database) instead.
 
 ---
 
-## What you get
+## Everything you need to take bookings
 
-<table width="100%">
-<tr>
-<td width="50%" valign="top">
+No add-ons, no per-feature upsells. It all ships in the box.
 
-<img src="./priv/static/images/ui/spacer.png" width="450" height="1" alt="" />
+### One place to run your day
 
-### No double-bookings
+Upcoming meetings, quick actions and your whole setup on a single screen. No hunting through menus to change how you take bookings.
 
-<sub>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</sub>
-
-Every connected calendar is checked at the moment of booking — one conflict anywhere blocks the slot everywhere.
-
-</td>
-<td width="50%" valign="top">
-
-<img src="./priv/static/images/ui/spacer.png" width="450" height="1" alt="" />
+![Tymeslot dashboard — overview with upcoming meetings and quick actions](./priv/static/images/screenshots/dashboard.webp)
 
 ### Availability that mirrors reality
 
-<sub>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</sub>
+Working hours, date-specific overrides, holiday blocks, per-meeting buffers, booking windows and minimum notice — set once, and your booking page reflects exactly when you are free.
 
-Working hours, date-specific overrides, vacation blocks, per-meeting buffers, booking windows, minimum notice — without touching a calendar.
+![Availability editor — weekly schedule with per-day hours and breaks](./priv/static/images/screenshots/availability.webp)
 
-</td>
-</tr>
-<tr>
-<td valign="top">
+### Embed it anywhere
 
-### Email that delivers
+Inline on a page, a popup, or a floating button. Copy the snippet, paste it on your site. Tokens are signed and domain-locked, so your widget only runs where you put it.
 
-<sub>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</sub>
+![Embed & share — inline, popup and floating embed options with code snippets](./priv/static/images/screenshots/embed.webp)
 
-Responsive MJML templates, `.ics` on every send, configurable reminders, signed cancel and reschedule links — no logins, no support tickets.
+### Never double-booked
 
-</td>
-<td valign="top">
-
-### SSO-first auth
-
-<sub>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</sub>
-
-Email/password, Google, GitHub, plus generic OAuth/OIDC — Keycloak, Authentik, Okta, Azure AD. Disable registration or password auth independently.
-
-</td>
-</tr>
-<tr>
-<td valign="top">
-
-### Embed anywhere
-
-<sub>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</sub>
-
-Inline, popup, or floating button. Signed, domain-locked tokens — your widget, only on your site.
-
-</td>
-<td valign="top">
-
-### Privacy by design
-
-<sub>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</sub>
-
-AES-encrypted credentials at rest, no third-party analytics or tracking pixels, rate-limited public endpoints, HMAC-signed webhooks, CSRF and signed tokens throughout.
-
-</td>
-</tr>
-</table>
-
-Plus: two themes (Quill, Rhythm) with dark mode, five languages (English, German, Ukrainian, French, Italian), white-label option, Slack and Telegram notifications, drag-and-drop calendar dashboard, attendee-driven reschedule flow, integration health alerts, and **optional paid bookings via Stripe Connect** (see [Meeting payments](#meeting-payments) below).
+Every connected calendar is checked the moment someone books. One conflict anywhere blocks the slot everywhere — across Google, Outlook, CalDAV and the rest.
 
 ---
 
-## Integrations
+## And there's more under the hood
 
-**Calendars**
-
-<table width="100%">
-<tr>
-<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/calendar/medium/google.png" alt="Google Calendar" height="44" /><br><sub>Google Calendar</sub></td>
-<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/calendar/medium/outlook.png" alt="Outlook" height="44" /><br><sub>Outlook</sub></td>
-<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/calendar/medium/caldav.png" alt="CalDAV" height="44" /><br><sub>CalDAV</sub></td>
-<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="44" /><br><sub>Nextcloud</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="44" /><br><sub>Radicale</sub></td>
-<td align="center"><img src="./priv/static/icons/providers/calendar/medium/zimbra.png" alt="Zimbra" height="44" /><br><sub>Zimbra</sub></td>
-<td align="center"><img src="./priv/static/icons/providers/calendar/medium/mailbox_org.png" alt="mailbox.org" height="44" /><br><sub>mailbox.org</sub></td>
-<td>&nbsp;</td>
-</tr>
-</table>
-
-**Video & location**
-
-<table width="100%">
-<tr>
-<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/video/medium/google_meet.png" alt="Google Meet" height="44" /><br><sub>Google Meet</sub></td>
-<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/video/medium/teams.png" alt="Microsoft Teams" height="44" /><br><sub>Microsoft Teams</sub></td>
-<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/video/medium/zoom.png" alt="Zoom" height="44" /><br><sub>Zoom</sub></td>
-<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/video/medium/mirotalk.png" alt="MiroTalk P2P" height="44" /><br><sub>MiroTalk P2P</sub></td>
-</tr>
-<tr>
-<td align="center"><img src="./priv/static/icons/providers/video/medium/local.png" alt="In-Person / Phone" height="44" /><br><sub>In-Person / Phone</sub></td>
-<td align="center"><img src="./priv/static/icons/providers/video/medium/custom.png" alt="Custom" height="44" /><br><sub>Custom Links</sub></td>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
-</tr>
-</table>
-
-Webhooks (`meeting_created`, `meeting_cancelled`, `meeting_rescheduled`) plug into n8n, Zapier, Make, or your own backend. HMAC-signed payloads.
+- **Email that delivers** — responsive templates, an `.ics` file on every send, configurable reminders, and signed cancel/reschedule links that need no login.
+- **Ask the right questions** — add custom questions to any meeting type, so you walk into every call already briefed.
+- **SSO-first auth** — email/password, Google, GitHub, plus generic OAuth/OIDC for Keycloak, Authentik, Okta and Azure AD. Disable registration or password login independently.
+- **Privacy by design** — credentials encrypted at rest, no third-party trackers or analytics pixels, rate-limited public endpoints, HMAC-signed webhooks, CSRF and signed tokens throughout.
+- **Automate everything** — `meeting_created`, `meeting_cancelled` and `meeting_rescheduled` webhooks plug straight into n8n, Zapier, Make or your own backend.
+- **Make it yours** — two booking-page themes (Quill and Rhythm) with dark mode and white-label options.
+- **Speaks your language** — English, German, Ukrainian, French and Italian, with Slack/Telegram notifications.
+- **Get paid to meet** — optional paid bookings through [Stripe Connect](#meeting-payments), off by default and fee-free for self-hosters.
 
 ---
 
-## Screenshots
+## Works with your stack
 
-<table>
+<b>Calendars</b> — sync availability and write confirmed meetings back, both ways.
+
+<table align="center">
 <tr>
-<td width="50%"><img src="./priv/static/images/screenshots/availability.png" alt="Booking page" /><br><sub><b>Booking page</b> — Quill or Rhythm theme, dark mode, five languages</sub></td>
-<td width="50%"><img src="./priv/static/images/screenshots/embedding.png" alt="Embed widget" /><br><sub><b>Embed widget</b> — inline, popup, or floating button</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/google.png" alt="Google Calendar" height="40" /><br /><sub>Google Calendar</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/outlook.png" alt="Outlook" height="40" /><br /><sub>Outlook</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/caldav.png" alt="CalDAV" height="40" /><br /><sub>CalDAV</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="40" /><br /><sub>Nextcloud</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="40" /><br /><sub>Radicale</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/zimbra.png" alt="Zimbra" height="40" /><br /><sub>Zimbra</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/mailbox_org.png" alt="mailbox.org" height="40" /><br /><sub>mailbox.org</sub></td>
+<td></td>
+</tr>
+</table>
+
+<b>Video &amp; location</b> — auto-create a meeting room (or set a place) when a booking is confirmed.
+
+<table align="center">
+<tr>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/google_meet.png" alt="Google Meet" height="40" /><br /><sub>Google Meet</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/teams.png" alt="Microsoft Teams" height="40" /><br /><sub>Microsoft Teams</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/zoom.png" alt="Zoom" height="40" /><br /><sub>Zoom</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/mirotalk.png" alt="MiroTalk P2P" height="40" /><br /><sub>MiroTalk P2P</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/in_person.png" alt="In person / phone" height="40" /><br /><sub>In person / phone</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/custom.png" alt="Custom link" height="40" /><br /><sub>Custom link</sub></td>
 </tr>
 </table>
 
 ---
 
-## Deploy
+## Deploy your way
 
 | Method | Guide | Notes |
-|--------|-------|-------|
+|---|---|---|
 | **Docker** | [README-Docker.md](README-Docker.md) | Single container, Postgres included — recommended |
 | **Cloudron** | [README-Cloudron.md](README-Cloudron.md) | One-click install, automatic updates |
-| **Railway** | [Deploy →](https://railway.com/deploy/tymeslot) | One-click cloud, no server |
-| **Managed Cloud** | [tymeslot.app](https://tymeslot.app) | Zero setup, free tier |
+| **Railway** | [Deploy →](https://railway.com/deploy/tymeslot) | One-click cloud, no server to manage |
+| **Managed Cloud** | [tymeslot.app](https://tymeslot.app) | Zero setup, free plan included |
 
-Full configuration reference (SMTP, OAuth, OIDC, reCAPTCHA, external Postgres, SSO-only mode): [Docker guide](README-Docker.md).
-
-The first user to register on a fresh install is automatically promoted to admin and gets access to `/admin`, where they can toggle runtime settings (registration on/off, password auth on/off, video transcoding) without redeploying. For promoting additional admins on each deployment target — Docker, Cloudron, Railway, source — see [`docs/ADMIN.md`](docs/ADMIN.md).
+Full configuration reference — SMTP, OAuth, OIDC, reCAPTCHA, external Postgres, SSO-only mode — lives in the [Docker guide](README-Docker.md). The first user to register on a fresh install becomes admin and gets `/admin`, where runtime settings (registration on/off, password auth, video transcoding) can be toggled without a redeploy. For promoting further admins on each target, see [`docs/ADMIN.md`](docs/ADMIN.md).
 
 ---
 
 ## Meeting payments
 
-Optional. Lets hosts charge attendees through Stripe at booking time. Off by default — self-hosters opt in by registering their own Stripe platform.
+Optional. Charge attendees through Stripe at booking time. Off by default — self-hosters opt in by registering their own Stripe platform, and Tymeslot never holds the funds or takes a cut unless you set one.
+
+<details>
+<summary><b>Set up Stripe Connect</b></summary>
+
+<br />
 
 **Prerequisites**
 
@@ -196,14 +174,16 @@ Optional. Lets hosts charge attendees through Stripe at booking time. Off by def
 |---|---|
 | `STRIPE_SECRET_KEY` | Your platform's Stripe secret key (`sk_live_…` or `sk_test_…`). Required when `MEETING_PAYMENTS_ENABLED=true`. |
 | `STRIPE_CONNECT_WEBHOOK_SECRET` | Signing secret for the Connect webhook endpoint. Required to verify connected-account events. |
-| `MEETING_PAYMENTS_ENABLED` | Set to `true` to expose the payments dashboard and event-type payment toggle. Defaults to `false`. |
-| `MEETING_PAYMENTS_APPLICATION_FEE_BP` | Optional platform fee, in basis points (`100` = 1%). Defaults to `0` so self-host operators never take a cut unless they explicitly opt in. Range `0`–`10000`. |
+| `MEETING_PAYMENTS_ENABLED` | Set to `true` to expose the payments dashboard and the per-event payment toggle. Defaults to `false`. |
+| `MEETING_PAYMENTS_APPLICATION_FEE_BP` | Optional platform fee in basis points (`100` = 1%). Defaults to `0`, so self-hosters never take a cut unless they opt in. Range `0`–`10000`. |
 
-Once enabled, hosts connect their own Stripe account from **Dashboard → Payments**, pick a currency, and turn on `Require payment` on any event type. Direct charges flow into the host's Stripe balance on their existing payout schedule — Tymeslot never holds the funds.
+Once enabled, hosts connect their own Stripe account from **Dashboard → Payments**, pick a currency, and switch on **Require payment** for any event type. Direct charges flow into the host's Stripe balance on their existing payout schedule.
+
+</details>
 
 ---
 
-## Stack
+## Built on
 
 <div align="center">
 
@@ -225,67 +205,28 @@ Once enabled, hosts connect their own Stripe account from **Dashboard → Paymen
 
 ## Pricing
 
-<table width="100%">
-<tr>
-<td width="50%" valign="top">
+### Self-hosted — free, forever
 
-<img src="./priv/static/images/ui/spacer.png" width="450" height="1" alt="" />
+The full feature set, every integration, unlimited bookings. Yours under the Elastic Licence 2.0, with community support. **[Self-host with Docker →](#quick-start)**
 
-### Self-hosted
+### Managed Cloud — free plan, €9/mo for Pro
 
-<h2>Free</h2>
-
-<sub>forever — Elastic Licence 2.0</sub>
-
-<br>
-
-✓&nbsp;Full feature set<br>
-✓&nbsp;All integrations<br>
-✓&nbsp;Unlimited bookings<br>
-✓&nbsp;Community support
-
-</td>
-<td width="50%" valign="top">
-
-<img src="./priv/static/images/ui/spacer.png" width="450" height="1" alt="" />
-
-### Managed Cloud
-
-<h2>Free <small>·</small> €9<small>/mo</small></h2>
-
-<sub>free plan — €9/mo for Pro</sub>
-
-<br>
-
-✓&nbsp;Zero maintenance<br>
-✓&nbsp;Automatic updates<br>
-✓&nbsp;Free plan included<br>
-✓&nbsp;Priority support
-
-</td>
-</tr>
-<tr>
-<td valign="bottom">
-
-<a href="README-Docker.md"><b>Self-host with Docker →</b></a>
-
-</td>
-<td valign="bottom">
-
-<a href="https://tymeslot.app"><b>Try the cloud →</b></a>
-
-</td>
-</tr>
-</table>
+Zero maintenance, automatic updates and priority support. Start free; upgrade to Pro when you grow. **[Try the Cloud →](https://tymeslot.app)** — 7-day Pro trial, no card required.
 
 ---
 
-## Contributing & licence
+## Star us & contribute
 
-PRs and issues welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Licensed under the [Elastic License 2.0](LICENSE) — free to use and self-host; commercial redistribution requires a separate agreement.
+If Tymeslot is useful to you, **[star the repo](https://github.com/tymeslot/tymeslot)** — it's the single biggest thing you can do to help others find it.
 
-Report security vulnerabilities via the [contact page](https://tymeslot.app/contact).
+PRs and issues are welcome — start with [CONTRIBUTING.md](CONTRIBUTING.md). Found a security issue? Please report it via the [contact page](https://tymeslot.app/contact) rather than a public issue.
 
-Built by [Luka Karsten Breitig](https://lukabreitig.com) · Diletta Luna OÜ · Tallinn, Estonia.
+## Licence
 
-<div align="center"><sub>Built with Elixir, Phoenix, and LiveView</sub></div>
+Source-available under the [Elastic Licence 2.0](LICENSE) — free to use and self-host; commercial redistribution requires a separate agreement.
+
+<br />
+
+<div align="center">
+<sub>Built with Elixir, Phoenix and LiveView · by the Tymeslot team at Diletta Luna OÜ · Tallinn, Estonia</sub>
+</div>
