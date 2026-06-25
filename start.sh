@@ -27,16 +27,6 @@ chmod -R 700 /app/data
 echo "Created runtime directories:"
 ls -la /app/data/
 
-# Seed tzdata writable directory with bundled ETS files (first boot or upgrade).
-# tzdata needs a writable data_dir because it writes poll timestamps even when
-# autoupdate is disabled.
-BUNDLED_ETS="/app/lib/tzdata-*/priv/release_ets"
-if ls $BUNDLED_ETS/*.ets 1>/dev/null 2>&1; then
-  mkdir -p /app/data/tzdata/release_ets
-  cp -u $BUNDLED_ETS/*.ets /app/data/tzdata/release_ets/
-  echo "==> Seeded tzdata ETS files in /app/data/tzdata"
-fi
-
 # Log environment (without sensitive data)
 echo "Environment configured:"
 echo "  MIX_ENV: ${MIX_ENV:-not set}"
