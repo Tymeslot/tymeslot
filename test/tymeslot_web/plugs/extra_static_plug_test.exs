@@ -13,10 +13,9 @@ defmodule TymeslotWeb.Plugs.ExtraStaticTest do
     # config sets this key, so the default cannot be relied upon here.
     setup_config(:tymeslot, :extra_static_sources, [])
 
-    # Unserved paths fall through to the /:username catch-all, which redirects.
-    conn = get(conn, "/extra-fixture/hello.txt")
-
-    assert conn.status == 302
+    # Unserved paths fall through to the /:username catch-all, which raises a
+    # real 404 for the unknown organizer "extra-fixture".
+    assert_error_sent(404, fn -> get(conn, "/extra-fixture/hello.txt") end)
   end
 
   test "serves files from a configured source", %{conn: conn} do
@@ -36,9 +35,9 @@ defmodule TymeslotWeb.Plugs.ExtraStaticTest do
       [at: "/", from: @fixture_dir, only: ["something-else"]]
     ])
 
-    conn = get(conn, "/extra-fixture/hello.txt")
-
-    assert conn.status == 302
+    # The path is outside the allowlist, so it falls through to the /:username
+    # catch-all, which raises a real 404 for the unknown organizer.
+    assert_error_sent(404, fn -> get(conn, "/extra-fixture/hello.txt") end)
   end
 
   test "falls through to later sources in the list", %{conn: conn} do
