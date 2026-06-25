@@ -9,7 +9,7 @@ defmodule Tymeslot.Auth.PasswordUpdate do
 
   alias Ecto.Changeset
 
-  alias Tymeslot.Auth.{UserQueries, UserSessionQueries}
+  alias Tymeslot.Auth.{Session, UserQueries}
   alias Tymeslot.Security.Password
   alias Tymeslot.Utils.ChangesetUtils
 
@@ -24,7 +24,7 @@ defmodule Tymeslot.Auth.PasswordUpdate do
          :ok <- ensure_not_same_as_old(user, new_password),
          :ok <- validate_new_password(new_password, new_password_confirmation),
          {:ok, updated_user} <- do_update_password(user, new_password, new_password_confirmation),
-         {_count, nil} <- UserSessionQueries.delete_user_sessions(user.id) do
+         :ok <- Session.revoke_all_sessions(user.id) do
       {:ok, updated_user}
     else
       {:error, :invalid_password} ->

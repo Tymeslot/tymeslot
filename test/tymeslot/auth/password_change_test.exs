@@ -67,5 +67,15 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
 
       refute Repo.get(UserSessionSchema, session.id)
     end
+
+    test "disconnects live sockets of revoked sessions", %{user: user} do
+      session = insert(:user_session, user: user)
+      TymeslotWeb.Endpoint.subscribe("users_sessions:#{Base.url_encode64(session.token)}")
+
+      assert {:ok, _updated_user} =
+               Auth.update_user_password(user, "CurrentPass123!", "NewPass456!", "NewPass456!")
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
   end
 end

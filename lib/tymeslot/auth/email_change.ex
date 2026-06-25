@@ -9,7 +9,7 @@ defmodule Tymeslot.Auth.EmailChange do
 
   alias Ecto.Changeset
 
-  alias Tymeslot.Auth.{UserQueries, UserSessionQueries, UserTokenQueries}
+  alias Tymeslot.Auth.{Session, UserQueries, UserSessionQueries, UserTokenQueries}
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.EmailValidator
@@ -72,7 +72,10 @@ defmodule Tymeslot.Auth.EmailChange do
          old_email <- user.email,
          new_email <- user.pending_email,
          {:ok, result} <- verify_email_change_in_transaction(user, old_email, new_email) do
-      # After successful commit, enqueue confirmation emails
+      # After successful commit, disconnect any live sockets bound to the
+      # now-revoked sessions, then enqueue confirmation emails.
+      Enum.each(result.revoked_tokens, &Session.disconnect_token/1)
+
       _result =
         EmailScheduler.schedule_email_change_confirmations(
           result.user.id,
@@ -144,7 +147,10 @@ defmodule Tymeslot.Auth.EmailChange do
     Repo.transaction(fn ->
       case UserTokenQueries.confirm_email_change(user) do
         {:ok, updated_user} ->
-          # Invalidate all existing sessions for security
+          # Invalidate all existing sessions for security. Capture the tokens
+          # before deleting so the caller can disconnect their live sockets
+          # *after* this transaction commits — never from inside it.
+          revoked_tokens = UserSessionQueries.list_user_session_tokens(updated_user.id)
           UserSessionQueries.delete_user_sessions(updated_user.id)
 
           Logger.info("Email change verified successfully",
@@ -153,7 +159,7 @@ defmodule Tymeslot.Auth.EmailChange do
             new_email: new_email
           )
 
-          %{user: updated_user}
+          %{user: updated_user, revoked_tokens: revoked_tokens}
 
         {:error, changeset} ->
           Repo.rollback({:changeset_error, format_changeset_error(changeset)})

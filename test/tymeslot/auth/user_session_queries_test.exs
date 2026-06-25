@@ -128,6 +128,31 @@ defmodule Tymeslot.Auth.UserSessionQueriesTest do
     end
   end
 
+  describe "list_user_session_tokens/1" do
+    test "returns the tokens of all the user's sessions" do
+      user = insert(:user)
+      create_session!(user, "token_1")
+      create_session!(user, "token_2")
+
+      assert ["token_1", "token_2"] ==
+               Enum.sort(UserSessionQueries.list_user_session_tokens(user.id))
+    end
+
+    test "excludes other users' sessions" do
+      user = insert(:user)
+      other = insert(:user)
+      create_session!(user, "mine")
+      create_session!(other, "theirs")
+
+      assert ["mine"] == UserSessionQueries.list_user_session_tokens(user.id)
+    end
+
+    test "returns an empty list when the user has no sessions" do
+      user = insert(:user)
+      assert [] == UserSessionQueries.list_user_session_tokens(user.id)
+    end
+  end
+
   describe "delete_session_by_token/1" do
     test "deletes session by token" do
       user = insert(:user)

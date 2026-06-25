@@ -9,6 +9,7 @@ defmodule Tymeslot.Auth.Session do
   alias Plug.Conn
   alias Tymeslot.Auth.UserSessionQueries
   alias Tymeslot.Security.{SecurityLogger, Token}
+  alias TymeslotWeb.Endpoint
 
   @user_token_key :user_token
 
@@ -39,7 +40,7 @@ defmodule Tymeslot.Auth.Session do
               updated_conn =
                 conn
                 |> Conn.put_session(@user_token_key, token)
-                |> Conn.put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
+                |> Conn.put_session(:live_socket_id, live_socket_topic(token))
                 |> Conn.configure_session(renew: true)
 
               # Log session creation for Plug.Conn
@@ -57,7 +58,7 @@ defmodule Tymeslot.Auth.Session do
                     Map.merge(socket.assigns, %{
                       user_token: token,
                       current_user: user,
-                      live_socket_id: "users_sessions:#{Base.url_encode64(token)}"
+                      live_socket_id: live_socket_topic(token)
                     })
               }
 
@@ -100,11 +101,43 @@ defmodule Tymeslot.Auth.Session do
       end
 
       UserSessionQueries.delete_session_by_token(user_token)
+      disconnect_token(user_token)
     end
 
     conn
     |> Conn.configure_session(drop: true)
     |> Conn.clear_session()
+  end
+
+  @doc """
+  Revokes every session belonging to a user: deletes the rows and immediately
+  disconnects any live sockets still bound to them.
+
+  Used by the security flows that invalidate all sessions at once (password
+  reset, password change, email change). Without the disconnect, a revoked
+  session keeps working on an already-connected LiveView socket until it next
+  reconnects.
+  """
+  @spec revoke_all_sessions(integer()) :: :ok
+  def revoke_all_sessions(user_id) do
+    tokens = UserSessionQueries.list_user_session_tokens(user_id)
+    UserSessionQueries.delete_user_sessions(user_id)
+    Enum.each(tokens, &disconnect_token/1)
+    :ok
+  end
+
+  @doc """
+  Force-disconnects any live socket bound to the given session token by
+  broadcasting a "disconnect" event on the token's `live_socket_id` topic.
+
+  Callers that delete the session row inside a database transaction must invoke
+  this only after the transaction has committed — disconnecting a socket whose
+  revocation later rolls back would be incorrect.
+  """
+  @spec disconnect_token(String.t()) :: :ok
+  def disconnect_token(token) when is_binary(token) do
+    Endpoint.broadcast(live_socket_topic(token), "disconnect", %{})
+    :ok
   end
 
   @doc """
@@ -177,6 +210,10 @@ defmodule Tymeslot.Auth.Session do
       get_in(socket.assigns, [:form_data, :email])
     end
   end
+
+  # The `live_socket_id` topic a connected socket is subscribed to, derived from
+  # its session token. Broadcasting "disconnect" here closes the socket.
+  defp live_socket_topic(token), do: "users_sessions:#{Base.url_encode64(token)}"
 
   # Helper function to safely get peer data
   defp get_peer_data(conn) do

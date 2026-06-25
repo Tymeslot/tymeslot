@@ -8,8 +8,8 @@ defmodule Tymeslot.Auth.PasswordReset do
   alias Tymeslot.Auth.{
     ErrorFormatter,
     Helpers.AccountLogging,
+    Session,
     UserSchema,
-    UserSessionQueries,
     Validation
   }
 
@@ -386,17 +386,17 @@ defmodule Tymeslot.Auth.PasswordReset do
     end
   end
 
-  # Invalidate all user sessions after password reset for security
+  # Invalidate all user sessions after password reset for security. Also
+  # disconnects any still-connected live sockets so the revocation is immediate.
   defp invalidate_all_sessions(user) do
-    case UserSessionQueries.delete_user_sessions(user.id) do
-      {_deleted_count, _deleted_sessions} ->
-        Logger.info("Invalidated all sessions after password reset",
-          user_id: user.id,
-          email: user.email,
-          event: :sessions_invalidated_password_reset
-        )
+    Session.revoke_all_sessions(user.id)
 
-        :ok
-    end
+    Logger.info("Invalidated all sessions after password reset",
+      user_id: user.id,
+      email: user.email,
+      event: :sessions_invalidated_password_reset
+    )
+
+    :ok
   end
 end

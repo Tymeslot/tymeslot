@@ -38,6 +38,23 @@ defmodule Tymeslot.Auth.UserSessionQueries do
   end
 
   @doc """
+  Lists the tokens of all sessions belonging to a user.
+
+  Used to force-disconnect any live sockets bound to those tokens when the
+  sessions are revoked (password reset, password change, email change).
+  """
+  @spec list_user_session_tokens(integer()) :: [String.t()]
+  def list_user_session_tokens(user_id) do
+    query =
+      from(s in UserSessionSchema,
+        where: s.user_id == ^user_id,
+        select: s.token
+      )
+
+    Repo.all(query)
+  end
+
+  @doc """
   Deletes all sessions for a user.
   """
   @spec delete_user_sessions(integer()) :: {non_neg_integer(), nil}

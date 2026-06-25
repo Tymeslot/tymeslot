@@ -133,18 +133,24 @@ defmodule Tymeslot.Auth.PasswordResetTest do
                PasswordReset.reset_password(token, "AnotherPass123!", "AnotherPass123!")
     end
 
-    test "invalidates all existing sessions" do
+    test "invalidates all existing sessions and disconnects their live sockets" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
       sessions = insert_list(3, :user_session, user: user)
+
+      Enum.each(sessions, fn session ->
+        TymeslotWeb.Endpoint.subscribe("users_sessions:#{Base.url_encode64(session.token)}")
+      end)
+
       {token, _value} = Token.generate_password_reset_token()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       new_password = "NewSecurePassword123!"
       {:ok, _user_map, _message} = PasswordReset.reset_password(token, new_password, new_password)
 
-      # All sessions should be invalidated
+      # All sessions should be invalidated and their live sockets disconnected
       Enum.each(sessions, fn session ->
         assert nil == UserSessionQueries.get_user_by_session_token(session.token)
+        assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
       end)
     end
 

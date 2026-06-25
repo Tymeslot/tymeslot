@@ -3,12 +3,16 @@ defmodule Tymeslot.Auth.SessionTest do
 
   @moduletag :auth
 
+  alias Phoenix.Socket.Broadcast
   alias Tymeslot.Auth.Session
   alias Tymeslot.Auth.UserSessionQueries
+  alias TymeslotWeb.Endpoint
 
   import Plug.Conn, only: [get_session: 2, put_session: 3]
   import Tymeslot.Factory
   import Phoenix.ConnTest
+
+  defp live_socket_topic(token), do: "users_sessions:#{Base.url_encode64(token)}"
 
   describe "create_session/2" do
     test "stores session token in conn session" do
@@ -52,6 +56,58 @@ defmodule Tymeslot.Auth.SessionTest do
       updated_conn = Session.delete_session(conn)
 
       assert nil == Session.get_current_user_id(updated_conn)
+    end
+
+    test "force-disconnects the live socket bound to the revoked token" do
+      user = insert(:user)
+      {:ok, conn, token} = Session.create_session(init_test_session(build_conn(), %{}), user)
+
+      Endpoint.subscribe(live_socket_topic(token))
+
+      Session.delete_session(conn)
+
+      assert_receive %Broadcast{event: "disconnect"}
+    end
+  end
+
+  describe "revoke_all_sessions/1" do
+    test "deletes every session for the user" do
+      user = insert(:user)
+      insert(:user_session, user: user, token: "tok-a")
+      insert(:user_session, user: user, token: "tok-b")
+
+      assert :ok == Session.revoke_all_sessions(user.id)
+
+      assert nil == UserSessionQueries.get_user_by_session_token("tok-a")
+      assert nil == UserSessionQueries.get_user_by_session_token("tok-b")
+    end
+
+    test "force-disconnects the live socket of every revoked session" do
+      user = insert(:user)
+      insert(:user_session, user: user, token: "tok-a")
+      insert(:user_session, user: user, token: "tok-b")
+
+      Endpoint.subscribe(live_socket_topic("tok-a"))
+      Endpoint.subscribe(live_socket_topic("tok-b"))
+
+      Session.revoke_all_sessions(user.id)
+
+      assert_receive %Broadcast{topic: "users_sessions:" <> _a, event: "disconnect"}
+      assert_receive %Broadcast{topic: "users_sessions:" <> _b, event: "disconnect"}
+    end
+
+    test "does not disconnect another user's sessions" do
+      user = insert(:user)
+      other = insert(:user)
+      insert(:user_session, user: user, token: "mine")
+      insert(:user_session, user: other, token: "theirs")
+
+      Endpoint.subscribe(live_socket_topic("theirs"))
+
+      Session.revoke_all_sessions(user.id)
+
+      refute_receive %Broadcast{event: "disconnect"}
+      assert UserSessionQueries.get_user_by_session_token("theirs")
     end
   end
 
