@@ -126,6 +126,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
           "SUMMARY:#{escape_text(Map.get(event_data, :summary) || "")}",
           "DESCRIPTION:#{escape_text(event_data[:description] || "")}",
           "LOCATION:#{escape_text(event_data[:location] || "")}",
+          build_conference_line(event_data),
+          build_attachment_lines(event_data),
           build_transp(event_data),
           build_status(event_data),
           build_class(event_data),
@@ -299,6 +301,45 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   defp build_dtend(%{end_time: %DateTime{} = dt}) do
     "DTEND:#{format_datetime(DateTime.shift_zone!(dt, "Etc/UTC"))}"
   end
+
+  # RFC 7986 §5.11 — advertise the video-meeting access URI as a first-class
+  # CONFERENCE property so RFC 7986-aware clients render a native "Join"
+  # affordance. LOCATION still carries the URL for older clients. The value is
+  # a URI, so it is not text-escaped; we only strip control characters to
+  # prevent property injection. LABEL is omitted here (unlike the email-side
+  # generator) because the CalDAV write path has no attendee-locale context.
+  defp build_conference_line(%{conference_url: url}) when is_binary(url) and url != "" do
+    "CONFERENCE;VALUE=URI;FEATURE=VIDEO:#{sanitize_ical_value(url)}"
+  end
+
+  defp build_conference_line(_event), do: nil
+
+  # RFC 5545 §3.8.1.1 — one `ATTACH` line per file, as a URI reference (not
+  # inline binary, which would bloat the payload). `FMTTYPE` carries the MIME
+  # type when known. Hosted at a Tymeslot `/uploads/...` URL.
+  defp build_attachment_lines(%{attachments: attachments}) when is_list(attachments) do
+    attachments
+    |> Enum.map(&attachment_line/1)
+    |> Enum.reject(&is_nil/1)
+    |> case do
+      [] -> nil
+      lines -> Enum.join(lines, "\r\n")
+    end
+  end
+
+  defp build_attachment_lines(_event), do: nil
+
+  defp attachment_line(%{url: url} = attachment) when is_binary(url) and url != "" do
+    case attachment[:content_type] || attachment["content_type"] do
+      mime when is_binary(mime) and mime != "" ->
+        "ATTACH;FMTTYPE=#{mime}:#{sanitize_ical_value(url)}"
+
+      _missing ->
+        "ATTACH:#{sanitize_ical_value(url)}"
+    end
+  end
+
+  defp attachment_line(_other), do: nil
 
   defp build_transp(%{transparency: t}) when t in [:transparent, "transparent", "TRANSPARENT"],
     do: "TRANSP:TRANSPARENT"

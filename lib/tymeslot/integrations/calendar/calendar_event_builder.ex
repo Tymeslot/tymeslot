@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   """
 
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias TymeslotWeb.Endpoint
 
   @doc """
   Builds a calendar event data map from a meeting record.
@@ -33,6 +34,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
       end_time: meeting.end_time,
       timezone: meeting.attendee_timezone,
       location: meeting.meeting_url || meeting.location,
+      conference_url: meeting.meeting_url,
+      transparency: if(Map.get(meeting, :show_as_free), do: :transparent, else: :opaque),
+      attachments: build_attachments(meeting),
       organizer_name: meeting.organizer_name,
       organizer_email: meeting.organizer_email,
       attendee_name: meeting.attendee_name,
@@ -60,12 +64,50 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
       meeting.description,
       if(meeting.attendee_message, do: "\n\nMessage from attendee:\n#{meeting.attendee_message}"),
       custom_answers_section(meeting),
+      attachments_section(meeting),
       if(meeting.meeting_url, do: "\n\nVideo meeting: #{meeting.meeting_url}")
     ]
 
     parts
     |> Enum.filter(& &1)
     |> Enum.join()
+  end
+
+  @doc """
+  Builds the canonical attachment list (`%{filename, url, content_type}`) from a
+  meeting's `attachments_snapshot`. Absolute download URLs are derived from the
+  endpoint host so calendar clients can fetch the files.
+  """
+  @spec build_attachments(map()) :: [map()]
+  def build_attachments(meeting) do
+    meeting
+    |> Map.get(:attachments_snapshot)
+    |> List.wrap()
+    |> Enum.map(fn a ->
+      %{
+        filename: a["filename"] || a[:filename],
+        url: attachment_url(a["stored_path"] || a[:stored_path]),
+        content_type: a["content_type"] || a[:content_type]
+      }
+    end)
+    |> Enum.reject(&is_nil(&1.url))
+  end
+
+  defp attachment_url(nil), do: nil
+  defp attachment_url(path), do: Endpoint.url() <> "/uploads/" <> path
+
+  # A plain-text "Attachments" block of download links. This is the universal
+  # fallback that renders in every calendar client and provider (CalDAV, Google
+  # description, Outlook body); CalDAV additionally gets native ATTACH lines.
+  defp attachments_section(meeting) do
+    case build_attachments(meeting) do
+      [] ->
+        nil
+
+      attachments ->
+        links = Enum.map_join(attachments, "\n", &"#{&1.filename}: #{&1.url}")
+        "\n\nAttachments:\n#{links}"
+    end
   end
 
   defp custom_answers_section(meeting) do

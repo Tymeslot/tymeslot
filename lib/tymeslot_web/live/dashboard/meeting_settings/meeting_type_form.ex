@@ -23,11 +23,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     Init,
     PaymentsSection,
     QuestionEditorComponent,
+    ShowAsFreeSection,
     Validation
   }
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   import GuestsSection, only: [guests_section: 1]
+  import ShowAsFreeSection, only: [show_as_free_section: 1]
   import HiddenFields, only: [hidden_fields: 1]
   import PaymentsSection, only: [payments_section: 1]
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
@@ -72,6 +74,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:payment_required, false)
      |> assign(:payment_price, "")
      |> assign(:allow_guests, false)
+     |> assign(:show_as_free, false)
      |> assign(:__initialized__, false)}
   end
 
@@ -219,6 +222,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         myself={@myself}
       />
 
+      <.show_as_free_section show_as_free={@show_as_free} myself={@myself} />
+
       <%!-- Custom questions section --%>
       <.live_component
         module={CustomQuestionsSection}
@@ -248,6 +253,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         payment_required={@payment_required}
         payment_price={@payment_price}
         allow_guests={@allow_guests}
+        show_as_free={@show_as_free}
       />
 
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :base) do %>
@@ -457,6 +463,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     {:noreply,
      socket
      |> assign(:allow_guests, !socket.assigns.allow_guests)
+     |> Autosave.maybe_run()}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_show_as_free", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:show_as_free, !socket.assigns.show_as_free)
      |> Autosave.maybe_run()}
   end
 

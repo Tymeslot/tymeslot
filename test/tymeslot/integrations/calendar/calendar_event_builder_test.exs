@@ -74,6 +74,28 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
       assert result.description =~ "Quarterly review"
       assert result.description =~ "Looking forward to it!"
     end
+
+    test "carries the meeting_url through as conference_url" do
+      meeting = %{@base_meeting | meeting_url: "https://meet.example.com/room"}
+
+      result = CalendarEventBuilder.build_event_data(meeting)
+
+      assert result.conference_url == "https://meet.example.com/room"
+    end
+
+    test "defaults transparency to opaque (busy)" do
+      result = CalendarEventBuilder.build_event_data(@base_meeting)
+
+      assert result.transparency == :opaque
+    end
+
+    test "maps show_as_free to transparent transparency" do
+      meeting = Map.put(@base_meeting, :show_as_free, true)
+
+      result = CalendarEventBuilder.build_event_data(meeting)
+
+      assert result.transparency == :transparent
+    end
   end
 
   describe "build_event_description/1" do

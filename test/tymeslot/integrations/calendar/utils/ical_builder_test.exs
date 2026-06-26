@@ -226,6 +226,48 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
       assert String.contains?(ical, "LOCATION:Test location")
     end
 
+    test "emits a CONFERENCE property when conference_url is provided" do
+      event_data = %{
+        summary: "Video Meeting",
+        conference_url: "https://meet.example.com/abc",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z]
+      }
+
+      ical =
+        "uid-conf" |> ICalBuilder.build_simple_event(event_data) |> String.replace("\r\n ", "")
+
+      assert String.contains?(
+               ical,
+               "CONFERENCE;VALUE=URI;FEATURE=VIDEO:https://meet.example.com/abc"
+             )
+    end
+
+    test "omits CONFERENCE when no conference_url is provided" do
+      event_data = %{
+        summary: "Plain",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z]
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-noconf", event_data)
+
+      refute String.contains?(ical, "CONFERENCE")
+    end
+
+    test "emits TRANSP:TRANSPARENT when transparency is transparent" do
+      event_data = %{
+        summary: "Free Time",
+        transparency: :transparent,
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z]
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-free", event_data)
+
+      assert String.contains?(ical, "TRANSP:TRANSPARENT")
+    end
+
     # Regression: prior to v0.100.0, build_simple_event/2 emitted neither
     # ORGANIZER nor ATTENDEE. The v0.100.0 refactor added ATTENDEE but not
     # ORGANIZER, which caused scheduling-aware CalDAV servers (Zimbra,
