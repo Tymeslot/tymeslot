@@ -63,6 +63,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           last_notified_state: map(),
           custom_fields_snapshot: [map()],
           custom_field_answers: map(),
+          show_as_free: boolean(),
+          attachments_snapshot: [map()],
           utm_source: String.t() | nil,
           utm_medium: String.t() | nil,
           utm_campaign: String.t() | nil,
@@ -170,6 +172,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:custom_fields_snapshot, {:array, :map}, default: [])
     field(:custom_field_answers, :map, default: %{})
 
+    # Snapshot of the meeting type's show_as_free setting at booking time —
+    # drives TRANSP/transparency on the calendar event written to the host.
+    field(:show_as_free, :boolean, default: false)
+
+    # Snapshot of the meeting type's host-uploaded attachments at booking time.
+    field(:attachments_snapshot, {:array, :map}, default: [])
+
     # Guests added by the attendee at booking time
     has_many(:guests, Tymeslot.Meetings.GuestSchema,
       foreign_key: :meeting_id,
@@ -246,6 +255,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :last_notified_state,
     :custom_fields_snapshot,
     :custom_field_answers,
+    :show_as_free,
+    :attachments_snapshot,
     :utm_source,
     :utm_medium,
     :utm_campaign,

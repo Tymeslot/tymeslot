@@ -4,11 +4,13 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   """
   use TymeslotWeb, :live_component
 
+  alias Tymeslot.FreeBusy
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Diagnostics
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnectModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
@@ -39,12 +41,55 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
       socket
       |> assign(assigns)
       |> load_integrations()
+      |> load_freebusy()
       |> assign_new(:security_metadata, fn -> DashboardHelpers.get_security_metadata(socket) end)
 
     {:ok, socket}
   end
 
+  defp load_freebusy(socket) do
+    case Profiles.get_or_create_profile(socket.assigns.current_user.id) do
+      {:ok, profile} ->
+        token = profile.freebusy_token
+
+        socket
+        |> assign(:freebusy_profile, profile)
+        |> assign(:freebusy_enabled, FreeBusy.feed_enabled?(profile))
+        |> assign(:freebusy_url, token && url(~p"/free-busy/#{token}"))
+
+      _error ->
+        socket
+        |> assign(:freebusy_profile, nil)
+        |> assign(:freebusy_enabled, false)
+        |> assign(:freebusy_url, nil)
+    end
+  end
+
+  defp update_freebusy(%{assigns: %{freebusy_profile: %{} = profile}} = socket, fun) do
+    case fun.(profile) do
+      {:ok, _updated} -> load_freebusy(socket)
+      {:error, _changeset} -> socket
+    end
+  end
+
+  defp update_freebusy(socket, _fun), do: socket
+
   # --- Event Handlers ---
+
+  @impl Phoenix.LiveComponent
+  def handle_event("enable_freebusy", _params, socket) do
+    {:noreply, update_freebusy(socket, &FreeBusy.enable_feed/1)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("regenerate_freebusy", _params, socket) do
+    {:noreply, update_freebusy(socket, &FreeBusy.regenerate_token/1)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("disable_freebusy", _params, socket) do
+    {:noreply, update_freebusy(socket, &FreeBusy.disable_feed/1)}
+  end
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_integration", %{"id" => id}, socket) do
@@ -332,6 +377,54 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
           integrations={@integrations}
           myself={@myself}
         />
+
+        <section class="space-y-4">
+          <div class="flex items-center gap-2">
+            <.icon name="hero-link" class="w-5 h-5 text-turquoise-500" />
+            <h3 class="text-token-base font-semibold text-tymeslot-800">Free/busy feed</h3>
+          </div>
+
+          <div class="card-glass p-4 space-y-3">
+            <p class="text-token-sm text-tymeslot-500">
+              Share a read-only link that publishes when you're busy (not the event
+              details) as a standard iCalendar feed, so other calendar systems can
+              overlay your availability.
+            </p>
+
+            <%= if @freebusy_enabled do %>
+              <code class="block w-full overflow-x-auto rounded-token-md bg-tymeslot-50 px-3 py-2 text-token-sm text-tymeslot-700 select-all">
+                {@freebusy_url}
+              </code>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  phx-click="regenerate_freebusy"
+                  phx-target={@myself}
+                >
+                  Regenerate link
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-ghost"
+                  phx-click="disable_freebusy"
+                  phx-target={@myself}
+                >
+                  Disable feed
+                </button>
+              </div>
+            <% else %>
+              <button
+                type="button"
+                class="btn btn-primary"
+                phx-click="enable_freebusy"
+                phx-target={@myself}
+              >
+                Enable free/busy feed
+              </button>
+            <% end %>
+          </div>
+        </section>
       <% end %>
 
       <.live_component

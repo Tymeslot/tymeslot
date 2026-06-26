@@ -162,6 +162,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
         reminders: map_reminders(raw[:valarm]),
         recurrence_rule: raw[:rrule] || raw[:recurrence_rule],
         recurrence_exceptions: exdates_as_dates(raw[:exdate] || raw[:exdates] || []),
+        recurrence_id: raw[:recurrence_id],
+        recurrence_id_range: raw[:recurrence_id_range],
         etag: raw[:etag],
         provider_metadata: Map.drop(raw, [:raw_ical, :href, :_occ_start, :_occ_end, :_recurring]),
         raw_ical: raw[:raw_ical],

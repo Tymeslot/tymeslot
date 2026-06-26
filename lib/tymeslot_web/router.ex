@@ -15,6 +15,14 @@ defmodule TymeslotWeb.Router do
     get "/healthcheck", HealthcheckController, :index
   end
 
+  # Public free/busy feed — token-gated, declared early so it wins over the
+  # wildcard username booking routes.
+  scope "/", TymeslotWeb do
+    pipe_through :public_feed
+
+    get "/free-busy/:token", FreebusyController, :index
+  end
+
   # =============================================================================
   # Webhook Routes
   # =============================================================================

@@ -7,6 +7,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingTypes.Attachments
   alias Tymeslot.MeetingTypes.Duration
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -113,6 +114,18 @@ defmodule Tymeslot.MeetingTypes do
   def update_meeting_type(meeting_type, attrs, opts \\ []) do
     MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts)
   end
+
+  @doc """
+  Appends a host-uploaded attachment to a meeting type. See
+  `Tymeslot.MeetingTypes.Attachments.add_attachment/2`.
+  """
+  defdelegate add_attachment(meeting_type, metadata), to: Attachments
+
+  @doc """
+  Removes an attachment from a meeting type. See
+  `Tymeslot.MeetingTypes.Attachments.remove_attachment/2`.
+  """
+  defdelegate remove_attachment(meeting_type, attachment_id), to: Attachments
 
   @doc """
   Toggles the active status of a meeting type without validating video integration.

@@ -386,4 +386,75 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       assert fresh_profile.primary_calendar_integration_id == nil
     end
   end
+
+  describe "free/busy feed" do
+    test "enable_freebusy generates a token, renders the feed URL, and persists it", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, html} = live(conn, ~p"/dashboard/calendar-integration")
+      refute html =~ "/free-busy/"
+
+      view
+      |> element("button[phx-click='enable_freebusy']")
+      |> render_click()
+
+      rendered = render(view)
+      assert rendered =~ "/free-busy/"
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert is_binary(profile.freebusy_token) and profile.freebusy_token != ""
+      assert rendered =~ profile.freebusy_token
+    end
+
+    test "regenerate_freebusy replaces the token and renders the new URL", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+
+      view
+      |> element("button[phx-click='enable_freebusy']")
+      |> render_click()
+
+      {:ok, after_enable} = ProfileQueries.get_by_user_id(user.id)
+      first_token = after_enable.freebusy_token
+
+      view
+      |> element("button[phx-click='regenerate_freebusy']")
+      |> render_click()
+
+      {:ok, after_regen} = ProfileQueries.get_by_user_id(user.id)
+      assert after_regen.freebusy_token != first_token
+
+      rendered = render(view)
+      assert rendered =~ "/free-busy/"
+      assert rendered =~ after_regen.freebusy_token
+      refute rendered =~ first_token
+    end
+
+    test "disable_freebusy clears the token and hides the feed URL", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+
+      view
+      |> element("button[phx-click='enable_freebusy']")
+      |> render_click()
+
+      assert render(view) =~ "/free-busy/"
+
+      view
+      |> element("button[phx-click='disable_freebusy']")
+      |> render_click()
+
+      rendered = render(view)
+      refute rendered =~ "/free-busy/"
+      assert has_element?(view, "button[phx-click='enable_freebusy']")
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert is_nil(profile.freebusy_token)
+    end
+  end
 end

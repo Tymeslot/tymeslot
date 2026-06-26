@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias Tymeslot.Locales
 
   @doc """
   Generates an ICS file content for a meeting/appointment.
@@ -91,8 +92,16 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
         "#{Map.get(meeting_details, :uid, UUID.uuid4())}@#{Application.get_env(:tymeslot, :email)[:domain]}",
       organizer: format_organizer(meeting_details),
       attendee: format_attendees(meeting_details),
+      conference: conference_uri(meeting_details),
       status: "CONFIRMED"
     }
+  end
+
+  defp conference_uri(meeting_details) do
+    case Map.get(meeting_details, :meeting_url) do
+      url when is_binary(url) and url != "" -> url
+      _other -> nil
+    end
   end
 
   # Tymeslot emails always advertise METHOD:PUBLISH (not REQUEST/CANCEL). The
@@ -109,6 +118,12 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     sequence_line = if is_integer(sequence), do: "SEQUENCE:#{sequence}\n", else: ""
     method_line = if method == :none, do: "", else: "METHOD:PUBLISH\n"
     status = status_for(method, event.status)
+    lang = language_param()
+    conference_line = build_conference_line(event.conference)
+
+    summary_text = escape_ical_text(event.summary || dgettext("emails", "Meeting"))
+    description_text = escape_ical_text(event.description)
+    location_text = escape_ical_text(event.location)
 
     fold_lines("""
     BEGIN:VCALENDAR
@@ -120,15 +135,52 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     DTSTAMP:#{format_datetime_utc(DateTime.utc_now())}
     DTSTART:#{format_datetime_utc(event.dtstart)}
     DTEND:#{format_datetime_utc(event.dtend)}
-    #{sequence_line}SUMMARY:#{escape_ical_text(event.summary || dgettext("emails", "Meeting"))}
-    DESCRIPTION:#{escape_ical_text(event.description)}
-    LOCATION:#{escape_ical_text(event.location)}
-    ORGANIZER;#{event.organizer}
+    #{sequence_line}SUMMARY#{tag_language(summary_text, lang)}:#{summary_text}
+    DESCRIPTION#{tag_language(description_text, lang)}:#{description_text}
+    LOCATION#{tag_language(location_text, lang)}:#{location_text}
+    #{conference_line}ORGANIZER;#{event.organizer}
     #{attendee_line}STATUS:#{status}
     END:VEVENT
     END:VCALENDAR
     """)
   end
+
+  # RFC 7986 §5.11 — `CONFERENCE` advertises an online-meeting access URI so
+  # clients can render a native "Join" affordance. We keep `LOCATION` and the
+  # description fallback too, for clients that predate RFC 7986. The value is a
+  # URI (not text), so it is not text-escaped; we only strip CR/LF to prevent
+  # property injection. `LABEL` is a quoted parameter value.
+  defp build_conference_line(nil), do: ""
+
+  defp build_conference_line(url) do
+    label = dgettext("emails", "Join the video call")
+
+    ~s(CONFERENCE;VALUE=URI;FEATURE=VIDEO;LABEL="#{escape_param_value(label)}":#{sanitize_uri(url)}\n)
+  end
+
+  defp escape_param_value(value) do
+    value
+    |> String.replace(~r/[\r\n]/, " ")
+    |> String.replace("\"", "'")
+  end
+
+  defp sanitize_uri(url), do: String.replace(url, ~r/[\r\n]/, "")
+
+  # RFC 5545 §3.2.10 — `LANGUAGE` carries the BCP-47 language tag of the
+  # property's human-readable text. The configured locale codes ("en", "de",
+  # "fr", "it", "uk") are already valid BCP-47 primary subtags. We read the
+  # locale active for this render (set by `generate_ics_with/4`) so it cannot
+  # drift from the surrounding email translation.
+  defp language_param do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
+    if locale in Locales.supported_codes(), do: ";LANGUAGE=#{locale}", else: ""
+  end
+
+  # Only tag properties that actually carry text — an empty SUMMARY/LOCATION
+  # has no language to declare.
+  defp tag_language("", _lang), do: ""
+  defp tag_language(_text, lang), do: lang
 
   # RFC 5545 §3.1 — content lines must not exceed 75 octets (excluding line
   # terminator). Fold by inserting CRLF + a single SPACE continuation marker.

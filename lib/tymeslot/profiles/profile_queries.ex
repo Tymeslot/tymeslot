@@ -25,6 +25,30 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
+  Fetches the profile owning the given free/busy feed token.
+  """
+  @spec get_by_freebusy_token(String.t()) :: {:ok, ProfileSchema.t()} | {:error, :not_found}
+  def get_by_freebusy_token(token) when is_binary(token) and token != "" do
+    case Repo.get_by(ProfileSchema, freebusy_token: token) do
+      nil -> {:error, :not_found}
+      profile -> {:ok, Repo.preload(profile, :user)}
+    end
+  end
+
+  def get_by_freebusy_token(_other), do: {:error, :not_found}
+
+  @doc """
+  Sets (or clears, with `nil`) the profile's free/busy feed token.
+  """
+  @spec update_freebusy_token(ProfileSchema.t(), String.t() | nil) ::
+          {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_freebusy_token(%ProfileSchema{} = profile, token) do
+    profile
+    |> ProfileSchema.freebusy_token_changeset(%{freebusy_token: token})
+    |> Repo.update()
+  end
+
+  @doc """
   Gets a profile by user ID, creating one if it doesn't exist.
   Note: The caller is responsible for any post-creation side effects
   (e.g. creating default weekly schedules).

@@ -102,6 +102,8 @@ defmodule Tymeslot.Bookings.Policy do
           required(:attendee_locale) => String.t(),
           required(:status) => String.t(),
           required(:reminders) => [reminder()],
+          required(:show_as_free) => boolean(),
+          required(:attachments_snapshot) => [map()],
           required(:view_url) => String.t(),
           required(:reschedule_url) => String.t(),
           required(:cancel_url) => String.t(),
@@ -188,6 +190,8 @@ defmodule Tymeslot.Bookings.Policy do
         attendee_locale: Map.get(params, :attendee_locale) || default_locale(),
         status: "confirmed",
         reminders: reminders,
+        show_as_free: (meeting_type_record && meeting_type_record.show_as_free) || false,
+        attachments_snapshot: attachments_snapshot(meeting_type_record),
         custom_fields_snapshot: Map.get(params, :custom_fields_snapshot, []),
         custom_field_answers: Map.get(params, :custom_field_answers, %{}),
         utm_source: Map.get(params, :utm_source),
@@ -202,6 +206,22 @@ defmodule Tymeslot.Bookings.Policy do
       build_meeting_action_urls(meeting_uid, org_username)
     )
   end
+
+  # Snapshots host-uploaded meeting-type attachments as plain maps so the
+  # calendar event and confirmation email reference a stable file set.
+  defp attachments_snapshot(%{attachments: attachments}) when is_list(attachments) do
+    Enum.map(attachments, fn a ->
+      %{
+        "id" => a.id,
+        "filename" => a.filename,
+        "stored_path" => a.stored_path,
+        "content_type" => a.content_type,
+        "byte_size" => a.byte_size
+      }
+    end)
+  end
+
+  defp attachments_snapshot(_meeting_type), do: []
 
   # Resolves the meeting type record if available and active
   defp resolve_meeting_type_record(meeting_type_id, organizer_user_id) do

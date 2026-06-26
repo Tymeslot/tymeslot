@@ -99,6 +99,15 @@ defmodule TymeslotWeb do
         plug TymeslotWeb.Plugs.SetLoggerMetadata
       end
 
+      # Public, unauthenticated iCalendar feed (free/busy). Calendar clients
+      # subscribe with `Accept: text/calendar` (the `ics` format) or `*/*`, so
+      # the json-only `:api` pipeline would `406` them.
+      pipeline :public_feed do
+        plug :accepts, ["ics", "txt", "json"]
+        plug TymeslotWeb.Plugs.SecurityHeadersPlug
+        plug TymeslotWeb.Plugs.SetLoggerMetadata
+      end
+
       pipeline :require_authenticated_user do
         plug TymeslotWeb.Plugs.RequireAuthPlug
       end

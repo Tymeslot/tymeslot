@@ -16,6 +16,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
+    Attachments,
+    AttachmentsSection,
     Autosave,
     CustomQuestionsSection,
     GuestsSection,
@@ -23,11 +25,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     Init,
     PaymentsSection,
     QuestionEditorComponent,
+    ShowAsFreeSection,
     Validation
   }
 
+  alias TymeslotWeb.Helpers.UploadConstraints
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+  import AttachmentsSection, only: [attachments_section: 1]
   import GuestsSection, only: [guests_section: 1]
+  import ShowAsFreeSection, only: [show_as_free_section: 1]
   import HiddenFields, only: [hidden_fields: 1]
   import PaymentsSection, only: [payments_section: 1]
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
@@ -72,7 +78,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:payment_required, false)
      |> assign(:payment_price, "")
      |> assign(:allow_guests, false)
-     |> assign(:__initialized__, false)}
+     |> assign(:show_as_free, false)
+     |> assign(:__initialized__, false)
+     |> allow_upload(:attachment,
+       accept: UploadConstraints.allowed_extensions(:attachment),
+       max_entries: 1,
+       max_file_size: UploadConstraints.max_file_size(:attachment)
+     )}
   end
 
   @impl Phoenix.LiveComponent
@@ -219,6 +231,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         myself={@myself}
       />
 
+      <.show_as_free_section show_as_free={@show_as_free} myself={@myself} />
+
       <%!-- Custom questions section --%>
       <.live_component
         module={CustomQuestionsSection}
@@ -248,6 +262,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         payment_required={@payment_required}
         payment_price={@payment_price}
         allow_guests={@allow_guests}
+        show_as_free={@show_as_free}
       />
 
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :base) do %>
@@ -310,6 +325,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         <% end %>
       </div>
     </form>
+
+    <%!-- Attachments upload form — rendered outside <form> to avoid nested forms.
+         HTML5 ignores nested <form> tags; the phx-change/phx-submit events on the
+         upload form would never fire if this were inside the outer meeting-type form. --%>
+    <.attachments_section
+      :if={@is_edit && @type && @type.id}
+      attachments={@type.attachments}
+      upload={@uploads.attachment}
+      myself={@myself}
+    />
 
     <%!-- Question editor modal — rendered outside <form> to avoid nested forms --%>
     <%= if @editing_question do %>
@@ -459,6 +484,25 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:allow_guests, !socket.assigns.allow_guests)
      |> Autosave.maybe_run()}
   end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_show_as_free", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:show_as_free, !socket.assigns.show_as_free)
+     |> Autosave.maybe_run()}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("validate_attachment", _params, socket), do: {:noreply, socket}
+
+  @impl Phoenix.LiveComponent
+  def handle_event("upload_attachment", _params, socket),
+    do: {:noreply, Attachments.upload(socket)}
+
+  @impl Phoenix.LiveComponent
+  def handle_event("remove_attachment", %{"id" => id}, socket),
+    do: {:noreply, Attachments.remove(socket, id)}
 
   @impl Phoenix.LiveComponent
   def handle_event("change_payment_price", %{"meeting_type" => %{"price_input" => price}}, socket) do

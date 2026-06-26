@@ -25,7 +25,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       assert ics_content =~ "END:VCALENDAR"
       assert ics_content =~ "BEGIN:VEVENT"
       assert ics_content =~ "END:VEVENT"
-      assert ics_content =~ "SUMMARY:Test Meeting"
+      assert ics_content =~ "SUMMARY;LANGUAGE=en:Test Meeting"
       assert ics_content =~ "UID:test-meeting-123@#{domain}"
     end
 
@@ -108,7 +108,25 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
 
       ics_content = IcsGenerator.generate_ics(meeting_details)
 
-      assert ics_content =~ "LOCATION:Video Call"
+      assert ics_content =~ "LOCATION;LANGUAGE=en:Video Call"
+    end
+
+    test "emits a CONFERENCE property when meeting_url is provided" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "meeting-123",
+        organizer_email: "john@example.com",
+        meeting_url: "https://meet.example.com/room123"
+      }
+
+      # Unfold RFC 5545 line folds before asserting the URL survives intact.
+      ics_content =
+        meeting_details |> IcsGenerator.generate_ics() |> String.replace("\r\n ", "")
+
+      assert ics_content =~
+               ~s(CONFERENCE;VALUE=URI;FEATURE=VIDEO;LABEL="Join the video call":https://meet.example.com/room123)
     end
 
     test "includes video URL in description when provided" do
@@ -137,7 +155,10 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
         attendee_message: "Looking forward to discussing the project"
       }
 
-      ics_content = IcsGenerator.generate_ics(meeting_details)
+      # Unfold RFC 5545 line folds — the LANGUAGE param lengthens the
+      # DESCRIPTION line, so the message text may now wrap mid-word.
+      ics_content =
+        meeting_details |> IcsGenerator.generate_ics() |> String.replace("\r\n ", "")
 
       assert ics_content =~ "Message from Jane"
       assert ics_content =~ "Looking forward to discussing the project"
@@ -157,8 +178,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
 
       ics_content = IcsGenerator.generate_ics(meeting_details, "de")
 
-      assert ics_content =~ "LOCATION:Videoanruf"
-      refute ics_content =~ "LOCATION:Video Call"
+      assert ics_content =~ "LOCATION;LANGUAGE=de:Videoanruf"
+      refute ics_content =~ "Video Call"
     end
 
     test "translates video meeting label in description into German" do
@@ -206,7 +227,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
 
       ics_content = IcsGenerator.generate_ics(meeting_details, "en")
 
-      assert ics_content =~ "LOCATION:Video Call"
+      assert ics_content =~ "LOCATION;LANGUAGE=en:Video Call"
     end
   end
 

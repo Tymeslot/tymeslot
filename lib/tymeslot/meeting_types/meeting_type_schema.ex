@@ -5,6 +5,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   use Ecto.Schema
   import Ecto.Changeset
   alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.MeetingTypes.MeetingTypeAttachment
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
 
@@ -17,6 +18,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           is_active: boolean(),
           is_private: boolean(),
           slug: String.t() | nil,
+          show_as_free: boolean(),
           allow_video: boolean(),
           allow_guests: boolean(),
           sort_order: integer(),
@@ -25,6 +27,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           price_cents: integer() | nil,
           is_archived: boolean(),
           custom_fields: [FieldDefinition.t()],
+          attachments: [MeetingTypeAttachment.t()],
           user_id: integer() | nil,
           video_integration_id: integer() | nil,
           calendar_integration_id: integer() | nil,
@@ -41,6 +44,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:is_active, :boolean, default: true)
     field(:is_private, :boolean, default: false)
     field(:slug, :string)
+    field(:show_as_free, :boolean, default: false)
     field(:allow_video, :boolean, default: false)
     field(:allow_guests, :boolean, default: false)
     field(:sort_order, :integer, default: 0)
@@ -55,6 +59,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     belongs_to(:calendar_integration, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema)
 
     embeds_many(:custom_fields, FieldDefinition, on_replace: :delete)
+    embeds_many(:attachments, MeetingTypeAttachment, on_replace: :delete)
 
     timestamps()
   end
@@ -108,6 +113,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :is_active,
       :is_private,
       :slug,
+      :show_as_free,
       :allow_video,
       :allow_guests,
       :sort_order,
@@ -121,6 +127,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :is_archived
     ])
     |> cast_embed(:custom_fields, with: &FieldDefinition.changeset/2)
+    |> cast_embed(:attachments, with: &MeetingTypeAttachment.changeset/2)
     |> validate_required([:name, :duration_minutes, :user_id])
     |> validate_length(:name, Constraints.name_length_opts())
     |> validate_length(:description, max: Constraints.description_max_length())
@@ -143,6 +150,40 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:video_integration_id)
     |> foreign_key_constraint(:calendar_integration_id)
+  end
+
+  # Maximum number of attachments per meeting type (mirrors the reminder cap of 3).
+  @max_attachments 5
+
+  @doc """
+  Focused changeset for replacing the attachments list, without re-validating
+  unrelated fields (name, video integration, payment, …). Callers pass the full
+  desired attachment set under `:attachments`.
+  """
+  @spec attachments_changeset(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
+  def attachments_changeset(meeting_type, attrs) do
+    meeting_type
+    |> cast(attrs, [])
+    |> cast_embed(:attachments, with: &MeetingTypeAttachment.changeset/2)
+    |> validate_attachment_count()
+  end
+
+  @doc "Maximum number of attachments allowed per meeting type."
+  @spec max_attachments() :: pos_integer()
+  def max_attachments, do: @max_attachments
+
+  defp validate_attachment_count(changeset) do
+    attachments = get_field(changeset, :attachments) || []
+
+    if length(attachments) > @max_attachments do
+      add_error(
+        changeset,
+        :attachments,
+        "cannot have more than #{@max_attachments} attachments"
+      )
+    else
+      changeset
+    end
   end
 
   @doc """
