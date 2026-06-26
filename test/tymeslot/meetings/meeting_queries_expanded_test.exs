@@ -9,6 +9,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
   @moduletag :queries
 
   alias Ecto.UUID
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingQueries
 
   # Helper to build meeting times
@@ -109,7 +110,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       meeting1 = insert(:meeting, start_time: start1, end_time: end1)
       meeting2 = insert(:meeting, start_time: start2, end_time: end2)
 
-      meetings = MeetingQueries.list_meetings()
+      meetings = MeetingListQueries.list_meetings()
 
       # Meeting2 has later start time so should be first (desc order)
       assert hd(meetings).id == meeting2.id
@@ -117,7 +118,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
     end
 
     test "returns empty list when no meetings" do
-      assert MeetingQueries.list_meetings() == []
+      assert MeetingListQueries.list_meetings() == []
     end
   end
 
@@ -127,8 +128,8 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       insert(:meeting, status: "confirmed")
       insert(:meeting, status: "cancelled")
 
-      confirmed = MeetingQueries.list_meetings_by_status("confirmed")
-      cancelled = MeetingQueries.list_meetings_by_status("cancelled")
+      confirmed = MeetingListQueries.list_meetings_by_status("confirmed")
+      cancelled = MeetingListQueries.list_meetings_by_status("cancelled")
 
       assert length(confirmed) == 2
       assert length(cancelled) == 1
@@ -137,7 +138,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
     test "returns empty list for status with no meetings" do
       insert(:meeting, status: "confirmed")
 
-      assert MeetingQueries.list_meetings_by_status("cancelled") == []
+      assert MeetingListQueries.list_meetings_by_status("cancelled") == []
     end
   end
 
@@ -151,7 +152,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       future_meeting = insert(:meeting, start_time: future_start, end_time: future_end)
       _past_meeting = insert(:meeting, start_time: past_start, end_time: past_end)
 
-      upcoming = MeetingQueries.list_upcoming_meetings()
+      upcoming = MeetingListQueries.list_upcoming_meetings()
 
       assert length(upcoming) == 1
       assert hd(upcoming).id == future_meeting.id
@@ -173,7 +174,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       range_start = DateTime.new!(~D[2025-06-14], ~T[00:00:00], "Etc/UTC")
       range_end = DateTime.new!(~D[2025-06-16], ~T[23:59:59], "Etc/UTC")
 
-      meetings = MeetingQueries.list_meetings_by_date_range(range_start, range_end)
+      meetings = MeetingListQueries.list_meetings_by_date_range(range_start, range_end)
 
       assert length(meetings) == 1
       assert hd(meetings).id == meeting_in_range.id
@@ -188,7 +189,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       range_start = DateTime.new!(~D[2025-07-01], ~T[00:00:00], "Etc/UTC")
       range_end = DateTime.new!(~D[2025-07-31], ~T[23:59:59], "Etc/UTC")
 
-      meetings = MeetingQueries.list_meetings_by_date_range(range_start, range_end)
+      meetings = MeetingListQueries.list_meetings_by_date_range(range_start, range_end)
 
       assert meetings == []
     end
@@ -199,7 +200,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       meeting1 = insert(:meeting, attendee_email: "john@example.com")
       _meeting2 = insert(:meeting, attendee_email: "jane@example.com")
 
-      meetings = MeetingQueries.list_meetings_by_attendee_email("john@example.com")
+      meetings = MeetingListQueries.list_meetings_by_attendee_email("john@example.com")
 
       assert length(meetings) == 1
       assert hd(meetings).id == meeting1.id
@@ -211,7 +212,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       meeting1 = insert(:meeting, organizer_email: "organizer1@example.com")
       _meeting2 = insert(:meeting, organizer_email: "organizer2@example.com")
 
-      meetings = MeetingQueries.list_meetings_by_organizer_email("organizer1@example.com")
+      meetings = MeetingListQueries.list_meetings_by_organizer_email("organizer1@example.com")
 
       assert length(meetings) == 1
       assert hd(meetings).id == meeting1.id
@@ -247,7 +248,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       video_integration = insert(:video_integration, user: user)
       meeting = missing_video_room_meeting(user, video_integration, 2)
 
-      results = MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+      results = MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
 
       assert length(results) == 1
       assert hd(results).id == meeting.id
@@ -270,7 +271,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         )
 
       assert [] =
-               MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+               MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
     end
 
     test "excludes non-confirmed meetings" do
@@ -290,7 +291,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         )
 
       assert [] =
-               MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+               MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
     end
 
     test "excludes past meetings" do
@@ -314,7 +315,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         )
 
       assert [] =
-               MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+               MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
     end
 
     test "excludes meetings with a null video_integration_id" do
@@ -333,7 +334,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         )
 
       assert [] =
-               MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+               MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
     end
 
     test "excludes meetings belonging to a different user" do
@@ -344,7 +345,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       _other_meeting = missing_video_room_meeting(other_user, video_integration, 2)
 
       assert [] =
-               MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+               MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
     end
 
     test "honours the limit parameter" do
@@ -356,7 +357,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       end
 
       results =
-        MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now(), 2)
+        MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now(), 2)
 
       assert length(results) == 2
     end
@@ -368,7 +369,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       later = missing_video_room_meeting(user, video_integration, 5)
       sooner = missing_video_room_meeting(user, video_integration, 2)
 
-      results = MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+      results = MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
 
       assert Enum.map(results, & &1.id) == [sooner.id, later.id]
     end
