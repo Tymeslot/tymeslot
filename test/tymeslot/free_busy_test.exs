@@ -90,10 +90,33 @@ defmodule Tymeslot.FreeBusyTest do
                  ~U[2030-07-01 00:00:00Z]
                )
     end
+
+    test "maps all-day events to midnight-to-midnight UTC intervals", %{
+      profile: profile,
+      integration: integration
+    } do
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        all_day: true,
+        start_date: ~D[2030-06-01],
+        end_date: ~D[2030-06-02],
+        start_at: nil,
+        end_at: nil,
+        transparency: "opaque",
+        status: "confirmed"
+      )
+
+      intervals =
+        FreeBusy.busy_intervals(profile, ~U[2030-05-01 00:00:00Z], ~U[2030-07-01 00:00:00Z])
+
+      assert [{s, e}] = intervals
+      assert s == ~U[2030-06-01 00:00:00Z]
+      assert e == ~U[2030-06-02 00:00:00Z]
+    end
   end
 
   describe "feed/2" do
-    test "renders a VFREEBUSY document containing the busy period" do
+    test "renders a VFREEBUSY document with correct interval bounds and ORGANIZER" do
       profile = insert(:profile)
       integration = insert(:calendar_integration, user: profile.user)
 
@@ -111,8 +134,12 @@ defmodule Tymeslot.FreeBusyTest do
 
       ics = FreeBusy.feed(profile, now: now)
 
+      start_str = busy_start |> DateTime.to_iso8601(:basic) |> String.replace(~r/\.\d+/, "")
+      end_str = busy_end |> DateTime.to_iso8601(:basic) |> String.replace(~r/\.\d+/, "")
+
       assert ics =~ "BEGIN:VFREEBUSY"
-      assert ics =~ "FREEBUSY;FBTYPE=BUSY:"
+      assert ics =~ "FREEBUSY;FBTYPE=BUSY:#{start_str}/#{end_str}"
+      assert ics =~ "ORGANIZER:mailto:#{profile.user.email}"
     end
   end
 end

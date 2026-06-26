@@ -31,7 +31,7 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   def get_by_freebusy_token(token) when is_binary(token) and token != "" do
     case Repo.get_by(ProfileSchema, freebusy_token: token) do
       nil -> {:error, :not_found}
-      profile -> {:ok, profile}
+      profile -> {:ok, Repo.preload(profile, :user)}
     end
   end
 

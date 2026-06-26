@@ -13,7 +13,8 @@ defmodule TymeslotWeb.EndpointTest do
       for path_info <- [
             ["auth", "verify-complete", "secret-token"],
             ["auth", "reset-password", "secret-token"],
-            ["email-change", "secret-token"]
+            ["email-change", "secret-token"],
+            ["free-busy", "abc"]
           ] do
         conn = %Plug.Conn{path_info: path_info}
         assert Endpoint.request_log_level(conn) == false

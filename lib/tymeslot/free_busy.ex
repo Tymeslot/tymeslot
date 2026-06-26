@@ -68,6 +68,7 @@ defmodule Tymeslot.FreeBusy do
       uid: "freebusy-#{profile.id}@tymeslot.com",
       window_start: window_start,
       window_end: window_end,
+      organizer_email: organizer_email(profile),
       intervals: busy_intervals(profile, window_start, window_end)
     )
   end
@@ -107,6 +108,12 @@ defmodule Tymeslot.FreeBusy do
   end
 
   defp event_interval(_other), do: []
+
+  defp organizer_email(%ProfileSchema{user: %{email: email}})
+       when is_binary(email) and email != "",
+       do: email
+
+  defp organizer_email(_profile), do: nil
 
   defp generate_token do
     @token_bytes |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
