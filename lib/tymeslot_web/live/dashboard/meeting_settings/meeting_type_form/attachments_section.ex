@@ -53,7 +53,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.AttachmentsSecti
         </li>
       </ul>
 
-      <form phx-change="validate_attachment" phx-submit="upload_attachment" phx-target={@myself}>
+      <form
+        id="attachment-upload-form"
+        phx-change="validate_attachment"
+        phx-submit="upload_attachment"
+        phx-target={@myself}
+      >
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
           <.live_file_input upload={@upload} class="text-token-sm" />
           <button type="submit" class="btn btn-secondary" disabled={@upload.entries == []}>

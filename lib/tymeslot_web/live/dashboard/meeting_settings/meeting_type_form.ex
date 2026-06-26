@@ -233,13 +233,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
       <.show_as_free_section show_as_free={@show_as_free} myself={@myself} />
 
-      <.attachments_section
-        :if={@is_edit && @type && @type.id}
-        attachments={@type.attachments}
-        upload={@uploads.attachment}
-        myself={@myself}
-      />
-
       <%!-- Custom questions section --%>
       <.live_component
         module={CustomQuestionsSection}
@@ -332,6 +325,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         <% end %>
       </div>
     </form>
+
+    <%!-- Attachments upload form — rendered outside <form> to avoid nested forms.
+         HTML5 ignores nested <form> tags; the phx-change/phx-submit events on the
+         upload form would never fire if this were inside the outer meeting-type form. --%>
+    <.attachments_section
+      :if={@is_edit && @type && @type.id}
+      attachments={@type.attachments}
+      upload={@uploads.attachment}
+      myself={@myself}
+    />
 
     <%!-- Question editor modal — rendered outside <form> to avoid nested forms --%>
     <%= if @editing_question do %>
