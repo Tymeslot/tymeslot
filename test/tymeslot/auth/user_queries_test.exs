@@ -7,6 +7,7 @@ defmodule Tymeslot.Auth.UserQueriesTest do
   @moduletag :queries
 
   alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Repo
   alias Tymeslot.Security.Password
 
   describe "authentication security (protects user accounts)" do
@@ -210,7 +211,7 @@ defmodule Tymeslot.Auth.UserQueriesTest do
 
       assert :ok == UserQueries.touch_last_active_at(user.id)
 
-      assert %DateTime{} = Tymeslot.Repo.reload!(user).last_active_at
+      assert %DateTime{} = Repo.reload!(user).last_active_at
     end
 
     test "only touches the given user" do
@@ -219,7 +220,7 @@ defmodule Tymeslot.Auth.UserQueriesTest do
 
       UserQueries.touch_last_active_at(user.id)
 
-      assert is_nil(Tymeslot.Repo.reload!(other).last_active_at)
+      assert is_nil(Repo.reload!(other).last_active_at)
     end
   end
 end

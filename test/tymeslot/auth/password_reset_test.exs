@@ -10,6 +10,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, Token}
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.Endpoint
 
   import Tymeslot.Factory
 
@@ -138,7 +139,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       sessions = insert_list(3, :user_session, user: user)
 
       Enum.each(sessions, fn session ->
-        TymeslotWeb.Endpoint.subscribe("users_sessions:#{Base.url_encode64(session.token)}")
+        Endpoint.subscribe("users_sessions:#{Base.url_encode64(session.token)}")
       end)
 
       {token, _value} = Token.generate_password_reset_token()

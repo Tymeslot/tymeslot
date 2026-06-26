@@ -10,6 +10,7 @@ defmodule Tymeslot.Auth.EmailChangeTest do
   alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Security.Token
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.Endpoint
 
   import Tymeslot.Factory
 
@@ -146,7 +147,7 @@ defmodule Tymeslot.Auth.EmailChangeTest do
 
     test "disconnects live sockets of revoked sessions after commit", %{user: user, token: token} do
       session = insert(:user_session, user: user)
-      TymeslotWeb.Endpoint.subscribe("users_sessions:#{Base.url_encode64(session.token)}")
+      Endpoint.subscribe("users_sessions:#{Base.url_encode64(session.token)}")
 
       assert {:ok, _updated_user, _message} = Auth.verify_email_change(token)
 
