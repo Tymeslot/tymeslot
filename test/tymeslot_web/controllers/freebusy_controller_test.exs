@@ -9,7 +9,7 @@ defmodule TymeslotWeb.FreebusyControllerTest do
 
   describe "GET /free-busy/:token" do
     test "returns a text/calendar VFREEBUSY for a valid token", %{conn: conn} do
-      {:ok, profile} = insert(:profile) |> FreeBusy.enable_feed()
+      {:ok, profile} = FreeBusy.enable_feed(insert(:profile))
 
       conn = get(conn, ~p"/free-busy/#{profile.freebusy_token}")
 

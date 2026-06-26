@@ -318,10 +318,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   # inline binary, which would bloat the payload). `FMTTYPE` carries the MIME
   # type when known. Hosted at a Tymeslot `/uploads/...` URL.
   defp build_attachment_lines(%{attachments: attachments}) when is_list(attachments) do
-    attachments
-    |> Enum.map(&attachment_line/1)
-    |> Enum.reject(&is_nil/1)
-    |> case do
+    lines =
+      attachments
+      |> Enum.map(&attachment_line/1)
+      |> Enum.reject(&is_nil/1)
+
+    case lines do
       [] -> nil
       lines -> Enum.join(lines, "\r\n")
     end

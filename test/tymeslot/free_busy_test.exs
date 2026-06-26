@@ -21,21 +21,21 @@ defmodule Tymeslot.FreeBusyTest do
     end
 
     test "regenerate_token replaces the token" do
-      {:ok, enabled} = insert(:profile) |> FreeBusy.enable_feed()
+      {:ok, enabled} = FreeBusy.enable_feed(insert(:profile))
 
       assert {:ok, rotated} = FreeBusy.regenerate_token(enabled)
       assert rotated.freebusy_token != enabled.freebusy_token
     end
 
     test "disable_feed clears the token" do
-      {:ok, enabled} = insert(:profile) |> FreeBusy.enable_feed()
+      {:ok, enabled} = FreeBusy.enable_feed(insert(:profile))
 
       assert {:ok, disabled} = FreeBusy.disable_feed(enabled)
       refute FreeBusy.feed_enabled?(disabled)
     end
 
     test "get_profile_by_token round-trips an enabled feed" do
-      {:ok, enabled} = insert(:profile) |> FreeBusy.enable_feed()
+      {:ok, enabled} = FreeBusy.enable_feed(insert(:profile))
 
       assert {:ok, found} = FreeBusy.get_profile_by_token(enabled.freebusy_token)
       assert found.id == enabled.id
@@ -98,7 +98,7 @@ defmodule Tymeslot.FreeBusyTest do
       integration = insert(:calendar_integration, user: profile.user)
 
       now = DateTime.utc_now()
-      busy_start = DateTime.add(now, 2, :day) |> DateTime.truncate(:second)
+      busy_start = DateTime.truncate(DateTime.add(now, 2, :day), :second)
       busy_end = DateTime.add(busy_start, 3600, :second)
 
       insert(:provider_calendar_event,

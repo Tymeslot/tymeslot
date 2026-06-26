@@ -61,7 +61,7 @@ defmodule Tymeslot.FreeBusy do
   @spec feed(ProfileSchema.t(), keyword()) :: String.t()
   def feed(%ProfileSchema{} = profile, opts \\ []) do
     horizon_days = Keyword.get(opts, :horizon_days, @default_horizon_days)
-    window_start = Keyword.get(opts, :now, DateTime.utc_now()) |> DateTime.truncate(:second)
+    window_start = DateTime.truncate(Keyword.get(opts, :now, DateTime.utc_now()), :second)
     window_end = DateTime.add(window_start, horizon_days, :day)
 
     FreebusyGenerator.generate(

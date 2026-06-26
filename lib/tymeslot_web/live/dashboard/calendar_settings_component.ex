@@ -7,10 +7,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.FreeBusy
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Diagnostics
-  alias Tymeslot.Profiles
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnectModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
@@ -392,15 +392,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
             </p>
 
             <%= if @freebusy_enabled do %>
-              <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <input
-                  type="text"
-                  readonly
-                  value={@freebusy_url}
-                  class="input flex-1 text-token-sm"
-                  onclick="this.select()"
-                />
-              </div>
+              <code class="block w-full overflow-x-auto rounded-token-md bg-tymeslot-50 px-3 py-2 text-token-sm text-tymeslot-700 select-all">
+                {@freebusy_url}
+              </code>
               <div class="flex flex-wrap gap-2">
                 <button
                   type="button"

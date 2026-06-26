@@ -9,6 +9,10 @@ defmodule Tymeslot.Repo.Migrations.AddFreebusyTokenToProfiles do
       add :freebusy_token, :string
     end
 
-    create unique_index(:profiles, [:freebusy_token])
+    # The column is brand-new and nullable; every existing row is NULL and
+    # Postgres permits unlimited NULLs under a unique index, so no
+    # data-preparation step is needed. `create_if_not_exists` keeps the
+    # migration idempotent for partially-applied states.
+    create_if_not_exists unique_index(:profiles, [:freebusy_token])
   end
 end
