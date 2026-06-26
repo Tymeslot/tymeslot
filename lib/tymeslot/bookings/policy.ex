@@ -102,6 +102,8 @@ defmodule Tymeslot.Bookings.Policy do
           required(:attendee_locale) => String.t(),
           required(:status) => String.t(),
           required(:reminders) => [reminder()],
+          required(:show_as_free) => boolean(),
+          required(:attachments_snapshot) => [map()],
           required(:view_url) => String.t(),
           required(:reschedule_url) => String.t(),
           required(:cancel_url) => String.t(),
