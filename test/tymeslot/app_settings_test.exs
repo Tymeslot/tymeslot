@@ -284,7 +284,7 @@ defmodule Tymeslot.AppSettingsTest do
       # `Application.delete_env` here would be overwritten by the baseline
       # restoration that runs after each AppSettings.update/1. Force the
       # baseline back to "unset" for the duration of this test.
-      baseline_key = {Tymeslot.AppSettings, :baseline, :admin_alert_email}
+      baseline_key = {Tymeslot.AppSettings.Env, :baseline, :admin_alert_email}
       original_baseline = :persistent_term.get(baseline_key, :__missing__)
       original_value = Application.get_env(:tymeslot, :admin_alert_email)
 
@@ -338,7 +338,7 @@ defmodule Tymeslot.AppSettingsTest do
       # so clear it explicitly to force a fresh snapshot from the value we
       # plant below. Otherwise reset/1 restores whatever runtime.exs set at
       # app boot — irrelevant for this test.
-      baseline_key = {Tymeslot.AppSettings, :baseline, :recaptcha_signup_min_score}
+      baseline_key = {Tymeslot.AppSettings.Env, :baseline, :recaptcha_signup_min_score}
       :persistent_term.erase(baseline_key)
 
       original_recaptcha = Application.get_env(:tymeslot, :recaptcha) || []

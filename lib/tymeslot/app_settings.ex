@@ -40,7 +40,7 @@ defmodule Tymeslot.AppSettings do
   require Logger
 
   alias Ecto.Changeset
-  alias Tymeslot.AppSettings.{AppSettingsQueries, AppSettingsSchema}
+  alias Tymeslot.AppSettings.{AppSettingsQueries, AppSettingsSchema, Env}
   alias Tymeslot.Auth
   alias Tymeslot.MeetingPayments
 
@@ -67,12 +67,6 @@ defmodule Tymeslot.AppSettings do
           locked_states: [term()]
         }
 
-  # Baseline = the config-layer value that was in effect before any DB
-  # override was applied. Captured once per BEAM lifetime in `:persistent_term`
-  # (purpose-built for read-heavy, write-rare configuration data) so reset/1
-  # can restore the original config value.
-  @baseline_sentinel :__app_settings_baseline_not_captured__
-
   @doc """
   Returns the list of admin-editable setting keys.
   """
@@ -87,9 +81,9 @@ defmodule Tymeslot.AppSettings do
   """
   @spec load!() :: :ok
   def load! do
-    Enum.each(keys(), &capture_baseline/1)
+    Env.capture_baselines()
     settings = AppSettingsQueries.get_settings()
-    Enum.each(keys(), fn key -> apply_override(key, Map.get(settings, key)) end)
+    Env.apply_overrides(settings)
     :ok
   end
 
@@ -200,7 +194,7 @@ defmodule Tymeslot.AppSettings do
   defp apply_update(attrs) do
     case AppSettingsQueries.update_settings(attrs, &lockout_guard(&1, attrs)) do
       {:ok, settings} ->
-        flush_overrides(settings)
+        Env.flush_overrides(settings)
         Logger.info("App settings updated", keys: Map.keys(attrs))
         {:ok, settings}
 
@@ -224,54 +218,6 @@ defmodule Tymeslot.AppSettings do
     if would_cause_lockout?(merged_row, attrs), do: {:error, :would_lock_out}, else: :ok
   end
 
-  # Applies all setting overrides from `settings` to the Application env in a
-  # way that avoids the TOCTOU window for nested keys. Keys that share a parent
-  # keyword list (e.g. :social_auth, :recaptcha) are merged together before
-  # being written, so each parent key receives exactly one `Application.put_env`
-  # call rather than a sequence of read-modify-write operations that concurrent
-  # updates could interleave.
-  defp flush_overrides(settings) do
-    {top_level, nested_by_parent} = partition_keys_by_layout()
-
-    Enum.each(top_level, &apply_override(&1, Map.get(settings, &1)))
-
-    Enum.each(nested_by_parent, fn {parent, keys} ->
-      flush_nested_parent(parent, keys, settings)
-    end)
-  end
-
-  defp partition_keys_by_layout do
-    Enum.reduce(keys(), {[], %{}}, fn key, {top_acc, nested_acc} ->
-      case config_path(key) do
-        [_top] -> {[key | top_acc], nested_acc}
-        [parent, _child] -> {top_acc, Map.update(nested_acc, parent, [key], &[key | &1])}
-      end
-    end)
-  end
-
-  defp flush_nested_parent(parent, keys, settings) do
-    current = Application.get_env(:tymeslot, parent, [])
-    merged = Enum.reduce(keys, current, &merge_nested_child(&2, &1, settings))
-    Application.put_env(:tymeslot, parent, merged)
-  end
-
-  defp merge_nested_child(kw, key, settings) do
-    [_parent, child] = config_path(key)
-
-    case Map.get(settings, key) do
-      nil -> restore_nested_child_baseline(kw, key, child)
-      value -> Keyword.put(kw, child, value)
-    end
-  end
-
-  defp restore_nested_child_baseline(kw, key, child) do
-    case :persistent_term.get(baseline_term(key), @baseline_sentinel) do
-      {:ok, value} -> Keyword.put(kw, child, value)
-      :error -> Keyword.delete(kw, child)
-      @baseline_sentinel -> kw
-    end
-  end
-
   # Lockout protection: refuse any update that would leave zero usable auth
   # paths *while at least one admin exists*. A path is "usable" if it is
   # enabled AND some admin can plausibly sign in through it. For password
@@ -293,13 +239,13 @@ defmodule Tymeslot.AppSettings do
   end
 
   defp password_currently_usable? do
-    read_config(:password_auth_enabled) == true and Auth.any_admin_uses_password_auth?()
+    Env.read(:password_auth_enabled) == true and Auth.any_admin_uses_password_auth?()
   end
 
   defp sso_currently_usable? do
-    sso_path_usable?(:google_auth_enabled, read_config(:google_auth_enabled)) or
-      sso_path_usable?(:github_auth_enabled, read_config(:github_auth_enabled)) or
-      sso_path_usable?(:oauth_auth_enabled, read_config(:oauth_auth_enabled))
+    sso_path_usable?(:google_auth_enabled, Env.read(:google_auth_enabled)) or
+      sso_path_usable?(:github_auth_enabled, Env.read(:github_auth_enabled)) or
+      sso_path_usable?(:oauth_auth_enabled, Env.read(:oauth_auth_enabled))
   end
 
   defp password_usable_after?(merged_row, attrs) do
@@ -407,15 +353,15 @@ defmodule Tymeslot.AppSettings do
 
   defp row_value_or_config(key, merged_row) do
     case Map.get(merged_row, key) do
-      nil -> read_config(key)
+      nil -> Env.read(key)
       value -> value
     end
   end
 
   defp baseline_or_default(key) do
-    case :persistent_term.get(baseline_term(key), @baseline_sentinel) do
+    case Env.baseline_value(key) do
       {:ok, value} -> value
-      _other -> default_for(key)
+      _other -> Env.default_for(key)
     end
   end
 
@@ -432,112 +378,17 @@ defmodule Tymeslot.AppSettings do
   application config provides a value.
   """
   @spec default_for(setting_key()) :: term()
-  def default_for(:registration_enabled), do: true
-  def default_for(:password_auth_enabled), do: true
-  def default_for(:google_auth_enabled), do: false
-  def default_for(:github_auth_enabled), do: false
-  def default_for(:oauth_auth_enabled), do: false
-  def default_for(:recaptcha_signup_enabled), do: false
-  def default_for(:recaptcha_booking_enabled), do: false
-  def default_for(:recaptcha_signup_min_score), do: 0.3
-  def default_for(:recaptcha_booking_min_score), do: 0.3
-  def default_for(:admin_alerts_enabled), do: false
-  def default_for(:admin_alert_email), do: nil
-  def default_for(:meeting_payments_enabled), do: false
-  def default_for(:booking_analytics_enabled), do: false
+  defdelegate default_for(key), to: Env
 
-  # Projection from setting key to its location in the Application env.
-  # Single-atom paths live at the top level; two-atom paths live nested
-  # under a parent keyword list (e.g. `:social_auth` / `:recaptcha`).
-  defp config_path(:google_auth_enabled), do: [:social_auth, :google_enabled]
-  defp config_path(:github_auth_enabled), do: [:social_auth, :github_enabled]
-  defp config_path(:oauth_auth_enabled), do: [:social_auth, :oauth_enabled]
-  defp config_path(:recaptcha_signup_enabled), do: [:recaptcha, :signup_enabled]
-  defp config_path(:recaptcha_booking_enabled), do: [:recaptcha, :booking_enabled]
-  defp config_path(:recaptcha_signup_min_score), do: [:recaptcha, :signup_min_score]
-  defp config_path(:recaptcha_booking_min_score), do: [:recaptcha, :booking_min_score]
-  defp config_path(key), do: [key]
-
-  defp capture_baseline(key) do
-    term = baseline_term(key)
-
-    case :persistent_term.get(term, @baseline_sentinel) do
-      @baseline_sentinel -> :persistent_term.put(term, fetch_config(key))
-      _existing -> :ok
-    end
-  end
-
-  defp apply_override(key, nil), do: restore_baseline(key)
-  defp apply_override(key, value), do: write_config(key, value)
-
-  defp restore_baseline(key) do
-    case :persistent_term.get(baseline_term(key), @baseline_sentinel) do
-      {:ok, value} -> write_config(key, value)
-      :error -> delete_config(key)
-      @baseline_sentinel -> :ok
-    end
-  end
-
-  defp effective_value(key, nil), do: read_config(key)
+  defp effective_value(key, nil), do: Env.read(key)
   defp effective_value(_key, value), do: value
 
   defp source_for(key, nil) do
-    case :persistent_term.get(baseline_term(key), @baseline_sentinel) do
+    case Env.baseline_value(key) do
       {:ok, _value} -> :config
       _other -> :default
     end
   end
 
   defp source_for(_key, _value), do: :db
-
-  defp baseline_term(key), do: {__MODULE__, :baseline, key}
-
-  # --- Application env helpers (handle both top-level and nested keys) ---
-
-  defp read_config(key) do
-    case config_path(key) do
-      [top] ->
-        Application.get_env(:tymeslot, top, default_for(key))
-
-      [parent, child] ->
-        :tymeslot
-        |> Application.get_env(parent, [])
-        |> Keyword.get(child, default_for(key))
-    end
-  end
-
-  defp fetch_config(key) do
-    case config_path(key) do
-      [top] ->
-        Application.fetch_env(:tymeslot, top)
-
-      [parent, child] ->
-        case Application.fetch_env(:tymeslot, parent) do
-          {:ok, kw} when is_list(kw) -> Keyword.fetch(kw, child)
-          _other -> :error
-        end
-    end
-  end
-
-  defp write_config(key, value) do
-    case config_path(key) do
-      [top] ->
-        Application.put_env(:tymeslot, top, value)
-
-      [parent, child] ->
-        kw = Application.get_env(:tymeslot, parent, [])
-        Application.put_env(:tymeslot, parent, Keyword.put(kw, child, value))
-    end
-  end
-
-  defp delete_config(key) do
-    case config_path(key) do
-      [top] ->
-        Application.delete_env(:tymeslot, top)
-
-      [parent, child] ->
-        kw = Application.get_env(:tymeslot, parent, [])
-        Application.put_env(:tymeslot, parent, Keyword.delete(kw, child))
-    end
-  end
 end
