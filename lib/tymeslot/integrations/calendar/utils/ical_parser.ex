@@ -144,6 +144,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         attendees: attendees,
         recurrence_rule: recurrence_rule,
         recurrence_id: recurrence_id,
+        recurrence_id_range: extract_recurrence_id_range(lines),
         exdates: exdates,
         start_time: start_time,
         end_time: end_time,
@@ -218,6 +219,23 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     case line do
       nil -> nil
       line -> line |> String.split(":", parts: 2) |> List.last() |> String.trim()
+    end
+  end
+
+  # RFC 5545 §3.2.13 — `RANGE=THISANDFUTURE` on a `RECURRENCE-ID` means the
+  # override applies to the targeted instance *and every later instance*, not
+  # just the single occurrence. Only the parametered form (`RECURRENCE-ID;…`)
+  # can carry it; the bare `RECURRENCE-ID:` form never does. Returns
+  # `:this_and_future` or `nil`.
+  defp extract_recurrence_id_range(lines) do
+    line = Enum.find(lines, &String.starts_with?(&1, "RECURRENCE-ID;"))
+
+    with line when is_binary(line) <- line,
+         params = line |> String.split(":", parts: 2) |> List.first(),
+         true <- Regex.match?(~r/(?:^|;)RANGE=THISANDFUTURE/i, params) do
+      :this_and_future
+    else
+      _no_range -> nil
     end
   end
 

@@ -56,6 +56,26 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserRecurrenceTest do
 
       assert {:ok, [event]} = ICalParser.parse(ical_content)
       assert event.recurrence_id == "20300115T100000Z"
+      assert is_nil(event.recurrence_id_range)
+    end
+
+    test "captures RANGE=THISANDFUTURE on RECURRENCE-ID" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:recurring@example.com
+      RECURRENCE-ID;RANGE=THISANDFUTURE:20300115T100000Z
+      DTSTART:20300115T110000Z
+      DTEND:20300115T120000Z
+      SUMMARY:Moved This And Future
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.recurrence_id == "20300115T100000Z"
+      assert event.recurrence_id_range == :this_and_future
     end
 
     test "returns nil recurrence_id when RECURRENCE-ID is absent" do
