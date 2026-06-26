@@ -98,6 +98,131 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
     end
   end
 
+  describe "build_attachments/1" do
+    test "returns empty list when attachments_snapshot is nil" do
+      assert CalendarEventBuilder.build_attachments(@base_meeting) == []
+    end
+
+    test "returns empty list when attachments_snapshot is an empty list" do
+      meeting = Map.put(@base_meeting, :attachments_snapshot, [])
+
+      assert CalendarEventBuilder.build_attachments(meeting) == []
+    end
+
+    test "builds attachment map from string-keyed snapshot entry" do
+      meeting =
+        Map.put(@base_meeting, :attachments_snapshot, [
+          %{
+            "filename" => "report.pdf",
+            "stored_path" => "meetings/123/report.pdf",
+            "content_type" => "application/pdf"
+          }
+        ])
+
+      [attachment] = CalendarEventBuilder.build_attachments(meeting)
+
+      assert attachment.filename == "report.pdf"
+      assert attachment.content_type == "application/pdf"
+      assert String.ends_with?(attachment.url, "/uploads/meetings/123/report.pdf")
+    end
+
+    test "falls back to atom keys when string keys are absent" do
+      meeting =
+        Map.put(@base_meeting, :attachments_snapshot, [
+          %{
+            filename: "deck.pptx",
+            stored_path: "meetings/456/deck.pptx",
+            content_type:
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+          }
+        ])
+
+      [attachment] = CalendarEventBuilder.build_attachments(meeting)
+
+      assert attachment.filename == "deck.pptx"
+      assert String.ends_with?(attachment.url, "/uploads/meetings/456/deck.pptx")
+    end
+
+    test "excludes entries whose stored_path is nil" do
+      meeting =
+        Map.put(@base_meeting, :attachments_snapshot, [
+          %{
+            "filename" => "orphan.pdf",
+            "stored_path" => nil,
+            "content_type" => "application/pdf"
+          },
+          %{
+            "filename" => "valid.pdf",
+            "stored_path" => "meetings/789/valid.pdf",
+            "content_type" => "application/pdf"
+          }
+        ])
+
+      [attachment] = CalendarEventBuilder.build_attachments(meeting)
+
+      assert attachment.filename == "valid.pdf"
+    end
+
+    test "builds an absolute download URL by prepending the endpoint host" do
+      meeting =
+        Map.put(@base_meeting, :attachments_snapshot, [
+          %{
+            "filename" => "slides.pdf",
+            "stored_path" => "meetings/abc/slides.pdf",
+            "content_type" => "application/pdf"
+          }
+        ])
+
+      [attachment] = CalendarEventBuilder.build_attachments(meeting)
+
+      assert String.starts_with?(attachment.url, "http")
+      assert String.contains?(attachment.url, "/uploads/meetings/abc/slides.pdf")
+    end
+  end
+
+  describe "build_event_data/1 — attachments" do
+    test "attachments key holds the built attachment list" do
+      meeting =
+        Map.put(@base_meeting, :attachments_snapshot, [
+          %{
+            "filename" => "slides.pdf",
+            "stored_path" => "meetings/abc/slides.pdf",
+            "content_type" => "application/pdf"
+          }
+        ])
+
+      result = CalendarEventBuilder.build_event_data(meeting)
+
+      [attachment] = result.attachments
+      assert attachment.filename == "slides.pdf"
+      assert attachment.content_type == "application/pdf"
+      assert String.ends_with?(attachment.url, "/uploads/meetings/abc/slides.pdf")
+    end
+
+    test "description carries an Attachments links block when snapshot is present" do
+      meeting =
+        Map.put(@base_meeting, :attachments_snapshot, [
+          %{
+            "filename" => "slides.pdf",
+            "stored_path" => "meetings/abc/slides.pdf",
+            "content_type" => "application/pdf"
+          }
+        ])
+
+      result = CalendarEventBuilder.build_event_data(meeting)
+
+      assert result.description =~ "Attachments:\nslides.pdf:"
+      assert result.description =~ "/uploads/meetings/abc/slides.pdf"
+    end
+
+    test "attachments list is empty and description has no Attachments block when snapshot is nil" do
+      result = CalendarEventBuilder.build_event_data(@base_meeting)
+
+      assert result.attachments == []
+      refute result.description =~ "Attachments:"
+    end
+  end
+
   describe "build_event_description/1" do
     test "prepends attendee identity and returns only the base description otherwise" do
       meeting = %{@base_meeting | attendee_message: nil, meeting_url: nil}

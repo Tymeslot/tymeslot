@@ -141,7 +141,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
         &(&1 == nil or &1 == "")
       )
 
-    Enum.join(lines, "\r\n") <> "\r\n"
+    raw = Enum.join(lines, "\r\n") <> "\r\n"
+    fold_lines(raw)
   end
 
   @doc """
@@ -602,4 +603,46 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   end
 
   defp sanitize_ical_value(value), do: value
+
+  # RFC 5545 §3.1 — fold content lines to ≤ 75 octets by inserting CRLF + SPACE.
+  # First segment ≤ 75 octets; each continuation ≤ 74 (leading SPACE takes one
+  # octet). Splits at UTF-8 codepoint boundaries to avoid tearing multi-byte
+  # sequences.
+  defp fold_lines(ical_string) do
+    ical_string
+    |> String.split("\r\n")
+    |> Enum.map_join("\r\n", &fold_line/1)
+  end
+
+  defp fold_line(line), do: fold_line_acc(line, _first = true, _acc = [])
+
+  defp fold_line_acc(<<>>, _first, acc), do: acc |> Enum.reverse() |> Enum.join("\r\n ")
+
+  defp fold_line_acc(rest, first, acc) do
+    limit = if first, do: 75, else: 74
+    {chunk, remaining} = take_octets(rest, limit)
+    fold_line_acc(remaining, false, [chunk | acc])
+  end
+
+  defp take_octets(binary, max_bytes) when byte_size(binary) <= max_bytes, do: {binary, ""}
+
+  defp take_octets(binary, max_bytes) do
+    split_at = safe_utf8_split(binary, max_bytes)
+    <<chunk::binary-size(^split_at), rest::binary>> = binary
+    {chunk, rest}
+  end
+
+  defp safe_utf8_split(binary, pos) do
+    pos = min(pos, byte_size(binary))
+    retreat_to_boundary(binary, pos)
+  end
+
+  defp retreat_to_boundary(_binary, 0), do: 0
+
+  defp retreat_to_boundary(binary, pos) do
+    byte = :binary.at(binary, pos - 1)
+    if continuation_byte?(byte), do: retreat_to_boundary(binary, pos - 1), else: pos
+  end
+
+  defp continuation_byte?(byte), do: byte >= 0x80 and byte <= 0xBF
 end
