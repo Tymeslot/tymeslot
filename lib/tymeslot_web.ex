@@ -21,6 +21,11 @@ defmodule TymeslotWeb do
   def static_paths, do: ~w(assets css fonts icons images uploads videos embed.js)
 
   @spec router() :: Macro.t()
+  # The router macro is a declarative list of HTTP/LiveView pipelines; ABC
+  # complexity counts each `plug` as a branch, which overstates the real
+  # cognitive complexity. Suppress here rather than fracture the macro with
+  # indirection purely to satisfy the metric.
+  # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
   def router do
     quote do
       use Phoenix.Router, helpers: false
