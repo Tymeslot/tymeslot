@@ -27,6 +27,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           has_custom_theme: boolean(),
           allowed_embed_domains: [String.t()] | nil,
           booking_page_published_at: DateTime.t() | nil,
+          freebusy_token: String.t() | nil,
           primary_calendar_integration_id: integer() | nil,
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           primary_calendar_integration:
@@ -52,6 +53,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:has_custom_theme, :boolean, default: false)
     field(:allowed_embed_domains, {:array, :string}, default: ["none"])
     field(:booking_page_published_at, :utc_datetime)
+    field(:freebusy_token, :string)
     field(:meeting_types, {:array, :map}, virtual: true)
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 
@@ -93,6 +95,17 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     |> validate_number(:advance_booking_days, Constraints.advance_booking_days_opts())
     |> validate_number(:min_advance_hours, Constraints.min_advance_hours_opts())
     |> unique_constraint(:username)
+  end
+
+  @doc """
+  Focused changeset for setting or clearing the free/busy feed token, without
+  re-validating unrelated fields. A `nil` token disables the feed.
+  """
+  @spec freebusy_token_changeset(t(), map()) :: Ecto.Changeset.t()
+  def freebusy_token_changeset(profile, attrs) do
+    profile
+    |> cast(attrs, [:freebusy_token])
+    |> unique_constraint(:freebusy_token)
   end
 
   defp validate_username(changeset) do
