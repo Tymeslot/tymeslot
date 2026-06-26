@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
 
     _drain = :sys.get_state(view.pid)
 
-    [meeting] = MeetingQueries.list_meetings_by_attendee_email("utm-user@example.com")
+    [meeting] = MeetingListQueries.list_meetings_by_attendee_email("utm-user@example.com")
 
     assert meeting.utm_source == "linkedin"
     assert meeting.utm_medium == "social"
@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
 
     _drain = :sys.get_state(view.pid)
 
-    [meeting] = MeetingQueries.list_meetings_by_attendee_email("no-utm-user@example.com")
+    [meeting] = MeetingListQueries.list_meetings_by_attendee_email("no-utm-user@example.com")
 
     assert is_nil(meeting.utm_source)
     assert is_nil(meeting.utm_medium)

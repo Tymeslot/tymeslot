@@ -5,14 +5,14 @@ defmodule Tymeslot.Meetings.Listing do
   Owns the read-side presentation concerns of the Meetings context: turning a
   filter string into query options, paging results with an opaque cursor, and
   selecting the meetings that still need a reminder email. The query mechanics
-  live in `MeetingQueries`; this module orchestrates them into pages and lists
+  live in `MeetingListQueries`; this module orchestrates them into pages and lists
   the dashboard and notification workers consume.
   """
 
   require Logger
 
   alias Tymeslot.Auth.UserQueries
-  alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
+  alias Tymeslot.Meetings.{MeetingListQueries, MeetingSchema}
   alias Tymeslot.Pagination.CursorPage
 
   @doc """
@@ -118,7 +118,7 @@ defmodule Tymeslot.Meetings.Listing do
     one_hour_from_now = DateTime.add(now, 1, :hour)
 
     Enum.filter(
-      MeetingQueries.list_meetings_needing_reminders(now, one_hour_from_now),
+      MeetingListQueries.list_meetings_needing_reminders(now, one_hour_from_now),
       &needs_reminder?/1
     )
   end
@@ -131,7 +131,7 @@ defmodule Tymeslot.Meetings.Listing do
     after_start = Keyword.get(opts, :after_start)
     after_id = Keyword.get(opts, :after_id)
 
-    MeetingQueries.list_meetings_for_user_paginated_cursor(user_email,
+    MeetingListQueries.list_meetings_for_user_paginated_cursor(user_email,
       per_page: per_page,
       status: status,
       exclude_status: exclude_status,

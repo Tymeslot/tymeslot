@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -170,7 +170,7 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
       assert html =~ "Terms"
 
       # --- Persisted booking carries snapshot and answers ---
-      [meeting] = MeetingQueries.list_meetings_by_attendee_email("jane.cf@example.com")
+      [meeting] = MeetingListQueries.list_meetings_by_attendee_email("jane.cf@example.com")
 
       assert length(meeting.custom_fields_snapshot) == 2
 
@@ -336,7 +336,7 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
 
       # No booking was created — the error branch short-circuited before
       # `Bookings.Create.execute/3`.
-      assert MeetingQueries.list_meetings_by_attendee_email("mallory@example.com") == []
+      assert MeetingListQueries.list_meetings_by_attendee_email("mallory@example.com") == []
 
       html = render(view)
 

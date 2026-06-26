@@ -19,7 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
-  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias Tymeslot.Workers.VideoRoomWorker
 
@@ -97,7 +97,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   # Best-effort: failures are logged but must not fail the OAuth response.
   defp enqueue_pending_video_room_retries(user_id) do
     user_id
-    |> MeetingQueries.list_user_meetings_missing_video_rooms(DateTime.utc_now())
+    |> MeetingListQueries.list_user_meetings_missing_video_rooms(DateTime.utc_now())
     |> Enum.each(&VideoRoomWorker.schedule_video_room_creation(&1.id))
 
     :ok

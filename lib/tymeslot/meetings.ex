@@ -15,6 +15,7 @@ defmodule Tymeslot.Meetings do
     Guests,
     Listing,
     MeetingCalendarQueries,
+    MeetingListQueries,
     MeetingQueries,
     MeetingSchema,
     VideoRooms
@@ -205,7 +206,7 @@ defmodule Tymeslot.Meetings do
   """
   @spec list_upcoming_meetings() :: [MeetingSchema.t()]
   def list_upcoming_meetings do
-    MeetingQueries.list_upcoming_meetings()
+    MeetingListQueries.list_upcoming_meetings()
   end
 
   @doc """
@@ -213,7 +214,7 @@ defmodule Tymeslot.Meetings do
   """
   @spec list_upcoming_meetings_for_user(String.t(), integer()) :: [MeetingSchema.t()]
   def list_upcoming_meetings_for_user(user_email, limit) do
-    MeetingQueries.upcoming_meetings_for_user(user_email, limit)
+    MeetingListQueries.upcoming_meetings_for_user(user_email, limit)
   end
 
   @doc """
@@ -221,7 +222,7 @@ defmodule Tymeslot.Meetings do
   """
   @spec list_upcoming_meetings_for_user(String.t()) :: [MeetingSchema.t()]
   def list_upcoming_meetings_for_user(user_email) do
-    MeetingQueries.list_upcoming_meetings_for_user(user_email)
+    MeetingListQueries.list_upcoming_meetings_for_user(user_email)
   end
 
   @doc """
@@ -229,7 +230,7 @@ defmodule Tymeslot.Meetings do
   """
   @spec list_past_meetings() :: [MeetingSchema.t()]
   def list_past_meetings do
-    MeetingQueries.list_past_meetings()
+    MeetingListQueries.list_past_meetings()
   end
 
   @doc """
@@ -237,7 +238,7 @@ defmodule Tymeslot.Meetings do
   """
   @spec list_past_meetings_for_user(String.t()) :: [MeetingSchema.t()]
   def list_past_meetings_for_user(user_email) do
-    MeetingQueries.list_past_meetings_for_user(user_email)
+    MeetingListQueries.list_past_meetings_for_user(user_email)
   end
 
   @doc """
@@ -267,7 +268,7 @@ defmodule Tymeslot.Meetings do
   """
   @spec list_cancelled_meetings_for_user(String.t()) :: [MeetingSchema.t()]
   def list_cancelled_meetings_for_user(user_email) do
-    MeetingQueries.list_cancelled_meetings_for_user(user_email)
+    MeetingListQueries.list_cancelled_meetings_for_user(user_email)
   end
 
   @doc """

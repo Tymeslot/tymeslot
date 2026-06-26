@@ -9,13 +9,13 @@ defmodule Tymeslot.Workers.VideoRoomRecoveryScanWorker do
   use Oban.Worker, queue: :default, max_attempts: 1, unique: [period: 60]
   require Logger
 
-  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Workers.VideoRoomWorker
 
   @impl Oban.Worker
   def perform(_job) do
     now = DateTime.utc_now()
-    meetings = MeetingQueries.list_meetings_missing_video_rooms(now)
+    meetings = MeetingListQueries.list_meetings_missing_video_rooms(now)
 
     scheduled_count =
       Enum.reduce(meetings, 0, fn meeting, acc ->

@@ -6,6 +6,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
   @moduletag :database
   @moduletag :queries
 
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
 
@@ -48,7 +49,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
       )
 
       one_hour_from_now = DateTime.add(now, 1, :hour)
-      meetings = MeetingQueries.list_meetings_needing_reminders(now, one_hour_from_now)
+      meetings = MeetingListQueries.list_meetings_needing_reminders(now, one_hour_from_now)
 
       assert length(meetings) == 1
       assert hd(meetings).id == meeting_in_window.id

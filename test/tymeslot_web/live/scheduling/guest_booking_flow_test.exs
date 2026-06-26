@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
-  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
@@ -275,7 +275,7 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       assert html =~ "invited2@example.com"
 
       # Read the created meeting back and verify guests are stored.
-      [meeting] = MeetingQueries.list_meetings_by_attendee_email("sender@example.com")
+      [meeting] = MeetingListQueries.list_meetings_by_attendee_email("sender@example.com")
 
       guest_emails =
         meeting.id
