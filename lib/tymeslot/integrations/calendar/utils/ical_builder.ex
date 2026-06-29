@@ -11,11 +11,22 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   - Recurring event support
   - Attendee management
   - Alarm/reminder support
+
+  ## Internal structure
+
+  The builder is split into focused sibling modules; this module orchestrates
+  them and exposes the public API:
+
+    - `__MODULE__.Format` — date/time formatting, text escaping, UID generation
+    - `__MODULE__.Properties` — canonical VEVENT property-line serialisers
+    - `__MODULE__.Alarms` — VALARM (reminder) serialisation
+    - `__MODULE__.LineFolder` — RFC 5545 §3.1 content-line folding
   """
 
-  alias Tymeslot.Integrations.Calendar.EventColour
-  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
-  alias Tymeslot.Integrations.Calendar.Reminder
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Alarms
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Properties
 
   @type ical_event_data :: %{
           required(:summary) => String.t(),
@@ -40,6 +51,46 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
           optional(:description) => String.t(),
           optional(:location) => String.t()
         }
+
+  @doc """
+  Generates a unique identifier for an event.
+
+  The UID follows the format: `{random-hex}@tymeslot.com`
+  """
+  @spec generate_uid() :: String.t()
+  defdelegate generate_uid(), to: Format
+
+  @doc """
+  Formats a DateTime for iCalendar format.
+
+  Converts to UTC and formats as: YYYYMMDDTHHMMSSZ
+
+  ## Examples
+
+      iex> ICalBuilder.format_datetime(~U[2024-01-15 10:30:45.123456Z])
+      "20240115T103045Z"
+  """
+  @spec format_datetime(DateTime.t()) :: String.t()
+  defdelegate format_datetime(datetime), to: Format
+
+  @doc """
+  Formats a Date for all-day events in iCalendar format.
+
+  ## Examples
+
+      iex> ICalBuilder.format_date(~D[2024-01-15])
+      "20240115"
+  """
+  @spec format_date(Date.t()) :: String.t()
+  defdelegate format_date(date), to: Format
+
+  @doc """
+  Escapes text for iCalendar format.
+
+  Handles special characters according to RFC 5545.
+  """
+  @spec escape_text(String.t() | nil) :: String.t()
+  defdelegate escape_text(text), to: Format
 
   @doc """
   Builds a complete iCalendar document for an event.
@@ -73,7 +124,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   """
   @spec build_event(ical_event_data()) :: String.t()
   def build_event(event_data) do
-    uid = Map.get(event_data, :uid, generate_uid())
+    uid = Map.get(event_data, :uid, Format.generate_uid())
 
     lines = [
       "BEGIN:VCALENDAR",
@@ -83,13 +134,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
       "METHOD:PUBLISH",
       "BEGIN:VEVENT",
       "UID:#{uid}",
-      "DTSTAMP:#{format_datetime(DateTime.utc_now())}",
-      build_dtstart(event_data),
-      build_dtend(event_data),
-      "SUMMARY:#{escape_text(event_data.summary)}",
+      "DTSTAMP:#{Format.format_datetime(DateTime.utc_now())}",
+      Properties.build_dtstart(event_data),
+      Properties.build_dtend(event_data),
+      "SUMMARY:#{Format.escape_text(event_data.summary)}",
       build_optional_properties(event_data),
       build_attendees(event_data),
-      build_reminders(event_data),
+      Alarms.build_reminders(event_data),
       "END:VEVENT",
       "END:VCALENDAR"
     ]
@@ -124,23 +175,23 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
           "PRODID:-//Tymeslot//CalDAV Client//EN",
           "BEGIN:VEVENT",
           "UID:#{uid}",
-          "DTSTAMP:#{format_datetime(DateTime.utc_now())}",
-          build_dtstart(event_data),
-          build_dtend(event_data),
-          "SUMMARY:#{escape_text(Map.get(event_data, :summary) || "")}",
-          "DESCRIPTION:#{escape_text(event_data[:description] || "")}",
-          "LOCATION:#{escape_text(event_data[:location] || "")}",
-          build_conference_line(event_data),
-          build_attachment_lines(event_data),
-          build_transp(event_data),
-          build_status(event_data),
-          build_class(event_data),
-          build_colour_line(event_data),
-          build_rrule_line(event_data),
-          build_exdate(event_data),
-          build_organizer_line(event_data),
-          build_attendee_lines(event_data),
-          build_reminders(event_data),
+          "DTSTAMP:#{Format.format_datetime(DateTime.utc_now())}",
+          Properties.build_dtstart(event_data),
+          Properties.build_dtend(event_data),
+          "SUMMARY:#{Format.escape_text(Map.get(event_data, :summary) || "")}",
+          "DESCRIPTION:#{Format.escape_text(event_data[:description] || "")}",
+          "LOCATION:#{Format.escape_text(event_data[:location] || "")}",
+          Properties.build_conference_line(event_data),
+          Properties.build_attachment_lines(event_data),
+          Properties.build_transp(event_data),
+          Properties.build_status(event_data),
+          Properties.build_class(event_data),
+          Properties.build_colour_line(event_data),
+          Properties.build_rrule_line(event_data),
+          Properties.build_exdate(event_data),
+          Properties.build_organizer_line(event_data),
+          Properties.build_attendee_lines(event_data),
+          Alarms.build_reminders(event_data),
           "END:VEVENT",
           "END:VCALENDAR"
         ],
@@ -148,65 +199,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
       )
 
     raw = Enum.join(lines, "\r\n") <> "\r\n"
-    fold_lines(raw)
-  end
-
-  @doc """
-  Generates a unique identifier for an event.
-
-  The UID follows the format: `{random-hex}@tymeslot.com`
-  """
-  @spec generate_uid() :: String.t()
-  def generate_uid do
-    random_string = Base.encode16(:crypto.strong_rand_bytes(16), case: :lower)
-    "#{random_string}@tymeslot.com"
-  end
-
-  @doc """
-  Formats a DateTime for iCalendar format.
-
-  Converts to UTC and formats as: YYYYMMDDTHHMMSSZ
-
-  ## Examples
-
-      iex> ICalBuilder.format_datetime(~U[2024-01-15 10:30:45.123456Z])
-      "20240115T103045Z"
-  """
-  @spec format_datetime(DateTime.t()) :: String.t()
-  def format_datetime(%DateTime{} = datetime) do
-    datetime
-    |> DateTime.to_iso8601(:basic)
-    |> String.replace(~r/\.\d+/, "")
-  end
-
-  @doc """
-  Formats a Date for all-day events in iCalendar format.
-
-  ## Examples
-
-      iex> ICalBuilder.format_date(~D[2024-01-15])
-      "20240115"
-  """
-  @spec format_date(Date.t()) :: String.t()
-  def format_date(%Date{} = date) do
-    Date.to_iso8601(date, :basic)
-  end
-
-  @doc """
-  Escapes text for iCalendar format.
-
-  Handles special characters according to RFC 5545.
-  """
-  @spec escape_text(String.t() | nil) :: String.t()
-  def escape_text(nil), do: ""
-
-  def escape_text(text) when is_binary(text) do
-    text
-    |> String.replace("\\", "\\\\")
-    |> String.replace(",", "\\,")
-    |> String.replace(";", "\\;")
-    |> String.replace("\n", "\\n")
-    |> String.replace("\r", "")
+    LineFolder.fold_lines(raw)
   end
 
   @doc """
@@ -218,11 +211,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   The production CalDAV write path uses `build_simple_event/2` instead, which
   reads the canonical `recurrence_rule` string field and emits it via
-  `build_rrule_line/1` (a private function that delegates to
-  `RRule.strip_prefix/1`). The two serialisers coexist because they serve
-  different data shapes:
+  `Properties.build_rrule_line/1` (which delegates to `RRule.strip_prefix/1`).
+  The two serialisers coexist because they serve different data shapes:
     - `build_rrule/1` — legacy `%{frequency: "WEEKLY", by_day: ["MO"]}` map
-    - `build_rrule_line/1` → `RRule.build/2` — canonical `%{freq: :weekly, ...}` map
+    - `Properties.build_rrule_line/1` → `RRule.build/2` — canonical `%{freq: :weekly, ...}` map
 
   Note: `build_rrule/1` always emits UNTIL as a UTC date-time even for all-day
   events. This is acceptable because the only production call site
@@ -265,7 +257,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
     parts =
       if recurrence[:until] do
-        parts ++ ["UNTIL=#{format_datetime(recurrence[:until])}"]
+        parts ++ ["UNTIL=#{Format.format_datetime(recurrence[:until])}"]
       else
         parts
       end
@@ -291,260 +283,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   @valid_transparencies ~w[OPAQUE TRANSPARENT]
   @valid_visibilities ~w[PUBLIC PRIVATE CONFIDENTIAL]
 
-  # Private helper functions
-
-  defp build_dtstart(%{start_time: %Date{} = date}) do
-    "DTSTART;VALUE=DATE:#{format_date(date)}"
-  end
-
-  defp build_dtstart(%{all_day: true, start_time: start_time}) do
-    date = DateTime.to_date(start_time)
-    "DTSTART;VALUE=DATE:#{format_date(date)}"
-  end
-
-  defp build_dtstart(%{start_time: %NaiveDateTime{} = ndt}) do
-    "DTSTART:#{format_naive_datetime(ndt)}"
-  end
-
-  defp build_dtstart(%{start_time: %DateTime{} = dt}) do
-    "DTSTART:#{format_datetime(DateTime.shift_zone!(dt, "Etc/UTC"))}"
-  end
-
-  # RFC 5545 §3.6.1: for a DATE-form DTEND (all-day event), the value is
-  # exclusive — the event ends at the start of that day, not during it. A
-  # single-day all-day event therefore has DTEND = DTSTART + 1.
-  #
-  # The production CalDAV create path (create_execution.ex) already adds +1
-  # before calling this function, so in practice `end_time` is always
-  # exclusive. This guard catches callers that supply `end_time == start_time`
-  # (e.g. direct test callers or future create paths that forget to add +1),
-  # ensuring we never silently emit a zero-length all-day event.
-  defp build_dtend(%{end_time: %Date{} = date, start_time: %Date{} = start}) do
-    exclusive = if Date.compare(date, start) == :eq, do: Date.add(date, 1), else: date
-    "DTEND;VALUE=DATE:#{format_date(exclusive)}"
-  end
-
-  defp build_dtend(%{end_time: %Date{} = date}) do
-    "DTEND;VALUE=DATE:#{format_date(date)}"
-  end
-
-  defp build_dtend(%{all_day: true, end_time: end_time, start_time: start_time}) do
-    end_date = DateTime.to_date(end_time)
-    start_date = DateTime.to_date(start_time)
-
-    exclusive =
-      if Date.compare(end_date, start_date) == :eq, do: Date.add(end_date, 1), else: end_date
-
-    "DTEND;VALUE=DATE:#{format_date(exclusive)}"
-  end
-
-  defp build_dtend(%{all_day: true, end_time: end_time}) do
-    date = DateTime.to_date(end_time)
-    "DTEND;VALUE=DATE:#{format_date(date)}"
-  end
-
-  defp build_dtend(%{end_time: %NaiveDateTime{} = ndt}) do
-    "DTEND:#{format_naive_datetime(ndt)}"
-  end
-
-  defp build_dtend(%{end_time: %DateTime{} = dt}) do
-    "DTEND:#{format_datetime(DateTime.shift_zone!(dt, "Etc/UTC"))}"
-  end
-
-  # RFC 7986 §5.11 — advertise the video-meeting access URI as a first-class
-  # CONFERENCE property so RFC 7986-aware clients render a native "Join"
-  # affordance. LOCATION still carries the URL for older clients. The value is
-  # a URI, so it is not text-escaped; we only strip control characters to
-  # prevent property injection. LABEL is omitted here (unlike the email-side
-  # generator) because the CalDAV write path has no attendee-locale context.
-  defp build_conference_line(%{conference_url: url}) when is_binary(url) and url != "" do
-    "CONFERENCE;VALUE=URI;FEATURE=VIDEO:#{sanitize_ical_value(url)}"
-  end
-
-  defp build_conference_line(_event), do: nil
-
-  # RFC 5545 §3.8.1.1 — one `ATTACH` line per file, as a URI reference (not
-  # inline binary, which would bloat the payload). `FMTTYPE` carries the MIME
-  # type when known. Hosted at a Tymeslot `/uploads/...` URL.
-  defp build_attachment_lines(%{attachments: attachments}) when is_list(attachments) do
-    lines =
-      attachments
-      |> Enum.map(&attachment_line/1)
-      |> Enum.reject(&is_nil/1)
-
-    case lines do
-      [] -> nil
-      lines -> Enum.join(lines, "\r\n")
-    end
-  end
-
-  defp build_attachment_lines(_event), do: nil
-
-  defp attachment_line(%{url: url} = attachment) when is_binary(url) and url != "" do
-    case attachment[:content_type] || attachment["content_type"] do
-      mime when is_binary(mime) and mime != "" ->
-        "ATTACH;FMTTYPE=#{mime}:#{sanitize_ical_value(url)}"
-
-      _missing ->
-        "ATTACH:#{sanitize_ical_value(url)}"
-    end
-  end
-
-  defp attachment_line(_other), do: nil
-
-  defp build_transp(%{transparency: t}) when t in [:transparent, "transparent", "TRANSPARENT"],
-    do: "TRANSP:TRANSPARENT"
-
-  defp build_transp(%{transparency: t}) when t in [:opaque, "opaque", "OPAQUE"],
-    do: "TRANSP:OPAQUE"
-
-  defp build_transp(_event), do: nil
-
-  defp build_status(%{status: s}) when s in [:tentative, "tentative", "TENTATIVE"],
-    do: "STATUS:TENTATIVE"
-
-  defp build_status(%{status: s}) when s in [:confirmed, "confirmed", "CONFIRMED"],
-    do: "STATUS:CONFIRMED"
-
-  defp build_status(%{status: s}) when s in [:cancelled, "cancelled", "CANCELLED"],
-    do: "STATUS:CANCELLED"
-
-  defp build_status(_event), do: nil
-
-  defp build_class(%{visibility: v}) when v in [:public, "public", "PUBLIC"], do: "CLASS:PUBLIC"
-
-  defp build_class(%{visibility: v}) when v in [:private, "private", "PRIVATE"],
-    do: "CLASS:PRIVATE"
-
-  defp build_class(%{visibility: v}) when v in [:confidential, "confidential", "CONFIDENTIAL"],
-    do: "CLASS:CONFIDENTIAL"
-
-  defp build_class(_event), do: nil
-
-  # Emits the RFC 7986 COLOR property from the canonical `:colour` palette key,
-  # mapped to a CSS3 colour name. An unrecognised value (e.g. a raw inbound
-  # provider colour) maps to nil and is omitted.
-  defp build_colour_line(%{colour: colour}) do
-    case EventColour.css_colour(colour) do
-      nil -> nil
-      css_name -> "COLOR:#{css_name}"
-    end
-  end
-
-  defp build_colour_line(_event), do: nil
-
-  # The canonical `recurrence_rule` may arrive bare (CalDAV/Outlook) or with a
-  # leading `RRULE:` (Google's normaliser keeps the prefix on read); strip any
-  # existing prefix so exactly one is emitted.
-  defp build_rrule_line(%{recurrence_rule: rrule}) when is_binary(rrule) and rrule != "",
-    do: "RRULE:#{RRule.strip_prefix(rrule)}"
-
-  defp build_rrule_line(_event), do: nil
-
-  # EXDATE's value type MUST match DTSTART's (RFC 5545 §3.8.5.1). If the
-  # master event is a DATE-TIME (timed event), bare Date exceptions are
-  # promoted to UTC DateTimes at DTSTART's time-of-day. If the master is a
-  # DATE (all-day event), we emit `;VALUE=DATE`.
-  defp build_exdate(%{recurrence_exceptions: dates, start_time: %DateTime{} = start_dt})
-       when is_list(dates) and dates != [] do
-    start_utc = DateTime.shift_zone!(start_dt, "Etc/UTC")
-    time_of_day = DateTime.to_time(start_utc)
-
-    formatted =
-      Enum.map_join(dates, ",", fn
-        %Date{} = d ->
-          d
-          |> DateTime.new!(time_of_day, "Etc/UTC")
-          |> format_datetime()
-
-        %DateTime{} = dt ->
-          dt |> DateTime.shift_zone!("Etc/UTC") |> format_datetime()
-      end)
-
-    "EXDATE:#{formatted}"
-  end
-
-  defp build_exdate(%{recurrence_exceptions: dates, start_time: %Date{}})
-       when is_list(dates) and dates != [] do
-    formatted =
-      Enum.map_join(dates, ",", fn
-        %Date{} = d -> format_date(d)
-      end)
-
-    "EXDATE;VALUE=DATE:#{formatted}"
-  end
-
-  defp build_exdate(_event), do: nil
-
-  # Issue #41: Zimbra (and likely other CalDAV servers) silently strips
-  # `SCHEDULE-AGENT` from incoming events and runs iTIP scheduling for any
-  # event that carries an `ATTENDEE` block — re-emailing the attendee on top
-  # of Tymeslot's own notification. The only reliable way to keep CalDAV
-  # servers from auto-scheduling is to not advertise an attendee at all.
-  #
-  # We emit `CONTACT` instead (RFC 5545 §3.8.4.2), which carries the same
-  # name/email but is not part of the iTIP scheduling model. The attendee
-  # identity is also folded into the event DESCRIPTION (see
-  # `CalendarEventBuilder.build_event_description/1`) so it remains visible
-  # in calendar clients that don't render CONTACT.
-  defp build_attendee_lines(%{attendees: attendees})
-       when is_list(attendees) and attendees != [] do
-    attendees
-    |> Enum.map(&format_attendee/1)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join("\r\n")
-  end
-
-  defp build_attendee_lines(%{attendee_email: email} = event) when is_binary(email) do
-    name = Map.get(event, :attendee_name)
-    format_attendee(%{email: email, name: name})
-  end
-
-  defp build_attendee_lines(_event), do: nil
-
-  defp format_attendee(%{"email" => email} = a),
-    do: format_attendee(%{email: email, name: a["name"]})
-
-  defp format_attendee(%{email: email} = a) when is_binary(email) and email != "" do
-    case a[:name] do
-      name when is_binary(name) and name != "" ->
-        "CONTACT:#{escape_text(name)} <#{sanitize_ical_value(email)}>"
-
-      _missing ->
-        "CONTACT:#{sanitize_ical_value(email)}"
-    end
-  end
-
-  defp format_attendee(email) when is_binary(email) and email != "" do
-    "CONTACT:#{sanitize_ical_value(email)}"
-  end
-
-  defp format_attendee(_other), do: nil
-
-  # We still emit `ORGANIZER` on every event so scheduling-aware servers
-  # don't inject one of their own at calendar-owner level (which would
-  # itself fire iTIP). The `SCHEDULE-AGENT=CLIENT` parameter is kept as
-  # defence-in-depth for servers that honour RFC 6638 §7.1 even though
-  # Zimbra silently strips it (see issue #41).
-  defp build_organizer_line(%{organizer_email: email} = event)
-       when is_binary(email) and email != "" do
-    case Map.get(event, :organizer_name) do
-      name when is_binary(name) and name != "" ->
-        "ORGANIZER;SCHEDULE-AGENT=CLIENT;CN=#{escape_text(name)}:mailto:#{sanitize_ical_value(email)}"
-
-      _missing ->
-        "ORGANIZER;SCHEDULE-AGENT=CLIENT:mailto:#{sanitize_ical_value(email)}"
-    end
-  end
-
-  defp build_organizer_line(_event), do: nil
-
-  defp format_naive_datetime(%NaiveDateTime{} = ndt) do
-    ndt
-    |> NaiveDateTime.to_iso8601(:basic)
-    |> String.replace(~r/\.\d+/, "")
-  end
-
+  # Optional-property assembly for the legacy `build_event/1` path. The
+  # canonical CalDAV path (`build_simple_event/2`) uses the dedicated
+  # serialisers in `Properties` instead.
   defp build_optional_properties(event_data) do
     []
     |> maybe_add_property(:description, event_data)
@@ -561,12 +302,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp maybe_add_property(properties, :description, %{description: description})
        when is_binary(description) do
-    properties ++ ["DESCRIPTION:#{escape_text(description)}"]
+    properties ++ ["DESCRIPTION:#{Format.escape_text(description)}"]
   end
 
   defp maybe_add_property(properties, :location, %{location: location})
        when is_binary(location) do
-    properties ++ ["LOCATION:#{escape_text(location)}"]
+    properties ++ ["LOCATION:#{Format.escape_text(location)}"]
   end
 
   defp maybe_add_property(properties, :status, %{status: status})
@@ -594,7 +335,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   defp maybe_add_property(properties, :categories, %{categories: categories})
        when is_list(categories) do
     categories_str = Enum.join(categories, ",")
-    properties ++ ["CATEGORIES:#{escape_text(categories_str)}"]
+    properties ++ ["CATEGORIES:#{Format.escape_text(categories_str)}"]
   end
 
   defp maybe_add_property(properties, :url, %{url: url}) when is_binary(url) do
@@ -624,105 +365,21 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp maybe_add_property(properties, _key, _value), do: properties
 
+  # Legacy CONTACT serialisation for the `build_event/1` attendee list. See
+  # `Properties.build_attendee_lines/1` for the canonical CalDAV path and the
+  # issue #41 rationale for emitting CONTACT rather than ATTENDEE.
   defp build_attendees(%{attendees: attendees}) when is_list(attendees) do
     Enum.map_join(attendees, "\r\n", fn
       %{"email" => email} ->
-        "CONTACT:#{sanitize_ical_value(email)}"
+        "CONTACT:#{Format.sanitize_ical_value(email)}"
 
       %{email: email} ->
-        "CONTACT:#{sanitize_ical_value(email)}"
+        "CONTACT:#{Format.sanitize_ical_value(email)}"
 
       email when is_binary(email) ->
-        "CONTACT:#{sanitize_ical_value(email)}"
+        "CONTACT:#{Format.sanitize_ical_value(email)}"
     end)
   end
 
   defp build_attendees(_no_attendees), do: ""
-
-  defp build_reminders(%{reminders: reminders}) when is_list(reminders) do
-    Enum.map_join(reminders, "\r\n", &build_reminder/1)
-  end
-
-  defp build_reminders(_no_reminders), do: ""
-
-  # The canonical reminder shape is `%{method: :popup | :email | :sms, minutes_before:}`
-  # (emitted by the provider normalisers). `:popup` → DISPLAY, `:email` → EMAIL,
-  # `:sms` → DISPLAY for the VALARM ACTION. A permissive fallback keeps any
-  # legacy/raw reminder (e.g. a bare `minutes_before`, or the historical `:type`
-  # key) building a DISPLAY alarm rather than crashing the whole iCal write.
-  # Both atom-keyed and string-keyed maps are handled via Reminder.
-  defp build_reminder(%{minutes_before: minutes, method: method}) do
-    build_valarm(minutes, Reminder.ical_action(method))
-  end
-
-  defp build_reminder(%{minutes_before: minutes, type: type}) do
-    build_valarm(minutes, String.upcase(to_string(type)))
-  end
-
-  defp build_reminder(%{minutes_before: minutes}) do
-    build_valarm(minutes, "DISPLAY")
-  end
-
-  # String-keyed reminders round-tripped through the JSONB cache column.
-  defp build_reminder(%{"minutes_before" => minutes} = reminder) do
-    build_valarm(minutes, Reminder.ical_action(Reminder.method(reminder)))
-  end
-
-  defp build_valarm(minutes, action) do
-    String.trim("""
-    BEGIN:VALARM
-    TRIGGER:-PT#{minutes}M
-    ACTION:#{action}
-    DESCRIPTION:Reminder
-    END:VALARM
-    """)
-  end
-
-  defp sanitize_ical_value(value) when is_binary(value) do
-    String.replace(value, ~r/[\r\n\x00-\x1f]/, "")
-  end
-
-  defp sanitize_ical_value(value), do: value
-
-  # RFC 5545 §3.1 — fold content lines to ≤ 75 octets by inserting CRLF + SPACE.
-  # First segment ≤ 75 octets; each continuation ≤ 74 (leading SPACE takes one
-  # octet). Splits at UTF-8 codepoint boundaries to avoid tearing multi-byte
-  # sequences.
-  defp fold_lines(ical_string) do
-    ical_string
-    |> String.split("\r\n")
-    |> Enum.map_join("\r\n", &fold_line/1)
-  end
-
-  defp fold_line(line), do: fold_line_acc(line, _first = true, _acc = [])
-
-  defp fold_line_acc(<<>>, _first, acc), do: acc |> Enum.reverse() |> Enum.join("\r\n ")
-
-  defp fold_line_acc(rest, first, acc) do
-    limit = if first, do: 75, else: 74
-    {chunk, remaining} = take_octets(rest, limit)
-    fold_line_acc(remaining, false, [chunk | acc])
-  end
-
-  defp take_octets(binary, max_bytes) when byte_size(binary) <= max_bytes, do: {binary, ""}
-
-  defp take_octets(binary, max_bytes) do
-    split_at = safe_utf8_split(binary, max_bytes)
-    <<chunk::binary-size(^split_at), rest::binary>> = binary
-    {chunk, rest}
-  end
-
-  defp safe_utf8_split(binary, pos) do
-    pos = min(pos, byte_size(binary))
-    retreat_to_boundary(binary, pos)
-  end
-
-  defp retreat_to_boundary(_binary, 0), do: 0
-
-  defp retreat_to_boundary(binary, pos) do
-    byte = :binary.at(binary, pos - 1)
-    if continuation_byte?(byte), do: retreat_to_boundary(binary, pos - 1), else: pos
-  end
-
-  defp continuation_byte?(byte), do: byte >= 0x80 and byte <= 0xBF
 end
