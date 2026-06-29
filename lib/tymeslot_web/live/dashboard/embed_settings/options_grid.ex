@@ -210,6 +210,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             href="https://github.com/Tymeslot/tymeslot-wordpress"
             target="_blank"
             rel="noopener noreferrer"
+            data-analytics-event="github_cta_clicked"
+            data-analytics-props={Jason.encode!(%{source_page: "embed_settings"})}
             class="font-bold text-indigo-700 underline hover:text-indigo-900"
           >
             Get the plugin

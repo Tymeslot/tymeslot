@@ -63,6 +63,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Layout do
           href="https://github.com/tymeslot/tymeslot"
           target="_blank"
           rel="noopener noreferrer"
+          data-analytics-event="github_cta_clicked"
+          data-analytics-props={Jason.encode!(%{source_page: "footer_credit"})}
           class="underline hover:text-white transition-colors"
           style="color: rgba(255,255,255,0.9);"
         >

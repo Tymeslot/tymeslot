@@ -77,6 +77,8 @@ defmodule TymeslotWeb.Components.SiteComponents do
             <div class="h-6 w-px bg-tymeslot-200" aria-hidden="true"></div>
             <.link
               href={~p"/auth/signup"}
+              data-analytics-event="signup_started"
+              data-analytics-props={Jason.encode!(%{source_page: "marketing", cta_location: "nav"})}
               class="px-8 py-3 font-black text-white bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 hover:from-turquoise-500 hover:to-blue-500 rounded-2xl shadow-xl hover:shadow-turquoise-500/40 transition-all duration-300 hover:-translate-y-1"
             >
               Get Started
@@ -136,6 +138,10 @@ defmodule TymeslotWeb.Components.SiteComponents do
               </.link>
               <.link
                 href={~p"/auth/signup"}
+                data-analytics-event="signup_started"
+                data-analytics-props={
+                  Jason.encode!(%{source_page: "marketing", cta_location: "mobile_menu"})
+                }
                 class="mobile-nav-button block px-4 py-3 bg-turquoise-600 text-white text-center rounded-lg hover:bg-turquoise-700 transition-colors"
               >
                 Get Started
@@ -476,6 +482,8 @@ defmodule TymeslotWeb.Components.SiteComponents do
               href="https://github.com/tymeslot/tymeslot"
               target="_blank"
               rel="noopener noreferrer"
+              data-analytics-event="github_cta_clicked"
+              data-analytics-props={Jason.encode!(%{source_page: "footer"})}
               class="inline-flex items-center gap-2 px-4 py-2 bg-linear-to-r from-turquoise-500 to-turquoise-600 text-white font-semibold rounded-token-lg hover:from-turquoise-600 hover:to-turquoise-700 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-turquoise-500/25 text-token-sm"
             >
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">

@@ -59,6 +59,13 @@ defmodule TymeslotWeb.Components.SiteComponentsTest do
       assert html =~ "All rights reserved"
     end
 
+    test "the GitHub link carries the github_cta_clicked analytics event tagged with the footer" do
+      html = render_component(&SiteComponents.site_footer/1, %{})
+
+      assert html =~ ~s(data-analytics-event="github_cta_clicked")
+      assert html =~ ~s(data-analytics-props="{&quot;source_page&quot;:&quot;footer&quot;}")
+    end
+
     test "renders every configured footer link" do
       html = render_component(&SiteComponents.site_footer/1, %{})
 
