@@ -8,6 +8,7 @@ defmodule Tymeslot.Profiles do
   require Logger
 
   alias Tymeslot.Availability.WeeklySchedule
+  alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Profiles.EmbedDomains
   alias Tymeslot.Profiles.OrganizerContext
@@ -63,8 +64,12 @@ defmodule Tymeslot.Profiles do
   completion when the user has not chosen one themselves).
   """
   @spec assign_default_username(profile(), username()) :: result(profile())
-  def assign_default_username(%ProfileSchema{} = profile, username),
-    do: ProfileQueries.update_username(profile, username)
+  def assign_default_username(%ProfileSchema{} = profile, username) do
+    with {:ok, updated_profile} <- ProfileQueries.update_username(profile, username) do
+      Publication.maybe_publish(updated_profile.user_id)
+      {:ok, updated_profile}
+    end
+  end
 
   @doc """
   Gets a profile by its database ID.
@@ -239,6 +244,7 @@ defmodule Tymeslot.Profiles do
            RateLimiter.check_username_change_rate_limit("user:" <> Integer.to_string(user_id)),
          :ok <- UsernameValidator.validate(username, reserved_words: ReservedPaths.list()),
          {:ok, updated_profile} <- ProfileQueries.update_username(profile, username) do
+      Publication.maybe_publish(updated_profile.user_id)
       {:ok, updated_profile}
     else
       {:error, :rate_limited} ->

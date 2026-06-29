@@ -289,6 +289,18 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
+  Checks if a user has at least one active meeting type.
+  """
+  @spec has_active_meeting_types?(integer()) :: boolean()
+  def has_active_meeting_types?(user_id) do
+    Repo.exists?(
+      from(mt in MeetingTypeSchema,
+        where: mt.user_id == ^user_id and mt.is_active == true
+      )
+    )
+  end
+
+  @doc """
   Counts meeting types for a user.
   """
   @spec count_for_user(integer()) :: non_neg_integer()

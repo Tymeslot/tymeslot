@@ -2,6 +2,7 @@ defmodule Tymeslot.MeetingTypes do
   @moduledoc """
   Context for managing meeting types.
   """
+  alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Features
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
@@ -11,7 +12,6 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.Slugs
-  alias Tymeslot.Profiles
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Utils.UriUtils
   require Logger
@@ -75,6 +75,14 @@ defmodule Tymeslot.MeetingTypes do
   end
 
   @doc """
+  Returns true if the user has at least one active meeting type.
+  """
+  @spec has_active_meeting_types?(integer()) :: boolean()
+  def has_active_meeting_types?(user_id) do
+    MeetingTypeQueries.has_active_meeting_types?(user_id)
+  end
+
+  @doc """
   Creates a new meeting type.
 
   `opts` are forwarded to the changeset for payment-validation context.
@@ -83,23 +91,8 @@ defmodule Tymeslot.MeetingTypes do
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def create_meeting_type(attrs, opts \\ []) do
     with {:ok, meeting_type} <- MeetingTypeQueries.create_meeting_type(attrs, opts) do
-      maybe_publish_booking_page(meeting_type)
+      Publication.maybe_publish(meeting_type.user_id)
       {:ok, meeting_type}
-    end
-  end
-
-  # A host's booking page is "published" the first time they have a username set
-  # and an active meeting type. Emit the telemetry once per host — the guard
-  # lives in Profiles.mark_booking_page_published/1, which returns
-  # {:ok, :published} only on the transition.
-  defp maybe_publish_booking_page(%{user_id: user_id}) do
-    with {:ok, profile} <- Profiles.get_or_create_profile(user_id),
-         {:ok, :published} <- Profiles.mark_booking_page_published(profile) do
-      :telemetry.execute([:tymeslot, :booking_page, :published], %{count: 1}, %{
-        theme: profile.booking_theme
-      })
-    else
-      _other -> :ok
     end
   end
 
@@ -111,7 +104,10 @@ defmodule Tymeslot.MeetingTypes do
   @spec update_meeting_type(Ecto.Schema.t(), map(), keyword()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def update_meeting_type(meeting_type, attrs, opts \\ []) do
-    MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts)
+    with {:ok, updated} <- MeetingTypeQueries.update_meeting_type(meeting_type, attrs, opts) do
+      Publication.maybe_publish(updated.user_id)
+      {:ok, updated}
+    end
   end
 
   @doc """
@@ -120,7 +116,10 @@ defmodule Tymeslot.MeetingTypes do
   @spec toggle_meeting_type_status(Ecto.Schema.t(), map()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def toggle_meeting_type_status(meeting_type, attrs) do
-    MeetingTypeQueries.toggle_meeting_type_status(meeting_type, attrs)
+    with {:ok, updated} <- MeetingTypeQueries.toggle_meeting_type_status(meeting_type, attrs) do
+      Publication.maybe_publish(updated.user_id)
+      {:ok, updated}
+    end
   end
 
   @doc """
@@ -242,10 +241,17 @@ defmodule Tymeslot.MeetingTypes do
     existing = MeetingTypeQueries.existing_names(user_id)
     now = NaiveDateTime.utc_now(:second)
 
-    user_id
-    |> default_meeting_type_templates(calendar_integration_id, target_calendar_id, now)
-    |> Enum.reject(fn type -> MapSet.member?(existing, type.name) end)
-    |> MeetingTypeQueries.bulk_insert_meeting_types()
+    result =
+      user_id
+      |> default_meeting_type_templates(calendar_integration_id, target_calendar_id, now)
+      |> Enum.reject(fn type -> MapSet.member?(existing, type.name) end)
+      |> MeetingTypeQueries.bulk_insert_meeting_types()
+
+    with {:ok, _meeting_types} <- result do
+      Publication.maybe_publish(user_id)
+    end
+
+    result
   end
 
   @spec create_default_meeting_types(term()) :: {:error, :invalid_user_id}

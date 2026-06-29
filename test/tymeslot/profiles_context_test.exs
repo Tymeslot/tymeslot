@@ -509,6 +509,40 @@ defmodule Tymeslot.ProfilesContextTest do
     end
   end
 
+  describe "publishing the booking page on username set" do
+    test "update_username/3 publishes when the user already has an active meeting type" do
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: nil)
+      insert(:meeting_type, user: user, is_active: true)
+
+      assert {:ok, _updated} = Profiles.update_username(profile, "newhost", user.id)
+
+      {:ok, reloaded} = ProfileQueries.get_by_user_id(user.id)
+      assert %DateTime{} = reloaded.booking_page_published_at
+    end
+
+    test "update_username/3 does not publish when the user has no active meeting type" do
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: nil)
+
+      assert {:ok, _updated} = Profiles.update_username(profile, "newhost", user.id)
+
+      {:ok, reloaded} = ProfileQueries.get_by_user_id(user.id)
+      assert reloaded.booking_page_published_at == nil
+    end
+
+    test "assign_default_username/2 publishes when the user already has an active meeting type" do
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: nil)
+      insert(:meeting_type, user: user, is_active: true)
+
+      assert {:ok, _updated} = Profiles.assign_default_username(profile, "autohost")
+
+      {:ok, reloaded} = ProfileQueries.get_by_user_id(user.id)
+      assert %DateTime{} = reloaded.booking_page_published_at
+    end
+  end
+
   # Helper to update settings directly in DB for testing retrieval
   defp update_profile_settings(user_id, attrs) do
     {:ok, profile} = ProfileQueries.get_by_user_id(user_id)

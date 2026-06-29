@@ -13,6 +13,7 @@ defmodule Tymeslot.MeetingTypesTest do
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Profiles
 
   setup do
     # When the SaaS app is compiled alongside Core, its config sets the
@@ -168,6 +169,128 @@ defmodule Tymeslot.MeetingTypesTest do
       assert {:ok, _meeting_type} = MeetingTypes.create_meeting_type(attrs)
 
       assert_received {:telemetry, %{count: 1}, %{theme: "2"}}
+    end
+  end
+
+  # =====================================
+  # Publishing via default meeting types
+  # =====================================
+
+  describe "when default meeting types are created" do
+    test "stamps the booking page as published for a user with a username" do
+      user = insert(:user)
+      insert(:profile, user: user, username: "host")
+
+      assert {:ok, defaults} = MeetingTypes.create_default_meeting_types(user.id)
+      assert defaults != []
+
+      assert %DateTime{} = Profiles.get_profile(user.id).booking_page_published_at
+    end
+
+    test "does not stamp the booking page when the user has no username" do
+      user = insert(:user)
+      insert(:profile, user: user, username: nil)
+
+      assert {:ok, defaults} = MeetingTypes.create_default_meeting_types(user.id)
+      assert defaults != []
+
+      assert Profiles.get_profile(user.id).booking_page_published_at == nil
+    end
+
+    test "emits the publish telemetry once even though several defaults are created" do
+      user = insert(:user)
+      insert(:profile, user: user, username: "host", booking_theme: "2")
+
+      test_pid = self()
+
+      :telemetry.attach(
+        "test-default-publish",
+        [:tymeslot, :booking_page, :published],
+        fn _event, measurements, metadata, _config ->
+          send(test_pid, {:telemetry, measurements, metadata})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach("test-default-publish") end)
+
+      assert {:ok, defaults} = MeetingTypes.create_default_meeting_types(user.id)
+      assert defaults != []
+
+      assert_received {:telemetry, %{count: 1}, %{theme: "2"}}
+      refute_received {:telemetry, _measurements, _metadata}
+    end
+  end
+
+  # =====================================
+  # Activation-triggered publication
+  # =====================================
+
+  describe "when an inactive meeting type is activated via toggle_meeting_type_status/2" do
+    test "stamps booking_page_published_at for a user with a username" do
+      user = insert(:user)
+      insert(:profile, user: user, username: "host")
+      meeting_type = insert(:meeting_type, user: user, is_active: false)
+
+      assert {:ok, _updated} =
+               MeetingTypes.toggle_meeting_type_status(meeting_type, %{is_active: true})
+
+      assert %DateTime{} = Profiles.get_profile(user.id).booking_page_published_at
+    end
+
+    test "does not stamp when user has no username" do
+      user = insert(:user)
+      insert(:profile, user: user, username: nil)
+      meeting_type = insert(:meeting_type, user: user, is_active: false)
+
+      assert {:ok, _updated} =
+               MeetingTypes.toggle_meeting_type_status(meeting_type, %{is_active: true})
+
+      assert Profiles.get_profile(user.id).booking_page_published_at == nil
+    end
+
+    test "is a no-op when page is already published" do
+      user = insert(:user)
+      published_at = ~U[2024-01-01 00:00:00Z]
+
+      insert(:profile,
+        user: user,
+        username: "host",
+        booking_page_published_at: published_at
+      )
+
+      meeting_type = insert(:meeting_type, user: user, is_active: false)
+
+      assert {:ok, _updated} =
+               MeetingTypes.toggle_meeting_type_status(meeting_type, %{is_active: true})
+
+      assert Profiles.get_profile(user.id).booking_page_published_at == published_at
+    end
+  end
+
+  # =====================================
+  # has_active_meeting_types? Behaviors
+  # =====================================
+
+  describe "has_active_meeting_types?/1" do
+    test "returns true when the user has an active meeting type" do
+      user = insert(:user)
+      insert(:meeting_type, user: user, is_active: true)
+
+      assert MeetingTypes.has_active_meeting_types?(user.id) == true
+    end
+
+    test "returns false when the user has only an inactive meeting type" do
+      user = insert(:user)
+      insert(:meeting_type, user: user, is_active: false)
+
+      assert MeetingTypes.has_active_meeting_types?(user.id) == false
+    end
+
+    test "returns false when the user has no meeting types" do
+      user = insert(:user)
+
+      assert MeetingTypes.has_active_meeting_types?(user.id) == false
     end
   end
 
