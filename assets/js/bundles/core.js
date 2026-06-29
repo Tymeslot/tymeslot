@@ -14,7 +14,7 @@ import topbar from "../../vendor/topbar.cjs"
 import { ConfirmDelete, PageReload, VideoHoverPreview, StopClickPropagation } from "../ui_interaction_hooks"
 import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick, scrollPageToTop, shouldScrollToTopOnNavigate } from "../utility_hooks"
 import { ClipboardCopy } from "../clipboard_hook"
-import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView } from "../analytics"
+import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView, HeroDemo } from "../analytics"
 import { installImageFallback } from "../image_fallback"
 import { installClipboardCopy } from "../clipboard_copy"
 
@@ -53,7 +53,8 @@ const CoreHooks = {
   ClipboardCopy,
 
   // Analytics (view-on-mount beacon; click tracking is delegated, not a hook)
-  AnalyticsView
+  AnalyticsView,
+  HeroDemo
 }
 
 // Use /embed-live in cross-site iframes to avoid session cookie dependency
