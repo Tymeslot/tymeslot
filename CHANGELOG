@@ -1,4 +1,16 @@
 
+[1.2.5]
+* core: Accept wildcard TLS certificates from SMTP servers
+* core: Make meeting-type attachment upload and removal safe
+* core: Fold long iCalendar content lines to 75 octets
+* core: Harden free/busy feed token logging and VFREEBUSY organizer
+* core: Show real meeting duration on Quill booking confirmation
+* core: Let hosts attach files to a meeting type
+* core: Enrich calendar events with conference links, language tags and free/busy status
+* core: Capture RANGE=THISANDFUTURE on CalDAV recurrence overrides
+* core: Publish a per-user free/busy calendar feed
+
+
 [1.2.4]
 * core: Redirect to login after self-service password change
 * core: End live sessions immediately on logout and credential changes
