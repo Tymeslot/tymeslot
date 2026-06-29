@@ -104,7 +104,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   @spec assert_owns_event(Phoenix.LiveView.Socket.t(), map()) :: :ok | {:error, :unauthorized}
   def assert_owns_event(socket, event) do
-    if MapSet.member?(socket.assigns.owned_integration_ids, event.calendar_integration_id) do
+    assert_owns_integration(socket, event.calendar_integration_id)
+  end
+
+  @spec assert_owns_integration(Phoenix.LiveView.Socket.t(), integer() | nil) ::
+          :ok | {:error, :unauthorized}
+  def assert_owns_integration(socket, integration_id) do
+    if MapSet.member?(socket.assigns.owned_integration_ids, integration_id) do
       :ok
     else
       {:error, :unauthorized}

@@ -174,6 +174,34 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
     end
   end
 
+  describe "handle_save_event/2 — authorization (T-69)" do
+    test "rejects a create targeting an integration the user does not own" do
+      user = insert(:user)
+      # owned_integration_ids is empty, so any integration id is unauthorised.
+      socket = build_create_socket(user, 999, [])
+
+      {:noreply, returned_socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert_receive {:flash, {:error, "Invalid calendar selected"}}
+      # The save must not have been dispatched to the domain layer.
+      refute_receive {:execute_create_event, _payload}
+      assert returned_socket.assigns.saving_event == false
+    end
+
+    test "dispatches the create when the user owns the target integration" do
+      user = insert(:user)
+      socket = build_create_socket(user, 42, [42])
+
+      {:noreply, returned_socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert_receive {:execute_create_event, payload}
+      assert payload.creating.integration_id == 42
+      assert payload.user_id == user.id
+      assert returned_socket.assigns.saving_event == true
+      refute_receive {:flash, {:error, "Invalid calendar selected"}}
+    end
+  end
+
   describe "handle_update_create_integration/2" do
     test "is a no-op when the create form has already been closed (creating_event is nil)" do
       # A duplicate/queued integration-change event can arrive after the create
@@ -226,6 +254,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
   defp build_socket do
     %Phoenix.LiveView.Socket{
       assigns: %{__changed__: %{}, flash: %{}}
+    }
+  end
+
+  # Socket for the save handler: a timed event being created on `integration_id`,
+  # with `owned_ids` standing in for the user's active integrations (the same
+  # MapSet that gates move/resize/delete).
+  defp build_create_socket(user, integration_id, owned_ids) do
+    %Phoenix.LiveView.Socket{
+      assigns: %{
+        __changed__: %{},
+        flash: %{},
+        current_user: user,
+        user_timezone: "Europe/Berlin",
+        saving_event: false,
+        owned_integration_ids: MapSet.new(owned_ids),
+        creating_event: %{
+          title: "Blocked Time",
+          integration_id: integration_id,
+          calendar_id: "primary",
+          date: "2026-04-06",
+          end_date: "2026-04-06",
+          start_hour: 9,
+          start_minute: 0,
+          end_hour: 10,
+          end_minute: 0,
+          all_day: false,
+          attendees: [],
+          reminders: [],
+          recurrence_rule: nil,
+          video_integration_id: nil
+        }
+      }
     }
   end
 end

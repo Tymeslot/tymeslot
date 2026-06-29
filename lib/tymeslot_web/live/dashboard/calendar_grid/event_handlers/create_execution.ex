@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGridComponent
 
@@ -22,21 +23,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
     end
   end
 
+  # Authorize the create against the user's own integrations before doing any
+  # work. `owned_integration_ids` is the same MapSet that gates move/resize/
+  # delete via `EditWorkflow.assert_owns_event/2`; routing creation through it
+  # keeps authorization defensive at the handler level rather than relying on
+  # the form only ever offering owned calendars.
   defp handle_save_event_with(creating, socket) do
-    integration = Enum.find(socket.assigns.integrations, &(&1.id == creating.integration_id))
+    case EditWorkflow.assert_owns_integration(socket, creating.integration_id) do
+      {:error, :unauthorized} ->
+        send(self(), {:flash, {:error, "Invalid calendar selected"}})
+        {:noreply, socket}
 
-    if is_nil(integration) do
-      send(self(), {:flash, {:error, "Invalid calendar selected"}})
-      {:noreply, socket}
-    else
-      with {:ok, start_date} <- Date.from_iso8601(creating.date),
-           {:ok, end_date} <- Date.from_iso8601(creating.end_date) do
-        save_resolved(creating, start_date, end_date, socket)
-      else
-        {:error, _reason} ->
-          send(self(), {:flash, {:error, "Invalid date"}})
-          {:noreply, socket}
-      end
+      :ok ->
+        with {:ok, start_date} <- Date.from_iso8601(creating.date),
+             {:ok, end_date} <- Date.from_iso8601(creating.end_date) do
+          save_resolved(creating, start_date, end_date, socket)
+        else
+          {:error, _reason} ->
+            send(self(), {:flash, {:error, "Invalid date"}})
+            {:noreply, socket}
+        end
     end
   end
 
