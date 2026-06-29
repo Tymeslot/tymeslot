@@ -1,0 +1,68 @@
+name: DCO
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dco-check:
+    runs-on: ubuntu-latest
+    # Only run on GitHub, not Gitea
+    if: github.server_url == 'https://github.com'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check Developer Certificate of Origin sign-off
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          commits=$(git rev-list "${BASE_SHA}..${HEAD_SHA}")
+          if [ -z "$commits" ]; then
+            echo "No commits to check."
+            exit 0
+          fi
+
+          failed=0
+          for sha in $commits; do
+            # Skip merge commits (two or more parents) — they carry no new work.
+            if [ "$(git rev-list --parents -n 1 "$sha" | wc -w)" -gt 2 ]; then
+              continue
+            fi
+
+            author_email=$(git show -s --format='%ae' "$sha")
+            subject=$(git show -s --format='%s' "$sha")
+
+            # A commit passes if any Signed-off-by line carries the author's email.
+            if git show -s --format='%B' "$sha" \
+                 | grep -i '^Signed-off-by:' \
+                 | grep -qF "<${author_email}>"; then
+              echo "✓ ${sha:0:12}  ${subject}"
+            else
+              echo "✗ ${sha:0:12}  ${subject}"
+              echo "      missing: Signed-off-by: <author> <${author_email}>"
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo ""
+            echo "One or more commits are not signed off."
+            echo "See CONTRIBUTING.md → 'Signing off your commits'."
+            echo ""
+            echo "Fix with:"
+            echo "  git rebase --signoff ${BASE_SHA}"
+            echo "  git push --force-with-lease"
+            exit 1
+          fi
+
+          echo ""
+          echo "All commits are signed off."
