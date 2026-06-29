@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
         flash: %{},
         current_user: user,
         creating_event: creating,
-        integrations: [integration],
+        owned_integration_ids: MapSet.new([integration.id]),
         user_timezone: "Europe/Tallinn"
       }
     }

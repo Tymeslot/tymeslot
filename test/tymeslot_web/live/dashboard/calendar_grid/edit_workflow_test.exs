@@ -111,6 +111,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
     end
   end
 
+  describe "assert_owns_event/2 and assert_owns_integration/2" do
+    test "returns :ok when the event's integration is owned" do
+      socket = socket_owning([7, 9])
+      event = %{calendar_integration_id: 7}
+
+      assert EditWorkflow.assert_owns_event(socket, event) == :ok
+    end
+
+    test "returns {:error, :unauthorized} when the event's integration is not owned" do
+      socket = socket_owning([7, 9])
+      event = %{calendar_integration_id: 13}
+
+      assert EditWorkflow.assert_owns_event(socket, event) == {:error, :unauthorized}
+    end
+
+    test "assert_owns_integration/2 authorises an owned integration id" do
+      socket = socket_owning([7, 9])
+
+      assert EditWorkflow.assert_owns_integration(socket, 9) == :ok
+    end
+
+    test "assert_owns_integration/2 rejects an unowned integration id" do
+      socket = socket_owning([7, 9])
+
+      assert EditWorkflow.assert_owns_integration(socket, 13) == {:error, :unauthorized}
+    end
+
+    test "assert_owns_integration/2 rejects a nil integration id" do
+      socket = socket_owning([7, 9])
+
+      assert EditWorkflow.assert_owns_integration(socket, nil) == {:error, :unauthorized}
+    end
+  end
+
   describe "sync_video_integration_async/3" do
     setup do
       original = Application.get_env(:tymeslot, :video_rooms_module)
@@ -205,6 +239,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
   end
 
   # Helpers
+
+  defp socket_owning(integration_ids) do
+    Component.assign(
+      %Phoenix.LiveView.Socket{},
+      :owned_integration_ids,
+      MapSet.new(integration_ids)
+    )
+  end
 
   defp build_event(opts) do
     insert(
