@@ -209,6 +209,41 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
     end
   end
 
+  describe "event resize" do
+    test "resizing an owned event is accepted and keeps the event on the grid", %{
+      conn: conn,
+      user: user
+    } do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      today = Date.utc_today()
+
+      event =
+        insert_event(integration, %{
+          summary: "Resizable Event",
+          start_at: DateTime.new!(today, ~T[09:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
+          all_day: false
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      # The CalendarResize hook pushes "event_resized" with the new bottom edge.
+      html =
+        lv
+        |> element("#calendar-resize-zone")
+        |> render_hook("event_resized", %{
+          "event-id" => to_string(event.id),
+          "event-date" => Date.to_iso8601(today),
+          "new-end-hour" => "12",
+          "new-end-minute" => "0"
+        })
+
+      # The optimistic update must apply without an authorization error or crash.
+      refute html =~ "You don't have permission to modify this event"
+      assert html =~ "Resizable Event"
+    end
+  end
+
   defp insert_event(integration, attrs) do
     insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end
