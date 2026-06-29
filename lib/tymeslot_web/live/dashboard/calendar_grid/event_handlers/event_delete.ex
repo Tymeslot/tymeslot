@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias Tymeslot.Meetings.AttendeeNotifications
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGridComponent
 
@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
 
         send(
           self(),
-          {:execute_delete_event, InlineEdit.build_delete_payload(event, user_id, false)}
+          {:execute_delete_event, NotificationFlows.build_delete_payload(event, user_id, false)}
         )
 
         {:noreply,

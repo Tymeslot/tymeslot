@@ -20,8 +20,10 @@ defmodule Tymeslot.Dev.Calendar do
 
   Events are generated relative to today by `Tymeslot.Integrations.Calendar.DebugSchedule`
   (the shared, pure generator that the `:debug` provider uses too), resolved in
-  the organiser's timezone. Rules live in the supervised `Store` Agent and reset
-  to the configured default pattern on restart.
+  the organiser's timezone. Rules and in-app events live in the supervised
+  `Tymeslot.Integrations.Calendar.DebugStore` Agent — the single store shared
+  with the dashboard calendar grid — and reset to the configured default pattern
+  on restart.
 
   Events **created in-app** (e.g. confirming a booking) are accepted too: they
   are recorded in the same in-memory store and immediately occupy their slot, so
@@ -34,8 +36,8 @@ defmodule Tymeslot.Dev.Calendar do
 
   @behaviour Tymeslot.Integrations.Calendar.CalendarBehaviour
 
-  alias Tymeslot.Dev.Calendar.Store
   alias Tymeslot.Integrations.Calendar.DebugSchedule
+  alias Tymeslot.Integrations.Calendar.DebugStore
   alias Tymeslot.Profiles.ProfileQueries
 
   @default_timezone "Etc/UTC"
@@ -44,7 +46,7 @@ defmodule Tymeslot.Dev.Calendar do
 
   @doc "Marks a whole day busy. Returns the updated rule list."
   @spec block(Date.t()) :: [DebugSchedule.rule()]
-  def block(%Date{} = date), do: Store.add_rule({:block_date, date})
+  def block(%Date{} = date), do: DebugStore.add_rule({:block_date, date})
 
   @doc """
   Marks a single period busy on `date`. Returns the updated rule list, or
@@ -53,7 +55,7 @@ defmodule Tymeslot.Dev.Calendar do
   @spec busy(Date.t(), Time.t(), Time.t()) :: [DebugSchedule.rule()] | {:error, :invalid_range}
   def busy(%Date{} = date, %Time{} = start_time, %Time{} = end_time) do
     if Time.compare(end_time, start_time) == :gt do
-      Store.add_rule({:busy, date, start_time, end_time})
+      DebugStore.add_rule({:busy, date, start_time, end_time})
     else
       {:error, :invalid_range}
     end
@@ -61,15 +63,15 @@ defmodule Tymeslot.Dev.Calendar do
 
   @doc "Swaps the recurring pattern (`:default` or `:empty`). Returns the pattern."
   @spec pattern(DebugSchedule.pattern()) :: DebugSchedule.pattern()
-  def pattern(pattern) when pattern in [:default, :empty], do: Store.set_pattern(pattern)
+  def pattern(pattern) when pattern in [:default, :empty], do: DebugStore.set_pattern(pattern)
 
   @doc "Removes all explicit busy/blocked rules, keeping the recurring pattern."
   @spec clear() :: :ok
-  def clear, do: Store.clear()
+  def clear, do: DebugStore.clear()
 
   @doc "Lists the current explicit busy/blocked rules."
   @spec list() :: [DebugSchedule.rule()]
-  def list, do: Store.snapshot().rules
+  def list, do: DebugStore.snapshot().rules
 
   # --- CalendarBehaviour -----------------------------------------------------
 
@@ -97,7 +99,7 @@ defmodule Tymeslot.Dev.Calendar do
 
   @impl true
   def get_event(uid, _user_id) do
-    case Map.fetch(Store.snapshot().created, uid) do
+    case DebugStore.fetch_event(uid) do
       {:ok, event} -> {:ok, event}
       :error -> {:error, :not_found}
     end
@@ -122,7 +124,7 @@ defmodule Tymeslot.Dev.Calendar do
 
   @impl true
   def delete_event(uid, _context) do
-    Store.delete_event(uid)
+    DebugStore.delete_event(uid)
     :ok
   end
 
@@ -135,30 +137,85 @@ defmodule Tymeslot.Dev.Calendar do
     do: generate(user_id, range_start, range_end, range_start.time_zone)
 
   defp generate(_user_id, range_start, range_end, timezone) do
-    %{pattern: pattern, rules: rules, created: created} = Store.snapshot()
+    %{pattern: pattern, rules: rules, events: events} = DebugStore.snapshot()
 
     generated = DebugSchedule.events(pattern, rules, range_start, range_end, timezone)
-    in_app = DebugSchedule.in_range(Map.values(created), range_start, range_end)
+
+    in_app =
+      events
+      |> Map.values()
+      |> Enum.map(&to_busy_block(&1, timezone))
+      |> DebugSchedule.in_range(range_start, range_end)
 
     Enum.sort_by(generated ++ in_app, & &1.start_time, DateTime)
+  end
+
+  # Projects a rich stored event to the booking busy-block shape. All-day events
+  # span from the start of their first day to the start of the day after their
+  # last day in the resolved timezone, so they still occupy availability.
+  defp to_busy_block(%{all_day: true, start_time: %Date{} = start_date} = event, timezone) do
+    end_date = Map.get(event, :end_time, start_date)
+
+    %{
+      uid: event.uid,
+      summary: Map.get(event, :summary) || "Booked (dev)",
+      start_time: day_start(start_date, timezone),
+      end_time: day_start(Date.add(end_date, 1), timezone),
+      status: Map.get(event, :status, "confirmed")
+    }
+  end
+
+  defp to_busy_block(
+         %{start_time: %DateTime{} = start_time, end_time: %DateTime{} = end_time} = event,
+         _timezone
+       ) do
+    %{
+      uid: event.uid,
+      summary: Map.get(event, :summary) || "Booked (dev)",
+      start_time: start_time,
+      end_time: end_time,
+      status: Map.get(event, :status, "confirmed")
+    }
   end
 
   # Stores a created/updated event when it carries the times needed to occupy a
   # slot. Returns the uid used, or `:ignore` when the payload is unusable.
   defp record_event(%{uid: uid, start_time: %DateTime{}, end_time: %DateTime{}} = event_data)
        when is_binary(uid) do
-    Store.put_event(%{
-      uid: uid,
-      summary: Map.get(event_data, :summary, "Booked (dev)"),
-      start_time: event_data.start_time,
-      end_time: event_data.end_time,
-      status: "confirmed"
-    })
+    store_event(event_data)
+    {:ok, uid}
+  end
 
+  defp record_event(%{uid: uid, all_day: true, start_time: %Date{}} = event_data)
+       when is_binary(uid) do
+    store_event(event_data)
     {:ok, uid}
   end
 
   defp record_event(_event_data), do: :ignore
+
+  defp store_event(event_data) do
+    event_data
+    |> Map.take([
+      :uid,
+      :summary,
+      :description,
+      :location,
+      :all_day,
+      :start_time,
+      :end_time,
+      :reminders,
+      :recurrence_rule,
+      :colour,
+      :attendees,
+      :provider_calendar_id
+    ])
+    |> Map.put_new(:summary, "Booked (dev)")
+    |> Map.put_new(:all_day, false)
+    |> Map.put(:status, "confirmed")
+    |> Map.put(:created_by_tymeslot, true)
+    |> DebugStore.put_event()
+  end
 
   defp timezone_for(user_id) do
     case ProfileQueries.get_by_user_id(user_id) do

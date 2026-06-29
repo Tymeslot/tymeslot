@@ -44,25 +44,42 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   use TymeslotWeb, :live_component
 
   alias Tymeslot.Meetings
-  alias TymeslotWeb.Components.Icons.IconComponents
+  alias TymeslotWeb.Dashboard.CalendarGrid.ComponentView
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.MiniMonth
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Search
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shortcuts
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility
-  alias TymeslotWeb.Dashboard.CalendarGrid.GridViews
-  alias TymeslotWeb.Dashboard.CalendarGrid.Header
-  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDiscardAttendeesModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmRemoveAttendeeModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.NotifyPromptModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal
+  alias TymeslotWeb.Dashboard.CalendarGrid.InitialState
   alias TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers
+
+  @mini_month_events ~w(toggle_mini_month close_mini_month mini_month_prev mini_month_next)
+
+  # Detail-modal inline-edit events, each delegated to a focused `InlineEdit`
+  # handler. Grouped here so adding a field is a one-line map entry rather than
+  # a new `handle_event/3` clause (keeps this component lean).
+  @inline_edit_events %{
+    "show_event" => :handle_show_event,
+    "close_event_detail" => :handle_close_event_detail,
+    "update_event_title" => :handle_update_event_title,
+    "update_event_location" => :handle_update_event_location,
+    "update_event_description" => :handle_update_event_description,
+    "update_event_calendar" => :handle_update_event_calendar,
+    "update_event_colour" => :handle_update_event_colour,
+    "update_edit_video" => :handle_update_edit_video,
+    "update_event_time" => :handle_update_event_time,
+    "toggle_event_all_day" => :handle_toggle_event_all_day,
+    "update_event_all_day_range" => :handle_update_event_all_day_range,
+    "add_event_reminder" => :handle_add_event_reminder,
+    "remove_event_reminder" => :handle_remove_event_reminder,
+    "update_event_recurrence" => :handle_update_event_recurrence
+  }
 
   attr :current_user, :map, required: true, doc: "Owns calendar preferences and integrations."
 
@@ -72,49 +89,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
-    socket =
-      socket
-      |> assign(:view, :week)
-      |> assign(:date, Date.utc_today())
-      |> assign(:events, [])
-      |> assign(:integrations, [])
-      |> assign(:integration_colors, %{})
-      |> assign(:loading, false)
-      |> assign(:selected_event, nil)
-      |> assign(:current_time, DateTime.utc_now())
-      |> assign(:hidden_integration_ids, [])
-      |> assign(:preferences, nil)
-      |> assign(:show_calendar_list, false)
-      |> assign(:show_view_menu, false)
-      |> assign(:show_settings, false)
-      |> assign(:creating_event, nil)
-      |> assign(:recurrence_prompt, nil)
-      |> assign(:confirm_delete_event, nil)
-      |> assign(:confirm_delete_linked_to_booking, false)
-      |> assign(:saving_event, false)
-      |> assign(:deleting_event, false)
-      |> assign(:video_integrations, [])
-      |> assign(:confirm_remove_attendee, nil)
-      |> assign(:pending_attendees, [])
-      |> assign(:confirm_discard_attendees, false)
-      |> assign(:attendee_input, "")
-      |> assign(:notify_prompt, nil)
-      |> assign(:pending_notification, false)
-      |> assign(:owned_integration_ids, MapSet.new())
-      |> assign(:visible_events, [])
-      |> assign(:guest_rsvp_summaries, %{})
-      |> assign(:visible_days, [])
-      |> assign(:user_timezone, "UTC")
-      |> assign(:timezone_display, "UTC")
-      |> assign(:timezone_country_code, nil)
-      |> assign(:syncing, false)
-      |> assign(:sync_total, 0)
-      |> assign(:sync_completed, 0)
-      |> assign(:stale_integrations, [])
-      |> assign(:oldest_sync_at, nil)
-      |> assign(:_initialized, false)
-
-    {:ok, socket}
+    {:ok, assign(socket, InitialState.defaults())}
   end
 
   # --- Update action handlers (delegated to UpdateHandlers) ---
@@ -206,36 +181,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   # --- Event handlers (delegated to focused modules) ---
 
   @impl Phoenix.LiveComponent
-  def handle_event("show_event", params, socket),
-    do: InlineEdit.handle_show_event(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("close_event_detail", params, socket),
-    do: InlineEdit.handle_close_event_detail(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_event_title", params, socket),
-    do: InlineEdit.handle_update_event_title(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_event_location", params, socket),
-    do: InlineEdit.handle_update_event_location(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_event_description", params, socket),
-    do: InlineEdit.handle_update_event_description(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_event_calendar", params, socket),
-    do: InlineEdit.handle_update_event_calendar(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_edit_video", params, socket),
-    do: InlineEdit.handle_update_edit_video(params, socket)
-
-  @impl Phoenix.LiveComponent
-  def handle_event("update_event_time", params, socket),
-    do: InlineEdit.handle_update_event_time(params, socket)
+  def handle_event(event, params, socket) when is_map_key(@inline_edit_events, event),
+    do: apply(InlineEdit, Map.fetch!(@inline_edit_events, event), [params, socket])
 
   @impl Phoenix.LiveComponent
   def handle_event("prev_period", params, socket),
@@ -256,6 +203,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("navigate_to_day", params, socket),
     do: Navigation.handle_navigate_to_day(params, socket)
+
+  def handle_event(event, params, socket) when event in @mini_month_events,
+    do: MiniMonth.handle_event(event, params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("search", params, socket),
+    do: Search.handle_search(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("goto_search_result", params, socket),
+    do: Search.handle_goto_search_result(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("close_search", params, socket),
+    do: Search.handle_close_search(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("toggle_shortcuts_help", params, socket),
+    do: Shortcuts.handle_toggle_shortcuts_help(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_calendar_list", params, socket),
@@ -306,6 +272,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: EventCrud.handle_update_create_time(params, socket)
 
   @impl Phoenix.LiveComponent
+  def handle_event("toggle_create_all_day", params, socket),
+    do: EventCrud.handle_toggle_create_all_day(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("update_create_integration", params, socket),
     do: EventCrud.handle_update_create_integration(params, socket)
 
@@ -326,36 +296,48 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: EventCrud.handle_update_create_video(params, socket)
 
   @impl Phoenix.LiveComponent
+  def handle_event("add_create_reminder", params, socket),
+    do: EventCrud.handle_add_create_reminder(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("remove_create_reminder", params, socket),
+    do: EventCrud.handle_remove_create_reminder(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_create_recurrence", params, socket),
+    do: EventCrud.handle_update_create_recurrence(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("add_event_attendee", params, socket),
-    do: InlineEdit.handle_add_event_attendee(params, socket)
+    do: AttendeeManagement.handle_add_event_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("request_remove_attendee", params, socket),
-    do: InlineEdit.handle_request_remove_attendee(params, socket)
+    do: AttendeeManagement.handle_request_remove_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("confirm_remove_attendee", params, socket),
-    do: InlineEdit.handle_confirm_remove_attendee(params, socket)
+    do: AttendeeManagement.handle_confirm_remove_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("cancel_remove_attendee", params, socket),
-    do: InlineEdit.handle_cancel_remove_attendee(params, socket)
+    do: AttendeeManagement.handle_cancel_remove_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("remove_pending_attendee", params, socket),
-    do: InlineEdit.handle_remove_pending_attendee(params, socket)
+    do: AttendeeManagement.handle_remove_pending_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("discard_pending_attendees", params, socket),
-    do: InlineEdit.handle_discard_pending_attendees(params, socket)
+    do: AttendeeManagement.handle_discard_pending_attendees(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("cancel_discard_attendees", params, socket),
-    do: InlineEdit.handle_cancel_discard_attendees(params, socket)
+    do: AttendeeManagement.handle_cancel_discard_attendees(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("update_attendee_input", params, socket),
-    do: InlineEdit.handle_update_attendee_input(params, socket)
+    do: AttendeeManagement.handle_update_attendee_input(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("save_event", params, socket),
@@ -410,6 +392,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: Preferences.handle_toggle_preference(params, socket, :show_weekends)
 
   @impl Phoenix.LiveComponent
+  def handle_event("toggle_desktop_reminders", params, socket),
+    do: Preferences.handle_toggle_preference(params, socket, :desktop_reminders_enabled)
+
+  @impl Phoenix.LiveComponent
   def handle_event("set_mobile_view", params, socket),
     do: Navigation.handle_set_mobile_view(params, socket)
 
@@ -423,185 +409,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("notify_prompt_confirm", params, socket),
-    do: InlineEdit.handle_notify_prompt_confirm(params, socket)
+    do: NotificationFlows.handle_notify_prompt_confirm(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("notify_prompt_cancel", params, socket),
-    do: InlineEdit.handle_notify_prompt_cancel(params, socket)
+    do: NotificationFlows.handle_notify_prompt_cancel(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("cancel_pending_notification", params, socket),
-    do: InlineEdit.handle_cancel_pending_notification(params, socket)
+    do: NotificationFlows.handle_cancel_pending_notification(params, socket)
 
   # --- Render ---
 
   @impl Phoenix.LiveComponent
-  def render(assigns) do
-    ~H"""
-    <div id="calendar-grid" class="flex flex-col h-full relative" phx-hook="CalendarMobile" phx-target={@myself}>
-      <.no_calendars_banner :if={@_initialized && @integrations == []} />
-      <div :if={@_initialized && @integrations != []} class="flex-1 flex flex-col min-h-0">
-        <Header.toolbar
-          view={@view}
-          date={@date}
-          integrations={@integrations}
-          integration_colors={@integration_colors}
-          hidden_integration_ids={@hidden_integration_ids}
-          show_calendar_list={@show_calendar_list}
-          show_view_menu={@show_view_menu}
-          syncing={@syncing}
-          timezone_display={@timezone_display}
-          timezone_country_code={@timezone_country_code}
-          preferences={@preferences}
-          myself={@myself}
-        />
-        <GridViews.week_day_view
-          view={@view}
-          visible_days={@visible_days}
-          visible_events={@visible_events}
-          events={@events}
-          integrations={@integrations}
-          integration_colors={@integration_colors}
-          hidden_integration_ids={@hidden_integration_ids}
-          current_time={@current_time}
-          user_timezone={@user_timezone}
-          preferences={@preferences}
-          stale_integrations={@stale_integrations}
-          oldest_sync_at={@oldest_sync_at}
-          syncing={@syncing}
-          sync_total={@sync_total}
-          sync_completed={@sync_completed}
-          date={@date}
-          guest_rsvp_summaries={@guest_rsvp_summaries}
-          myself={@myself}
-        />
-        <GridViews.month_view
-          view={@view}
-          visible_days={@visible_days}
-          visible_events={@visible_events}
-          integrations={@integrations}
-          integration_colors={@integration_colors}
-          hidden_integration_ids={@hidden_integration_ids}
-          date={@date}
-          user_timezone={@user_timezone}
-          preferences={@preferences}
-          guest_rsvp_summaries={@guest_rsvp_summaries}
-          myself={@myself}
-        />
-        <CreateEventModal.create_event_modal
-          :if={@creating_event}
-          creating_event={@creating_event}
-          integrations={@integrations}
-          integration_colors={@integration_colors}
-          saving={@saving_event}
-          user_timezone={@user_timezone}
-          myself={@myself}
-          video_integrations={@video_integrations}
-        />
-        <RecurrencePromptModal.recurrence_prompt_modal
-          :if={@recurrence_prompt}
-          recurrence_prompt={@recurrence_prompt}
-          myself={@myself}
-        />
-        <SettingsModal.settings_modal
-          :if={@show_settings}
-          preferences={@preferences}
-          myself={@myself}
-        />
-        <EventDetailModal.event_detail_modal
-          :if={@selected_event}
-          selected_event={@selected_event}
-          integrations={@integrations}
-          integration_colors={@integration_colors}
-          user_timezone={@user_timezone}
-          time_format={Helpers.time_format(assigns)}
-          myself={@myself}
-          editable={MapSet.member?(@owned_integration_ids, @selected_event.calendar_integration_id)}
-          attendee_input={@attendee_input}
-          pending_attendees={@pending_attendees}
-          video_integrations={@video_integrations}
-          pending_notification={@pending_notification}
-        />
-        <NotifyPromptModal.notify_prompt_modal
-          :if={@notify_prompt}
-          notify_prompt={@notify_prompt}
-          kind={@notify_prompt.kind}
-          myself={@myself}
-        />
-        <ConfirmDeleteModal.confirm_delete_modal
-          :if={@confirm_delete_event}
-          event={@confirm_delete_event}
-          deleting={@deleting_event}
-          linked_to_booking={@confirm_delete_linked_to_booking}
-          myself={@myself}
-        />
-        <ConfirmRemoveAttendeeModal.confirm_remove_attendee_modal
-          :if={@confirm_remove_attendee}
-          confirm_remove_attendee={@confirm_remove_attendee}
-          myself={@myself}
-        />
-        <ConfirmDiscardAttendeesModal.confirm_discard_attendees_modal
-          :if={@confirm_discard_attendees}
-          count={
-            if @selected_event,
-              do: length(@pending_attendees),
-              else: length((@creating_event || %{})[:attendees] || [])
-          }
-          myself={@myself}
-        />
-      </div>
-    </div>
-    """
-  end
-
-  defp no_calendars_banner(assigns) do
-    hours = Enum.to_list(6..20)
-    days = ~w(Mon Tue Wed Thu Fri Sat Sun)
-    assigns = assign(assigns, hours: hours, days: days)
-
-    ~H"""
-    <div class="relative flex-1 min-h-0 overflow-hidden">
-      <%!-- Blurred calendar grid background --%>
-      <div class="absolute inset-0 select-none" aria-hidden="true">
-        <div class="h-full flex flex-col blur-[1px] opacity-60">
-          <%!-- Day headers --%>
-          <div class="grid grid-cols-8 border-b border-tymeslot-200">
-            <div class="py-3 px-2"></div>
-            <div :for={day <- @days} class="py-3 px-2 text-center border-l border-tymeslot-200">
-              <span class="text-token-xs font-bold text-tymeslot-300">{day}</span>
-            </div>
-          </div>
-          <%!-- Time rows --%>
-          <div class="flex-1 overflow-hidden">
-            <div :for={hour <- @hours} class="grid grid-cols-8 border-b border-tymeslot-200">
-              <div class="py-4 px-2 text-right">
-                <span class="text-token-xs text-tymeslot-300/50">{rem(hour, 12) |> then(&if(&1 == 0, do: 12, else: &1))} {if(hour < 12, do: "AM", else: "PM")}</span>
-              </div>
-              <div :for={_day <- @days} class="py-4 border-l border-tymeslot-200"></div>
-            </div>
-          </div>
-        </div>
-        <%!-- Gradient fade overlay --%>
-        <div class="absolute inset-0 bg-linear-to-b from-white/40 via-transparent to-white/50"></div>
-      </div>
-      <%!-- Centred content --%>
-      <div class="absolute inset-0 flex flex-col items-center justify-center px-6">
-        <div class="w-20 h-20 bg-white/90 backdrop-blur rounded-token-2xl flex items-center justify-center mb-6 shadow-sm border-2 border-dashed border-tymeslot-100">
-          <IconComponents.icon name={:calendar} class="w-10 h-10 text-tymeslot-300" />
-        </div>
-        <h2 class="text-token-xl font-bold text-tymeslot-800 mb-2">Nothing to see here</h2>
-        <p class="text-token-base text-tymeslot-500 text-center max-w-md mb-8">
-          Connect at least one calendar to see your events here.
-        </p>
-        <.link
-          patch={~p"/dashboard/calendar-integration"}
-          class="inline-flex items-center gap-2 px-6 py-3 bg-turquoise-600 hover:bg-turquoise-700 text-white font-bold rounded-token-xl transition-colors shadow-lg shadow-turquoise-500/20"
-        >
-          <.icon name="hero-plus" class="w-5 h-5" />
-          Connect a calendar
-        </.link>
-      </div>
-    </div>
-    """
-  end
+  def render(assigns), do: ComponentView.grid(assigns)
 end

@@ -24,7 +24,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState
 
   describe "handle_create_result/2" do
     test "flashes 'Event created.' when there are no attendees" do
@@ -34,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       result = build_result(integration, attendees: [])
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       assert updated_socket.assigns.flash["info"] == "Event created."
     end
@@ -46,10 +47,46 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       result = build_result(integration, attendees: [%{email: "a@x.com"}])
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       assert updated_socket.assigns.flash["info"] ==
                "Event created. Attendees have been invited."
+    end
+
+    test "persists reminders on the cached event" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      result =
+        build_result(integration,
+          attendees: [],
+          reminders: [%{method: :popup, minutes_before: 10}]
+        )
+
+      socket = build_socket()
+
+      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, result}, socket)
+
+      {:ok, cached} = CalendarGrid.get_cached_event(integration.id, result.uid)
+      assert cached.reminders == [%{method: :popup, minutes_before: 10}]
+    end
+
+    test "persists the recurrence rule on the cached event" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      result =
+        build_result(integration,
+          attendees: [],
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=MO,WE"
+        )
+
+      socket = build_socket()
+
+      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, result}, socket)
+
+      {:ok, cached} = CalendarGrid.get_cached_event(integration.id, result.uid)
+      assert cached.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO,WE"
     end
 
     test "persists video_integration_id and description on the cached event" do
@@ -66,7 +103,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
 
       socket = build_socket()
 
-      {:noreply, _socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, _socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       {:ok, cached} = CalendarGrid.get_cached_event(integration.id, result.uid)
       assert cached.description =~ "https://meet.example.com/abc"
@@ -88,7 +125,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
 
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       assert updated_socket.assigns.flash["info"] == "Event created."
       assert updated_socket.assigns.flash["warning"] =~ "Meet link"
@@ -101,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       result = build_result(integration, attendees: [])
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       assert updated_socket.assigns.flash["info"] == "Event created."
       assert is_nil(updated_socket.assigns.flash["warning"])
@@ -116,7 +153,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       result = build_result(integration, attendees: [], reauth_required: true)
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       # The event still saved, so the success info flash is present…
       assert updated_socket.assigns.flash["info"] == "Event created."
@@ -131,7 +168,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       result = build_result(integration, attendees: [], reauth_required: false)
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_create_result({:ok, result}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_create_result({:ok, result}, socket)
 
       assert is_nil(updated_socket.assigns.flash["error"])
     end
@@ -144,7 +181,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       socket = %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}, creating_event: nil}}
 
       assert {:noreply, ^socket} =
-               EventCreate.handle_update_create_integration(
+               CreateFormState.handle_update_create_integration(
                  %{"integration-id" => "1", "calendar-id" => "primary"},
                  socket
                )
@@ -159,6 +196,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
     description = Keyword.get(opts, :description, nil)
     warning = Keyword.get(opts, :warning, nil)
     reauth_required = Keyword.get(opts, :reauth_required, false)
+    reminders = Keyword.get(opts, :reminders, [])
+    recurrence_rule = Keyword.get(opts, :recurrence_rule, nil)
 
     base = %{
       uid: "uid-" <> Integer.to_string(System.unique_integer([:positive])),
@@ -166,6 +205,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
         title: "New Event",
         integration_id: integration.id,
         calendar_id: "primary",
+        reminders: reminders,
+        recurrence_rule: recurrence_rule,
         video_integration_id: video_integration_id
       },
       start_at: ~U[2026-04-06 09:00:00Z],

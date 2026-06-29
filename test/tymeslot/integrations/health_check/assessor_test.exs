@@ -9,6 +9,19 @@ defmodule Tymeslot.Integrations.HealthCheck.AssessorTest do
   setup :verify_on_exit!
 
   describe "assess/2 for calendar integrations" do
+    test "reports the in-memory debug calendar healthy without probing a provider" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "debug")
+
+      # No provider mock is expected — the debug provider must be short-circuited.
+      # If it attempted a real connection probe the test would crash.
+      {result, duration} = Assessor.assess(:calendar, integration)
+
+      assert {:ok, :debug} = result
+      assert is_integer(duration)
+      assert duration >= 0
+    end
+
     test "returns success result and duration" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, provider: "google")

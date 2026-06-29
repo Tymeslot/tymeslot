@@ -9,7 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugSchedule do
 
   This module is pure — it holds no state and performs no side effects, so it is
   compiled in every environment and fully unit-testable. The live, mutable rule
-  set lives in `Tymeslot.Dev.Calendar.Store` (dev-only); the `:debug` calendar
+  set lives in `Tymeslot.Integrations.Calendar.DebugStore`; the `:debug` calendar
   provider drives the default pattern through here too, so both paths return
   identical events.
 

@@ -132,12 +132,17 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   defp build_event_data(uid, creating, start_at, end_at, event_details, video_context, plan) do
     description = build_description(creating[:description], video_context)
 
+    # For all-day events `start_at`/`end_at` are `Date` structs and `all_day`
+    # is true — the provider mappers emit date-only values (Google `start.date`,
+    # Outlook `isAllDay`, CalDAV `DTSTART;VALUE=DATE`) from a `Date` start/end.
     raw_base = %{
       uid: uid,
       summary: creating.title,
       start_time: start_at,
       end_time: end_at,
-      all_day: false,
+      all_day: Map.get(creating, :all_day, false),
+      reminders: Map.get(creating, :reminders, []),
+      recurrence_rule: Map.get(creating, :recurrence_rule),
       calendar_integration_id: creating.integration_id,
       calendar_id: creating[:calendar_id],
       description: description

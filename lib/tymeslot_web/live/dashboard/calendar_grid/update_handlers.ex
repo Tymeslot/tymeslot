@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
   import Phoenix.LiveView, only: [connected?: 1]
 
   alias Tymeslot.CalendarGrid
+  alias TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec handle_revert_event(map(), Phoenix.LiveView.Socket.t()) ::
@@ -252,7 +253,41 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
           |> maybe_auto_refresh()
       end
 
-    {:ok, socket}
+    {:ok, assign_desktop_reminder_feed(socket)}
+  end
+
+  # Recomputes the upcoming desktop-reminder feed. Runs on the initial connect
+  # and again on every 60s `current_time` tick (which routes through this same
+  # handler), so the browser always has a fresh window of fire times without a
+  # dedicated server timer. When the preference is off we assign an empty feed
+  # so the hook stays inert.
+  defp assign_desktop_reminder_feed(socket) do
+    prefs = socket.assigns[:preferences]
+
+    if (connected?(socket) and prefs) && prefs.desktop_reminders_enabled do
+      now = socket.assigns[:current_time] || DateTime.utc_now()
+      timezone = socket.assigns[:user_timezone] || "Etc/UTC"
+      time_format = Helpers.time_format(socket.assigns)
+
+      feed =
+        socket
+        |> visible_integration_ids()
+        |> CalendarGrid.list_upcoming_events_with_reminders(now)
+        |> DesktopReminderFeed.build(now, timezone, time_format)
+
+      assign(socket, :desktop_reminders_feed, feed)
+    else
+      assign(socket, :desktop_reminders_feed, [])
+    end
+  end
+
+  defp visible_integration_ids(socket) do
+    hidden = socket.assigns[:hidden_integration_ids] || []
+
+    socket.assigns
+    |> Map.get(:integrations, [])
+    |> Enum.map(& &1.id)
+    |> Enum.reject(&(&1 in hidden))
   end
 
   defp maybe_auto_refresh(socket) do

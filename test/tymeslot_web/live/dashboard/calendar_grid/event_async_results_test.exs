@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       # {:create_event_result, ...} back to the LiveView pid. Two historical bugs
       # crashed this path:
       #
-      # 1. EventCreate.handle_create_result/2 looked up integrations on the
+      # 1. CreateExecution.handle_create_result/2 looked up integrations on the
       #    parent LiveView socket, which never carries the :integrations assign.
       # 2. CalendarGrid.cache_created_event/1 received second-precision
       #    DateTimes built from DateTime.new!, but the schema requires

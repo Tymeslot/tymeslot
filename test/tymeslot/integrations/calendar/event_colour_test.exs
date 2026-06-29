@@ -1,0 +1,94 @@
+defmodule Tymeslot.Integrations.Calendar.EventColourTest do
+  use ExUnit.Case, async: true
+
+  @moduletag :unit
+  @moduletag :calendar
+
+  alias Tymeslot.Integrations.Calendar.EventColour
+
+  describe "palette/0 and keys/0" do
+    test "exposes a fixed, non-empty palette of {key, label, class} tuples" do
+      palette = EventColour.palette()
+
+      assert length(palette) == 8
+
+      Enum.each(palette, fn entry ->
+        assert {key, label, class} = entry
+        assert is_binary(key)
+        assert is_binary(label)
+        assert String.starts_with?(class, "bg-calendar-")
+      end)
+    end
+
+    test "keys/0 lists every palette key" do
+      assert EventColour.keys() == [
+               "tomato",
+               "tangerine",
+               "banana",
+               "sage",
+               "peacock",
+               "blueberry",
+               "grape",
+               "graphite"
+             ]
+    end
+  end
+
+  describe "valid_key?/1" do
+    test "is true for palette keys" do
+      assert EventColour.valid_key?("tomato")
+      assert EventColour.valid_key?("graphite")
+    end
+
+    test "is false for unknown values and non-strings" do
+      refute EventColour.valid_key?("1")
+      refute EventColour.valid_key?("not-a-colour")
+      refute EventColour.valid_key?(nil)
+      refute EventColour.valid_key?(11)
+    end
+  end
+
+  describe "tailwind_class/1" do
+    test "maps a palette key to its Tailwind class" do
+      assert EventColour.tailwind_class("tomato") == "bg-calendar-7"
+      assert EventColour.tailwind_class("blueberry") == "bg-calendar-2"
+    end
+
+    test "returns nil for nil so callers fall back to integration colour" do
+      assert EventColour.tailwind_class(nil) == nil
+    end
+
+    test "returns the neutral fallback for unknown values (e.g. raw provider colour)" do
+      # Inbound Google stores raw colorId strings like "1".."11" which are not
+      # palette keys — must not crash, falls back gracefully.
+      assert EventColour.tailwind_class("11") == "bg-calendar-fallback"
+      assert EventColour.tailwind_class("unknown") == "bg-calendar-fallback"
+    end
+  end
+
+  describe "google_color_id/1" do
+    test "maps palette keys to Google colorIds" do
+      assert EventColour.google_color_id("tomato") == "11"
+      assert EventColour.google_color_id("sage") == "2"
+      assert EventColour.google_color_id("graphite") == "8"
+    end
+
+    test "returns nil for unknown keys so the mapper omits colorId" do
+      assert EventColour.google_color_id("11") == nil
+      assert EventColour.google_color_id(nil) == nil
+    end
+  end
+
+  describe "css_colour/1" do
+    test "maps palette keys to CSS3 colour names" do
+      assert EventColour.css_colour("tomato") == "tomato"
+      assert EventColour.css_colour("peacock") == "teal"
+      assert EventColour.css_colour("grape") == "darkorchid"
+    end
+
+    test "returns nil for unknown keys so the builder omits the COLOR line" do
+      assert EventColour.css_colour("not-a-key") == nil
+      assert EventColour.css_colour(nil) == nil
+    end
+  end
+end

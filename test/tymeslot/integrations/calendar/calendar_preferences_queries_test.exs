@@ -64,6 +64,16 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesQueriesTest do
       assert prefs.default_view == "day"
     end
 
+    test "persists the agenda view as a default_view" do
+      user = insert(:user)
+
+      assert {:ok, prefs} =
+               CalendarPreferencesQueries.upsert(user.id, %{default_view: "agenda"})
+
+      assert prefs.default_view == "agenda"
+      assert CalendarPreferencesQueries.get_or_create(user.id).default_view == "agenda"
+    end
+
     test "validates default_view enum" do
       user = insert(:user)
 

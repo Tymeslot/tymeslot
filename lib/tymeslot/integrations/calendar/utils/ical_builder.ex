@@ -13,6 +13,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   - Alarm/reminder support
   """
 
+  alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Integrations.Calendar.Reminder
+
   @type ical_event_data :: %{
           required(:summary) => String.t(),
           required(:start_time) => DateTime.t(),
@@ -131,10 +135,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
           build_transp(event_data),
           build_status(event_data),
           build_class(event_data),
+          build_colour_line(event_data),
           build_rrule_line(event_data),
           build_exdate(event_data),
           build_organizer_line(event_data),
           build_attendee_lines(event_data),
+          build_reminders(event_data),
           "END:VEVENT",
           "END:VCALENDAR"
         ],
@@ -204,13 +210,31 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   end
 
   @doc """
-  Builds a recurrence rule (RRULE) string.
+  Builds a recurrence rule (RRULE) string from a legacy string-keyed map.
+
+  This is the *legacy* RRULE serialiser used by `build_event/1` (the
+  `maybe_add_property/3` recurrence path). Its input format uses string/atom
+  keys with uppercase frequency strings: `%{frequency: "WEEKLY", ...}`.
+
+  The production CalDAV write path uses `build_simple_event/2` instead, which
+  reads the canonical `recurrence_rule` string field and emits it via
+  `build_rrule_line/1` (a private function that delegates to
+  `RRule.strip_prefix/1`). The two serialisers coexist because they serve
+  different data shapes:
+    - `build_rrule/1` — legacy `%{frequency: "WEEKLY", by_day: ["MO"]}` map
+    - `build_rrule_line/1` → `RRule.build/2` — canonical `%{freq: :weekly, ...}` map
+
+  Note: `build_rrule/1` always emits UNTIL as a UTC date-time even for all-day
+  events. This is acceptable because the only production call site
+  (`build_event/1`) is not used by the CalDAV write path. For correct all-day
+  UNTIL handling on the CalDAV path, the canonical RRULE string is built via
+  `RRule.build/2` with `all_day: true`.
 
   ## Options
   - `:frequency` - DAILY, WEEKLY, MONTHLY, YEARLY (required)
   - `:interval` - Interval between recurrences (default: 1)
   - `:count` - Number of occurrences
-  - `:until` - End date for recurrence
+  - `:until` - End date/time for recurrence
   - `:by_day` - List of days (MO, TU, WE, TH, FR, SA, SU)
   - `:by_month` - List of months (1-12)
 
@@ -286,8 +310,32 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     "DTSTART:#{format_datetime(DateTime.shift_zone!(dt, "Etc/UTC"))}"
   end
 
+  # RFC 5545 §3.6.1: for a DATE-form DTEND (all-day event), the value is
+  # exclusive — the event ends at the start of that day, not during it. A
+  # single-day all-day event therefore has DTEND = DTSTART + 1.
+  #
+  # The production CalDAV create path (create_execution.ex) already adds +1
+  # before calling this function, so in practice `end_time` is always
+  # exclusive. This guard catches callers that supply `end_time == start_time`
+  # (e.g. direct test callers or future create paths that forget to add +1),
+  # ensuring we never silently emit a zero-length all-day event.
+  defp build_dtend(%{end_time: %Date{} = date, start_time: %Date{} = start}) do
+    exclusive = if Date.compare(date, start) == :eq, do: Date.add(date, 1), else: date
+    "DTEND;VALUE=DATE:#{format_date(exclusive)}"
+  end
+
   defp build_dtend(%{end_time: %Date{} = date}) do
     "DTEND;VALUE=DATE:#{format_date(date)}"
+  end
+
+  defp build_dtend(%{all_day: true, end_time: end_time, start_time: start_time}) do
+    end_date = DateTime.to_date(end_time)
+    start_date = DateTime.to_date(start_time)
+
+    exclusive =
+      if Date.compare(end_date, start_date) == :eq, do: Date.add(end_date, 1), else: end_date
+
+    "DTEND;VALUE=DATE:#{format_date(exclusive)}"
   end
 
   defp build_dtend(%{all_day: true, end_time: end_time}) do
@@ -373,8 +421,23 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp build_class(_event), do: nil
 
+  # Emits the RFC 7986 COLOR property from the canonical `:colour` palette key,
+  # mapped to a CSS3 colour name. An unrecognised value (e.g. a raw inbound
+  # provider colour) maps to nil and is omitted.
+  defp build_colour_line(%{colour: colour}) do
+    case EventColour.css_colour(colour) do
+      nil -> nil
+      css_name -> "COLOR:#{css_name}"
+    end
+  end
+
+  defp build_colour_line(_event), do: nil
+
+  # The canonical `recurrence_rule` may arrive bare (CalDAV/Outlook) or with a
+  # leading `RRULE:` (Google's normaliser keeps the prefix on read); strip any
+  # existing prefix so exactly one is emitted.
   defp build_rrule_line(%{recurrence_rule: rrule}) when is_binary(rrule) and rrule != "",
-    do: "RRULE:#{rrule}"
+    do: "RRULE:#{RRule.strip_prefix(rrule)}"
 
   defp build_rrule_line(_event), do: nil
 
@@ -582,20 +645,37 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp build_reminders(_no_reminders), do: ""
 
-  defp build_reminder(%{minutes_before: minutes, type: type}) do
-    type = String.upcase(to_string(type))
+  # The canonical reminder shape is `%{method: :popup | :email | :sms, minutes_before:}`
+  # (emitted by the provider normalisers). `:popup` → DISPLAY, `:email` → EMAIL,
+  # `:sms` → DISPLAY for the VALARM ACTION. A permissive fallback keeps any
+  # legacy/raw reminder (e.g. a bare `minutes_before`, or the historical `:type`
+  # key) building a DISPLAY alarm rather than crashing the whole iCal write.
+  # Both atom-keyed and string-keyed maps are handled via Reminder.
+  defp build_reminder(%{minutes_before: minutes, method: method}) do
+    build_valarm(minutes, Reminder.ical_action(method))
+  end
 
-    String.trim("""
-    BEGIN:VALARM
-    TRIGGER:-PT#{minutes}M
-    ACTION:#{type}
-    DESCRIPTION:Reminder
-    END:VALARM
-    """)
+  defp build_reminder(%{minutes_before: minutes, type: type}) do
+    build_valarm(minutes, String.upcase(to_string(type)))
   end
 
   defp build_reminder(%{minutes_before: minutes}) do
-    build_reminder(%{minutes_before: minutes, type: "DISPLAY"})
+    build_valarm(minutes, "DISPLAY")
+  end
+
+  # String-keyed reminders round-tripped through the JSONB cache column.
+  defp build_reminder(%{"minutes_before" => minutes} = reminder) do
+    build_valarm(minutes, Reminder.ical_action(Reminder.method(reminder)))
+  end
+
+  defp build_valarm(minutes, action) do
+    String.trim("""
+    BEGIN:VALARM
+    TRIGGER:-PT#{minutes}M
+    ACTION:#{action}
+    DESCRIPTION:Reminder
+    END:VALARM
+    """)
   end
 
   defp sanitize_ical_value(value) when is_binary(value) do

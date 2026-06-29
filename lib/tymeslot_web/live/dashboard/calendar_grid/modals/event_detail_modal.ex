@@ -4,9 +4,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   use TymeslotWeb, :html
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Components.Icons.ProviderIcon
+  alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
 
   attr :selected_event, :map, required: true
   attr :integrations, :list, required: true
@@ -99,6 +104,34 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         <div class="flex-1">
           <% start_parts = Helpers.datetime_to_local_parts(@selected_event.start_at, @user_timezone) %>
           <% end_parts = Helpers.datetime_to_local_parts(@selected_event.end_at, @user_timezone) %>
+          <div :if={@editable} class="flex items-center justify-between mb-2">
+            <span class="text-token-xs font-medium text-tymeslot-400">All day</span>
+            <StatusSwitch.status_switch
+              id="event-all-day"
+              checked={@selected_event.all_day || false}
+              on_change="toggle_event_all_day"
+              target={@myself}
+              size={:small}
+            />
+          </div>
+          <form id="event-all-day-form" :if={@editable and @selected_event.all_day} phx-change="update_event_all_day_range" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm">
+            <input
+              type="date"
+              id="event-all-day-start"
+              name="start-date"
+              value={@selected_event.start_date && Date.to_iso8601(@selected_event.start_date)}
+              class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            />
+            <span class="text-tymeslot-400">&ndash;</span>
+            <%!-- end_date is stored exclusively; show the inclusive last day. --%>
+            <input
+              type="date"
+              id="event-all-day-end"
+              name="end-date"
+              value={@selected_event.end_date && Date.to_iso8601(Date.add(@selected_event.end_date, -1))}
+              class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+            />
+          </form>
           <form id="event-time-form" :if={@editable and not @selected_event.all_day} phx-change="update_event_time" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm">
             <input
               type="date"
@@ -131,7 +164,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             />
             <span class="text-token-xs font-normal text-tymeslot-400 ml-1"><%= Helpers.tz_abbr(@user_timezone) %></span>
           </form>
-          <div :if={!@editable or @selected_event.all_day}>
+          <div :if={!@editable}>
             <p class="text-token-sm font-medium text-tymeslot-700">
               <span :if={@selected_event.all_day}>All day</span>
               <span :if={!@selected_event.all_day}>
@@ -307,6 +340,43 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         </div>
       </div>
 
+      <%!-- Repeat --%>
+      <div :if={@editable} class="mb-3">
+        <RecurrenceEditor.recurrence_editor
+          recurrence_rule={Map.get(@selected_event, :recurrence_rule)}
+          myself={@myself}
+          change_event="update_event_recurrence"
+        />
+      </div>
+      <div
+        :if={!@editable and recurrence_summary(@selected_event) != nil}
+        class="flex items-start gap-3 mb-3"
+      >
+        <.icon name="hero-arrow-path" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
+        <div class="flex-1">
+          <p class="text-token-sm text-tymeslot-600 leading-snug">
+            {recurrence_summary(@selected_event)}
+          </p>
+        </div>
+      </div>
+
+      <%!-- Reminders --%>
+      <RemindersEditor.reminders_editor
+        :if={@editable}
+        reminders={Map.get(@selected_event, :reminders) || []}
+        myself={@myself}
+        add_event="add_event_reminder"
+        remove_event="remove_event_reminder"
+      />
+      <div :if={!@editable and (Map.get(@selected_event, :reminders) || []) != []} class="flex items-start gap-3 mb-3">
+        <.icon name="hero-bell" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
+        <div class="flex-1">
+          <p :for={reminder <- Map.get(@selected_event, :reminders) || []} class="text-token-sm text-tymeslot-600 leading-snug">
+            <%= RemindersEditor.reminder_label(reminder) %>
+          </p>
+        </div>
+      </div>
+
       <%!-- Calendar picker --%>
       <div :if={@editable} class="flex items-start gap-3 mb-3">
         <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Calendar">
@@ -324,6 +394,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         </div>
       </div>
 
+      <%!-- Colour --%>
+      <div :if={@editable} class="flex items-start gap-3 mb-3">
+        <.icon name="hero-swatch" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
+        <div class="flex-1">
+          <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">Colour</p>
+          <.colour_swatches selected={Map.get(@selected_event, :colour)} target={@myself} />
+        </div>
+      </div>
+
       <%!-- Footer actions --%>
       <div :if={@editable} class="mt-4 pt-3 border-t border-tymeslot-100 flex items-center">
         <button
@@ -336,6 +415,54 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         </button>
       </div>
     </.modal>
+    """
+  end
+
+  # Read-only human-readable summary of an event's recurrence rule, or nil when
+  # the event does not repeat.
+  defp recurrence_summary(event) do
+    case Map.get(event, :recurrence_rule) do
+      rule when is_binary(rule) and rule != "" ->
+        rule |> RRule.parse() |> RecurrenceEditor.summary()
+
+      _none ->
+        nil
+    end
+  end
+
+  attr :selected, :any, default: nil
+  attr :target, :any, required: true
+
+  # Palette swatch picker. A "Default" pill clears the override (falling back to
+  # the per-calendar colour); each swatch pushes the palette key. The active
+  # option is ringed.
+  defp colour_swatches(assigns) do
+    assigns = assign(assigns, :palette, EventColour.palette())
+
+    ~H"""
+    <div class="flex flex-wrap items-center gap-1.5">
+      <button
+        type="button"
+        phx-click="update_event_colour"
+        phx-value-colour="default"
+        phx-target={@target}
+        class={"inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-token-xs transition-all #{if is_nil(@selected), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
+      >
+        Default
+      </button>
+      <button
+        :for={{key, label, swatch_class} <- @palette}
+        type="button"
+        phx-click="update_event_colour"
+        phx-value-colour={key}
+        phx-target={@target}
+        title={label}
+        aria-label={label}
+        aria-pressed={to_string(@selected == key)}
+        class={"w-6 h-6 rounded-full #{swatch_class} ring-2 ring-offset-1 transition-all #{if @selected == key, do: "ring-turquoise-500", else: "ring-transparent hover:ring-tymeslot-300"}"}
+      >
+      </button>
+    </div>
     """
   end
 

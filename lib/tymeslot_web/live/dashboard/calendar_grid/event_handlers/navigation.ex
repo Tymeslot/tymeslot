@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
   require Logger
 
   alias Tymeslot.CalendarGrid
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.MiniMonth
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec handle_prev_period(map(), Phoenix.LiveView.Socket.t()) ::
@@ -34,13 +35,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
 
   @spec handle_set_view(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_set_view(%{"view" => view}, socket) when view in ~w(day three_day week month) do
+  def handle_set_view(%{"view" => view}, socket)
+      when view in ~w(day three_day week month agenda) do
     view_atom = String.to_existing_atom(view)
 
     # Only persist "real" view choices. `:three_day` is a responsive view that
     # should not override the user's stored preference — otherwise a narrow
     # viewport would permanently demote their week/month choice.
-    if view in ~w(day week month) do
+    if view in ~w(day week month agenda) do
       user_id = socket.assigns.current_user.id
 
       case CalendarGrid.save_preferences(user_id, %{default_view: view}) do
@@ -68,7 +70,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
   def handle_navigate_to_day(%{"date" => date_str}, socket) do
     case Date.from_iso8601(date_str) do
       {:ok, date} ->
-        socket = socket |> assign(:view, :day) |> assign(:date, date) |> Helpers.load_events()
+        socket =
+          socket
+          |> assign(:view, :day)
+          |> assign(:date, date)
+          |> MiniMonth.close()
+          |> Helpers.load_events()
+
         {:noreply, socket}
 
       {:error, _reason} ->
@@ -129,6 +137,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
     new_date =
       case socket.assigns.view do
         :month -> Helpers.navigate_month(socket.assigns.date, direction)
+        :agenda -> Date.add(socket.assigns.date, 30 * direction)
         :week -> Date.add(socket.assigns.date, 7 * direction)
         :three_day -> Date.add(socket.assigns.date, 3 * direction)
         :day -> Date.add(socket.assigns.date, direction)

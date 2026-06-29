@@ -277,6 +277,49 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
     end
   end
 
+  describe "format_event_data/1 — colour" do
+    test "maps a palette colour key to a Google colorId" do
+      event_data = %{
+        summary: "Coloured",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC",
+        colour: "tomato"
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["colorId"] == "11"
+    end
+
+    test "omits colorId when no colour override is set" do
+      event_data = %{
+        summary: "Default",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC"
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      refute Map.has_key?(result, "colorId")
+    end
+
+    test "omits colorId for an unrecognised colour value" do
+      event_data = %{
+        summary: "Raw",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC",
+        colour: "11"
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      refute Map.has_key?(result, "colorId")
+    end
+  end
+
   describe "format_event_data/1 — all-day events" do
     test "produces date-only format for Date start/end" do
       event_data = %{
@@ -365,6 +408,94 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
 
     test "returns false when :conference_data is an empty map" do
       refute EventMapper.requires_conference_data_version?(%{conference_data: %{}})
+    end
+  end
+
+  describe "format_event_data/1 — reminders" do
+    test "maps reminders to non-default overrides with method and minutes" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        reminders: [
+          %{method: :popup, minutes_before: 10},
+          %{method: :email, minutes_before: 60}
+        ]
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["reminders"]["useDefault"] == false
+
+      assert result["reminders"]["overrides"] == [
+               %{"method" => "popup", "minutes" => 10},
+               %{"method" => "email", "minutes" => 60}
+             ]
+    end
+
+    test "omits the reminders key when no reminders are present" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z]
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      refute Map.has_key?(result, "reminders")
+    end
+
+    test "omits the reminders key for an empty reminders list" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        reminders: []
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      refute Map.has_key?(result, "reminders")
+    end
+  end
+
+  describe "format_event_data/1 — recurrence" do
+    test "emits recurrence as an RRULE-prefixed list" do
+      event_data = %{
+        summary: "Standup",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 10:15:00Z],
+        recurrence_rule: "FREQ=WEEKLY;BYDAY=MO,WE,FR"
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["recurrence"] == ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR"]
+    end
+
+    test "does not double-prefix a rule that already carries RRULE:" do
+      event_data = %{
+        summary: "Standup",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 10:15:00Z],
+        recurrence_rule: "RRULE:FREQ=DAILY"
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["recurrence"] == ["RRULE:FREQ=DAILY"]
+    end
+
+    test "omits the recurrence key when no rule is present" do
+      event_data = %{
+        summary: "Once",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z]
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      refute Map.has_key?(result, "recurrence")
     end
   end
 end

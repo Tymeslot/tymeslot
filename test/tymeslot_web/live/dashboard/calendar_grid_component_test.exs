@@ -329,9 +329,73 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
     end
   end
 
-  # Extracts the text content of the first <h2> element found in HTML.
+  describe "shortcuts help overlay" do
+    test "toggle_shortcuts_help opens the overlay", %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
+      # "Keyboard shortcuts" also labels the header affordance button, so assert
+      # on the modal marker rather than the bare string.
+      refute html =~ "calendar-shortcuts-help-modal"
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("toggle_shortcuts_help", %{})
+
+      assert html =~ "calendar-shortcuts-help-modal"
+      assert html =~ "Keyboard shortcuts"
+      assert html =~ "Create event"
+    end
+
+    test "toggling twice closes the overlay again", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv |> element("#calendar-grid") |> render_hook("toggle_shortcuts_help", %{})
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("toggle_shortcuts_help", %{})
+
+      refute html =~ "calendar-shortcuts-help-modal"
+    end
+
+    test "the header affordance button opens the overlay", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      html =
+        lv
+        |> element("button[aria-label='Keyboard shortcuts']")
+        |> render_click()
+
+      assert html =~ "calendar-shortcuts-help-modal"
+    end
+  end
+
+  describe "set_view via shortcuts" do
+    test "set_view switches to day, week, and month", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      html =
+        lv |> element("#calendar-grid") |> render_hook("set_view", %{"view" => "day"})
+
+      assert html =~ Calendar.strftime(Date.utc_today(), "%A, %B %-d, %Y")
+
+      lv |> element("#calendar-grid") |> render_hook("set_view", %{"view" => "month"})
+      html = render(lv)
+      # Month view renders a full 6x7 grid of day cells.
+      assert length(Regex.scan(~r/data-day-col=/, html)) >= 28
+
+      html =
+        lv |> element("#calendar-grid") |> render_hook("set_view", %{"view" => "week"})
+
+      refute html =~ Calendar.strftime(Date.utc_today(), "%A, %B %-d, %Y")
+    end
+  end
+
+  # Extracts the calendar period label, which renders inside the mini-month
+  # popover trigger (`#calendar-period-label`).
   defp extract_period_label(html) do
-    case Regex.run(~r/<h2[^>]*>(.*?)<\/h2>/s, html) do
+    case Regex.run(~r/<span[^>]*id="calendar-period-label"[^>]*>(.*?)<\/span>/s, html) do
       [_match, text] -> String.trim(text)
       _no_match -> ""
     end

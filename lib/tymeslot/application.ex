@@ -130,7 +130,7 @@ defmodule Tymeslot.Application do
     # solely under dev/support, so this never runs in test or release builds.
     dev_children =
       if Application.get_env(:tymeslot, :dev_calendar_enabled, false),
-        do: [Tymeslot.Dev.Calendar.Store],
+        do: [Tymeslot.Integrations.Calendar.DebugStore],
         else: []
 
     children = base_children ++ production_children ++ dev_children ++ [TymeslotWeb.Endpoint]

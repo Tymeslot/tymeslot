@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGridComponent
 
-  @allowed_preference_keys ~w(week_start_day time_format default_view show_week_numbers show_weekends)a
+  @allowed_preference_keys ~w(week_start_day time_format default_view show_week_numbers show_weekends desktop_reminders_enabled)a
 
   @spec handle_toggle_settings(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

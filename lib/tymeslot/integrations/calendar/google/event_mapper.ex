@@ -4,7 +4,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   API event format. Pure data transformations with no side effects.
   """
 
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.EventTimeFormatter
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Integrations.Calendar.Reminder
 
   @doc """
   Formats internal event data into a Google Calendar API event body.
@@ -18,6 +21,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     |> extract_event_fields()
     |> add_google_event_id(event_data)
     |> maybe_add_conference_data(event_data)
+    |> maybe_add_reminders(event_data)
+    |> maybe_add_recurrence(event_data)
+    |> maybe_add_colour(event_data)
     |> remove_nil_values()
   end
 
@@ -155,6 +161,60 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
 
   defp stringify_keys(list) when is_list(list), do: Enum.map(list, &stringify_keys/1)
   defp stringify_keys(other), do: other
+
+  # Reminders sync to Google as explicit overrides (`useDefault: false`). When no
+  # reminders are present the key is omitted entirely, so Google applies the
+  # calendar's default reminders. The canonical inbound shape is
+  # `%{method: :popup | :email, minutes_before: integer}`.
+  defp maybe_add_reminders(base_data, event_data) do
+    case get_field_value(event_data, :reminders) do
+      reminders when is_list(reminders) and reminders != [] ->
+        Map.put(base_data, "reminders", %{
+          "useDefault" => false,
+          "overrides" => Enum.map(reminders, &reminder_override/1)
+        })
+
+      _none ->
+        base_data
+    end
+  end
+
+  # Reminder maps reach here either atom-keyed (freshly built in the create/edit
+  # flow) or string-keyed (round-tripped through the JSONB cache column). Key
+  # reading and provider projection are delegated to Reminder.
+  defp reminder_override(reminder) do
+    %{
+      "method" => Reminder.google_method(Reminder.method(reminder)),
+      "minutes" => Reminder.minutes_before(reminder)
+    }
+  end
+
+  # Google expects `recurrence` as a list of RRULE strings, each prefixed with
+  # `RRULE:`. The canonical `recurrence_rule` field may or may not already carry
+  # that prefix (the Google normaliser keeps it on read; CalDAV stores it bare),
+  # so any existing prefix is stripped before re-adding exactly one. Omitted
+  # entirely when no rule is present.
+  defp maybe_add_recurrence(base_data, event_data) do
+    case get_field_value(event_data, :recurrence_rule) do
+      rrule when is_binary(rrule) and rrule != "" ->
+        Map.put(base_data, "recurrence", ["RRULE:#{RRule.strip_prefix(rrule)}"])
+
+      _none ->
+        base_data
+    end
+  end
+
+  # The canonical `:colour` field carries a Tymeslot palette key (e.g.
+  # `"tomato"`). Google events use a numeric `colorId` ("1".."11"), so the key
+  # is mapped at the boundary. An unrecognised value (e.g. a raw inbound
+  # colorId round-tripped from the cache) maps to nil and is omitted, leaving
+  # Google's default colour untouched.
+  defp maybe_add_colour(base_data, event_data) do
+    case EventColour.google_color_id(get_field_value(event_data, :colour)) do
+      nil -> base_data
+      color_id -> Map.put(base_data, "colorId", color_id)
+    end
+  end
 
   defp to_string_or_default(nil, default), do: default
   defp to_string_or_default(value, _default) when is_binary(value), do: value

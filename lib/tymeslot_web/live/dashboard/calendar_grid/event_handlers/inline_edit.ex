@@ -67,24 +67,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         {:noreply, socket}
 
       event ->
-        new_id = parse_video_integration_id(params["video_integration_id"])
+        new_id = Shared.parse_optional_int(params["video_integration_id"])
         updated_event = Map.put(event, :video_integration_id, new_id)
         {:noreply, assign(socket, :selected_event, updated_event)}
     end
   end
-
-  defp parse_video_integration_id(nil), do: nil
-  defp parse_video_integration_id(""), do: nil
-
-  defp parse_video_integration_id(val) when is_binary(val) do
-    case Integer.parse(val) do
-      {int, ""} -> int
-      _other -> nil
-    end
-  end
-
-  defp parse_video_integration_id(val) when is_integer(val), do: val
-  defp parse_video_integration_id(_other), do: nil
 
   @spec handle_update_event_location(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -106,26 +93,203 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       event ->
         tz = socket.assigns.user_timezone
 
-        with {:ok, start_date} <- Date.from_iso8601(params["start-date"]),
-             {:ok, start_time} <- Time.from_iso8601(normalize_time(params["start-time"])),
-             {:ok, end_date} <- Date.from_iso8601(params["end-date"]),
-             {:ok, end_time} <- Time.from_iso8601(normalize_time(params["end-time"])),
+        with {:ok, {start_date, start_time, end_date, end_time}} <- parse_time_inputs(params),
              :ok <- EditWorkflow.assert_owns_event(socket, event),
-             :ok <- Shared.check_edit_rate_limit(socket) do
-          new_start = Shared.to_utc(start_date, start_time.hour, start_time.minute, tz)
-          raw_end = Shared.to_utc(end_date, end_time.hour, end_time.minute, tz)
+             :ok <- Shared.check_edit_rate_limit(socket),
+             {:ok, new_start} <- Shared.to_utc(start_date, start_time.hour, start_time.minute, tz),
+             {:ok, raw_end} <- Shared.to_utc(end_date, end_time.hour, end_time.minute, tz) do
           apply_time_change(socket, event, new_start, raw_end)
         else
-          {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+          {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
+          {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
+          _error -> {:noreply, socket}
+        end
+    end
+  end
+
+  # Parses the four raw date/time form fields into a tuple, short-circuiting on
+  # the first malformed value. Keeps the caller's `with` chain flat.
+  defp parse_time_inputs(params) do
+    with {:ok, start_date} <- Date.from_iso8601(params["start-date"]),
+         {:ok, start_time} <- Time.from_iso8601(normalize_time(params["start-time"])),
+         {:ok, end_date} <- Date.from_iso8601(params["end-date"]),
+         {:ok, end_time} <- Time.from_iso8601(normalize_time(params["end-time"])) do
+      {:ok, {start_date, start_time, end_date, end_time}}
+    end
+  end
+
+  @spec handle_toggle_event_all_day(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_toggle_event_all_day(_params, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      event ->
+        with :ok <- EditWorkflow.assert_owns_event(socket, event),
+             :ok <- Shared.check_edit_rate_limit(socket) do
+          optimistic_event = toggle_all_day(event, socket.assigns.user_timezone)
+          push_all_day_change(socket, event, optimistic_event)
+        else
+          {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
+          {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
+        end
+    end
+  end
+
+  @spec handle_update_event_all_day_range(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_event_all_day_range(params, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      %{all_day: true} = event ->
+        with {:ok, start_date} <- Date.from_iso8601(params["start-date"]),
+             {:ok, end_date} <- parse_end_date(params["end-date"], start_date),
+             :ok <- EditWorkflow.assert_owns_event(socket, event),
+             :ok <- Shared.check_edit_rate_limit(socket) do
+          # The form presents inclusive dates; storage keeps `end_date`
+          # exclusive, so a single-day range (start == end) is stored as +1.
+          exclusive_end = Date.add(end_date, 1)
+
+          if Date.compare(start_date, event.start_date) == :eq and
+               Date.compare(exclusive_end, event.end_date) == :eq do
+            {:noreply, socket}
+          else
+            optimistic_event = %{event | start_date: start_date, end_date: exclusive_end}
+            push_all_day_change(socket, event, optimistic_event)
+          end
+        else
+          {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
+          {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
+          _error -> {:noreply, socket}
+        end
+
+      _timed ->
+        {:noreply, socket}
+    end
+  end
+
+  @spec handle_add_event_reminder(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_add_event_reminder(params, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      event ->
+        with {:ok, reminder} <- Shared.parse_reminder(params),
+             existing = event.reminders || [],
+             new_reminders = Shared.add_reminder(existing, reminder),
+             true <- new_reminders != existing,
+             :ok <- EditWorkflow.assert_owns_event(socket, event),
+             :ok <- Shared.check_edit_rate_limit(socket) do
+          push_reminders_change(socket, event, new_reminders)
+        else
+          false ->
             {:noreply, socket}
 
-          {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-            {:noreply, socket}
+          {:error, :unauthorized} = error ->
+            Shared.flash_guard_error(socket, error)
 
-          _error ->
+          {:error, :rate_limited, _message} = error ->
+            Shared.flash_guard_error(socket, error)
+
+          :error ->
             {:noreply, socket}
+        end
+    end
+  end
+
+  @spec handle_remove_event_reminder(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_remove_event_reminder(params, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      event ->
+        with {:ok, index} <- Shared.parse_int(params["index"]),
+             :ok <- EditWorkflow.assert_owns_event(socket, event),
+             :ok <- Shared.check_edit_rate_limit(socket) do
+          new_reminders = List.delete_at(event.reminders || [], index)
+          push_reminders_change(socket, event, new_reminders)
+        else
+          {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
+          {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
+          :error -> {:noreply, socket}
+        end
+    end
+  end
+
+  @spec handle_update_event_recurrence(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_event_recurrence(params, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      event ->
+        event_context = %{
+          all_day: Map.get(event, :all_day, false),
+          start_date: recurrence_start_date(event)
+        }
+
+        case Shared.compose_recurrence_rule(params, event_context) do
+          {:error, :until_before_start} = error ->
+            Shared.flash_guard_error(socket, error)
+
+          new_rule ->
+            if new_rule == event.recurrence_rule do
+              {:noreply, socket}
+            else
+              with :ok <- EditWorkflow.assert_owns_event(socket, event),
+                   :ok <- Shared.check_edit_rate_limit(socket) do
+                push_recurrence_change(socket, event, new_rule)
+              else
+                {:error, :unauthorized} = error ->
+                  Shared.flash_guard_error(socket, error)
+
+                {:error, :rate_limited, _message} = error ->
+                  Shared.flash_guard_error(socket, error)
+              end
+            end
+        end
+    end
+  end
+
+  # The selected event is a schema struct (no Access behaviour), so read its
+  # fields with `Map.get/2` rather than bracket syntax. Falls back to the
+  # timed start instant's date when the event has no all-day start_date.
+  defp recurrence_start_date(event) do
+    Map.get(event, :start_date) ||
+      case Map.get(event, :start_at) do
+        %DateTime{} = start_at -> DateTime.to_date(start_at)
+        _other -> nil
+      end
+  end
+
+  @spec handle_update_event_colour(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_event_colour(params, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      event ->
+        new_colour = Shared.parse_colour(params["colour"])
+
+        if new_colour == Map.get(event, :colour) do
+          {:noreply, socket}
+        else
+          with :ok <- EditWorkflow.assert_owns_event(socket, event),
+               :ok <- Shared.check_edit_rate_limit(socket) do
+            push_colour_change(socket, event, new_colour)
+          else
+            {:error, :unauthorized} = error -> Shared.flash_guard_error(socket, error)
+            {:error, :rate_limited, _message} = error -> Shared.flash_guard_error(socket, error)
+          end
         end
     end
   end
@@ -147,11 +311,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         with :ok <- EditWorkflow.assert_owns_event(socket, event),
              :ok <- Shared.check_move_rate_limit(socket) do
           updated_event = %{event | calendar_integration_id: new_id}
-
-          updated_events =
-            Enum.map(socket.assigns.events, fn e ->
-              if e.id == event.id, do: updated_event, else: e
-            end)
+          updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
 
           socket =
             socket
@@ -176,189 +336,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     end
   end
 
-  @spec handle_add_event_attendee(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_add_event_attendee(%{"email" => raw_email}, socket) do
-    case socket.assigns.selected_event do
-      nil ->
-        {:noreply, socket}
-
-      event ->
-        email = raw_email |> String.trim() |> String.downcase()
-        existing_emails = Enum.map(event.attendees || [], &attendee_email/1)
-        already_present = email in existing_emails
-
-        with true <- Shared.valid_email?(email),
-             false <- already_present,
-             :ok <- EditWorkflow.assert_owns_event(socket, event),
-             :ok <- Shared.check_edit_rate_limit(socket) do
-          new_attendee = %{"email" => email, "name" => nil, "status" => "needs_action"}
-          new_attendees = (event.attendees || []) ++ [new_attendee]
-          updated_event = %{event | attendees: new_attendees}
-
-          updated_events =
-            Enum.map(socket.assigns.events, fn e ->
-              if e.id == event.id, do: updated_event, else: e
-            end)
-
-          {:ok, _result} =
-            AttendeeNotifications.attendees_added(event, [%{email: email, name: nil}])
-
-          send(self(), {:flash, {:info, "Attendee added and invited."}})
-
-          socket =
-            socket
-            |> assign(:selected_event, updated_event)
-            |> assign(:events, updated_events)
-            |> assign(:attendee_input, "")
-            |> Helpers.precompute_derived()
-            |> Updates.update_attendees_async(event, new_attendees)
-
-          {:noreply, socket}
-        else
-          {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-            {:noreply, socket}
-
-          {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-            {:noreply, socket}
-
-          _invalid ->
-            {:noreply, socket}
-        end
-    end
-  end
-
-  defp attendee_email(%{} = attendee),
-    do: Map.get(attendee, "email") || Map.get(attendee, :email)
-
-  defp normalise_attendee(%{} = attendee) do
-    %{
-      email: Map.get(attendee, "email") || Map.get(attendee, :email),
-      name: Map.get(attendee, "name") || Map.get(attendee, :name)
-    }
-  end
-
-  defp apply_remove_attendee(socket, event, email) do
-    {removed, new_attendees} =
-      Enum.split_with(event.attendees || [], &(attendee_email(&1) == email))
-
-    updated_event = %{event | attendees: new_attendees}
-
-    updated_events =
-      Enum.map(socket.assigns.events, fn e ->
-        if e.id == event.id, do: updated_event, else: e
-      end)
-
-    normalised_removed = Enum.map(removed, &normalise_attendee/1)
-
-    if normalised_removed != [] do
-      {:ok, _result} = AttendeeNotifications.attendees_removed(event, normalised_removed)
-      send(self(), {:flash, {:info, "Attendee removed and notified."}})
-    end
-
-    socket
-    |> assign(:selected_event, updated_event)
-    |> assign(:events, updated_events)
-    |> assign(:confirm_remove_attendee, nil)
-    |> Helpers.precompute_derived()
-    |> Updates.update_attendees_async(event, new_attendees)
-  end
-
-  @spec handle_request_remove_attendee(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_request_remove_attendee(%{"email" => email}, socket) do
-    case socket.assigns.selected_event do
-      nil ->
-        {:noreply, socket}
-
-      event ->
-        case EditWorkflow.assert_owns_event(socket, event) do
-          :ok ->
-            {:noreply,
-             assign(socket, :confirm_remove_attendee, %{email: email, event_id: event.id})}
-
-          {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-            {:noreply, socket}
-        end
-    end
-  end
-
-  @spec handle_confirm_remove_attendee(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_confirm_remove_attendee(_params, socket) do
-    case {socket.assigns.confirm_remove_attendee, socket.assigns.selected_event} do
-      {nil, _event} ->
-        {:noreply, socket}
-
-      {%{email: _email}, nil} ->
-        {:noreply, assign(socket, :confirm_remove_attendee, nil)}
-
-      {%{email: email, event_id: event_id}, %{id: event_id} = event} ->
-        case Shared.check_edit_rate_limit(socket) do
-          :ok ->
-            {:noreply, apply_remove_attendee(socket, event, email)}
-
-          {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-            {:noreply, assign(socket, :confirm_remove_attendee, nil)}
-        end
-
-      {%{email: _email, event_id: _stored_id}, _mismatched_event} ->
-        {:noreply, assign(socket, :confirm_remove_attendee, nil)}
-    end
-  end
-
-  @spec handle_cancel_remove_attendee(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_cancel_remove_attendee(_params, socket) do
-    {:noreply, assign(socket, :confirm_remove_attendee, nil)}
-  end
-
-  @spec handle_update_attendee_input(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_update_attendee_input(%{"email" => value}, socket) do
-    {:noreply, assign(socket, :attendee_input, value)}
-  end
-
-  @spec handle_remove_pending_attendee(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_remove_pending_attendee(%{"email" => email}, socket) do
-    updated = List.delete(socket.assigns.pending_attendees, email)
-    {:noreply, assign(socket, :pending_attendees, updated)}
-  end
-
-  @spec handle_discard_pending_attendees(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_discard_pending_attendees(_params, socket) do
-    cond do
-      socket.assigns.selected_event != nil ->
-        {:noreply,
-         socket
-         |> assign(:pending_attendees, [])
-         |> assign(:confirm_discard_attendees, false)
-         |> assign(:selected_event, nil)
-         |> assign(:attendee_input, "")}
-
-      socket.assigns.creating_event != nil ->
-        {:noreply,
-         socket
-         |> assign(:creating_event, nil)
-         |> assign(:confirm_discard_attendees, false)}
-
-      true ->
-        {:noreply, assign(socket, :confirm_discard_attendees, false)}
-    end
-  end
-
-  @spec handle_cancel_discard_attendees(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_cancel_discard_attendees(_params, socket) do
-    {:noreply, assign(socket, :confirm_discard_attendees, false)}
-  end
-
   defp handle_update_event_field(field, max_length, new_value, socket) do
     case socket.assigns.selected_event do
       nil ->
@@ -375,11 +352,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
              :ok <- EditWorkflow.assert_owns_event(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           updated_event = Map.put(event, field, trimmed)
-
-          updated_events =
-            Enum.map(socket.assigns.events, fn e ->
-              if e.id == event.id, do: updated_event, else: e
-            end)
+          updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
 
           socket =
             socket
@@ -393,13 +366,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
           true ->
             {:noreply, socket}
 
-          {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-            {:noreply, socket}
+          {:error, :unauthorized} = error ->
+            Shared.flash_guard_error(socket, error)
 
-          {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-            {:noreply, socket}
+          {:error, :rate_limited, _message} = error ->
+            Shared.flash_guard_error(socket, error)
 
           {:error, reason} when is_binary(reason) ->
             message =
@@ -415,6 +386,138 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
   defp normalize_time(t) when byte_size(t) == 5, do: t <> ":00"
   defp normalize_time(t), do: t
+
+  # Converts a timed event to all-day (deriving the date range from the local
+  # start/end) and vice versa (defaulting a single-day all-day event to a
+  # 09:00–10:00 timed slot in the user's timezone).
+  #
+  # `end_date` is stored exclusively (matching the iCal/Google/Outlook all-day
+  # convention and the grid's render filter), so a single-day all-day event has
+  # `end_date == start_date + 1`. The conversions translate between that
+  # exclusive boundary and the inclusive last day a timed event touches.
+  defp toggle_all_day(%{all_day: true} = event, tz) do
+    start_date = event.start_date
+    # Exclusive end_date → inclusive last day the event covers.
+    last_day = Date.add(event.end_date, -1)
+    last_day = if Date.compare(last_day, start_date) == :lt, do: start_date, else: last_day
+
+    # DST gap/ambiguous is extremely unlikely at 09:00/10:00, but we default
+    # gracefully rather than crashing: on gap the shifted `just_after` is used,
+    # and on ambiguous the DST-side is picked — both are acceptable defaults
+    # when toggling the all-day flag programmatically.
+    {:ok, start_at} = Shared.to_utc(start_date, 9, 0, tz)
+    {:ok, end_at} = Shared.to_utc(last_day, 10, 0, tz)
+
+    %{
+      event
+      | all_day: false,
+        start_at: start_at,
+        end_at: end_at,
+        start_date: nil,
+        end_date: nil
+    }
+  end
+
+  defp toggle_all_day(event, tz) do
+    start_date = event.start_at |> DateTime.shift_zone!(tz) |> DateTime.to_date()
+    last_day = event.end_at |> DateTime.shift_zone!(tz) |> DateTime.to_date()
+    # Inclusive last day → exclusive end_date.
+    end_date = Date.add(last_day, 1)
+
+    %{
+      event
+      | all_day: true,
+        start_date: start_date,
+        end_date: end_date,
+        start_at: nil,
+        end_at: nil
+    }
+  end
+
+  defp push_colour_change(socket, original_event, new_colour) do
+    optimistic_event = Map.put(original_event, :colour, new_colour)
+
+    result =
+      Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
+        Updates.update_colour_async(s, original_event, new_colour)
+      end)
+
+    send(self(), {:flash, {:info, "Changes saved."}})
+    result
+  end
+
+  defp push_reminders_change(socket, original_event, new_reminders) do
+    optimistic_event = %{original_event | reminders: new_reminders}
+
+    result =
+      Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
+        Updates.update_reminders_async(s, original_event, new_reminders)
+      end)
+
+    send(self(), {:flash, {:info, "Changes saved."}})
+    result
+  end
+
+  # Applies a recurrence-rule change. When the event is already part of a
+  # recurring series, the scope prompt (this / this-and-following / all events)
+  # is shown first and the actual write is deferred to confirmation; otherwise
+  # the rule is written straight away.
+  #
+  # Recurrence changes deviate from the standard `apply_optimistic_update`
+  # pattern: the async step is conditional on whether the event belongs to a
+  # series, so the update and the flash are handled inline here.
+  defp push_recurrence_change(socket, original_event, new_rule) do
+    optimistic_event = %{original_event | recurrence_rule: new_rule}
+
+    updated_events =
+      Shared.replace_event(socket.assigns.events, original_event.id, optimistic_event)
+
+    socket =
+      socket
+      |> assign(:selected_event, optimistic_event)
+      |> assign(:events, updated_events)
+      |> Helpers.precompute_derived()
+
+    if original_event.recurring_event_id do
+      prompt = %{
+        kind: :recurrence_rule,
+        event: original_event,
+        optimistic_event: optimistic_event,
+        recurrence_rule: new_rule,
+        original_event: original_event
+      }
+
+      {:noreply, assign(socket, :recurrence_prompt, prompt)}
+    else
+      socket = Updates.update_recurrence_async(socket, original_event, new_rule)
+      send(self(), {:flash, {:info, "Changes saved."}})
+      {:noreply, socket}
+    end
+  end
+
+  defp push_all_day_change(socket, original_event, optimistic_event) do
+    result =
+      Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
+        Updates.toggle_all_day_async(s, original_event, optimistic_event)
+      end)
+
+    send(self(), {:flash, {:info, "Changes saved."}})
+    result
+  end
+
+  defp parse_end_date(end_str, start_date) do
+    case Date.from_iso8601(end_str) do
+      {:ok, end_date} ->
+        if Date.compare(end_date, start_date) == :lt do
+          {:ok, start_date}
+        else
+          {:ok, end_date}
+        end
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
 
   defp apply_time_change(socket, event, _new_start, _raw_end) when event.all_day == true do
     send(self(), {:flash, {:info, "Time editing is not available for all-day events."}})
@@ -446,98 +549,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     end
   end
 
-  @spec handle_notify_prompt_confirm(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_notify_prompt_confirm(_params, socket) do
-    case socket.assigns.notify_prompt do
-      nil ->
-        {:noreply, socket}
-
-      %{kind: :update, summary: summary, event: event, attendees: attendees} ->
-        case AttendeeNotifications.event_updated_confirm(event, summary, attendees) do
-          {:ok, :sent} ->
-            send(self(), {:flash, {:info, "Changes saved. Attendees will be notified shortly."}})
-
-            {:noreply,
-             socket
-             |> assign(:notify_prompt, nil)
-             |> assign(:pending_notification, true)}
-
-          {:error, _reason} ->
-            send(
-              self(),
-              {:flash, {:warning, "Could not schedule notification. Changes were saved."}}
-            )
-
-            {:noreply, assign(socket, :notify_prompt, nil)}
-        end
-
-      %{kind: :delete, event: event, attendees: attendees} ->
-        case AttendeeNotifications.event_deleted_confirm(event, attendees) do
-          {:ok, :sent} ->
-            user_id = socket.assigns.current_user.id
-
-            send(
-              self(),
-              {:execute_delete_event, build_delete_payload(event, user_id, true)}
-            )
-
-            {:noreply,
-             socket
-             |> assign(:notify_prompt, nil)
-             |> assign(:deleting_event, true)}
-
-          {:error, _reason} ->
-            send(
-              self(),
-              {:flash, {:warning, "Could not schedule notification. Please try again."}}
-            )
-
-            {:noreply, assign(socket, :notify_prompt, nil)}
-        end
-    end
-  end
-
-  @spec handle_notify_prompt_cancel(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_notify_prompt_cancel(_params, socket) do
-    case socket.assigns.notify_prompt do
-      nil ->
-        {:noreply, socket}
-
-      %{kind: :update} ->
-        send(self(), {:flash, {:info, "Changes saved."}})
-        {:noreply, assign(socket, :notify_prompt, nil)}
-
-      %{kind: :delete, event: event} ->
-        user_id = socket.assigns.current_user.id
-
-        send(
-          self(),
-          {:execute_delete_event, build_delete_payload(event, user_id, false)}
-        )
-
-        {:noreply,
-         socket
-         |> assign(:notify_prompt, nil)
-         |> assign(:deleting_event, true)}
-    end
-  end
-
-  @spec handle_cancel_pending_notification(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_cancel_pending_notification(_params, socket) do
-    case socket.assigns.selected_event do
-      nil ->
-        {:noreply, socket}
-
-      event ->
-        :ok = AttendeeNotifications.cancel_pending(event)
-        send(self(), {:flash, {:info, "Pending notification cancelled."}})
-        {:noreply, assign(socket, :pending_notification, false)}
-    end
-  end
-
   defp apply_notify_result(socket, original_event, updated_event) do
     socket = VideoSync.sync_video_integration_async(socket, original_event, updated_event)
 
@@ -560,20 +571,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
           attendees: attendees
         })
     end
-  end
-
-  @doc """
-  Builds the payload used to dispatch `{:execute_delete_event, payload}` from
-  either the rate-limit-gated confirm path or the notify-prompt branches.
-  """
-  @spec build_delete_payload(map(), integer(), boolean()) :: map()
-  def build_delete_payload(event, user_id, notify_on_delete) do
-    %{
-      uid: event.uid,
-      provider_event_id: event.provider_event_id,
-      calendar_integration_id: event.calendar_integration_id,
-      user_id: user_id,
-      notify_on_delete: notify_on_delete
-    }
   end
 end

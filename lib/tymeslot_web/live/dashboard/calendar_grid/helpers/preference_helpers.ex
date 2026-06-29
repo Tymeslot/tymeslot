@@ -11,10 +11,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   def col_count(%{view: :three_day}), do: 3
   def col_count(%{view: :day}), do: 1
   def col_count(%{view: :month}), do: 7
+  def col_count(%{view: :agenda}), do: 1
 
-  @spec day_header_class(Date.t()) :: String.t()
-  def day_header_class(day) do
-    if Date.compare(day, Date.utc_today()) == :eq do
+  @spec day_header_class(Date.t(), String.t()) :: String.t()
+  def day_header_class(day, timezone \\ "Etc/UTC") do
+    today =
+      DateTime.utc_now()
+      |> DateTime.shift_zone!(timezone)
+      |> DateTime.to_date()
+
+    if Date.compare(day, today) == :eq do
       "font-bold text-turquoise-600"
     else
       "text-tymeslot-600"
@@ -40,6 +46,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
     Calendar.strftime(date, "%B %Y")
   end
 
+  def period_label(%{view: :agenda, date: date} = assigns) do
+    tz = Map.get(assigns, :user_timezone, "Etc/UTC")
+
+    today =
+      DateTime.utc_now()
+      |> DateTime.shift_zone!(tz)
+      |> DateTime.to_date()
+
+    if Date.compare(date, today) == :eq do
+      "Next 30 days"
+    else
+      range_label(date, Date.add(date, 30))
+    end
+  end
+
   defp range_label(start_date, end_date) do
     start_str = Calendar.strftime(start_date, "%B %-d")
 
@@ -58,10 +79,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   def view_label(:three_day), do: "3 Days"
   def view_label(:week), do: "Week"
   def view_label(:month), do: "Month"
+  def view_label(:agenda), do: "Agenda"
 
   @spec navigate_month(Date.t(), integer()) :: Date.t()
   def navigate_month(date, delta) do
     Date.shift(Date.new!(date.year, date.month, 1), month: delta)
+  end
+
+  @doc """
+  6×7 day matrix for the month containing `date`.
+
+  Returns 42 consecutive `Date` structs starting from the first day of the week
+  that contains the first of the month (honouring `week_start`), so the grid
+  always spans six full weeks. Shared by the month view and the mini-month
+  picker so both render the same cells.
+  """
+  @spec month_matrix(Date.t(), :monday | :sunday) :: [Date.t()]
+  def month_matrix(date, week_start) when week_start in [:monday, :sunday] do
+    first_of_month = Date.new!(date.year, date.month, 1)
+    grid_start = Date.beginning_of_week(first_of_month, week_start)
+    Enum.map(0..41, &Date.add(grid_start, &1))
   end
 
   @spec month_cell_class(Date.t(), map()) :: String.t()
@@ -81,18 +118,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   def show_week_numbers?(%{preferences: %{show_week_numbers: true}}), do: true
   def show_week_numbers?(_assigns), do: false
 
+  # Accepts either an assigns map (`%{preferences: %{time_format: …}}`) or a bare
+  # preferences map (`%{time_format: …}`), so view helpers can pass whichever
+  # they hold without re-deriving the fallback.
   @spec time_format(map()) :: String.t()
   def time_format(%{preferences: %{time_format: fmt}}), do: fmt
+  def time_format(%{time_format: fmt}) when is_binary(fmt), do: fmt
   def time_format(_assigns), do: "12h"
 
   @valid_views %{
     "week" => :week,
     "three_day" => :three_day,
     "day" => :day,
-    "month" => :month
+    "month" => :month,
+    "agenda" => :agenda
   }
 
-  @spec safe_view_atom(String.t()) :: :week | :three_day | :day | :month
+  @spec safe_view_atom(String.t()) :: :week | :three_day | :day | :month | :agenda
   def safe_view_atom(view) when is_binary(view), do: Map.get(@valid_views, view, :week)
   def safe_view_atom(_view), do: :week
 

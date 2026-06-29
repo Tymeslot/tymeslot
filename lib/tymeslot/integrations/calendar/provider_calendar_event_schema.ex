@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
 
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Reminder
 
   @timestamps_opts [type: :utc_datetime_usec]
 
@@ -227,7 +228,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
       recurrence_exceptions: record.recurrence_exceptions || [],
       attachments: record.attachments || [],
       links: record.links || [],
-      reminders: record.reminders || [],
+      reminders: normalise_reminders(record.reminders),
       etag: record.etag,
       synced_at: record.synced_at,
       provider_updated_at: record.provider_updated_at,
@@ -288,6 +289,17 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     {us, _precision} = dt.microsecond
     %{dt | microsecond: {us, 6}}
   end
+
+  # Reminders are stored in a JSONB column, so even atom-keyed maps written by
+  # the dashboard come back string-keyed. Normalise to the canonical
+  # `%{method: :popup | :email | :sms, minutes_before: integer}` shape that the
+  # UI and the provider mappers expect.
+  defp normalise_reminders(nil), do: []
+
+  defp normalise_reminders(reminders) when is_list(reminders),
+    do: Enum.map(reminders, &Reminder.normalise/1)
+
+  defp normalise_reminders(_other), do: []
 
   defp safe_to_atom(nil), do: nil
   defp safe_to_atom(value) when is_atom(value), do: value

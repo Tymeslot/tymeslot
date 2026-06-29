@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
 
   import Tymeslot.Factory
 
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution
 
   defp build_socket(opts \\ []) do
     user = insert(:user)
@@ -33,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
           title: "Standup",
           integration_id: integration.id,
           calendar_id: "primary",
+          all_day: false,
           date: "2026-04-10",
           end_date: "2026-04-10",
           start_hour: 10,
@@ -63,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
       socket =
         build_socket(creating_overrides: %{integration_id: 999_999})
 
-      {:noreply, _socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
 
       assert_received {:flash, {:error, "Invalid calendar selected"}}
     end
@@ -73,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
     test "flashes when start date cannot be parsed" do
       socket = build_socket(creating_overrides: %{date: "not-a-date"})
 
-      {:noreply, _socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
 
       assert_received {:flash, {:error, "Invalid date"}}
     end
@@ -81,7 +82,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
     test "flashes when end date cannot be parsed" do
       socket = build_socket(creating_overrides: %{end_date: "13-04-2026"})
 
-      {:noreply, _socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
 
       assert_received {:flash, {:error, "Invalid date"}}
     end
@@ -99,7 +100,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
           }
         )
 
-      {:noreply, _socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
 
       assert_received {:flash, {:error, "End time must be after start time"}}
     end
@@ -115,7 +116,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
           }
         )
 
-      {:noreply, _socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
 
       assert_received {:flash, {:error, "End time must be after start time"}}
     end
@@ -125,7 +126,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
     test "schedules the create-event execute message when validation passes" do
       socket = build_socket()
 
-      {:noreply, updated_socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, updated_socket} = CreateExecution.handle_save_event(%{}, socket)
 
       assert updated_socket.assigns.saving_event == true
       assert_received {:execute_create_event, payload}
@@ -135,13 +136,67 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
     end
   end
 
+  describe "handle_save_event/2 — reminders" do
+    test "threads reminders into the execute-create payload" do
+      socket =
+        build_socket(
+          creating_overrides: %{
+            reminders: [%{method: :popup, minutes_before: 10}]
+          }
+        )
+
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert_received {:execute_create_event, payload}
+      assert payload.creating.reminders == [%{method: :popup, minutes_before: 10}]
+    end
+  end
+
+  describe "handle_save_event/2 — all-day events" do
+    test "schedules an all-day create with Date start/end and all_day: true" do
+      socket =
+        build_socket(
+          creating_overrides: %{
+            all_day: true,
+            date: "2026-04-18",
+            # Inclusive last day picked by the user; stored exclusively as +1.
+            end_date: "2026-04-18"
+          }
+        )
+
+      {:noreply, updated_socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert updated_socket.assigns.saving_event == true
+      assert_received {:execute_create_event, payload}
+      assert payload.all_day == true
+      assert payload.start_at == ~D[2026-04-18]
+      # end_date is exclusive: a single-day all-day event ends on the next day.
+      assert payload.end_at == ~D[2026-04-19]
+    end
+
+    test "rejects an all-day event whose end date precedes its start date" do
+      socket =
+        build_socket(
+          creating_overrides: %{
+            all_day: true,
+            date: "2026-04-19",
+            end_date: "2026-04-18"
+          }
+        )
+
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert_received {:flash, {:error, "End date must not be before start date"}}
+    end
+  end
+
   describe "handle_save_event/2 — no creating_event in assigns" do
     test "is a no-op when there is no in-progress event" do
       socket = %Phoenix.LiveView.Socket{
         assigns: %{__changed__: %{}, flash: %{}, creating_event: nil}
       }
 
-      {:noreply, returned_socket} = EventCreate.handle_save_event(%{}, socket)
+      {:noreply, returned_socket} = CreateExecution.handle_save_event(%{}, socket)
       assert returned_socket == socket
 
       refute_received {:flash, _}

@@ -14,8 +14,10 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
+  alias Tymeslot.Workers.SyncDebugCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
   @palette_size 8
@@ -31,6 +33,7 @@ defmodule Tymeslot.CalendarGrid do
     3 => 90
   }
   @caldav_default_stale_minutes 25
+  @debug_stale_minutes 15
 
   @doc """
   Returns all cached calendar events for the given integration IDs within a time range.
@@ -41,6 +44,46 @@ defmodule Tymeslot.CalendarGrid do
           [ProviderCalendarEventSchema.t()]
   def list_events_for_range(integration_ids, start_dt, end_dt) do
     ProviderCalendarEventQueries.list_for_range(integration_ids, start_dt, end_dt)
+  end
+
+  # How far ahead the desktop-reminder feed looks. Wide enough to cover the
+  # longest reminder lead time (a week) while keeping the payload bounded.
+  @reminder_feed_window_days 8
+
+  @doc """
+  Returns the user's upcoming timed events that carry at least one reminder,
+  within `[now, now + #{@reminder_feed_window_days}d)`, scoped to the given
+  (already visibility-filtered) integration IDs.
+
+  Reminders are normalised to the canonical `%{method:, minutes_before:}` shape,
+  so callers can read `minutes_before` regardless of how the row was stored.
+  """
+  @spec list_upcoming_events_with_reminders([integer()], DateTime.t()) ::
+          [ProviderCalendarEventSchema.t()]
+  def list_upcoming_events_with_reminders(integration_ids, now) do
+    window_end = DateTime.add(now, @reminder_feed_window_days, :day)
+
+    integration_ids
+    |> ProviderCalendarEventQueries.list_upcoming_timed(now, window_end)
+    |> Enum.map(&normalise_event_reminders/1)
+    |> Enum.reject(&(&1.reminders == []))
+  end
+
+  defp normalise_event_reminders(event) do
+    %{event | reminders: Enum.map(event.reminders, &Reminder.normalise/1)}
+  end
+
+  @doc """
+  Searches the user's cached calendar events by a free-text term.
+
+  Matches case-insensitively against event title, description, and location,
+  scoped to the user's active integrations. Pass `:hidden_integration_ids` in
+  `opts` to exclude calendars the user has toggled off; results are ordered by
+  start time and capped at a sensible limit. A blank term returns `[]`.
+  """
+  @spec search_events(integer(), String.t(), keyword()) :: [ProviderCalendarEventSchema.t()]
+  def search_events(user_id, term, opts \\ []) do
+    ProviderCalendarEventQueries.search(user_id, term, opts)
   end
 
   @doc """
@@ -233,6 +276,8 @@ defmodule Tymeslot.CalendarGrid do
     DateTime.before?(integration.last_external_sync_at, cutoff)
   end
 
+  defp stale_threshold_minutes(%{provider: "debug"}), do: @debug_stale_minutes
+
   defp stale_threshold_minutes(%{provider: provider, caldav_sync_tier: tier})
        when provider in @caldav_providers do
     Map.get(@caldav_tier_stale_minutes, tier, @caldav_default_stale_minutes)
@@ -249,6 +294,12 @@ defmodule Tymeslot.CalendarGrid do
   defp enqueue_sync_worker(%{provider: "outlook"} = integration) do
     %{"calendar_integration_id" => integration.id}
     |> RefreshOutlookCalendarWorker.new()
+    |> Oban.insert()
+  end
+
+  defp enqueue_sync_worker(%{provider: "debug"} = integration) do
+    %{"calendar_integration_id" => integration.id}
+    |> SyncDebugCalendarWorker.new()
     |> Oban.insert()
   end
 

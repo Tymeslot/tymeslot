@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning
+  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.MonthSpanLayout
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.OverlapLayout
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting
@@ -52,6 +53,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   defdelegate week_start(date, assigns), to: PreferenceHelpers
   defdelegate col_count(assigns), to: PreferenceHelpers
   defdelegate day_header_class(day), to: PreferenceHelpers
+  defdelegate day_header_class(day, timezone), to: PreferenceHelpers
   defdelegate period_label(assigns), to: PreferenceHelpers
   defdelegate view_label(view), to: PreferenceHelpers
   defdelegate navigate_month(date, delta), to: PreferenceHelpers
@@ -64,6 +66,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   defdelegate assign_view_from_preferences(socket), to: PreferenceHelpers
   defdelegate week_number(date), to: PreferenceHelpers
   defdelegate day_name_headers(assigns), to: PreferenceHelpers
+  defdelegate month_matrix(date, week_start), to: PreferenceHelpers
 
   # Overlap layout
 
@@ -71,6 +74,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   defdelegate overflow_events_for_day(assigns, date), to: OverlapLayout
   defdelegate layout_for_day(assigns, date), to: OverlapLayout
   defdelegate overlap_layout(events), to: OverlapLayout
+
+  # Month-grid multi-day / all-day bar layout
+
+  defdelegate week_layout(assigns, week_days), to: MonthSpanLayout
+  defdelegate chip_events(assigns, date), to: MonthSpanLayout
 
   # General-purpose event filtering (remains in facade)
 

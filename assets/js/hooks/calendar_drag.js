@@ -6,6 +6,10 @@
 // - CalendarMobile: mobile viewport detection and swipe navigation
 
 const HOUR_HEIGHT_PX = 64  // 4rem at 16px base (h-16 in Tailwind)
+// How long to keep re-asserting the current-time scroll after a
+// `calendar:scroll-to-current` request, so it survives the server re-render
+// that accompanies a refresh (which natively resets scrollTop a frame later).
+const SCROLL_REASSERT_MS = 1200
 const SNAP_MINUTES = 15
 const TOUCH_HOLD_MS = 200       // long-press threshold before a touch becomes a drag
 const DRAG_THRESHOLD_PX = 5     // pointer movement before drag starts (mouse)
@@ -50,8 +54,9 @@ export const CalendarDrag = {
     // Track scroll position to toggle "jump to now" pill visibility.
     this.el.addEventListener('scroll', this._onScroll, { passive: true })
 
+    this._scrollAssertRaf = null
     this._scrollToCurrentTime()
-    this._onScrollToCurrent = () => this._scrollToCurrentTime()
+    this._onScrollToCurrent = this._handleScrollToCurrent.bind(this)
     this.el.addEventListener('calendar:scroll-to-current', this._onScrollToCurrent)
 
     // Initial pill visibility check after layout settles.
@@ -73,6 +78,7 @@ export const CalendarDrag = {
     document.removeEventListener('touchcancel', this._onPointerUp)
     this.el.removeEventListener('scroll', this._onScroll)
     this.el.removeEventListener('calendar:scroll-to-current', this._onScrollToCurrent)
+    if (this._scrollAssertRaf) cancelAnimationFrame(this._scrollAssertRaf)
     this._clearTouchHold()
   },
 
@@ -82,6 +88,26 @@ export const CalendarDrag = {
     const remInPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
     this.el.scrollTop = Math.max(0, topRem * remInPx - HOUR_HEIGHT_PX)
     requestAnimationFrame(() => this._updateJumpToNowVisibility())
+  },
+
+  // Handler for the `calendar:scroll-to-current` event (refresh button + "jump
+  // to now" pill). A plain one-shot scroll loses a race: the same refresh pushes
+  // a server re-render whose patch natively resets `scrollTop` to 0 a frame or
+  // two later, landing on the top of the calendar. Re-assert the current-time
+  // position over a short window so it wins — but only when the scroll has been
+  // zeroed, so a user scrolling away during the window is left alone.
+  _handleScrollToCurrent() {
+    this._scrollToCurrentTime()
+
+    const deadline = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + SCROLL_REASSERT_MS
+    if (this._scrollAssertRaf) cancelAnimationFrame(this._scrollAssertRaf)
+
+    const tick = () => {
+      if (Math.round(this.el.scrollTop) === 0) this._scrollToCurrentTime()
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+      this._scrollAssertRaf = now < deadline ? requestAnimationFrame(tick) : null
+    }
+    this._scrollAssertRaf = requestAnimationFrame(tick)
   },
 
   _handleScroll() {
@@ -566,14 +592,27 @@ export const CalendarMobile = {
         return
       }
 
+      // `?` (shift + /) toggles the shortcuts help overlay. This is the one
+      // shift-combination we honour, so handle it before the modifier guard in
+      // _shouldIgnoreKey rejects it. We still respect focus/modal context.
+      if (e.key === '?' && !this._inEditableOrModalContext(e)) {
+        this.pushEventTo(this.el, 'toggle_shortcuts_help', {})
+        e.preventDefault()
+        return
+      }
+
       if (this._shouldIgnoreKey(e)) return
 
       let handled = true
       switch (e.key) {
         case 'ArrowLeft':
+        case 'p':
+        case 'P':
           this.pushEventTo(this.el, 'prev_period', {})
           break
         case 'ArrowRight':
+        case 'n':
+        case 'N':
           this.pushEventTo(this.el, 'next_period', {})
           break
         case 't':
@@ -581,17 +620,30 @@ export const CalendarMobile = {
           this.pushEventTo(this.el, 'today', {})
           document.getElementById('calendar-drag-zone')?.dispatchEvent(new CustomEvent('calendar:scroll-to-current'))
           break
+        case 'c':
+        case 'C':
+          this.pushEventTo(this.el, 'show_create_form', {})
+          break
         case 'd':
         case 'D':
+        case '1':
           this.pushEventTo(this.el, 'set_view', { view: 'day' })
           break
         case 'w':
         case 'W':
+        case '2':
           this.pushEventTo(this.el, 'set_view', { view: 'week' })
           break
         case 'm':
         case 'M':
+        case '3':
           this.pushEventTo(this.el, 'set_view', { view: 'month' })
+          break
+        case '4':
+          this.pushEventTo(this.el, 'set_view', { view: 'agenda' })
+          break
+        case '/':
+          this._focusSearch()
           break
         default:
           handled = false
@@ -603,14 +655,27 @@ export const CalendarMobile = {
 
   _shouldIgnoreKey(e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return true
+    return this._inEditableOrModalContext(e)
+  },
+
+  // True when focus is in a text-entry field or a modal is open — contexts where
+  // single-key shortcuts must not fire. Unlike _shouldIgnoreKey this ignores the
+  // shift modifier, so the `?` overlay toggle can still pass through.
+  _inEditableOrModalContext(e) {
     const t = e.target
-    if (!t) return false
-    const tag = t.tagName
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true
-    if (t.isContentEditable) return true
-    // Ignore keys while a modal is open.
+    if (t) {
+      const tag = t.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true
+      if (t.isContentEditable) return true
+    }
     if (document.querySelector('[role="dialog"][aria-modal="true"]')) return true
     return false
+  },
+
+  // `/` focuses the search input. Prevent default in the caller so the slash
+  // isn't typed.
+  _focusSearch() {
+    document.getElementById('calendar-search-input')?.focus()
   },
 
   destroyed() {

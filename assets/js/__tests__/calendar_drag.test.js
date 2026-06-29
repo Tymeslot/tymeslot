@@ -7,8 +7,10 @@
  * the wrong time, so these are the highest-value units to lock down.
  */
 
-import { describe, expect, test } from 'vitest';
-import { snapToGrid, minutesFromY, pointerXY } from '../hooks/calendar_drag';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { snapToGrid, minutesFromY, pointerXY, CalendarCreate, CalendarMobile, CalendarDrag } from '../hooks/calendar_drag';
+
+const HOUR_HEIGHT_PX = 64;
 
 describe('snapToGrid', () => {
   // 15-minute grid (SNAP_MINUTES = 15)
@@ -122,5 +124,343 @@ describe('combined: typical drag-drop pipeline', () => {
     const rawEnd = minutesFromY(dragYIntoStart);
     const snappedEnd = Math.max(startMinutes + 15, snapToGrid(rawEnd));
     expect(snappedEnd).toBeGreaterThanOrEqual(startMinutes + 15);
+  });
+});
+
+describe('CalendarCreate: drag-to-create span', () => {
+  // The hook turns a press-and-drag on the empty grid into a time *span*. These
+  // tests drive the real hook through jsdom pointer events and assert the
+  // payload pushed to the server carries start AND end from the drag — a plain
+  // click must still fall back to the default 30-minute duration.
+
+  let hook;
+  let zone;
+  let col;
+
+  // jsdom returns all-zero rects; give the day column a deterministic geometry so
+  // pixel→minute maths is exercised. The column top is at y=0, so a clientY of N
+  // pixels maps directly to N px down the grid.
+  function stubColumnRect(el) {
+    el.getBoundingClientRect = () => ({
+      top: 0, left: 0, right: 80, bottom: 24 * HOUR_HEIGHT_PX,
+      width: 80, height: 24 * HOUR_HEIGHT_PX, x: 0, y: 0,
+    });
+  }
+
+  function mouse(type, y) {
+    const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: 40, clientY: y });
+    return e;
+  }
+
+  beforeEach(() => {
+    zone = document.createElement('div');
+    zone.id = 'calendar-create-zone';
+
+    col = document.createElement('div');
+    col.setAttribute('data-day-col', '2026-06-22');
+    stubColumnRect(col);
+    zone.appendChild(col);
+    document.body.appendChild(zone);
+
+    // _findDayColAt relies on elementFromPoint, absent in jsdom — resolve to the
+    // single column so same-day drags behave as in a browser.
+    document.elementFromPoint = vi.fn(() => col);
+
+    hook = Object.assign(Object.create(CalendarCreate), {
+      el: zone,
+      pushEventTo: vi.fn(),
+    });
+    hook.mounted();
+  });
+
+  afterEach(() => {
+    hook.destroyed();
+    zone.remove();
+    vi.restoreAllMocks();
+  });
+
+  test('dragging from 09:00 to 10:30 pushes a span payload', () => {
+    // pointerdown at y = 9h = 576px (09:00), drag to y = 10.5h = 672px (10:30).
+    col.dispatchEvent(mouse('mousedown', 9 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mousemove', 10.5 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mouseup', 10.5 * HOUR_HEIGHT_PX));
+
+    expect(hook.pushEventTo).toHaveBeenCalledTimes(1);
+    const [, event, payload] = hook.pushEventTo.mock.calls[0];
+    expect(event).toBe('show_create_form');
+    expect(payload).toMatchObject({
+      'date': '2026-06-22',
+      'start-hour': '9',
+      'start-minute': '0',
+      'end-hour': '10',
+      'end-minute': '30',
+    });
+  });
+
+  test('end time snaps to the 15-minute grid', () => {
+    // Drag end at y = 580px → 543.75 min → snaps to 09:00... start; choose a
+    // clearer case: start 14:00 (896px), end at 901px ≈ 14:04 → snaps to 14:00,
+    // but minEnd forces start + 15 = 14:15.
+    col.dispatchEvent(mouse('mousedown', 14 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mousemove', 14 * HOUR_HEIGHT_PX + 5));
+    document.dispatchEvent(mouse('mouseup', 14 * HOUR_HEIGHT_PX + 5));
+
+    const [, , payload] = hook.pushEventTo.mock.calls[0];
+    expect(payload['start-hour']).toBe('14');
+    expect(payload['start-minute']).toBe('0');
+    expect(payload['end-hour']).toBe('14');
+    expect(payload['end-minute']).toBe('15');
+  });
+
+  test('a plain click (no movement) falls back to a 30-minute default', () => {
+    col.dispatchEvent(mouse('mousedown', 11 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mouseup', 11 * HOUR_HEIGHT_PX));
+
+    expect(hook.pushEventTo).toHaveBeenCalledTimes(1);
+    const [, , payload] = hook.pushEventTo.mock.calls[0];
+    expect(payload['start-hour']).toBe('11');
+    expect(payload['start-minute']).toBe('0');
+    expect(payload['end-hour']).toBe('11');
+    expect(payload['end-minute']).toBe('30');
+  });
+
+  test('does not start a drag on an existing event block', () => {
+    const eventBlock = document.createElement('div');
+    eventBlock.setAttribute('data-draggable', 'true');
+    col.appendChild(eventBlock);
+
+    eventBlock.dispatchEvent(mouse('mousedown', 9 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mousemove', 10 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mouseup', 10 * HOUR_HEIGHT_PX));
+
+    expect(hook.pushEventTo).not.toHaveBeenCalled();
+  });
+
+  test('does not start a drag on a resize handle', () => {
+    const handle = document.createElement('div');
+    handle.setAttribute('data-resize-handle', '');
+    col.appendChild(handle);
+
+    handle.dispatchEvent(mouse('mousedown', 9 * HOUR_HEIGHT_PX));
+    document.dispatchEvent(mouse('mouseup', 10 * HOUR_HEIGHT_PX));
+
+    expect(hook.pushEventTo).not.toHaveBeenCalled();
+  });
+});
+
+describe('CalendarMobile: keyboard shortcuts', () => {
+  // The global keydown handler turns single keystrokes into LiveView events. The
+  // tests drive real keydown events through jsdom and assert the right
+  // pushEventTo call (event name + payload), plus that the focus/modal guards
+  // still suppress shortcuts.
+
+  let hook;
+  let el;
+
+  function key(k, opts = {}) {
+    return new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...opts });
+  }
+
+  // Returns the calls made *after* the mount-time responsive-view push (if any).
+  function shortcutCalls() {
+    return hook.pushEventTo.mock.calls.filter(([, event]) => event !== 'set_responsive_view');
+  }
+
+  beforeEach(() => {
+    el = document.createElement('div');
+    el.id = 'calendar-grid';
+    document.body.appendChild(el);
+
+    hook = Object.assign(Object.create(CalendarMobile), {
+      el,
+      pushEventTo: vi.fn(),
+    });
+    hook.mounted();
+  });
+
+  afterEach(() => {
+    hook.destroyed();
+    el.remove();
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  test.each([
+    ['c', 'show_create_form', {}],
+    ['n', 'next_period', {}],
+    ['p', 'prev_period', {}],
+    ['1', 'set_view', { view: 'day' }],
+    ['2', 'set_view', { view: 'week' }],
+    ['3', 'set_view', { view: 'month' }],
+    ['4', 'set_view', { view: 'agenda' }],
+  ])('key "%s" dispatches %s', (k, event, payload) => {
+    document.dispatchEvent(key(k));
+
+    expect(shortcutCalls()).toHaveLength(1);
+    const [target, name, args] = shortcutCalls()[0];
+    expect(target).toBe(el);
+    expect(name).toBe(event);
+    expect(args).toEqual(payload);
+  });
+
+  test('existing d/w/m aliases still set the view', () => {
+    document.dispatchEvent(key('d'));
+    document.dispatchEvent(key('w'));
+    document.dispatchEvent(key('m'));
+
+    expect(shortcutCalls().map(([, , args]) => args.view)).toEqual(['day', 'week', 'month']);
+  });
+
+  test('"?" (shift+/) toggles the shortcuts help overlay', () => {
+    document.dispatchEvent(key('?', { shiftKey: true }));
+
+    expect(shortcutCalls()).toHaveLength(1);
+    expect(shortcutCalls()[0][1]).toBe('toggle_shortcuts_help');
+  });
+
+  test('"/" focuses the search input and is prevented', () => {
+    const search = document.createElement('input');
+    search.id = 'calendar-search-input';
+    document.body.appendChild(search);
+    const focusSpy = vi.spyOn(search, 'focus');
+
+    const e = key('/');
+    document.dispatchEvent(e);
+
+    expect(focusSpy).toHaveBeenCalled();
+    expect(e.defaultPrevented).toBe(true);
+    // Focusing must not push a server event.
+    expect(shortcutCalls()).toHaveLength(0);
+  });
+
+  test('"/" is still prevented (no slash typed) when no search input is present', () => {
+    const e = key('/');
+    document.dispatchEvent(e);
+
+    expect(e.defaultPrevented).toBe(true);
+    expect(shortcutCalls()).toHaveLength(0);
+  });
+
+  test('suppresses shortcuts while typing in an input', () => {
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+
+    input.dispatchEvent(key('c'));
+
+    expect(shortcutCalls()).toHaveLength(0);
+  });
+
+  test('suppresses "?" while typing in an input', () => {
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+
+    input.dispatchEvent(key('?', { shiftKey: true }));
+
+    expect(shortcutCalls()).toHaveLength(0);
+  });
+
+  test('suppresses shortcuts when modifier keys are held', () => {
+    document.dispatchEvent(key('c', { metaKey: true }));
+    document.dispatchEvent(key('n', { ctrlKey: true }));
+
+    expect(shortcutCalls()).toHaveLength(0);
+  });
+
+  test('suppresses shortcuts while a modal dialog is open', () => {
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    document.body.appendChild(dialog);
+
+    document.dispatchEvent(key('c'));
+    document.dispatchEvent(key('?', { shiftKey: true }));
+
+    expect(shortcutCalls()).toHaveLength(0);
+  });
+});
+
+describe('CalendarDrag: scroll-to-current survives the post-refresh reset', () => {
+  // Regression (verified in a real browser): the refresh button fires
+  // `calendar:scroll-to-current` alongside the server push. The accompanying
+  // re-render natively resets the scroll container's scrollTop to 0 a frame or
+  // two later, so a one-shot scroll loses the race and the calendar snaps to the
+  // top. `_handleScrollToCurrent` re-asserts the current-time position over a
+  // short window so it wins — but only while the scroll has been zeroed, so a
+  // user scrolling away during the window is left alone.
+  //
+  // currentTopRem 54 → 54 * 16 (rem fallback) − 64 (HOUR_HEIGHT_PX) = 800.
+  const EXPECTED_TOP = 800;
+
+  let rafQueue;
+  let now;
+
+  beforeEach(() => {
+    rafQueue = [];
+    now = 0;
+    vi.stubGlobal('requestAnimationFrame', (cb) => rafQueue.push(cb));
+    vi.stubGlobal('cancelAnimationFrame', () => {});
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  // Run every frame currently queued; frames scheduled during the flush queue up
+  // for the next explicit flush (mirrors how rAF batches across paints).
+  function flushFrames() {
+    const due = rafQueue;
+    rafQueue = [];
+    due.forEach((cb) => cb());
+  }
+
+  function makeHook(scrollTop = 0) {
+    const el = { scrollTop, dataset: { currentTopRem: '54' } };
+    return Object.assign(Object.create(CalendarDrag), {
+      el,
+      _updateJumpToNowVisibility: vi.fn(),
+    });
+  }
+
+  test('re-asserts the current-time scroll after the patch zeroes it', () => {
+    const hook = makeHook(0);
+
+    hook._handleScrollToCurrent();
+    expect(hook.el.scrollTop).toBe(EXPECTED_TOP); // initial assert
+
+    // The server re-render natively resets the scroll to the top.
+    hook.el.scrollTop = 0;
+
+    // A frame within the window restores it.
+    now = 100;
+    flushFrames();
+    expect(hook.el.scrollTop).toBe(EXPECTED_TOP);
+  });
+
+  test('leaves a user-chosen non-zero position alone during the window', () => {
+    const hook = makeHook(0);
+    hook._handleScrollToCurrent();
+
+    // User scrolls somewhere deliberate (non-zero) before the next frame.
+    hook.el.scrollTop = 500;
+    now = 100;
+    flushFrames();
+
+    expect(hook.el.scrollTop).toBe(500);
+  });
+
+  test('stops re-asserting once the window has elapsed', () => {
+    const hook = makeHook(0);
+    hook._handleScrollToCurrent();
+
+    // Advance past the re-assert deadline, then drain the scheduled frame.
+    now = 5000;
+    flushFrames();
+
+    // A later stray reset must no longer be corrected — the loop has stopped.
+    hook.el.scrollTop = 0;
+    flushFrames();
+    expect(hook.el.scrollTop).toBe(0);
   });
 });

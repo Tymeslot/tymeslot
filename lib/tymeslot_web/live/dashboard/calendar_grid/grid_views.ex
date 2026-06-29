@@ -1,14 +1,23 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
-  @moduledoc "Grid view function components for the calendar grid (week/day and month)."
+  @moduledoc """
+  Day/week timed-grid view for the calendar grid, plus the public facade for the
+  other view components. The month view, all-day row, status banners and guest
+  badges live in focused modules under `CalendarGrid.Views.*`; `month_view/1` is
+  re-exported here so existing callers keep a single entry point.
+  """
 
   use TymeslotWeb, :html
-  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+  alias TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow
+  alias TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges
+  alias TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView
+  alias TymeslotWeb.Dashboard.CalendarGrid.Views.StatusBanners
 
   @timed_views [:week, :three_day, :day]
-  @allday_visible_limit 2
+
+  defdelegate month_view(assigns), to: MonthView
 
   attr :view, :atom, required: true
   attr :visible_days, :list, required: true
@@ -46,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
       |> assign(:day_layouts, day_layouts)
 
     ~H"""
-    <.status_banners
+    <StatusBanners.status_banners
       stale_integrations={@stale_integrations}
       syncing={@syncing}
       sync_total={@sync_total}
@@ -63,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
         style={"grid-template-columns: var(--time-axis) repeat(#{@col_count}, 1fr)"}
       >
         <div class="text-token-xs text-tymeslot-400 flex items-end justify-end pr-2 pb-1">all-day</div>
-        <.allday_cell
+        <AllDayRow.all_day_cell
           :for={day <- @visible_days}
           assigns_ref={assigns}
           day={day}
@@ -88,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
           <div class="flex items-center justify-end pr-2 sticky left-0 bg-white z-10">
             <span class="text-token-xs text-tymeslot-400"><%= Helpers.user_tz_abbr(assigns) %></span>
           </div>
-          <div :for={day <- @visible_days} class={"text-center py-2 border-l border-tymeslot-100 #{Helpers.day_header_class(day)}"}>
+          <div :for={day <- @visible_days} class={"text-center py-2 border-l border-tymeslot-100 #{Helpers.day_header_class(day, @user_timezone)}"}>
             <span :if={@view == :day} class="text-token-sm font-medium hidden sm:inline"><%= Calendar.strftime(day, "%A, %B %-d, %Y") %></span>
             <span :if={@view == :day} class="text-token-sm font-medium sm:hidden"><%= Calendar.strftime(day, "%a %-d") %></span>
             <span :if={@view != :day} class="text-token-sm"><%= Calendar.strftime(day, "%a %-d") %></span>
@@ -139,7 +148,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
               data-start-minutes={DateTime.shift_zone!(event.start_at, @user_timezone) |> then(&(&1.hour * 60 + &1.minute))}
               data-duration-minutes={max(15, round(DateTime.diff(Map.get(event, :display_end_at, event.end_at), Map.get(event, :display_start_at, event.start_at), :second) / 60))}
             >
-              <div class="truncate font-semibold"><%= event.summary || "(No title)" %></div>
+              <div class="truncate font-semibold">
+                <.icon
+                  :if={(Map.get(event, :reminders) || []) != []}
+                  name="hero-bell-micro"
+                  class="inline-block w-3 h-3 opacity-70 mr-0.5 align-text-bottom"
+                />{event.summary || "(No title)"}
+              </div>
               <div class="opacity-80"><%= Helpers.format_display_time_range(event, Helpers.time_format(assigns), @user_timezone) %></div>
               <img
                 :if={Map.get(event, :created_by_tymeslot)}
@@ -147,7 +162,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                 alt="Tymeslot"
                 class="absolute top-0.5 right-0.5 w-3 h-3 opacity-60"
               />
-              <.event_guest_badge summary={guest_summary_for_event(@guest_rsvp_summaries, event)} />
+              <EventBadges.event_guest_badge summary={EventBadges.guest_summary_for_event(@guest_rsvp_summaries, event)} />
               <%!-- Enlarged invisible resize hit-target for touch; visual handle revealed on hover --%>
               <div data-resize-handle class="absolute bottom-0 left-0 right-0 h-3 cursor-s-resize touch-none" aria-hidden="true">
                 <div class="absolute bottom-0 left-0 right-0 h-2 opacity-0 group-hover:opacity-100 bg-black/10 rounded-b"></div>
@@ -192,64 +207,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
         </button>
       </div>
     </div>
-    """
-  end
-
-  # ---------- All-day cell (with cap + "more" disclosure) ----------
-
-  attr :assigns_ref, :map, required: true
-  attr :day, :any, required: true
-  attr :myself, :any, required: true
-
-  defp allday_cell(assigns) do
-    all_day_events = Helpers.all_day_events_for_day(assigns.assigns_ref, assigns.day)
-    {shown, hidden} = Enum.split(all_day_events, @allday_visible_limit)
-
-    assigns =
-      assigns
-      |> assign(:shown, shown)
-      |> assign(:hidden, hidden)
-      |> assign(:hidden_count, length(hidden))
-
-    ~H"""
-    <details class="group border-l border-tymeslot-100 p-0.5 min-h-[1.5rem] [&>summary::-webkit-details-marker]:hidden">
-      <summary class="flex flex-col gap-0.5 list-none cursor-default">
-        <div
-          :for={event <- @shown}
-          id={"allday-event-#{event.id}"}
-          phx-hook="StopClickPropagation"
-          class={"rounded px-1 text-token-xs font-medium text-white truncate cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
-          phx-click="show_event"
-          phx-value-event-id={event.id}
-          phx-target={@myself}
-          role="button"
-          tabindex="0"
-          aria-label={"All-day: #{event.summary || "Untitled event"}"}
-        >
-          <img
-            :if={Map.get(event, :created_by_tymeslot)}
-            src="/images/brand/logo.svg"
-            alt=""
-            class="inline-block w-3 h-3 opacity-60 mr-0.5 align-text-bottom"
-          /><%= event.summary || "(No title)" %>
-        </div>
-        <span
-          :if={@hidden_count > 0}
-          class="text-token-xs text-tymeslot-500 hover:text-tymeslot-700 cursor-pointer px-1 group-open:hidden"
-        >+<%= @hidden_count %> more</span>
-      </summary>
-      <div :if={@hidden_count > 0} class="flex flex-col gap-0.5 mt-0.5">
-        <div
-          :for={event <- @hidden}
-          class={"rounded px-1 text-token-xs font-medium text-white truncate cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
-          phx-click="show_event"
-          phx-value-event-id={event.id}
-          phx-target={@myself}
-          role="button"
-          tabindex="0"
-        ><%= event.summary || "(No title)" %></div>
-      </div>
-    </details>
     """
   end
 
@@ -317,246 +274,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   defp today_in_visible?(visible_days, current_time, timezone) do
     today = current_time |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
     Enum.any?(visible_days, &(Date.compare(&1, today) == :eq))
-  end
-
-  # ---------- Month view ----------
-
-  attr :view, :atom, required: true
-  attr :visible_days, :list, required: true
-  attr :visible_events, :list, required: true
-  attr :integrations, :list, required: true
-  attr :integration_colors, :map, required: true
-  attr :hidden_integration_ids, :list, required: true
-  attr :date, :any, required: true
-  attr :user_timezone, :string, required: true
-  attr :preferences, :any
-  attr :guest_rsvp_summaries, :map, default: %{}
-  attr :myself, :any, required: true
-
-  @spec month_view(map()) :: Phoenix.LiveView.Rendered.t()
-  def month_view(assigns) do
-    ~H"""
-    <div id="calendar-month-grid" class={if @view == :month, do: "flex-1 overflow-auto", else: "hidden"}>
-      <%!-- Day-of-week headers --%>
-      <div class="grid border-b border-tymeslot-200 bg-white sticky top-0 z-10"
-        style={if Helpers.show_week_numbers?(assigns), do: "grid-template-columns: 2rem repeat(7, 1fr)", else: "grid-template-columns: repeat(7, 1fr)"}>
-        <div :if={Helpers.show_week_numbers?(assigns)} class="text-center text-token-xs font-medium text-tymeslot-400 py-1 sm:py-2">Wk</div>
-        <div :for={day_name <- Helpers.day_name_headers(assigns)} class="text-center text-token-xs font-medium text-tymeslot-500 py-1 sm:py-2 uppercase tracking-wide">
-          <span class="hidden sm:inline"><%= day_name %></span>
-          <span class="sm:hidden"><%= String.first(day_name) %></span>
-        </div>
-      </div>
-
-      <%!-- 6×7 day cells (keyed on date to retrigger fade on navigation) --%>
-      <div
-        id={"month-grid-#{@date.year}-#{@date.month}"}
-        class="grid animate-fade-in"
-        style={if Helpers.show_week_numbers?(assigns), do: "grid-template-columns: 2rem repeat(7, 1fr)", else: "grid-template-columns: repeat(7, 1fr)"}
-      >
-        <%= for {week_days, _week_idx} <- @visible_days |> Enum.chunk_every(7) |> Enum.with_index() do %>
-          <div
-            :if={Helpers.show_week_numbers?(assigns)}
-            class="text-token-xs text-tymeslot-400 flex items-start justify-center pt-1 border-b border-r border-tymeslot-100"
-          ><%= Helpers.week_number(List.first(week_days)) %></div>
-          <.month_cell
-            :for={day <- week_days}
-            day={day}
-            assigns_ref={assigns}
-            user_timezone={@user_timezone}
-            myself={@myself}
-          />
-        <% end %>
-      </div>
-    </div>
-    """
-  end
-
-  attr :day, :any, required: true
-  attr :assigns_ref, :map, required: true
-  attr :user_timezone, :string, required: true
-  attr :myself, :any, required: true
-
-  defp month_cell(assigns) do
-    day_events = Helpers.day_events(assigns.assigns_ref, assigns.day)
-
-    today =
-      DateTime.utc_now() |> DateTime.shift_zone!(assigns.user_timezone) |> DateTime.to_date()
-
-    is_today = Date.compare(assigns.day, today) == :eq
-    is_current_month = assigns.day.month == assigns.assigns_ref.date.month
-
-    assigns =
-      assigns
-      |> assign(:day_events, day_events)
-      |> assign(:is_today, is_today)
-      |> assign(:is_current_month, is_current_month)
-
-    ~H"""
-    <div
-      class={"min-h-16 sm:min-h-24 border-b border-r border-tymeslot-100 p-1 cursor-pointer hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-inset #{Helpers.month_cell_class(@day, @assigns_ref)}"}
-      phx-click="navigate_to_day"
-      phx-value-date={Date.to_iso8601(@day)}
-      phx-target={@myself}
-      role="button"
-      tabindex="0"
-      aria-label={Calendar.strftime(@day, "%A, %B %-d") <> ", #{length(@day_events)} events"}
-    >
-      <div class={"text-token-xs font-medium mb-0.5 #{day_number_class(@is_today, @is_current_month)}"}>
-        <%= @day.day %>
-      </div>
-
-      <%!-- Desktop: up to 3 event titles --%>
-      <div class="hidden sm:block">
-        <div
-          :for={event <- Enum.take(@day_events, 3)}
-          class={"rounded px-1 text-token-xs text-white truncate mb-0.5 cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
-          phx-click="show_event"
-          phx-value-event-id={event.id}
-          phx-target={@myself}
-        >
-          <img
-            :if={Map.get(event, :created_by_tymeslot)}
-            src="/images/brand/logo.svg"
-            alt=""
-            class="inline-block w-3 h-3 opacity-60 mr-0.5 align-text-bottom"
-          /><%= event.summary || "(No title)" %><span
-            :if={guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)}
-            class={["inline-block w-1.5 h-1.5 rounded-full ml-0.5 align-middle", guest_dot_tone(guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event))]}
-            title={guest_badge_title(guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event))}
-          ></span>
-        </div>
-        <div :if={length(@day_events) > 3} class="text-token-xs text-tymeslot-400 mt-0.5">
-          +<%= length(@day_events) - 3 %> more
-        </div>
-      </div>
-
-      <%!-- Mobile: first title (truncated) + coloured chip with count --%>
-      <div class="sm:hidden flex flex-col gap-0.5 mt-0.5">
-        <div
-          :if={List.first(@day_events)}
-          class={"rounded px-1 text-token-2xs text-white truncate #{Helpers.color_for_event(@assigns_ref, List.first(@day_events))}"}
-        ><%= List.first(@day_events).summary || "(No title)" %></div>
-        <div
-          :if={length(@day_events) > 1}
-          class="inline-flex items-center gap-0.5 text-token-2xs text-tymeslot-500 leading-none"
-        >
-          <span :for={event <- @day_events |> Enum.drop(1) |> Enum.take(3)}
-            class={"w-1.5 h-1.5 rounded-full #{Helpers.color_for_event(@assigns_ref, event)}"}
-          ></span>
-          <span :if={length(@day_events) > 4} class="ml-0.5">+<%= length(@day_events) - 4 %></span>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  defp day_number_class(true = _is_today, _is_current_month),
-    do:
-      "w-5 h-5 rounded-full bg-turquoise-600 text-white flex items-center justify-center text-center"
-
-  defp day_number_class(_is_today, false = _is_current_month), do: "text-tymeslot-300"
-  defp day_number_class(_is_today, _is_current_month), do: "text-tymeslot-600"
-
-  # ---------- Guest RSVP indicator ----------
-
-  # Compact accepted/total pill shown on Tymeslot-created timed event blocks.
-  attr :summary, :map, default: nil
-
-  defp event_guest_badge(assigns) do
-    ~H"""
-    <span
-      :if={@summary}
-      class={[
-        "absolute bottom-0.5 left-0.5 inline-flex items-center gap-0.5 rounded-full px-1 py-px text-[10px] font-bold leading-none",
-        guest_badge_tone(@summary)
-      ]}
-      title={guest_badge_title(@summary)}
-    >
-      <svg viewBox="0 0 16 16" fill="currentColor" class="w-2.5 h-2.5" aria-hidden="true">
-        <path d="M8 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM3.5 14a4.5 4.5 0 0 1 9 0 .5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5Z" />
-      </svg>
-      {@summary.accepted}/{@summary.total}
-    </span>
-    """
-  end
-
-  # Returns the RSVP summary for a Tymeslot-created event, or nil.
-  defp guest_summary_for_event(summaries, event) do
-    if Map.get(event, :created_by_tymeslot) do
-      Map.get(summaries || %{}, Map.get(event, :uid))
-    end
-  end
-
-  defp guest_badge_tone(%{declined: declined}) when declined > 0, do: "bg-red-500/90 text-white"
-
-  defp guest_badge_tone(%{total: total, accepted: accepted}) when total > 0 and accepted == total,
-    do: "bg-green-600/90 text-white"
-
-  defp guest_badge_tone(_summary), do: "bg-amber-500/90 text-white"
-
-  defp guest_dot_tone(%{declined: declined}) when declined > 0, do: "bg-red-500"
-
-  defp guest_dot_tone(%{total: total, accepted: accepted}) when total > 0 and accepted == total,
-    do: "bg-green-500"
-
-  defp guest_dot_tone(_summary), do: "bg-amber-500"
-
-  defp guest_badge_title(%{accepted: accepted, total: total, declined: declined}) do
-    base =
-      dgettext("dashboard", "%{accepted} of %{total} guests going",
-        accepted: accepted,
-        total: total
-      )
-
-    if declined > 0 do
-      declined_fragment =
-        dngettext("dashboard", ", %{count} declined", ", %{count} declined", declined,
-          count: declined
-        )
-
-      base <> declined_fragment
-    else
-      base
-    end
-  end
-
-  # ---------- Status banners ----------
-
-  attr :stale_integrations, :list, required: true
-  attr :syncing, :boolean, required: true
-  attr :sync_total, :integer, required: true
-  attr :sync_completed, :integer, required: true
-  attr :oldest_sync_at, :any
-  attr :myself, :any, required: true
-
-  defp status_banners(assigns) do
-    ~H"""
-    <div :if={@stale_integrations != [] and not @syncing} class="flex items-center gap-2 px-3 py-1.5 md:px-4 bg-amber-50 border-b border-amber-200 text-token-sm text-amber-700">
-      <.icon name="hero-exclamation-triangle" class="w-4 h-4 shrink-0" />
-      <span>
-        <%= if @oldest_sync_at, do: "Calendar data may be outdated (last synced #{format_sync_age(@oldest_sync_at)}).", else: "Some calendars have never been synced." %>
-      </span>
-      <button
-        phx-click="refresh"
-        phx-target={@myself}
-        class="underline hover:text-amber-900 font-medium"
-      >Refresh now</button>
-    </div>
-    <div :if={@syncing} class="flex items-center gap-2 px-3 py-1.5 md:px-4 bg-turquoise-50 border-b border-turquoise-200 text-token-sm text-turquoise-700">
-      <IconComponents.icon name={:refresh} class="w-4 h-4 animate-spin shrink-0" />
-      <span>Syncing calendars<%= if @sync_total > 1, do: " (#{@sync_completed}/#{@sync_total})", else: "" %>...</span>
-    </div>
-    """
-  end
-
-  defp format_sync_age(datetime) do
-    diff = DateTime.diff(DateTime.utc_now(), datetime, :second)
-
-    cond do
-      diff < 60 -> "just now"
-      diff < 3600 -> "#{div(diff, 60)}m ago"
-      diff < 86_400 -> "#{div(diff, 3600)}h ago"
-      true -> "#{div(diff, 86_400)}d ago"
-    end
   end
 end
