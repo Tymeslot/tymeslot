@@ -246,6 +246,14 @@ defmodule Tymeslot.Mailer.SMTPConfig do
       cacerts: cacerts,
       # Server Name Indication for hostname verification (prevents MITM)
       server_name_indication: String.to_charlist(smtp_host),
+      # RFC 6125 hostname matching, including wildcard certificates. Without this,
+      # OTP's default matcher rejects a wildcard cert (e.g. `*.mailbox.org`) when
+      # connecting to a subdomain host (e.g. `smtp.mailbox.org`) with a fatal
+      # `{:bad_cert, {:hostname_check_failed, ...}}` alert. This is the same
+      # matcher Mint/Finch/Req use for HTTPS.
+      customize_hostname_check: [
+        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+      ],
       # Maximum certificate chain depth: root CA + up to 3 intermediates + server cert
       # Industry standard allows 3-5 levels; 5 provides good compatibility
       depth: 5

@@ -149,6 +149,11 @@ defmodule Tymeslot.Mailer.SmtpProbe do
       active: false,
       verify: :verify_peer,
       server_name_indication: host,
+      # RFC 6125 hostname matching, including wildcard certificates — mirrors the
+      # send path in SMTPConfig so the probe accepts the same certs a real send does.
+      customize_hostname_check: [
+        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+      ],
       versions: versions,
       depth: depth
     ]

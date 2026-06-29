@@ -81,7 +81,24 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
       assert Keyword.has_key?(tls_opts, :verify)
       assert Keyword.has_key?(tls_opts, :cacerts)
       assert Keyword.has_key?(tls_opts, :server_name_indication)
+      assert Keyword.has_key?(tls_opts, :customize_hostname_check)
       assert Keyword.has_key?(tls_opts, :depth)
+    end
+
+    test "hostname check uses the RFC 6125 matcher so wildcard certs are accepted" do
+      # Regression: connecting to smtp.mailbox.org (cert: *.mailbox.org) failed with
+      # {:bad_cert, {:hostname_check_failed, ...}} because OTP's default matcher does
+      # not handle wildcard certificates. The :https match_fun does.
+      config =
+        SMTPConfig.build(
+          host: "smtp.mailbox.org",
+          port: 587,
+          username: "user",
+          password: "pass"
+        )
+
+      assert [match_fun: match_fun] = config[:tls_options][:customize_hostname_check]
+      assert is_function(match_fun, 2)
     end
 
     test "TLS versions include only modern protocols" do
