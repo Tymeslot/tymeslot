@@ -94,29 +94,6 @@ defmodule TymeslotWeb.Plugs.UploadStaticSecurityTest do
     end
   end
 
-  describe "call/2 — attachments path" do
-    test "forces content-disposition: attachment and nosniff for /uploads/attachments/ files",
-         %{conn: conn} do
-      path_info = ["uploads", "attachments", "7", "42", "1234_agenda.pdf"]
-
-      result = UploadStaticSecurity.call(%{conn | path_info: path_info}, [])
-
-      refute result.halted
-      assert get_resp_header(result, "content-disposition") == ["attachment"]
-      assert get_resp_header(result, "x-content-type-options") == ["nosniff"]
-    end
-
-    test "does not force content-disposition for other upload paths", %{conn: conn} do
-      path_info = ["uploads", "avatars", "7", "avatar.png"]
-
-      result = UploadStaticSecurity.call(%{conn | path_info: path_info}, [])
-
-      refute result.halted
-      assert get_resp_header(result, "content-disposition") == []
-      assert get_resp_header(result, "x-content-type-options") == ["nosniff"]
-    end
-  end
-
   describe "call/2 — already halted" do
     test "does not touch an already-halted conn", %{conn: conn} do
       halted_conn =

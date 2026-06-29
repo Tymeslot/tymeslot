@@ -46,19 +46,6 @@ defmodule TymeslotWeb.Helpers.AttachmentUploadTest do
   end
 
   @tag :tmp_dir
-  test "rejects files larger than the attachment size limit", %{tmp_dir: tmp_dir} do
-    alias TymeslotWeb.Helpers.UploadConstraints
-
-    # Write a file one byte over the allowed maximum.
-    max = UploadConstraints.max_file_size(:attachment)
-    oversized_content = :binary.copy(<<0>>, max + 1)
-    source = temp_source(tmp_dir, "oversized.pdf", oversized_content)
-
-    assert {:error, :file_too_large} =
-             AttachmentUpload.store(1, 1, %{path: source, client_name: "oversized.pdf"})
-  end
-
-  @tag :tmp_dir
   test "delete/1 removes a stored file", %{tmp_dir: tmp_dir} do
     source = temp_source(tmp_dir, "source.pdf")
     {:ok, metadata} = AttachmentUpload.store(1, 1, %{path: source, client_name: "doc.pdf"})

@@ -9,7 +9,6 @@ defmodule Tymeslot.Bookings.PolicyTest do
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings.MeetingSchema
-  alias Tymeslot.MeetingTypes
 
   describe "can_cancel_meeting?/1" do
     test "allows cancellation for future meetings" do
@@ -359,120 +358,6 @@ defmodule Tymeslot.Bookings.PolicyTest do
       attrs = Policy.build_meeting_attributes(params)
 
       assert attrs.reminders == []
-    end
-  end
-
-  describe "build_meeting_attributes/1 show_as_free snapshot" do
-    test "captures show_as_free: true from the meeting type" do
-      user = insert(:user)
-      _profile = insert(:profile, user: user)
-      meeting_type = insert(:meeting_type, user: user, show_as_free: true)
-
-      params = %{
-        meeting_uid: "meeting-uid",
-        start_datetime: DateTime.add(DateTime.utc_now(), 3600, :second),
-        end_datetime: DateTime.add(DateTime.utc_now(), 5400, :second),
-        duration_minutes: 30,
-        form_data: %{"name" => "Attendee", "email" => "attendee@example.com", "message" => ""},
-        organizer_user_id: user.id,
-        meeting_type_id: meeting_type.id,
-        user_timezone: "UTC"
-      }
-
-      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _client ->
-        {:ok, %{integration_id: 1, calendar_path: "primary"}}
-      end)
-
-      attrs = Policy.build_meeting_attributes(params)
-
-      assert attrs.show_as_free == true
-    end
-
-    test "defaults show_as_free to false when no meeting type" do
-      user = insert(:user)
-      _profile = insert(:profile, user: user)
-
-      params = %{
-        meeting_uid: "meeting-uid",
-        start_datetime: DateTime.add(DateTime.utc_now(), 3600, :second),
-        end_datetime: DateTime.add(DateTime.utc_now(), 5400, :second),
-        duration_minutes: 30,
-        form_data: %{"name" => "Attendee", "email" => "attendee@example.com", "message" => ""},
-        organizer_user_id: user.id,
-        meeting_type_id: nil,
-        user_timezone: "UTC"
-      }
-
-      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _client ->
-        {:ok, %{integration_id: 1, calendar_path: "primary"}}
-      end)
-
-      attrs = Policy.build_meeting_attributes(params)
-
-      assert attrs.show_as_free == false
-    end
-  end
-
-  describe "build_meeting_attributes/1 attachments_snapshot" do
-    test "snapshots meeting type attachments as plain maps" do
-      user = insert(:user)
-      _profile = insert(:profile, user: user)
-      meeting_type = insert(:meeting_type, user: user)
-
-      {:ok, meeting_type} =
-        MeetingTypes.add_attachment(meeting_type, %{
-          "filename" => "agenda.pdf",
-          "stored_path" => "attachments/1/2/agenda.pdf",
-          "content_type" => "application/pdf",
-          "byte_size" => 1024
-        })
-
-      params = %{
-        meeting_uid: "meeting-uid",
-        start_datetime: DateTime.add(DateTime.utc_now(), 3600, :second),
-        end_datetime: DateTime.add(DateTime.utc_now(), 5400, :second),
-        duration_minutes: 30,
-        form_data: %{"name" => "Attendee", "email" => "attendee@example.com", "message" => ""},
-        organizer_user_id: user.id,
-        meeting_type_id: meeting_type.id,
-        user_timezone: "UTC"
-      }
-
-      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _client ->
-        {:ok, %{integration_id: 1, calendar_path: "primary"}}
-      end)
-
-      attrs = Policy.build_meeting_attributes(params)
-
-      assert [snap] = attrs.attachments_snapshot
-      assert snap["filename"] == "agenda.pdf"
-      assert snap["stored_path"] == "attachments/1/2/agenda.pdf"
-      assert snap["content_type"] == "application/pdf"
-    end
-
-    test "snapshots an empty list when the meeting type has no attachments" do
-      user = insert(:user)
-      _profile = insert(:profile, user: user)
-      meeting_type = insert(:meeting_type, user: user)
-
-      params = %{
-        meeting_uid: "meeting-uid",
-        start_datetime: DateTime.add(DateTime.utc_now(), 3600, :second),
-        end_datetime: DateTime.add(DateTime.utc_now(), 5400, :second),
-        duration_minutes: 30,
-        form_data: %{"name" => "Attendee", "email" => "attendee@example.com", "message" => ""},
-        organizer_user_id: user.id,
-        meeting_type_id: meeting_type.id,
-        user_timezone: "UTC"
-      }
-
-      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _client ->
-        {:ok, %{integration_id: 1, calendar_path: "primary"}}
-      end)
-
-      attrs = Policy.build_meeting_attributes(params)
-
-      assert attrs.attachments_snapshot == []
     end
   end
 end

@@ -152,9 +152,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> foreign_key_constraint(:calendar_integration_id)
   end
 
-  # Maximum number of attachments per meeting type (mirrors the reminder cap of 3).
-  @max_attachments 5
-
   @doc """
   Focused changeset for replacing the attachments list, without re-validating
   unrelated fields (name, video integration, payment, …). Callers pass the full
@@ -165,25 +162,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     meeting_type
     |> cast(attrs, [])
     |> cast_embed(:attachments, with: &MeetingTypeAttachment.changeset/2)
-    |> validate_attachment_count()
-  end
-
-  @doc "Maximum number of attachments allowed per meeting type."
-  @spec max_attachments() :: pos_integer()
-  def max_attachments, do: @max_attachments
-
-  defp validate_attachment_count(changeset) do
-    attachments = get_field(changeset, :attachments) || []
-
-    if length(attachments) > @max_attachments do
-      add_error(
-        changeset,
-        :attachments,
-        "cannot have more than #{@max_attachments} attachments"
-      )
-    else
-      changeset
-    end
   end
 
   @doc """

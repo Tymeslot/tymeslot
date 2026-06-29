@@ -2,25 +2,18 @@ defmodule TymeslotWeb.Plugs.UploadStaticSecurity do
   @moduledoc """
   Security wrapper that guards the `/uploads` static-file mount.
 
-  Three concerns:
+  Two concerns:
 
-  * **Extension allowlist.** Upload flows produce images (`.jpg`, `.jpeg`,
-    `.png`, `.gif`, `.webp`), videos (`.mp4`, `.webm`, `.mov`), and
-    host-uploaded meeting attachments (`.pdf`, `.doc`, `.docx`, `.xls`,
-    `.xlsx`, `.ppt`, `.pptx`, `.txt`, `.csv`). Anything else reaching the
-    upload directory is either an attacker artefact that bypassed an upload
-    validator or a historical file that should no longer be served. Requests
-    for unlisted extensions return `404` before `Plug.Static` touches the
-    filesystem.
+  * **Extension allowlist.** The upload flows only ever produce images
+    (`.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`) and videos (`.mp4`,
+    `.webm`, `.mov`). Anything else reaching the upload directory is
+    either an attacker artefact that bypassed an upload validator or a
+    historical file that should no longer be served. Requests for those
+    extensions return `404` before `Plug.Static` touches the filesystem.
 
   * **MIME sniffing.** `X-Content-Type-Options: nosniff` is added to every
     allowed `/uploads` response so browsers cannot override the
     `Content-Type` that `Plug.Static` sets.
-
-  * **Forced download for attachments.** Requests under
-    `/uploads/attachments/` additionally receive
-    `Content-Disposition: attachment`, which prevents browsers from rendering
-    document types inline and neutralises stored-XSS via an uploaded file.
 
   Must be plugged **before** the `/uploads` `Plug.Static` in the endpoint.
   """
