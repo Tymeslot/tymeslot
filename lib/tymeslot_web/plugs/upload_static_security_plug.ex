@@ -25,13 +25,11 @@ defmodule TymeslotWeb.Plugs.UploadStaticSecurity do
   alias TymeslotWeb.Helpers.UploadConstraints
 
   @uploads_prefix "uploads"
-  @attachments_prefix "attachments"
 
   @allowed_extensions MapSet.new(
                         UploadConstraints.allowed_extensions(:avatar) ++
                           UploadConstraints.allowed_extensions(:image) ++
-                          UploadConstraints.allowed_extensions(:video) ++
-                          UploadConstraints.allowed_extensions(:attachment)
+                          UploadConstraints.allowed_extensions(:video)
                       )
 
   @impl Plug
@@ -42,9 +40,7 @@ defmodule TymeslotWeb.Plugs.UploadStaticSecurity do
 
   def call(%{path_info: [@uploads_prefix | rest]} = conn, _opts) when rest != [] do
     if allowed_extension?(rest) do
-      conn
-      |> put_resp_header("x-content-type-options", "nosniff")
-      |> maybe_force_download(rest)
+      put_resp_header(conn, "x-content-type-options", "nosniff")
     else
       conn
       |> put_resp_content_type("text/plain")
@@ -54,15 +50,6 @@ defmodule TymeslotWeb.Plugs.UploadStaticSecurity do
   end
 
   def call(conn, _opts), do: conn
-
-  # Meeting attachments can be document types whose browsers might render
-  # inline (and execute embedded content). Forcing a download — alongside
-  # `nosniff` — neutralises stored-XSS via an uploaded file.
-  defp maybe_force_download(conn, [@attachments_prefix | _rest]) do
-    put_resp_header(conn, "content-disposition", "attachment")
-  end
-
-  defp maybe_force_download(conn, _segments), do: conn
 
   defp allowed_extension?(segments) do
     ext =

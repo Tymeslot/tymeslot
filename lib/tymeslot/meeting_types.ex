@@ -115,54 +115,6 @@ defmodule Tymeslot.MeetingTypes do
   end
 
   @doc """
-  Appends a host-uploaded attachment to a meeting type. `metadata` carries the
-  stored-file fields (`filename`, `stored_path`, `content_type`, `byte_size`).
-  The file itself must already be persisted by the caller (web layer).
-  """
-  @spec add_attachment(Ecto.Schema.t(), map()) ::
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
-  def add_attachment(meeting_type, metadata) when is_map(metadata) do
-    attrs = %{attachments: existing_attachment_params(meeting_type) ++ [metadata]}
-    MeetingTypeQueries.update_attachments(meeting_type, attrs)
-  end
-
-  @doc """
-  Removes the attachment with the given id from a meeting type. Returns the
-  removed attachment's `stored_path` (if any) so the caller can delete the file.
-  """
-  @spec remove_attachment(Ecto.Schema.t(), String.t()) ::
-          {:ok, Ecto.Schema.t(), String.t() | nil} | {:error, Ecto.Changeset.t()}
-  def remove_attachment(meeting_type, attachment_id) do
-    {removed, kept} =
-      Enum.split_with(meeting_type.attachments || [], &(&1.id == attachment_id))
-
-    attrs = %{attachments: Enum.map(kept, &attachment_params/1)}
-
-    case MeetingTypeQueries.update_attachments(meeting_type, attrs) do
-      {:ok, updated} ->
-        stored_path = removed |> List.first() |> then(&(&1 && &1.stored_path))
-        {:ok, updated, stored_path}
-
-      error ->
-        error
-    end
-  end
-
-  defp existing_attachment_params(meeting_type) do
-    Enum.map(meeting_type.attachments || [], &attachment_params/1)
-  end
-
-  defp attachment_params(attachment) do
-    %{
-      "id" => attachment.id,
-      "filename" => attachment.filename,
-      "stored_path" => attachment.stored_path,
-      "content_type" => attachment.content_type,
-      "byte_size" => attachment.byte_size
-    }
-  end
-
-  @doc """
   Toggles the active status of a meeting type without validating video integration.
   """
   @spec toggle_meeting_type_status(Ecto.Schema.t(), map()) ::

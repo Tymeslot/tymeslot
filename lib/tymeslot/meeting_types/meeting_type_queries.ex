@@ -110,17 +110,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
-  Replaces a meeting type's attachments using a focused changeset.
-  """
-  @spec update_attachments(MeetingTypeSchema.t(), map()) ::
-          {:ok, MeetingTypeSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_attachments(meeting_type, attrs) do
-    meeting_type
-    |> MeetingTypeSchema.attachments_changeset(attrs)
-    |> Repo.update()
-  end
-
-  @doc """
   Toggles the active status of a meeting type.
   Uses a simplified changeset that doesn't validate video integration requirements.
   """

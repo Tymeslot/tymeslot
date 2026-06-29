@@ -153,18 +153,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   end
 
   @doc """
-  Focused changeset for replacing the attachments list, without re-validating
-  unrelated fields (name, video integration, payment, …). Callers pass the full
-  desired attachment set under `:attachments`.
-  """
-  @spec attachments_changeset(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
-  def attachments_changeset(meeting_type, attrs) do
-    meeting_type
-    |> cast(attrs, [])
-    |> cast_embed(:attachments, with: &MeetingTypeAttachment.changeset/2)
-  end
-
-  @doc """
   Simple changeset for toggling active status.
   Only validates the is_active field without checking video integration requirements.
   """
