@@ -248,7 +248,8 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       video_integration = insert(:video_integration, user: user)
       meeting = missing_video_room_meeting(user, video_integration, 2)
 
-      results = MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+      results =
+        MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
 
       assert length(results) == 1
       assert hd(results).id == meeting.id
@@ -271,7 +272,10 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         )
 
       assert [] =
-               MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+               MeetingListQueries.list_user_meetings_missing_video_rooms(
+                 user.id,
+                 DateTime.utc_now()
+               )
     end
 
     test "excludes non-confirmed meetings" do
@@ -291,7 +295,10 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         )
 
       assert [] =
-               MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+               MeetingListQueries.list_user_meetings_missing_video_rooms(
+                 user.id,
+                 DateTime.utc_now()
+               )
     end
 
     test "excludes past meetings" do
@@ -315,7 +322,10 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         )
 
       assert [] =
-               MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+               MeetingListQueries.list_user_meetings_missing_video_rooms(
+                 user.id,
+                 DateTime.utc_now()
+               )
     end
 
     test "excludes meetings with a null video_integration_id" do
@@ -334,7 +344,10 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         )
 
       assert [] =
-               MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+               MeetingListQueries.list_user_meetings_missing_video_rooms(
+                 user.id,
+                 DateTime.utc_now()
+               )
     end
 
     test "excludes meetings belonging to a different user" do
@@ -345,7 +358,10 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       _other_meeting = missing_video_room_meeting(other_user, video_integration, 2)
 
       assert [] =
-               MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+               MeetingListQueries.list_user_meetings_missing_video_rooms(
+                 user.id,
+                 DateTime.utc_now()
+               )
     end
 
     test "honours the limit parameter" do
@@ -369,7 +385,8 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       later = missing_video_room_meeting(user, video_integration, 5)
       sooner = missing_video_room_meeting(user, video_integration, 2)
 
-      results = MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+      results =
+        MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
 
       assert Enum.map(results, & &1.id) == [sooner.id, later.id]
     end
