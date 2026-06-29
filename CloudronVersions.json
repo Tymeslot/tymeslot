@@ -2191,7 +2191,7 @@
       "ts": "Fri, 17 Apr 2026 20:39:29 GMT"
     },
     "1.2.5": {
-      "creationDate": "Mon, 29 Jun 2026 07:32:28 GMT",
+      "creationDate": "Mon, 29 Jun 2026 08:02:03 GMT",
       "manifest": {
         "addons": {
           "localstorage": {},
@@ -2202,7 +2202,7 @@
           "sendmail": {}
         },
         "author": "Luka Karsten Breitig",
-        "changelog": "File attachments on meeting types, a personal free/busy calendar feed, and richer calendar events.\n* Attach files to a meeting type — shared with bookers at confirmation\n* Personal free/busy calendar feed for sharing availability externally\n* Calendar events enriched with conference links, language tags and free/busy status\n* SMTP now accepts wildcard TLS certificates",
+        "changelog": "Personal free/busy feed, richer calendar events, and CalDAV improvements.\n* Personal free/busy calendar feed for sharing availability externally\n* Calendar events enriched with conference links, language tags and free/busy status\n* SMTP now accepts wildcard TLS certificates",
         "contactEmail": "hello@tymeslot.app",
         "description": "A meeting scheduler application with CalDAV integration",
         "dockerImage": "luka1thb/tymeslot-cloudron:1.2.5",
@@ -2235,7 +2235,7 @@
         "website": "https://tymeslot.app"
       },
       "publishState": "published",
-      "ts": "Mon, 29 Jun 2026 07:32:28 GMT"
+      "ts": "Mon, 29 Jun 2026 08:02:03 GMT"
     }
   }
 }
