@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
   import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
+  import Tymeslot.ThemeBookingFlowHelpers
 
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -36,105 +37,21 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
       @tag :capture_log
       test "visitor can book end-to-end with #{meta.name} theme", %{conn: conn} do
         timezone = "America/New_York"
-        user = insert(:user)
 
-        profile =
-          insert(:profile,
-            user: user,
-            username: "book-#{unquote(meta.name)}",
-            booking_theme: unquote(theme_id),
-            timezone: timezone,
-            advance_booking_days: 30,
-            min_advance_hours: 0,
-            buffer_minutes: 0
-          )
-
-        _meeting_type =
-          insert(:meeting_type,
-            user: user,
-            duration_minutes: 30,
-            name: "Quick Chat",
-            is_active: true
-          )
-
-        Enum.each(1..7, fn day_of_week ->
-          insert(:weekly_availability,
-            profile: profile,
-            day_of_week: day_of_week,
-            is_available: true,
-            start_time: ~T[09:00:00],
-            end_time: ~T[17:00:00]
-          )
-        end)
-
-        _integration =
-          insert(:calendar_integration,
-            user: user,
-            is_active: true
-          )
+        %{user: user, profile: profile} =
+          seed_booking_account(unquote(theme_id), "book-#{unquote(meta.name)}", timezone)
 
         {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=#{timezone}")
 
-        # Overview: select duration + continue
-        view
-        |> element(
-          "button[data-testid='duration-option'][data-duration='#{unquote(meta.duration_selector)}']"
-        )
-        |> render_click()
-
-        view
-        |> element("button[data-testid='next-step']")
-        |> render_click()
-
-        # Schedule: pick a date + time slot
-        target_date = next_business_day(Date.utc_today())
-        date_str = Date.to_string(target_date)
-
-        navigate_calendar_to_date(view, unquote(meta.name), target_date)
-
-        wait_until(fn ->
-          has_element?(
-            view,
-            "button[data-testid='calendar-day'][phx-value-date='#{date_str}']:not([disabled])"
-          )
-        end)
-
-        view
-        |> element("button[data-testid='calendar-day'][phx-value-date='#{date_str}']")
-        |> render_click()
-
-        wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
-
-        slot =
-          view
-          |> render()
-          |> Floki.parse_document!()
-          |> first_slot_time()
-
-        view
-        |> element("button[data-testid='time-slot'][phx-value-time='#{slot}']")
-        |> render_click()
-
-        wait_until(fn -> not has_element?(view, "button[data-testid='next-step'][disabled]") end)
-
-        view
-        |> element("button[data-testid='next-step']")
-        |> render_click()
-
-        # Booking: submit form
         attendee_email = "attendee-#{unquote(meta.name)}@example.com"
 
-        wait_until(fn -> has_element?(view, "form[data-testid='booking-form']") end)
+        confirmation_html =
+          complete_booking_flow(view, unquote(meta.name), unquote(theme_id), %{
+            name: "Test Attendee",
+            email: attendee_email,
+            message: "Hello!"
+          })
 
-        submit_booking_form(view, unquote(theme_id), %{
-          name: "Test Attendee",
-          email: attendee_email,
-          message: "Hello!"
-        })
-
-        wait_until(fn -> has_element?(view, "[data-testid='confirmation-heading']") end, 10_000)
-
-        confirmation_html = render(view)
         assert confirmation_html =~ attendee_email
 
         # The confirmation must show the meeting type's real duration, derived from
@@ -149,6 +66,34 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
         assert meeting.status == "confirmed"
       end
+    end
+  end
+
+  describe "preview booking is simulated, not persisted" do
+    @tag :capture_log
+    test "completing a booking in preview mode shows confirmation but creates no meeting", %{
+      conn: conn
+    } do
+      timezone = "America/New_York"
+      %{user: user, profile: profile} = seed_booking_account("1", "preview-book", timezone)
+
+      # Load the page as an owner preview — bookings here must be simulated.
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}?preview=true&timezone=#{timezone}")
+
+      attendee_email = "preview-attendee@example.com"
+
+      # The full confirmation flow renders, exactly as a real visitor would see.
+      confirmation_html =
+        complete_booking_flow(view, "quill", "1", %{
+          name: "Preview Attendee",
+          email: attendee_email,
+          message: "Just looking!"
+        })
+
+      assert confirmation_html =~ attendee_email
+
+      # ...but nothing was persisted: no meeting row exists for this organiser.
+      assert Repo.get_by(MeetingSchema, organizer_user_id: user.id) == nil
     end
   end
 
@@ -561,63 +506,6 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
       assert render(view2) =~ "This time slot is no longer available"
       refute has_element?(view2, "[data-testid='confirmation-heading']")
     end
-  end
-
-  defp submit_booking_form(view, _theme_id, %{name: name, email: email, message: message}) do
-    view
-    |> form("form[data-testid='booking-form']", %{
-      "booking" => %{"name" => name, "email" => email, "message" => message}
-    })
-    |> render_submit()
-  end
-
-  defp first_slot_time(doc) do
-    val = List.first(Floki.attribute(doc, "button[data-testid='time-slot']", "phx-value-time"))
-
-    case val do
-      nil ->
-        data_time =
-          List.first(Floki.attribute(doc, "button[data-testid='time-slot']", "data-time"))
-
-        case data_time do
-          nil -> flunk("Expected at least one available time slot after selecting a date")
-          slot -> slot
-        end
-
-      slot ->
-        slot
-    end
-  end
-
-  defp navigate_calendar_to_date(view, theme_name, target_date) do
-    today = Date.utc_today()
-
-    case theme_name do
-      "quill" ->
-        if target_date.year > today.year ||
-             (target_date.year == today.year && target_date.month > today.month) do
-          view |> element("button[phx-click='next_month']") |> render_click()
-        end
-
-      "rhythm" ->
-        week_start = Date.beginning_of_week(today, :monday)
-        week_end = Date.add(week_start, 6)
-
-        if Date.compare(target_date, week_end) == :gt do
-          view |> element("button[phx-click='next_week']") |> render_click()
-        end
-
-      _date ->
-        :ok
-    end
-  end
-
-  defp next_business_day(%Date{} = start_date) do
-    Enum.find_value(1..14, fn offset ->
-      date = Date.add(start_date, offset)
-      dow = Date.day_of_week(date)
-      if dow in 1..5, do: date, else: nil
-    end) || Date.add(start_date, 1)
   end
 
   # Returns the next 2nd-Sunday-of-March (US DST spring-forward) after `today`.

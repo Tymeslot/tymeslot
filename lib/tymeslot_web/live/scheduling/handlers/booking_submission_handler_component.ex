@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Bookings.DemoOrchestrator
   alias Tymeslot.CustomFields
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
@@ -408,7 +409,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       organizer_user_id: socket.assigns[:organizer_user_id]
     ]
 
-    orchestrator = Demo.get_orchestrator(socket)
+    orchestrator = booking_orchestrator(socket)
 
     case orchestrator.submit_booking(params, opts) do
       {:ok, :payment_required, %{meeting: meeting, checkout_url: url}} ->
@@ -435,6 +436,20 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
       {:error, reason} ->
         handle_booking_error(socket, reason)
+    end
+  end
+
+  # In preview mode — the owner previewing their own page, or a theme-switch
+  # preview — a booking must be SIMULATED: no database row, no confirmation
+  # email, no calendar event. The demo orchestrator builds a realistic mock
+  # meeting from the real organiser, so the preview shows the full confirmation
+  # flow exactly as a visitor would, without creating anything. Falls back to
+  # the normally-resolved orchestrator (real, or SaaS demo) otherwise.
+  defp booking_orchestrator(socket) do
+    if socket.assigns[:theme_preview] do
+      DemoOrchestrator
+    else
+      Demo.get_orchestrator(socket)
     end
   end
 

@@ -12,6 +12,7 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
   """
 
   alias Ecto.UUID
+  alias Tymeslot.Bookings.Validation
   alias Tymeslot.Demo
 
   require Logger
@@ -107,14 +108,14 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
   defp suffix_valid?(""), do: true
   defp suffix_valid?(suffix), do: String.match?(suffix, ~r/^m(in)?$/i)
 
-  defp parse_start_time(%{date: date, time: time, user_timezone: tz}) do
-    with {:ok, d} <- Date.from_iso8601(date),
-         {:ok, t} <- Time.from_iso8601(time <> ":00"),
-         {:ok, ndt} <- NaiveDateTime.new(d, t),
-         {:ok, dt} <- DateTime.from_naive(ndt, tz) do
-      {:ok, dt}
-    else
-      _other -> {:error, :invalid_datetime}
+  # Parse the slot via the shared booking validation so the simulated start time
+  # matches exactly how the real orchestrator interprets it. The booking flow's
+  # slot values aren't always plain ISO `HH:MM`, so a naive parse rejected real
+  # slots — which broke simulated bookings from a live preview.
+  defp parse_start_time(%{date: date, time: time, user_timezone: tz} = meeting_params) do
+    case Validation.parse_meeting_times(date, time, meeting_params[:duration], tz) do
+      {:ok, {start_datetime, _end_datetime}} -> {:ok, start_datetime}
+      _error -> {:error, :invalid_datetime}
     end
   end
 

@@ -40,18 +40,22 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
   @doc """
   Assigns theme-related data including preview mode detection.
 
-  This function checks for the "theme" parameter in params to enable
-  preview mode, which preserves the theme parameter during navigation.
+  A page is a preview when the URL carries either `?theme=` (a theme-switch
+  preview, which also selects the previewed theme id) or `?preview=` (the
+  owner previewing their own published page, keeping the stored theme). Both
+  set `:theme_preview`, the single signal downstream gates rely on — notably
+  the booking submit, which simulates rather than persists in preview mode.
   """
   @spec assign_theme_with_preview(Phoenix.LiveView.Socket.t(), map()) ::
           Phoenix.LiveView.Socket.t()
   def assign_theme_with_preview(socket, params) do
-    # Check if we're in preview mode (theme parameter present in URL)
-    theme_preview = Map.has_key?(params, "theme")
+    theme_switch = Map.has_key?(params, "theme")
+    theme_preview = theme_switch or Map.has_key?(params, "preview")
 
-    # Use theme from URL params if in preview mode, otherwise use default
+    # Only a theme-switch preview picks the theme id from the URL; an owner
+    # preview keeps whatever theme is already assigned.
     theme_id =
-      if theme_preview do
+      if theme_switch do
         params["theme"] || socket.assigns[:theme_id] || "1"
       else
         socket.assigns[:theme_id] || "1"
