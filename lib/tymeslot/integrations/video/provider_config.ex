@@ -254,16 +254,19 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
     end
   end
 
+  @display_names %{
+    mirotalk: "MiroTalk P2P",
+    google_meet: "Google Meet",
+    teams: "Microsoft Teams",
+    zoom: "Zoom",
+    custom: "Custom Video Link"
+  }
+
   @doc """
   Gets the display name for a provider.
   """
   @spec display_name(atom()) :: String.t()
-  def display_name(:mirotalk), do: "MiroTalk P2P"
-  def display_name(:google_meet), do: "Google Meet"
-  def display_name(:teams), do: "Microsoft Teams"
-  def display_name(:zoom), do: "Zoom"
-  def display_name(:custom), do: "Custom Video Link"
-  def display_name(_provider), do: "Unknown Provider"
+  def display_name(provider), do: Map.get(@display_names, provider, "Unknown Provider")
 
   @doc """
   Returns the provider modules list (enabled only).

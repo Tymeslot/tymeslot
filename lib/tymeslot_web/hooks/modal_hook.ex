@@ -73,69 +73,32 @@ defmodule TymeslotWeb.Hooks.ModalHook do
     |> Component.assign(:saving, false)
   end
 
-  defp resolve_keys(:delete_break), do: {:show_delete_break_modal, :delete_break_modal_data}
-  defp resolve_keys(:clear_day), do: {:show_clear_day_modal, :clear_day_modal_data}
-  defp resolve_keys(:cancel_meeting), do: {:show_cancel_meeting_modal, :cancel_meeting_modal_data}
+  @modal_registry %{
+    delete_break: {:show_delete_break_modal, :delete_break_modal_data},
+    clear_day: {:show_clear_day_modal, :clear_day_modal_data},
+    cancel_meeting: {:show_cancel_meeting_modal, :cancel_meeting_modal_data},
+    reschedule_request: {:show_reschedule_request_modal, :reschedule_request_modal_data},
+    delete_meeting_type: {:show_delete_meeting_type_modal, :delete_meeting_type_modal_data},
+    delete_avatar: {:show_delete_avatar_modal, :delete_avatar_modal_data},
+    delete: {:show_delete_modal, :delete_modal_data},
+    create: {:show_create_modal, :create_modal_data},
+    edit: {:show_edit_modal, :edit_modal_data},
+    deliveries: {:show_deliveries_modal, :deliveries_modal_data},
+    regenerate_token: {:show_regenerate_token_modal, :regenerate_token_modal_data},
+    telegram_delete: {:show_telegram_delete_modal, :telegram_delete_modal_data},
+    telegram_deliveries: {:show_telegram_deliveries_modal, :telegram_deliveries_modal_data},
+    slack_delete: {:show_slack_delete_modal, :slack_delete_modal_data},
+    slack_deliveries: {:show_slack_deliveries_modal, :slack_deliveries_modal_data}
+  }
 
-  defp resolve_keys(:reschedule_request),
-    do: {:show_reschedule_request_modal, :reschedule_request_modal_data}
+  defp resolve_keys(k) when is_atom(k) do
+    case Map.fetch(@modal_registry, k) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "Unknown modal name: #{inspect(k)}"
+    end
+  end
 
-  defp resolve_keys(:delete_meeting_type),
-    do: {:show_delete_meeting_type_modal, :delete_meeting_type_modal_data}
-
-  defp resolve_keys(:delete_avatar), do: {:show_delete_avatar_modal, :delete_avatar_modal_data}
-  defp resolve_keys(:delete), do: {:show_delete_modal, :delete_modal_data}
-  defp resolve_keys(:create), do: {:show_create_modal, :create_modal_data}
-  defp resolve_keys(:edit), do: {:show_edit_modal, :edit_modal_data}
-  defp resolve_keys(:deliveries), do: {:show_deliveries_modal, :deliveries_modal_data}
-
-  defp resolve_keys(:regenerate_token),
-    do: {:show_regenerate_token_modal, :regenerate_token_modal_data}
-
-  defp resolve_keys(:telegram_delete),
-    do: {:show_telegram_delete_modal, :telegram_delete_modal_data}
-
-  defp resolve_keys(:telegram_deliveries),
-    do: {:show_telegram_deliveries_modal, :telegram_deliveries_modal_data}
-
-  defp resolve_keys(:slack_delete),
-    do: {:show_slack_delete_modal, :slack_delete_modal_data}
-
-  defp resolve_keys(:slack_deliveries),
-    do: {:show_slack_deliveries_modal, :slack_deliveries_modal_data}
-
-  defp resolve_keys("delete_break"), do: {:show_delete_break_modal, :delete_break_modal_data}
-  defp resolve_keys("clear_day"), do: {:show_clear_day_modal, :clear_day_modal_data}
-
-  defp resolve_keys("cancel_meeting"),
-    do: {:show_cancel_meeting_modal, :cancel_meeting_modal_data}
-
-  defp resolve_keys("reschedule_request"),
-    do: {:show_reschedule_request_modal, :reschedule_request_modal_data}
-
-  defp resolve_keys("delete_meeting_type"),
-    do: {:show_delete_meeting_type_modal, :delete_meeting_type_modal_data}
-
-  defp resolve_keys("delete_avatar"), do: {:show_delete_avatar_modal, :delete_avatar_modal_data}
-  defp resolve_keys("delete"), do: {:show_delete_modal, :delete_modal_data}
-  defp resolve_keys("create"), do: {:show_create_modal, :create_modal_data}
-  defp resolve_keys("edit"), do: {:show_edit_modal, :edit_modal_data}
-  defp resolve_keys("deliveries"), do: {:show_deliveries_modal, :deliveries_modal_data}
-
-  defp resolve_keys("regenerate_token"),
-    do: {:show_regenerate_token_modal, :regenerate_token_modal_data}
-
-  defp resolve_keys("telegram_delete"),
-    do: {:show_telegram_delete_modal, :telegram_delete_modal_data}
-
-  defp resolve_keys("telegram_deliveries"),
-    do: {:show_telegram_deliveries_modal, :telegram_deliveries_modal_data}
-
-  defp resolve_keys("slack_delete"),
-    do: {:show_slack_delete_modal, :slack_delete_modal_data}
-
-  defp resolve_keys("slack_deliveries"),
-    do: {:show_slack_deliveries_modal, :slack_deliveries_modal_data}
+  defp resolve_keys(k) when is_binary(k), do: resolve_keys(String.to_existing_atom(k))
 
   defp resolve_keys(other), do: raise(ArgumentError, "Unknown modal name: #{inspect(other)}")
 end
