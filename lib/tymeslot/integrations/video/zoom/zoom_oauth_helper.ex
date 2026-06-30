@@ -18,11 +18,13 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
 
   @behaviour Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperBehaviour
 
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Retry
   alias Tymeslot.Integrations.Common.OAuth.ErrorParser
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
+  alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
   alias Tymeslot.Integrations.Shared.ZoomConfig
 
   require Logger
@@ -55,9 +57,7 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
       state: state
     }
 
-    params = if login_hint, do: Map.put(params, :login_hint, login_hint), else: params
-
-    url = "#{@authorize_url}?" <> URI.encode_query(params)
+    url = ProviderHelpers.build_authorization_url(@authorize_url, params, login_hint)
     Logger.info("Generated Zoom OAuth URL", scope: @zoom_scope)
     url
   end
@@ -180,7 +180,7 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
     ]
 
     Retry.with_backoff(fn ->
-      case http_client().get(@user_profile_url, headers, []) do
+      case Config.http_client_module().get(@user_profile_url, headers, []) do
         {:ok, %Req.Response{status: 200, body: body}} ->
           parse_profile_body(body)
 
@@ -240,10 +240,6 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
 
       {:error, :missing_required_scope}
     end
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 
   defp generate_state(user_id, integration_id) do

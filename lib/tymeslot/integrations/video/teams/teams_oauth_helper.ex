@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
 
   @behaviour Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperBehaviour
 
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Retry
   alias Tymeslot.Integrations.Common.OAuth.ErrorParser
@@ -16,6 +17,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
+  alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
 
   require Logger
 
@@ -43,10 +45,9 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
       prompt: "select_account"
     }
 
-    params = if login_hint, do: Map.put(params, :login_hint, login_hint), else: params
+    url =
+      ProviderHelpers.build_authorization_url("#{@oauth_base_url}/authorize", params, login_hint)
 
-    query_string = URI.encode_query(params)
-    url = "#{@oauth_base_url}/authorize?" <> query_string
     Logger.info("Generated Teams OAuth URL", scope: @teams_scope)
     url
   end
@@ -102,7 +103,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
   end
 
   defp ensure_calendar_scope(tokens) do
-    returned_scope = tokens[:scope] || tokens.scope || ""
+    returned_scope = tokens[:scope] || ""
 
     if String.contains?(returned_scope, "Calendars.ReadWrite"),
       do: returned_scope,
@@ -116,7 +117,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
     ]
 
     Retry.with_backoff(fn ->
-      case http_client().get("https://graph.microsoft.com/v1.0/me", headers, []) do
+      case Config.http_client_module().get("https://graph.microsoft.com/v1.0/me", headers, []) do
         {:ok, %Req.Response{status: 200, body: body}} ->
           case Jason.decode(body) do
             {:ok, %{"id" => id} = profile} when is_binary(id) and id != "" ->
@@ -140,10 +141,6 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
           {:error, "Network error fetching profile: #{inspect(reason)}"}
       end
     end)
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 
   @doc """
@@ -228,7 +225,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
   defp verify_state(_arg), do: {:error, "Invalid state parameter"}
 
   defp verify_required_scopes(tokens) do
-    returned_scope = tokens[:scope] || tokens.scope || ""
+    returned_scope = tokens[:scope] || ""
 
     if String.contains?(returned_scope, "Calendars.ReadWrite") do
       :ok

@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   alias Tymeslot.Integrations.Common.OAuth.IdToken
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
+  alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
 
   @calendar_scope "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access openid profile email"
   @oauth_base_url "https://login.microsoftonline.com/common/oauth2/v2.0"
@@ -48,10 +49,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
       prompt: "select_account"
     }
 
-    params = if login_hint, do: Map.put(params, :login_hint, login_hint), else: params
-
-    query_string = URI.encode_query(params)
-    "#{@oauth_base_url}/authorize?" <> query_string
+    ProviderHelpers.build_authorization_url("#{@oauth_base_url}/authorize", params, login_hint)
   end
 
   @doc """
