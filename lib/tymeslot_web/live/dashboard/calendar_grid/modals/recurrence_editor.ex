@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
       <div class="flex-1">
         <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">Repeat</p>
 
-        <form phx-change={@change_event} phx-target={@myself} class="space-y-2">
+        <form id={"recurrence-editor-form-#{@change_event}"} phx-change={@change_event} phx-target={@myself} class="space-y-2">
           <select
             name="freq"
             class="w-full rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
