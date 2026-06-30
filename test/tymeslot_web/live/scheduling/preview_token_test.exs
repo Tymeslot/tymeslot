@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewTokenTest do
   @moduletag :scheduling
   @moduletag :unit
 
+  alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Live.Scheduling.PreviewToken
 
   @salt "booking owner preview"
@@ -46,7 +47,7 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewTokenTest do
       # timestamp (seconds since epoch) so we can back-date without sleeping.
       expired_token =
         Phoenix.Token.sign(
-          TymeslotWeb.Endpoint,
+          Endpoint,
           @salt,
           user_id,
           signed_at: System.system_time(:second) - 3601
