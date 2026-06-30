@@ -26,6 +26,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   """
 
   alias Ecto.UUID
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Meetings.MeetingQueries
   require Logger
@@ -307,7 +308,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
     # Send error notification email to calendar owner only
     # This helps identify persistent CalDAV issues
-    case email_service_module().send_calendar_sync_error(meeting, error_reason) do
+    case Config.email_service_module().send_calendar_sync_error(meeting, error_reason) do
       :ok ->
         :ok
 
@@ -366,11 +367,6 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     do: Map.put(attrs, :provider_event_id, provider_id)
 
   defp put_provider_mapping(attrs, _other), do: attrs
-
-  defp email_service_module do
-    Application.get_env(:tymeslot, :email_service_module) ||
-      Tymeslot.Emails.EmailService
-  end
 
   defp calendar_module do
     Application.get_env(:tymeslot, :calendar_module) ||

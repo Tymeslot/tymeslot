@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Infrastructure.Config
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.CalendarManagement
@@ -26,7 +27,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
          {:ok, integration} <- fetch_integration(integration_type, integration_id) do
       type_atom = safe_integration_type_atom(integration_type)
 
-      case email_service_module().send_integration_unhealthy_notification(
+      case Config.email_service_module().send_integration_unhealthy_notification(
              user,
              integration,
              type_atom
@@ -78,7 +79,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
          {:ok, integration} <- fetch_integration(integration_type, integration_id) do
       type_atom = safe_integration_type_atom(integration_type)
 
-      case email_service_module().send_integration_paused_notification(
+      case Config.email_service_module().send_integration_paused_notification(
              user,
              integration,
              type_atom,
@@ -119,7 +120,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
     with {:ok, user} <- UserQueries.get_user(user_id),
          {:ok, details} <- build_invitation_details(user, args),
          {:ok, _email_result} <-
-           email_service_module().send_calendar_invitation(args["attendee_email"], details) do
+           Config.email_service_module().send_calendar_invitation(args["attendee_email"], details) do
       Logger.info("Calendar invitation sent",
         attendee_email: args["attendee_email"],
         event_uid: args["event_uid"]
@@ -159,7 +160,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
 
       results =
         Enum.map(args["attendee_emails"], fn email ->
-          email_service_module().send_event_update_notification(email, details)
+          Config.email_service_module().send_event_update_notification(email, details)
         end)
 
       errors = Enum.filter(results, &match?({:error, _reason}, &1))
@@ -329,11 +330,5 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
       method: parse_method(args["method"]),
       sequence: args["sequence"]
     }
-  end
-
-  defp email_service_module do
-    Application.get_env(:tymeslot, :email_service_module) ||
-      Application.get_env(:tymeslot, :email_service) ||
-      Tymeslot.Emails.EmailService
   end
 end
