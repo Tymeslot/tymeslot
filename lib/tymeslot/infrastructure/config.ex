@@ -59,6 +59,33 @@ defmodule Tymeslot.Infrastructure.Config do
     get_module(:oauth_helper_module, Tymeslot.Auth.OAuth.Helper)
   end
 
+  @doc """
+  Gets the HTTP client module configured for the application.
+
+  Read at runtime so tests can inject a mock via `with_config/3` or
+  `Application.put_env/3`.
+  """
+  @spec http_client_module() :: module()
+  def http_client_module do
+    get_module(:http_client_module, Tymeslot.Infrastructure.HTTPClient)
+  end
+
+  @doc """
+  Gets the Google Calendar API module configured for the application.
+  """
+  @spec google_calendar_api_module() :: module()
+  def google_calendar_api_module do
+    get_module(:google_calendar_api_module, Tymeslot.Integrations.Calendar.Google.CalendarAPI)
+  end
+
+  @doc """
+  Gets the Outlook Calendar API module configured for the application.
+  """
+  @spec outlook_calendar_api_module() :: module()
+  def outlook_calendar_api_module do
+    get_module(:outlook_calendar_api_module, Tymeslot.Integrations.Calendar.Outlook.CalendarAPI)
+  end
+
   # Configuration Modules
 
   @doc """

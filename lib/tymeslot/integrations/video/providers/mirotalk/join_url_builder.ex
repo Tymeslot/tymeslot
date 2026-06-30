@@ -10,7 +10,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
 
   require Logger
 
-  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
 
@@ -50,7 +50,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
 
     handle_join_api_response(
       HttpHelpers.try_https_then_http(base_url, "/api/v1/join", fn url ->
-        http_client().post(url, body, headers, ssrf_protect: true)
+        Config.http_client_module().post(url, body, headers, ssrf_protect: true)
       end),
       :with_validation
     )
@@ -86,7 +86,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
 
     handle_join_api_response(
       HttpHelpers.try_https_then_http(base_url, "/api/v1/join", fn url ->
-        http_client().post(url, body, headers, ssrf_protect: true)
+        Config.http_client_module().post(url, body, headers, ssrf_protect: true)
       end),
       :legacy
     )
@@ -272,8 +272,4 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
 
   defp map_role("organizer"), do: "admin"
   defp map_role(_other), do: "guest"
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
-  end
 end

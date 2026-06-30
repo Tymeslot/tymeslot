@@ -10,7 +10,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   require Logger
 
-  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder
@@ -98,7 +98,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     # Always try HTTPS first; if it fails due to network/connection, fall back to HTTP
     handle_api_response(
       HttpHelpers.try_https_then_http(base_url, "/api/v1/meeting", fn url ->
-        http_client().post(url, "", headers, options)
+        Config.http_client_module().post(url, "", headers, options)
       end)
     )
   end
@@ -204,7 +204,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
     # Try HTTPS first, then HTTP
     case HttpHelpers.try_https_then_http(base_url, "/api/v1/meeting", fn url ->
-           http_client().post(url, "", headers, ssrf_protect: true)
+           Config.http_client_module().post(url, "", headers, ssrf_protect: true)
          end) do
       {:ok, %Req.Response{status: 200, body: body}} ->
         case Jason.decode(body) do
@@ -378,9 +378,5 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       :ok -> :ok
       {:error, :rate_limited, message} -> {:error, message}
     end
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
   end
 end

@@ -4,6 +4,8 @@ defmodule Tymeslot.Telegram.API do
   All outbound requests to api.telegram.org go through this module.
   """
 
+  alias Tymeslot.Infrastructure.Config
+
   @base_url "https://api.telegram.org/bot"
   @timeout_ms 10_000
 
@@ -33,7 +35,7 @@ defmodule Tymeslot.Telegram.API do
     body = Jason.encode!(params)
     headers = [{"content-type", "application/json"}]
 
-    case http_client().post(url, body, headers, receive_timeout: @timeout_ms) do
+    case Config.http_client_module().post(url, body, headers, receive_timeout: @timeout_ms) do
       {:ok, %{status: status, body: response_body}} ->
         {:ok, status, response_body}
 
@@ -43,9 +45,5 @@ defmodule Tymeslot.Telegram.API do
       {:error, reason} ->
         {:error, inspect(reason)}
     end
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 end

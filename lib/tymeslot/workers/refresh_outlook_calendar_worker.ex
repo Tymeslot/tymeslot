@@ -29,8 +29,8 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.DeltaSync, as: OutlookDeltaSync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
@@ -85,11 +85,11 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
   end
 
   defp bootstrap(integration) do
-    case outlook_calendar_api().bootstrap_sync(integration) do
+    case Config.outlook_calendar_api_module().bootstrap_sync(integration) do
       {:ok, updated} ->
         # Opportunistic webhook (re-)registration. Non-fatal: a seeded delta
         # link is enough on its own, the next click/sweep can keep things current.
-        outlook_calendar_api().register_graph_subscription(updated)
+        Config.outlook_calendar_api_module().register_graph_subscription(updated)
         broadcast_complete(updated)
         :ok
 
@@ -105,9 +105,5 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
 
   defp broadcast_complete(integration) do
     SyncBroadcast.broadcast_sync_complete(integration.user_id, integration.id)
-  end
-
-  defp outlook_calendar_api do
-    Application.get_env(:tymeslot, :outlook_calendar_api_module, OutlookCalendarAPI)
   end
 end

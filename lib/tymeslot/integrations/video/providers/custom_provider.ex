@@ -43,6 +43,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   - Be reachable (in test_connection only)
   """
 
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.TemplateConfig
 
@@ -365,7 +366,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
       max_redirects: 3
     ]
 
-    case http_client().head(url, [], opts) do
+    case Config.http_client_module().head(url, [], opts) do
       {:ok, %{status: status}} when status in 200..399 ->
         {:ok, status}
 
@@ -381,7 +382,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   end
 
   defp do_get(url, opts) do
-    case http_client().get(url, [], opts) do
+    case Config.http_client_module().get(url, [], opts) do
       {:ok, %{status: status}} when status in 200..399 ->
         {:ok, status}
 
@@ -403,9 +404,5 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
       {:error, reason} ->
         {:error, "Failed to reach URL: #{inspect(reason)}"}
     end
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 end

@@ -3,6 +3,8 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
   reCAPTCHA v3 verification module for validating tokens.
   """
 
+  alias Tymeslot.Infrastructure.Config
+
   require Logger
 
   @verify_url "https://www.google.com/recaptcha/api/siteverify"
@@ -60,7 +62,7 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
 
     headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
 
-    case http_client().post(@verify_url, body, headers,
+    case Config.http_client_module().post(@verify_url, body, headers,
            receive_timeout: 5000,
            connect_options: [timeout: 5000]
          ) do
@@ -118,10 +120,6 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
 
   defp secret_key do
     System.get_env("RECAPTCHA_SECRET_KEY")
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 
   @spec maybe_put_remote_ip(%{String.t() => term()}, binary()) :: %{String.t() => term()}

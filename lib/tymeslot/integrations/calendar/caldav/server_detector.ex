@@ -18,6 +18,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
   - **Generic**: Fallback for unrecognized CalDAV servers
   """
 
+  alias Tymeslot.Infrastructure.Config
+
   @type server_type ::
           :radicale
           | :nextcloud
@@ -452,16 +454,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
       {"Authorization", "Basic " <> Base.encode64("#{username}:#{password}")}
     ]
 
-    case http_client().request(:options, url, "", headers, receive_timeout: 5_000) do
+    case Config.http_client_module().request(:options, url, "", headers, receive_timeout: 5_000) do
       {:ok, %Req.Response{headers: response_headers}} ->
         {:ok, response_headers}
 
       {:error, reason} ->
         {:error, "Failed to probe server: #{inspect(reason)}"}
     end
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 end

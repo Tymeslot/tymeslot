@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     display_name: "Outlook Calendar",
     base_url: "https://graph.microsoft.com/v1.0"
 
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.EventNormaliser
@@ -214,9 +215,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
 
   # Private helper functions
 
-  defp api_module do
-    Application.get_env(:tymeslot, :outlook_calendar_api_module, CalendarAPI)
-  end
+  defp api_module, do: Config.outlook_calendar_api_module()
 
   defp get_calendar_owner(%{"owner" => owner}) when is_map(owner) do
     owner["name"] || owner["address"] || "Unknown"

@@ -6,7 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.HTTP do
   and delegates response handling to the caller for provider-specific behaviour.
   """
 
-  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Config
 
   @spec request(atom() | String.t(), String.t(), String.t(), String.t(), keyword()) :: any()
   def request(method, base_url, path, token, opts \\ []) do
@@ -98,10 +98,6 @@ defmodule Tymeslot.Integrations.Calendar.HTTP do
   end
 
   defp default_request(method, url, body, headers) do
-    http_client().request(method, url, body, headers, [])
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
+    Config.http_client_module().request(method, url, body, headers, [])
   end
 end

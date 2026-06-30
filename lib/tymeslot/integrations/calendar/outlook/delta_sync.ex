@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   require Logger
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
@@ -61,7 +62,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   end
 
   defp do_fetch_and_apply(integration, delta_link) do
-    api_module = outlook_calendar_api()
+    api_module = Config.outlook_calendar_api_module()
 
     result =
       AccessToken.with_access_token(integration, &api_module.refresh_token/1, fn token ->
@@ -258,8 +259,4 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   defp format_error({:error, reason}), do: inspect(reason)
 
   defp format_error(other), do: inspect(other)
-
-  defp outlook_calendar_api do
-    Application.get_env(:tymeslot, :outlook_calendar_api_module, OutlookCalendarAPI)
-  end
 end
