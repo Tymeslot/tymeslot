@@ -185,8 +185,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
       </.embed_option_card>
     </div>
 
-    <%!-- WordPress plugin callout. Hardcoded GitHub link: Core standalone has no
-         /docs, and the plugin works against any instance (cloud or self-hosted). --%>
+    <%!-- WordPress plugin callout. Hardcoded links: Core standalone has no /docs,
+         and the plugin (on WordPress.org, source on GitHub) works against any
+         instance, cloud or self-hosted. --%>
     <div class="mt-8 flex items-start gap-3 rounded-token-xl border-2 border-indigo-200 bg-linear-to-r from-indigo-50 to-blue-50 p-5">
       <svg
         class="mt-0.5 h-6 w-6 shrink-0 text-indigo-600"
@@ -207,14 +208,25 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         <p class="text-token-sm text-indigo-800">
           Install the official Tymeslot plugin to embed your booking page with a block or shortcode — no code.
           <a
+            href="https://wordpress.org/plugins/tymeslot/"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-analytics-event="wordpress_plugin_cta_clicked"
+            data-analytics-props={Jason.encode!(%{source_page: "embed_settings"})}
+            class="font-bold text-indigo-700 underline hover:text-indigo-900"
+          >
+            Get it on WordPress.org
+          </a>
+          <span class="text-indigo-400" aria-hidden="true">·</span>
+          <a
             href="https://github.com/Tymeslot/tymeslot-wordpress"
             target="_blank"
             rel="noopener noreferrer"
             data-analytics-event="github_cta_clicked"
             data-analytics-props={Jason.encode!(%{source_page: "embed_settings"})}
-            class="font-bold text-indigo-700 underline hover:text-indigo-900"
+            class="font-semibold text-indigo-600 underline hover:text-indigo-900"
           >
-            Get the plugin
+            source
           </a>
         </p>
       </div>
