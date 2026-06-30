@@ -1,5 +1,6 @@
 defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
   use TymeslotWeb.LiveCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :utils
 
   import Mox
@@ -10,6 +11,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.Live.Scheduling.PreviewToken
 
   setup :verify_on_exit!
 
@@ -71,14 +73,21 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
   describe "preview booking is simulated, not persisted" do
     @tag :capture_log
-    test "completing a booking in preview mode shows confirmation but creates no meeting", %{
-      conn: conn
-    } do
+    test "an owner preview (valid token) shows confirmation but creates no meeting or side effects",
+         %{conn: conn} do
       timezone = "America/New_York"
       %{user: user, profile: profile} = seed_booking_account("1", "preview-book", timezone)
 
-      # Load the page as an owner preview — bookings here must be simulated.
-      {:ok, view, _html} = live(conn, ~p"/#{profile.username}?preview=true&timezone=#{timezone}")
+      # Load the page as the owner: `?preview=true` for display plus a verified,
+      # owner-bound token that authorises simulate mode. Bookings here must be
+      # simulated, exactly as the onboarding/dashboard preview iframe loads it.
+      token = PreviewToken.sign(user.id)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/#{profile.username}?preview=true&preview_token=#{token}&timezone=#{timezone}"
+        )
 
       attendee_email = "preview-attendee@example.com"
 
@@ -92,8 +101,86 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
       assert confirmation_html =~ attendee_email
 
-      # ...but nothing was persisted: no meeting row exists for this organiser.
+      # ...but nothing was persisted, and no real side effects fired: no meeting
+      # row, and no confirmation-email / video-room jobs were enqueued.
       assert Repo.get_by(MeetingSchema, organizer_user_id: user.id) == nil
+      assert [] = all_enqueued()
+    end
+
+    @tag :capture_log
+    test "bare ?preview=true with no token is blocked — no real booking, explicit error",
+         %{conn: conn} do
+      # BEHAVIOUR CHANGE (S1): previously a bare `?preview=true` with no valid
+      # owner token persisted a real booking. Now it is blocked with an error so
+      # the page owner's belief that they are in "preview mode" is never silently
+      # violated by a stale session or token expiry.
+      timezone = "America/New_York"
+      %{user: user, profile: profile} = seed_booking_account("1", "preview-blocked", timezone)
+
+      {:ok, view, _html} = live(conn, ~p"/#{profile.username}?preview=true&timezone=#{timezone}")
+
+      attendee_email = "blocked-attendee@example.com"
+
+      fill_and_submit_booking_flow(view, "quill", "1", %{
+        name: "Blocked Attendee",
+        email: attendee_email,
+        message: "This must not persist"
+      })
+
+      # No meeting row must be created — the submission was blocked.
+      assert Repo.get_by(MeetingSchema,
+               organizer_user_id: user.id,
+               attendee_email: attendee_email
+             ) ==
+               nil
+
+      # No real side-effects: no confirmation email, no video-room job.
+      assert [] = all_enqueued()
+
+      # The LiveView must show the error flash rather than the confirmation view.
+      _drain = :sys.get_state(view.pid)
+      assert render(view) =~ "Preview session expired"
+      refute has_element?(view, "[data-testid='confirmation-heading']")
+    end
+
+    @tag :capture_log
+    test "cross-user token (valid token for user A on user B's page) is blocked", %{conn: conn} do
+      # A token is bound to a specific owner. Replaying user A's token against
+      # user B's page must not grant simulate-mode — `owner?/2` checks the bound
+      # user id, so B's page sees `owner_preview=false`. Combined with
+      # `theme_preview=true` (from `?preview=true`), the submission is blocked.
+      timezone = "America/New_York"
+      %{user: user_a} = seed_booking_account("1", "cross-user-a", timezone)
+      %{user: user_b, profile: profile_b} = seed_booking_account("1", "cross-user-b", timezone)
+
+      token_for_a = PreviewToken.sign(user_a.id)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/#{profile_b.username}?preview=true&preview_token=#{token_for_a}&timezone=#{timezone}"
+        )
+
+      attendee_email = "cross-user@example.com"
+
+      fill_and_submit_booking_flow(view, "quill", "1", %{
+        name: "Cross User Attacker",
+        email: attendee_email,
+        message: "Should be blocked"
+      })
+
+      # No meeting for user B — the cross-user token was rejected.
+      assert Repo.get_by(MeetingSchema,
+               organizer_user_id: user_b.id,
+               attendee_email: attendee_email
+             ) ==
+               nil
+
+      assert [] = all_enqueued()
+
+      _drain = :sys.get_state(view.pid)
+      assert render(view) =~ "Preview session expired"
+      refute has_element?(view, "[data-testid='confirmation-heading']")
     end
   end
 

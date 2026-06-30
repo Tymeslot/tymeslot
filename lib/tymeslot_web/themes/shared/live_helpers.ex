@@ -18,7 +18,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.ThemeFlow
   alias TymeslotWeb.Helpers.ClientIP
-  alias TymeslotWeb.Live.Scheduling.{AvailabilityHelpers, OrganizerHelpers, ThemeUtils}
+
+  alias TymeslotWeb.Live.Scheduling.{
+    AvailabilityHelpers,
+    OrganizerHelpers,
+    PreviewToken,
+    ThemeUtils
+  }
+
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: CustomizationHelpers
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
@@ -58,6 +65,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     # Apply theme customization after organizer is resolved
     socket = maybe_assign_customization(socket)
 
+    # Verify an owner-preview token now that the organiser (and so the page
+    # owner's user id) is resolved. Gates simulate-vs-persist downstream.
+    socket = assign_owner_preview(socket, params)
+
     # Subscribe to calendar event updates for the organiser so availability refreshes on sync
     socket = maybe_subscribe_to_calendar_events(socket)
 
@@ -96,6 +107,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       socket
       |> handle_param_updates_fun.(params)
       |> ThemeUtils.assign_theme_with_preview(params)
+      |> assign_owner_preview(params)
       |> assign(:current_state, initial_state)
       |> handle_state_entry_fun.(initial_state, params)
 
@@ -108,6 +120,21 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       {:ok, socket} = SlotFetchingHandlerComponent.maybe_reload_slots(socket)
       {:noreply, socket}
     end
+  end
+
+  # Owner-preview gate: a booking submitted on a page loaded with a valid,
+  # owner-bound preview token is SIMULATED rather than persisted. The booking
+  # page is public, so a bare `?preview=true` is not enough — only a token
+  # signed in the owner's authenticated session and bound to this page's owner
+  # flips the gate. Sticky once true so internal multi-step navigation (which
+  # does not re-carry the query param) can't silently drop it back to a real
+  # booking. Defaults to false, so any path that never sets it fails closed.
+  defp assign_owner_preview(socket, params) do
+    owner_preview? =
+      socket.assigns[:owner_preview] ||
+        PreviewToken.owner?(params["preview_token"], socket.assigns[:organizer_user_id])
+
+    assign(socket, :owner_preview, owner_preview?)
   end
 
   @doc """

@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
 
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Themes.Core.Registry
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @doc """
@@ -30,7 +31,7 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
   """
   @spec assign_theme(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def assign_theme(socket) do
-    theme_id = socket.assigns[:theme_id] || "1"
+    theme_id = socket.assigns[:theme_id] || Registry.default_theme_id()
 
     socket
     |> assign(:scheduling_theme_id, theme_id)
@@ -43,8 +44,12 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
   A page is a preview when the URL carries either `?theme=` (a theme-switch
   preview, which also selects the previewed theme id) or `?preview=` (the
   owner previewing their own published page, keeping the stored theme). Both
-  set `:theme_preview`, the single signal downstream gates rely on — notably
-  the booking submit, which simulates rather than persists in preview mode.
+  set `:theme_preview`, a **display-only** signal (it tunes rendering, e.g. the
+  `iframe_embed.js` standalone bail-out).
+
+  It deliberately does NOT gate booking persistence: the booking page is
+  public, so simulate-vs-persist hangs off the verified, owner-bound
+  `:owner_preview` token instead (see `LiveHelpers.assign_owner_preview/2`).
   """
   @spec assign_theme_with_preview(Phoenix.LiveView.Socket.t(), map()) ::
           Phoenix.LiveView.Socket.t()
@@ -56,9 +61,9 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
     # preview keeps whatever theme is already assigned.
     theme_id =
       if theme_switch do
-        params["theme"] || socket.assigns[:theme_id] || "1"
+        params["theme"] || socket.assigns[:theme_id] || Registry.default_theme_id()
       else
-        socket.assigns[:theme_id] || "1"
+        socket.assigns[:theme_id] || Registry.default_theme_id()
       end
 
     socket

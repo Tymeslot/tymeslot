@@ -409,47 +409,71 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       organizer_user_id: socket.assigns[:organizer_user_id]
     ]
 
-    orchestrator = booking_orchestrator(socket)
-
-    case orchestrator.submit_booking(params, opts) do
-      {:ok, :payment_required, %{meeting: meeting, checkout_url: url}} ->
-        handle_payment_required(socket, meeting, url, sanitized_params)
-
-      {:ok, meeting} ->
-        handle_booking_success(socket, meeting, sanitized_params)
-
-      {:error, errors} when is_list(errors) ->
-        error_map = Enum.into(errors, %{})
-
+    case booking_orchestrator(socket) do
+      :preview_without_valid_token ->
         socket =
           socket
-          |> assign(:form, Component.to_form(sanitized_params))
-          |> assign(:validation_errors, error_map)
           |> assign(:submitting, false)
           |> assign(:submission_processed, false)
           |> Flash.put_flash(
             :error,
-            dgettext("booking", "Please correct the errors below before submitting.")
+            dgettext("booking", "Preview session expired. Reload the page to continue.")
           )
 
         {:error, socket}
 
-      {:error, reason} ->
-        handle_booking_error(socket, reason)
+      orchestrator ->
+        case orchestrator.submit_booking(params, opts) do
+          {:ok, :payment_required, %{meeting: meeting, checkout_url: url}} ->
+            handle_payment_required(socket, meeting, url, sanitized_params)
+
+          {:ok, meeting} ->
+            handle_booking_success(socket, meeting, sanitized_params)
+
+          {:error, errors} when is_list(errors) ->
+            error_map = Enum.into(errors, %{})
+
+            socket =
+              socket
+              |> assign(:form, Component.to_form(sanitized_params))
+              |> assign(:validation_errors, error_map)
+              |> assign(:submitting, false)
+              |> assign(:submission_processed, false)
+              |> Flash.put_flash(
+                :error,
+                dgettext("booking", "Please correct the errors below before submitting.")
+              )
+
+            {:error, socket}
+
+          {:error, reason} ->
+            handle_booking_error(socket, reason)
+        end
     end
   end
 
-  # In preview mode — the owner previewing their own page, or a theme-switch
-  # preview — a booking must be SIMULATED: no database row, no confirmation
-  # email, no calendar event. The demo orchestrator builds a realistic mock
-  # meeting from the real organiser, so the preview shows the full confirmation
-  # flow exactly as a visitor would, without creating anything. Falls back to
-  # the normally-resolved orchestrator (real, or SaaS demo) otherwise.
+  # Selects the booking orchestrator based on the current preview state.
+  #
+  # Three cases:
+  #
+  #   1. `:owner_preview` true — the token was verified and bound to this page's
+  #      owner. Simulate via DemoOrchestrator: no DB row, email, or calendar
+  #      event.
+  #
+  #   2. `:theme_preview` true but `:owner_preview` false — the preview display
+  #      flag is active (so the owner believes they are in a simulation), but no
+  #      valid owner-bound token was present or it expired during the session.
+  #      Persisting a real booking here would be invisible to the owner. Fail
+  #      closed: return `:preview_without_valid_token` so the caller blocks the
+  #      submission with an explicit error.
+  #
+  #   3. Neither flag set — a normal public booking; dispatch to the real
+  #      (or SaaS-demo-mode) orchestrator.
   defp booking_orchestrator(socket) do
-    if socket.assigns[:theme_preview] do
-      DemoOrchestrator
-    else
-      Demo.get_orchestrator(socket)
+    cond do
+      socket.assigns[:owner_preview] -> DemoOrchestrator
+      socket.assigns[:theme_preview] -> :preview_without_valid_token
+      true -> Demo.get_orchestrator(socket)
     end
   end
 

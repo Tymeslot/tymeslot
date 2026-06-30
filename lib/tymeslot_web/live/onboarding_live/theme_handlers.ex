@@ -15,6 +15,7 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
+  alias TymeslotWeb.Live.Scheduling.PreviewToken
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   @doc """
@@ -84,7 +85,10 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
       {:ok, socket, username} ->
         {:noreply,
          socket
-         |> Component.assign(:theme_preview_url, preview_url(username))
+         |> Component.assign(
+           :theme_preview_url,
+           preview_url(username, socket.assigns.profile.user_id)
+         )
          |> Component.assign(:show_theme_preview, true)}
 
       {:error, socket} ->
@@ -152,8 +156,8 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   # frames same-origin, and standalone — unlike embed mode — keeps the video
   # background and fills the frame to full height, so the modal shows the page
   # exactly as invitees see it rather than a chrome-stripped, video-less card.
-  defp preview_url(username) do
-    "#{Policy.app_url()}/#{username}?preview=true"
+  defp preview_url(username, user_id) do
+    "#{Policy.app_url()}/#{username}?preview=true&preview_token=#{PreviewToken.sign(user_id)}"
   end
 
   # The preview needs a resolvable username. Most users set one on the profile
