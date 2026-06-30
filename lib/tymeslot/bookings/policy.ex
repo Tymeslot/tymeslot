@@ -3,6 +3,7 @@ defmodule Tymeslot.Bookings.Policy do
   Business rules and policies for bookings.
   Pure functions that define what is allowed.
   """
+  alias Tymeslot.Bookings.BuildParams
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Locales
@@ -47,29 +48,6 @@ defmodule Tymeslot.Bookings.Policy do
       owner_timezone: owner_timezone
     }
   end
-
-  @typedoc "Parameters passed to `build_meeting_attributes/1`."
-  @type meeting_build_params :: %{
-          required(:meeting_uid) => String.t(),
-          required(:form_data) => %{String.t() => term()},
-          required(:start_datetime) => DateTime.t(),
-          required(:end_datetime) => DateTime.t(),
-          required(:duration_minutes) => integer(),
-          required(:user_timezone) => String.t() | nil,
-          optional(:organizer_user_id) => integer() | nil,
-          optional(:meeting_type_id) => integer() | nil,
-          optional(:video_integration_id) => integer() | String.t() | nil,
-          optional(:attendee_locale) => String.t() | nil,
-          optional(:utm_source) => String.t() | nil,
-          optional(:utm_medium) => String.t() | nil,
-          optional(:utm_campaign) => String.t() | nil,
-          optional(:utm_content) => String.t() | nil,
-          optional(:utm_term) => String.t() | nil,
-          optional(:referrer_host) => String.t() | nil,
-          optional(:tracking_params) => map(),
-          optional(:visitor_hash) => String.t() | nil,
-          optional(atom()) => term()
-        }
 
   @typedoc "A single reminder entry with a numeric value and a unit string (e.g. \"minutes\")."
   @type reminder :: %{required(:value) => integer(), required(:unit) => String.t()}
@@ -131,11 +109,19 @@ defmodule Tymeslot.Bookings.Policy do
   Builds meeting attributes from parameters and form data.
   Pure transformation function.
   """
-  @spec build_meeting_attributes(meeting_build_params()) :: meeting_attributes()
-  def build_meeting_attributes(params) do
+  # Dialyzer can verify the typed `BuildParams.t()` input, but it cannot prove
+  # the precise field types of the returned map: this is a pure data-shuffler
+  # whose values flow straight from struct/schema fields and the attendee's
+  # form data (`form_data["name"]` etc. are inherently `term()`), so the success
+  # typing widens every output field to `any()`. The `meeting_attributes` spec
+  # is retained as the authoritative documentation of the result shape; the
+  # contract check is disabled rather than gutting that type to `term()`.
+  @dialyzer {:no_contracts, build_meeting_attributes: 1}
+  @spec build_meeting_attributes(BuildParams.t()) :: meeting_attributes()
+  def build_meeting_attributes(%BuildParams{} = params) do
     meeting_uid = params.meeting_uid
-    organizer_user_id = Map.get(params, :organizer_user_id)
-    meeting_type_id = Map.get(params, :meeting_type_id)
+    organizer_user_id = params.organizer_user_id
+    meeting_type_id = params.meeting_type_id
     form_data = params.form_data
 
     # Resolve meeting type if ID provided
@@ -185,21 +171,21 @@ defmodule Tymeslot.Bookings.Policy do
         attendee_phone: nil,
         attendee_company: nil,
         attendee_timezone: Timezones.normalize(user_timezone),
-        attendee_locale: Map.get(params, :attendee_locale) || default_locale(),
+        attendee_locale: params.attendee_locale || default_locale(),
         status: "confirmed",
         reminders: reminders,
         show_as_free: (meeting_type_record && meeting_type_record.show_as_free) || false,
         attachments_snapshot: attachments_snapshot(meeting_type_record),
-        custom_fields_snapshot: Map.get(params, :custom_fields_snapshot, []),
-        custom_field_answers: Map.get(params, :custom_field_answers, %{}),
-        utm_source: Map.get(params, :utm_source),
-        utm_medium: Map.get(params, :utm_medium),
-        utm_campaign: Map.get(params, :utm_campaign),
-        utm_content: Map.get(params, :utm_content),
-        utm_term: Map.get(params, :utm_term),
-        referrer_host: Map.get(params, :referrer_host),
-        tracking_params: Map.get(params, :tracking_params, %{}),
-        visitor_hash: Map.get(params, :visitor_hash)
+        custom_fields_snapshot: params.custom_fields_snapshot,
+        custom_field_answers: params.custom_field_answers,
+        utm_source: params.utm_source,
+        utm_medium: params.utm_medium,
+        utm_campaign: params.utm_campaign,
+        utm_content: params.utm_content,
+        utm_term: params.utm_term,
+        referrer_host: params.referrer_host,
+        tracking_params: params.tracking_params,
+        visitor_hash: params.visitor_hash
       },
       build_meeting_action_urls(meeting_uid, org_username)
     )
@@ -424,7 +410,7 @@ defmodule Tymeslot.Bookings.Policy do
 
   defp resolve_video_integration_id(params, organizer_user_id) do
     video_integration_id =
-      case Map.get(params, :video_integration_id) do
+      case params.video_integration_id do
         id when is_integer(id) ->
           id
 

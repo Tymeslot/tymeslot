@@ -7,6 +7,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
 
   setup :verify_on_exit!
 
+  alias Tymeslot.Bookings.BuildParams
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings.MeetingSchema
 
@@ -263,7 +264,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
         {:ok, %{integration_id: 1, calendar_path: "primary"}}
       end)
 
-      attrs = Policy.build_meeting_attributes(params)
+      attrs = Policy.build_meeting_attributes(BuildParams.new(params))
 
       assert attrs.description == "Quarterly review"
       assert attrs.attendee_message == "Please bring slides."
@@ -292,7 +293,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
         {:ok, %{integration_id: 1, calendar_path: "primary"}}
       end)
 
-      attrs = Policy.build_meeting_attributes(params)
+      attrs = Policy.build_meeting_attributes(BuildParams.new(params))
 
       assert attrs.description == ""
       assert attrs.attendee_message == "Hi!"
@@ -325,7 +326,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
         {:ok, %{integration_id: 1, calendar_path: "primary"}}
       end)
 
-      attrs = Policy.build_meeting_attributes(params)
+      attrs = Policy.build_meeting_attributes(BuildParams.new(params))
 
       assert attrs.reminders == [%{value: 10, unit: "minutes"}, %{value: 1, unit: "hours"}]
     end
@@ -355,7 +356,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
         {:ok, %{integration_id: 1, calendar_path: "primary"}}
       end)
 
-      attrs = Policy.build_meeting_attributes(params)
+      attrs = Policy.build_meeting_attributes(BuildParams.new(params))
 
       assert attrs.reminders == []
     end

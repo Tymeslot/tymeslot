@@ -7,7 +7,7 @@ defmodule Tymeslot.Bookings.Create do
   require Logger
 
   alias Tymeslot.Availability.TimeSlots
-  alias Tymeslot.Bookings.{CalendarJobs, Policy, Validation}
+  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Policy, Validation}
   alias Tymeslot.CustomFields
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
@@ -277,7 +277,7 @@ defmodule Tymeslot.Bookings.Create do
 
   defp create_meeting_and_all_side_effects_atomically(booking_data, opts) do
     booking_data = put_meeting_type_record(booking_data)
-    meeting_attrs = Policy.build_meeting_attributes(booking_data)
+    meeting_attrs = Policy.build_meeting_attributes(BuildParams.new(booking_data))
 
     if paid_meeting_type?(booking_data) do
       create_paid_booking(meeting_attrs, booking_data)
