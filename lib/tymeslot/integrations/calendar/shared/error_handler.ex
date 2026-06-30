@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
           | :radicale
           | :zimbra
           | :mailbox_org
+          | :apple
           | :baikal
           | :generic
 
@@ -58,12 +59,20 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     end
   end
 
+  def sanitize_error_message(:unauthorized, :apple) do
+    "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security → App-Specific Passwords, and use it instead of your Apple ID password."
+  end
+
   def sanitize_error_message(:unauthorized, _provider) do
     "Authentication failed. Please check your credentials."
   end
 
   def sanitize_error_message(:forbidden, :mailbox_org) do
     "Access denied. If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead."
+  end
+
+  def sanitize_error_message(:forbidden, :apple) do
+    "Access denied. iCloud requires an app-specific password generated at appleid.apple.com — your Apple ID password will not work for CalDAV."
   end
 
   def sanitize_error_message(:forbidden, _provider) do
@@ -251,6 +260,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     "If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead"
   end
 
+  defp get_auth_suggestion(:auth, :apple) do
+    "iCloud requires an app-specific password. Generate one at appleid.apple.com under Sign-In and Security → App-Specific Passwords, and use it instead of your Apple ID password"
+  end
+
   defp get_auth_suggestion(:auth, _provider) do
     "Double-check your credentials and ensure they haven't expired"
   end
@@ -401,6 +414,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
       :radicale -> "Radicale"
       :zimbra -> "Zimbra"
       :mailbox_org -> "mailbox.org"
+      :apple -> "Apple iCloud"
       :google -> "Google Calendar"
       :outlook -> "Outlook Calendar"
       _other_provider -> "calendar provider"

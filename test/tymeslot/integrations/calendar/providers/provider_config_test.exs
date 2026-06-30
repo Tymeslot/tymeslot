@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
                "nextcloud",
                "zimbra",
                "mailbox_org",
+               "apple",
                "baikal"
              ]
     end
@@ -38,6 +39,12 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
     test "string key returns the same map as the atom key" do
       assert ProviderConfig.locked_url_for("mailbox_org") ==
                ProviderConfig.locked_url_for(:mailbox_org)
+    end
+
+    test "Apple iCloud has a locked CalDAV URL" do
+      assert %{url: "https://caldav.icloud.com"} = ProviderConfig.locked_url_for(:apple)
+      assert ProviderConfig.caldav_based?(:apple)
+      assert ProviderConfig.display_name(:apple) == "Apple iCloud"
     end
 
     test "atom key for a provider without a locked URL returns nil" do

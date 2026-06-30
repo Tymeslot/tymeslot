@@ -61,6 +61,10 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
     mailbox_org: %{
       failure_threshold: 3,
       recovery_timeout: :timer.minutes(2)
+    },
+    apple: %{
+      failure_threshold: 3,
+      recovery_timeout: :timer.minutes(2)
     }
   }
 

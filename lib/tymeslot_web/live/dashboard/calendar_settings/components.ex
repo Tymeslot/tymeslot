@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   alias Tymeslot.Integrations.Calendar.ProviderConfig
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.{
+    AppleConfig,
     BaikalConfig,
     CaldavConfig,
     MailboxOrgConfig,
@@ -141,6 +142,19 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             <.live_component
               module={MailboxOrgConfig}
               id="mailbox-org-config"
+              target={@myself}
+              metadata={@security_metadata}
+              form_errors={@form_errors}
+              form_values={@form_values}
+              discovered_calendars={@discovered_calendars}
+              show_calendar_selection={@show_calendar_selection}
+              discovery_credentials={@discovery_credentials}
+              saving={@is_saving}
+            />
+          <% :apple -> %>
+            <.live_component
+              module={AppleConfig}
+              id="apple-config"
               target={@myself}
               metadata={@security_metadata}
               form_errors={@form_errors}
@@ -585,6 +599,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   defp format_provider_title(:caldav), do: "CalDAV"
   defp format_provider_title(:zimbra), do: "Zimbra"
   defp format_provider_title(:mailbox_org), do: "mailbox.org"
+  defp format_provider_title(:apple), do: "Apple iCloud"
   defp format_provider_title(:baikal), do: "Baikal"
   defp format_provider_title(_provider), do: "Calendar"
 end

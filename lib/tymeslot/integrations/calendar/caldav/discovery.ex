@@ -79,41 +79,44 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
                depth: "0",
                max_retries: 0
              ) do
-          {:ok, _response} = success ->
-            success
+          {:ok, %Req.Response{}} ->
+            :ok
 
           {:error, reason} when reason in [:not_found, :forbidden, :server_error] ->
-            Logger.debug("CalDAV discovery path not found; falling back to RFC 4791 probe",
+            Logger.debug(
+              "CalDAV discovery path unavailable; verifying via full RFC 4791 discovery",
               reason: reason,
               base_url: client.base_url
             )
 
-            rfc4791_probe(client.base_url, client.username, client.password)
+            # Run the complete principal → calendar-home-set → calendar-list
+            # chain rather than a credentials-only probe, so a passing test
+            # proves calendars are actually reachable. iCloud's principal probe
+            # returns 207 even when the guessed path 403s, so a probe that
+            # stopped at `current-user-principal` reported success on a
+            # connection that could not list any calendars.
+            case discover_via_rfc4791(client) do
+              {:ok, _calendars} -> :ok
+              {:error, _reason} = error -> error
+            end
 
           {:error, _reason} = error ->
             error
         end
 
-      case result do
-        {:ok, %Req.Response{}} ->
-          {:ok, "CalDAV connection successful"}
-
-        {:error, :unauthorized} ->
-          {:error, :unauthorized}
-
-        {:error, :not_found} ->
-          {:error, :not_found}
-
-        # Radicale returns 403 for auth failures; re-tag so callers treat it as
-        # a credential error rather than a permissions error.
-        {:error, :forbidden} when client.provider == :radicale ->
-          {:error, :unauthorized}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
+      normalise_test_result(result, client)
     end
   end
+
+  # Radicale returns 403 for auth failures; re-tag so callers treat it as a
+  # credential error rather than a permissions error. Every other error passes
+  # through unchanged.
+  defp normalise_test_result(:ok, _client), do: {:ok, "CalDAV connection successful"}
+
+  defp normalise_test_result({:error, :forbidden}, %{provider: :radicale}),
+    do: {:error, :unauthorized}
+
+  defp normalise_test_result({:error, reason}, _client), do: {:error, reason}
 
   @doc """
   Discovers available calendars on the CalDAV server.
@@ -150,15 +153,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
         end
       end)
     end
-  end
-
-  # Probes the server root for `current-user-principal` to verify that
-  # credentials are valid when the guessed discovery path fails.
-  # A 207 response here proves credentials work even if the path was wrong.
-  defp rfc4791_probe(base_url, username, password) do
-    url = UrlBuilder.build_calendar_url(base_url, "/")
-    body = XmlHandler.build_propfind_request(properties: [:current_user_principal])
-    Http.propfind(url, username, password, body: body, depth: "0")
   end
 
   # Full RFC 4791 discovery chain:

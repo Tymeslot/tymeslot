@@ -94,6 +94,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
           {"nextcloud", "Nextcloud"},
           {"zimbra", "Zimbra"},
           {"mailbox_org", "mailbox.org"},
+          {"apple", "Apple iCloud"},
           {"baikal", "Baikal"}
         ] do
       @provider provider

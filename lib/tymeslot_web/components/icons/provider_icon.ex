@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   @oauth_only_providers ~w(github oauth)
   @calendar_providers ~w(
     google_calendar outlook outlook_calendar nextcloud nextcloud_calendar
-    caldav radicale zimbra mailbox_org
+    caldav radicale zimbra mailbox_org apple baikal
   )
 
   @doc """
@@ -51,6 +51,11 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   # bundled demo SVG — which scales to any size — so it renders an icon instead
   # of a broken `<img>` for the missing `debug.png`.
   defp build_icon_path("debug", _type, _size), do: "/icons/providers/calendar/debug.svg"
+
+  # Apple ships a single monochrome glyph (the Apple logo) rather than the
+  # multi-size branded PNGs the other providers use. Point at the bundled SVG —
+  # which scales to any size — instead of a non-existent apple.png.
+  defp build_icon_path("apple", _type, _size), do: "/icons/providers/calendar/apple.svg"
 
   defp build_icon_path(provider, type, size) do
     # Determine the type based on provider if not explicitly set

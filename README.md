@@ -112,13 +112,19 @@ Every connected calendar is checked the moment someone books. One conflict anywh
 <tr>
 <td align="center"><img src="./priv/static/icons/providers/calendar/medium/google.png" alt="Google Calendar" height="40" /><br /><sub>Google Calendar</sub></td>
 <td align="center"><img src="./priv/static/icons/providers/calendar/medium/outlook.png" alt="Outlook" height="40" /><br /><sub>Outlook</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/apple.svg" alt="Apple iCloud" height="40" /><br /><sub>Apple iCloud</sub></td>
 <td align="center"><img src="./priv/static/icons/providers/calendar/medium/caldav.png" alt="CalDAV" height="40" /><br /><sub>CalDAV</sub></td>
-<td align="center"><img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="40" /><br /><sub>Nextcloud</sub></td>
 </tr>
 <tr>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="40" /><br /><sub>Nextcloud</sub></td>
 <td align="center"><img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="40" /><br /><sub>Radicale</sub></td>
 <td align="center"><img src="./priv/static/icons/providers/calendar/medium/zimbra.png" alt="Zimbra" height="40" /><br /><sub>Zimbra</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/baikal.png" alt="Baikal" height="40" /><br /><sub>Baikal</sub></td>
+</tr>
+<tr>
 <td align="center"><img src="./priv/static/icons/providers/calendar/medium/mailbox_org.png" alt="mailbox.org" height="40" /><br /><sub>mailbox.org</sub></td>
+<td></td>
+<td></td>
 <td></td>
 </tr>
 </table>

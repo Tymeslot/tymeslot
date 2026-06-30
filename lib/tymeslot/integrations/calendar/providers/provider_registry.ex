@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
       nextcloud: Tymeslot.Integrations.Calendar.Nextcloud.Provider,
       zimbra: Tymeslot.Integrations.Calendar.Zimbra.Provider,
       mailbox_org: Tymeslot.Integrations.Calendar.MailboxOrg.Provider,
+      apple: Tymeslot.Integrations.Calendar.Apple.Provider,
       baikal: Tymeslot.Integrations.Calendar.Baikal.Provider,
       google: Tymeslot.Integrations.Calendar.Google.Provider,
       outlook: Tymeslot.Integrations.Calendar.Outlook.Provider,

@@ -581,6 +581,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       "nextcloud" -> :nextcloud
       "zimbra" -> :zimbra
       "mailbox_org" -> :mailbox_org
+      "apple" -> :apple
+      "baikal" -> :baikal
       _other -> :caldav
     end
   end

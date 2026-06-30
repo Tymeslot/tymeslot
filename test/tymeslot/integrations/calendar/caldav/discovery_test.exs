@@ -28,66 +28,63 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
       assert {:ok, _message} = Discovery.test_connection(@caldav_client, ip_address: "127.0.0.1")
     end
 
-    test "falls back to RFC 4791 probe when discovery path returns 404" do
-      # First call: discovery path → 404
-      # Second call: RFC 4791 probe to / → 207
-      stub_sequential(
-        fn conn -> Conn.send_resp(conn, 404, "") end,
-        fn conn ->
-          conn
-          |> Conn.put_resp_header("content-type", "application/xml")
-          |> Conn.send_resp(207, """
-          <D:multistatus xmlns:D="DAV:">
-            <D:response>
-              <D:href>/</D:href>
-              <D:propstat>
-                <D:prop>
-                  <D:current-user-principal>
-                    <D:href>/principals/users/user/</D:href>
-                  </D:current-user-principal>
-                </D:prop>
-                <D:status>HTTP/1.1 200 OK</D:status>
-              </D:propstat>
-            </D:response>
-          </D:multistatus>
-          """)
-        end
-      )
+    test "falls back to the full RFC 4791 chain when discovery path returns 404" do
+      # A passing test must prove calendars are reachable, so the fallback runs
+      # the complete principal → calendar-home-set → calendar-list chain.
+      stub_rfc4791_chain(initial_status: 404)
 
       assert {:ok, _message} = Discovery.test_connection(@caldav_client, ip_address: "127.0.0.1")
     end
 
-    test "falls back to RFC 4791 probe when discovery path returns 5xx" do
-      # test_connection passes max_retries: 0, so the 500 is returned immediately
-      # as :server_error and the fallback to RFC 4791 triggers on the first attempt.
-      # Path-based routing ensures the RFC 4791 probe to "/" returns 207 while the
-      # guessed discovery path consistently returns 500.
+    test "falls back to the full RFC 4791 chain when discovery path returns 5xx" do
+      stub_rfc4791_chain(initial_status: 500)
+
+      assert {:ok, _msg} = Discovery.test_connection(@caldav_client, ip_address: "127.0.0.1")
+    end
+
+    test "fails when credentials are valid but no calendar collection is reachable" do
+      # The iCloud false-positive guard: the guessed path 403s and the
+      # current-user-principal probe succeeds (proving credentials), but the
+      # calendar-home-set step fails. A credentials-only probe would have
+      # reported success here; the full chain must report the error instead.
+      call_count = :counters.new(1, [:atomics])
+
       ReqTest.stub(:tymeslot_http, fn conn ->
-        if conn.request_path == "/" do
-          conn
-          |> Conn.put_resp_header("content-type", "application/xml")
-          |> Conn.send_resp(207, """
-          <D:multistatus xmlns:D="DAV:">
-            <D:response>
-              <D:propstat>
-                <D:prop>
-                  <D:current-user-principal>
-                    <D:href>/principals/users/user/</D:href>
-                  </D:current-user-principal>
-                </D:prop>
-                <D:status>HTTP/1.1 200 OK</D:status>
-              </D:propstat>
-            </D:response>
-          </D:multistatus>
-          """)
-        else
-          # All guessed discovery paths return 500 — exhausts retry budget,
-          # triggering the fallback to RFC 4791.
-          Conn.send_resp(conn, 500, "Internal Server Error")
+        :counters.add(call_count, 1, 1)
+        n = :counters.get(call_count, 1)
+
+        cond do
+          n == 1 ->
+            # Guessed discovery path → 403 (iCloud's response)
+            Conn.send_resp(conn, 403, "")
+
+          n == 2 ->
+            # current-user-principal probe succeeds — credentials are valid
+            conn
+            |> Conn.put_resp_header("content-type", "application/xml")
+            |> Conn.send_resp(207, """
+            <D:multistatus xmlns:D="DAV:">
+              <D:response>
+                <D:propstat>
+                  <D:prop>
+                    <D:current-user-principal>
+                      <D:href>/principals/users/user/</D:href>
+                    </D:current-user-principal>
+                  </D:prop>
+                  <D:status>HTTP/1.1 200 OK</D:status>
+                </D:propstat>
+              </D:response>
+            </D:multistatus>
+            """)
+
+          n >= 3 ->
+            # calendar-home-set step fails — calendars cannot be listed
+            Conn.send_resp(conn, 500, "Internal Server Error")
         end
       end)
 
-      assert {:ok, _msg} = Discovery.test_connection(@caldav_client, ip_address: "127.0.0.1")
+      assert {:error, _reason} =
+               Discovery.test_connection(@caldav_client, ip_address: "127.0.0.1")
     end
 
     test "propagates :unauthorized even when RFC 4791 probe also returns 401" do
@@ -238,6 +235,65 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
       assert {:error, _reason} =
                Discovery.discover_calendars(client, skip_breaker: true)
     end
+  end
+
+  # Stubs the full RFC 4791 discovery chain: the guessed discovery path returns
+  # `initial_status`, then current-user-principal → calendar-home-set → an empty
+  # calendar list each return 207.
+  defp stub_rfc4791_chain(opts) do
+    initial_status = Keyword.fetch!(opts, :initial_status)
+    call_count = :counters.new(1, [:atomics])
+
+    ReqTest.stub(:tymeslot_http, fn conn ->
+      :counters.add(call_count, 1, 1)
+      n = :counters.get(call_count, 1)
+
+      cond do
+        n == 1 ->
+          Conn.send_resp(conn, initial_status, "")
+
+        n == 2 ->
+          conn
+          |> Conn.put_resp_header("content-type", "application/xml")
+          |> Conn.send_resp(207, """
+          <D:multistatus xmlns:D="DAV:">
+            <D:response>
+              <D:propstat>
+                <D:prop>
+                  <D:current-user-principal>
+                    <D:href>/principals/users/user/</D:href>
+                  </D:current-user-principal>
+                </D:prop>
+                <D:status>HTTP/1.1 200 OK</D:status>
+              </D:propstat>
+            </D:response>
+          </D:multistatus>
+          """)
+
+        n == 3 ->
+          conn
+          |> Conn.put_resp_header("content-type", "application/xml")
+          |> Conn.send_resp(207, """
+          <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+            <D:response>
+              <D:propstat>
+                <D:prop>
+                  <C:calendar-home-set>
+                    <D:href>/calendars/user/</D:href>
+                  </C:calendar-home-set>
+                </D:prop>
+                <D:status>HTTP/1.1 200 OK</D:status>
+              </D:propstat>
+            </D:response>
+          </D:multistatus>
+          """)
+
+        n >= 4 ->
+          conn
+          |> Conn.put_resp_header("content-type", "application/xml")
+          |> Conn.send_resp(207, "<D:multistatus xmlns:D=\"DAV:\"/>")
+      end
+    end)
   end
 
   describe "test_connection/2 URL validation (SSRF protection)" do

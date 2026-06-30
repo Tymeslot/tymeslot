@@ -160,6 +160,7 @@ config :tymeslot, :calendar_providers, %{
   nextcloud: [enabled: true],
   zimbra: [enabled: true],
   mailbox_org: [enabled: true],
+  apple: [enabled: true],
   baikal: [enabled: true],
   google: [enabled: true],
   outlook: [enabled: true],

@@ -35,13 +35,14 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
     :nextcloud,
     :zimbra,
     :mailbox_org,
+    :apple,
     :baikal,
     :google,
     :outlook,
     :demo
   ]
   @oauth_providers [:google, :outlook]
-  @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :baikal]
+  @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :apple, :baikal]
   @dev_only_providers [:debug]
 
   # Providers whose CalDAV server URL is fixed and must never be edited by the
@@ -51,6 +52,10 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
     mailbox_org: %{
       url: "https://dav.mailbox.org",
       tooltip: "mailbox.org always uses this CalDAV server — the address cannot be changed"
+    },
+    apple: %{
+      url: "https://caldav.icloud.com",
+      tooltip: "Apple iCloud always uses this CalDAV server — the address cannot be changed"
     }
   }
 
@@ -92,6 +97,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
       icon: "mailbox_org",
       description: "Sync calendars from your mailbox.org account",
       button_text: "Connect mailbox.org",
+      click_event: "connect_provider",
+      circuit_breaker_enabled: true
+    },
+    apple: %{
+      icon: "apple",
+      description: "Sync calendars from your Apple iCloud account",
+      button_text: "Connect Apple iCloud",
       click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
@@ -393,6 +405,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def display_name(:nextcloud), do: "Nextcloud"
   def display_name(:zimbra), do: "Zimbra"
   def display_name(:mailbox_org), do: "mailbox.org"
+  def display_name(:apple), do: "Apple iCloud"
   def display_name(:baikal), do: "Baikal"
   def display_name(:google), do: "Google Calendar"
   def display_name(:outlook), do: "Outlook Calendar"
@@ -411,6 +424,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
 
   def get_provider_module(:mailbox_org),
     do: Tymeslot.Integrations.Calendar.MailboxOrg.Provider
+
+  def get_provider_module(:apple), do: Tymeslot.Integrations.Calendar.Apple.Provider
 
   def get_provider_module(:baikal), do: Tymeslot.Integrations.Calendar.Baikal.Provider
 
