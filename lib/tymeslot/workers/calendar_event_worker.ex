@@ -25,6 +25,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Workers.RetryHelpers
   require Logger
 
   # Configuration
@@ -247,7 +248,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
   # Group all handle_error_result/3 clauses together, after the /2 clauses
   defp handle_error_result(:rate_limited, job, message) do
-    retry_after = parse_retry_after_message(message) || parse_retry_after(job)
+    retry_after = RetryHelpers.parse_retry_after_from_message(message) || parse_retry_after(job)
 
     snooze_seconds =
       if is_integer(retry_after),
@@ -263,17 +264,10 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     # Try to extract retry_after:N from last error message (if present)
     case List.last(errors) do
       %{"attempt" => _attempt_number, "error" => msg} when is_binary(msg) ->
-        parse_retry_after_message(msg)
+        RetryHelpers.parse_retry_after_from_message(msg)
 
       _no_error ->
         nil
-    end
-  end
-
-  defp parse_retry_after_message(msg) when is_binary(msg) do
-    case Regex.run(~r/retry_after:(\d+)/i, msg) do
-      [_match, n] -> String.to_integer(n)
-      _nomatch -> nil
     end
   end
 
