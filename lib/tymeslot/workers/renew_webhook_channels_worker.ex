@@ -22,11 +22,10 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
-  alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
-  alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.CalendarManagement
 
   # Batch entry point: enumerate expiring integrations and schedule one
@@ -69,14 +68,6 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   # ---------------------------------------------------------------------------
   # Private helpers
   # ---------------------------------------------------------------------------
-
-  defp google_calendar_api do
-    Application.get_env(:tymeslot, :google_calendar_api_module, GoogleCalendarAPI)
-  end
-
-  defp outlook_calendar_api do
-    Application.get_env(:tymeslot, :outlook_calendar_api_module, OutlookCalendarAPI)
-  end
 
   defp schedule_google_renewals do
     expiring = CalendarIntegrationWebhookQueries.list_expiring_google_channels(48)
@@ -141,7 +132,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   end
 
   defp renew_single(integration, "google") do
-    case google_calendar_api().register_push_channel(integration) do
+    case Config.google_calendar_api_module().register_push_channel(integration) do
       {:ok, _updated} ->
         :ok
 
@@ -172,7 +163,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   end
 
   defp renew_single(integration, "outlook") do
-    case outlook_calendar_api().register_graph_subscription(integration) do
+    case Config.outlook_calendar_api_module().register_graph_subscription(integration) do
       {:ok, _updated} ->
         :ok
 

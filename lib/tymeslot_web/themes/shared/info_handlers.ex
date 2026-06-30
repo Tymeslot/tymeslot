@@ -42,20 +42,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_availability_ok(socket, ref, availability_map) do
     Process.demonitor(ref, [:flush])
-
-    # Check if this is our current availability task
-    if ref == socket.assigns[:availability_task_ref] do
-      socket =
-        socket
-        |> assign(:month_availability_map, availability_map)
-        |> assign(:availability_status, :loaded)
-        |> assign(:availability_task, nil)
-        |> assign(:availability_task_ref, nil)
-
-      {:noreply, socket}
-    else
-      {:noreply, socket}
-    end
+    finalize_availability_task(socket, ref, :loaded, availability_map)
   end
 
   @doc """
@@ -66,20 +53,9 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   def handle_availability_error(socket, ref, reason) do
     Process.demonitor(ref, [:flush])
 
-    if ref == socket.assigns[:availability_task_ref] do
+    finalize_availability_task(socket, ref, :error, nil, fn ->
       Logger.warning("Month availability fetch failed", reason: inspect(reason))
-
-      socket =
-        socket
-        |> assign(:month_availability_map, nil)
-        |> assign(:availability_status, :error)
-        |> assign(:availability_task, nil)
-        |> assign(:availability_task_ref, nil)
-
-      {:noreply, socket}
-    else
-      {:noreply, socket}
-    end
+    end)
   end
 
   @doc """
@@ -88,13 +64,23 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   @spec handle_availability_down(Phoenix.LiveView.Socket.t(), reference(), any()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_availability_down(socket, ref, reason) do
-    if ref == socket.assigns[:availability_task_ref] do
+    finalize_availability_task(socket, ref, :timeout, nil, fn ->
       Logger.warning("Month availability task failed", reason: inspect(reason))
+    end)
+  end
+
+  # Applies the terminal availability-task state, but only for the *current*
+  # task ref — a stale ref (the user moved on before the fetch finished) is a
+  # no-op. `on_active` runs only when the ref matches, so error/timeout warnings
+  # are never emitted for superseded tasks.
+  defp finalize_availability_task(socket, ref, status, map, on_active \\ fn -> :ok end) do
+    if ref == socket.assigns[:availability_task_ref] do
+      on_active.()
 
       socket =
         socket
-        |> assign(:month_availability_map, nil)
-        |> assign(:availability_status, :timeout)
+        |> assign(:month_availability_map, map)
+        |> assign(:availability_status, status)
         |> assign(:availability_task, nil)
         |> assign(:availability_task_ref, nil)
 

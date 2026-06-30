@@ -39,26 +39,24 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
   """
   @spec reason_to_form_errors(String.t() | any()) :: map()
   def reason_to_form_errors(reason) do
-    reason_down = if is_binary(reason), do: String.downcase(reason), else: ""
-
-    cond do
-      is_binary(reason) and
-          (String.contains?(reason_down, "invalid api key") or
-             String.contains?(reason_down, "authentication failed")) ->
-        %{api_key: reason}
-
-      is_binary(reason) and
-          (String.contains?(reason_down, "url") or String.contains?(reason_down, "domain") or
-             String.contains?(reason_down, "endpoint")) ->
-        %{base_url: reason}
-
-      is_binary(reason) ->
-        %{base_url: reason}
-
-      true ->
-        %{base_url: "Connection validation failed"}
+    case classify_reason(reason) do
+      :api_key -> %{api_key: reason}
+      :base_url -> %{base_url: reason}
+      :non_binary -> %{base_url: "Connection validation failed"}
     end
   end
+
+  defp classify_reason(reason) when is_binary(reason) do
+    r = String.downcase(reason)
+
+    if String.contains?(r, "invalid api key") or String.contains?(r, "authentication failed") do
+      :api_key
+    else
+      :base_url
+    end
+  end
+
+  defp classify_reason(_reason), do: :non_binary
 
   # --- internal helpers ---
 

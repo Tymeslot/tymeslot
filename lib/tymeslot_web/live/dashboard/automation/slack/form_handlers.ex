@@ -20,13 +20,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.FormHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_show_webhook_form(_params, socket) do
     {:noreply,
-     socket
-     |> assign(:show_slack_form, true)
-     |> assign(:slack_form_mode, :webhook_url)
-     |> assign(:slack_form_data, nil)
-     |> assign(:slack_form_timestamp, System.system_time())
-     |> assign(:slack_form_errors, %{})
-     |> assign(:slack_form_values, %{
+     open_slack_form(socket, :webhook_url, nil, %{
        "name" => "",
        "events" => Slack.default_events_for_new_integration(),
        "webhook_url" => "",
@@ -136,17 +130,21 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.FormHandlers do
   """
   @spec open_oauth_form(Phoenix.LiveView.Socket.t(), term()) :: Phoenix.LiveView.Socket.t()
   def open_oauth_form(socket, integration) do
-    socket
-    |> assign(:show_slack_form, true)
-    |> assign(:slack_form_mode, :oauth_pending)
-    |> assign(:slack_form_data, integration)
-    |> assign(:slack_form_timestamp, System.system_time())
-    |> assign(:slack_form_errors, %{})
-    |> assign(:slack_form_values, %{
+    open_slack_form(socket, :oauth_pending, integration, %{
       "name" => integration.name || "",
       "events" => integration.events || Slack.default_events_for_new_integration(),
       "channel_id" => "",
       "channel_name" => ""
     })
+  end
+
+  defp open_slack_form(socket, mode, data, values) do
+    socket
+    |> assign(:show_slack_form, true)
+    |> assign(:slack_form_mode, mode)
+    |> assign(:slack_form_data, data)
+    |> assign(:slack_form_timestamp, System.system_time())
+    |> assign(:slack_form_errors, %{})
+    |> assign(:slack_form_values, values)
   end
 end

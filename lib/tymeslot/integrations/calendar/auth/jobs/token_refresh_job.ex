@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
   alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.Common.ErrorHandler
+  alias Tymeslot.Workers.RetryHelpers
 
   @refresh_threshold_hours 2
 
@@ -177,7 +178,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
 
       :rate_limited ->
         # Respect rate limiting with custom backoff
-        retry_after = extract_retry_after(reason)
+        retry_after = RetryHelpers.parse_retry_after_from_message(reason) || 300
 
         error_msg =
           ErrorHandler.format_integration_error(
@@ -247,15 +248,4 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
     retryable_errors = ["network", "timeout", "connection", "dns", "ssl"]
     Enum.any?(retryable_errors, &String.contains?(reason_lower, &1))
   end
-
-  defp extract_retry_after(reason) when is_binary(reason) do
-    # Try to extract retry-after from error message
-    case Regex.run(~r/retry[_\s]after[:\s]+(\d+)/i, reason) do
-      [_first, seconds_str] -> String.to_integer(seconds_str)
-      # Default to 5 minutes if no retry-after found
-      _other -> 300
-    end
-  end
-
-  defp extract_retry_after(_arg), do: 300
 end

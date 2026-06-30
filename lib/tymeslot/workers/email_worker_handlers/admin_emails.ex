@@ -5,6 +5,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Config
+
   @spec handle_admin_alert(%{String.t() => term()}) ::
           :ok | {:error, term()}
   def handle_admin_alert(%{
@@ -16,7 +18,13 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
       }) do
     severity = severity_atom(severity_str)
 
-    case email_service_module().send_admin_alert(recipient, category, severity, message, metadata) do
+    case Config.email_service_module().send_admin_alert(
+           recipient,
+           category,
+           severity,
+           message,
+           metadata
+         ) do
       {:ok, _result} ->
         Logger.info("Admin alert email delivered",
           category: category,
@@ -39,10 +47,4 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
   defp severity_atom("warning"), do: :warning
   defp severity_atom("error"), do: :error
   defp severity_atom(_other), do: :warning
-
-  defp email_service_module do
-    Application.get_env(:tymeslot, :email_service_module) ||
-      Application.get_env(:tymeslot, :email_service) ||
-      Tymeslot.Emails.EmailService
-  end
 end

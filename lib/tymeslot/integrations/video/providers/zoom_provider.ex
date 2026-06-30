@@ -8,7 +8,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   calendar events created by the user's calendar provider.
   """
 
-  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.OAuthTokenManager
@@ -389,7 +389,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
     url = "#{@api_base_url}/users/me/meetings"
 
-    case http_client().request(:post, url, Jason.encode!(payload), headers, []) do
+    case Config.http_client_module().request(:post, url, Jason.encode!(payload), headers, []) do
       {:ok, %Req.Response{status: 201, body: body}} ->
         Payload.parse_meeting_response(body)
 
@@ -411,7 +411,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     headers = [{"Authorization", "Bearer #{token}"}]
     url = "#{@api_base_url}/meetings/#{meeting_id}"
 
-    case http_client().request(:get, url, "", headers, []) do
+    case Config.http_client_module().request(:get, url, "", headers, []) do
       {:ok, %Req.Response{status: 200, body: body}} ->
         Logger.info("Verified Zoom meeting",
           room_id: to_string(meeting_id),
@@ -444,7 +444,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     body = Jason.encode!(Payload.build_meeting_payload(start_time, duration, config))
     url = "#{@api_base_url}/meetings/#{room_id}"
 
-    case http_client().request(:patch, url, body, request_headers(:patch, token), []) do
+    case Config.http_client_module().request(
+           :patch,
+           url,
+           body,
+           request_headers(:patch, token),
+           []
+         ) do
       {:ok, %Req.Response{status: 204}} ->
         :ok
 
@@ -482,7 +488,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       {:ok, fresh_token} ->
         url = "#{@api_base_url}/meetings/#{room_id}"
 
-        case http_client().request(verb, url, body, request_headers(verb, fresh_token), []) do
+        case Config.http_client_module().request(
+               verb,
+               url,
+               body,
+               request_headers(verb, fresh_token),
+               []
+             ) do
           {:ok, %Req.Response{status: 401, body: response_body}} ->
             # Refresh succeeded but Zoom still rejects — token is revoked.
             flag_revoked_token(config)
@@ -544,7 +556,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   defp delete_scheduled_meeting(token, room_id, config) do
     url = "#{@api_base_url}/meetings/#{room_id}"
 
-    case http_client().request(:delete, url, "", request_headers(:delete, token), []) do
+    case Config.http_client_module().request(
+           :delete,
+           url,
+           "",
+           request_headers(:delete, token),
+           []
+         ) do
       {:ok, %Req.Response{status: 401, body: _body}} ->
         # Token may have been server-side revoked. Attempt one forced refresh
         # and retry. If refresh fails or the retry also returns 401, flag the
@@ -586,10 +604,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
           :ok
       end
     end
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
   end
 
   defp zoom_oauth_helper do

@@ -12,6 +12,7 @@ defmodule Tymeslot.Webhooks do
   require Logger
 
   alias Tymeslot.Features
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.UrlValidation
   alias Tymeslot.Webhooks.{PayloadBuilder, WebhookDeliverySchema, WebhookQueries, WebhookSchema}
@@ -171,7 +172,9 @@ defmodule Tymeslot.Webhooks do
       payload = PayloadBuilder.build_test_payload()
       headers = build_headers(payload, token)
 
-      case http_client().post(url, Jason.encode!(payload), headers, receive_timeout: 10_000) do
+      case Config.http_client_module().post(url, Jason.encode!(payload), headers,
+             receive_timeout: 10_000
+           ) do
         {:ok, %{status: status}} when status >= 200 and status < 300 ->
           :ok
 
@@ -326,8 +329,4 @@ defmodule Tymeslot.Webhooks do
   # ============================================================================
   # Private Helpers
   # ============================================================================
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
-  end
 end

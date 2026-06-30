@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Emails.AppointmentBuilder
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Utils.ReminderUtils
@@ -15,96 +16,80 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   @spec handle_confirmation_emails(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_confirmation_emails(%{"meeting_id" => meeting_id}) do
-    case MeetingQueries.get_meeting(meeting_id) do
-      {:ok, meeting} ->
-        send_confirmation_emails(meeting)
-
-      {:error, :not_found} ->
-        Logger.warning("Attempted to send confirmation emails for non-existent meeting",
-          meeting_id: meeting_id
-        )
-
-        {:discard, "Meeting not found"}
-    end
+    with_meeting(meeting_id, "confirmation emails", &send_confirmation_emails/1)
   end
 
   @spec handle_reminder_emails(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_reminder_emails(%{"meeting_id" => meeting_id} = args) do
-    case MeetingQueries.get_meeting(meeting_id) do
-      {:ok, meeting} ->
-        if meeting.status == "cancelled" do
-          Logger.info("Skipping reminder emails for cancelled meeting",
-            meeting_id: meeting_id
-          )
-
-          {:discard, "Meeting cancelled"}
-        else
-          reminder_value = Map.get(args, "reminder_value", 30)
-          reminder_unit = Map.get(args, "reminder_unit", "minutes")
-
-          if reminder_already_sent?(meeting, reminder_value, reminder_unit) do
-            Logger.info("Skipping reminder emails - already sent",
-              meeting_id: meeting_id
-            )
-
-            :ok
-          else
-            send_reminder_emails(meeting, reminder_value, reminder_unit)
-          end
-        end
-
-      {:error, :not_found} ->
-        Logger.warning("Attempted to send reminder emails for non-existent meeting",
+    with_meeting(meeting_id, "reminder emails", fn meeting ->
+      if meeting.status == "cancelled" do
+        Logger.info("Skipping reminder emails for cancelled meeting",
           meeting_id: meeting_id
         )
 
-        {:discard, "Meeting not found"}
-    end
+        {:discard, "Meeting cancelled"}
+      else
+        reminder_value = Map.get(args, "reminder_value", 30)
+        reminder_unit = Map.get(args, "reminder_unit", "minutes")
+
+        if reminder_already_sent?(meeting, reminder_value, reminder_unit) do
+          Logger.info("Skipping reminder emails - already sent",
+            meeting_id: meeting_id
+          )
+
+          :ok
+        else
+          send_reminder_emails(meeting, reminder_value, reminder_unit)
+        end
+      end
+    end)
   end
 
   @spec handle_reschedule_request(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_reschedule_request(%{"meeting_id" => meeting_id}) do
-    case MeetingQueries.get_meeting(meeting_id) do
-      {:ok, meeting} ->
-        if meeting.status == "cancelled" do
-          Logger.info("Skipping reschedule request for cancelled meeting",
-            meeting_id: meeting_id
-          )
-
-          {:discard, "Meeting cancelled"}
-        else
-          send_reschedule_request_email(meeting)
-        end
-
-      {:error, :not_found} ->
-        Logger.warning("Attempted to send reschedule request for non-existent meeting",
+    with_meeting(meeting_id, "reschedule request", fn meeting ->
+      if meeting.status == "cancelled" do
+        Logger.info("Skipping reschedule request for cancelled meeting",
           meeting_id: meeting_id
         )
 
-        {:discard, "Meeting not found"}
-    end
+        {:discard, "Meeting cancelled"}
+      else
+        send_reschedule_request_email(meeting)
+      end
+    end)
   end
 
   @spec handle_cancellation_emails(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_cancellation_emails(%{"meeting_id" => meeting_id}) do
+    with_meeting(meeting_id, "cancellation emails", fn meeting ->
+      if meeting.status == "cancelled" do
+        send_cancellation_emails_for_meeting(meeting)
+      else
+        Logger.info("Skipping cancellation emails - meeting is not cancelled",
+          meeting_id: meeting_id,
+          status: meeting.status
+        )
+
+        {:discard, "Meeting not cancelled"}
+      end
+    end)
+  end
+
+  # Fetches the meeting and runs `fun` with it, or discards the job with a
+  # consistent log line when the meeting no longer exists. `action` names the
+  # email action for the warning (e.g. "confirmation emails").
+  defp with_meeting(meeting_id, action, fun) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        if meeting.status == "cancelled" do
-          send_cancellation_emails_for_meeting(meeting)
-        else
-          Logger.info("Skipping cancellation emails - meeting is not cancelled",
-            meeting_id: meeting_id,
-            status: meeting.status
-          )
-
-          {:discard, "Meeting not cancelled"}
-        end
+        fun.(meeting)
 
       {:error, :not_found} ->
-        Logger.warning("Attempted to send cancellation emails for non-existent meeting",
+        Logger.warning("Attempted to send email for non-existent meeting",
+          email_action: action,
           meeting_id: meeting_id
         )
 
@@ -117,7 +102,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
     appointment_details = AppointmentBuilder.from_meeting(meeting)
 
-    case email_service_module().send_cancellation_emails(appointment_details) do
+    case Config.email_service_module().send_cancellation_emails(appointment_details) do
       {{:ok, _organizer}, {:ok, _attendee}} ->
         Logger.info("Cancellation emails sent successfully", meeting_id: meeting.id)
         :ok
@@ -163,7 +148,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         need_attendee: need_attendee?
       )
 
-      email_service = email_service_module()
+      email_service = Config.email_service_module()
 
       organizer_result =
         if need_organizer? do
@@ -256,7 +241,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
     time_until = appointment_details.time_until
 
-    case email_service_module().send_appointment_reminders(appointment_details, time_until) do
+    case Config.email_service_module().send_appointment_reminders(appointment_details, time_until) do
       {organizer_result, attendee_result} ->
         process_email_results(
           meeting,
@@ -270,7 +255,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   defp send_reschedule_request_email(meeting) do
     Logger.info("Sending reschedule request email", meeting_id: meeting.id, uid: meeting.uid)
 
-    case email_service_module().send_reschedule_request(meeting) do
+    case Config.email_service_module().send_reschedule_request(meeting) do
       {:ok, _result} ->
         Logger.info("Reschedule request email sent successfully",
           meeting_id: meeting.id,
@@ -426,11 +411,5 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         _other -> false
       end
     end)
-  end
-
-  defp email_service_module do
-    Application.get_env(:tymeslot, :email_service_module) ||
-      Application.get_env(:tymeslot, :email_service) ||
-      Tymeslot.Emails.EmailService
   end
 end

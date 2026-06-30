@@ -21,7 +21,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   require Logger
 
-  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
@@ -254,10 +254,6 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   def url_patterns, do: ["meet.google.com"]
 
   # Private helper functions (token validation, API calls)
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
-  end
-
   defp google_oauth_helper do
     Application.get_env(:tymeslot, :google_calendar_oauth_helper, GoogleOAuthHelper)
   end
@@ -372,7 +368,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
     url = "https://meet.googleapis.com/v2/spaces"
 
-    case http_client().request(:post, url, "{}", headers, []) do
+    case Config.http_client_module().request(:post, url, "{}", headers, []) do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
         case Jason.decode(response_body) do
           {:ok, space} -> {:ok, space}
@@ -433,7 +429,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
     url = "https://meet.googleapis.com/v2/spaces/#{space_id}:endActiveConference"
 
-    case http_client().request(:post, url, "{}", headers, []) do
+    case Config.http_client_module().request(:post, url, "{}", headers, []) do
       {:ok, %Req.Response{status: 200}} ->
         :ok
 
@@ -502,7 +498,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
     url = "https://www.googleapis.com/calendar/v3/users/me/calendarList"
 
-    case http_client().request(:get, url, "", headers, []) do
+    case Config.http_client_module().request(:get, url, "", headers, []) do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
         case Jason.decode(response_body) do
           {:ok, list} -> {:ok, list}

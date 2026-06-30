@@ -21,6 +21,8 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
   alias Tymeslot.Slack
   alias Tymeslot.Webhooks.WebhookQueries
 
+  @retention Application.compile_env(:tymeslot, :payments, [])[:retention] || []
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
     # Clean up outgoing webhook deliveries
@@ -42,7 +44,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
     # Default to 60 days retention
     retention_days =
       Map.get(args, "retention_days") ||
-        get_in(Application.get_env(:tymeslot, :payments, []), [:retention, :outgoing_webhook_days]) ||
+        @retention[:outgoing_webhook_days] ||
         60
 
     Logger.info("Starting webhook delivery cleanup", retention_days: retention_days)
@@ -58,7 +60,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
   defp nullify_stale_payloads(args) do
     retention_days =
       Map.get(args, "payload_retention_days") ||
-        get_in(Application.get_env(:tymeslot, :payments, []), [:retention, :payload_days]) ||
+        @retention[:payload_days] ||
         30
 
     cutoff_date =
@@ -82,7 +84,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
     # Default to 60 days retention, matching outgoing webhook deliveries.
     retention_days =
       Map.get(args, "slack_delivery_retention_days") ||
-        get_in(Application.get_env(:tymeslot, :payments, []), [:retention, :outgoing_webhook_days]) ||
+        @retention[:outgoing_webhook_days] ||
         60
 
     Logger.info("Starting Slack delivery cleanup", retention_days: retention_days)
@@ -99,7 +101,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
     # Default to 90 days retention for Stripe events
     retention_days =
       Map.get(args, "stripe_event_retention_days") ||
-        get_in(Application.get_env(:tymeslot, :payments, []), [:retention, :stripe_event_days]) ||
+        @retention[:stripe_event_days] ||
         90
 
     # WebhookEventSchema.inserted_at is a NaiveDateTime (:naive_datetime), so the

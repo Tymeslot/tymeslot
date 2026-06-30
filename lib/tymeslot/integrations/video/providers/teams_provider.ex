@@ -6,7 +6,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   Provides seamless OAuth integration allowing users to create Teams meetings on their behalf.
   """
 
-  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
@@ -319,7 +319,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
     url = "#{@graph_api_base_url}/me/events"
 
-    case http_client().request(:post, url, Jason.encode!(meeting_payload), headers, []) do
+    case Config.http_client_module().request(
+           :post,
+           url,
+           Jason.encode!(meeting_payload),
+           headers,
+           []
+         ) do
       {:ok, %Req.Response{status: 201, body: body}} ->
         parse_meeting_response(body)
 
@@ -439,10 +445,6 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     # Check if it is the consumer tenant or we don't know yet (common)
     tenant_id == MicrosoftConfig.consumer_tenant_id() or tenant_id == "common" or
       is_nil(tenant_id)
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
   end
 
   defp teams_oauth_helper do

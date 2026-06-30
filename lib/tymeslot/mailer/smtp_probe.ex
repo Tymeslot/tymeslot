@@ -69,7 +69,7 @@ defmodule Tymeslot.Mailer.SmtpProbe do
   defp test_starttls_connection(host, port, timeout) do
     case :gen_tcp.connect(host, port, [:binary, active: false], timeout) do
       {:ok, socket} ->
-        result = exchange_greeting_tcp(socket, timeout)
+        result = exchange_greeting(socket, :gen_tcp, timeout)
         :gen_tcp.close(socket)
         result
 
@@ -80,29 +80,13 @@ defmodule Tymeslot.Mailer.SmtpProbe do
     e -> {:error, Exception.message(e)}
   end
 
-  defp exchange_greeting_tcp(socket, timeout) do
-    with {:ok, greeting} <- :gen_tcp.recv(socket, 0, timeout),
-         :ok <- validate_smtp_greeting(greeting) do
-      :gen_tcp.send(socket, "QUIT\r\n")
-      drain_quit_tcp(socket)
-      :ok
-    end
-  end
-
-  defp drain_quit_tcp(socket) do
-    case :gen_tcp.recv(socket, 0, 1000) do
-      {:ok, response} -> log_unexpected_quit(response)
-      {:error, _reason} -> :ok
-    end
-  end
-
   # Port 465: direct SSL connection.
   defp test_ssl_connection(host, port, timeout, config) do
     ssl_opts = ssl_options(host, config)
 
     case :ssl.connect(host, port, ssl_opts, timeout) do
       {:ok, socket} ->
-        result = exchange_greeting_ssl(socket, timeout)
+        result = exchange_greeting(socket, :ssl, timeout)
         :ssl.close(socket)
         result
 
@@ -113,17 +97,17 @@ defmodule Tymeslot.Mailer.SmtpProbe do
     e -> {:error, Exception.message(e)}
   end
 
-  defp exchange_greeting_ssl(socket, timeout) do
-    with {:ok, greeting} <- :ssl.recv(socket, 0, timeout),
+  defp exchange_greeting(socket, mod, timeout) do
+    with {:ok, greeting} <- mod.recv(socket, 0, timeout),
          :ok <- validate_smtp_greeting(greeting) do
-      :ssl.send(socket, "QUIT\r\n")
-      drain_quit_ssl(socket)
+      mod.send(socket, "QUIT\r\n")
+      drain_quit(socket, mod)
       :ok
     end
   end
 
-  defp drain_quit_ssl(socket) do
-    case :ssl.recv(socket, 0, 1000) do
+  defp drain_quit(socket, mod) do
+    case mod.recv(socket, 0, 1000) do
       {:ok, response} -> log_unexpected_quit(response)
       {:error, _reason} -> :ok
     end

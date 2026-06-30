@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   client. All modules above it work with domain types, not `Req.Response`.
   """
 
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.RetryLogic
   # Aliased as CalDAVBase to avoid shadowing Elixir's built-in Base module,
   # which is referenced by name in build_headers/3 for Base64 encoding.
@@ -55,7 +56,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     body = Keyword.get(opts, :body, XmlHandler.build_propfind_request())
     timeout = Keyword.get(opts, :timeout, Keyword.get(opts, :discovery_timeout, 10_000))
 
-    case http_client().request(:propfind, url, body, headers,
+    case Config.http_client_module().request(:propfind, url, body, headers,
            receive_timeout: timeout,
            ssrf_protect: true
          ) do
@@ -113,7 +114,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
 
     timeout = Keyword.get(opts, :timeout, CalDAVBase.report_timeout_ms())
 
-    case http_client().request(:report, url, body, headers,
+    case Config.http_client_module().request(:report, url, body, headers,
            receive_timeout: timeout,
            ssrf_protect: true
          ) do
@@ -174,7 +175,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     # Oban workers are async, so the user never waits on this timeout.
     timeout = Keyword.get(opts, :timeout, 45_000)
 
-    case http_client().put(url, ical_data, headers,
+    case Config.http_client_module().put(url, ical_data, headers,
            receive_timeout: timeout,
            ssrf_protect: true
          ) do
@@ -198,7 +199,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     # Matches put_event — see the note there for rationale.
     timeout = Keyword.get(opts, :timeout, 45_000)
 
-    case http_client().delete(url, headers, receive_timeout: timeout, ssrf_protect: true) do
+    case Config.http_client_module().delete(url, headers,
+           receive_timeout: timeout,
+           ssrf_protect: true
+         ) do
       {:ok, %Req.Response{status: status} = response} when status in [200, 204, 404] ->
         # 404 is ok for delete — event may already be gone
         {:ok, response}
@@ -229,7 +233,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     headers = build_headers(username, password, [])
     timeout = Keyword.get(opts, :timeout, 30_000)
 
-    case http_client().head(url, headers, receive_timeout: timeout, ssrf_protect: true) do
+    case Config.http_client_module().head(url, headers,
+           receive_timeout: timeout,
+           ssrf_protect: true
+         ) do
       {:ok, %Req.Response{status: status} = response} when status in [200, 204] ->
         {:ok, response}
 
@@ -323,9 +330,5 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     )
 
     {:error, :server_unresponsive}
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 end

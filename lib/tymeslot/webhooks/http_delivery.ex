@@ -12,7 +12,7 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
 
   require Logger
 
-  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Webhooks.SsrfValidator
 
   @delivery_timeout_ms 10_000
@@ -184,7 +184,7 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
 
   defp perform_http_request(url, :post, body, headers) do
     result =
-      http_client().post(url, body, headers,
+      Config.http_client_module().post(url, body, headers,
         receive_timeout: @delivery_timeout_ms,
         redirect: false
       )
@@ -194,7 +194,7 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
 
   defp perform_http_request(url, :get, _body, headers) do
     result =
-      http_client().get(url, headers,
+      Config.http_client_module().get(url, headers,
         receive_timeout: @delivery_timeout_ms,
         redirect: false
       )
@@ -208,9 +208,4 @@ defmodule Tymeslot.Webhooks.HttpDelivery do
 
   defp normalise_http_result({:error, %{reason: reason}}), do: {:error, reason}
   defp normalise_http_result({:error, reason}), do: {:error, reason}
-
-  @spec http_client() :: module()
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
-  end
 end

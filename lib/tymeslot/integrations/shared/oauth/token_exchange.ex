@@ -6,7 +6,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
   against OAuth token endpoints (Google, Microsoft, etc.).
   """
 
-  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
 
   require Logger
@@ -65,7 +65,13 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
 
     headers = Keyword.get(opts, :headers, @default_headers)
 
-    case http_client().request(:post, token_url, URI.encode_query(body), headers, []) do
+    case Config.http_client_module().request(
+           :post,
+           token_url,
+           URI.encode_query(body),
+           headers,
+           []
+         ) do
       {:ok, response} ->
         %{status: status, body: resp_body} = normalize_response(response)
 
@@ -102,7 +108,13 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
     fallback_scope = Keyword.get(opts, :fallback_scope)
     headers = Keyword.get(opts, :headers, @default_headers)
 
-    case http_client().request(:post, token_url, URI.encode_query(body), headers, []) do
+    case Config.http_client_module().request(
+           :post,
+           token_url,
+           URI.encode_query(body),
+           headers,
+           []
+         ) do
       {:ok, response} ->
         %{status: status, body: resp_body} = normalize_response(response)
 
@@ -129,10 +141,6 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
   end
 
   # Private helpers
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
-  end
 
   defp parse_token_response(response_body, fallback_refresh_token, fallback_scope) do
     case Jason.decode(response_body) do

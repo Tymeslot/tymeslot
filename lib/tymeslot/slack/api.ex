@@ -12,6 +12,8 @@ defmodule Tymeslot.Slack.API do
   do not have to inspect the body to detect failure.
   """
 
+  alias Tymeslot.Infrastructure.Config
+
   @base_url "https://slack.com/api"
   @timeout_ms 10_000
 
@@ -115,15 +117,11 @@ defmodule Tymeslot.Slack.API do
   # ============================================================================
 
   defp http_post(url, body, headers) do
-    http_client().post(url, body, headers, receive_timeout: @timeout_ms)
+    Config.http_client_module().post(url, body, headers, receive_timeout: @timeout_ms)
   end
 
   defp http_get(url, headers) do
-    http_client().get(url, headers, receive_timeout: @timeout_ms)
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
+    Config.http_client_module().get(url, headers, receive_timeout: @timeout_ms)
   end
 
   defp maybe_put_cursor(params, nil), do: params

@@ -26,11 +26,12 @@ defmodule TymeslotWeb.Components.PaymentHelpers do
   Accepts a lowercase ISO 4217 currency code string. Unknown or
   non-string values return an empty string.
   """
+  @currency_symbols %{"eur" => "€", "usd" => "$", "gbp" => "£", "chf" => "CHF "}
+
   @spec currency_symbol(String.t() | term()) :: String.t()
-  def currency_symbol("eur"), do: "€"
-  def currency_symbol("usd"), do: "$"
-  def currency_symbol("gbp"), do: "£"
-  def currency_symbol("chf"), do: "CHF "
-  def currency_symbol(other) when is_binary(other), do: String.upcase(other) <> " "
+  def currency_symbol(currency) when is_binary(currency) do
+    Map.get(@currency_symbols, currency, String.upcase(currency) <> " ")
+  end
+
   def currency_symbol(_currency), do: ""
 end

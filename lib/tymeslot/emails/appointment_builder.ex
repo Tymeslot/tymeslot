@@ -109,10 +109,11 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   defp timezone_details(meeting, owner_timezone, attendee_timezone) do
     %{
       attendee_timezone: attendee_timezone,
-      start_time_owner_tz: convert_to_timezone(meeting.start_time, owner_timezone),
-      end_time_owner_tz: convert_to_timezone(meeting.end_time, owner_timezone),
-      start_time_attendee_tz: convert_to_timezone(meeting.start_time, attendee_timezone),
-      end_time_attendee_tz: convert_to_timezone(meeting.end_time, attendee_timezone)
+      start_time_owner_tz: DateTimeUtils.convert_to_timezone(meeting.start_time, owner_timezone),
+      end_time_owner_tz: DateTimeUtils.convert_to_timezone(meeting.end_time, owner_timezone),
+      start_time_attendee_tz:
+        DateTimeUtils.convert_to_timezone(meeting.start_time, attendee_timezone),
+      end_time_attendee_tz: DateTimeUtils.convert_to_timezone(meeting.end_time, attendee_timezone)
     }
   end
 
@@ -262,10 +263,6 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   end
 
   defp format_location_details(meeting), do: format_location(meeting)
-
-  defp convert_to_timezone(datetime, timezone) do
-    DateTimeUtils.convert_to_timezone(datetime, timezone)
-  end
 
   defp legacy_reminder_label(meeting) do
     meeting.reminder_time || meeting.default_reminder_time

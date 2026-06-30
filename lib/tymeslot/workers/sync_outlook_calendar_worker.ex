@@ -27,6 +27,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Workers.RetryHelpers
 
   # CalendarGrid enqueues Outlook jobs with only calendar_integration_id (no graph_resource_id).
   # Outlook syncs are event-driven via Microsoft Graph webhooks — there is no full-sync path yet.
@@ -129,7 +130,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
           calendar_integration_id: integration.id
         )
 
-        {:snooze, retry_after_seconds(message)}
+        {:snooze, min(RetryHelpers.parse_retry_after_from_message(message) || 120, 600)}
 
       {:error, reason} ->
         Logger.error("Outlook Calendar sync failed",
@@ -140,17 +141,6 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
         {:error, reason}
     end
   end
-
-  # The canonical client encodes a server-provided Retry-After as
-  # "retry_after:N" in the rate-limit error message.
-  defp retry_after_seconds("retry_after:" <> seconds) do
-    case Integer.parse(seconds) do
-      {n, _rest} when n > 0 -> min(n, 600)
-      _no_parse -> 120
-    end
-  end
-
-  defp retry_after_seconds(_message), do: 120
 
   defp handle_event_deleted(integration, graph_resource_id) do
     Logger.info("Outlook Calendar event deleted; removing from cache",

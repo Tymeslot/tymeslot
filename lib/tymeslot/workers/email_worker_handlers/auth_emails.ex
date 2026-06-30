@@ -7,6 +7,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
   require Logger
 
   alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Infrastructure.Config
 
   @spec handle_email_verification(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -29,7 +30,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
   end
 
   defp deliver_email_verification(user, verification_url) do
-    case email_service_module().send_email_verification(user, verification_url) do
+    case Config.email_service_module().send_email_verification(user, verification_url) do
       {:ok, _result} ->
         Logger.info("Queued email verification sent", user_id: user.id)
         :ok
@@ -63,7 +64,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
   end
 
   defp deliver_password_reset(user, reset_url) do
-    case email_service_module().send_password_reset(user, reset_url) do
+    case Config.email_service_module().send_password_reset(user, reset_url) do
       {:ok, _result} ->
         Logger.info("Queued password reset email sent", user_id: user.id)
         :ok
@@ -87,7 +88,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
       }) do
     case UserQueries.get_user(user_id) do
       {:ok, user} ->
-        case email_service_module().send_email_change_verification(
+        case Config.email_service_module().send_email_change_verification(
                user,
                new_email,
                verification_url
@@ -121,7 +122,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
   def handle_email_change_notification(%{"user_id" => user_id, "new_email" => new_email}) do
     case UserQueries.get_user(user_id) do
       {:ok, user} ->
-        case email_service_module().send_email_change_notification(user, new_email) do
+        case Config.email_service_module().send_email_change_notification(user, new_email) do
           {:ok, _result} ->
             Logger.info("Queued email change notification sent",
               user_id: user_id,
@@ -155,7 +156,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
       }) do
     with {:ok, user} <- UserQueries.get_user(user_id),
          {old_result, new_result} <-
-           email_service_module().send_email_change_confirmations(user, old_email, new_email) do
+           Config.email_service_module().send_email_change_confirmations(
+             user,
+             old_email,
+             new_email
+           ) do
       organizer_success = match?({:ok, _result}, old_result)
       new_success = match?({:ok, _result}, new_result)
 
@@ -186,11 +191,5 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
       nil -> false
       job_hash -> job_hash != current_hash
     end
-  end
-
-  defp email_service_module do
-    Application.get_env(:tymeslot, :email_service_module) ||
-      Application.get_env(:tymeslot, :email_service) ||
-      Tymeslot.Emails.EmailService
   end
 end

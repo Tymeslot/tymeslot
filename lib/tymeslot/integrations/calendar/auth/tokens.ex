@@ -5,10 +5,9 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
   Centralizes token expiry checks and refresh flows for Google and Outlook.
   """
 
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
-  alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.Shared.Lock
@@ -96,7 +95,7 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
   end
 
   defp perform_refresh(%{provider: "google"} = integration) do
-    case google_calendar_api().refresh_token(integration) do
+    case Config.google_calendar_api_module().refresh_token(integration) do
       {:ok, {new_access_token, new_refresh_token, expires_at}} ->
         # Use new refresh token if provided (rotation), else keep old one
         refresh_to_persist =
@@ -120,7 +119,7 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
   end
 
   defp perform_refresh(%{provider: "outlook"} = integration) do
-    case outlook_calendar_api().refresh_token(integration) do
+    case Config.outlook_calendar_api_module().refresh_token(integration) do
       {:ok, {new_access_token, new_refresh_token, expires_at}} ->
         persist_and_return(integration, new_access_token, new_refresh_token, expires_at)
 
@@ -163,13 +162,5 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
        refresh_token: refresh,
        token_expires_at: expires_at
      })}
-  end
-
-  defp google_calendar_api do
-    Application.get_env(:tymeslot, :google_calendar_api_module, GoogleCalendarAPI)
-  end
-
-  defp outlook_calendar_api do
-    Application.get_env(:tymeslot, :outlook_calendar_api_module, OutlookCalendarAPI)
   end
 end

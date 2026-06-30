@@ -439,11 +439,12 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       # Guards against sending {:load_slots, nil} on date deselection
       defp handle_schedule_date_selection(socket, date) do
         socket =
-          socket
-          |> assign(:selected_date, date)
-          |> assign(:selected_time, nil)
-          |> assign(:loading_slots, date != nil)
-          |> assign(:calendar_error, nil)
+          assign(socket,
+            selected_date: date,
+            selected_time: nil,
+            loading_slots: date != nil,
+            calendar_error: nil
+          )
 
         if date, do: send(self(), {:load_slots, date})
         {:noreply, socket}

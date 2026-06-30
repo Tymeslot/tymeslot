@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Shared.OAuth.TokenFlow do
   Shared helpers for performing OAuth token exchanges and refreshes.
   """
 
-  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Config
 
   @default_headers [{"Content-Type", "application/x-www-form-urlencoded"}]
 
@@ -26,7 +26,13 @@ defmodule Tymeslot.Integrations.Shared.OAuth.TokenFlow do
   defp request_tokens(token_url, params, opts) do
     headers = Keyword.get(opts, :headers, @default_headers)
 
-    case http_client().request(:post, token_url, URI.encode_query(params), headers, []) do
+    case Config.http_client_module().request(
+           :post,
+           token_url,
+           URI.encode_query(params),
+           headers,
+           []
+         ) do
       {:ok, %{status: 200, body: body}} ->
         {:ok, Jason.decode!(body)}
 
@@ -36,9 +42,5 @@ defmodule Tymeslot.Integrations.Shared.OAuth.TokenFlow do
       {:error, reason} ->
         {:error, {:network_error, reason}}
     end
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
   end
 end

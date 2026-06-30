@@ -6,7 +6,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
   require Logger
 
-  alias Tymeslot.Emails.EmailService
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.Notifications.{ContentBuilder, Recipients, SchedulingRules}
   alias Tymeslot.Utils.ReminderUtils
@@ -289,7 +289,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   defp send_immediate_notifications(notification_type, content) do
-    email_service = get_email_service_module()
+    email_service = Config.email_service_module()
 
     case notification_type do
       :reschedule ->
@@ -345,10 +345,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
   # Module getters for dependency injection in tests
   defp get_email_worker_module do
     Application.get_env(:tymeslot, :email_worker_module, Tymeslot.Emails.EmailScheduler)
-  end
-
-  defp get_email_service_module do
-    Application.get_env(:tymeslot, :email_service_module, EmailService)
   end
 
   defp normalize_reminders(reminders) do

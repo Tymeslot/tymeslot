@@ -28,22 +28,7 @@ defmodule TymeslotWeb.AccountLive.ErrorFormatter do
   end
 
   def format(message) when is_binary(message) do
-    cond do
-      message == "Current password is incorrect" ->
-        %{current_password: [message]}
-
-      String.contains?(message, "email") ->
-        %{new_email: [message]}
-
-      String.contains?(message, "match") ->
-        %{new_password_confirmation: [message]}
-
-      String.contains?(message, "8 characters") ->
-        %{new_password: [message]}
-
-      true ->
-        %{base: [message]}
-    end
+    %{field_for(message) => [message]}
   end
 
   def format(errors) when is_map(errors) do
@@ -51,6 +36,17 @@ defmodule TymeslotWeb.AccountLive.ErrorFormatter do
   end
 
   def format(_other), do: %{base: ["An unexpected error occurred"]}
+
+  defp field_for("Current password is incorrect"), do: :current_password
+
+  defp field_for(msg) do
+    cond do
+      String.contains?(msg, "email") -> :new_email
+      String.contains?(msg, "match") -> :new_password_confirmation
+      String.contains?(msg, "8 characters") -> :new_password
+      true -> :base
+    end
+  end
 
   @doc """
   Formats validation errors from input processor.

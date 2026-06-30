@@ -222,11 +222,8 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   end
 
   defp format_single_change({:time, from_start, to_start}) do
-    "#{dgettext("emails", "Time:")} #{format_time_short(from_start)} → #{format_time_short(to_start)}"
+    "#{dgettext("emails", "Time:")} #{Formatting.format_time_short(from_start)} → #{Formatting.format_time_short(to_start)}"
   end
 
   defp format_single_change(_other), do: nil
-
-  defp format_time_short(%DateTime{} = dt), do: Calendar.strftime(dt, "%d %b %Y, %H:%M UTC")
-  defp format_time_short(val), do: to_string(val)
 end

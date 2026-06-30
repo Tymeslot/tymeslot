@@ -11,8 +11,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     display_name: "Google Calendar",
     base_url: "https://www.googleapis.com/calendar/v3"
 
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.Google.{CalendarAPI, EventNormaliser}
+  alias Tymeslot.Integrations.Calendar.Google.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
   alias Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch
 
@@ -233,9 +234,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
 
   # Private helper functions
 
-  defp api_module do
-    Application.get_env(:tymeslot, :google_calendar_api_module, CalendarAPI)
-  end
+  defp api_module, do: Config.google_calendar_api_module()
 
   defp all_day_google_event?(%{"start" => %{"date" => _date}}), do: true
   defp all_day_google_event?(_other), do: false

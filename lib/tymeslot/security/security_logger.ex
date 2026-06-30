@@ -3,6 +3,8 @@ defmodule Tymeslot.Security.SecurityLogger do
   Security event logging for suspicious input patterns that were sanitised in place.
   """
 
+  alias Tymeslot.Infrastructure.Config
+
   require Logger
 
   @type security_metadata :: %{
@@ -317,7 +319,7 @@ defmodule Tymeslot.Security.SecurityLogger do
     headers = [{"Content-Type", "application/json"}]
     body = Jason.encode!(metadata)
 
-    case http_client().post(webhook_url, body, headers,
+    case Config.http_client_module().post(webhook_url, body, headers,
            receive_timeout: 10_000,
            connect_options: [timeout: 5_000]
          ) do
@@ -335,9 +337,5 @@ defmodule Tymeslot.Security.SecurityLogger do
       Logger.error("Exception sending security event to monitoring service",
         error: inspect(error)
       )
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 end

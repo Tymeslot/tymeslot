@@ -7,9 +7,10 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   state management, and provides flexible scope configuration.
   """
 
-  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Common.OAuth.{ErrorParser, IdToken, State, TokenExchange}
+  alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
   alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
 
   require Logger
@@ -62,18 +63,17 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
       prompt: Keyword.get(options, :prompt, default_prompt)
     }
 
-    # Add login_hint if provided
-    base_params =
-      if login_hint, do: Map.put(base_params, :login_hint, login_hint), else: base_params
-
     # Add any additional options
     params =
       options
       |> Keyword.drop([:access_type, :prompt, :integration_id, :login_hint])
       |> Enum.into(base_params)
 
-    query_string = URI.encode_query(params)
-    "https://accounts.google.com/o/oauth2/v2/auth?" <> query_string
+    ProviderHelpers.build_authorization_url(
+      "https://accounts.google.com/o/oauth2/v2/auth",
+      params,
+      login_hint
+    )
   end
 
   @doc """
@@ -186,7 +186,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
     url = "https://www.googleapis.com/oauth2/v1/tokeninfo"
     headers = [{"Authorization", "Bearer #{access_token}"}]
 
-    case http_client().request(:get, url, "", headers, []) do
+    case Config.http_client_module().request(:get, url, "", headers, []) do
       {:ok, %{status: 200, body: response_body}} ->
         case Jason.decode(response_body) do
           {:ok, response} ->
@@ -315,9 +315,5 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
     Application.get_env(:tymeslot, :google_oauth)[:state_secret] ||
       System.get_env("GOOGLE_STATE_SECRET") ||
       raise "Google State Secret not configured"
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
   end
 end

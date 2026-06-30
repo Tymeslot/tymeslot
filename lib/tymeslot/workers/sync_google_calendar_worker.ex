@@ -23,8 +23,8 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Sync
@@ -59,12 +59,8 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   # Private helpers
   # ---------------------------------------------------------------------------
 
-  defp google_calendar_api do
-    Application.get_env(:tymeslot, :google_calendar_api_module, GoogleCalendarAPI)
-  end
-
   defp sync_integration(integration) do
-    case google_calendar_api().list_events_incremental(integration) do
+    case Config.google_calendar_api_module().list_events_incremental(integration) do
       {:ok, %{events: events, next_sync_token: next_sync_token}} ->
         Logger.info("Incremental Google Calendar sync fetched events",
           calendar_integration_id: integration.id,
@@ -125,7 +121,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   end
 
   defp bootstrap_integration(integration) do
-    case google_calendar_api().bootstrap_sync(integration) do
+    case Config.google_calendar_api_module().bootstrap_sync(integration) do
       {:ok, %{events: events, next_sync_token: next_sync_token}} ->
         Logger.info("Google Calendar bootstrap fetched events",
           calendar_integration_id: integration.id,
@@ -230,7 +226,12 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   end
 
   defp sync_one_secondary_calendar(integration, calendar_id, start_time, end_time) do
-    case google_calendar_api().list_events(integration, calendar_id, start_time, end_time) do
+    case Config.google_calendar_api_module().list_events(
+           integration,
+           calendar_id,
+           start_time,
+           end_time
+         ) do
       {:ok, events} ->
         case safe_process_events(integration, events, calendar_id) do
           :ok -> :ok

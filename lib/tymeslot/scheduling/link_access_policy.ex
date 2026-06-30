@@ -83,7 +83,7 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
   @spec check_public_readiness(map() | nil) :: {:ok, :ready} | {:error, public_reason}
   def check_public_readiness(profile) do
     cond do
-      demo_profile?(profile) ->
+      Demo.demo_profile?(profile) ->
         {:ok, :ready}
 
       is_nil(profile) or is_nil(Map.get(profile, :user_id)) ->
@@ -125,7 +125,4 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
     do: integration_status[:has_calendar] || false
 
   defp has_calendar?(_integration_status), do: false
-
-  # Demo profiles used in the scheduling flow for previews/demos.
-  defp demo_profile?(profile), do: Demo.demo_profile?(profile)
 end
