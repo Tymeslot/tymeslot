@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   require Logger
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Integrations.Calendar.VTimezone
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils.Duration
   alias Tymeslot.Utils.DateTimeUtils.ICal
@@ -93,9 +94,15 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   end
 
   defp extract_events(content) do
+    # Build the embedded VTIMEZONE map once per VCALENDAR. It carries only the
+    # custom, non-IANA zones bundled in the payload (RFC 5545 §3.6.5) and is
+    # consulted by `parse_datetime_property/2` solely for TZIDs the configured
+    # time zone database can't resolve — IANA zones never touch it.
+    vtimezones = VTimezone.parse(content)
+
     content
     |> extract_vevent_blocks()
-    |> Enum.map(&parse_event_block/1)
+    |> Enum.map(&parse_event_block(&1, vtimezones))
     |> Enum.filter(&(&1 != nil))
   end
 
@@ -112,7 +119,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     |> Enum.filter(&(&1 != nil))
   end
 
-  defp parse_event_block(event_block) do
+  defp parse_event_block(event_block, vtimezones) do
     lines = unfold_lines(event_block)
 
     # Extract properties
@@ -123,16 +130,16 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     attendees = extract_attendees(lines)
     recurrence_rule = extract_property(lines, "RRULE")
     recurrence_id = extract_recurrence_id(lines)
-    exdates = extract_exdates(lines)
+    exdates = extract_exdates(lines, vtimezones)
 
     # Parse dates with timezone support
     dtstart = extract_datetime_property(lines, "DTSTART")
     dtend = extract_datetime_property(lines, "DTEND")
 
-    start_time = parse_datetime_property(dtstart)
+    start_time = parse_datetime_property(dtstart, vtimezones)
 
     end_time =
-      parse_datetime_property(dtend) ||
+      parse_datetime_property(dtend, vtimezones) ||
         calculate_end_time(start_time, extract_property(lines, "DURATION"))
 
     if uid && start_time do
@@ -309,27 +316,59 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     |> String.replace("\\\\", "\\")
   end
 
-  defp parse_datetime_property(nil), do: nil
+  defp parse_datetime_property(nil, _vtimezones), do: nil
 
-  defp parse_datetime_property(dt_info) do
-    case ICal.parse_datetime_with_timezone(dt_info) do
-      {:ok, datetime} ->
-        datetime
-
-      {:error, _reason} ->
+  defp parse_datetime_property(%{value: value, timezone: timezone} = dt_info, vtimezones) do
+    if vtimezone_override?(timezone, vtimezones) do
+      resolve_via_vtimezone(value, timezone, vtimezones)
+    else
+      case ICal.parse_datetime_with_timezone(dt_info) do
+        {:ok, datetime} -> datetime
         # Fallback for all-day or basic date formats (YYYYMMDD)
-        with %{value: value} <- dt_info,
-             true <- is_binary(value),
-             true <- String.match?(value, ~r/^\d{8}$/),
-             <<y1::binary-size(4), m1::binary-size(2), d1::binary-size(2)>> <- value,
-             {year, ""} <- Integer.parse(y1),
-             {month, ""} <- Integer.parse(m1),
-             {day, ""} <- Integer.parse(d1),
-             {:ok, date} <- Date.new(year, month, day) do
-          date
-        else
-          _error -> nil
-        end
+        {:error, _reason} -> all_day_date(value)
+      end
+    end
+  end
+
+  # A bundled VTIMEZONE only takes precedence when the TZID is one the
+  # configured time zone database cannot resolve. Genuine IANA zones (and the
+  # `Etc/GMT∓N` zones `Timezones.sanitize/1` maps offset TZIDs to) keep the
+  # richer database-backed conversion, including full DST history.
+  defp vtimezone_override?(timezone, vtimezones) when is_binary(timezone),
+    do: Map.has_key?(vtimezones, timezone) and not tz_database_known?(timezone)
+
+  defp vtimezone_override?(_timezone, _vtimezones), do: false
+
+  defp resolve_via_vtimezone(value, timezone, vtimezones) do
+    with {:ok, %NaiveDateTime{} = naive} <- ICal.parse_ical_datetime(value),
+         {:ok, vtz} <- Map.fetch(vtimezones, timezone),
+         {:ok, datetime} <- VTimezone.to_utc(vtz, naive) do
+      datetime
+    else
+      _unresolved -> all_day_date(value)
+    end
+  end
+
+  # Probes the configured time zone database at a fixed, transition-free instant
+  # so a known zone never reports as unknown via a DST gap/ambiguity result.
+  defp tz_database_known?(timezone) do
+    case DateTime.from_naive(~N[2020-06-15 12:00:00], timezone) do
+      {:error, _reason} -> false
+      _resolved -> true
+    end
+  end
+
+  defp all_day_date(value) do
+    with true <- is_binary(value),
+         true <- String.match?(value, ~r/^\d{8}$/),
+         <<y1::binary-size(4), m1::binary-size(2), d1::binary-size(2)>> <- value,
+         {year, ""} <- Integer.parse(y1),
+         {month, ""} <- Integer.parse(m1),
+         {day, ""} <- Integer.parse(d1),
+         {:ok, date} <- Date.new(year, month, day) do
+      date
+    else
+      _error -> nil
     end
   end
 
@@ -364,7 +403,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     end
   end
 
-  defp extract_exdates(lines) do
+  defp extract_exdates(lines, vtimezones) do
     lines
     |> Enum.filter(fn line ->
       String.starts_with?(line, "EXDATE:") or String.starts_with?(line, "EXDATE;")
@@ -376,7 +415,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
       value
       |> String.split(",")
       |> Enum.map(fn str ->
-        parse_datetime_property(%{value: String.trim(str), timezone: timezone})
+        parse_datetime_property(%{value: String.trim(str), timezone: timezone}, vtimezones)
       end)
       |> Enum.reject(&is_nil/1)
     end)

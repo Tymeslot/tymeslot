@@ -206,7 +206,9 @@ defmodule Tymeslot.Timezones.Data do
     3. Second whitespace trim (in case the quotes wrapped padded content)
     4. Windows zone → IANA mapping (Microsoft Graph's `originalStartTimeZone`
        frequently carries Windows zone names like `"Romance Standard Time"`)
-    5. Legacy IANA rename (`Europe/Kiev` → `Europe/Kyiv`)
+    5. Offset-style `GMT±HHMM` / `UTC±HH` TZID → `Etc/GMT∓N` (whole-hour
+       offsets only; Apple Calendar and Outlook emit these)
+    6. Legacy IANA rename (`Europe/Kiev` → `Europe/Kyiv`)
 
   Returns `nil` for nil, non-binary, or empty input. Does **not** validate the
   result against the curated city list — callers that need validation should
@@ -225,7 +227,7 @@ defmodule Tymeslot.Timezones.Data do
 
     case cleaned do
       "" -> nil
-      other -> other |> windows_to_iana() |> normalize()
+      other -> other |> windows_to_iana() |> map_offset_tzid() |> normalize()
     end
   end
 
@@ -237,6 +239,35 @@ defmodule Tymeslot.Timezones.Data do
       iana -> iana
     end
   end
+
+  # Some clients (Apple Calendar, Outlook) emit offset-style `TZID`s such as
+  # `GMT+0200` that no time zone database recognises. Map whole-hour GMT/UTC
+  # offsets to the corresponding POSIX `Etc/GMT∓N` zone — note the IANA sign
+  # reversal: `Etc/GMT-2` *is* UTC+2. Sub-hour offsets and out-of-range values
+  # have no `Etc/GMT` equivalent and pass through unchanged (the caller then
+  # falls back to UTC). DST is intentionally not represented: an offset TZID
+  # carries no DST rule, so a fixed-offset zone is the most faithful mapping.
+  # A bundled `VTIMEZONE` component, when present, is the richer source and is
+  # consulted ahead of this fallback by the iCal parser.
+  defp map_offset_tzid(tz) do
+    case Regex.run(~r/^(?:GMT|UTC)\s*([+-])(\d{1,2})(\d{2})?$/i, tz) do
+      [_match, sign, hours | rest] ->
+        if whole_hour?(rest), do: etc_gmt_zone(sign, String.to_integer(hours)) || tz, else: tz
+
+      _no_match ->
+        tz
+    end
+  end
+
+  defp whole_hour?([]), do: true
+  defp whole_hour?(["00"]), do: true
+  defp whole_hour?([""]), do: true
+  defp whole_hour?(_minutes), do: false
+
+  defp etc_gmt_zone(_sign, 0), do: "Etc/UTC"
+  defp etc_gmt_zone("+", hours) when hours in 1..14, do: "Etc/GMT-#{hours}"
+  defp etc_gmt_zone("-", hours) when hours in 1..12, do: "Etc/GMT+#{hours}"
+  defp etc_gmt_zone(_sign, _hours), do: nil
 
   @spec valid?(term()) :: boolean()
   def valid?(timezone_id) when is_binary(timezone_id) do

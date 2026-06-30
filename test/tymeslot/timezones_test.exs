@@ -267,6 +267,26 @@ defmodule Tymeslot.TimezonesTest do
       assert Timezones.sanitize("not-a-real-zone") == "not-a-real-zone"
       assert Timezones.sanitize("Mars/Olympus_Mons") == "Mars/Olympus_Mons"
     end
+
+    test "maps whole-hour GMT/UTC offset TZIDs to Etc/GMT zones (POSIX sign reversal)" do
+      # Apple Calendar / Outlook emit offset-style TZIDs that no tz database knows.
+      # Etc/GMT-2 *is* UTC+2 — the sign is intentionally reversed.
+      assert Timezones.sanitize("GMT+0200") == "Etc/GMT-2"
+      assert Timezones.sanitize("GMT-0500") == "Etc/GMT+5"
+      assert Timezones.sanitize("GMT+2") == "Etc/GMT-2"
+      assert Timezones.sanitize("UTC+0100") == "Etc/GMT-1"
+      assert Timezones.sanitize("GMT+0000") == "Etc/UTC"
+      assert Timezones.sanitize("GMT-0000") == "Etc/UTC"
+    end
+
+    test "leaves sub-hour and out-of-range offset TZIDs unchanged" do
+      # No Etc/GMT zone carries a fractional offset.
+      assert Timezones.sanitize("GMT+0530") == "GMT+0530"
+      # Reversed Etc/GMT range tops out at +12 / -14; beyond that has no zone.
+      assert Timezones.sanitize("GMT-1300") == "GMT-1300"
+      # A bare "GMT" without an offset is not an Etc zone name.
+      assert Timezones.sanitize("GMT") == "GMT"
+    end
   end
 
   describe "flag_exists?/1" do
