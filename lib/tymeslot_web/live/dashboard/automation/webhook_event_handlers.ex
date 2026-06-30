@@ -17,25 +17,13 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
   @spec handle_show_form(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_show_form(_params, socket) do
-    {:noreply,
-     socket
-     |> assign(:show_webhook_form, true)
-     |> assign(:webhook_form_mode, :create)
-     |> assign(:webhook_form_data, nil)
-     |> assign(:webhook_form_timestamp, System.system_time())
-     |> assign(:form_errors, %{})
-     |> assign(:form_values, %{"name" => "", "url" => "", "events" => []})}
+    {:noreply, open_webhook_form(socket, :create, nil)}
   end
 
   @spec handle_close_form(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_close_form(_params, socket) do
-    {:noreply,
-     socket
-     |> assign(:show_webhook_form, false)
-     |> assign(:webhook_form_data, nil)
-     |> assign(:form_errors, %{})
-     |> assign(:form_values, %{})}
+    {:noreply, close_webhook_form(socket)}
   end
 
   @spec handle_validate_field(map(), Phoenix.LiveView.Socket.t()) ::
@@ -109,18 +97,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
   def handle_show_edit_form(%{"id" => id}, socket) do
     case AutomationHelpers.get_webhook_for_user(socket, id) do
       {:ok, webhook} ->
-        {:noreply,
-         socket
-         |> assign(:show_webhook_form, true)
-         |> assign(:webhook_form_mode, :edit)
-         |> assign(:webhook_form_data, webhook)
-         |> assign(:webhook_form_timestamp, System.system_time())
-         |> assign(:form_errors, %{})
-         |> assign(:form_values, %{
-           "name" => webhook.name,
-           "url" => webhook.url,
-           "events" => webhook.events
-         })}
+        {:noreply, open_webhook_form(socket, :edit, webhook)}
 
       {:error, _reason} ->
         Flash.error("Webhook not found")
@@ -326,14 +303,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
         case save_fn.(sanitized) do
           {:ok, _webhook} ->
             Flash.info("Webhook #{verb} successfully")
-
-            {:noreply,
-             socket
-             |> assign(:show_webhook_form, false)
-             |> assign(:webhook_form_data, nil)
-             |> assign(:form_errors, %{})
-             |> assign(:form_values, %{})
-             |> AutomationHelpers.load_webhooks()}
+            {:noreply, socket |> close_webhook_form() |> AutomationHelpers.load_webhooks()}
 
           {:error, %Ecto.Changeset{} = changeset} ->
             errors = AutomationHelpers.format_changeset_errors(changeset)
@@ -366,17 +336,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
           {:ok, updated_webhook} ->
             Flash.info("Security token regenerated")
 
-            socket =
-              if (socket.assigns.webhook_form_mode == :edit and
-                    socket.assigns.webhook_form_data) &&
-                   socket.assigns.webhook_form_data.id == updated_webhook.id do
-                assign(socket, :webhook_form_data, updated_webhook)
-              else
-                socket
-              end
-
             {:noreply,
              socket
+             |> maybe_refresh_form_data(updated_webhook)
              |> ModalHook.hide_modal(:regenerate_token)
              |> assign(:selected_webhook, nil)
              |> AutomationHelpers.load_webhooks()}
@@ -397,4 +359,45 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
         end
     end
   end
+
+  defp open_webhook_form(socket, :create, nil) do
+    socket
+    |> assign(:show_webhook_form, true)
+    |> assign(:webhook_form_mode, :create)
+    |> assign(:webhook_form_data, nil)
+    |> assign(:webhook_form_timestamp, System.system_time())
+    |> assign(:form_errors, %{})
+    |> assign(:form_values, %{"name" => "", "url" => "", "events" => []})
+  end
+
+  defp open_webhook_form(socket, :edit, webhook) do
+    socket
+    |> assign(:show_webhook_form, true)
+    |> assign(:webhook_form_mode, :edit)
+    |> assign(:webhook_form_data, webhook)
+    |> assign(:webhook_form_timestamp, System.system_time())
+    |> assign(:form_errors, %{})
+    |> assign(:form_values, %{
+      "name" => webhook.name,
+      "url" => webhook.url,
+      "events" => webhook.events
+    })
+  end
+
+  defp close_webhook_form(socket) do
+    socket
+    |> assign(:show_webhook_form, false)
+    |> assign(:webhook_form_data, nil)
+    |> assign(:form_errors, %{})
+    |> assign(:form_values, %{})
+  end
+
+  defp maybe_refresh_form_data(
+         %{assigns: %{webhook_form_mode: :edit, webhook_form_data: %{id: form_id}}} = socket,
+         %{id: form_id} = updated_webhook
+       ) do
+    assign(socket, :webhook_form_data, updated_webhook)
+  end
+
+  defp maybe_refresh_form_data(socket, _updated_webhook), do: socket
 end

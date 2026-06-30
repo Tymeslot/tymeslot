@@ -282,11 +282,14 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   end
 
   def handle_async(:issue_refund, {:ok, {:error, reason}}, socket) do
-    Flash.error(refund_error_message(reason))
-    {:noreply, assign(socket, :refund_submitting, false)}
+    handle_refund_failure(socket, reason)
   end
 
   def handle_async(:issue_refund, {:exit, reason}, socket) do
+    handle_refund_failure(socket, reason)
+  end
+
+  defp handle_refund_failure(socket, reason) do
     Flash.error(refund_error_message(reason))
     {:noreply, assign(socket, :refund_submitting, false)}
   end
