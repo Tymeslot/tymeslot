@@ -146,14 +146,6 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   def steps(false), do: @steps_without_theme
 
   @doc """
-  Returns the default step sequence (no theme step).
-
-  Used as the initial assign before a calendar connection is known.
-  """
-  @spec get_steps() :: [step()]
-  def get_steps, do: @steps_without_theme
-
-  @doc """
   Returns the total number of steps in the given sequence.
   """
   @spec step_count([step()]) :: pos_integer()
@@ -291,19 +283,6 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   def scheduling_step?(:booking_window), do: true
   def scheduling_step?(:minimum_notice), do: true
   def scheduling_step?(_step), do: false
-
-  @doc """
-  Returns the illustration SVG filename for a given step.
-  """
-  @spec illustration_file(step()) :: String.t()
-  def illustration_file(:welcome), do: "welcome.svg"
-  def illustration_file(:profile), do: "profile.svg"
-  def illustration_file(:connect_calendar), do: "calendar-sync.svg"
-  def illustration_file(:choose_theme), do: "profile.svg"
-  def illustration_file(:buffer_time), do: "preferences.svg"
-  def illustration_file(:booking_window), do: "preferences.svg"
-  def illustration_file(:minimum_notice), do: "preferences.svg"
-  def illustration_file(:ready), do: "ready.svg"
 
   # -------------------------------------------------------------------
   # Scheduling preset accessors

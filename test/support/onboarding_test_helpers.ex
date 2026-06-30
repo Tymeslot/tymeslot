@@ -71,6 +71,17 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   end
 
   @doc """
+  Returns a `{conn, user}` for a fresh, not-yet-onboarded user logged in but
+  WITHOUT mounting the LiveView — for tests that drive `live/2` to a specific
+  onboarding URL themselves.
+  """
+  @spec onboarding_conn(Plug.Conn.t()) :: {Plug.Conn.t(), any()}
+  def onboarding_conn(conn) do
+    user = insert(:user, onboarding_completed_at: nil)
+    {log_in_user(conn, user), user}
+  end
+
+  @doc """
   Like `setup_onboarding/1` but with an active calendar integration already
   connected, so the conditional `choose_theme` step is part of the flow.
 

@@ -27,12 +27,30 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
   end
 
   describe "focus_custom_input with invalid inputs" do
-    test "invalid setting name does not crash", %{conn: conn} do
+    test "invalid setting name does not crash and leaves state unchanged", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
       navigate_to_scheduling_steps(view)
 
-      html = render(view)
+      # Dispatch the event with an unknown setting — the handler's `with` clause
+      # falls through to `else _other -> {:noreply, socket}` without crashing.
+      html = render_click(view, "focus_custom_input", %{"setting" => "nonexistent_field"})
+
+      # Still on the buffer_time step.
       assert html =~ "Buffer between meetings"
+      # No custom input was revealed (custom_input_mode unchanged).
+      refute html =~ ~s(name="buffer_minutes")
+    end
+  end
+
+  describe "direct navigation to a step outside the active sequence" do
+    test "choose_theme without a connected calendar redirects, not crash", %{conn: conn} do
+      # choose_theme is only in the step sequence once a calendar is connected.
+      # Navigating straight to its URL without one used to assign an
+      # out-of-sequence step and crash on the next advance; it must redirect.
+      {conn, _user} = onboarding_conn(conn)
+
+      assert {:error, {:redirect, %{to: "/onboarding"}}} =
+               live(conn, "/onboarding/choose_theme")
     end
   end
 
@@ -261,8 +279,8 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
   end
 
   describe "concurrent updates" do
-    test "rapid preset button clicks work correctly", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
+    test "rapid preset button clicks settle on the last-clicked value", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn)
       navigate_to_scheduling_steps(view)
 
       view
@@ -283,28 +301,38 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       )
       |> render_click()
 
-      assert render(view) =~ "Buffer between meetings"
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
+      assert profile.buffer_minutes == 45
     end
 
-    test "switching between custom and preset rapidly works", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
+    test "switching through preset and back to custom seeds the default custom value", %{
+      conn: conn
+    } do
+      {:ok, view, _html, user} = setup_onboarding(conn)
       navigate_to_scheduling_steps(view)
 
+      # Enter custom mode (seeds buffer_minutes to default_custom = 20).
       view
       |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
       |> render_click()
 
+      # Click a preset — exits custom mode, persists 30.
       view
       |> element(
         "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='30']"
       )
       |> render_click()
 
+      # Re-enter custom mode: current value (30) is a preset, so seeds to default_custom = 20.
       view
       |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
       |> render_click()
 
+      # Custom input is visible.
       assert render(view) =~ ~s(name="buffer_minutes")
+      # The re-seeded value (20) was persisted, not the last preset (30).
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
+      assert profile.buffer_minutes == 20
     end
   end
 

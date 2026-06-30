@@ -79,8 +79,10 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   end
 
   defp advance_step(socket, step) do
+    next = StepConfig.next_step(step, socket.assigns.steps) || step
+
     socket
-    |> Component.assign(:current_step, StepConfig.next_step(step, socket.assigns.steps))
+    |> Component.assign(:current_step, next)
     |> Analytics.push("onboarding_step_completed", %{step: to_string(step)})
     |> LiveView.clear_flash()
   end

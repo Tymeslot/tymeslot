@@ -21,6 +21,7 @@ defmodule TymeslotWeb.OnboardingLive do
   alias TymeslotWeb.OnboardingLive.ThemePreviewModal
   alias TymeslotWeb.OnboardingLive.TimezoneHandlers
   alias TymeslotWeb.OnboardingLive.WelcomeStep
+  alias TymeslotWeb.Themes.Core.Registry
 
   @impl Phoenix.LiveView
   @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) ::
@@ -45,16 +46,21 @@ defmodule TymeslotWeb.OnboardingLive do
   def handle_params(%{"step" => step}, _uri, socket) do
     if StepConfig.valid_step?(step) do
       step_atom = String.to_existing_atom(step)
-      {:noreply, assign(socket, :current_step, step_atom)}
-    else
-      redirect_path =
-        if socket.assigns.live_action in [:debug_welcome, :debug_step] do
-          ~p"/debug/onboarding"
-        else
-          ~p"/onboarding"
-        end
 
-      {:noreply, redirect(socket, to: redirect_path)}
+      # During the disconnected (static) render the calendar list has not been
+      # loaded yet, so `socket.assigns.steps` is always the no-calendar sequence
+      # and conditional steps like `:choose_theme` are absent. Redirecting here
+      # would wrongly bounce a calendar-connected user who deep-links or refreshes
+      # `/onboarding/choose_theme` before the socket connects. Defer the
+      # membership check until the connected render, where `mount/3` has run
+      # with the real calendar list and `steps` reflects it.
+      if !connected?(socket) or step_atom in socket.assigns.steps do
+        {:noreply, assign(socket, :current_step, step_atom)}
+      else
+        {:noreply, redirect(socket, to: onboarding_fallback_path(socket))}
+      end
+    else
+      {:noreply, redirect(socket, to: onboarding_fallback_path(socket))}
     end
   end
 
@@ -84,10 +90,9 @@ defmodule TymeslotWeb.OnboardingLive do
         <LivePreview.live_preview
           :if={@profile}
           current_step={@current_step}
-          booking_theme={@profile.booking_theme || "1"}
+          booking_theme={@profile.booking_theme || Registry.default_theme_id()}
           name={Map.get(@form_data, "full_name", "")}
           username={Map.get(@form_data, "username", "")}
-          timezone={@profile.timezone}
           avatar_url={Profiles.avatar_url(@profile, :thumb)}
           color_scheme={@color_scheme}
           buffer_minutes={@profile.buffer_minutes}
@@ -295,6 +300,14 @@ defmodule TymeslotWeb.OnboardingLive do
   # ------------------------------------------------------------------
   # Private helpers
   # ------------------------------------------------------------------
+
+  defp onboarding_fallback_path(socket) do
+    if socket.assigns.live_action in [:debug_welcome, :debug_step] do
+      ~p"/debug/onboarding"
+    else
+      ~p"/onboarding"
+    end
+  end
 
   defp booking_host do
     String.replace(Policy.app_url(), ~r{^https?://}, "")
