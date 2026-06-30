@@ -13,6 +13,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   alias Tymeslot.ThemeCustomizations.Presets
+  alias TymeslotWeb.Themes.Core.Registry
 
   # Stable display order for the colour-scheme swatches.
   @scheme_order ~w(default turquoise purple sunset ocean forest rose monochrome)
@@ -54,30 +55,28 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
           Pick the look and feel invitees see on your booking page.
         </p>
         <div class="grid grid-cols-2 gap-3">
-          <%= for {name, id} <- @theme_options do %>
-            <% selected = (@profile && @profile.booking_theme) == id %>
-            <button
-              type="button"
-              phx-click="select_theme"
-              phx-value-theme={id}
-              aria-pressed={to_string(selected)}
-              class={[
-                "p-3 rounded-token-xl border-2 flex flex-col gap-2 transition-colors",
-                if(selected,
-                  do: "border-turquoise-500 bg-turquoise-50",
-                  else: "border-tymeslot-200 bg-white hover:border-tymeslot-300"
-                )
-              ]}
-            >
-              <.theme_thumbnail id={id} primary={@primary} />
-              <span class={[
-                "font-semibold text-token-sm",
-                if(selected, do: "text-turquoise-700", else: "text-tymeslot-600")
-              ]}>
-                {name}
-              </span>
-            </button>
-          <% end %>
+          <button
+            :for={{name, id} <- @theme_options}
+            type="button"
+            phx-click="select_theme"
+            phx-value-theme={id}
+            aria-pressed={to_string(theme_selected?(@profile, id))}
+            class={[
+              "p-3 rounded-token-xl border-2 flex flex-col gap-2 transition-colors",
+              if(theme_selected?(@profile, id),
+                do: "border-turquoise-500 bg-turquoise-50",
+                else: "border-tymeslot-200 bg-white hover:border-tymeslot-300"
+              )
+            ]}
+          >
+            <.theme_thumbnail theme_key={resolve_theme_key(id)} primary={@primary} />
+            <span class={[
+              "font-semibold text-token-sm",
+              if(theme_selected?(@profile, id), do: "text-turquoise-700", else: "text-tymeslot-600")
+            ]}>
+              {name}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -88,24 +87,22 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
           Set the accent colour that ties your page together.
         </p>
         <div class="flex flex-wrap gap-3">
-          <%= for id <- scheme_ids(@color_schemes) do %>
-            <% scheme = Map.get(@color_schemes, id) %>
-            <button
-              type="button"
-              phx-click="select_color_scheme"
-              phx-value-scheme={id}
-              title={scheme.name}
-              aria-label={scheme.name}
-              class={[
-                "w-9 h-9 rounded-full border-2 transition-transform hover:scale-110",
-                if(@color_scheme == id,
-                  do: "border-turquoise-500 ring-2 ring-turquoise-200 scale-110",
-                  else: "border-white shadow-sm"
-                )
-              ]}
-              style={"background: #{Map.get(scheme.colors, :primary, "#14b8a6")};"}
-            />
-          <% end %>
+          <button
+            :for={id <- scheme_ids(@color_schemes)}
+            type="button"
+            phx-click="select_color_scheme"
+            phx-value-scheme={id}
+            title={get_in(@color_schemes, [id, :name])}
+            aria-label={get_in(@color_schemes, [id, :name])}
+            class={[
+              "w-9 h-9 rounded-full border-2 transition-transform hover:scale-110",
+              if(@color_scheme == id,
+                do: "border-turquoise-500 ring-2 ring-turquoise-200 scale-110",
+                else: "border-white shadow-sm"
+              )
+            ]}
+            style={"background: #{get_in(@color_schemes, [id, :colors, :primary]) || "#14b8a6"};"}
+          />
         </div>
       </div>
 
@@ -130,10 +127,10 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   # Miniature mock that resembles each theme at a glance: Quill shows its
   # signature numbered step band over a calendar grid; Rhythm shows its
   # compact vertical slot list. Tinted with the active scheme's primary.
-  attr :id, :string, required: true
+  attr :theme_key, :atom, required: true
   attr :primary, :string, required: true
 
-  defp theme_thumbnail(%{id: "2"} = assigns) do
+  defp theme_thumbnail(%{theme_key: :rhythm} = assigns) do
     ~H"""
     <div class="aspect-[4/3] w-full rounded-token-lg bg-tymeslot-900 p-2 flex flex-col gap-1.5 overflow-hidden">
       <div class="h-1.5 w-2/3 rounded-full bg-white/30" />
@@ -157,12 +154,21 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
       <div class="grid grid-cols-5 gap-0.5">
         <span
           :for={cell <- 0..9}
-          class="aspect-square rounded-[1px]"
+          class="aspect-square rounded-token-sm"
           style={if(cell in [2, 6], do: "background: #{@primary};", else: "background: rgba(255,255,255,0.12);")}
         />
       </div>
     </div>
     """
+  end
+
+  defp theme_selected?(profile, id), do: (profile && profile.booking_theme) == id
+
+  defp resolve_theme_key(id) do
+    case Registry.id_to_key(id) do
+      {:ok, key} -> key
+      {:error, :invalid_theme_id} -> Registry.default_theme_key()
+    end
   end
 
   # Returns colour-scheme ids in a stable display order, appending any

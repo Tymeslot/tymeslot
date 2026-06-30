@@ -22,6 +22,8 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   alias Tymeslot.ThemeCustomizations.Presets
+  alias TymeslotWeb.OnboardingLive.TextHelpers
+  alias TymeslotWeb.Themes.Core.Registry
 
   @default_scheme "default"
 
@@ -35,7 +37,6 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   attr :booking_theme, :string, default: "1"
   attr :name, :string, default: ""
   attr :username, :string, default: ""
-  attr :timezone, :string, default: nil
   attr :avatar_url, :string, default: nil
   attr :color_scheme, :string, default: @default_scheme
   attr :buffer_minutes, :integer, default: nil
@@ -150,7 +151,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     <div class="w-full flex flex-col gap-3">
       <%!-- Signature numbered step band --%>
       <div class="flex items-center justify-center gap-1.5">
-        <%= for n <- 1..4 do %>
+        <span :for={n <- 1..4} class="contents">
           <span
             class="w-5 h-5 rounded-full text-token-2xs font-bold inline-flex items-center justify-center"
             style={step_dot_style(@colors, n == 1)}
@@ -158,14 +159,12 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
             {n}
           </span>
           <span :if={n < 4} class="w-3 h-px" style={divider_style(@colors)} />
-        <% end %>
+        </span>
       </div>
 
       <%!-- Mini month calendar (7 columns) --%>
       <div class="grid grid-cols-7 gap-1" style={slots_style(highlight?(@step, :slots))}>
-        <%= for day <- 0..20 do %>
-          <span class="aspect-square rounded-token-sm" style={calendar_cell_style(@colors, day)} />
-        <% end %>
+        <span :for={day <- 0..20} class="aspect-square rounded-token-sm" style={calendar_cell_style(@colors, day)} />
       </div>
 
       <%!-- Multi-column slot grid --%>
@@ -182,14 +181,13 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     <div class="w-full flex flex-col gap-2">
       <%!-- Single week strip --%>
       <div class="flex justify-between gap-1">
-        <%= for day <- 0..6 do %>
-          <span
-            class="grow h-6 rounded-token-md inline-flex items-center justify-center text-token-2xs font-semibold"
-            style={week_cell_style(@colors, day == 2)}
-          >
-            {Enum.at(~w(M T W T F S S), day)}
-          </span>
-        <% end %>
+        <span
+          :for={day <- 0..6}
+          class="grow h-6 rounded-token-md inline-flex items-center justify-center text-token-2xs font-semibold"
+          style={week_cell_style(@colors, day == 2)}
+        >
+          {Enum.at(~w(M T W T F S S), day)}
+        </span>
       </div>
 
       <%!-- Vertical slot list --%>
@@ -250,9 +248,12 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   # Theme + slot resolution
   # -------------------------------------------------------------------
 
-  defp theme_key("2"), do: :rhythm
-  defp theme_key(2), do: :rhythm
-  defp theme_key(_id), do: :quill
+  defp theme_key(id) do
+    case Registry.id_to_key(id) do
+      {:ok, key} -> key
+      {:error, :invalid_theme_id} -> Registry.default_theme_key()
+    end
+  end
 
   defp build_slots(assigns) do
     ~w(9:00 9:30 10:00 10:30)
@@ -289,7 +290,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     do: "A breather between meetings (#{assigns.buffer_minutes || 15} min)"
 
   defp caption(%{current_step: :booking_window} = assigns),
-    do: "Bookable up to #{humanize_days(assigns.advance_booking_days)}"
+    do: "Bookable up to #{TextHelpers.humanize_days(assigns.advance_booking_days)}"
 
   defp caption(%{current_step: :minimum_notice} = assigns),
     do: "Earliest booking: #{assigns.min_advance_hours || 0}h from now"
@@ -330,15 +331,6 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
     "#{host}/#{slug}"
   end
-
-  defp humanize_days(nil), do: "90 days"
-  defp humanize_days(7), do: "1 week"
-  defp humanize_days(14), do: "2 weeks"
-  defp humanize_days(30), do: "1 month"
-  defp humanize_days(90), do: "3 months"
-  defp humanize_days(180), do: "6 months"
-  defp humanize_days(365), do: "1 year"
-  defp humanize_days(days), do: "#{days} days"
 
   # -------------------------------------------------------------------
   # Colour resolution
