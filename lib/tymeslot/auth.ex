@@ -240,9 +240,8 @@ defmodule Tymeslot.Auth do
   Checks if a user has completed onboarding.
   """
   @spec onboarding_completed?(Ecto.Schema.t()) :: boolean()
-  def onboarding_completed?(user) do
-    not is_nil(user.onboarding_completed_at)
-  end
+  def onboarding_completed?(%{onboarding_completed_at: nil}), do: false
+  def onboarding_completed?(_user), do: true
 
   @doc """
   Returns the Google account email to use as an OAuth `login_hint` when the user
@@ -277,17 +276,15 @@ defmodule Tymeslot.Auth do
   Returns true if the user has already seen the post-onboarding dashboard tour.
   """
   @spec dashboard_tour_seen?(Ecto.Schema.t()) :: boolean()
-  def dashboard_tour_seen?(user) do
-    not is_nil(user.dashboard_tour_seen_at)
-  end
+  def dashboard_tour_seen?(%{dashboard_tour_seen_at: nil}), do: false
+  def dashboard_tour_seen?(_user), do: true
 
   @doc """
   Checks if a user has unsubscribed from marketing emails.
   """
   @spec marketing_unsubscribed?(Ecto.Schema.t()) :: boolean()
-  def marketing_unsubscribed?(user) do
-    not is_nil(user.marketing_unsubscribed_at)
-  end
+  def marketing_unsubscribed?(%{marketing_unsubscribed_at: nil}), do: false
+  def marketing_unsubscribed?(_user), do: true
 
   @doc """
   Marks a user as unsubscribed from marketing emails. Idempotent.
