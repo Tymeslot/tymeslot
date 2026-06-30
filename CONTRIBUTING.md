@@ -278,7 +278,7 @@ end
 
 ## 📝 Contributor Licence
 
-By submitting a contribution to this project — a pull request, patch, or any code, documentation, translation, or other material — you agree to the following terms. This keeps the project's licensing clean and lets us continue to evolve how Tymeslot is distributed.
+Tymeslot Core is distributed under the [GNU Affero General Public License v3.0 or later](LICENSE). By submitting a contribution to this project — a pull request, patch, or any code, documentation, translation, or other material — you agree that your contribution is made available to the public under that same licence, and you agree to the following terms. This keeps the project's licensing clean and lets us continue to evolve how Tymeslot is distributed.
 
 1. **You have the right to submit it.** The contribution is your original work, or you otherwise have the legal right to submit it under these terms, and it does not knowingly infringe any third party's rights.
 

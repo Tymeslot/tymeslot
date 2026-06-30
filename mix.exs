@@ -22,9 +22,9 @@ defmodule Tymeslot.MixProject do
         ]
       ],
       test_coverage: [tool: ExCoveralls],
-      licenses: ["Elastic-2.0"],
+      licenses: ["AGPL-3.0-or-later"],
       links: %{
-        "License" => "https://www.elastic.co/licensing/elastic-license"
+        "License" => "https://www.gnu.org/licenses/agpl-3.0.html"
       }
     ]
   end

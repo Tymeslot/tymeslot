@@ -10,7 +10,7 @@ Built on Elixir/OTP, so it keeps running while you sleep.
 </p>
 
 <p>
-<a href="https://www.elastic.co/licensing/elastic-license"><img src="https://img.shields.io/badge/Licence-Elastic--2.0-1F6FEB.svg" alt="Licence: Elastic-2.0" /></a>
+<a href="https://www.gnu.org/licenses/agpl-3.0.html"><img src="https://img.shields.io/badge/Licence-AGPL--3.0-1F6FEB.svg" alt="Licence: AGPL-3.0" /></a>
 <a href="https://elixir-lang.org"><img src="https://img.shields.io/badge/Elixir-1.20-4B275F.svg?logo=elixir&logoColor=white" alt="Elixir" /></a>
 <a href="https://phoenixframework.org"><img src="https://img.shields.io/badge/Phoenix-1.8-FD4F00.svg?logo=phoenixframework&logoColor=white" alt="Phoenix" /></a>
 <a href="https://github.com/phoenixframework/phoenix_live_view"><img src="https://img.shields.io/badge/LiveView-1.1-E34F26.svg" alt="LiveView" /></a>
@@ -37,7 +37,7 @@ Built on Elixir/OTP, so it keeps running while you sleep.
 
 <br />
 
-> **Source-available, and staying that way.** Calendly is closed SaaS. Cal.com relicensed away from open source in 2026. Tymeslot's source stays public and self-hostable under the [Elastic Licence 2.0](LICENSE) — what you run today, you can keep running tomorrow.
+> **Open source, and staying that way.** Calendly is closed SaaS. Cal.com relicensed away from open source in 2026. Tymeslot's source stays public and self-hostable under the [GNU AGPLv3](LICENSE) — what you run today, you can keep running tomorrow.
 >
 > **Actively developed.** Tymeslot is the engine behind [tymeslot.app](https://tymeslot.app), our managed cloud — so the code you self-host is the same code we run in production for paying customers. New releases ship regularly; see the [releases](https://github.com/tymeslot/tymeslot/releases).
 
@@ -207,7 +207,7 @@ Once enabled, hosts connect their own Stripe account from **Dashboard → Paymen
 
 ### Self-hosted — free, forever
 
-The full feature set, every integration, unlimited bookings. Yours under the Elastic Licence 2.0, with community support. **[Self-host with Docker →](#quick-start)**
+The full feature set, every integration, unlimited bookings. Yours under the GNU AGPLv3, with community support. **[Self-host with Docker →](#quick-start)**
 
 ### Managed Cloud — free plan, €9/mo for Pro
 
@@ -223,7 +223,7 @@ PRs and issues are welcome — start with [CONTRIBUTING.md](CONTRIBUTING.md). Fo
 
 ## Licence
 
-Source-available under the [Elastic Licence 2.0](LICENSE) — free to use and self-host; commercial redistribution requires a separate agreement.
+Open source under the [GNU AGPLv3](LICENSE) — free to use, self-host, modify and redistribute; if you run a modified version as a network service, share your changes under the same licence.
 
 <br />
 
