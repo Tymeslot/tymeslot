@@ -44,7 +44,8 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
       with {:ok, date} <- Date.from_iso8601(date_string),
            {:ok, owner_timezone} <- get_owner_timezone(organizer_profile) do
         # Check if this is a demo user
-        if demo_user?(organizer_profile) || ContextUtils.get_from_context(context, :demo_mode) do
+        if Demo.demo_profile?(organizer_profile) ||
+             ContextUtils.get_from_context(context, :demo_mode) do
           # Use demo provider for availability generation
           Demo.get_available_slots(
             date_string,
@@ -126,7 +127,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
       organizer_profile && user_id != organizer_profile.user_id ->
         {:error, :unauthorized}
 
-      demo_user?(organizer_profile) || ContextUtils.get_from_context(context, :demo_mode) ->
+      Demo.demo_profile?(organizer_profile) || ContextUtils.get_from_context(context, :demo_mode) ->
         # Delegate to demo provider
         Demo.get_range_availability(
           user_id,
@@ -359,6 +360,4 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
       true -> 30
     end
   end
-
-  defp demo_user?(profile), do: Demo.demo_profile?(profile)
 end

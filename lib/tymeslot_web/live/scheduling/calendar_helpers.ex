@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
           [map()]
   def get_calendar_days(user_timezone, year, month, organizer_profile, availability_map \\ nil) do
     if organizer_profile do
-      if demo_user?(organizer_profile) do
+      if Demo.demo_profile?(organizer_profile) do
         # Delegate to demo provider for calendar days
         Demo.get_calendar_days(user_timezone, year, month, organizer_profile, availability_map)
       else
@@ -237,8 +237,6 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
 
     is_weekday && is_future && is_within_limit
   end
-
-  defp demo_user?(profile), do: Demo.demo_profile?(profile)
 
   defp update_calendar_data(socket) do
     %{

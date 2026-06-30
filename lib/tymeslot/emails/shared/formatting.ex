@@ -133,6 +133,15 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   end
 
   @doc """
+  Formats a datetime as a short UTC timestamp for change-summary displays.
+  Example: "25 Jun 2026, 14:30 UTC"
+  Falls back to `to_string/1` for non-DateTime values.
+  """
+  @spec format_time_short(DateTime.t() | term()) :: String.t()
+  def format_time_short(%DateTime{} = dt), do: Calendar.strftime(dt, "%d %b %Y, %H:%M UTC")
+  def format_time_short(val), do: to_string(val)
+
+  @doc """
   Formats a complete datetime.
   Example: "November 25, 2024 at 2:30 PM PST"
   """

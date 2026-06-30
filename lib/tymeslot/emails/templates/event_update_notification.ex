@@ -205,16 +205,13 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
   defp change_to_row({:time, from_start, to_start}),
     do:
-      {dgettext("emails", "Time"), escape(format_time_short(from_start)),
-       escape(format_time_short(to_start))}
+      {dgettext("emails", "Time"), escape(Formatting.format_time_short(from_start)),
+       escape(Formatting.format_time_short(to_start))}
 
   defp change_to_row(_other), do: nil
 
   defp escape(nil), do: dgettext("emails", "(none)")
   defp escape(val), do: val |> to_string() |> Sanitise.sanitize_for_email()
-
-  defp format_time_short(%DateTime{} = dt), do: Calendar.strftime(dt, "%d %b %Y, %H:%M UTC")
-  defp format_time_short(val), do: to_string(val)
 
   defp build_text_body(details, locale) do
     changes_text = TextBodyHelper.format_event_changes(details.changes, locale)
