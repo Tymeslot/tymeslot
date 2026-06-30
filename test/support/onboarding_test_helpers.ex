@@ -71,6 +71,42 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   end
 
   @doc """
+  Like `setup_onboarding/1` but with an active calendar integration already
+  connected, so the conditional `choose_theme` step is part of the flow.
+
+  Returns `{:ok, view, html, user}`.
+  """
+  @spec setup_onboarding_with_calendar(Plug.Conn.t()) :: {:ok, any(), String.t(), any()}
+  def setup_onboarding_with_calendar(conn) do
+    user = insert(:user, onboarding_completed_at: nil)
+    insert(:calendar_integration, user: user)
+    conn = log_in_user(conn, user)
+    {:ok, view, html} = live(conn, "/onboarding")
+    {:ok, view, html, user}
+  end
+
+  @doc """
+  Navigates from the welcome step to the `choose_theme` step.
+
+  Requires a connected calendar (use `setup_onboarding_with_calendar/1`); fills
+  the profile with a unique username so the profile step persists and advances.
+  """
+  @spec goto_choose_theme(any()) :: any()
+  def goto_choose_theme(view) do
+    # welcome -> profile
+    view |> element("button[phx-click='next_step']") |> render_click()
+
+    # fill + advance profile with a unique, available username
+    fill_profile(view, "Ada Lovelace", "ada#{System.unique_integer([:positive])}")
+    view |> element("button[phx-click='next_step']") |> render_click()
+
+    # connect_calendar -> choose_theme (calendar already connected)
+    view |> element("button[phx-click='next_step']") |> render_click()
+
+    view
+  end
+
+  @doc """
   Navigates from the welcome step to the first scheduling preference step (buffer time).
   Fills the profile form and clicks through connect_calendar.
   """

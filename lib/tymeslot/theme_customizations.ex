@@ -51,6 +51,19 @@ defmodule Tymeslot.ThemeCustomizations do
   end
 
   @doc """
+  Returns a random video-background preset key (e.g. `"preset:blue-wave"`).
+
+  Used to seed a fresh account with a moving background so its booking page —
+  and the onboarding preview of it — has life out of the box.
+  """
+  @spec random_video_preset() :: String.t()
+  def random_video_preset do
+    Presets.get_video_presets()
+    |> Map.keys()
+    |> Enum.random()
+  end
+
+  @doc """
   Creates or updates a theme customization for a profile and theme.
   """
   @spec upsert_theme_customization(profile_id(), theme_id(), map()) ::

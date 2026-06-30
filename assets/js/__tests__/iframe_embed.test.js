@@ -153,6 +153,26 @@ describe('embedded context detection', () => {
 
     expect(window.parent.postMessage).not.toHaveBeenCalled()
   })
+
+  test('does not set data-embedded for a same-origin owner preview (?preview=true)', () => {
+    // A preview iframe renders the full standalone page (video, full height),
+    // so embedded mode must be skipped even though we are inside an iframe.
+    runScript({ isEmbedded: true, search: '?preview=true' })
+
+    expect(document.documentElement.hasAttribute('data-embedded')).toBe(false)
+  })
+
+  test('does not run the resize loop for a preview (?preview=true)', () => {
+    runScript({ isEmbedded: true, search: '?preview=true' })
+
+    expect(window.parent.postMessage).not.toHaveBeenCalled()
+  })
+
+  test('still embeds normally for a non-preview iframe', () => {
+    runScript({ isEmbedded: true, search: '?embed=1' })
+
+    expect(document.documentElement.hasAttribute('data-embedded')).toBe(true)
+  })
 })
 
 describe('continuous resize protocol', () => {

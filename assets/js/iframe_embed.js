@@ -36,9 +36,20 @@
   const isEmbedded = window.self !== window.top;
   if (!isEmbedded) return;
 
-  document.documentElement.setAttribute("data-embedded", "");
-
   const params = new URLSearchParams(window.location.search);
+
+  // Same-origin owner preview (`?preview=true`) renders the FULL standalone page
+  // inside the iframe — video background, full viewport height, real layout —
+  // exactly as invitees see it. Embedded mode (the `data-embedded` attribute and
+  // the auto-resize loop) deliberately strips the video and collapses the page to
+  // content height, which is wrong for a preview, so skip it entirely here. CSP
+  // `frame-ancestors 'self'` (set server-side for preview requests) still governs
+  // who may frame the page, so this purely cosmetic bail-out has no security role.
+  const isPreview =
+    params.get("preview") === "true" || params.get("preview") === "1";
+  if (isPreview) return;
+
+  document.documentElement.setAttribute("data-embedded", "");
 
   // --- Derive the allowed parent origin ---
   // Prefer document.referrer (browser-provided, hard to spoof). Fall back

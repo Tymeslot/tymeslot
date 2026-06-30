@@ -7,7 +7,6 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   """
 
   use Phoenix.Component
-  use TymeslotWeb, :verified_routes
 
   import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
@@ -32,6 +31,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   attr :next_disabled, :boolean, default: false
 
   slot :inner_block, required: true
+  slot :preview
 
   @spec onboarding_layout(map()) :: Phoenix.LiveView.Rendered.t()
   def onboarding_layout(assigns) do
@@ -43,11 +43,11 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
           <div class="onboarding-progress">
             <div class="onboarding-progress-dots">
               <%= for step <- @steps do %>
-                <div class={progress_dot_class(step, @current_step)} />
+                <div class={progress_dot_class(step, @current_step, @steps)} />
               <% end %>
             </div>
             <span class="onboarding-progress-label">
-              Step {StepConfig.step_number(@current_step)} of {StepConfig.step_count()}
+              Step {StepConfig.step_number(@current_step, @steps)} of {StepConfig.step_count(@steps)}
             </span>
           </div>
 
@@ -90,20 +90,17 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
         </div>
       </div>
 
-      <%!-- Illustration panel (hidden on mobile) --%>
+      <%!-- Live preview panel (hidden on mobile) --%>
       <div class="onboarding-illustration-panel">
-        <img
-          src={~p"/images/onboarding/#{StepConfig.illustration_file(@current_step)}"}
-          alt={"Illustration for #{StepConfig.step_title(@current_step)}"}
-        />
+        {render_slot(@preview)}
       </div>
     </div>
     """
   end
 
-  defp progress_dot_class(step, current_step) do
+  defp progress_dot_class(step, current_step, steps) do
     cond do
-      StepConfig.step_completed?(step, current_step) ->
+      StepConfig.step_completed?(step, current_step, steps) ->
         "onboarding-progress-dot onboarding-progress-dot--completed"
 
       step == current_step ->

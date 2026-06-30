@@ -3,8 +3,14 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   Configuration module for onboarding steps and related data.
 
   Centralises step definitions, validation rules, and configuration
-  options for the seven-step onboarding flow:
-  welcome → profile → connect_calendar → buffer_time → booking_window → minimum_notice → ready.
+  options for the onboarding flow:
+  welcome → profile → connect_calendar → [choose_theme] → buffer_time → booking_window → minimum_notice → ready.
+
+  The `choose_theme` step is *conditional*: it only appears once the user has
+  connected a calendar (so their real booking page is publicly ready and can
+  be previewed). If they skip the calendar step, the theme step is skipped
+  entirely. Because of this, the step sequence is a runtime list rather than a
+  fixed constant — numbering and next/previous are derived from that list.
   """
 
   @typedoc "Represents an onboarding step in the flow."
@@ -12,6 +18,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
           :welcome
           | :profile
           | :connect_calendar
+          | :choose_theme
           | :buffer_time
           | :booking_window
           | :minimum_notice
@@ -22,7 +29,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
 
   alias Tymeslot.Validation.Constraints
 
-  @steps [
+  @steps_without_theme [
     :welcome,
     :profile,
     :connect_calendar,
@@ -31,7 +38,20 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
     :minimum_notice,
     :ready
   ]
-  @step_index Map.new(Enum.with_index(@steps))
+
+  @steps_with_theme [
+    :welcome,
+    :profile,
+    :connect_calendar,
+    :choose_theme,
+    :buffer_time,
+    :booking_window,
+    :minimum_notice,
+    :ready
+  ]
+
+  # Superset of every step that can appear — used only for membership checks.
+  @all_steps @steps_with_theme
 
   @buffer_time_options [
     {"No buffer", 0},
@@ -116,71 +136,92 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   # -------------------------------------------------------------------
 
   @doc """
-  Returns the list of available onboarding steps in order.
+  Returns the onboarding step sequence.
+
+  When `calendar_connected?` is true the conditional `:choose_theme` step is
+  included (right after `:connect_calendar`); otherwise it is omitted.
+  """
+  @spec steps(boolean()) :: [step()]
+  def steps(true), do: @steps_with_theme
+  def steps(false), do: @steps_without_theme
+
+  @doc """
+  Returns the default step sequence (no theme step).
+
+  Used as the initial assign before a calendar connection is known.
   """
   @spec get_steps() :: [step()]
-  def get_steps, do: @steps
+  def get_steps, do: @steps_without_theme
 
   @doc """
-  Returns the total number of onboarding steps.
+  Returns the total number of steps in the given sequence.
   """
-  @spec step_count() :: pos_integer()
-  def step_count, do: length(@steps)
+  @spec step_count([step()]) :: pos_integer()
+  def step_count(steps) when is_list(steps), do: length(steps)
 
   @doc """
-  Returns the 1-indexed position of a step in the flow.
+  Returns the 1-indexed position of a step within the given sequence.
   """
-  @spec step_number(step()) :: pos_integer()
-  def step_number(step), do: @step_index[step] + 1
+  @spec step_number(step(), [step()]) :: pos_integer()
+  def step_number(step, steps) when is_list(steps) do
+    case Enum.find_index(steps, &(&1 == step)) do
+      nil -> 1
+      index -> index + 1
+    end
+  end
 
   @doc """
-  Validates if a given step name is valid.
+  Validates if a given step name is one of the known steps.
   """
   @spec valid_step?(binary()) :: boolean()
   def valid_step?(step_name) when is_binary(step_name) do
     step_atom = String.to_existing_atom(step_name)
-    step_atom in @steps
+    step_atom in @all_steps
   rescue
     ArgumentError -> false
   end
 
   @spec valid_step?(step()) :: boolean()
-  def valid_step?(step_atom) when is_atom(step_atom), do: step_atom in @steps
+  def valid_step?(step_atom) when is_atom(step_atom), do: step_atom in @all_steps
 
   @spec valid_step?(term()) :: boolean()
   def valid_step?(_other), do: false
 
   @doc """
-  Checks if a step is completed based on current step position.
+  Checks if a step is completed based on the current position within `steps`.
   """
-  @spec step_completed?(step(), step()) :: boolean()
-  def step_completed?(step, current_step) do
-    @step_index[step] < @step_index[current_step]
+  @spec step_completed?(step(), step(), [step()]) :: boolean()
+  def step_completed?(step, current_step, steps) when is_list(steps) do
+    with index when is_integer(index) <- Enum.find_index(steps, &(&1 == step)),
+         current when is_integer(current) <- Enum.find_index(steps, &(&1 == current_step)) do
+      index < current
+    else
+      _nil -> false
+    end
   end
 
   @doc """
-  Returns the next step in the flow, or nil if at the end.
+  Returns the next step in `steps`, or nil if at the end.
   """
-  @spec next_step(step()) :: step() | nil
-  def next_step(:welcome), do: :profile
-  def next_step(:profile), do: :connect_calendar
-  def next_step(:connect_calendar), do: :buffer_time
-  def next_step(:buffer_time), do: :booking_window
-  def next_step(:booking_window), do: :minimum_notice
-  def next_step(:minimum_notice), do: :ready
-  def next_step(:ready), do: nil
+  @spec next_step(step(), [step()]) :: step() | nil
+  def next_step(step, steps) when is_list(steps), do: neighbour(steps, step, 1)
 
   @doc """
-  Returns the previous step in the flow, or nil if at the beginning.
+  Returns the previous step in `steps`, or nil if at the beginning.
   """
-  @spec previous_step(step()) :: step() | nil
-  def previous_step(:welcome), do: nil
-  def previous_step(:profile), do: :welcome
-  def previous_step(:connect_calendar), do: :profile
-  def previous_step(:buffer_time), do: :connect_calendar
-  def previous_step(:booking_window), do: :buffer_time
-  def previous_step(:minimum_notice), do: :booking_window
-  def previous_step(:ready), do: :minimum_notice
+  @spec previous_step(step(), [step()]) :: step() | nil
+  def previous_step(step, steps) when is_list(steps), do: neighbour(steps, step, -1)
+
+  defp neighbour(steps, step, delta) do
+    case Enum.find_index(steps, &(&1 == step)) do
+      nil ->
+        nil
+
+      index ->
+        new_index = index + delta
+        if new_index >= 0, do: Enum.at(steps, new_index), else: nil
+    end
+  end
 
   # -------------------------------------------------------------------
   # Step display
@@ -193,6 +234,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   def step_title(:welcome), do: "Welcome to Tymeslot"
   def step_title(:profile), do: "Set up your profile"
   def step_title(:connect_calendar), do: "Connect your calendar"
+  def step_title(:choose_theme), do: "Choose your theme"
   def step_title(:buffer_time), do: "Buffer between meetings"
   def step_title(:booking_window), do: "Booking window"
   def step_title(:minimum_notice), do: "Minimum notice"
@@ -209,6 +251,9 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
 
   def step_description(:connect_calendar),
     do: "Sync your calendar to avoid double-bookings and keep everything in one place."
+
+  def step_description(:choose_theme),
+    do: "Pick the look and feel of your booking page — then preview the real thing."
 
   def step_description(:buffer_time),
     do: "Breathing room between appointments so you never feel rushed."
@@ -254,6 +299,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   def illustration_file(:welcome), do: "welcome.svg"
   def illustration_file(:profile), do: "profile.svg"
   def illustration_file(:connect_calendar), do: "calendar-sync.svg"
+  def illustration_file(:choose_theme), do: "profile.svg"
   def illustration_file(:buffer_time), do: "preferences.svg"
   def illustration_file(:booking_window), do: "preferences.svg"
   def illustration_file(:minimum_notice), do: "preferences.svg"

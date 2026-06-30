@@ -13,6 +13,8 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   alias Tymeslot.Auth
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
+  alias TymeslotWeb.OnboardingLive.StepConfig
+  alias TymeslotWeb.OnboardingLive.ThemeHandlers
 
   require Logger
 
@@ -171,10 +173,12 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
         case Calendar.create_integration_with_validation(user_id, integration_params) do
           {:ok, _integration} ->
             connected = Calendar.list_integrations(user_id)
+            ThemeHandlers.seed_video_backgrounds(socket.assigns.profile, connected)
 
             {:noreply,
              socket
              |> Component.assign(:connected_calendars, connected)
+             |> Component.assign(:steps, StepConfig.steps(connected != []))
              |> Component.assign(:calendar_state, :selecting)
              |> Component.assign(:calendar_choice, nil)
              |> Component.assign(:caldav_form_data, %{})

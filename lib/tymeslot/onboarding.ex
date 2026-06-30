@@ -5,6 +5,7 @@ defmodule Tymeslot.Onboarding do
 
   alias Tymeslot.Auth
   alias Tymeslot.Profiles
+  alias Tymeslot.ThemeCustomizations
 
   @doc """
   Creates a mock profile for development mode.
@@ -68,6 +69,37 @@ defmodule Tymeslot.Onboarding do
         error ->
           error
       end
+    end
+  end
+
+  @doc """
+  Seeds each booking theme with a video background so the onboarding preview —
+  and the published page — shows motion out of the box.
+
+  Picks one random preset for the user and applies it to every theme in
+  `theme_ids` that does not already use a video background. Idempotent: a theme
+  that already has a video background (a returning user, or one who picked their
+  own) is left untouched, so the choice is never overwritten or re-randomised.
+  """
+  @spec ensure_preview_video_backgrounds(map(), [String.t()]) :: :ok
+  def ensure_preview_video_backgrounds(%{id: profile_id}, theme_ids)
+      when is_integer(profile_id) and is_list(theme_ids) do
+    preset = ThemeCustomizations.random_video_preset()
+    Enum.each(theme_ids, &put_video_background_unless_set(profile_id, &1, preset))
+  end
+
+  def ensure_preview_video_backgrounds(_profile, _theme_ids), do: :ok
+
+  defp put_video_background_unless_set(profile_id, theme_id, preset) do
+    case ThemeCustomizations.get_by_profile_and_theme(profile_id, theme_id) do
+      %{background_type: "video"} ->
+        :ok
+
+      _other ->
+        ThemeCustomizations.upsert_theme_customization(profile_id, theme_id, %{
+          "background_type" => "video",
+          "background_value" => preset
+        })
     end
   end
 end

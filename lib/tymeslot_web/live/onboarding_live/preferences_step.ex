@@ -10,6 +10,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.OnboardingLive.StepConfig
+  alias TymeslotWeb.OnboardingLive.TextHelpers
 
   @doc """
   Renders the buffer time preference step.
@@ -25,7 +26,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
     ~H"""
     <form id="onboarding-buffer-time-form" phx-change="update_scheduling_preferences" phx-debounce="300" class="onboarding-form">
       <p class="onboarding-preference-example">
-        If someone books you at 2:00 PM and your buffer is 15 min, the next available slot starts at 2:15 PM.
+        {buffer_example(@profile.buffer_minutes)}
       </p>
 
       <div class="onboarding-preference-presets">
@@ -78,7 +79,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
     ~H"""
     <form id="onboarding-booking-window-form" phx-change="update_scheduling_preferences" phx-debounce="300" class="onboarding-form">
       <p class="onboarding-preference-example">
-        With a 2-week window, someone visiting your page today can only book up to 2 weeks ahead.
+        {window_example(@profile.advance_booking_days)}
       </p>
 
       <div class="onboarding-preference-presets">
@@ -131,7 +132,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
     ~H"""
     <form id="onboarding-min-notice-form" phx-change="update_scheduling_preferences" phx-debounce="300" class="onboarding-form">
       <p class="onboarding-preference-example">
-        With 3 hours' notice, nobody can book a slot that starts sooner than 3 hours from now.
+        {notice_example(@profile.min_advance_hours)}
       </p>
 
       <div class="onboarding-preference-presets">
@@ -207,4 +208,55 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
     <% end %>
     """
   end
+
+  # -------------------------------------------------------------------
+  # Worked-example sentences — reflect the currently chosen value so the
+  # explanation stays accurate as the user clicks through presets/custom.
+  # -------------------------------------------------------------------
+
+  @example_meeting_end ~T[14:00:00]
+
+  defp buffer_example(nil), do: buffer_example(15)
+
+  defp buffer_example(0),
+    do: "With no buffer, the next available slot starts as soon as a meeting ends."
+
+  defp buffer_example(minutes) do
+    next_start = Time.add(@example_meeting_end, minutes * 60)
+
+    "If someone books a meeting that ends at #{format_12h(@example_meeting_end)} and your buffer is " <>
+      "#{minutes} min, the next available slot starts at #{format_12h(next_start)}."
+  end
+
+  defp window_example(nil), do: window_example(14)
+
+  defp window_example(days) do
+    phrase = TextHelpers.humanize_days(days)
+    "Someone visiting your page today can only book up to #{phrase} ahead — no further."
+  end
+
+  defp notice_example(nil), do: notice_example(3)
+
+  defp notice_example(0),
+    do: "With no minimum notice, someone can book a slot that starts any time from now."
+
+  defp notice_example(hours) do
+    phrase = humanize_hours(hours)
+    "With #{phrase} of notice, nobody can book a slot that starts sooner than #{phrase} from now."
+  end
+
+  defp humanize_hours(1), do: "1 hour"
+  defp humanize_hours(24), do: "1 day"
+  defp humanize_hours(48), do: "2 days"
+  defp humanize_hours(hours), do: "#{hours} hours"
+
+  defp format_12h(%Time{minute: minute} = time) do
+    {hour12, meridiem} = to_12h(time.hour)
+    "#{hour12}:#{String.pad_leading(Integer.to_string(minute), 2, "0")} #{meridiem}"
+  end
+
+  defp to_12h(0), do: {12, "AM"}
+  defp to_12h(12), do: {12, "PM"}
+  defp to_12h(hour) when hour < 12, do: {hour, "AM"}
+  defp to_12h(hour), do: {hour - 12, "PM"}
 end

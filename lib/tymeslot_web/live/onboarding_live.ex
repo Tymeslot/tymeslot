@@ -1,16 +1,13 @@
 defmodule TymeslotWeb.OnboardingLive do
   use TymeslotWeb, :live_view
 
-  alias Tymeslot.Auth
   alias Tymeslot.Bookings.Policy
-  alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
-  alias Tymeslot.Timezones
-  alias TymeslotWeb.CustomInputModeHelper
-  alias TymeslotWeb.OnboardingLive.BasicSettingsShared
   alias TymeslotWeb.OnboardingLive.CalendarHandlers
+  alias TymeslotWeb.OnboardingLive.ChooseThemeStep
   alias TymeslotWeb.OnboardingLive.ConnectCalendarStep
+  alias TymeslotWeb.OnboardingLive.Initializer
+  alias TymeslotWeb.OnboardingLive.LivePreview
   alias TymeslotWeb.OnboardingLive.NavigationHandlers
   alias TymeslotWeb.OnboardingLive.OnboardingLayout
   alias TymeslotWeb.OnboardingLive.PreferencesStep
@@ -20,6 +17,8 @@ defmodule TymeslotWeb.OnboardingLive do
   alias TymeslotWeb.OnboardingLive.SchedulingHandlers
   alias TymeslotWeb.OnboardingLive.SkipConfirmationModal
   alias TymeslotWeb.OnboardingLive.StepConfig
+  alias TymeslotWeb.OnboardingLive.ThemeHandlers
+  alias TymeslotWeb.OnboardingLive.ThemePreviewModal
   alias TymeslotWeb.OnboardingLive.TimezoneHandlers
   alias TymeslotWeb.OnboardingLive.WelcomeStep
 
@@ -36,7 +35,7 @@ defmodule TymeslotWeb.OnboardingLive do
        |> put_flash(:info, "You have already completed onboarding.")
        |> redirect(to: ~p"/dashboard")}
     else
-      {:ok, initialize_onboarding(socket, user)}
+      {:ok, Initializer.initialize(socket, user)}
     end
   end
 
@@ -76,6 +75,30 @@ defmodule TymeslotWeb.OnboardingLive do
           @connected_calendars == []
       }
     >
+      <:preview>
+        <%!-- The disconnected (dead) render has no profile yet, so it can't
+             know the user's theme/colours. Rendering the real preview with
+             default colours here would flash the wrong theme the instant the
+             socket connects, so show a neutral skeleton until then. --%>
+        <LivePreview.preview_skeleton :if={is_nil(@profile)} />
+        <LivePreview.live_preview
+          :if={@profile}
+          current_step={@current_step}
+          booking_theme={@profile.booking_theme || "1"}
+          name={Map.get(@form_data, "full_name", "")}
+          username={Map.get(@form_data, "username", "")}
+          timezone={@profile.timezone}
+          avatar_url={Profiles.avatar_url(@profile, :thumb)}
+          color_scheme={@color_scheme}
+          buffer_minutes={@profile.buffer_minutes}
+          advance_booking_days={@profile.advance_booking_days}
+          min_advance_hours={@profile.min_advance_hours}
+          calendar_connected={
+            @connected_calendars != [] or @calendar_choice not in [nil, "skip"]
+          }
+          booking_host={booking_host()}
+        />
+      </:preview>
       <%= case @current_step do %>
         <% :welcome -> %>
           <WelcomeStep.welcome_step />
@@ -87,6 +110,14 @@ defmodule TymeslotWeb.OnboardingLive do
             timezone_dropdown_open={@timezone_dropdown_open}
             timezone_search={@timezone_search}
             form_errors={@form_errors}
+            uploads={@uploads}
+            avatar_url={@profile && Profiles.avatar_url(@profile, :thumb)}
+          />
+        <% :choose_theme -> %>
+          <ChooseThemeStep.choose_theme_step
+            profile={@profile}
+            theme_options={@theme_options}
+            color_scheme={@color_scheme}
           />
         <% :connect_calendar -> %>
           <ConnectCalendarStep.connect_calendar_step
@@ -122,6 +153,12 @@ defmodule TymeslotWeb.OnboardingLive do
 
     <%!-- Skip confirmation modal --%>
     <SkipConfirmationModal.skip_confirmation_modal show={@show_skip_modal} />
+
+    <%!-- Real booking-page preview --%>
+    <ThemePreviewModal.theme_preview_modal
+      show={@show_theme_preview}
+      url={@theme_preview_url}
+    />
     """
   end
 
@@ -151,7 +188,7 @@ defmodule TymeslotWeb.OnboardingLive do
   end
 
   # ------------------------------------------------------------------
-  # Event handlers — Profile (basic settings)
+  # Event handlers — Profile (basic settings + avatar)
   # ------------------------------------------------------------------
 
   def handle_event("validate_basic_settings", params, socket) do
@@ -160,6 +197,30 @@ defmodule TymeslotWeb.OnboardingLive do
 
   def handle_event("update_basic_settings", _params, socket) do
     NavigationHandlers.handle_next_step(socket)
+  end
+
+  def handle_event("validate_avatar", _params, socket) do
+    {:noreply, socket}
+  end
+
+  # ------------------------------------------------------------------
+  # Event handlers — Theme & preview
+  # ------------------------------------------------------------------
+
+  def handle_event("select_theme", %{"theme" => theme_id}, socket) do
+    ThemeHandlers.handle_select_theme(theme_id, socket)
+  end
+
+  def handle_event("select_color_scheme", %{"scheme" => scheme_id}, socket) do
+    ThemeHandlers.handle_select_color_scheme(scheme_id, socket)
+  end
+
+  def handle_event("preview_booking_page", _params, socket) do
+    ThemeHandlers.handle_preview_booking_page(socket)
+  end
+
+  def handle_event("close_theme_preview", _params, socket) do
+    ThemeHandlers.handle_close_theme_preview(socket)
   end
 
   # ------------------------------------------------------------------
@@ -191,40 +252,11 @@ defmodule TymeslotWeb.OnboardingLive do
   end
 
   def handle_event("update_scheduling_preferences", params, socket) do
-    {:noreply, updated_socket} =
-      SchedulingHandlers.handle_update_scheduling_preferences(params, socket)
-
-    if Map.get(updated_socket.assigns, :form_errors, %{}) == %{} do
-      socket_with_mode = update_custom_input_modes(updated_socket, params)
-      {:noreply, socket_with_mode}
-    else
-      {:noreply, updated_socket}
-    end
+    SchedulingHandlers.handle_update_with_custom_modes(params, socket)
   end
 
   def handle_event("focus_custom_input", %{"setting" => setting}, socket) do
-    with %{} = config <- StepConfig.custom_input_config()[setting],
-         %{} = profile <- socket.assigns[:profile] do
-      current = Map.get(profile, config.field) || config.constraints.default_custom
-
-      custom_value =
-        if current in config.presets,
-          do: config.constraints.default_custom,
-          else: current
-
-      params = %{setting => to_string(custom_value)}
-
-      {:noreply, updated_socket} =
-        SchedulingHandlers.handle_update_scheduling_preferences(params, socket)
-
-      if Map.get(updated_socket.assigns, :form_errors, %{}) == %{} do
-        {:noreply, CustomInputModeHelper.enable_custom_mode(updated_socket, config.field)}
-      else
-        {:noreply, updated_socket}
-      end
-    else
-      _other -> {:noreply, socket}
-    end
+    SchedulingHandlers.handle_focus_custom_input(setting, socket)
   end
 
   # ------------------------------------------------------------------
@@ -264,88 +296,7 @@ defmodule TymeslotWeb.OnboardingLive do
   # Private helpers
   # ------------------------------------------------------------------
 
-  defp initialize_onboarding(socket, user) do
-    profile = load_profile(socket, user)
-
-    connected_calendars =
-      if connected?(socket), do: Calendar.list_integrations(user.id), else: []
-
-    socket
-    |> assign(:profile, profile)
-    |> then(fn s ->
-      if profile,
-        do: assign(s, :form_data, BasicSettingsShared.build_form_data(s)),
-        else: assign(s, :form_data, %{})
-    end)
-    |> assign(:current_step, :welcome)
-    |> assign(:step_data, %{})
-    |> assign(:show_skip_modal, false)
-    |> assign(:steps, StepConfig.get_steps())
-    |> assign(:timezone_options, Timezones.all_options())
-    |> assign(:timezone_dropdown_open, false)
-    |> assign(:timezone_search, "")
-    |> assign(:page_title, "Welcome")
-    |> assign(:form_errors, %{})
-    |> assign(:custom_input_mode, CustomInputModeHelper.default_custom_mode())
-    |> assign(:calendar_state, :selecting)
-    |> assign(:calendar_choice, nil)
-    |> assign(:connected_calendars, connected_calendars)
-    |> assign(:google_signup_email, Auth.google_signup_login_hint(user))
-    |> assign(:caldav_form_data, %{})
-    |> assign(:caldav_form_errors, %{})
-    |> assign(:booking_url, build_booking_url(profile))
-  end
-
-  defp load_profile(socket, user) do
-    if connected?(socket) do
-      {:ok, loaded} = Onboarding.get_or_create_profile(user.id)
-      detected_timezone = get_connect_params(socket)["timezone"]
-      prefilled_profile = Profiles.prefill_timezone(loaded, detected_timezone)
-
-      if prefilled_profile.timezone != loaded.timezone do
-        case Profiles.update_timezone(loaded, prefilled_profile.timezone) do
-          {:ok, updated} -> updated
-          {:error, _reason} -> prefilled_profile
-        end
-      else
-        loaded
-      end
-    else
-      nil
-    end
-  end
-
-  defp build_booking_url(nil), do: ""
-
-  defp build_booking_url(profile) do
-    base = Policy.app_url()
-    username = profile.username || ""
-    "#{base}/#{username}"
-  end
-
-  defp update_custom_input_modes(socket, params) do
-    Enum.reduce(params, socket, fn {key, value}, acc ->
-      field = field_key_to_atom(key)
-      if field, do: try_update_mode(acc, field, value, params), else: acc
-    end)
-  end
-
-  defp field_key_to_atom("buffer_minutes"), do: :buffer_minutes
-  defp field_key_to_atom("advance_booking_days"), do: :advance_booking_days
-  defp field_key_to_atom("min_advance_hours"), do: :min_advance_hours
-  defp field_key_to_atom(_arg), do: nil
-
-  defp try_update_mode(socket, field, value_str, params) when is_binary(value_str) do
-    case Integer.parse(value_str) do
-      {int_value, _value} ->
-        CustomInputModeHelper.toggle_custom_mode(socket, field, params, int_value)
-
-      _other ->
-        socket
-    end
-  end
-
-  defp try_update_mode(socket, _field, _value, _params) do
-    socket
+  defp booking_host do
+    String.replace(Policy.app_url(), ~r{^https?://}, "")
   end
 end

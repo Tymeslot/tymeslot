@@ -59,7 +59,10 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       "skip" ->
         {:noreply,
          socket
-         |> Component.assign(:current_step, StepConfig.next_step(:connect_calendar))
+         |> Component.assign(
+           :current_step,
+           StepConfig.next_step(:connect_calendar, socket.assigns.steps)
+         )
          |> Analytics.push("onboarding_step_completed", %{
            step: "connect_calendar",
            skipped: true
@@ -77,7 +80,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
 
   defp advance_step(socket, step) do
     socket
-    |> Component.assign(:current_step, StepConfig.next_step(step))
+    |> Component.assign(:current_step, StepConfig.next_step(step, socket.assigns.steps))
     |> Analytics.push("onboarding_step_completed", %{step: to_string(step)})
     |> LiveView.clear_flash()
   end
@@ -95,27 +98,33 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       :connect_calendar ->
         {:noreply,
          socket
-         |> Component.assign(:current_step, StepConfig.previous_step(:connect_calendar))
+         |> Component.assign(
+           :current_step,
+           StepConfig.previous_step(:connect_calendar, socket.assigns.steps)
+         )
          |> Component.assign(:form_data, BasicSettingsShared.build_form_data(socket))
          |> LiveView.clear_flash()}
 
       step when step in [:buffer_time, :booking_window, :minimum_notice] ->
         {:noreply,
          socket
-         |> Component.assign(:current_step, StepConfig.previous_step(step))
+         |> Component.assign(:current_step, StepConfig.previous_step(step, socket.assigns.steps))
          |> LiveView.clear_flash()}
 
       :ready ->
         {:noreply,
          socket
-         |> Component.assign(:current_step, StepConfig.previous_step(:ready))
+         |> Component.assign(
+           :current_step,
+           StepConfig.previous_step(:ready, socket.assigns.steps)
+         )
          |> Component.assign_new(:custom_input_mode, fn ->
            CustomInputModeHelper.default_custom_mode()
          end)
          |> LiveView.clear_flash()}
 
       step ->
-        case StepConfig.previous_step(step) do
+        case StepConfig.previous_step(step, socket.assigns.steps) do
           nil ->
             {:noreply, socket}
 

@@ -67,7 +67,14 @@
 }
 
 .modal-content--full {
-  @apply max-w-[calc(100vw-3rem)] h-[calc(100vh-3rem)];
+  @apply max-w-[calc(100vw-3rem)] h-[calc(100vh-3rem)] flex flex-col;
+}
+
+/* Full-screen modals lay their content out as a column so the body fills the
+   remaining height. Embedded content (e.g. a preview iframe) can then size to
+   100% and max out the dialog without overflowing or jumping. */
+.modal-content--full .modal-body {
+  @apply flex-1 min-h-0;
 }
 
 /* Responsive adjustments */

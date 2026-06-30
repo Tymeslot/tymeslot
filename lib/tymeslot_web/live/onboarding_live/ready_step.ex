@@ -2,8 +2,8 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   @moduledoc """
   Ready step component for the onboarding flow.
 
-  Displays the user's booking URL with a copy button and a link
-  to explore the dashboard.
+  Displays the user's booking URL with a copy button. The "Go to dashboard"
+  navigation button in the layout footer is the sole call to action.
   """
 
   use Phoenix.Component
@@ -38,13 +38,6 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
         >
           <.icon name="hero-clipboard-document" class="w-5 h-5" />
         </button>
-      </div>
-
-      <%!-- Dashboard link --%>
-      <div class="text-center">
-        <a href="/dashboard" class="text-token-sm text-tymeslot-400 hover:text-tymeslot-600 font-medium transition-colors">
-          or explore your dashboard first
-        </a>
       </div>
     </div>
     """

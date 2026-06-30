@@ -9,6 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Profiles.Settings
+  alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.OnboardingLive.StepConfig
 
   @doc """
@@ -62,7 +63,76 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
     end
   end
 
+  @doc """
+  Updates scheduling preferences and, on success, syncs the per-field
+  custom-input modes from the submitted params. Combines the persistence step
+  with its custom-input bookkeeping so the LiveView delegates a single call.
+  """
+  @spec handle_update_with_custom_modes(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_with_custom_modes(params, socket) do
+    {:noreply, updated_socket} = handle_update_scheduling_preferences(params, socket)
+
+    if Map.get(updated_socket.assigns, :form_errors, %{}) == %{} do
+      {:noreply, update_custom_input_modes(updated_socket, params)}
+    else
+      {:noreply, updated_socket}
+    end
+  end
+
+  @doc """
+  Seeds and reveals the custom-value input for a scheduling field, switching it
+  into custom mode (unless validation of the seeded value fails).
+  """
+  @spec handle_focus_custom_input(String.t(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_focus_custom_input(setting, socket) do
+    with %{} = config <- StepConfig.custom_input_config()[setting],
+         %{} = profile <- socket.assigns[:profile] do
+      current = Map.get(profile, config.field) || config.constraints.default_custom
+
+      custom_value =
+        if current in config.presets, do: config.constraints.default_custom, else: current
+
+      params = %{setting => to_string(custom_value)}
+
+      {:noreply, updated_socket} = handle_update_scheduling_preferences(params, socket)
+
+      if Map.get(updated_socket.assigns, :form_errors, %{}) == %{} do
+        {:noreply, CustomInputModeHelper.enable_custom_mode(updated_socket, config.field)}
+      else
+        {:noreply, updated_socket}
+      end
+    else
+      _other -> {:noreply, socket}
+    end
+  end
+
   # Private helpers
+
+  defp update_custom_input_modes(socket, params) do
+    Enum.reduce(params, socket, fn {key, value}, acc ->
+      field = field_key_to_atom(key)
+      if field, do: try_update_mode(acc, field, value, params), else: acc
+    end)
+  end
+
+  defp field_key_to_atom("buffer_minutes"), do: :buffer_minutes
+  defp field_key_to_atom("advance_booking_days"), do: :advance_booking_days
+  defp field_key_to_atom("min_advance_hours"), do: :min_advance_hours
+  defp field_key_to_atom(_arg), do: nil
+
+  defp try_update_mode(socket, field, value_str, params) when is_binary(value_str) do
+    case Integer.parse(value_str) do
+      {int_value, _value} ->
+        CustomInputModeHelper.toggle_custom_mode(socket, field, params, int_value)
+
+      _other ->
+        socket
+    end
+  end
+
+  defp try_update_mode(socket, _field, _value, _params), do: socket
 
   @fields [
     {"buffer_minutes", :buffer_minutes, "Buffer minutes"},
