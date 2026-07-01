@@ -139,6 +139,16 @@ defmodule TymeslotWeb.Router do
       live "/auth/password-reset-success", AuthLive, :password_reset_success
     end
 
+    # Convenience redirects for mistyped auth slugs. Defined before the
+    # `/:username` booking-page catch-all so they resolve here rather than as a
+    # username lookup. See TymeslotWeb.AuthAliasController.
+    get "/login", AuthAliasController, :login
+    get "/signin", AuthAliasController, :login
+    get "/sign-in", AuthAliasController, :login
+    get "/signup", AuthAliasController, :signup
+    get "/sign-up", AuthAliasController, :signup
+    get "/register", AuthAliasController, :signup
+
     # Email change verification route
     get "/email-change/:token", EmailChangeController, :verify
 

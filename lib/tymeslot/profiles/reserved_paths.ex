@@ -22,7 +22,7 @@ defmodule Tymeslot.Profiles.ReservedPaths do
   defp system_paths do
     ~w(
       auth dashboard api dev docs admin healthcheck webhooks email-change debug onboarding
-      login logout signup register settings profile account password reset-password
+      login logout signin sign-in signup sign-up register settings profile account password reset-password
       setup config configuration system root mail email billing subscription
       payment invoice plans pricing upgrade downgrade feedback report abuse
       webhook callback oauth connect integration marketplace apps plugins
