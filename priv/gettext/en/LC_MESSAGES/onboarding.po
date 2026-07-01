@@ -133,4 +133,4 @@ msgstr "Your account"
 #: lib/tymeslot/onboarding/dashboard_tour.ex:44
 #, elixir-autogen, elixir-format
 msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
-msgstr ""
+msgstr "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."

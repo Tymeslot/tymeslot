@@ -1186,4 +1186,4 @@ msgstr "Pick a time that works for you and book a meeting in seconds."
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:420
 #, elixir-autogen, elixir-format
 msgid "Preview session expired. Reload the page to continue."
-msgstr ""
+msgstr "Preview session expired. Reload the page to continue."
