@@ -207,6 +207,37 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       # The optimistic UI update must not raise; no permission error expected
       refute html =~ "You don't have permission"
     end
+
+    test "rejects a move to an integration owned by another user", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      other_user = insert(:user)
+      foreign_integration = insert(:calendar_integration, user: other_user, is_active: true)
+      today = Date.utc_today()
+
+      event =
+        insert_event(integration, %{
+          summary: "Private Event",
+          start_at: DateTime.new!(today, ~T[09:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
+          all_day: false
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv
+      |> element("[id^='event-#{event.id}-']")
+      |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_event_calendar", %{
+        "integration-id" => to_string(foreign_integration.id)
+      })
+
+      # The destination integration is not in the user's owned set, so the move
+      # is refused and the event is never reassigned to another user's calendar.
+      assert render(lv) =~ "You don&#39;t have permission to move this event"
+    end
   end
 
   describe "event resize" do

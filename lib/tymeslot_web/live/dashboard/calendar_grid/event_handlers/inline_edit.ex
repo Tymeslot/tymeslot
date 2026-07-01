@@ -309,6 +309,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
       {event, {:ok, new_id}} ->
         with :ok <- EditWorkflow.assert_owns_event(socket, event),
+             :ok <- EditWorkflow.assert_owns_integration(socket, new_id),
              :ok <- Shared.check_move_rate_limit(socket) do
           updated_event = %{event | calendar_integration_id: new_id}
           updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
