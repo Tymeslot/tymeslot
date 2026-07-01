@@ -39,17 +39,17 @@ defmodule Tymeslot.Announcements do
 
     * the user has not already marked it seen;
     * it has not expired (`expires_at` is `nil` or still in the future);
-    * the user signed up before it was published — **or** the user is an admin,
-      who bypasses the signup-date gate so they can review what users see.
-      Admins still respect the seen and expiry filters, so they see each
-      announcement exactly once.
+    * the user signed up before it was published.
+
+  Admins are gated by signup date exactly like everyone else — there is no
+  bypass.
   """
   @spec list_for(UserSchema.t()) :: [Announcement.t()]
   def list_for(%UserSchema{} = user) do
     user_inserted_at = to_utc_datetime(user.inserted_at)
     now = DateTime.utc_now()
 
-    # Evaluate the in-memory catalog first (expiry + signup/admin
+    # Evaluate the in-memory catalog first (expiry + signup-date
     # visibility) — these checks need no database access. Only if some
     # candidate survives do we pay for the per-user seen-keys query. Once
     # every catalogue entry has expired this short-circuits, so a mount can
@@ -58,7 +58,7 @@ defmodule Tymeslot.Announcements do
       catalogs()
       |> Enum.flat_map(&safe_list/1)
       |> Enum.reject(&expired?(&1, now))
-      |> Enum.filter(&visible_to?(&1, user, user_inserted_at))
+      |> Enum.filter(&published_after_signup?(&1, user_inserted_at))
 
     case candidates do
       [] ->
@@ -91,9 +91,7 @@ defmodule Tymeslot.Announcements do
   defp expired?(%Announcement{expires_at: expires_at}, now),
     do: not DateTime.after?(expires_at, now)
 
-  defp visible_to?(_announcement, %UserSchema{is_admin: true}, _user_inserted_at), do: true
-
-  defp visible_to?(%Announcement{published_at: published_at}, _user, user_inserted_at),
+  defp published_after_signup?(%Announcement{published_at: published_at}, user_inserted_at),
     do: DateTime.after?(published_at, user_inserted_at)
 
   defp catalogs do

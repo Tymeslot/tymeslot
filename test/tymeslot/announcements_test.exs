@@ -282,7 +282,7 @@ defmodule Tymeslot.AnnouncementsTest do
     end
   end
 
-  describe "Announcements.list_for/1 admin bypass" do
+  describe "Announcements.list_for/1 signup gate applies to admins" do
     setup do
       previous = Application.get_env(:tymeslot, :announcement_catalogs, [])
       Application.put_env(:tymeslot, :announcement_catalogs, [AnnouncementsTestCatalog])
@@ -290,28 +290,26 @@ defmodule Tymeslot.AnnouncementsTest do
       :ok
     end
 
-    test "an admin who signed up after publication still sees all announcements" do
+    test "an admin who signed up after publication sees no announcements — no bypass" do
       # Signed up after both test_alpha (2026-01-01) and test_beta (2026-02-01).
       admin = insert(:user, is_admin: true, inserted_at: ~N[2026-04-01 00:00:00])
 
-      assert [%{key: "test_alpha"}, %{key: "test_beta"}] = Announcements.list_for(admin)
-    end
-
-    test "a non-admin with the same signup date sees none — the bypass is admin-only" do
-      user = insert(:user, is_admin: false, inserted_at: ~N[2026-04-01 00:00:00])
-
-      assert [] = Announcements.list_for(user)
-    end
-
-    test "an admin sees each announcement only once — marking it seen suppresses it" do
-      admin = insert(:user, is_admin: true, inserted_at: ~N[2026-04-01 00:00:00])
-
-      assert [%{key: "test_alpha"}, %{key: "test_beta"}] = Announcements.list_for(admin)
-
-      Announcements.mark_seen!(admin, "test_alpha")
-      Announcements.mark_seen!(admin, "test_beta")
-
       assert [] = Announcements.list_for(admin)
+    end
+
+    test "an admin who signed up before publication sees announcements published after signup" do
+      # Signed up after test_alpha (2026-01-01) but before test_beta (2026-02-01).
+      admin = insert(:user, is_admin: true, inserted_at: ~N[2026-01-15 00:00:00])
+
+      assert [%{key: "test_beta"}] = Announcements.list_for(admin)
+    end
+
+    test "an admin and a non-admin with the same signup date see the same announcements" do
+      inserted_at = ~N[2026-01-15 00:00:00]
+      admin = insert(:user, is_admin: true, inserted_at: inserted_at)
+      user = insert(:user, is_admin: false, inserted_at: inserted_at)
+
+      assert Announcements.list_for(admin) == Announcements.list_for(user)
     end
   end
 
