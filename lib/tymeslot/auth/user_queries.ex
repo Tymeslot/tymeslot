@@ -320,10 +320,13 @@ defmodule Tymeslot.Auth.UserQueries do
 
   Runs `Tymeslot.MeetingPayments.anonymise_host/1` before the
   delete so booking-payment and payment-transaction rows are scrubbed and
-  marked retained — the FKs on those tables are `:nilify_all`, so the
-  rows survive the user delete and must be anonymised in the same
-  transaction. Required for tax-record retention under EU and Swiss
-  commercial law (GDPR Art. 17(3)(b) carve-out).
+  marked retained. The ordering is what guarantees survival: anonymisation
+  nils the host reference on each row (`booking_payments.host_user_id` is a
+  bare integer with no FK; `payment_transactions.user_id` is set to nil)
+  before the user row is deleted, so no retained row still points at the
+  user when the delete runs — regardless of the FK's `on_delete`. Both must
+  happen in the same transaction. Required for tax-record retention under EU
+  and Swiss commercial law (GDPR Art. 17(3)(b) carve-out).
   """
   @spec delete_user(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t() | term()}
   def delete_user(%UserSchema{} = user) do
