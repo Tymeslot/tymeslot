@@ -43,7 +43,7 @@ defmodule Tymeslot.Onboarding.DashboardTour do
         body:
           dgettext(
             "onboarding",
-            "Switch between Scheduling (your event types) and Calendar (your bookings)."
+            "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
           )
       },
       %{

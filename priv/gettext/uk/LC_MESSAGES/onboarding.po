@@ -105,11 +105,6 @@ msgstr "Пропустити"
 msgid "Step %{n} of %{total}"
 msgstr "Крок %{n} з %{total}"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:44
-#, elixir-autogen, elixir-format
-msgid "Switch between Scheduling (your event types) and Calendar (your bookings)."
-msgstr "Перемикайтеся між Плануванням (ваші типи подій) та Календарем (ваші бронювання)."
-
 #: lib/tymeslot/onboarding/dashboard_tour.ex:36
 #, elixir-autogen, elixir-format
 msgid "Take 30 seconds to learn where everything lives."
@@ -134,3 +129,8 @@ msgstr "Все готово"
 #, elixir-autogen, elixir-format
 msgid "Your account"
 msgstr "Ваш обліковий запис"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:44
+#, elixir-autogen, elixir-format
+msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
+msgstr "Перемикайтеся між Плануванням (ваші типи подій) та Календарем (повний огляд ваших бронювань і синхронізованих подій)."

@@ -105,11 +105,6 @@ msgstr "Salta"
 msgid "Step %{n} of %{total}"
 msgstr "Passaggio %{n} di %{total}"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:44
-#, elixir-autogen, elixir-format
-msgid "Switch between Scheduling (your event types) and Calendar (your bookings)."
-msgstr "Passa tra Pianificazione (i tuoi tipi di evento) e Calendario (le tue prenotazioni)."
-
 #: lib/tymeslot/onboarding/dashboard_tour.ex:36
 #, elixir-autogen, elixir-format
 msgid "Take 30 seconds to learn where everything lives."
@@ -134,3 +129,8 @@ msgstr "Tutto pronto"
 #, elixir-autogen, elixir-format
 msgid "Your account"
 msgstr "Il tuo account"
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:44
+#, elixir-autogen, elixir-format
+msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
+msgstr "Passa tra Pianificazione (i tuoi tipi di evento) e Calendario (una vista completa delle tue prenotazioni ed eventi sincronizzati)."
