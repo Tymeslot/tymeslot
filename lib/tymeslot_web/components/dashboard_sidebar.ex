@@ -132,6 +132,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 action={:meeting_settings}
                 show_notification={not (@integration_status[:has_meeting_types] || false)}
                 notification_type="info"
+                notification_title="Add a meeting type so guests have something to book"
               >
                 <IconComponents.icon name={:grid} class="w-5 h-5" />
                 <span>Meeting Types</span>
@@ -166,6 +167,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 action={:calendar_integration}
                 show_notification={not (@integration_status[:has_calendar] || false)}
                 notification_type="info"
+                notification_title="Connect a calendar to avoid double-bookings"
               >
                 <IconComponents.icon name={:calendar} class="w-5 h-5" />
                 <span>Calendar</span>
@@ -177,6 +179,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 action={:video_integration}
                 show_notification={not (@integration_status[:has_video] || false)}
                 notification_type="info"
+                notification_title="Connect a video provider to host online meetings"
               >
                 <IconComponents.icon name={:video} class="w-5 h-5" />
                 <span>Video</span>
@@ -254,6 +257,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   attr :action, :atom, required: true
   attr :show_notification, :boolean, default: false
   attr :notification_type, :string, default: "critical"
+  attr :notification_title, :string, default: "Setup recommended"
   attr :locked, :boolean, default: false
   attr :rest, :global
   slot :inner_block, required: true
@@ -287,7 +291,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             _other -> ""
           end
         ]}
-        title="Setup recommended"
+        title={@notification_title}
       >
         !
       </div>
