@@ -23,7 +23,11 @@ defmodule TymeslotWeb.DashboardRoutesTest do
   defp setup_authenticated_user(conn) do
     DashboardCache.clear_all()
 
-    user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+    user =
+      insert(:user,
+        onboarding_completed_at: DateTime.utc_now(),
+        dashboard_tour_seen_at: DateTime.utc_now()
+      )
 
     profile =
       insert(:profile,
@@ -299,7 +303,11 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     setup %{conn: conn} do
       DashboardCache.clear_all()
 
-      user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+      user =
+        insert(:user,
+          onboarding_completed_at: DateTime.utc_now(),
+          dashboard_tour_seen_at: DateTime.utc_now()
+        )
 
       insert(:profile,
         user: user,
@@ -323,6 +331,41 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     end
   end
 
+  describe "overview - first visit" do
+    setup %{conn: conn} do
+      DashboardCache.clear_all()
+
+      # Onboarding is complete (so no redirect) but the dashboard tour has
+      # never been seen — the hallmark of a first dashboard visit.
+      user =
+        insert(:user,
+          onboarding_completed_at: DateTime.utc_now(),
+          dashboard_tour_seen_at: nil
+        )
+
+      insert(:profile,
+        user: user,
+        username: "firsttimer",
+        full_name: "First Timer",
+        booking_theme: "1"
+      )
+
+      conn =
+        conn
+        |> init_test_session(%{})
+        |> log_in_user(user)
+
+      {:ok, %{conn: conn}}
+    end
+
+    test "greets a first-time visitor with 'Welcome' rather than 'Welcome back'", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      assert html =~ "Welcome, First Timer"
+      refute html =~ "Welcome back"
+    end
+  end
+
   describe "onboarding redirect" do
     test "redirects to onboarding when onboarding is not completed", %{conn: conn} do
       DashboardCache.clear_all()
@@ -342,7 +385,11 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     setup %{conn: conn} do
       DashboardCache.clear_all()
 
-      user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+      user =
+        insert(:user,
+          onboarding_completed_at: DateTime.utc_now(),
+          dashboard_tour_seen_at: DateTime.utc_now()
+        )
 
       insert(:profile,
         user: user,

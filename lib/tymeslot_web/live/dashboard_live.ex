@@ -143,6 +143,7 @@ defmodule TymeslotWeb.DashboardLive do
 
   use TymeslotWeb, :live_view
 
+  alias Tymeslot.Auth
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Onboarding.DashboardTour
   alias TymeslotWeb.Components.DashboardLayout
@@ -164,7 +165,16 @@ defmodule TymeslotWeb.DashboardLive do
   @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()} | {:ok, Phoenix.LiveView.Socket.t(), keyword()}
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    # Snapshot once, before the dashboard tour can mark itself seen mid-session,
+    # so the overview greeting stays "Welcome" for the whole first visit and
+    # only becomes "Welcome back" on a later one.
+    first_visit? =
+      case socket.assigns[:current_user] do
+        %{} = user -> not Auth.dashboard_tour_seen?(user)
+        _no_user -> false
+      end
+
+    {:ok, assign(socket, :first_dashboard_visit, first_visit?)}
   end
 
   @impl Phoenix.LiveView
@@ -246,6 +256,7 @@ defmodule TymeslotWeb.DashboardLive do
             module={@component_module}
             id={ComponentDispatch.component_id(@live_action)}
             current_user={@current_user}
+            first_dashboard_visit={@first_dashboard_visit}
             profile={Map.get(@component_props, :profile, @profile)}
             shared_data={Map.get(@component_props, :shared_data, %{})}
             integration_status={@integration_status}
