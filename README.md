@@ -231,6 +231,8 @@ PRs and issues are welcome — start with [CONTRIBUTING.md](CONTRIBUTING.md). Fo
 
 Open source under the [GNU AGPLv3](LICENSE) — free to use, self-host, modify and redistribute; if you run a modified version as a network service, share your changes under the same licence.
 
+The licence covers the **code**. The **Tymeslot name and logo** are trademarks of Diletta Luna OÜ — forks are welcome, but must travel under their own name. See [TRADEMARK.md](TRADEMARK.md).
+
 <br />
 
 <div align="center">
