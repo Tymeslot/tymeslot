@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewTokenTest do
   @moduletag :scheduling
   @moduletag :unit
 
+  alias Phoenix.Token
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Live.Scheduling.PreviewToken
 
@@ -46,7 +47,7 @@ defmodule TymeslotWeb.Live.Scheduling.PreviewTokenTest do
       # max_age is 3600 s. `Phoenix.Token.sign/4` accepts a `:signed_at`
       # timestamp (seconds since epoch) so we can back-date without sleeping.
       expired_token =
-        Phoenix.Token.sign(
+        Token.sign(
           Endpoint,
           @salt,
           user_id,
