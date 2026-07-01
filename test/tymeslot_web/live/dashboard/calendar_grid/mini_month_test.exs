@@ -87,9 +87,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.MiniMonthTest do
       assert html =~ ~s(id="mini-month-popover-panel")
       assert html =~ Calendar.strftime(prev_month, "%B %Y")
 
-      # The main grid did NOT navigate: still week view (the day-view full-date
-      # label for today is absent because we never navigated to a day).
-      refute html =~ Calendar.strftime(today, "%A, %B %-d, %Y")
+      # The main grid did NOT navigate: still week view (the day-view header
+      # renders the full-date label as span text, so its absence proves we never
+      # navigated to a day). We match the span-text form specifically rather than
+      # the bare date string, because the mini-month popover also emits today's
+      # full date as an `aria-label` on every day cell — and stepping the picker
+      # back a month can surface today as a trailing day of that grid.
+      refute html =~ ">#{Calendar.strftime(today, "%A, %B %-d, %Y")}</span>"
 
       # Stepping forward twice lands on next month.
       next_month = Date.shift(Date.new!(today.year, today.month, 1), month: 1)
