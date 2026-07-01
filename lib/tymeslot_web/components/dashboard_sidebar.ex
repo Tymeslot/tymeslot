@@ -58,16 +58,16 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             target="_blank"
             class="dashboard-nav-link flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-black rounded-2xl transition-all duration-300 bg-linear-to-br from-turquoise-600 to-cyan-600 text-white hover:text-white hover:translate-x-0 shadow-lg shadow-turquoise-500/30 hover:shadow-xl hover:shadow-turquoise-500/40 hover:from-turquoise-700 hover:to-cyan-700 group"
           >
-            <IconComponents.icon name={:external_link} class="w-5 h-5 text-white" />
-            <span class="text-white">View Page</span>
+            <IconComponents.icon name={:external_link} class="w-5 h-5 shrink-0 text-white" />
+            <span class="text-white whitespace-nowrap">View Page</span>
           </.link>
           <div
             :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
             class="flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-bold rounded-2xl bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-60 border-2 border-tymeslot-200"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
           >
-            <IconComponents.icon name={:external_link} class="w-5 h-5" />
-            <span>View Page</span>
+            <IconComponents.icon name={:external_link} class="w-5 h-5 shrink-0" />
+            <span class="whitespace-nowrap">View Page</span>
           </div>
 
           <button
