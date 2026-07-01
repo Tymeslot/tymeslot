@@ -78,7 +78,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
         |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/dashboard"
-      assert Flash.get(conn.assigns.flash, :info) =~ "Successfully signed up"
+      assert Flash.get(conn.assigns.flash, :info) =~ "successfully signed up"
     end
 
     test "requires terms acceptance when enforced", %{conn: conn} do
@@ -241,7 +241,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
         |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/dashboard"
-      assert Flash.get(conn.assigns.flash, :info) =~ "Successfully signed up"
+      assert Flash.get(conn.assigns.flash, :info) =~ "successfully signed up"
     end
 
     test "clears session data after successful completion", %{conn: conn} do

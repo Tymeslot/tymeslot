@@ -281,7 +281,7 @@ defmodule TymeslotWeb.OAuthController do
     case Verification.verify_user_email(conn, user, %{}) do
       {:ok, _updated_user} ->
         message =
-          "Welcome! Successfully signed up with #{String.capitalize(oauth_data.provider)}. Please check your email to verify your account."
+          "Welcome! You've successfully signed up with #{String.capitalize(oauth_data.provider)}. Please check your email to verify your account."
 
         create_session_and_redirect(conn, user, message)
 
@@ -290,7 +290,7 @@ defmodule TymeslotWeb.OAuthController do
 
       {:error, _error_reason} ->
         message =
-          "Welcome! Successfully signed up with #{String.capitalize(oauth_data.provider)}. Verification email could not be sent - please contact support if needed."
+          "Welcome! You've successfully signed up with #{String.capitalize(oauth_data.provider)}. Verification email could not be sent - please contact support if needed."
 
         create_session_and_redirect(conn, user, message)
     end
@@ -350,7 +350,7 @@ defmodule TymeslotWeb.OAuthController do
 
   @spec get_welcome_message(String.t()) :: String.t()
   defp get_welcome_message(provider) do
-    "Welcome! Successfully signed up with #{String.capitalize(provider)}."
+    "Welcome! You've successfully signed up with #{String.capitalize(provider)}."
   end
 
   @spec respond_to_oauth_result(
