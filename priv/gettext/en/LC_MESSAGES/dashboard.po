@@ -305,7 +305,7 @@ msgstr "GitHub login"
 msgid "Google login"
 msgstr "Google login"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:52
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:53
 #, elixir-autogen, elixir-format
 msgid "Hidden from your public booking page; reachable only by its direct link"
 msgstr ""
@@ -496,7 +496,7 @@ msgstr "They will lose access to admin settings and user management."
 msgid "Total users"
 msgstr "Total users"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:54
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:55
 #, elixir-autogen, elixir-format
 msgid "Unlisted"
 msgstr ""
@@ -586,7 +586,7 @@ msgstr "reCAPTCHA on signup"
 msgid "to admin?"
 msgstr "to admin?"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex:505
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex:55
 #, elixir-autogen, elixir-format
 msgid "%{accepted} of %{total} guests going"
 msgstr ""
@@ -596,7 +596,7 @@ msgstr ""
 msgid "%{going} of %{total} going"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/grid_views.ex:512
+#: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex:62
 #, elixir-autogen, elixir-format
 msgid ", %{count} declined"
 msgid_plural ", %{count} declined"

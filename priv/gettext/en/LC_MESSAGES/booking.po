@@ -555,7 +555,7 @@ msgstr "Open Stripe Checkout"
 msgid "Payment cancelled"
 msgstr "Payment cancelled"
 
-#: lib/tymeslot_web/themes/shared/info_handlers.ex:190
+#: lib/tymeslot_web/themes/shared/info_handlers.ex:176
 #, elixir-autogen, elixir-format
 msgid "Payment was cancelled. Please try booking again."
 msgstr "Payment was cancelled. Please try booking again."
@@ -571,13 +571,13 @@ msgstr "Pick a meeting duration below."
 msgid "Please contact the organizer"
 msgstr "Please contact the organizer"
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:394
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:444
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below before submitting."
 msgstr "Please correct the errors below before submitting."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:101
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:285
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:102
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:319
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below."
 msgstr "Please correct the errors below."
@@ -1024,7 +1024,7 @@ msgstr "with %{name}"
 msgid "%{email} has already been added."
 msgstr "%{email} has already been added."
 
-#: lib/tymeslot_web/themes/shared/components/guest_field.ex:102
+#: lib/tymeslot_web/themes/shared/components/guest_field.ex:103
 #, elixir-autogen, elixir-format
 msgid "+ Add guests"
 msgstr "+ Add guests"
@@ -1039,7 +1039,7 @@ msgstr "Able to make it after all?"
 msgid "Accept instead"
 msgstr "Accept instead"
 
-#: lib/tymeslot_web/themes/shared/components/guest_field.ex:89
+#: lib/tymeslot_web/themes/shared/components/guest_field.ex:90
 #, elixir-autogen, elixir-format
 msgid "Add"
 msgstr "Add"
@@ -1080,7 +1080,7 @@ msgstr "Decline instead"
 msgid "Enter a valid email address."
 msgstr "Enter a valid email address."
 
-#: lib/tymeslot_web/themes/shared/components/guest_field.ex:85
+#: lib/tymeslot_web/themes/shared/components/guest_field.ex:86
 #, elixir-autogen, elixir-format
 msgid "Guest email address"
 msgstr "Guest email address"
@@ -1163,7 +1163,7 @@ msgstr "You've declined"
 msgid "Your response has been sent to %{name}."
 msgstr "Your response has been sent to %{name}."
 
-#: lib/tymeslot_web/themes/shared/components/guest_field.ex:82
+#: lib/tymeslot_web/themes/shared/components/guest_field.ex:83
 #, elixir-autogen, elixir-format
 msgid "guest@example.com"
 msgstr "guest@example.com"
@@ -1182,3 +1182,8 @@ msgstr "Book a meeting with %{name}. Pick a time that works for you."
 #, elixir-autogen, elixir-format
 msgid "Pick a time that works for you and book a meeting in seconds."
 msgstr "Pick a time that works for you and book a meeting in seconds."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:420
+#, elixir-autogen, elixir-format
+msgid "Preview session expired. Reload the page to continue."
+msgstr ""
