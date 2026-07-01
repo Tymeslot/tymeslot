@@ -60,6 +60,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
                 phx-blur="validate_login_email"
                 icon="hero-envelope"
                 required
+                autofocus
               />
               <div id="login-password-toggle-container" phx-hook="PasswordToggle" data-password-container>
                 <.input

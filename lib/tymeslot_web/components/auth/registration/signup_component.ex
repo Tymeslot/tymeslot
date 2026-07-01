@@ -72,6 +72,7 @@ defmodule TymeslotWeb.Registration.SignupComponent do
               phx-debounce="blur"
               icon="hero-envelope"
               required
+              autofocus
             />
             <div id="signup-password-toggle-container" data-password-container phx-hook="PasswordToggle">
               <.input

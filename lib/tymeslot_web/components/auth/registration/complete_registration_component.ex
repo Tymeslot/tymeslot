@@ -55,6 +55,7 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
       label="Display Name"
       placeholder="e.g. John Doe"
       required
+      autofocus
       icon="hero-user"
     />
     """

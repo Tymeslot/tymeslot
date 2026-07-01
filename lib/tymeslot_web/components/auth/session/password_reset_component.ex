@@ -53,6 +53,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
             phx-debounce="blur"
             icon="hero-envelope"
             required
+            autofocus
           />
 
           <%= if FormValidationHelpers.field_errors(@errors, :general) != [] do %>
@@ -180,6 +181,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
               label="New Password"
               placeholder="Enter your new password"
               required
+              autofocus
               class="text-sm sm:text-base"
               aria-describedby="password-requirements"
               icon="hero-lock-closed"

@@ -9,11 +9,13 @@ import { initializeBundle } from "./bundle_utils"
 import { lazyHook } from "../dynamic_hooks"
 import { PasswordToggle } from "../password_toggle"
 import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
+import { AuthAutoFocus } from "../utility_hooks"
 
 // Define auth-specific hooks
 const AuthHooks = {
   PasswordToggle,
   RecaptchaV3: RecaptchaV3Hook,
+  AuthAutoFocus,
   // Lazy-load auth video - only load when video element is mounted
   AuthVideo: lazyHook("AuthVideo", () =>
     import("../video_hooks").then(m => m.AuthVideo)

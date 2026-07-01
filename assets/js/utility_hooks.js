@@ -186,11 +186,36 @@ export const AutoFocus = {
   mounted() {
     // Focus the input element immediately
     this.el.focus();
-    
+
     // Optional: Select all text if the input has a value
     if (this.el.value) {
       this.el.select();
     }
+  }
+};
+
+// Re-focuses the descendant marked `autofocus` whenever this element's
+// `data-state` attribute changes. Plain HTML `autofocus` only fires when a
+// node is first inserted into the document; LiveView patches (e.g. switching
+// between login/signup within the same view via push_patch) morph the
+// existing node in place instead of recreating it, so the browser never
+// re-runs its native autofocus handling. `updated()` fires on every patch
+// touching this element's subtree, so we gate on `data-state` actually
+// changing to avoid stealing focus back on every keystroke's validate round-trip.
+export const AuthAutoFocus = {
+  mounted() {
+    this.lastState = this.el.dataset.state;
+    this.focusTarget();
+  },
+  updated() {
+    const state = this.el.dataset.state;
+    if (state !== this.lastState) {
+      this.lastState = state;
+      this.focusTarget();
+    }
+  },
+  focusTarget() {
+    this.el.querySelector('[autofocus]')?.focus();
   }
 };
 
