@@ -1,4 +1,39 @@
 
+[1.3.0]
+* core: Describe Calendar as a full calendar view in the onboarding tour
+* core: Address the user as "you" in the Google sign-up confirmation
+* core: Keep sidebar View Page button on one line to prevent overflow
+* core: Assert destination ownership when moving a calendar event
+* core: Stop all-day recurring events running past their end date
+* core: Keep weekly repeat-on-weekday events at local time across DST
+* core: Add id to recurrence editor form to silence phx-change warning
+* core: Redirect out-of-sequence onboarding steps instead of crashing
+* core: Gate booking-page preview simulation behind a signed owner token
+* core: Prevent booking-page previews from creating real bookings
+* core: Correct CalDAV event times for unrecognised timezones
+* core: Enforce calendar-integration ownership on grid event creation
+* core: Stop sending event-update emails to guests who declined
+* core: Keep recurring events at their local time across DST changes
+* core: Correct arrow glyphs in calendar shortcuts help
+* core: Make calendar event search respond to typing
+* core: Add live booking-page preview and theme step to onboarding
+* core: Add Apple iCloud as a calendar provider
+* core: Link to the WordPress.org plugin from embed settings
+* core: Centralise booking-page publication across all go-live paths
+* core: Add browser desktop reminders for upcoming events
+* core: Build the in-app calendar grid (phases 1-2)
+* core: Add a controllable in-memory dev calendar
+* core: Set a per-event colour in the calendar
+* core: Add a mini-month date picker to the calendar toolbar
+* core: Add an agenda view to the calendar
+* core: Search your calendar events
+* core: Keyboard shortcuts and a shortcuts help overlay for the calendar
+* core: Quick-add events from a single line of text
+* core: Create and edit recurring events
+* core: Set event reminders that sync to your calendar provider
+* core: Create and toggle all-day events in the calendar
+
+
 [1.2.5]
 * core: Accept wildcard TLS certificates from SMTP servers
 * core: Make meeting-type attachment upload and removal safe
