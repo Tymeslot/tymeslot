@@ -236,7 +236,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
         days_from_start = first_day
         skip_weeks = interval - 1
         days_ahead = days_to_end_of_week + days_from_start + skip_weeks * 7
-        DateTime.add(dt, days_ahead, :day)
+        shift_calendar_days(dt, days_ahead)
 
       next_number ->
         shift_calendar_days(dt, next_number - current_number)

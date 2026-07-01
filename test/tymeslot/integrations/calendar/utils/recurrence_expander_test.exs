@@ -539,6 +539,44 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderTest do
       assert utc_by_date[~D[2026-11-02]] == ~U[2026-11-02 14:00:00Z]
     end
 
+    test "weekly BYDAY series keeps its local time across the autumn fall-back" do
+      # The single-weekday BYDAY shape (what the recurrence editor emits by
+      # default) steps through advance_to_next_byday/3's week-wrap branch on
+      # every iteration — since BYDAY=MO never has a later weekday in the same
+      # week. That branch must stay in the event's own timezone, exactly like
+      # the plain-weekly path above, or a 15:00 Monday series drifts to 14:00
+      # after Berlin's 2026-10-25 fall-back.
+      anchor = DateTime.new!(~D[2026-10-12], ~T[15:00:00], "Europe/Berlin")
+
+      event = %{
+        uid: "dst-weekly-byday",
+        summary: "Monday standup",
+        start_time: anchor,
+        end_time: DateTime.new!(~D[2026-10-12], ~T[15:30:00], "Europe/Berlin"),
+        recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"
+      }
+
+      occurrences =
+        RecurrenceExpander.expand(
+          event,
+          ~U[2026-10-01 00:00:00Z],
+          ~U[2026-11-15 23:59:59Z]
+        )
+
+      assert Enum.all?(occurrences, &(DateTime.to_time(&1.start_time) == ~T[15:00:00]))
+
+      utc_by_date =
+        Map.new(occurrences, fn occ ->
+          {DateTime.to_date(occ.start_time), DateTime.shift_zone!(occ.start_time, "Etc/UTC")}
+        end)
+
+      # All Mondays, so the fall-back must land the instant an hour later in UTC
+      # while the wall clock stays at 15:00.
+      assert utc_by_date[~D[2026-10-19]] == ~U[2026-10-19 13:00:00Z]
+      assert utc_by_date[~D[2026-10-26]] == ~U[2026-10-26 14:00:00Z]
+      assert utc_by_date[~D[2026-11-02]] == ~U[2026-11-02 14:00:00Z]
+    end
+
     test "monthly series keeps its local time across a DST transition" do
       anchor = DateTime.new!(~D[2026-09-15], ~T[09:30:00], "Europe/Berlin")
 
