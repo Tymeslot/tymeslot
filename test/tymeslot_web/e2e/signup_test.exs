@@ -1,9 +1,9 @@
 defmodule TymeslotWeb.E2E.SignupTest do
   use TymeslotWeb.BrowserCase, async: false
 
-  alias Tymeslot.Auth
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Auth.Verification
+  alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
 
@@ -31,7 +31,7 @@ defmodule TymeslotWeb.E2E.SignupTest do
     {:ok, _user} = Verification.verify_user(user.id)
 
     # Mark onboarding complete so we can reach dashboard
-    Auth.mark_onboarding_complete(user)
+    Onboarding.mark_onboarding_complete(user)
     Profiles.get_or_create_profile(user.id)
 
     # Log in with the new account

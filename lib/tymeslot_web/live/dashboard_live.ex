@@ -143,8 +143,8 @@ defmodule TymeslotWeb.DashboardLive do
 
   use TymeslotWeb, :live_view
 
-  alias Tymeslot.Auth
   alias Tymeslot.Dashboard.DashboardContext
+  alias Tymeslot.Onboarding
   alias Tymeslot.Onboarding.DashboardTour
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Components.TourOverlay
@@ -153,6 +153,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Dashboard.CalendarGridComponent
   alias TymeslotWeb.Dashboard.ComponentDispatch
   alias TymeslotWeb.Dashboard.MeetingFormMessages
+  alias TymeslotWeb.Dashboard.OnboardingChecklist
   alias TymeslotWeb.Dashboard.PaymentsHandlers
   alias TymeslotWeb.Dashboard.ScheduleSettingsComponent
   alias TymeslotWeb.Dashboard.ServiceSettingsComponent
@@ -170,7 +171,7 @@ defmodule TymeslotWeb.DashboardLive do
     # only becomes "Welcome back" on a later one.
     first_visit? =
       case socket.assigns[:current_user] do
-        %{} = user -> not Auth.dashboard_tour_seen?(user)
+        %{} = user -> not Onboarding.dashboard_tour_seen?(user)
         _no_user -> false
       end
 
@@ -470,6 +471,24 @@ defmodule TymeslotWeb.DashboardLive do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("tour:" <> action, params, socket),
     do: TourEventHandlers.handle_event(action, params, socket)
+
+  def handle_event("onboarding:toggle", %{"id" => key}, socket) do
+    user = socket.assigns.current_user
+
+    with true <- OnboardingChecklist.toggleable_item?(key),
+         {:ok, user} <- Onboarding.toggle_dashboard_setup_item(user, key) do
+      {:noreply, assign(socket, :current_user, user)}
+    else
+      _invalid_or_error -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("onboarding:dismiss", _params, socket) do
+    case Onboarding.dismiss_dashboard_setup(socket.assigns.current_user) do
+      {:ok, user} -> {:noreply, assign(socket, :current_user, user)}
+      {:error, _changeset} -> {:noreply, socket}
+    end
+  end
 
   # Private functions
 

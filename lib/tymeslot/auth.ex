@@ -228,22 +228,6 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
-  Marks a user's onboarding as complete.
-  """
-  @spec mark_onboarding_complete(Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
-  def mark_onboarding_complete(user) do
-    UserQueries.mark_onboarding_complete(user)
-  end
-
-  @doc """
-  Checks if a user has completed onboarding.
-  """
-  @spec onboarding_completed?(Ecto.Schema.t()) :: boolean()
-  def onboarding_completed?(%{onboarding_completed_at: nil}), do: false
-  def onboarding_completed?(_user), do: true
-
-  @doc """
   Returns the Google account email to use as an OAuth `login_hint` when the user
   signed up (or linked an account) via Google, or `nil` otherwise.
 
@@ -258,78 +242,6 @@ defmodule Tymeslot.Auth do
     do: user.provider_email || user.email
 
   def google_signup_login_hint(_user), do: nil
-
-  @doc """
-  Marks the post-onboarding dashboard tour as seen. Idempotent.
-  """
-  @spec mark_dashboard_tour_seen(Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
-  def mark_dashboard_tour_seen(user) do
-    if dashboard_tour_seen?(user) do
-      {:ok, user}
-    else
-      UserQueries.mark_dashboard_tour_seen(user)
-    end
-  end
-
-  @doc """
-  Returns true if the user has already seen the post-onboarding dashboard tour.
-  """
-  @spec dashboard_tour_seen?(Ecto.Schema.t()) :: boolean()
-  def dashboard_tour_seen?(%{dashboard_tour_seen_at: nil}), do: false
-  def dashboard_tour_seen?(_user), do: true
-
-  @doc """
-  Checks if a user has unsubscribed from marketing emails.
-  """
-  @spec marketing_unsubscribed?(Ecto.Schema.t()) :: boolean()
-  def marketing_unsubscribed?(%{marketing_unsubscribed_at: nil}), do: false
-  def marketing_unsubscribed?(_user), do: true
-
-  @doc """
-  Marks a user as unsubscribed from marketing emails. Idempotent.
-  """
-  @spec unsubscribe_user_from_marketing(Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
-  def unsubscribe_user_from_marketing(user) do
-    if marketing_unsubscribed?(user) do
-      {:ok, user}
-    else
-      UserQueries.set_marketing_unsubscribed_at(user, DateTime.utc_now(:second))
-    end
-  end
-
-  @doc """
-  Resubscribes a user to marketing emails. Idempotent.
-  """
-  @spec resubscribe_user_to_marketing(Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
-  def resubscribe_user_to_marketing(user) do
-    if marketing_unsubscribed?(user) do
-      UserQueries.set_marketing_unsubscribed_at(user, nil)
-    else
-      {:ok, user}
-    end
-  end
-
-  @doc """
-  Returns the IDs of users currently eligible to receive marketing email — i.e.
-  who have a verified email and have not unsubscribed from marketing.
-  """
-  @spec list_marketing_eligible_user_ids() :: [integer()]
-  def list_marketing_eligible_user_ids do
-    UserQueries.list_marketing_eligible_user_ids()
-  end
-
-  @doc """
-  Returns the count of users currently eligible to receive marketing email.
-  Prefer this over `list_marketing_eligible_user_ids/0` when you only need the
-  number — it runs a single COUNT(*) without loading IDs into memory.
-  """
-  @spec count_marketing_eligible_user_ids() :: non_neg_integer()
-  def count_marketing_eligible_user_ids do
-    UserQueries.count_marketing_eligible_user_ids()
-  end
 
   @doc """
   Checks if an email is available for registration.

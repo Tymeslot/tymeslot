@@ -166,3 +166,19 @@
   border-top: 1px solid rgba(64, 224, 208, 0.1);
   border-bottom: 1px solid rgba(64, 224, 208, 0.1);
 }
+
+/* Dashboard onboarding checklist — slow exit.
+   Applied by `phx-remove` (JS.transition) whenever LiveView removes the widget,
+   covering both manual dismissal (the × button) and auto-hide once every step is
+   done. The base transition drives the fade so the widget eases out before it is
+   removed from the DOM, matching the `time:` passed to JS.transition. */
+.onboarding-checklist {
+  transition:
+    opacity var(--duration-500) ease,
+    transform var(--duration-500) ease;
+}
+
+.onboarding-checklist.onboarding-checklist--leaving {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+}

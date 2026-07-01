@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
 
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Components.Icons.IconComponents
+  alias TymeslotWeb.Dashboard.OnboardingChecklist
 
   @spec format_meeting_time(map(), String.t() | nil) :: String.t()
 
@@ -39,6 +40,14 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           </p>
         </div>
       </div>
+
+      <%!-- Onboarding checklist — only while setup is incomplete and not dismissed --%>
+      <OnboardingChecklist.onboarding_checklist
+        :if={OnboardingChecklist.visible?(@current_user, @integration_status)}
+        integration_status={@integration_status}
+        current_user={@current_user}
+        profile={@profile}
+      />
 
       <%!-- Dashboard Grid --%>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">

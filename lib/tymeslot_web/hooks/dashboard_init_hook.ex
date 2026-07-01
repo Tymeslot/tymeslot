@@ -10,9 +10,9 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
 
   import Phoenix.LiveView
   import Phoenix.Component
-  alias Tymeslot.Auth
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Features
+  alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
 
@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
         # Let authentication hooks handle missing user
         {:cont, socket}
 
-      !Auth.onboarding_completed?(user) ->
+      !Onboarding.onboarding_completed?(user) ->
         {:halt, redirect(socket, to: ~p"/onboarding")}
 
       true ->

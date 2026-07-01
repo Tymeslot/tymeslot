@@ -43,6 +43,7 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :infrastructure,
       :integrations,
       :mailer,
+      :marketing,
       :meetings,
       :meeting_types,
       :notifications,

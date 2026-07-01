@@ -387,7 +387,7 @@ defmodule Tymeslot.Auth.UserQueries do
   Sets `dashboard_tour_seen_at` to the current UTC time for `user`.
 
   This is an unconditional write — idempotence is enforced at the context level
-  by `Auth.mark_dashboard_tour_seen/1`.
+  by `Onboarding.mark_dashboard_tour_seen/1`.
   """
   @spec mark_dashboard_tour_seen(UserSchema.t()) ::
           {:ok, UserSchema.t()} | {:error, Changeset.t()}
@@ -396,6 +396,29 @@ defmodule Tymeslot.Auth.UserQueries do
     |> Changeset.change(%{
       dashboard_tour_seen_at: DateTime.utc_now(:second)
     })
+    |> Repo.update()
+  end
+
+  @doc """
+  Replaces the host's manually-ticked dashboard setup items. Callers own the
+  membership logic (add/remove a key); this only persists the resulting list.
+  """
+  @spec set_dashboard_setup_done_items(UserSchema.t(), [String.t()]) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def set_dashboard_setup_done_items(%UserSchema{} = user, items) when is_list(items) do
+    user
+    |> Changeset.change(%{dashboard_setup_done_items: items})
+    |> Repo.update()
+  end
+
+  @doc """
+  Stamps `dashboard_setup_dismissed_at` so the onboarding widget stays closed.
+  """
+  @spec mark_dashboard_setup_dismissed(UserSchema.t()) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def mark_dashboard_setup_dismissed(%UserSchema{} = user) do
+    user
+    |> Changeset.change(%{dashboard_setup_dismissed_at: DateTime.utc_now(:second)})
     |> Repo.update()
   end
 

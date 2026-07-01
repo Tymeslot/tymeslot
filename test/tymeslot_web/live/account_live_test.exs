@@ -11,6 +11,7 @@ defmodule TymeslotWeb.AccountLiveTest do
   alias Ecto.Changeset
   alias Tymeslot.Auth
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Onboarding
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -259,7 +260,7 @@ defmodule TymeslotWeb.AccountLiveTest do
   describe "Social Login Users" do
     setup %{conn: conn} do
       user = insert(:user, provider: "google")
-      {:ok, user} = Auth.mark_onboarding_complete(user)
+      {:ok, user} = Onboarding.mark_onboarding_complete(user)
       profile = insert(:profile, user: user)
       %{conn: log_in_user(conn, user), user: user, profile: profile}
     end

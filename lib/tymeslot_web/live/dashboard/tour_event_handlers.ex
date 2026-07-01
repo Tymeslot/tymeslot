@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Dashboard.TourEventHandlers do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.Auth
+  alias Tymeslot.Onboarding
   alias Tymeslot.Onboarding.DashboardTour
 
   @doc """
@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.TourEventHandlers do
   def assign_tour_state(socket, :overview) do
     user = socket.assigns[:current_user]
 
-    if user && !Auth.dashboard_tour_seen?(user) do
+    if user && !Onboarding.dashboard_tour_seen?(user) do
       socket
       |> assign(:tour_active, true)
       |> assign(:tour_step_index, 0)
@@ -95,8 +95,8 @@ defmodule TymeslotWeb.Dashboard.TourEventHandlers do
   defp mark_tour_seen_once(socket) do
     user = socket.assigns[:current_user]
 
-    if user && !Auth.dashboard_tour_seen?(user) do
-      case Auth.mark_dashboard_tour_seen(user) do
+    if user && !Onboarding.dashboard_tour_seen?(user) do
+      case Onboarding.mark_dashboard_tour_seen(user) do
         {:ok, updated_user} ->
           assign(socket, :current_user, updated_user)
 
