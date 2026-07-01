@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
       <% else %>
         <.section_header icon={:paint_brush} title="Choose Your Style" />
 
-        <div class="-mt-8 mb-16 max-w-2xl">
+        <div class="mb-16 max-w-2xl">
           <p class="text-xl text-tymeslot-500 font-medium leading-relaxed">
             Select the interface that best represents your personal brand and creates the best experience for your clients.
           </p>
