@@ -45,6 +45,16 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderTest do
 
       assert until == ~U[2026-04-11 00:00:00Z]
     end
+
+    test "parses DATE-form UNTIL (all-day series) as end-of-day UTC" do
+      # RFC 5545 §3.3.10: all-day recurrences carry a bare-date UNTIL. It must
+      # still parse (as inclusive end-of-day) — a nil here would treat the
+      # series as unbounded.
+      assert {:ok, %{until: %DateTime{} = until}} =
+               RecurrenceExpander.parse_rrule("FREQ=DAILY;UNTIL=20260411")
+
+      assert until == ~U[2026-04-11 23:59:59Z]
+    end
   end
 
   describe "expand/4 with weekly recurrence" do
@@ -493,6 +503,33 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderTest do
         RecurrenceExpander.expand(event, ~U[2026-04-01 00:00:00Z], ~U[2026-05-31 23:59:59Z])
 
       assert occurrences == []
+    end
+
+    test "all-day series honours a DATE-form UNTIL instead of running unbounded" do
+      # The recurrence editor emits a bare-date UNTIL for all-day events. If the
+      # expander can't parse it, the series is treated as endless and paints
+      # occurrences past its intended end (capped only by @max_occurrences).
+      event = %{
+        uid: "allday-until",
+        summary: "All-day standup",
+        start_time: ~D[2026-04-01],
+        end_time: ~D[2026-04-02],
+        recurrence_rule: "FREQ=DAILY;UNTIL=20260405"
+      }
+
+      occurrences =
+        RecurrenceExpander.expand(event, ~U[2026-04-01 00:00:00Z], ~U[2026-04-30 23:59:59Z])
+
+      starts = Enum.map(occurrences, & &1.start_time)
+
+      # Inclusive through the UNTIL date, nothing after it.
+      assert starts == [
+               ~D[2026-04-01],
+               ~D[2026-04-02],
+               ~D[2026-04-03],
+               ~D[2026-04-04],
+               ~D[2026-04-05]
+             ]
     end
   end
 

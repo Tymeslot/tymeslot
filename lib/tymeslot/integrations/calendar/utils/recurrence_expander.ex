@@ -148,6 +148,14 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
     "#{y}-#{mo}-#{d}T#{h}:#{mi}:#{s}Z"
   end
 
+  # DATE-form UNTIL (RFC 5545 §3.3.10): all-day recurrences carry a bare date.
+  # Expand it to end-of-day UTC so the final day stays inclusive — without this
+  # the bare value fails to parse, `parse_until` returns nil, and the series is
+  # silently treated as unbounded (capped only by @max_occurrences).
+  defp format_ical_datetime(<<y::binary-size(4), mo::binary-size(2), d::binary-size(2)>>) do
+    "#{y}-#{mo}-#{d}T23:59:59Z"
+  end
+
   defp format_ical_datetime(other), do: other
 
   defp parse_byday(nil), do: nil
