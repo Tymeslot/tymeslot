@@ -234,6 +234,7 @@ defmodule TymeslotWeb.DashboardLive do
       current_action={@live_action}
       integration_status={@integration_status}
       automations_allowed={@automations_allowed}
+      analytics_allowed={@analytics_allowed}
       payments_allowed={@payments_allowed}
       full_width={@live_action == :calendar}
       sidebar_extensions={@sidebar_extensions}
