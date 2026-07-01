@@ -138,55 +138,6 @@ defmodule Tymeslot.Auth.UserQueriesTest do
     end
   end
 
-  describe "set_marketing_unsubscribed_at/2" do
-    test "sets the timestamp when given a DateTime" do
-      user = insert(:user)
-      now = DateTime.utc_now(:second)
-
-      {:ok, updated} = UserQueries.set_marketing_unsubscribed_at(user, now)
-
-      assert DateTime.compare(updated.marketing_unsubscribed_at, now) == :eq
-    end
-
-    test "clears the timestamp when given nil" do
-      user = insert(:user, marketing_unsubscribed_at: DateTime.utc_now(:second))
-
-      {:ok, updated} = UserQueries.set_marketing_unsubscribed_at(user, nil)
-
-      assert is_nil(updated.marketing_unsubscribed_at)
-    end
-  end
-
-  describe "list_marketing_eligible_user_ids/0" do
-    test "includes verified users who have not unsubscribed" do
-      eligible = insert(:user, verified_at: DateTime.utc_now(), marketing_unsubscribed_at: nil)
-
-      ids = UserQueries.list_marketing_eligible_user_ids()
-
-      assert eligible.id in ids
-    end
-
-    test "excludes unverified users" do
-      unverified = insert(:unverified_user, marketing_unsubscribed_at: nil)
-
-      ids = UserQueries.list_marketing_eligible_user_ids()
-
-      refute unverified.id in ids
-    end
-
-    test "excludes users who have unsubscribed from marketing" do
-      unsubscribed =
-        insert(:user,
-          verified_at: DateTime.utc_now(),
-          marketing_unsubscribed_at: DateTime.utc_now()
-        )
-
-      ids = UserQueries.list_marketing_eligible_user_ids()
-
-      refute unsubscribed.id in ids
-    end
-  end
-
   describe "mark_dashboard_tour_seen/1" do
     test "sets dashboard_tour_seen_at to now for a user that hasn't seen the tour" do
       user = insert(:user, dashboard_tour_seen_at: nil)

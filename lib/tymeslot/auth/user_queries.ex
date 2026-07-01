@@ -441,42 +441,6 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Sets or clears a user's marketing unsubscribe timestamp.
-
-  Pass a `DateTime` to mark the user as unsubscribed, or `nil` to resubscribe.
-  """
-  @spec set_marketing_unsubscribed_at(UserSchema.t(), DateTime.t() | nil) ::
-          {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def set_marketing_unsubscribed_at(%UserSchema{} = user, value) do
-    user
-    |> Changeset.change(%{marketing_unsubscribed_at: value})
-    |> Repo.update()
-  end
-
-  @doc """
-  Returns the IDs of users currently eligible to receive marketing email — i.e.
-  who have a verified email and have not unsubscribed from marketing.
-  """
-  @spec list_marketing_eligible_user_ids() :: [integer()]
-  def list_marketing_eligible_user_ids do
-    UserSchema
-    |> where([u], not is_nil(u.verified_at) and is_nil(u.marketing_unsubscribed_at))
-    |> select([u], u.id)
-    |> Repo.all()
-  end
-
-  @doc """
-  Returns the count of users currently eligible to receive marketing email.
-  Runs a single COUNT(*) query — no IDs are loaded into memory.
-  """
-  @spec count_marketing_eligible_user_ids() :: non_neg_integer()
-  def count_marketing_eligible_user_ids do
-    UserSchema
-    |> where([u], not is_nil(u.verified_at) and is_nil(u.marketing_unsubscribed_at))
-    |> Repo.aggregate(:count)
-  end
-
-  @doc """
   Gets a user by ID with profile preloaded.
   """
   @spec get_user_with_profile!(integer()) :: UserSchema.t()

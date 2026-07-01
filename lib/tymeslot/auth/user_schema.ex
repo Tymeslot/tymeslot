@@ -42,7 +42,6 @@ defmodule Tymeslot.Auth.UserSchema do
           dashboard_tour_seen_at: DateTime.t() | nil,
           dashboard_setup_done_items: [String.t()],
           dashboard_setup_dismissed_at: DateTime.t() | nil,
-          marketing_unsubscribed_at: DateTime.t() | nil,
           last_active_at: DateTime.t() | nil,
           is_admin: boolean(),
           profile: ProfileSchema.t() | Ecto.Association.NotLoaded.t() | nil,
@@ -81,7 +80,6 @@ defmodule Tymeslot.Auth.UserSchema do
     field(:dashboard_tour_seen_at, :utc_datetime)
     field(:dashboard_setup_done_items, {:array, :string}, default: [])
     field(:dashboard_setup_dismissed_at, :utc_datetime)
-    field(:marketing_unsubscribed_at, :utc_datetime)
     field(:last_active_at, :utc_datetime)
     field(:is_admin, :boolean, default: false)
 
