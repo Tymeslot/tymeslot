@@ -87,6 +87,22 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
   setup :setup_dashboard_user
 
+  describe "setup prompt" do
+    test "shows a prompt when no calendar is connected", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/calendar-integration")
+
+      assert html =~ "You haven&#39;t connected a calendar yet"
+    end
+
+    test "hides the prompt once a calendar is connected", %{conn: conn, user: user} do
+      insert(:calendar_integration, user: user, provider: "google", is_active: true)
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/calendar-integration")
+
+      refute html =~ "You haven&#39;t connected a calendar yet"
+    end
+  end
+
   describe "connect_provider navigation" do
     for {provider, label} <- [
           {"caldav", "CalDAV"},

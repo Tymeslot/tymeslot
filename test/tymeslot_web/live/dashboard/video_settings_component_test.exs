@@ -42,6 +42,20 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       assert html =~ ~s(phx-value-provider="zoom")
     end
 
+    test "shows a prompt when no video provider is connected", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/video-integration")
+
+      assert html =~ "You haven&#39;t connected a video provider yet"
+    end
+
+    test "hides the prompt once a video provider is connected", %{conn: conn, user: user} do
+      insert(:video_integration, user: user, is_active: true)
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/video-integration")
+
+      refute html =~ "You haven&#39;t connected a video provider yet"
+    end
+
     test "lists connected integrations", %{conn: conn, user: user} do
       insert(:video_integration, user: user, name: "My MiroTalk", provider: "mirotalk")
 

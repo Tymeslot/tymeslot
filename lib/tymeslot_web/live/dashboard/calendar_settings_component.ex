@@ -354,6 +354,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     <div class="space-y-12 pb-24">
       <.section_header icon={:calendar} title="Calendar Settings" />
 
+      <.info_box :if={not (@integration_status[:has_calendar] || false)} variant={:info} class="mb-0">
+        You haven't connected a calendar yet. Connect one so Tymeslot can read your
+        availability and stop meetings being booked when you're already busy.
+      </.info_box>
+
       <%= if @view == :config do %>
         <.live_component
           module={ConfigViewComponent}

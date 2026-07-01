@@ -281,6 +281,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     <div class="space-y-10 pb-20">
       <.section_header icon={:video} title="Video Integration" />
 
+      <.info_box :if={not (@integration_status[:has_video] || false)} variant={:info} class="mb-0">
+        You haven't connected a video provider yet. Connect one so online meetings
+        get a video link added automatically when they're booked.
+      </.info_box>
+
       <%= if @view_mode == :config do %>
         <%!-- Configuration Page Mode --%>
         <div
