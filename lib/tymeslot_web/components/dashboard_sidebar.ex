@@ -276,6 +276,10 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           do: "dashboard-nav-link--active",
           else: ""
         ),
+        if(@show_notification and @current != @action,
+          do: "dashboard-nav-link--needs-setup",
+          else: ""
+        ),
         if(@locked, do: "opacity-75", else: "")
       ]}
     >

@@ -302,6 +302,35 @@
   left: 100%;
 }
 
+/* Nav row that still needs a setup action — gentle full-row highlight.
+   Never applied to the active row (see sidebar component), so the solid
+   active gradient always wins and the two tiers stay visually distinct. */
+.dashboard-nav-link--needs-setup {
+  @apply bg-turquoise-50/70 text-turquoise-700;
+}
+
+/* Short, vertically-centred accent pill — reads as an indicator,
+   not a full-height frame edge. */
+.dashboard-nav-link--needs-setup::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 55%;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-500);
+}
+
+.dashboard-nav-link--needs-setup:hover::before {
+  background: var(--color-primary-600);
+}
+
+.dashboard-nav-link--needs-setup svg {
+  color: var(--color-primary-600);
+}
+
 /* Icon enhancements within nav links */
 .dashboard-nav-link svg {
   transition: var(--transition-glass-fast);
@@ -471,8 +500,11 @@
 }
 
 .dashboard-nav-notification--info {
-  background: var(--gradient-gray);
-  box-shadow: var(--shadow-sm);
+  background: var(--gradient-turquoise);
+  box-shadow:
+    0 1px 4px rgba(20, 184, 166, 0.25),
+    0 0 0 1px rgba(13, 148, 136, 0.15);
+  opacity: 1;
 }
 
 /* Selector Buttons - Used for mode selection in forms */
