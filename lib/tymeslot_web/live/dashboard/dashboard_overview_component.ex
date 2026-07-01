@@ -26,16 +26,16 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
       />
 
       <%!-- Welcome Section --%>
-      <div class="bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 rounded-token-3xl p-8 lg:p-12 text-white shadow-2xl shadow-turquoise-500/20 relative overflow-hidden">
+      <div class="bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 rounded-token-3xl px-8 py-3 lg:px-12 lg:py-4 text-white shadow-2xl shadow-turquoise-500/20 relative overflow-hidden">
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_50%)]"></div>
         <div class="relative z-10">
-          <h1 class="text-4xl lg:text-5xl font-black mb-4 tracking-tight">
+          <h1 class="text-3xl lg:text-4xl font-black mb-1 tracking-tight">
             {if @first_dashboard_visit, do: "Welcome", else: "Welcome back"}{if @profile.full_name,
               do: ", #{@profile.full_name}",
               else: ""}!
           </h1>
-          <p class="text-xl text-white/90 font-medium max-w-2xl leading-relaxed">
-            Here's an overview of your scheduling setup and recent activity. Everything looks great today!
+          <p class="text-lg text-white/90 font-medium max-w-4xl leading-snug">
+            Here's an overview of your scheduling setup and recent activity.
           </p>
         </div>
       </div>
