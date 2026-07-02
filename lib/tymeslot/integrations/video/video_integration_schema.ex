@@ -59,14 +59,14 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     field(:settings, :map, default: %{})
 
     # Virtual fields for decrypted credentials
-    field(:api_key, :string, virtual: true)
-    field(:access_token, :string, virtual: true)
-    field(:refresh_token, :string, virtual: true)
-    field(:account_id, :string, virtual: true)
-    field(:client_id, :string, virtual: true)
-    field(:client_secret, :string, virtual: true)
-    field(:tenant_id, :string, virtual: true)
-    field(:teams_user_id, :string, virtual: true)
+    field(:api_key, :string, virtual: true, redact: true)
+    field(:access_token, :string, virtual: true, redact: true)
+    field(:refresh_token, :string, virtual: true, redact: true)
+    field(:account_id, :string, virtual: true, redact: true)
+    field(:client_id, :string, virtual: true, redact: true)
+    field(:client_secret, :string, virtual: true, redact: true)
+    field(:tenant_id, :string, virtual: true, redact: true)
+    field(:teams_user_id, :string, virtual: true, redact: true)
 
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 

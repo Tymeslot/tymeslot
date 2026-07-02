@@ -46,7 +46,7 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
     field(:disabled_reason, :string)
 
     # Virtual field for decrypted token
-    field(:webhook_token, :string, virtual: true)
+    field(:webhook_token, :string, virtual: true, redact: true)
 
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 

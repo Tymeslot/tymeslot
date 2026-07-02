@@ -110,10 +110,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:last_full_sync_at, :utc_datetime)
 
     # Virtual fields for decrypted values
-    field(:username, :string, virtual: true)
-    field(:password, :string, virtual: true)
-    field(:access_token, :string, virtual: true)
-    field(:refresh_token, :string, virtual: true)
+    field(:username, :string, virtual: true, redact: true)
+    field(:password, :string, virtual: true, redact: true)
+    field(:access_token, :string, virtual: true, redact: true)
+    field(:refresh_token, :string, virtual: true, redact: true)
 
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 

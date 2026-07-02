@@ -52,7 +52,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
     field(:disabled_at, :utc_datetime)
     field(:disabled_reason, :string)
 
-    field(:bot_token, :string, virtual: true)
+    field(:bot_token, :string, virtual: true, redact: true)
 
     field(:status, Ecto.Enum,
       values: [:pending_link, :active, :paused, :auto_disabled],
