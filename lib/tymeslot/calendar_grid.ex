@@ -39,11 +39,13 @@ defmodule Tymeslot.CalendarGrid do
   Returns all cached calendar events for the given integration IDs within a time range.
 
   Queries the event cache for events overlapping the [start_dt, end_dt] window.
+  Accepts a `:limit` option (default: unbounded) — see
+  `ProviderCalendarEventQueries.list_for_range/4`.
   """
-  @spec list_events_for_range([integer()], DateTime.t(), DateTime.t()) ::
+  @spec list_events_for_range([integer()], DateTime.t(), DateTime.t(), keyword()) ::
           [ProviderCalendarEventSchema.t()]
-  def list_events_for_range(integration_ids, start_dt, end_dt) do
-    ProviderCalendarEventQueries.list_for_range(integration_ids, start_dt, end_dt)
+  def list_events_for_range(integration_ids, start_dt, end_dt, opts \\ []) do
+    ProviderCalendarEventQueries.list_for_range(integration_ids, start_dt, end_dt, opts)
   end
 
   # How far ahead the desktop-reminder feed looks. Wide enough to cover the

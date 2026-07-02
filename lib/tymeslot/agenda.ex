@@ -22,6 +22,10 @@ defmodule Tymeslot.Agenda do
   # Upper bound on confirmed bookings pulled in — far more than a two-day agenda
   # plus a hero fallback ever needs.
   @meeting_limit 100
+  # Upper bound on cached external calendar events pulled in for the lookahead
+  # window — far more than a two-day agenda plus a hero fallback ever needs,
+  # but wide enough to absorb a busy calendar's recurring-event instances.
+  @external_event_limit 300
 
   @doc """
   Assembles the Today/Tomorrow agenda for `user` in `timezone`.
@@ -76,7 +80,7 @@ defmodule Tymeslot.Agenda do
 
     external =
       integration_ids
-      |> CalendarGrid.list_events_for_range(now, window_end)
+      |> CalendarGrid.list_events_for_range(now, window_end, limit: @external_event_limit)
       |> Enum.reject(&drop_external?(&1, booked_event_ids))
 
     Enum.map(meetings, &entry_from_meeting(&1, tz)) ++

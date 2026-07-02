@@ -162,8 +162,11 @@ defmodule TymeslotWeb.DashboardLive do
 
   require Logger
 
-  # Cadence for the overview agenda's live refresh: advances the now-line and
-  # drops appointments that have ended, mirroring the calendar grid's tick.
+  # Cadence for the overview agenda's live refresh. Unlike the calendar
+  # grid's query-free `:tick` (which only re-sends `current_time`), this
+  # re-runs `Agenda.day_agenda/2` from the database every 60s to advance
+  # the now-line, drop entries that have ended, and pick up bookings or
+  # calendar events created since the last load.
   @agenda_tick_ms 60_000
 
   @impl Phoenix.LiveView

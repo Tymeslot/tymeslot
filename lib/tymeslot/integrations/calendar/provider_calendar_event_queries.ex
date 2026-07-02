@@ -17,20 +17,34 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
 
   Events are included if they overlap with the [range_start, range_end] window.
   Both timed events (start_at/end_at) and all-day events (start_date/end_date)
-  are checked for overlap.
+  are checked for overlap. Results are ordered by start time ascending.
+
+  ## Options
+
+  - `:limit` — maximum number of rows to return (default: unbounded). Since
+    results are ordered ascending by start time, the earliest-starting events
+    in the range are the ones kept when a limit is applied.
   """
-  @spec list_for_range([integer()], DateTime.t(), DateTime.t()) :: [
+  @spec list_for_range([integer()], DateTime.t(), DateTime.t(), keyword()) :: [
           ProviderCalendarEventSchema.t()
         ]
-  def list_for_range([], _range_start, _range_end), do: []
+  def list_for_range(integration_ids, range_start, range_end, opts \\ [])
 
-  def list_for_range(integration_ids, range_start, range_end) do
+  def list_for_range([], _range_start, _range_end, _opts), do: []
+
+  def list_for_range(integration_ids, range_start, range_end, opts) do
+    limit = Keyword.get(opts, :limit)
+
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id in ^integration_ids)
     |> where_overlapping_range(range_start, range_end)
     |> order_by([e], asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)))
+    |> maybe_limit(limit)
     |> Repo.all()
   end
+
+  defp maybe_limit(query, nil), do: query
+  defp maybe_limit(query, limit), do: limit(query, ^limit)
 
   @upcoming_reminder_limit 200
 
