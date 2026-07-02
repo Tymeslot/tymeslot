@@ -11,10 +11,19 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations")
 
       assert html =~ "Integrations"
-      # Placeholder tab labels rendered by IntegrationsHubComponent.
-      # Task 3 hardens this into a real tablist with patch links + status dots.
+      # Tab labels rendered as patch links by the integrations tab nav.
       assert html =~ "Calendars"
       assert html =~ "Video"
+      assert html =~ ~s(href="/dashboard/integrations?tab=calendars")
+      assert html =~ ~s(href="/dashboard/integrations?tab=video")
+    end
+
+    test "marks the active tab link with aria-selected=true", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      # The active (video) tab carries aria-selected="true"; others are false.
+      assert html =~ ~s(aria-selected="true")
+      assert html =~ ~s(aria-selected="false")
     end
 
     test "defaults the active tab to calendars", %{conn: conn} do

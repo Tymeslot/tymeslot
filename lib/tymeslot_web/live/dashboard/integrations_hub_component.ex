@@ -2,7 +2,8 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   @moduledoc "Unified integrations dashboard: Calendars, Video, Payments tabs."
   use TymeslotWeb, :live_component
 
-  @tabs [:calendars, :video, :payments]
+  import TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav
+
   @tab_labels %{calendars: "Calendars", video: "Video", payments: "Payments"}
 
   @impl true
@@ -10,9 +11,19 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:tabs, @tabs)
+     |> assign(:tabs, build_tabs())
      |> assign(:tab_labels, @tab_labels)
      |> assign(:active_tab, parse_tab(assigns[:params]))}
+  end
+
+  # Real counts and health status arrive in a later task; for now every tab is
+  # healthy with no count.
+  defp build_tabs do
+    [
+      %{id: :calendars, label: "Calendars", count: nil, status: :ok},
+      %{id: :video, label: "Video", count: nil, status: :ok},
+      %{id: :payments, label: "Payments", count: nil, status: :ok}
+    ]
   end
 
   defp parse_tab(%{"tab" => tab}) when tab in ~w(calendars video payments),
@@ -25,16 +36,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
     ~H"""
     <div id="integrations-hub" class="space-y-8 pb-20">
       <.section_header title="Integrations" />
-      <div role="tablist" class="flex gap-1 border-b border-tymeslot-200">
-        <%!-- Placeholder tab labels; real nav with patch links + status dots comes in Task 3. --%>
-        <span
-          :for={tab <- @tabs}
-          role="tab"
-          class="px-4 py-2.5 text-token-sm font-semibold"
-        >
-          {@tab_labels[tab]}
-        </span>
-      </div>
+      <.integrations_tab_nav active_tab={@active_tab} tabs={@tabs} />
       <div data-tab-panel={@active_tab}>
         <p class="text-tymeslot-500">Coming online: {@tab_labels[@active_tab]}.</p>
       </div>
