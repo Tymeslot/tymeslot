@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Hat9dP9jWqqYyFwPioqCKICeZ8P0USGo9lqQnrNhaZ40QazTNHpdfWCFfUPVRvp
+\restrict DXEnA6iteHr0NKx0CgjrpvRrigedXJyD5ab7ppakJK4bvjcLhcOtc90jFVUn9Bn
 
 -- Dumped from database version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
@@ -2840,7 +2840,7 @@ CREATE UNIQUE INDEX profiles_user_id_index ON public.profiles USING btree (user_
 -- Name: profiles_username_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX profiles_username_index ON public.profiles USING btree (username);
+CREATE UNIQUE INDEX profiles_username_index ON public.profiles USING btree (lower((username)::text));
 
 
 --
@@ -3099,7 +3099,7 @@ CREATE UNIQUE INDEX users_email_change_token_hash_index ON public.users USING bt
 -- Name: users_email_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX users_email_index ON public.users USING btree (email);
+CREATE UNIQUE INDEX users_email_index ON public.users USING btree (lower((email)::text));
 
 
 --
@@ -3539,7 +3539,7 @@ ALTER TABLE ONLY public.weekly_availability
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Hat9dP9jWqqYyFwPioqCKICeZ8P0USGo9lqQnrNhaZ40QazTNHpdfWCFfUPVRvp
+\unrestrict DXEnA6iteHr0NKx0CgjrpvRrigedXJyD5ab7ppakJK4bvjcLhcOtc90jFVUn9Bn
 
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180112);
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180204);
@@ -3713,3 +3713,4 @@ INSERT INTO public."schema_migrations" (version) VALUES (20260701135118);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702165041);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702180346);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702180350);
+INSERT INTO public."schema_migrations" (version) VALUES (20260702200554);
