@@ -165,6 +165,23 @@ defmodule Tymeslot.Telegram.TelegramQueries do
     IntegrationQueries.delivery_stats(TelegramDeliverySchema, integration_id, days_ago)
   end
 
+  @doc """
+  Deletes Telegram delivery log rows older than `days`. One row is written per
+  attempt, so this table grows unbounded without pruning. A negative or
+  non-integer retention is treated as a no-op so a misconfigured value can
+  never wipe the whole table.
+  """
+  @spec cleanup_old_deliveries(integer()) :: {non_neg_integer(), nil}
+  def cleanup_old_deliveries(days) when is_integer(days) and days >= 0 do
+    cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
+
+    TelegramDeliverySchema
+    |> where([d], d.inserted_at < ^cutoff)
+    |> Repo.delete_all()
+  end
+
+  def cleanup_old_deliveries(_days), do: {0, nil}
+
   defp maybe_derive_status({:ok, integration}),
     do: {:ok, TelegramIntegrationSchema.derive_status(integration)}
 

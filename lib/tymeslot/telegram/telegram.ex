@@ -302,6 +302,16 @@ defmodule Tymeslot.Telegram do
     TelegramQueries.get_delivery_stats(integration_id, opts)
   end
 
+  @doc """
+  Prunes Telegram delivery log rows older than `days` (default 60). Called by
+  the shared `WebhookCleanupWorker` so the per-attempt delivery log does not
+  grow unbounded. Returns the `{deleted_count, nil}` tuple from `delete_all`.
+  """
+  @spec prune_deliveries(integer()) :: {non_neg_integer(), nil}
+  def prune_deliveries(days \\ 60) do
+    TelegramQueries.cleanup_old_deliveries(days)
+  end
+
   # ============================================================================
   # Events & Feature Checks
   # ============================================================================

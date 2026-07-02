@@ -6,6 +6,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
   1. Outgoing webhook delivery logs (60 days retention)
   2. Incoming Stripe webhook events (90 days retention)
   3. Slack delivery logs (60 days retention)
+  4. Telegram delivery logs (60 days retention)
 
   Ensures the database doesn't grow indefinitely by removing
   old records based on configured retention periods.
@@ -19,6 +20,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
   require Logger
 
   alias Tymeslot.Slack
+  alias Tymeslot.Telegram
   alias Tymeslot.Webhooks.WebhookQueries
 
   @retention Application.compile_env(:tymeslot, :payments, [])[:retention] || []
@@ -36,6 +38,9 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
 
     # Clean up Slack delivery logs (one row per attempt — grows fast)
     cleanup_slack_deliveries(args)
+
+    # Clean up Telegram delivery logs (one row per attempt — grows fast)
+    cleanup_telegram_deliveries(args)
 
     :ok
   end
@@ -91,6 +96,23 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
     {count, _rows} = Slack.prune_deliveries(retention_days)
 
     Logger.info("Slack delivery cleanup completed",
+      deleted_count: count,
+      retention_days: retention_days
+    )
+  end
+
+  defp cleanup_telegram_deliveries(args) do
+    # Default to 60 days retention, matching outgoing webhook deliveries.
+    retention_days =
+      Map.get(args, "telegram_delivery_retention_days") ||
+        @retention[:outgoing_webhook_days] ||
+        60
+
+    Logger.info("Starting Telegram delivery cleanup", retention_days: retention_days)
+
+    {count, _rows} = Telegram.prune_deliveries(retention_days)
+
+    Logger.info("Telegram delivery cleanup completed",
       deleted_count: count,
       retention_days: retention_days
     )

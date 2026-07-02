@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Slack.SlackDeliverySchema
+  alias Tymeslot.Telegram.TelegramDeliverySchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookEventSchema
   alias Tymeslot.Workers.WebhookCleanupWorker
@@ -216,6 +217,32 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
 
       assert :ok = perform_job(WebhookCleanupWorker, %{"slack_delivery_retention_days" => 30})
       refute Repo.get(SlackDeliverySchema, delivery.id)
+    end
+  end
+
+  describe "perform/1 - Telegram delivery log cleanup" do
+    test "removes Telegram delivery rows older than 60 days, keeps recent ones" do
+      integration = insert(:telegram_integration)
+      old_date = DateTime.add(DateTime.utc_now(), -61, :day)
+      recent_date = DateTime.add(DateTime.utc_now(), -10, :day)
+
+      old = insert(:telegram_delivery, integration: integration, inserted_at: old_date)
+      recent = insert(:telegram_delivery, integration: integration, inserted_at: recent_date)
+
+      assert :ok = perform_job(WebhookCleanupWorker, %{})
+
+      refute Repo.get(TelegramDeliverySchema, old.id)
+      assert Repo.get(TelegramDeliverySchema, recent.id)
+    end
+
+    test "respects the telegram_delivery_retention_days argument" do
+      integration = insert(:telegram_integration)
+      date_45 = DateTime.add(DateTime.utc_now(), -45, :day)
+
+      delivery = insert(:telegram_delivery, integration: integration, inserted_at: date_45)
+
+      assert :ok = perform_job(WebhookCleanupWorker, %{"telegram_delivery_retention_days" => 30})
+      refute Repo.get(TelegramDeliverySchema, delivery.id)
     end
   end
 end
