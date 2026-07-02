@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
   alias TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
 
-  test "renders calendar_item correctly" do
+  test "renders calendar_connection_row correctly" do
     assigns = %{
       integration: %{
         id: 1,
@@ -36,17 +36,18 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         provider_account_email: nil,
         needs_reauth: false
       },
-      validating_integration_id: 0,
+      expanded?: true,
+      health_state: nil,
       myself: "some-target"
     }
 
-    html = render_component(&CalendarComponents.calendar_item/1, assigns)
+    html = render_component(&CalendarComponents.calendar_connection_row/1, assigns)
     assert html =~ "My Calendar"
     assert html =~ "Work"
-    assert html =~ "Active for Conflict Checking" or html =~ "Syncing 1 Calendars"
+    assert html =~ "Syncing 1 Calendars"
   end
 
-  test "renders calendar_item correctly when inactive" do
+  test "renders calendar_connection_row correctly when inactive" do
     assigns = %{
       integration: %{
         id: 1,
@@ -57,16 +58,18 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         provider_account_email: nil,
         needs_reauth: false
       },
-      validating_integration_id: 0,
+      expanded?: false,
+      health_state: nil,
       myself: "some-target"
     }
 
-    html = render_component(&CalendarComponents.calendar_item/1, assigns)
+    html = render_component(&CalendarComponents.calendar_connection_row/1, assigns)
     assert html =~ "Paused"
-    assert html =~ "disabled"
+    # The shared connection row dims inactive integrations.
+    assert html =~ "opacity-70"
   end
 
-  test "renders calendar_item safely when calendar_list is nil" do
+  test "renders calendar_connection_row safely when calendar_list is nil" do
     assigns = %{
       integration: %{
         id: 1,
@@ -77,12 +80,13 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         provider_account_email: nil,
         needs_reauth: false
       },
-      validating_integration_id: 0,
+      expanded?: true,
+      health_state: nil,
       myself: "some-target"
     }
 
     # Should not crash
-    html = render_component(&CalendarComponents.calendar_item/1, assigns)
+    html = render_component(&CalendarComponents.calendar_connection_row/1, assigns)
     assert html =~ "My Calendar"
     assert html =~ "Syncing 0 Calendars"
     assert html =~ "No calendars found"

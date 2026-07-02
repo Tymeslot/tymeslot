@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
      |> assign(:is_refreshing, false)
      |> assign(:validating_integration_id, nil)
      |> assign(:health_states, %{})
+     |> assign(:expanded_rows, MapSet.new())
      |> assign(:available_calendar_providers, Calendar.list_available_providers(:calendar))}
   end
 
@@ -92,6 +93,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("toggle_row", %{"id" => id}, socket) do
+    {:noreply, assign(socket, :expanded_rows, toggle_member(socket.assigns.expanded_rows, id))}
+  end
+
   def handle_event("toggle_integration", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
@@ -348,6 +353,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   defp parse_int(_arg), do: :error
 
+  defp toggle_member(set, id) do
+    if MapSet.member?(set, id), do: MapSet.delete(set, id), else: MapSet.put(set, id)
+  end
+
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
@@ -375,6 +384,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
           is_refreshing={@is_refreshing}
           myself={@myself}
           health_states={@health_states}
+          expanded_rows={@expanded_rows}
         />
 
         <Components.available_providers_section

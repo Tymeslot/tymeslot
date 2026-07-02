@@ -225,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
       view
-      |> element("#calendar-toggle-#{integration.id}")
+      |> element("#toggle-#{integration.id}")
       |> render_click()
 
       rendered = render(view)
@@ -254,6 +254,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
         )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+
+      # The chip grid lives in the connection row's expandable detail slot;
+      # open it before clicking a calendar pill.
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
 
       view
       |> element(
@@ -291,6 +297,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
       {:ok, view, html} = live(conn, ~p"/dashboard/calendar-integration")
       assert html =~ "Soon-to-be-deleted"
+
+      # Expand the row (client-side state only) so the calendar pill is in
+      # the DOM before we simulate the deletion race.
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
 
       # Simulate the user deleting the integration from another tab
       # between page load and click. Without the pre-update existence
@@ -339,6 +351,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
+      # The delete control lives in the connection row's expandable actions
+      # slot; open the row before reaching for it.
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{primary.id}']")
+      |> render_click()
+
       # Open the delete modal for the primary integration. The click
       # pushes a `show` event at the dedicated modal component.
       view
@@ -382,6 +400,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       {:ok, _profile} = CalendarPrimary.set_primary_calendar_integration(user.id, integration.id)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
 
       view
       |> element(

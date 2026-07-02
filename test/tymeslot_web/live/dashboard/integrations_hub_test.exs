@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
   @moduletag :utils
 
   import Tymeslot.DashboardTestHelpers
+  import Tymeslot.Factory
 
   setup :setup_dashboard_user
 
@@ -36,6 +37,37 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       assert html =~ ~s(data-tab-panel="video")
+    end
+  end
+
+  describe "calendars tab" do
+    test "renders a connected calendar with its summary and an expandable calendar list",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          name: "Work Google",
+          is_active: true,
+          provider_account_email: "me@gmail.com",
+          calendar_list: [%{"id" => "cal-1", "name" => "Team Sync", "selected" => true}]
+        )
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      # The nested calendar settings component renders the integration's
+      # title and one-line summary (which includes the account email).
+      assert html =~ "Work Google"
+      assert html =~ "me@gmail.com"
+
+      # The calendar chip grid lives in the collapsed detail slot.
+      refute html =~ "Team Sync"
+
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
+      assert render(view) =~ "Team Sync"
     end
   end
 end

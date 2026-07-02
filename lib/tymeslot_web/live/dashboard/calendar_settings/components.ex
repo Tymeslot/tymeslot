@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.TokenUtils
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.{
     AppleConfig,
@@ -18,9 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   }
 
   alias TymeslotWeb.Components.Dashboard.Integrations.ProviderCard
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
-  alias TymeslotWeb.Components.Icons.ProviderIcon
-  alias TymeslotWeb.Components.UI.StatusSwitch
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
   alias TymeslotWeb.Dashboard.CalendarSettings.Helpers
 
   @doc """
@@ -183,6 +182,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   attr :is_refreshing, :boolean, required: true
   attr :myself, :any, required: true
   attr :health_states, :map, default: %{}
+  attr :expanded_rows, :any, default: nil
 
   @spec connected_calendars_section(map()) :: Phoenix.LiveView.Rendered.t()
   def connected_calendars_section(assigns) do
@@ -240,9 +240,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
         <div class="grid grid-cols-1 gap-4">
           <%= for integration <- @active_integrations do %>
-            <.calendar_item
+            <.calendar_connection_row
               integration={integration}
-              validating_integration_id={@validating_integration_id}
+              expanded?={row_expanded?(@expanded_rows, integration.id)}
               myself={@myself}
               health_state={Map.get(@health_states, integration.id)}
             />
@@ -264,9 +264,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
         <div class="grid grid-cols-1 gap-4">
           <%= for integration <- @inactive_integrations do %>
-            <.calendar_item
+            <.calendar_connection_row
               integration={integration}
-              validating_integration_id={@validating_integration_id}
+              expanded?={row_expanded?(@expanded_rows, integration.id)}
               myself={@myself}
               health_state={Map.get(@health_states, integration.id)}
             />
@@ -278,197 +278,106 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   end
 
   @doc """
-  Renders an individual calendar integration item.
+  Renders a single connected calendar integration as a shared
+  `connection_row`: status-first header with a one-line summary, the
+  calendar-selection chip grid in the expandable `:detail` slot, and the
+  reconnect/upgrade/delete controls in the `:actions` slot.
   """
   attr :integration, :map, required: true
-  attr :validating_integration_id, :integer, required: true
+  attr :expanded?, :boolean, default: false
   attr :myself, :any, required: true
-  attr :icon_size, :string, default: "compact", values: ["compact", "medium", "large", "mini"]
   attr :health_state, :map, default: nil
 
-  @spec calendar_item(map()) :: Phoenix.LiveView.Rendered.t()
-  def calendar_item(assigns) do
-    provider_name = Helpers.format_provider_name(assigns.integration.provider)
-
-    calendar_list = assigns.integration.calendar_list || []
-
-    no_calendars_selected? =
-      assigns.integration.is_active and calendar_list != [] and
-        not Enum.any?(calendar_list, &(&1["selected"] || &1[:selected]))
+  @spec calendar_connection_row(map()) :: Phoenix.LiveView.Rendered.t()
+  def calendar_connection_row(assigns) do
+    integration = assigns.integration
+    provider_name = Helpers.format_provider_name(integration.provider)
+    calendar_list = integration.calendar_list || []
 
     assigns =
       assigns
-      |> assign(:provider_name, provider_name)
+      |> assign(:calendar_list, calendar_list)
+      |> assign(:status, integration_status(integration, assigns.health_state))
+      |> assign(:summary, calendar_summary(integration))
       |> assign(
         :display_name,
-        if(assigns.integration.name == provider_name,
-          do: provider_name,
-          else: assigns.integration.name
-        )
+        if(integration.name == provider_name, do: provider_name, else: integration.name)
       )
-      |> assign(:no_calendars_selected?, no_calendars_selected?)
 
     ~H"""
-    <div class={[
-      "card-glass p-6 transition-all duration-300 hover:shadow-xl group",
-      !@integration.is_active && "opacity-75 grayscale-[0.5] hover:grayscale-0"
-    ]}>
-      <%!-- Top row: info + toggle --%>
-      <div class="flex items-start justify-between gap-4">
-        <%!-- Info --%>
-        <div class="flex items-start gap-4 min-w-0">
-          <div class="p-3 bg-tymeslot-50 rounded-2xl group-hover:bg-white group-hover:shadow-md transition-all border border-tymeslot-100 group-hover:border-turquoise-100 shrink-0">
-            <ProviderIcon.provider_icon provider={@integration.provider} size={@icon_size} />
+    <ConnectionRow.connection_row
+      id={to_string(@integration.id)}
+      icon={@integration.provider}
+      icon_type={:calendar}
+      title={@display_name}
+      summary={@summary}
+      status={@status}
+      active?={@integration.is_active}
+      expanded?={@expanded?}
+      toggle_event="toggle_integration"
+      myself={@myself}
+    >
+      <:detail>
+        <div :if={@integration.is_active}>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-token-2xs font-black uppercase tracking-widest text-tymeslot-400">
+              Syncing {Enum.count(@calendar_list, &(&1["selected"] || &1[:selected]))} Calendars
+            </span>
+            <div class="h-px bg-tymeslot-100 flex-1"></div>
           </div>
 
-          <div class="min-w-0 pt-1">
-            <div class="flex items-center gap-3 mb-2 flex-wrap">
-              <h4 class="text-lg font-black text-tymeslot-900 truncate tracking-tight">
-                {@display_name}
-              </h4>
-              <span
-                :if={!@integration.is_active}
-                class="px-2 py-0.5 rounded-full bg-tymeslot-100 text-tymeslot-500 text-token-2xs font-black uppercase tracking-widest"
+          <div class="flex flex-wrap gap-2.5">
+            <%= for calendar <- @calendar_list do %>
+              <% calendar_id = calendar["id"] || calendar[:id] %>
+              <% calendar_name = DisplayHelpers.extract_calendar_display_name(calendar) %>
+              <% is_selected = calendar["selected"] || calendar[:selected] %>
+              <% color = calendar["color"] || calendar[:color] %>
+
+              <button
+                phx-click="toggle_calendar_selection"
+                phx-value-integration_id={@integration.id}
+                phx-value-calendar_id={calendar_id}
+                phx-target={@myself}
+                class={[
+                  "inline-flex items-center gap-2.5 px-3.5 py-2 rounded-token-xl border-2 transition-all text-xs font-bold",
+                  is_selected &&
+                    "bg-turquoise-50 border-turquoise-400 text-turquoise-900 shadow-sm shadow-turquoise-500/5",
+                  !is_selected &&
+                    "bg-white border-tymeslot-50 text-tymeslot-400 hover:border-tymeslot-200 hover:bg-tymeslot-50"
+                ]}
               >
-                Paused
-              </span>
-              <span
-                :if={@integration.needs_reauth}
-                class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-token-2xs font-black uppercase tracking-widest"
-              >
-                Reconnect required
-              </span>
-              <UIComponents.health_warning_badge :if={
-                @health_state && @health_state.status == :unhealthy
-              } />
-              <UIComponents.no_calendars_badge :if={@no_calendars_selected?} />
-            </div>
-            <p
-              :if={@integration.provider_account_email}
-              class="text-sm text-tymeslot-500 truncate -mt-1 mb-1"
-            >
-              {@integration.provider_account_email}
-            </p>
+                <div
+                  :if={color && is_selected}
+                  class="w-2.5 h-2.5 rounded-full ring-2 ring-white"
+                  style={"background-color: #{color}"}
+                />
+                <span>{calendar_name}</span>
+                <span
+                  :if={calendar["primary"] || calendar[:primary]}
+                  class="text-[9px] font-black bg-tymeslot-200 px-1.5 py-0.5 rounded text-tymeslot-600 uppercase tracking-tighter"
+                >
+                  Primary
+                </span>
+                <svg
+                  :if={is_selected}
+                  class="w-3.5 h-3.5 text-turquoise-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="3"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </button>
+            <% end %>
 
-            <p :if={!@integration.is_active} class="text-sm text-tymeslot-400 font-medium italic">
-              This integration is currently disabled. Toggle the switch to enable conflict checking.
-            </p>
-          </div>
-        </div>
-
-        <%!-- Actions + toggle (top right) --%>
-        <div class="flex items-center gap-1 shrink-0">
-          <button
-            :if={@integration.provider == "google" && Helpers.needs_scope_upgrade?(@integration)}
-            phx-click="upgrade_google_scope"
-            phx-value-id={@integration.id}
-            phx-target={@myself}
-            class="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-token-xl font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
-            title="Upgrade Google Calendar permissions"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
-            Upgrade
-          </button>
-          <button
-            :if={@integration.provider in ["google", "outlook"]}
-            phx-click="connect_provider"
-            phx-value-provider={@integration.provider}
-            phx-target={@myself}
-            class="flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-700 rounded-token-xl font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
-            title="Reconnect integration"
-          >
-            <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
-          </button>
-          <button
-            :if={@integration.provider not in ["google", "outlook"]}
-            phx-click="show_reconnect"
-            phx-value-id={@integration.id}
-            phx-target="#caldav-reconnect-modal"
-            class="flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-700 rounded-token-xl font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
-            title="Reconnect integration"
-          >
-            <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
-          </button>
-          <button
-            phx-click="show"
-            phx-value-id={@integration.id}
-            phx-target="#delete-calendar-modal"
-            class="p-2.5 text-tymeslot-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-            title="Remove Connection"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          </button>
-          <StatusSwitch.status_switch
-            id={"calendar-toggle-#{@integration.id}"}
-            checked={@integration.is_active}
-            on_change="toggle_integration"
-            target={@myself}
-            phx_value_id={to_string(@integration.id)}
-            size={:large}
-            class="ring-4 ring-tymeslot-50 group-hover:ring-turquoise-50 transition-all"
-          />
-        </div>
-      </div>
-
-      <%!-- Calendar Selection Grid (full width, active only) --%>
-      <div :if={@integration.is_active} class="mt-6">
-        <div class="flex items-center gap-2 mb-3">
-          <span class="text-token-2xs font-black uppercase tracking-widest text-tymeslot-400">
-            Syncing {(@integration.calendar_list || [])
-            |> Enum.count(&(&1["selected"] || &1[:selected]))} Calendars
-          </span>
-          <div class="h-px bg-tymeslot-100 flex-1"></div>
-        </div>
-
-        <div class="flex flex-wrap gap-2.5">
-          <%= for calendar <- @integration.calendar_list || [] do %>
-            <% calendar_id = calendar["id"] || calendar[:id] %>
-            <% calendar_name = DisplayHelpers.extract_calendar_display_name(calendar) %>
-            <% is_selected = calendar["selected"] || calendar[:selected] %>
-            <% color = calendar["color"] || calendar[:color] %>
-
-            <button
-              phx-click="toggle_calendar_selection"
-              phx-value-integration_id={@integration.id}
-              phx-value-calendar_id={calendar_id}
-              phx-target={@myself}
-              class={[
-                "inline-flex items-center gap-2.5 px-3.5 py-2 rounded-token-xl border-2 transition-all text-xs font-bold",
-                is_selected &&
-                  "bg-turquoise-50 border-turquoise-400 text-turquoise-900 shadow-sm shadow-turquoise-500/5",
-                !is_selected &&
-                  "bg-white border-tymeslot-50 text-tymeslot-400 hover:border-tymeslot-200 hover:bg-tymeslot-50"
-              ]}
-            >
-              <div
-                :if={color && is_selected}
-                class="w-2.5 h-2.5 rounded-full ring-2 ring-white"
-                style={"background-color: #{color}"}
-              />
-              <span>{calendar_name}</span>
-              <span
-                :if={calendar["primary"] || calendar[:primary]}
-                class="text-[9px] font-black bg-tymeslot-200 px-1.5 py-0.5 rounded text-tymeslot-600 uppercase tracking-tighter"
-              >
-                Primary
-              </span>
+            <div :if={@calendar_list == []} class="flex items-center gap-2 text-tymeslot-400 py-2">
               <svg
-                :if={is_selected}
-                class="w-3.5 h-3.5 text-turquoise-600"
+                class="w-4 h-4 animate-pulse"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -476,34 +385,116 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  stroke-width="3"
-                  d="M5 13l4 4L19 7"
+                  stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-            </button>
-          <% end %>
-
-          <div
-            :if={!@integration.calendar_list || @integration.calendar_list == []}
-            class="flex items-center gap-2 text-tymeslot-400 py-2"
-          >
-            <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span class="text-xs font-medium italic">
-              No calendars found. Try refreshing the integration.
-            </span>
+              <span class="text-xs font-medium italic">
+                No calendars found. Try refreshing the integration.
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </:detail>
+
+      <:actions>
+        <button
+          :if={@integration.provider == "google" && Helpers.needs_scope_upgrade?(@integration)}
+          phx-click="upgrade_google_scope"
+          phx-value-id={@integration.id}
+          phx-target={@myself}
+          class="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-token-xl font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
+          title="Upgrade Google Calendar permissions"
+        >
+          <.icon name="hero-bolt" class="w-4 h-4" /> Upgrade
+        </button>
+        <button
+          :if={@integration.provider in ["google", "outlook"]}
+          phx-click="connect_provider"
+          phx-value-provider={@integration.provider}
+          phx-target={@myself}
+          class="flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-700 rounded-token-xl font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
+          title="Reconnect integration"
+        >
+          <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
+        </button>
+        <button
+          :if={@integration.provider not in ["google", "outlook"]}
+          phx-click="show_reconnect"
+          phx-value-id={@integration.id}
+          phx-target="#caldav-reconnect-modal"
+          class="flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-700 rounded-token-xl font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
+          title="Reconnect integration"
+        >
+          <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
+        </button>
+        <button
+          phx-click="show"
+          phx-value-id={@integration.id}
+          phx-target="#delete-calendar-modal"
+          class="ml-auto flex items-center gap-2 px-4 py-2 text-tymeslot-500 hover:text-red-500 hover:bg-red-50 rounded-token-xl font-bold border-2 border-transparent hover:border-red-100 transition-all"
+          title="Remove Connection"
+        >
+          <.icon name="hero-trash" class="w-4 h-4" /> Delete
+        </button>
+      </:actions>
+    </ConnectionRow.connection_row>
     """
   end
+
+  @doc """
+  Builds a one-line human summary for a calendar integration — account
+  email, conflict-check coverage, booking target, and last-sync — dropping
+  absent segments gracefully.
+  """
+  @spec calendar_summary(map()) :: String.t()
+  def calendar_summary(integration) do
+    calendar_list = integration.calendar_list || []
+
+    [
+      integration.provider_account_email,
+      conflict_segment(integration, calendar_list),
+      booking_segment(integration, calendar_list),
+      sync_segment(integration)
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" · ")
+  end
+
+  # Status-first badge mapping, dispatched on integration/health shape.
+  defp integration_status(%{is_active: false}, _health), do: {:paused, "Paused"}
+  defp integration_status(%{needs_reauth: true}, _health), do: {:warning, "Reconnect"}
+
+  defp integration_status(_integration, %{status: :unhealthy}),
+    do: {:warning, "Connection issues"}
+
+  defp integration_status(_integration, _health), do: {:ok, "Healthy"}
+
+  defp conflict_segment(%{is_active: true}, calendar_list) when calendar_list != [] do
+    selected = Enum.count(calendar_list, &(&1["selected"] || &1[:selected]))
+    "conflict-checks #{selected} of #{length(calendar_list)} calendars"
+  end
+
+  defp conflict_segment(_integration, _calendar_list), do: nil
+
+  defp booking_segment(integration, calendar_list) do
+    case booking_calendar(integration, calendar_list) do
+      nil -> nil
+      calendar -> "books into #{DisplayHelpers.extract_calendar_display_name(calendar)}"
+    end
+  end
+
+  defp booking_calendar(integration, calendar_list) do
+    booking_id = Map.get(integration, :default_booking_calendar_id)
+
+    Enum.find(calendar_list, &(booking_id && (&1["id"] || &1[:id]) == booking_id)) ||
+      Enum.find(calendar_list, &(&1["primary"] || &1[:primary]))
+  end
+
+  defp sync_segment(%{last_sync_at: %DateTime{} = synced_at}),
+    do: "synced #{TokenUtils.relative_time(synced_at)}"
+
+  defp sync_segment(_integration), do: nil
 
   @doc """
   Renders the grid of available calendar providers.
@@ -593,6 +584,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   end
 
   # --- Helpers ---
+
+  defp row_expanded?(nil, _id), do: false
+  defp row_expanded?(set, id), do: MapSet.member?(set, to_string(id))
 
   defp format_provider_title(:nextcloud), do: "Nextcloud"
   defp format_provider_title(:radicale), do: "Radicale"

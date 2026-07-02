@@ -4,9 +4,11 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
 
   import TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav
 
+  alias TymeslotWeb.Dashboard.CalendarSettingsComponent
+
   @tab_labels %{calendars: "Calendars", video: "Video", payments: "Payments"}
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     {:ok,
      socket
@@ -31,14 +33,25 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
 
   defp parse_tab(_params), do: :calendars
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div id="integrations-hub" class="space-y-8 pb-20">
       <.section_header title="Integrations" />
       <.integrations_tab_nav active_tab={@active_tab} tabs={@tabs} />
       <div data-tab-panel={@active_tab}>
-        <p class="text-tymeslot-500">Coming online: {@tab_labels[@active_tab]}.</p>
+        <.live_component
+          :if={@active_tab == :calendars}
+          module={CalendarSettingsComponent}
+          id="calendar-settings"
+          current_user={@current_user}
+          integration_status={@integration_status}
+          client_ip={@client_ip}
+          user_agent={@user_agent}
+        />
+        <p :if={@active_tab != :calendars} class="text-tymeslot-500">
+          Coming online: {@tab_labels[@active_tab]}.
+        </p>
       </div>
     </div>
     """
