@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict DXEnA6iteHr0NKx0CgjrpvRrigedXJyD5ab7ppakJK4bvjcLhcOtc90jFVUn9Bn
+\restrict DFSxzOtCVtPdrl64bGSsPAUAFFEanDIJOESRwAfWTOwIBo0TlzS457A3HbNHZks
 
 -- Dumped from database version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
@@ -1903,6 +1903,14 @@ ALTER TABLE ONLY public.meeting_types
 
 
 --
+-- Name: meetings meetings_end_after_start; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.meetings
+    ADD CONSTRAINT meetings_end_after_start CHECK ((end_time > start_time)) NOT VALID;
+
+
+--
 -- Name: meetings meetings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1943,11 +1951,35 @@ ALTER TABLE ONLY public.onboarding_emails_sent
 
 
 --
+-- Name: payment_transactions payment_transactions_amount_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.payment_transactions
+    ADD CONSTRAINT payment_transactions_amount_non_negative CHECK ((amount >= 0)) NOT VALID;
+
+
+--
+-- Name: payment_transactions payment_transactions_discount_amount_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.payment_transactions
+    ADD CONSTRAINT payment_transactions_discount_amount_non_negative CHECK ((discount_amount >= 0)) NOT VALID;
+
+
+--
 -- Name: payment_transactions payment_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.payment_transactions
     ADD CONSTRAINT payment_transactions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payment_transactions payment_transactions_tax_amount_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.payment_transactions
+    ADD CONSTRAINT payment_transactions_tax_amount_non_negative CHECK ((tax_amount >= 0)) NOT VALID;
 
 
 --
@@ -3539,7 +3571,7 @@ ALTER TABLE ONLY public.weekly_availability
 -- PostgreSQL database dump complete
 --
 
-\unrestrict DXEnA6iteHr0NKx0CgjrpvRrigedXJyD5ab7ppakJK4bvjcLhcOtc90jFVUn9Bn
+\unrestrict DFSxzOtCVtPdrl64bGSsPAUAFFEanDIJOESRwAfWTOwIBo0TlzS457A3HbNHZks
 
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180112);
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180204);
@@ -3714,3 +3746,4 @@ INSERT INTO public."schema_migrations" (version) VALUES (20260702165041);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702180346);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702180350);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702200554);
+INSERT INTO public."schema_migrations" (version) VALUES (20260702201528);
