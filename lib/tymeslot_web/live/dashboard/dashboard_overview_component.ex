@@ -140,7 +140,6 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
         <div :if={@agenda.next} class="mb-8">
           <.agenda_cockpit
             entry={@agenda.next}
-            later?={@agenda.later?}
             timezone={@agenda.timezone}
             then_entry={@then_entry}
             more_count={@more_count}
@@ -166,9 +165,13 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           </div>
 
           <div :if={@spine != []} class="relative">
-            <%= for row <- @spine do %>
-              <.spine_row row={row} now={@now} timezone={@agenda.timezone} myself={@myself} />
-            <% end %>
+            <.spine_row
+              :for={row <- @spine}
+              row={row}
+              now={@now}
+              timezone={@agenda.timezone}
+              myself={@myself}
+            />
           </div>
         </div>
 
@@ -236,7 +239,6 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   # --- Focus cockpit ---------------------------------------------------------
 
   attr :entry, :map, required: true
-  attr :later?, :boolean, default: false
   attr :timezone, :string, required: true
   attr :then_entry, :map, default: nil
   attr :more_count, :integer, default: 0
@@ -351,7 +353,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
             </span>
             <span
               :if={@in_progress?}
-              class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-token-xs font-black bg-turquoise-100 text-turquoise-700 rounded-full uppercase tracking-wider"
+              class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-token-xs font-black bg-turquoise-100 text-turquoise-700 rounded-token-full uppercase tracking-wider"
             >
               <span class="w-1.5 h-1.5 rounded-token-full bg-turquoise-500 animate-pulse"></span> Now
             </span>
@@ -485,7 +487,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
 
   defp source_badge(%{source: :tymeslot} = assigns) do
     ~H"""
-    <span class="shrink-0 px-2 py-0.5 text-token-xs font-black bg-turquoise-100 text-turquoise-700 rounded-full uppercase tracking-wider">
+    <span class="shrink-0 px-2 py-0.5 text-token-xs font-black bg-turquoise-100 text-turquoise-700 rounded-token-full uppercase tracking-wider">
       Booking
     </span>
     """
@@ -493,7 +495,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
 
   defp source_badge(assigns) do
     ~H"""
-    <span class="shrink-0 px-2 py-0.5 text-token-xs font-black bg-tymeslot-100 text-tymeslot-600 rounded-full uppercase tracking-wider">
+    <span class="shrink-0 px-2 py-0.5 text-token-xs font-black bg-tymeslot-100 text-tymeslot-600 rounded-token-full uppercase tracking-wider">
       Calendar
     </span>
     """
