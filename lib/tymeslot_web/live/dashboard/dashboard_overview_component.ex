@@ -12,8 +12,11 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   use TymeslotWeb, :live_component
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Agenda
   alias Tymeslot.Agenda.Day
   alias Tymeslot.Agenda.Entry
+  # Aliased to avoid clashing with the stdlib `Calendar` used for strftime below.
+  alias Tymeslot.Integrations.Calendar, as: CalendarContext
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Dashboard.AgendaDetailModal
@@ -41,6 +44,43 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
 
   def handle_event("close_entry", _params, socket) do
     {:noreply, assign(socket, :selected_entry, nil)}
+  end
+
+  def handle_event("set_entry_colour", %{"colour" => colour, "target" => target}, socket) do
+    case CalendarContext.set_event_colour(
+           socket.assigns.current_user.id,
+           decode_target(target),
+           colour
+         ) do
+      {:ok, _override} -> {:noreply, reload_agenda_colours(socket)}
+      {:error, _changeset} -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("clear_entry_colour", %{"target" => target}, socket) do
+    CalendarContext.clear_event_colour(socket.assigns.current_user.id, decode_target(target))
+    {:noreply, reload_agenda_colours(socket)}
+  end
+
+  # Rebuilds the agenda from the database (now reflecting the override) and keeps
+  # the detail modal open on the same entry so its picker shows the new colour.
+  defp reload_agenda_colours(socket) do
+    agenda = Agenda.day_agenda(socket.assigns.current_user, socket.assigns.agenda.timezone)
+
+    selected =
+      socket.assigns.selected_entry && find_entry(agenda, socket.assigns.selected_entry.id)
+
+    socket
+    |> assign(:agenda, agenda)
+    |> assign(:selected_entry, selected)
+    |> assign_agenda_view(agenda, DateTime.utc_now())
+  end
+
+  defp decode_target("meeting:" <> id), do: {:meeting, id}
+
+  defp decode_target("external:" <> rest) do
+    [integration_id, uid] = String.split(rest, ":", parts: 2)
+    {:external, String.to_integer(integration_id), uid}
   end
 
   defp find_entry(%Day{} = agenda, id) do
