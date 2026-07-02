@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
         {:ok, %Req.Response{status: 200, body: "{}"}}
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       view
       |> element("button", "Connect MiroTalk")
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
 
       original_api_key_ciphertext = integration.api_key_encrypted
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       # Open the edit modal for this integration. The connection row keeps
       # its actions behind the expand chevron, so reveal them first.
@@ -161,7 +161,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
           api_key_encrypted: Encryption.encrypt("live-api-key-abcdef123456")
         )
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       view
       |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")

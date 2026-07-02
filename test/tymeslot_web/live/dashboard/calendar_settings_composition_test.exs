@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
   describe "setup prompt" do
     test "shows a prompt when no calendar is connected", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       assert html =~ "You haven&#39;t connected a calendar yet"
     end
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
     test "hides the prompt once a calendar is connected", %{conn: conn, user: user} do
       insert(:calendar_integration, user: user, provider: "google", is_active: true)
 
-      {:ok, _view, html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       refute html =~ "You haven&#39;t connected a calendar yet"
     end
@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       @label label
 
       test "clicking #{label} provider card navigates to its config form", %{conn: conn} do
-        {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+        {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
         view
         |> element("button[phx-click='connect_provider'][phx-value-provider='#{@provider}']")
@@ -134,7 +134,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
         "https://accounts.google.com/o/oauth2/auth?fake=1"
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='connect_provider'][phx-value-provider='google']")
@@ -150,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
         "https://login.microsoftonline.com/oauth?fake=1"
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='connect_provider'][phx-value-provider='outlook']")
@@ -192,7 +192,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
         end
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='refresh_all_calendars']")
@@ -222,7 +222,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
           is_active: true
         )
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("#toggle-#{integration.id}")
@@ -253,7 +253,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
           ]
         )
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       # The chip grid lives in the connection row's expandable detail slot;
       # open it before clicking a calendar pill.
@@ -295,7 +295,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
           ]
         )
 
-      {:ok, view, html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
       assert html =~ "Soon-to-be-deleted"
 
       # Expand the row (client-side state only) so the calendar pill is in
@@ -349,7 +349,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
       {:ok, _profile} = CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       # The delete control lives in the connection row's expandable actions
       # slot; open the row before reaching for it.
@@ -399,7 +399,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
       {:ok, _profile} = CalendarPrimary.set_primary_calendar_integration(user.id, integration.id)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
@@ -431,7 +431,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       conn: conn,
       user: user
     } do
-      {:ok, view, html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
       refute html =~ "/free-busy/"
 
       view
@@ -450,7 +450,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       conn: conn,
       user: user
     } do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='enable_freebusy']")
@@ -476,7 +476,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       conn: conn,
       user: user
     } do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='enable_freebusy']")

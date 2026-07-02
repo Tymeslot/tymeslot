@@ -62,45 +62,46 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       :ok
     end
 
-    test "redirects to dashboard root with flash", %{conn: conn} do
+    test "keeps the payments tab hidden inside the hub", %{conn: conn} do
       user = create_onboarded_user()
       conn = log_in_user(conn, user)
 
-      assert {:error, {:live_redirect, %{to: "/dashboard", flash: flash}}} =
-               live(conn, "/dashboard/payments")
+      # The hub falls back to the calendars tab when payments access is denied,
+      # so the Stripe CTA never renders for a feature-disabled host.
+      {:ok, _view, html} = live(conn, "/dashboard/integrations?tab=payments")
 
-      assert flash["error"] =~ "not available"
+      refute html =~ "Connect Stripe"
     end
 
-    test "hides the Payments sidebar link", %{conn: conn} do
+    test "the sidebar exposes the merged integrations entry, not a payments link",
+         %{conn: conn} do
       user = create_onboarded_user()
       conn = log_in_user(conn, user)
 
       {:ok, _view, html} = live(conn, "/dashboard")
 
       refute html =~ "payments-nav-link"
-      refute html =~ "/dashboard/payments"
+      assert html =~ "/dashboard/integrations"
     end
   end
 
   describe "/dashboard/payments — when feature enabled" do
     setup do: enable_payments()
 
-    test "shows the Payments sidebar link", %{conn: conn} do
+    test "surfaces the payments tab in the hub", %{conn: conn} do
       user = create_onboarded_user()
       conn = log_in_user(conn, user)
 
-      {:ok, _view, html} = live(conn, "/dashboard")
+      {:ok, _view, html} = live(conn, "/dashboard/integrations")
 
-      assert html =~ "payments-nav-link"
-      assert html =~ "/dashboard/payments"
+      assert html =~ "/dashboard/integrations?tab=payments"
     end
 
     test "renders inside the dashboard shell with the sidebar", %{conn: conn} do
       user = create_onboarded_user()
       conn = log_in_user(conn, user)
 
-      {:ok, _view, html} = live(conn, "/dashboard/payments")
+      {:ok, _view, html} = live(conn, "/dashboard/integrations?tab=payments")
 
       assert html =~ "dashboard-sidebar"
       assert html =~ "Connect Stripe"
@@ -110,7 +111,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       user = create_onboarded_user()
       conn = log_in_user(conn, user)
 
-      {:ok, _view, html} = live(conn, "/dashboard/payments")
+      {:ok, _view, html} = live(conn, "/dashboard/integrations?tab=payments")
       assert html =~ "Connect Stripe"
     end
   end
@@ -135,7 +136,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       )
 
       conn = log_in_user(conn, user)
-      {:ok, _view, html} = live(conn, "/dashboard/payments")
+      {:ok, _view, html} = live(conn, "/dashboard/integrations?tab=payments")
 
       assert html =~ "Connected and ready"
       assert html =~ "Recent payments"
@@ -154,7 +155,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
 
       conn = log_in_user(conn, user)
 
-      {:ok, _view, _html} = live(conn, "/dashboard/payments?return=1")
+      {:ok, _view, _html} = live(conn, "/dashboard/integrations?tab=payments&return=1")
 
       assert_enqueued(
         worker: ResyncConnectAccount,
@@ -175,7 +176,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
 
       conn = log_in_user(conn, user)
 
-      {:ok, _view, _html} = live(conn, "/dashboard/payments?refresh=1")
+      {:ok, _view, _html} = live(conn, "/dashboard/integrations?tab=payments&refresh=1")
 
       assert_enqueued(
         worker: ResyncConnectAccount,
@@ -195,7 +196,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       )
 
       conn = log_in_user(conn, user)
-      {:ok, _view, _html} = live(conn, "/dashboard/payments")
+      {:ok, _view, _html} = live(conn, "/dashboard/integrations?tab=payments")
 
       refute_enqueued(worker: ResyncConnectAccount)
     end
@@ -212,7 +213,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       )
 
       conn = log_in_user(conn, user)
-      {:ok, view, _html} = live(conn, "/dashboard/payments")
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
 
       # The disconnect button opens an in-app confirmation modal; the actual
       # disconnect happens from the modal's confirm button.
@@ -241,7 +242,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
         insert(:meeting_type, user: user, payment_required: true, price_cents: 5000)
 
       conn = log_in_user(conn, user)
-      {:ok, view, _html} = live(conn, "/dashboard/payments")
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
 
       view
       |> element("button[phx-click=change_currency][phx-value-currency=gbp]")
@@ -271,7 +272,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       )
 
       conn = log_in_user(conn, user)
-      {:ok, _view, html} = live(conn, "/dashboard/payments")
+      {:ok, _view, html} = live(conn, "/dashboard/integrations?tab=payments")
 
       # The host can resume onboarding rather than landing on a dead-end card.
       assert html =~ "Finish connecting Stripe"
@@ -334,7 +335,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       _pending = paid_payment_for(user, %{status: "pending", paid_at: nil})
 
       conn = log_in_user(conn, user)
-      {:ok, view, _html} = live(conn, "/dashboard/payments")
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
 
       buttons = view |> element("table") |> render() |> String.split("Refund") |> length()
       # 1 refund button → 2 segments after split (header text doesn't include "Refund")
@@ -361,7 +362,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       end)
 
       conn = log_in_user(conn, user)
-      {:ok, view, _html} = live(conn, "/dashboard/payments")
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
 
       view
       |> element("button[phx-click=open_refund_modal]", "Refund")
@@ -398,7 +399,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       end)
 
       conn = log_in_user(conn, user)
-      {:ok, view, _html} = live(conn, "/dashboard/payments")
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
 
       view
       |> element("button[phx-click=open_refund_modal]", "Refund")
@@ -431,7 +432,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       victim_payment = paid_payment_for(victim, %{stripe_account_id: "acct_VICTIM"})
 
       conn = log_in_user(conn, attacker)
-      {:ok, view, _html} = live(conn, "/dashboard/payments")
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
 
       # Drive the component event directly with a crafted id; no rendered
       # button exists for a payment the attacker does not own.

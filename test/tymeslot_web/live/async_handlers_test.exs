@@ -88,7 +88,7 @@ defmodule TymeslotWeb.Live.AsyncHandlersTest do
         {:ok, [%{"id" => "primary", "summary" => "Primary"}]}
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='refresh_all_calendars']")
@@ -128,7 +128,7 @@ defmodule TymeslotWeb.Live.AsyncHandlersTest do
         {:error, :api_error}
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='refresh_all_calendars']")
@@ -159,7 +159,7 @@ defmodule TymeslotWeb.Live.AsyncHandlersTest do
         {:ok, %Req.Response{status: 503, body: "{}"}}
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       # Capture the HTML returned by render_click directly — this is the
       # state right after the click handler assigns :testing_connection

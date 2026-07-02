@@ -63,7 +63,6 @@ defmodule TymeslotWeb.Components.DashboardLayout do
             profile={@profile}
             automations_allowed={@automations_allowed}
             analytics_allowed={@analytics_allowed}
-            payments_allowed={@payments_allowed}
             sidebar_extensions={@sidebar_extensions}
           />
         <% end %>

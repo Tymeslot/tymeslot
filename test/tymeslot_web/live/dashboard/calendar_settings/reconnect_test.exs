@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
         expected_url
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element(
@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
         expected_url
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element(
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
           is_active: true
         )
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
@@ -152,7 +152,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
           is_active: true
         )
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{own_integration.id}']")
@@ -179,7 +179,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
           needs_reauth: true
         )
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       html =
         view
@@ -210,7 +210,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
           needs_reauth: true
         )
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       html =
         view

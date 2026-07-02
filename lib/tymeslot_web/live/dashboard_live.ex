@@ -169,6 +169,16 @@ defmodule TymeslotWeb.DashboardLive do
   # calendar events created since the last load.
   @agenda_tick_ms 60_000
 
+  # The standalone calendar/video/payments pages now live as tabs inside the
+  # unified integrations hub. Their routes stay defined (deep links, emails and
+  # OAuth/Stripe returns still point at them) but each legacy live action bounces
+  # to the matching hub tab.
+  @legacy_integration_tabs %{
+    calendar_integration: "calendars",
+    video_integration: "video",
+    payments: "payments"
+  }
+
   @impl Phoenix.LiveView
   @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()} | {:ok, Phoenix.LiveView.Socket.t(), keyword()}
@@ -189,6 +199,29 @@ defmodule TymeslotWeb.DashboardLive do
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_params(params, _url, socket) do
+    case Map.fetch(@legacy_integration_tabs, socket.assigns.live_action) do
+      {:ok, tab} ->
+        {:noreply, push_navigate(socket, to: hub_tab_path(tab, params))}
+
+      :error ->
+        {:noreply, handle_dashboard_params(params, socket)}
+    end
+  end
+
+  # Builds the hub URL for a legacy redirect, carrying the Stripe onboarding
+  # return markers (`?return=1`/`?refresh=1`) through so the hub still triggers
+  # the capability resync once the user lands on the payments tab.
+  defp hub_tab_path(tab, params) do
+    passthrough =
+      for key <- [:return, :refresh],
+          Map.has_key?(params, Atom.to_string(key)),
+          do: {key, params[Atom.to_string(key)]}
+
+    query = [{:tab, tab} | passthrough]
+    ~p"/dashboard/integrations?#{query}"
+  end
+
+  defp handle_dashboard_params(params, socket) do
     action = socket.assigns.live_action
 
     socket =
@@ -210,12 +243,13 @@ defmodule TymeslotWeb.DashboardLive do
       |> assign(:params, params)
       |> TourEventHandlers.assign_tour_state(action)
 
-    socket = if action == :payments, do: PaymentsHandlers.handle(params, socket), else: socket
+    socket =
+      if action == :integrations,
+        do: PaymentsHandlers.maybe_enqueue_resync(params, socket),
+        else: socket
 
     socket = if connected?(socket), do: load_dashboard_data(socket), else: socket
-    socket = reschedule_agenda_tick(socket, action)
-
-    {:noreply, socket}
+    reschedule_agenda_tick(socket, action)
   end
 
   # Keeps a single agenda-refresh timer alive only while the overview is open.

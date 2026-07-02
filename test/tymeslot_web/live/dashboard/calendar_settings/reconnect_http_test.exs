@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
         calendar_name: "Default"
       )
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
         ]
       )
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
@@ -202,7 +202,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       # The modal must stay on the credentials phase.
       ReqTest.stub(:tymeslot_http, fn conn -> Conn.resp(conn, 401, "") end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
@@ -260,7 +260,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       # must stay on that phase and show the "select at least one" message.
       stub_caldav_server(accept: "bob:newpass")
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
@@ -303,7 +303,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       # to the calendar-selection phase.
       ReqTest.stub(:tymeslot_http, fn conn -> Conn.resp(conn, 401, "") end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
@@ -343,7 +343,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
         calendar_name: new_calendar_name
       )
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
@@ -420,7 +420,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       flagged = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert flagged.needs_reauth == true
 
-      {:ok, view, html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
       assert html =~ "Reconnect required"
 
       # Phase 2: the server now accepts the rotated password and the user
