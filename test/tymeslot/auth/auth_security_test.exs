@@ -67,7 +67,6 @@ defmodule Tymeslot.Auth.SecurityTest do
       expired_session =
         insert(:user_session,
           user: user,
-          token: "expired-token",
           expires_at: DateTime.add(DateTime.utc_now(), -1, :hour)
         )
 

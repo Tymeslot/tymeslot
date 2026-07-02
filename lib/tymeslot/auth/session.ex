@@ -30,6 +30,9 @@ defmodule Tymeslot.Auth.Session do
           {:ok, Conn.t() | Phoenix.LiveView.Socket.t(), String.t()} | {:error, atom(), any()}
   def create_session(conn_or_socket, user) do
     token = Token.generate_session_token()
+    # The socket's disconnect topic is derived from the token *hash*, so it can
+    # be reconstructed at revocation time (which only has the stored hash).
+    token_hash = Token.hash_token(token)
     expires_at = DateTime.truncate(DateTime.add(DateTime.utc_now(), 24, :hour), :second)
 
     case UserSessionQueries.create_session(user.id, token, expires_at) do
@@ -43,7 +46,7 @@ defmodule Tymeslot.Auth.Session do
               updated_conn =
                 conn
                 |> Conn.put_session(@user_token_key, token)
-                |> Conn.put_session(:live_socket_id, live_socket_topic(token))
+                |> Conn.put_session(:live_socket_id, live_socket_topic(token_hash))
                 |> Conn.configure_session(renew: true)
 
               # Log session creation for Plug.Conn
@@ -61,7 +64,7 @@ defmodule Tymeslot.Auth.Session do
                     Map.merge(socket.assigns, %{
                       user_token: token,
                       current_user: user,
-                      live_socket_id: live_socket_topic(token)
+                      live_socket_id: live_socket_topic(token_hash)
                     })
               }
 
@@ -104,7 +107,7 @@ defmodule Tymeslot.Auth.Session do
       end
 
       UserSessionQueries.delete_session_by_token(user_token)
-      disconnect_token(user_token)
+      disconnect_session_hash(Token.hash_token(user_token))
     end
 
     conn
@@ -123,23 +126,24 @@ defmodule Tymeslot.Auth.Session do
   """
   @spec revoke_all_sessions(integer()) :: :ok
   def revoke_all_sessions(user_id) do
-    tokens = UserSessionQueries.list_user_session_tokens(user_id)
+    hashes = UserSessionQueries.list_user_session_token_hashes(user_id)
     UserSessionQueries.delete_user_sessions(user_id)
-    Enum.each(tokens, &disconnect_token/1)
+    Enum.each(hashes, &disconnect_session_hash/1)
     :ok
   end
 
   @doc """
-  Force-disconnects any live socket bound to the given session token by
-  broadcasting a "disconnect" event on the token's `live_socket_id` topic.
+  Force-disconnects any live socket bound to the given session token hash by
+  broadcasting a "disconnect" event on its `live_socket_id` topic.
 
-  Callers that delete the session row inside a database transaction must invoke
-  this only after the transaction has committed — disconnecting a socket whose
-  revocation later rolls back would be incorrect.
+  Takes the SHA-256 hash of the session token (the socket's topic is derived
+  from the hash). Callers that delete the session row inside a database
+  transaction must invoke this only after the transaction has committed —
+  disconnecting a socket whose revocation later rolls back would be incorrect.
   """
-  @spec disconnect_token(String.t()) :: :ok
-  def disconnect_token(token) when is_binary(token) do
-    Endpoint.broadcast(live_socket_topic(token), "disconnect", %{})
+  @spec disconnect_session_hash(String.t()) :: :ok
+  def disconnect_session_hash(token_hash) when is_binary(token_hash) do
+    Endpoint.broadcast(live_socket_topic(token_hash), "disconnect", %{})
     :ok
   end
 
@@ -215,8 +219,9 @@ defmodule Tymeslot.Auth.Session do
   end
 
   # The `live_socket_id` topic a connected socket is subscribed to, derived from
-  # its session token. Broadcasting "disconnect" here closes the socket.
-  defp live_socket_topic(token), do: "users_sessions:#{Base.url_encode64(token)}"
+  # its session token *hash* so revocation (which only has the stored hash) can
+  # reconstruct the same topic. Broadcasting "disconnect" here closes the socket.
+  defp live_socket_topic(token_hash), do: "users_sessions:#{Base.url_encode64(token_hash)}"
 
   # Helper function to safely get peer data
   defp get_peer_data(conn) do

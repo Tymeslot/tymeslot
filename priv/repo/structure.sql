@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict DFSxzOtCVtPdrl64bGSsPAUAFFEanDIJOESRwAfWTOwIBo0TlzS457A3HbNHZks
+\restrict 851pY9qBv6UOIiRaukzRNKySlbqW7ZYVy1Brbb8N7G32qbUaCG7DNw39hxDJv1O
 
 -- Dumped from database version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
@@ -1306,10 +1306,10 @@ ALTER SEQUENCE public.user_seen_announcements_id_seq OWNED BY public.user_seen_a
 CREATE TABLE public.user_sessions (
     id bigint NOT NULL,
     user_id bigint NOT NULL,
-    token character varying(255) NOT NULL,
     expires_at timestamp(0) without time zone NOT NULL,
     inserted_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
+    updated_at timestamp with time zone NOT NULL,
+    token_hash character varying(255) NOT NULL
 );
 
 
@@ -3107,10 +3107,10 @@ CREATE INDEX user_seen_announcements_user_id_index ON public.user_seen_announcem
 
 
 --
--- Name: user_sessions_token_index; Type: INDEX; Schema: public; Owner: -
+-- Name: user_sessions_token_hash_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX user_sessions_token_index ON public.user_sessions USING btree (token);
+CREATE UNIQUE INDEX user_sessions_token_hash_index ON public.user_sessions USING btree (token_hash);
 
 
 --
@@ -3571,7 +3571,7 @@ ALTER TABLE ONLY public.weekly_availability
 -- PostgreSQL database dump complete
 --
 
-\unrestrict DFSxzOtCVtPdrl64bGSsPAUAFFEanDIJOESRwAfWTOwIBo0TlzS457A3HbNHZks
+\unrestrict 851pY9qBv6UOIiRaukzRNKySlbqW7ZYVy1Brbb8N7G32qbUaCG7DNw39hxDJv1O
 
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180112);
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180204);
@@ -3747,3 +3747,4 @@ INSERT INTO public."schema_migrations" (version) VALUES (20260702180346);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702180350);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702200554);
 INSERT INTO public."schema_migrations" (version) VALUES (20260702201528);
+INSERT INTO public."schema_migrations" (version) VALUES (20260702214204);

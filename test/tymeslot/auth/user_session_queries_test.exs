@@ -7,16 +7,17 @@ defmodule Tymeslot.Auth.UserSessionQueriesTest do
   @moduletag :queries
 
   alias Tymeslot.Auth.UserSessionQueries
+  alias Tymeslot.Security.Token
 
   describe "create_session/3" do
-    test "creates session with valid attributes" do
+    test "creates session with valid attributes, storing the token hashed" do
       user = insert(:user)
       token = "session_token_123"
       expires_at = DateTime.truncate(DateTime.add(DateTime.utc_now(), 72, :hour), :second)
 
       assert {:ok, session} = UserSessionQueries.create_session(user.id, token, expires_at)
       assert session.user_id == user.id
-      assert session.token == token
+      assert session.token_hash == Token.hash_token(token)
       assert session.expires_at == expires_at
     end
 
@@ -24,7 +25,7 @@ defmodule Tymeslot.Auth.UserSessionQueriesTest do
       assert {:error, changeset} = UserSessionQueries.create_session(nil, nil, nil)
       refute changeset.valid?
       assert "can't be blank" in errors_on(changeset).user_id
-      assert "can't be blank" in errors_on(changeset).token
+      assert "can't be blank" in errors_on(changeset).token_hash
       assert "can't be blank" in errors_on(changeset).expires_at
     end
 
@@ -39,7 +40,7 @@ defmodule Tymeslot.Auth.UserSessionQueriesTest do
 
       # Attempt to create second session with same token
       assert {:error, changeset} = UserSessionQueries.create_session(user2.id, token, expires_at)
-      assert "has already been taken" in errors_on(changeset).token
+      assert "has already been taken" in errors_on(changeset).token_hash
     end
   end
 
@@ -128,14 +129,14 @@ defmodule Tymeslot.Auth.UserSessionQueriesTest do
     end
   end
 
-  describe "list_user_session_tokens/1" do
-    test "returns the tokens of all the user's sessions" do
+  describe "list_user_session_token_hashes/1" do
+    test "returns the token hashes of all the user's sessions" do
       user = insert(:user)
       create_session!(user, "token_1")
       create_session!(user, "token_2")
 
-      assert ["token_1", "token_2"] ==
-               Enum.sort(UserSessionQueries.list_user_session_tokens(user.id))
+      assert Enum.sort([Token.hash_token("token_1"), Token.hash_token("token_2")]) ==
+               Enum.sort(UserSessionQueries.list_user_session_token_hashes(user.id))
     end
 
     test "excludes other users' sessions" do
@@ -144,12 +145,13 @@ defmodule Tymeslot.Auth.UserSessionQueriesTest do
       create_session!(user, "mine")
       create_session!(other, "theirs")
 
-      assert ["mine"] == UserSessionQueries.list_user_session_tokens(user.id)
+      assert [Token.hash_token("mine")] ==
+               UserSessionQueries.list_user_session_token_hashes(user.id)
     end
 
     test "returns an empty list when the user has no sessions" do
       user = insert(:user)
-      assert [] == UserSessionQueries.list_user_session_tokens(user.id)
+      assert [] == UserSessionQueries.list_user_session_token_hashes(user.id)
     end
   end
 

@@ -24,8 +24,8 @@ defmodule Tymeslot.Workers.ExpiredSessionCleanupWorkerTest do
 
       assert :ok = perform_job(ExpiredSessionCleanupWorker, %{})
 
-      refute Repo.get_by(UserSessionSchema, token: expired_session.token)
-      assert Repo.get_by(UserSessionSchema, token: valid_session.token)
+      refute Repo.get_by(UserSessionSchema, token_hash: expired_session.token_hash)
+      assert Repo.get_by(UserSessionSchema, token_hash: valid_session.token_hash)
     end
 
     test "handles empty database gracefully" do
@@ -43,7 +43,7 @@ defmodule Tymeslot.Workers.ExpiredSessionCleanupWorkerTest do
       assert :ok = perform_job(ExpiredSessionCleanupWorker, %{})
 
       # Boundary session should be cleaned (expired means <= now)
-      refute Repo.get_by(UserSessionSchema, token: boundary_session.token)
+      refute Repo.get_by(UserSessionSchema, token_hash: boundary_session.token_hash)
     end
 
     test "cleans up multiple expired sessions efficiently" do
@@ -60,7 +60,7 @@ defmodule Tymeslot.Workers.ExpiredSessionCleanupWorkerTest do
 
       # All expired sessions should be cleaned
       Enum.each(expired_sessions, fn session ->
-        refute Repo.get_by(UserSessionSchema, token: session.token)
+        refute Repo.get_by(UserSessionSchema, token_hash: session.token_hash)
       end)
     end
 

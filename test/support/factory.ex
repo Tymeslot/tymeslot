@@ -119,8 +119,11 @@ defmodule Tymeslot.Factory do
 
   @spec user_session_factory() :: Tymeslot.Auth.UserSessionSchema.t()
   def user_session_factory do
+    token = Token.generate_session_token()
+
     %UserSessionSchema{
-      token: Token.generate_session_token(),
+      token: token,
+      token_hash: Token.hash_token(token),
       expires_at: DateTime.truncate(DateTime.add(DateTime.utc_now(), 72, :hour), :second),
       user: build(:user)
     }

@@ -7,13 +7,17 @@ defmodule Tymeslot.Auth.SessionTest do
   alias Tymeslot.Auth.Session
   alias Tymeslot.Auth.UserSessionQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Token
   alias TymeslotWeb.Endpoint
 
   import Plug.Conn, only: [get_session: 2, put_session: 3]
   import Tymeslot.Factory
   import Phoenix.ConnTest
 
-  defp live_socket_topic(token), do: "users_sessions:#{Base.url_encode64(token)}"
+  # The real socket topic is derived from the token *hash*, so pass the plaintext
+  # token here and hash it to reconstruct the same topic.
+  defp live_socket_topic(token),
+    do: "users_sessions:#{Base.url_encode64(Token.hash_token(token))}"
 
   describe "create_session/2" do
     test "stores session token in conn session" do
@@ -83,8 +87,8 @@ defmodule Tymeslot.Auth.SessionTest do
   describe "revoke_all_sessions/1" do
     test "deletes every session for the user" do
       user = insert(:user)
-      insert(:user_session, user: user, token: "tok-a")
-      insert(:user_session, user: user, token: "tok-b")
+      insert(:user_session, user: user, token_hash: Token.hash_token("tok-a"))
+      insert(:user_session, user: user, token_hash: Token.hash_token("tok-b"))
 
       assert :ok == Session.revoke_all_sessions(user.id)
 
@@ -94,8 +98,8 @@ defmodule Tymeslot.Auth.SessionTest do
 
     test "force-disconnects the live socket of every revoked session" do
       user = insert(:user)
-      insert(:user_session, user: user, token: "tok-a")
-      insert(:user_session, user: user, token: "tok-b")
+      insert(:user_session, user: user, token_hash: Token.hash_token("tok-a"))
+      insert(:user_session, user: user, token_hash: Token.hash_token("tok-b"))
 
       topic_a = live_socket_topic("tok-a")
       topic_b = live_socket_topic("tok-b")
@@ -112,8 +116,8 @@ defmodule Tymeslot.Auth.SessionTest do
     test "does not disconnect another user's sessions" do
       user = insert(:user)
       other = insert(:user)
-      insert(:user_session, user: user, token: "mine")
-      insert(:user_session, user: other, token: "theirs")
+      insert(:user_session, user: user, token_hash: Token.hash_token("mine"))
+      insert(:user_session, user: other, token_hash: Token.hash_token("theirs"))
 
       Endpoint.subscribe(live_socket_topic("theirs"))
 
@@ -144,7 +148,7 @@ defmodule Tymeslot.Auth.SessionTest do
       _expired_session =
         insert(:user_session,
           user: user,
-          token: "expired-token-value",
+          token_hash: Token.hash_token("expired-token-value"),
           expires_at: DateTime.add(DateTime.utc_now(), -1, :hour)
         )
 
