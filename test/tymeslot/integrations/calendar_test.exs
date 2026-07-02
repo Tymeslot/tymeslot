@@ -149,4 +149,25 @@ defmodule Tymeslot.Integrations.CalendarTest do
       assert Enum.at(events, 0).uid == "event1"
     end
   end
+
+  describe "set_event_colour/clear_event_colour" do
+    setup do
+      user = insert(:user)
+      integ = insert(:calendar_integration, user: user)
+      %{user: user, integ: integ}
+    end
+
+    test "sets a durable override for an external event", %{user: user, integ: integ} do
+      assert {:ok, _} =
+               Calendar.set_event_colour(user.id, {:external, integ.id, "uid-1"}, "blueberry")
+
+      assert Calendar.overrides_for(user.id) == %{{:external, integ.id, "uid-1"} => "blueberry"}
+    end
+
+    test "clears an override", %{user: user, integ: integ} do
+      {:ok, _} = Calendar.set_event_colour(user.id, {:external, integ.id, "uid-1"}, "blueberry")
+      :ok = Calendar.clear_event_colour(user.id, {:external, integ.id, "uid-1"})
+      assert Calendar.overrides_for(user.id) == %{}
+    end
+  end
 end
