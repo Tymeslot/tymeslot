@@ -49,4 +49,56 @@ defmodule Tymeslot.MeetingPaymentsTest do
       assert MeetingPayments.platform_configured?()
     end
   end
+
+  describe "connect_display_state/1" do
+    test "maps a missing account to :not_connected" do
+      assert MeetingPayments.connect_display_state(nil) == :not_connected
+    end
+
+    test "maps a soft-deleted account to :deleted" do
+      account = %{deleted_at: DateTime.utc_now(), details_submitted: true}
+
+      assert MeetingPayments.connect_display_state(account) == :deleted
+    end
+
+    test "maps an unsubmitted account to :incomplete" do
+      account = %{deleted_at: nil, details_submitted: false}
+
+      assert MeetingPayments.connect_display_state(account) == :incomplete
+    end
+
+    test "maps a submitted account with a disabled_reason to :restricted" do
+      account = %{
+        deleted_at: nil,
+        details_submitted: true,
+        disabled_reason: "requirements.past_due"
+      }
+
+      assert MeetingPayments.connect_display_state(account) == :restricted
+    end
+
+    test "maps a submitted account with charges and payouts enabled to :ready" do
+      account = %{
+        deleted_at: nil,
+        details_submitted: true,
+        disabled_reason: nil,
+        charges_enabled: true,
+        payouts_enabled: true
+      }
+
+      assert MeetingPayments.connect_display_state(account) == :ready
+    end
+
+    test "maps a submitted-but-not-yet-enabled account to :pending_review" do
+      account = %{
+        deleted_at: nil,
+        details_submitted: true,
+        disabled_reason: nil,
+        charges_enabled: false,
+        payouts_enabled: false
+      }
+
+      assert MeetingPayments.connect_display_state(account) == :pending_review
+    end
+  end
 end

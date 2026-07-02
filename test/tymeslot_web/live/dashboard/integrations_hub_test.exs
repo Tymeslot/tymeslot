@@ -5,7 +5,23 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
+  alias Tymeslot.Repo
+
   setup :setup_dashboard_user
+
+  # Persists an `unhealthy` health-state row for an active integration, the
+  # shape `list_unhealthy_for_user/1` (and therefore the hub banner) reads.
+  defp mark_unhealthy(user, integration_id, type) do
+    %IntegrationHealthStateSchema{}
+    |> IntegrationHealthStateSchema.changeset(%{
+      integration_type: type,
+      integration_id: integration_id,
+      user_id: user.id,
+      status: "unhealthy"
+    })
+    |> Repo.insert!()
+  end
 
   describe "Integrations hub" do
     test "renders the integrations hub with tab labels", %{conn: conn} do
@@ -47,6 +63,50 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
       assert html =~ "Connect a video tool"
       assert html =~ ~s(href="/dashboard/integrations?tab=calendars")
       assert html =~ ~s(href="/dashboard/integrations?tab=video")
+    end
+  end
+
+  describe "attention banner and tab summary" do
+    test "renders no attention banner when every integration is healthy",
+         %{conn: conn, user: user} do
+      insert(:calendar_integration, user: user, is_active: true, needs_reauth: false)
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations")
+
+      # No aggregated banner and no coloured status dots on the tabs.
+      refute html =~ "needs attention"
+      refute html =~ "bg-amber-500"
+      refute html =~ "bg-red-500"
+    end
+
+    test "surfaces an unhealthy calendar with a banner, a jump link and a tab dot",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:calendar_integration, user: user, name: "Work Google", is_active: true)
+
+      mark_unhealthy(user, integration.id, "calendar")
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations")
+
+      # The aggregated banner names the integration and links to the tab.
+      assert html =~ "1 connection needs attention"
+      assert html =~ "Work Google stopped syncing."
+      assert html =~ ~s(href="/dashboard/integrations?tab=calendars")
+      assert html =~ "Review"
+
+      # The Calendars tab carries the amber warning dot.
+      assert has_element?(view, "span.bg-amber-500")
+    end
+
+    test "shows the connected-calendar count on the Calendars tab",
+         %{conn: conn, user: user} do
+      insert(:calendar_integration, user: user, is_active: true)
+      insert(:calendar_integration, user: user, is_active: true)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations")
+
+      # The count pill inside the Calendars tab link reads "2".
+      assert has_element?(view, "a[role='tab'] span", "2")
     end
   end
 

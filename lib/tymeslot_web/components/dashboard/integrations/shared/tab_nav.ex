@@ -46,5 +46,5 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav do
 
   defp dot(:warning), do: "bg-amber-500"
   defp dot(:error), do: "bg-red-500"
-  defp dot(_), do: "bg-transparent"
+  defp dot(_status), do: "bg-transparent"
 end
