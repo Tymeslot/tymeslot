@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   import TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav
 
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
+  alias TymeslotWeb.Dashboard.VideoSettingsComponent
 
   @tab_labels %{calendars: "Calendars", video: "Video", payments: "Payments"}
 
@@ -49,7 +50,16 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
           client_ip={@client_ip}
           user_agent={@user_agent}
         />
-        <p :if={@active_tab != :calendars} class="text-tymeslot-500">
+        <.live_component
+          :if={@active_tab == :video}
+          module={VideoSettingsComponent}
+          id="video-settings"
+          current_user={@current_user}
+          integration_status={@integration_status}
+          client_ip={@client_ip}
+          user_agent={@user_agent}
+        />
+        <p :if={@active_tab == :payments} class="text-tymeslot-500">
           Coming online: {@tab_labels[@active_tab]}.
         </p>
       </div>

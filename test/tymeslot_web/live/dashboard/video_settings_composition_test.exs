@@ -114,13 +114,15 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
 
-      # Open the edit modal for this integration. The row renders the
-      # edit button twice (desktop + mobile variants); restrict the
-      # selector to the desktop-only wrapper so exactly one element
-      # matches.
+      # Open the edit modal for this integration. The connection row keeps
+      # its actions behind the expand chevron, so reveal them first.
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
       view
       |> element(
-        ".hidden button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
       )
       |> render_click()
 
@@ -162,8 +164,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
 
       view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
+      view
       |> element(
-        ".hidden button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
       )
       |> render_click()
 

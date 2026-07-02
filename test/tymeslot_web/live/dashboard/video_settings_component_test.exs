@@ -62,7 +62,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
 
       assert render(view) =~ "My MiroTalk"
-      assert render(view) =~ "Self-Hosted"
+      # The provider-type tag renders in the collapsed connection row header.
+      assert render(view) =~ "self-hosted"
     end
 
     test "toggles integration status", %{conn: conn, user: user} do
@@ -71,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
 
       view
-      |> element("#video-toggle-#{integration.id}")
+      |> element("#toggle-#{integration.id}")
       |> render_click()
 
       assert render(view) =~ "Integration status updated"
@@ -79,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
     end
 
     test "tests connection for an integration", %{conn: conn, user: user} do
-      _integration = insert(:video_integration, user: user, provider: "mirotalk", is_active: true)
+      integration = insert(:video_integration, user: user, provider: "mirotalk", is_active: true)
 
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200, body: "{}"}}
@@ -87,8 +88,13 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
 
+      # Actions live behind the expand chevron in the connection row.
       view
-      |> element("div.hidden button[phx-click='test_connection']")
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
+      view
+      |> element("button[phx-click='test_connection'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       eventually(fn ->
@@ -175,8 +181,15 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
 
       assert render(view) =~ "To Delete"
 
+      # Expand the row to reveal its actions, then open the delete modal.
       view
-      |> element("div.hidden button[title='Delete Integration']")
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
+      view
+      |> element(
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#delete-video-modal']"
+      )
       |> render_click()
 
       # Confirm delete in modal

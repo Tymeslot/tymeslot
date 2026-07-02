@@ -70,4 +70,48 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
       assert render(view) =~ "Team Sync"
     end
   end
+
+  describe "video tab" do
+    test "renders a connected video integration with its summary and expandable detail",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "mirotalk",
+          name: "Team Room",
+          is_active: true,
+          base_url: "https://meet.myserver.com"
+        )
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      # The nested video settings component renders the integration title
+      # and its one-line summary (the self-hosted host and type).
+      assert html =~ "Team Room"
+      assert html =~ "meet.myserver.com"
+      assert html =~ "self-hosted"
+
+      # The provider-type label and the edit/delete action buttons live in
+      # the collapsed detail slot (the header shows the lowercase
+      # "self-hosted" tag instead of the "Self-Hosted" label).
+      refute html =~ "Self-Hosted"
+
+      refute has_element?(
+               view,
+               "button[phx-value-id='#{integration.id}'][phx-target='#delete-video-modal']"
+             )
+
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
+      # Expanding reveals the provider-type detail and the action buttons.
+      assert render(view) =~ "Self-Hosted"
+
+      assert has_element?(
+               view,
+               "button[phx-value-id='#{integration.id}'][phx-target='#delete-video-modal']"
+             )
+    end
+  end
 end

@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
-  alias TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow
+  alias TymeslotWeb.Dashboard.VideoSettings.Components
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:saving, false)
      |> assign(:testing_connection, nil)
      |> assign(:health_states, %{})
+     |> assign(:expanded_rows, MapSet.new())
      |> assign(:available_video_providers, Directory.list(:video))}
   end
 
@@ -50,6 +51,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("toggle_row", %{"id" => id}, socket) do
+    {:noreply, assign(socket, :expanded_rows, toggle_member(socket.assigns.expanded_rows, id))}
+  end
+
   def handle_event("track_form_change", %{"integration" => params}, socket) do
     {:noreply, assign(socket, :form_values, params)}
   end
@@ -353,8 +358,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
                 <% end %>
 
                 <%= for integration <- active_integrations do %>
-                  <VideoRow.video_row
+                  <Components.video_connection_row
                     integration={integration}
+                    expanded?={MapSet.member?(@expanded_rows, to_string(integration.id))}
                     testing_connection={@testing_connection}
                     myself={@myself}
                     health_state={Map.get(@health_states, integration.id)}
@@ -371,8 +377,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
                 <% end %>
 
                 <%= for integration <- inactive_integrations do %>
-                  <VideoRow.video_row
+                  <Components.video_connection_row
                     integration={integration}
+                    expanded?={MapSet.member?(@expanded_rows, to_string(integration.id))}
                     testing_connection={@testing_connection}
                     myself={@myself}
                     health_state={Map.get(@health_states, integration.id)}
@@ -510,6 +517,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   defp notify_parent(msg), do: send(self(), msg)
+
+  defp toggle_member(set, id) do
+    if MapSet.member?(set, id), do: MapSet.delete(set, id), else: MapSet.put(set, id)
+  end
 
   defp map_keys_to_atoms(%{} = map) do
     for {k, v} <- map, into: %{} do
