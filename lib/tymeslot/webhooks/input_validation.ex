@@ -12,7 +12,7 @@ defmodule Tymeslot.Webhooks.InputValidation do
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
   alias Tymeslot.Security.{RateLimiter, UniversalSanitizer}
   alias Tymeslot.Validation.Constraints
-  alias Tymeslot.Webhooks.WebhookSchema
+  alias Tymeslot.Webhooks.{SsrfValidator, WebhookSchema}
 
   @primary_key false
   embedded_schema do
@@ -143,7 +143,10 @@ defmodule Tymeslot.Webhooks.InputValidation do
   end
 
   defp validate_url_format(changeset) do
-    URLValidator.validate_url(changeset, :url, block_private_ips: true, enforce_https: true)
+    URLValidator.validate_url(changeset, :url,
+      block_private_ips: not SsrfValidator.allow_private?(),
+      enforce_https: not SsrfValidator.allow_private?()
+    )
   end
 
   defp validate_events_list(changeset) do

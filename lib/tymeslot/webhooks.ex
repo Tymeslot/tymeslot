@@ -15,7 +15,15 @@ defmodule Tymeslot.Webhooks do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.UrlValidation
-  alias Tymeslot.Webhooks.{PayloadBuilder, WebhookDeliverySchema, WebhookQueries, WebhookSchema}
+
+  alias Tymeslot.Webhooks.{
+    PayloadBuilder,
+    SsrfValidator,
+    WebhookDeliverySchema,
+    WebhookQueries,
+    WebhookSchema
+  }
+
   alias Tymeslot.Workers.WebhookWorker
 
   # ============================================================================
@@ -162,7 +170,9 @@ defmodule Tymeslot.Webhooks do
   """
   @spec test_webhook_connection(String.t(), String.t() | nil) :: :ok | {:error, String.t()}
   def test_webhook_connection(url, token \\ nil) do
-    strict? = Application.get_env(:tymeslot, :environment, :prod) == :prod
+    strict? =
+      Application.get_env(:tymeslot, :environment, :prod) == :prod and
+        not SsrfValidator.allow_private?()
 
     with :ok <-
            UrlValidation.validate_http_url(url,
@@ -196,7 +206,9 @@ defmodule Tymeslot.Webhooks do
   """
   @spec validate_webhook_url(String.t()) :: :ok | {:error, String.t()}
   def validate_webhook_url(url) do
-    strict? = Application.get_env(:tymeslot, :environment, :prod) == :prod
+    strict? =
+      Application.get_env(:tymeslot, :environment, :prod) == :prod and
+        not SsrfValidator.allow_private?()
 
     UrlValidation.validate_http_url(url,
       block_private_ips: strict?,

@@ -864,3 +864,32 @@ webhook_base_url = System.get_env("WEBHOOK_BASE_URL")
 if webhook_base_url && String.trim(webhook_base_url) != "" do
   config :tymeslot, :webhook_base_url, String.trim(webhook_base_url)
 end
+
+# Self-host escape hatch for SSRF protection on calendar and self-hosted video
+# integrations. In :prod, outbound requests to CalDAV servers and self-hosted
+# video (e.g. MiroTalk) whose hostname resolves to a private/loopback/link-local
+# address are blocked (Tymeslot.Security.SsrfGuard). Operators who intentionally
+# run those integrations on a private network — the common self-hosting case —
+# opt out by setting ALLOW_PRIVATE_IPS_FOR_CALENDAR=true.
+#
+# This does NOT relax webhook SSRF protection (Tymeslot.Webhooks.SsrfValidator);
+# webhooks have their own switch (ALLOW_PRIVATE_IPS_FOR_WEBHOOKS below).
+#
+# Seeded from env in non-test environments only, so an exported shell var can't
+# flip the default for the test suite (tests set the flag explicitly).
+if config_env() != :test and
+     System.get_env("ALLOW_PRIVATE_IPS_FOR_CALENDAR") in ["true", "1", "yes"] do
+  config :tymeslot, :allow_private_ips_for_calendar, true
+end
+
+# Webhook-scoped sibling of the above. In :prod, outbound webhook deliveries to
+# a URL whose hostname resolves to a private/loopback/link-local address are
+# blocked (Tymeslot.Webhooks.SsrfValidator). Operators who intentionally point
+# webhooks at internal services opt out with ALLOW_PRIVATE_IPS_FOR_WEBHOOKS=true.
+#
+# Deliberately separate from ALLOW_PRIVATE_IPS_FOR_CALENDAR: relaxing calendar
+# and video SSRF should not silently open outbound webhooks to internal hosts.
+if config_env() != :test and
+     System.get_env("ALLOW_PRIVATE_IPS_FOR_WEBHOOKS") in ["true", "1", "yes"] do
+  config :tymeslot, :allow_private_ips_for_webhooks, true
+end

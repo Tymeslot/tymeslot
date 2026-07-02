@@ -15,10 +15,12 @@ defmodule Tymeslot.Webhooks.SsrfValidatorTest do
   setup do
     original_env = fetch_config(:environment)
     original_resolver = fetch_config(:dns_resolver_module)
+    original_allow = fetch_config(:allow_private_ips_for_webhooks)
 
     on_exit(fn ->
       restore(:environment, original_env)
       restore(:dns_resolver_module, original_resolver)
+      restore(:allow_private_ips_for_webhooks, original_allow)
     end)
 
     :ok
@@ -90,6 +92,32 @@ defmodule Tymeslot.Webhooks.SsrfValidatorTest do
     test "rejects IPv6 link-local (fe80::/10)" do
       Application.put_env(:tymeslot, :dns_resolver_module, AlwaysOkResolver)
       assert {:error, _reason} = SsrfValidator.check("https://[fe80::1]/hook")
+    end
+  end
+
+  describe "check/1 (self-host opt-out via :allow_private_ips_for_webhooks)" do
+    setup do
+      Application.put_env(:tymeslot, :environment, :prod)
+      Application.put_env(:tymeslot, :allow_private_ips_for_webhooks, true)
+      # A resolver that would reject everything — proving the opt-out skips DNS.
+      Application.put_env(:tymeslot, :dns_resolver_module, PrivateIpResolver)
+      :ok
+    end
+
+    test "permits a private IP literal" do
+      assert :ok = SsrfValidator.check("https://10.0.0.1/hook")
+    end
+
+    test "permits a host whose DNS resolves to a private IP (DNS check skipped)" do
+      assert :ok = SsrfValidator.check("https://internal.example.org/hook")
+    end
+
+    test "permits http (HTTPS no longer enforced)" do
+      assert :ok = SsrfValidator.check("http://internal.example.org/hook")
+    end
+
+    test "still rejects a syntactically invalid URL" do
+      assert {:error, _reason} = SsrfValidator.check("not a url at all")
     end
   end
 end

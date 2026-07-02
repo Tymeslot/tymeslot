@@ -12,6 +12,7 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Validation.Constraints
+  alias Tymeslot.Webhooks.SsrfValidator
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -84,7 +85,10 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
       |> validate_required(@required_fields)
       |> validate_length(:name, Constraints.webhook_name_length_opts())
       |> validate_length(:url, min: 1, max: Constraints.url_max_length())
-      |> URLValidator.validate_url(:url, block_private_ips: true, enforce_https: true)
+      |> URLValidator.validate_url(:url,
+        block_private_ips: not SsrfValidator.allow_private?(),
+        enforce_https: not SsrfValidator.allow_private?()
+      )
       |> validate_events()
       |> foreign_key_constraint(:user_id)
 
