@@ -258,6 +258,7 @@ defmodule TymeslotWeb.Router do
       live "/dashboard/calendar", DashboardLive, :calendar
       live "/dashboard/calendar-integration", DashboardLive, :calendar_integration
       live "/dashboard/video-integration", DashboardLive, :video_integration
+      live "/dashboard/integrations", DashboardLive, :integrations
       live "/dashboard/automation", DashboardLive, :automation
       live "/dashboard/theme", DashboardLive, :theme
       live "/dashboard/theme/customize/:theme_id", DashboardLive, :theme_customization
