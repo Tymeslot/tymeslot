@@ -130,6 +130,12 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
 
   Returns `{:ok, count}` on success or `{:error, reason}` on failure.
   """
+  # Rows are inserted in chunks so a single `insert_all` never exceeds
+  # PostgreSQL's 65,535 bind-parameter limit. The schema has ~30 insertable
+  # columns, so a busy calendar's initial sync (Google requests up to 2,500
+  # events per page) would otherwise blow the limit in one statement.
+  @upsert_chunk_size 1000
+
   @spec upsert_batch([map()]) :: {:ok, non_neg_integer()}
   def upsert_batch([]), do: {:ok, 0}
 
@@ -141,7 +147,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
     # series in a single sync response — all sharing the same iCalUID. PostgreSQL
     # rejects an ON CONFLICT DO UPDATE that targets the same row twice in one
     # command, so we keep the last entry per (calendar_integration_id, uid).
-    entries =
+    count =
       events_attrs
       |> Enum.map(fn attrs ->
         attrs
@@ -152,7 +158,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
         Map.put(acc, {entry.calendar_integration_id, entry.uid}, entry)
       end)
       |> Map.values()
+      |> Enum.chunk_every(@upsert_chunk_size)
+      |> Enum.reduce(0, fn chunk, acc -> acc + upsert_chunk(chunk) end)
 
+    {:ok, count}
+  end
+
+  defp upsert_chunk(entries) do
     {count, _rows} =
       Repo.insert_all(
         ProviderCalendarEventSchema,
@@ -161,7 +173,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
         conflict_target: [:calendar_integration_id, :uid]
       )
 
-    {:ok, count}
+    count
   end
 
   @doc """

@@ -128,6 +128,30 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueriesMutationTes
 
       assert event.summary == "Last"
     end
+
+    test "inserts a batch larger than the Postgres bind-parameter limit" do
+      # Regression: a single insert_all over ~30 columns exceeds PostgreSQL's
+      # 65,535 bind-parameter limit around ~2,200 rows. A busy calendar's
+      # initial Google sync (2,500 events per page) can plausibly exceed that,
+      # so upsert_batch must chunk. 3,000 rows would fail as one statement.
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      batch =
+        Enum.map(1..3000, fn n ->
+          build_event_attrs(integration, %{uid: "bulk-#{n}", summary: "Event #{n}"})
+        end)
+
+      assert {:ok, 3000} = ProviderCalendarEventQueries.upsert_batch(batch)
+
+      assert 3000 ==
+               Repo.aggregate(
+                 from(e in ProviderCalendarEventSchema,
+                   where: e.calendar_integration_id == ^integration.id
+                 ),
+                 :count
+               )
+    end
   end
 
   describe "get_by_uid/2" do
