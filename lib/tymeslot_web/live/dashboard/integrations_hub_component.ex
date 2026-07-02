@@ -38,7 +38,26 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   def render(assigns) do
     ~H"""
     <div id="integrations-hub" class="space-y-8 pb-20">
-      <.section_header title="Integrations" />
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <.section_header title="Integrations" />
+
+        <div class="flex items-center gap-2">
+          <span class="text-token-sm font-semibold text-tymeslot-500 mr-1">Add integration</span>
+          <.link
+            patch={~p"/dashboard/integrations?tab=calendars"}
+            class="inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-3 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600"
+          >
+            <.icon name="hero-calendar-days" class="w-4 h-4" /> Connect a calendar
+          </.link>
+          <.link
+            patch={~p"/dashboard/integrations?tab=video"}
+            class="inline-flex items-center gap-1.5 rounded-token-lg border border-turquoise-200 bg-white px-3 py-2 text-token-sm font-semibold text-turquoise-700 transition-colors hover:bg-turquoise-50"
+          >
+            <.icon name="hero-video-camera" class="w-4 h-4" /> Connect a video tool
+          </.link>
+        </div>
+      </div>
+
       <.integrations_tab_nav active_tab={@active_tab} tabs={@tabs} />
       <div data-tab-panel={@active_tab}>
         <.live_component

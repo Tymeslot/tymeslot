@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnectModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
+  alias TymeslotWeb.Dashboard.CalendarSettings.AvailableProviders
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
   alias TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
@@ -33,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
      |> assign(:validating_integration_id, nil)
      |> assign(:health_states, %{})
      |> assign(:expanded_rows, MapSet.new())
+     |> assign(:show_all_caldav, false)
      |> assign(:available_calendar_providers, Calendar.list_available_providers(:calendar))}
   end
 
@@ -41,6 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     socket =
       socket
       |> assign(assigns)
+      |> maybe_reset_caldav_reveal(assigns)
       |> load_integrations()
       |> load_freebusy()
       |> assign_new(:security_metadata, fn -> DashboardHelpers.get_security_metadata(socket) end)
@@ -95,6 +98,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   @impl Phoenix.LiveComponent
   def handle_event("toggle_row", %{"id" => id}, socket) do
     {:noreply, assign(socket, :expanded_rows, toggle_member(socket.assigns.expanded_rows, id))}
+  end
+
+  def handle_event("toggle_caldav_options", _params, socket) do
+    {:noreply, assign(socket, :show_all_caldav, not socket.assigns.show_all_caldav)}
   end
 
   def handle_event("toggle_integration", %{"id" => id}, socket) do
@@ -333,6 +340,14 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     assign(socket, view: :config, selected_provider: provider)
   end
 
+  # Collapse the CalDAV reveal when the config view sends us back to the
+  # providers list (a `send_update` carrying `view: :providers`). Routine
+  # parent re-renders don't pass `:view`, so they leave the reveal untouched.
+  defp maybe_reset_caldav_reveal(socket, %{view: :providers}),
+    do: assign(socket, :show_all_caldav, false)
+
+  defp maybe_reset_caldav_reveal(socket, _assigns), do: socket
+
   defp format_refresh_failures(names) when length(names) <= 3 do
     Enum.join(names, ", ")
   end
@@ -387,9 +402,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
           expanded_rows={@expanded_rows}
         />
 
-        <Components.available_providers_section
+        <AvailableProviders.available_providers_section
           available_calendar_providers={@available_calendar_providers}
           integrations={@integrations}
+          show_all_caldav={@show_all_caldav}
           myself={@myself}
         />
 

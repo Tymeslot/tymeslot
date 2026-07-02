@@ -38,6 +38,16 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
 
       assert html =~ ~s(data-tab-panel="video")
     end
+
+    test "renders Add integration jump links to the calendars and video tabs", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations")
+
+      assert html =~ "Add integration"
+      assert html =~ "Connect a calendar"
+      assert html =~ "Connect a video tool"
+      assert html =~ ~s(href="/dashboard/integrations?tab=calendars")
+      assert html =~ ~s(href="/dashboard/integrations?tab=video")
+    end
   end
 
   describe "calendars tab" do
@@ -68,6 +78,28 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
       |> render_click()
 
       assert render(view) =~ "Team Sync"
+    end
+
+    test "collapses CalDAV presets and reveals them via the Other CalDAV affordance",
+         %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      # Apple and Nextcloud show as first-class cards; the folded presets are
+      # hidden behind the "Other CalDAV server" affordance.
+      assert html =~ ~s(phx-value-provider="apple")
+      assert html =~ ~s(phx-value-provider="nextcloud")
+      assert html =~ "Other CalDAV server"
+      refute html =~ ~s(phx-value-provider="zimbra")
+      refute html =~ ~s(phx-value-provider="radicale")
+
+      view
+      |> element("button[phx-click='toggle_caldav_options']")
+      |> render_click()
+
+      revealed = render(view)
+      assert revealed =~ ~s(phx-value-provider="zimbra")
+      assert revealed =~ ~s(phx-value-provider="radicale")
+      assert revealed =~ "Show fewer"
     end
   end
 

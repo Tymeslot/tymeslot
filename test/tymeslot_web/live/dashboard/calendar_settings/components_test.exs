@@ -48,36 +48,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
     end
   end
 
-  describe "available_providers_section" do
-    test "renders available providers" do
-      providers = [
-        %{type: :google, display_name: "Google Calendar"},
-        %{type: :outlook, display_name: "Outlook Calendar"}
-      ]
-
-      assigns = %{
-        available_calendar_providers: providers,
-        myself: "target"
-      }
-
-      html = render_component(&Components.available_providers_section/1, assigns)
-      assert html =~ "Available Providers"
-      assert html =~ "Google Calendar"
-      assert html =~ "Outlook Calendar"
-    end
-
-    test "handles empty providers list" do
-      assigns = %{
-        available_calendar_providers: [],
-        myself: "target"
-      }
-
-      html = render_component(&Components.available_providers_section/1, assigns)
-      assert html =~ "Available Providers"
-      refute html =~ "Google Calendar"
-    end
-  end
-
   describe "config_view" do
     test "renders config view for nextcloud" do
       assigns = %{
