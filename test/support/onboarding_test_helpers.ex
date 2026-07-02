@@ -147,10 +147,12 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
     |> element(~s{button[phx-value-option="skip"]})
     |> render_click()
 
-    # connect_calendar to buffer_time
+    # Continue without a calendar opens a nudge modal — confirm it to advance.
     view
     |> element("button[phx-click='next_step']")
     |> render_click()
+
+    render_click(view, "confirm_skip_calendar")
 
     view
   end

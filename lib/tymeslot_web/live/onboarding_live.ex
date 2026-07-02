@@ -15,6 +15,7 @@ defmodule TymeslotWeb.OnboardingLive do
   alias TymeslotWeb.OnboardingLive.ProfileStep
   alias TymeslotWeb.OnboardingLive.ReadyStep
   alias TymeslotWeb.OnboardingLive.SchedulingHandlers
+  alias TymeslotWeb.OnboardingLive.SkipCalendarModal
   alias TymeslotWeb.OnboardingLive.SkipConfirmationModal
   alias TymeslotWeb.OnboardingLive.StepConfig
   alias TymeslotWeb.OnboardingLive.ThemeHandlers
@@ -159,6 +160,9 @@ defmodule TymeslotWeb.OnboardingLive do
     <%!-- Skip confirmation modal --%>
     <SkipConfirmationModal.skip_confirmation_modal show={@show_skip_modal} />
 
+    <%!-- Nudge before continuing without a connected calendar --%>
+    <SkipCalendarModal.skip_calendar_modal show={@show_skip_calendar_modal} />
+
     <%!-- Real booking-page preview --%>
     <ThemePreviewModal.theme_preview_modal
       show={@show_theme_preview}
@@ -190,6 +194,14 @@ defmodule TymeslotWeb.OnboardingLive do
 
   def handle_event("skip_onboarding", _params, socket) do
     NavigationHandlers.handle_skip_onboarding(socket)
+  end
+
+  def handle_event("confirm_skip_calendar", _params, socket) do
+    NavigationHandlers.handle_confirm_skip_calendar(socket)
+  end
+
+  def handle_event("hide_skip_calendar_modal", _params, socket) do
+    NavigationHandlers.handle_hide_skip_calendar_modal(socket)
   end
 
   # ------------------------------------------------------------------

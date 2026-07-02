@@ -47,9 +47,11 @@ defmodule TymeslotWeb.OnboardingAnalyticsTest do
 
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      # skip the calendar step: select "Not right now" then Continue
+      # skip the calendar step: select "Not right now", Continue, then confirm
+      # the nudge modal — the skipped event fires only once the user confirms.
       view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
+      render_click(view, "confirm_skip_calendar")
 
       assert_push_event view, "ts:analytics", %{
         name: "onboarding_step_completed",

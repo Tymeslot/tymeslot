@@ -48,6 +48,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     |> Component.assign(:current_step, :welcome)
     |> Component.assign(:step_data, %{})
     |> Component.assign(:show_skip_modal, false)
+    |> Component.assign(:show_skip_calendar_modal, false)
     |> Component.assign(:show_theme_preview, false)
     |> Component.assign(:theme_preview_url, nil)
     |> Component.assign(:steps, StepConfig.steps(connected_calendars != []))

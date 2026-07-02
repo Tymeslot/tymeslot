@@ -111,9 +111,10 @@ defmodule TymeslotWeb.OnboardingCompositionTest do
       view |> element("button[phx-click='next_step']") |> render_click()
       assert has_element?(view, ".onboarding-provider-cards")
 
-      # connect_calendar → select skip → Continue → buffer_time
+      # connect_calendar → select skip → Continue → confirm nudge → buffer_time
       view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
+      render_click(view, "confirm_skip_calendar")
       assert has_element?(view, "button[phx-value-buffer_minutes]")
 
       # buffer_time → previous → connect_calendar

@@ -380,14 +380,44 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
   end
 
   describe "skip advances the flow" do
-    test "selecting skip then Continue advances to buffer_time", %{conn: conn} do
+    test "selecting skip then Continue opens the nudge modal before advancing",
+         %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
       view = navigate_to_calendar_step(view)
 
       view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
 
+      # The nudge modal becomes visible and we're still on the calendar step.
+      assert has_element?(view, ~s{#skip-calendar-modal[style*="display: flex"]})
+      assert has_element?(view, ".onboarding-provider-cards")
+      refute has_element?(view, "button[phx-value-buffer_minutes]")
+    end
+
+    test "confirming the nudge modal advances to buffer_time", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      view = navigate_to_calendar_step(view)
+
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
+      render_click(view, "confirm_skip_calendar")
+
       assert has_element?(view, "button[phx-value-buffer_minutes]")
+    end
+
+    test "dismissing the nudge modal returns to the calendar step", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      view = navigate_to_calendar_step(view)
+
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
+      render_click(view, "hide_skip_calendar_modal")
+
+      # Modal hidden, still on the calendar step and free to pick a provider.
+      assert has_element?(view, ~s{#skip-calendar-modal[style*="display: none"]})
+      assert has_element?(view, ".onboarding-provider-cards")
+      assert has_element?(view, ~s{button[phx-value-option="google"]})
+      refute has_element?(view, "button[phx-value-buffer_minutes]")
     end
   end
 end

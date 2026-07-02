@@ -38,12 +38,15 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
       |> fill_in(css("#username"), with: "e2e-user-#{System.unique_integer([:positive])}")
       |> click(css("button[phx-click='next_step']"))
 
-    # Step 3: Connect Calendar — select "Not right now", then Continue
+    # Step 3: Connect Calendar — select "Not right now", then Continue.
+    # Continuing without a calendar opens a nudge modal — confirm to proceed.
     session =
       session
       |> assert_has(css(~s{button[phx-value-option="skip"]}))
       |> click(css(~s{button[phx-value-option="skip"]}))
       |> click(css("button[phx-click='next_step']"))
+      |> assert_has(css("#skip-calendar-modal"))
+      |> click(css("button[phx-click='confirm_skip_calendar']"))
 
     # Step 4: Buffer Time — use defaults, continue
     session =

@@ -57,17 +57,9 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
         {:noreply, Component.assign(socket, :calendar_state, :connecting_caldav)}
 
       "skip" ->
-        {:noreply,
-         socket
-         |> Component.assign(
-           :current_step,
-           StepConfig.next_step(:connect_calendar, socket.assigns.steps)
-         )
-         |> Analytics.push("onboarding_step_completed", %{
-           step: "connect_calendar",
-           skipped: true
-         })
-         |> LiveView.clear_flash()}
+        # Don't advance immediately: Tymeslot only makes sense with a calendar
+        # connected, so nudge the user to reconsider before proceeding.
+        {:noreply, Component.assign(socket, :show_skip_calendar_modal, true)}
 
       _none ->
         if socket.assigns.connected_calendars == [] do
@@ -152,6 +144,37 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_hide_skip_modal(socket) do
     {:noreply, Component.assign(socket, :show_skip_modal, false)}
+  end
+
+  @doc """
+  Confirms proceeding past the calendar step without a connected calendar.
+
+  Closes the nudge modal and advances to the next step, recording the skip.
+  """
+  @spec handle_confirm_skip_calendar(Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_confirm_skip_calendar(socket) do
+    {:noreply,
+     socket
+     |> Component.assign(:show_skip_calendar_modal, false)
+     |> Component.assign(
+       :current_step,
+       StepConfig.next_step(:connect_calendar, socket.assigns.steps)
+     )
+     |> Analytics.push("onboarding_step_completed", %{
+       step: "connect_calendar",
+       skipped: true
+     })
+     |> LiveView.clear_flash()}
+  end
+
+  @doc """
+  Dismisses the calendar nudge modal, returning the user to the calendar step.
+  """
+  @spec handle_hide_skip_calendar_modal(Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_hide_skip_calendar_modal(socket) do
+    {:noreply, Component.assign(socket, :show_skip_calendar_modal, false)}
   end
 
   @doc """
