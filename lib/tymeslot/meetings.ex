@@ -264,11 +264,12 @@ defmodule Tymeslot.Meetings do
   end
 
   @doc """
-  Lists all cancelled meetings for a specific user.
+  Lists cancelled meetings for a specific user, bounded by `:limit`
+  (default 200) so the read is never unbounded.
   """
-  @spec list_cancelled_meetings_for_user(String.t()) :: [MeetingSchema.t()]
-  def list_cancelled_meetings_for_user(user_email) do
-    MeetingListQueries.list_cancelled_meetings_for_user(user_email)
+  @spec list_cancelled_meetings_for_user(String.t(), keyword()) :: [MeetingSchema.t()]
+  def list_cancelled_meetings_for_user(user_email, opts \\ []) do
+    MeetingListQueries.list_cancelled_meetings_for_user(user_email, opts)
   end
 
   @doc """

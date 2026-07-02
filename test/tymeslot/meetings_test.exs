@@ -151,6 +151,22 @@ defmodule Tymeslot.MeetingsTest do
       assert length(result) == 1
       assert hd(result).id == cancelled_meeting.id
     end
+
+    test "bounds the result set with the :limit option" do
+      user = insert(:user)
+
+      for _ <- 1..3 do
+        insert(:meeting,
+          organizer_email: user.email,
+          organizer_user_id: user.id,
+          status: "cancelled",
+          start_time: DateTime.add(DateTime.utc_now(), 86_400, :second),
+          end_time: DateTime.add(DateTime.utc_now(), 90_000, :second)
+        )
+      end
+
+      assert length(Meetings.list_cancelled_meetings_for_user(user.email, limit: 2)) == 2
+    end
   end
 
   describe "get_meeting!/1" do
