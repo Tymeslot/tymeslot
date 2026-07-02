@@ -11,9 +11,11 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   """
   use TymeslotWeb, :live_component
 
+  alias Phoenix.LiveView.JS
   alias Tymeslot.Agenda.Day
   alias Tymeslot.Agenda.Entry
   alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Dashboard.AgendaDetailModal
   alias TymeslotWeb.Dashboard.AgendaTimeline
   alias TymeslotWeb.Dashboard.OnboardingChecklist
 
@@ -25,7 +27,25 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
      socket
      |> assign(assigns)
      |> assign(:agenda, agenda)
+     # Survive the 60s agenda tick: a re-render must not close a modal the user
+     # has open, so keep any already-selected entry rather than resetting it.
+     |> assign_new(:selected_entry, fn -> nil end)
      |> assign_agenda_view(agenda, DateTime.utc_now())}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("open_entry", %{"id" => id}, socket) do
+    {:noreply, assign(socket, :selected_entry, find_entry(socket.assigns.agenda, id))}
+  end
+
+  def handle_event("close_entry", _params, socket) do
+    {:noreply, assign(socket, :selected_entry, nil)}
+  end
+
+  defp find_entry(%Day{} = agenda, id) do
+    [agenda.next | agenda.today ++ agenda.tomorrow]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.find(&(&1.id == id))
   end
 
   # Reshapes the domain agenda into the view model the rail renders against. The
@@ -124,6 +144,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
             timezone={@agenda.timezone}
             then_entry={@then_entry}
             more_count={@more_count}
+            myself={@myself}
           />
         </div>
 
@@ -132,17 +153,21 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           <.group_heading label="Today" />
 
           <div :if={@all_day_today != []} class="mb-4 flex flex-wrap gap-2">
-            <span
+            <button
               :for={entry <- @all_day_today}
-              class="inline-flex items-center gap-1.5 rounded-token-full bg-tymeslot-100 px-3 py-1 text-token-xs font-black text-tymeslot-600"
+              type="button"
+              phx-click="open_entry"
+              phx-value-id={entry.id}
+              phx-target={@myself}
+              class="inline-flex items-center gap-1.5 rounded-token-full bg-tymeslot-100 px-3 py-1 text-token-xs font-black text-tymeslot-600 cursor-pointer hover:bg-tymeslot-200 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 transition-colors"
             >
               <.icon name="hero-sun-mini" class="w-4 h-4 text-tymeslot-400" />{entry.title}
-            </span>
+            </button>
           </div>
 
           <div :if={@spine != []} class="relative">
             <%= for row <- @spine do %>
-              <.spine_row row={row} now={@now} timezone={@agenda.timezone} />
+              <.spine_row row={row} now={@now} timezone={@agenda.timezone} myself={@myself} />
             <% end %>
           </div>
         </div>
@@ -155,6 +180,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
               :for={entry <- @tomorrow_entries}
               entry={entry}
               timezone={@agenda.timezone}
+              myself={@myself}
             />
           </div>
         </div>
@@ -180,8 +206,31 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           Connect a calendar to see your whole schedule here
         </.link>
       </div>
+
+      <%!-- Appointment detail modal --%>
+      <AgendaDetailModal.agenda_detail_modal
+        :if={@selected_entry}
+        entry={@selected_entry}
+        timezone={@agenda.timezone}
+        now={@now}
+        myself={@myself}
+      />
     </div>
     """
+  end
+
+  # DOM/LiveView bindings that turn any agenda surface into a clickable,
+  # keyboard-focusable button opening the detail modal. Spread with `{...}`
+  # alongside an explicit `phx-target={@myself}` at each call site.
+  defp open_attrs(%Entry{id: id}) do
+    %{
+      "phx-click" => "open_entry",
+      "phx-keydown" => "open_entry",
+      "phx-key" => "Enter",
+      "phx-value-id" => id,
+      "role" => "button",
+      "tabindex" => "0"
+    }
   end
 
   # --- Focus cockpit ---------------------------------------------------------
@@ -191,10 +240,16 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   attr :timezone, :string, required: true
   attr :then_entry, :map, default: nil
   attr :more_count, :integer, default: 0
+  attr :myself, :any, required: true
 
   defp agenda_cockpit(assigns) do
     ~H"""
-    <div class="relative overflow-hidden rounded-token-2xl bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 p-6 text-white shadow-xl shadow-turquoise-500/20">
+    <div
+      {open_attrs(@entry)}
+      phx-target={@myself}
+      aria-label={"View details for #{@entry.title}"}
+      class="relative overflow-hidden rounded-token-2xl bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 p-6 text-white shadow-xl shadow-turquoise-500/20 cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-white/60"
+    >
       <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.15),transparent_55%)]">
       </div>
       <div class="relative z-10">
@@ -239,6 +294,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
               href={@entry.join_url}
               target="_blank"
               rel="noopener noreferrer"
+              phx-click={%JS{}}
               class="hidden shrink-0 items-center gap-1.5 rounded-token-xl bg-white px-4 py-2 text-token-sm font-black text-turquoise-700 shadow-lg hover:bg-turquoise-50 transition-colors"
             >
               <.icon name="hero-video-camera-mini" class="w-4 h-4" /> Join
@@ -264,6 +320,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   attr :row, :any, required: true
   attr :now, :map, required: true
   attr :timezone, :string, required: true
+  attr :myself, :any, required: true
 
   defp spine_row(%{row: {:event, _entry, _meta}} = assigns) do
     {:event, entry, meta} = assigns.row
@@ -277,11 +334,16 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
         {time_label(@entry, @timezone)}
       </div>
       <.rail node={if @in_progress?, do: :live, else: :event} />
-      <div class={[
-        "flex-1 min-w-0 mb-3 flex items-center gap-3 p-4 rounded-token-2xl border-2 transition-all group",
-        (@next? or @in_progress?) && "bg-white border-turquoise-200 shadow-md shadow-turquoise-500/10",
-        not (@next? or @in_progress?) && "bg-tymeslot-50/50 border-tymeslot-50 hover:bg-white hover:shadow-md"
-      ]}>
+      <div
+        {open_attrs(@entry)}
+        phx-target={@myself}
+        aria-label={"View details for #{@entry.title}"}
+        class={[
+          "flex-1 min-w-0 mb-3 flex items-center gap-3 p-4 rounded-token-2xl border-2 transition-all group cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-turquoise-400",
+          (@next? or @in_progress?) && "bg-white border-turquoise-200 shadow-md shadow-turquoise-500/10",
+          not (@next? or @in_progress?) && "bg-tymeslot-50/50 border-tymeslot-50 hover:bg-white hover:shadow-md"
+        ]}
+      >
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 flex-wrap">
             <span class="text-tymeslot-900 font-black tracking-tight truncate group-hover:text-turquoise-700 transition-colors">
@@ -309,6 +371,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           href={@entry.join_url}
           target="_blank"
           rel="noopener noreferrer"
+          phx-click={%JS{}}
           class="shrink-0 inline-flex items-center gap-1.5 rounded-token-xl bg-turquoise-50 px-3 py-1.5 text-token-xs font-black text-turquoise-700 hover:bg-turquoise-100 transition-colors"
         >
           <.icon name="hero-video-camera-mini" class="w-4 h-4" /> Join
@@ -383,10 +446,16 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
 
   attr :entry, :map, required: true
   attr :timezone, :string, required: true
+  attr :myself, :any, required: true
 
   defp peek_row(assigns) do
     ~H"""
-    <div class="flex items-center gap-3 py-1.5">
+    <div
+      {open_attrs(@entry)}
+      phx-target={@myself}
+      aria-label={"View details for #{@entry.title}"}
+      class="flex items-center gap-3 py-1.5 px-2 -mx-2 rounded-token-xl cursor-pointer hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 transition-colors"
+    >
       <div class="w-14 shrink-0 text-token-xs font-black tabular-nums text-tymeslot-400">
         {if @entry.all_day?, do: "All day", else: time_label(@entry, @timezone)}
       </div>

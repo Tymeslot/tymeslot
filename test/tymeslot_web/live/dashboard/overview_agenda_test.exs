@@ -80,4 +80,99 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
     assert html =~ "Nothing on your plate today or tomorrow"
     assert html =~ "Connect a calendar to see your whole schedule here"
   end
+
+  test "clicking a booking opens a detail modal with its full details and actions",
+       %{conn: conn, user: user} do
+    tomorrow = Date.add(Date.utc_today(), 1)
+    start = DateTime.new!(tomorrow, ~T[12:00:00], "Etc/UTC")
+
+    insert(:meeting,
+      organizer_email: user.email,
+      start_time: start,
+      end_time: DateTime.add(start, 45 * 60, :second),
+      status: "confirmed",
+      title: "Quarterly review",
+      attendee_name: "Dana Lee",
+      location: "Room 3B",
+      organizer_video_url: "https://zoom.us/j/123"
+    )
+
+    {:ok, view, html} = live(conn, ~p"/dashboard")
+    refute html =~ "agenda-detail-modal"
+
+    view
+    |> element(~s([aria-label="View details for Quarterly review"]))
+    |> render_click()
+
+    modal = view |> element("#agenda-detail-modal") |> render()
+
+    assert modal =~ Calendar.strftime(tomorrow, "%A, %-d %B %Y")
+    assert modal =~ "45 min"
+    assert modal =~ "Dana Lee"
+    # It reads clearly as a video meeting on a recognised platform, held in a room.
+    assert modal =~ "Video meeting"
+    assert modal =~ "Zoom"
+    assert modal =~ "Room 3B"
+    # A Tymeslot booking is labelled as such and offers both smart actions.
+    assert modal =~ "Calendar"
+    assert modal =~ "Tymeslot"
+    assert modal =~ "Manage booking"
+    assert modal =~ "Join"
+  end
+
+  test "dismissing the detail modal clears it", %{conn: conn, user: user} do
+    tomorrow = Date.add(Date.utc_today(), 1)
+    start = DateTime.new!(tomorrow, ~T[12:00:00], "Etc/UTC")
+
+    insert(:meeting,
+      organizer_email: user.email,
+      start_time: start,
+      end_time: DateTime.add(start, 3600, :second),
+      status: "confirmed",
+      title: "Quarterly review"
+    )
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+    assert view
+           |> element(~s([aria-label="View details for Quarterly review"]))
+           |> render_click() =~ "agenda-detail-modal"
+
+    refute view
+           |> element(~s(#agenda-detail-modal button[aria-label="Close modal"]))
+           |> render_click() =~ "agenda-detail-modal"
+  end
+
+  test "a synced calendar event offers Join but no booking management",
+       %{conn: conn, user: user} do
+    tomorrow = Date.add(Date.utc_today(), 1)
+    start = DateTime.new!(tomorrow, ~T[12:00:00], "Etc/UTC")
+    integration = insert(:calendar_integration, user: user, name: "Work Google")
+
+    insert(:provider_calendar_event,
+      calendar_integration: integration,
+      summary: "Design sync",
+      start_at: start,
+      end_at: DateTime.add(start, 3600, :second),
+      all_day: false,
+      video_link: "https://meet.example.com/d",
+      organiser: %{"displayName" => "Sam Rivera"}
+    )
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+    view
+    |> element(~s([aria-label="View details for Design sync"]))
+    |> render_click()
+
+    modal = view |> element("#agenda-detail-modal") |> render()
+
+    assert modal =~ "Sam Rivera"
+    assert modal =~ "Video meeting"
+    # It names the source calendar it came from …
+    assert modal =~ "Work Google"
+    # … and offers Join but not booking management for a synced event.
+    assert modal =~ "Join"
+    refute modal =~ "Manage booking"
+  end
 end

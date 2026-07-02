@@ -37,11 +37,13 @@ defmodule Tymeslot.Agenda do
     tomorrow = Date.add(today, 1)
     window_end = DateTime.add(now, @lookahead_days * 86_400, :second)
 
-    integration_ids = active_integration_ids(user)
+    integrations = active_integrations(user)
+    integration_ids = Enum.map(integrations, & &1.id)
+    calendar_names = Map.new(integrations, &{&1.id, &1.name})
 
     entries =
       user
-      |> gather_entries(integration_ids, now, window_end, tz)
+      |> gather_entries(integration_ids, calendar_names, now, window_end, tz)
       |> Enum.filter(&upcoming?(&1, now))
       |> Enum.sort_by(& &1.start_at, DateTime)
 
@@ -59,7 +61,7 @@ defmodule Tymeslot.Agenda do
 
   # --- Gathering & merging ---------------------------------------------------
 
-  defp gather_entries(user, integration_ids, now, window_end, tz) do
+  defp gather_entries(user, integration_ids, calendar_names, now, window_end, tz) do
     # The `/2` query filters to confirmed bookings; `/1` would include pending
     # and cancelled ones, which have no place on the agenda.
     meetings = Meetings.list_upcoming_meetings_for_user(user.email, @meeting_limit)
@@ -78,7 +80,7 @@ defmodule Tymeslot.Agenda do
       |> Enum.reject(&drop_external?(&1, booked_event_ids))
 
     Enum.map(meetings, &entry_from_meeting(&1, tz)) ++
-      Enum.map(external, &entry_from_event(&1, tz))
+      Enum.map(external, &entry_from_event(&1, tz, calendar_names))
   end
 
   # An external event is dropped when it is one of our own synced bookings, a
@@ -115,11 +117,12 @@ defmodule Tymeslot.Agenda do
       all_day?: false,
       location: presence(meeting.location),
       join_url: presence(meeting.organizer_video_url) || presence(meeting.meeting_url),
-      who: presence(meeting.attendee_name)
+      who: presence(meeting.attendee_name),
+      calendar: nil
     }
   end
 
-  defp entry_from_event(%{all_day: true} = event, tz) do
+  defp entry_from_event(%{all_day: true} = event, tz, calendar_names) do
     end_date = event.end_date || Date.add(event.start_date, 1)
 
     %Entry{
@@ -132,11 +135,12 @@ defmodule Tymeslot.Agenda do
       all_day?: true,
       location: presence(event.location),
       join_url: nil,
-      who: organiser_name(event.organiser)
+      who: organiser_name(event.organiser),
+      calendar: calendar_name(event, calendar_names)
     }
   end
 
-  defp entry_from_event(event, tz) do
+  defp entry_from_event(event, tz, calendar_names) do
     end_at = event.end_at || DateTime.add(event.start_at, 3600, :second)
 
     %Entry{
@@ -149,20 +153,25 @@ defmodule Tymeslot.Agenda do
       all_day?: false,
       location: presence(event.location),
       join_url: presence(event.video_link),
-      who: organiser_name(event.organiser)
+      who: organiser_name(event.organiser),
+      calendar: calendar_name(event, calendar_names)
     }
   end
 
   # --- Helpers ---------------------------------------------------------------
 
-  defp active_integration_ids(%{id: id}) when is_integer(id) do
+  defp active_integrations(%{id: id}) when is_integer(id) do
     id
     |> Calendar.list_integrations()
     |> Enum.filter(& &1.is_active)
-    |> Enum.map(& &1.id)
   end
 
-  defp active_integration_ids(_user), do: []
+  defp active_integrations(_user), do: []
+
+  defp calendar_name(%{calendar_integration_id: id}, calendar_names),
+    do: presence(Map.get(calendar_names, id))
+
+  defp calendar_name(_event, _calendar_names), do: nil
 
   defp to_local_date(datetime, tz) do
     datetime

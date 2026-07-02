@@ -29,6 +29,30 @@ defmodule Tymeslot.AgendaTest do
       assert "Team sync" in titles(day)
     end
 
+    test "tags each entry with the calendar it belongs to", %{user: user, tomorrow: tomorrow} do
+      booking(user, at(tomorrow, ~T[12:00:00]), title: "Client call")
+
+      integration = insert(:calendar_integration, user: user, name: "Work Google")
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        summary: "Team sync",
+        start_at: at(tomorrow, ~T[13:00:00]),
+        end_at: at(tomorrow, ~T[14:00:00]),
+        all_day: false
+      )
+
+      day = Agenda.day_agenda(user, "Etc/UTC")
+
+      booking = Enum.find(entries(day), &(&1.title == "Client call"))
+      synced = Enum.find(entries(day), &(&1.title == "Team sync"))
+
+      # A booking is a Tymeslot entry (no synced calendar); a synced event carries
+      # the integration's name so the UI can say which calendar it came from.
+      assert booking.calendar == nil
+      assert synced.calendar == "Work Google"
+    end
+
     test "surfaces the earliest timed entry as the hero and excludes it from the groups",
          %{user: user, tomorrow: tomorrow} do
       booking(user, at(tomorrow, ~T[14:00:00]), title: "Later")

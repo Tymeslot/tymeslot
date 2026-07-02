@@ -25,7 +25,8 @@ defmodule Tymeslot.Agenda.Entry do
     :all_day?,
     :location,
     :join_url,
-    :who
+    :who,
+    :calendar
   ]
 
   @type source :: :tymeslot | :external
@@ -40,7 +41,8 @@ defmodule Tymeslot.Agenda.Entry do
           all_day?: boolean(),
           location: String.t() | nil,
           join_url: String.t() | nil,
-          who: String.t() | nil
+          who: String.t() | nil,
+          calendar: String.t() | nil
         }
 
   @doc """
