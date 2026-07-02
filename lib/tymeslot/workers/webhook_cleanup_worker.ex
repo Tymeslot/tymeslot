@@ -66,7 +66,6 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
     cutoff_date =
       DateTime.utc_now()
       |> DateTime.add(-retention_days, :day)
-      |> DateTime.to_naive()
 
     case WebhookQueries.nullify_stale_payloads(cutoff_date) do
       {count, _nil} when count > 0 ->
@@ -104,12 +103,9 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
         @retention[:stripe_event_days] ||
         90
 
-    # WebhookEventSchema.inserted_at is a NaiveDateTime (:naive_datetime), so the
-    # cutoff must be NaiveDateTime too — passing a DateTime silently fails to match.
     cutoff_date =
       DateTime.utc_now()
       |> DateTime.add(-retention_days, :day)
-      |> DateTime.to_naive()
 
     case WebhookQueries.delete_old_webhook_events(cutoff_date) do
       {count, nil} when count > 0 ->

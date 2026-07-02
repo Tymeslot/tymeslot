@@ -61,7 +61,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     embeds_many(:custom_fields, FieldDefinition, on_replace: :delete)
     embeds_many(:attachments, MeetingTypeAttachment, on_replace: :delete)
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @valid_icons [

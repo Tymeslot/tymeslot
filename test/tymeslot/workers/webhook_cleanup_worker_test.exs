@@ -96,13 +96,12 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
     # override any value we set via Repo.insert!/1 with the current timestamp.
     defp insert_webhook_event(stripe_event_id, dt, opts \\ []) do
       truncated = DateTime.truncate(dt, :second)
-      naive = DateTime.to_naive(truncated)
 
       base_attrs = %{
         stripe_event_id: stripe_event_id,
         event_type: "customer.subscription.updated",
         processed_at: truncated,
-        inserted_at: naive
+        inserted_at: truncated
       }
 
       attrs =

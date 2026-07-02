@@ -70,7 +70,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
 
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @doc false

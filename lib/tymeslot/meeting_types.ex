@@ -239,7 +239,7 @@ defmodule Tymeslot.MeetingTypes do
   def create_default_meeting_types(user_id) when is_integer(user_id) do
     {calendar_integration_id, target_calendar_id} = resolve_primary_calendar(user_id)
     existing = MeetingTypeQueries.existing_names(user_id)
-    now = NaiveDateTime.utc_now(:second)
+    now = DateTime.utc_now(:second)
 
     result =
       user_id

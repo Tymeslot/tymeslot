@@ -197,7 +197,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
       set: [
         payment_required: false,
         price_cents: nil,
-        updated_at: NaiveDateTime.utc_now(:second)
+        updated_at: DateTime.utc_now(:second)
       ]
     )
   end
@@ -219,7 +219,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
       set: [
         calendar_integration_id: nil,
         target_calendar_id: nil,
-        updated_at: NaiveDateTime.utc_now(:second)
+        updated_at: DateTime.utc_now(:second)
       ]
     )
   end
@@ -327,7 +327,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   """
   @spec reorder_meeting_types(integer(), [integer()]) :: {:ok, any()} | {:error, any()}
   def reorder_meeting_types(user_id, meeting_type_ids) when is_list(meeting_type_ids) do
-    now = NaiveDateTime.utc_now(:second)
+    now = DateTime.utc_now(:second)
 
     Repo.transaction(fn ->
       results =

@@ -302,8 +302,8 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
 
   Returns `{count, nil}` where count is the number of rows updated.
   """
-  @spec nullify_stale_payloads(NaiveDateTime.t()) :: {non_neg_integer(), nil}
-  def nullify_stale_payloads(%NaiveDateTime{} = cutoff_date) do
+  @spec nullify_stale_payloads(DateTime.t()) :: {non_neg_integer(), nil}
+  def nullify_stale_payloads(%DateTime{} = cutoff_date) do
     query =
       from(w in WebhookEventSchema,
         where: w.inserted_at < ^cutoff_date and not is_nil(w.payload)
@@ -317,8 +317,8 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
 
   Returns `{count, nil}` where count is the number of rows deleted.
   """
-  @spec delete_old_webhook_events(NaiveDateTime.t()) :: {non_neg_integer(), nil}
-  def delete_old_webhook_events(%NaiveDateTime{} = cutoff_date) do
+  @spec delete_old_webhook_events(DateTime.t()) :: {non_neg_integer(), nil}
+  def delete_old_webhook_events(%DateTime{} = cutoff_date) do
     query =
       from(w in WebhookEventSchema,
         where: w.inserted_at < ^cutoff_date

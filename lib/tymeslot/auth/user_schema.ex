@@ -95,7 +95,7 @@ defmodule Tymeslot.Auth.UserSchema do
 
     has_many(:meeting_types, Tymeslot.MeetingTypes.MeetingTypeSchema, foreign_key: :user_id)
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @doc false

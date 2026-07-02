@@ -28,7 +28,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
     field :show_weekends, :boolean, default: true
     field :desktop_reminders_enabled, :boolean, default: false
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @valid_views ~w(week day month agenda)

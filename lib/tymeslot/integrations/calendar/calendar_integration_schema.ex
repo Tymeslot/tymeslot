@@ -121,7 +121,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
       foreign_key: :calendar_integration_id
     )
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @doc false

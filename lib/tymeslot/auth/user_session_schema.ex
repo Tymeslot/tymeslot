@@ -19,7 +19,7 @@ defmodule Tymeslot.Auth.UserSessionSchema do
     field(:token, :string)
     field(:expires_at, :utc_datetime)
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @doc false
