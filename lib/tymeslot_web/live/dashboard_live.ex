@@ -293,6 +293,7 @@ defmodule TymeslotWeb.DashboardLive do
             live_action={@live_action}
             params={@params}
             custom_questions_allowed={@custom_questions_allowed}
+            payments_allowed={@payments_allowed}
           />
         <% else %>
           <ComponentDispatch.feature_placeholder

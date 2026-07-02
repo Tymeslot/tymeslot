@@ -5,34 +5,51 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   import TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav
 
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
+  alias TymeslotWeb.Dashboard.PaymentsSettingsComponent
   alias TymeslotWeb.Dashboard.VideoSettingsComponent
-
-  @tab_labels %{calendars: "Calendars", video: "Video", payments: "Payments"}
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
+    # `payments_allowed` is computed once at mount by `DashboardInitHook`
+    # (mirroring the `PaymentsHandlers` gate: `:ok`/`:stripe_required` allow),
+    # so the hub reuses it rather than re-checking the feature here.
+    payments_allowed? = Map.get(assigns, :payments_allowed, false)
+
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:tabs, build_tabs())
-     |> assign(:tab_labels, @tab_labels)
-     |> assign(:active_tab, parse_tab(assigns[:params]))}
+     |> assign(:tabs, build_tabs(payments_allowed?))
+     |> assign(:active_tab, parse_tab(assigns[:params], payments_allowed?))}
   end
 
   # Real counts and health status arrive in a later task; for now every tab is
-  # healthy with no count.
-  defp build_tabs do
+  # healthy with no count. The Payments tab appears only when the host can
+  # access the `:meeting_payments` feature.
+  defp build_tabs(payments_allowed?) do
     [
       %{id: :calendars, label: "Calendars", count: nil, status: :ok},
-      %{id: :video, label: "Video", count: nil, status: :ok},
-      %{id: :payments, label: "Payments", count: nil, status: :ok}
-    ]
+      %{id: :video, label: "Video", count: nil, status: :ok}
+      # Deferred to Task 9 (attention banner): derive the Payments tab status
+      # from the connect account's display state (`:ready`→`:ok`,
+      # `:restricted`→`:error`, `:pending_review`/`:incomplete`→`:warning`).
+      # Until health is wired through it stays `:ok`, matching calendars/video.
+    ] ++ payments_tab(payments_allowed?)
   end
 
-  defp parse_tab(%{"tab" => tab}) when tab in ~w(calendars video payments),
-    do: String.to_existing_atom(tab)
+  defp payments_tab(true),
+    do: [%{id: :payments, label: "Payments", count: nil, status: :ok}]
 
-  defp parse_tab(_params), do: :calendars
+  defp payments_tab(false), do: []
+
+  # `?tab=payments` is only honoured when the host may access payments;
+  # otherwise it falls back to calendars rather than rendering a gated tab.
+  defp parse_tab(%{"tab" => "payments"}, false), do: :calendars
+
+  defp parse_tab(%{"tab" => tab}, _payments_allowed?)
+       when tab in ~w(calendars video payments),
+       do: String.to_existing_atom(tab)
+
+  defp parse_tab(_params, _payments_allowed?), do: :calendars
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
@@ -78,9 +95,12 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
           client_ip={@client_ip}
           user_agent={@user_agent}
         />
-        <p :if={@active_tab == :payments} class="text-tymeslot-500">
-          Coming online: {@tab_labels[@active_tab]}.
-        </p>
+        <.live_component
+          :if={@active_tab == :payments}
+          module={PaymentsSettingsComponent}
+          id="payments-settings"
+          current_user={@current_user}
+        />
       </div>
     </div>
     """
