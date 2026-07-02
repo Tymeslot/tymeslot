@@ -162,6 +162,10 @@ defmodule TymeslotWeb.DashboardLive do
 
   require Logger
 
+  # Cadence for the overview agenda's live refresh: advances the now-line and
+  # drops appointments that have ended, mirroring the calendar grid's tick.
+  @agenda_tick_ms 60_000
+
   @impl Phoenix.LiveView
   @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()} | {:ok, Phoenix.LiveView.Socket.t(), keyword()}
@@ -206,8 +210,26 @@ defmodule TymeslotWeb.DashboardLive do
     socket = if action == :payments, do: PaymentsHandlers.handle(params, socket), else: socket
 
     socket = if connected?(socket), do: load_dashboard_data(socket), else: socket
+    socket = reschedule_agenda_tick(socket, action)
 
     {:noreply, socket}
+  end
+
+  # Keeps a single agenda-refresh timer alive only while the overview is open.
+  # Cancels any prior timer first so repeated visits never stack ticks.
+  defp reschedule_agenda_tick(socket, :overview) do
+    if ref = socket.assigns[:agenda_tick_ref], do: Process.cancel_timer(ref)
+
+    if connected?(socket) do
+      assign(socket, :agenda_tick_ref, Process.send_after(self(), :agenda_tick, @agenda_tick_ms))
+    else
+      assign(socket, :agenda_tick_ref, nil)
+    end
+  end
+
+  defp reschedule_agenda_tick(socket, _action) do
+    if ref = socket.assigns[:agenda_tick_ref], do: Process.cancel_timer(ref)
+    assign(socket, :agenda_tick_ref, nil)
   end
 
   @impl Phoenix.LiveView
@@ -420,6 +442,10 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_info(:tick, socket),
     do: CalendarEventHandlers.handle_tick(socket)
 
+  def handle_info(:agenda_tick, socket) do
+    {:noreply, socket |> reschedule_agenda_tick(socket.assigns.live_action) |> refresh_agenda()}
+  end
+
   def handle_info({:calendar_events_updated, _user_id, _changed_uids}, socket),
     do: CalendarEventHandlers.handle_calendar_events_updated(socket)
 
@@ -523,12 +549,20 @@ defmodule TymeslotWeb.DashboardLive do
   defp load_dashboard_data(socket) do
     user = socket.assigns[:current_user]
     action = socket.assigns[:live_action]
+    timezone = socket.assigns[:profile] && socket.assigns.profile.timezone
 
     if user do
-      dashboard_data = DashboardContext.get_dashboard_data_for_action(user.email, action)
+      dashboard_data = DashboardContext.get_dashboard_data_for_action(user, timezone, action)
       assign(socket, dashboard_data)
     else
       socket
     end
   end
+
+  # Rebuilds only the overview agenda on a tick; a stale timer that fires after
+  # the user has navigated elsewhere is a no-op.
+  defp refresh_agenda(%{assigns: %{live_action: :overview}} = socket),
+    do: load_dashboard_data(socket)
+
+  defp refresh_agenda(socket), do: socket
 end

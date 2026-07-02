@@ -6,10 +6,10 @@ defmodule Tymeslot.Dashboard.DashboardContext do
 
   require Logger
 
+  alias Tymeslot.Agenda
   alias Tymeslot.Infrastructure.DashboardCache
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
-  alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
 
@@ -103,32 +103,25 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   @doc """
   Gets dashboard-specific data for a given action.
 
-  Returns action-specific data needed for rendering. For :overview action,
-  returns upcoming meetings (limited to 3). For other actions, returns empty data.
+  For the `:overview` action, builds the live agenda (`Agenda.Day`) for the user
+  in their timezone — the merged Today/Tomorrow view of bookings and synced
+  calendar events. Other actions need no extra data and return an empty map.
 
   ## Examples
 
-      iex> get_dashboard_data_for_action("user@test.com", :overview)
-      %{upcoming_meetings: [%Meeting{}, %Meeting{}, %Meeting{}]}
+      iex> get_dashboard_data_for_action(user, "Europe/Berlin", :overview)
+      %{agenda: %Tymeslot.Agenda.Day{}}
 
-      iex> get_dashboard_data_for_action("user@test.com", :settings)
-      %{upcoming_meetings: []}
+      iex> get_dashboard_data_for_action(user, "Europe/Berlin", :settings)
+      %{}
   """
-  @spec get_dashboard_data_for_action(String.t(), atom()) :: map()
-  def get_dashboard_data_for_action(user_email, action) when is_binary(user_email) do
-    case action do
-      :overview ->
-        # Business rule: Overview displays 3 upcoming meetings
-        meetings = Meetings.list_upcoming_meetings_for_user(user_email, 3)
-        %{upcoming_meetings: meetings}
-
-      _other_tab ->
-        %{upcoming_meetings: []}
-    end
+  @spec get_dashboard_data_for_action(map(), String.t() | nil, atom()) :: map()
+  def get_dashboard_data_for_action(%{email: email} = user, timezone, :overview)
+      when is_binary(email) do
+    %{agenda: Agenda.day_agenda(user, timezone)}
   end
 
-  @spec get_dashboard_data_for_action(nil | any(), atom()) :: map()
-  def get_dashboard_data_for_action(_user_email, _action), do: %{upcoming_meetings: []}
+  def get_dashboard_data_for_action(_user, _timezone, _action), do: %{}
 
   # Runs calendar, video, and meeting type queries concurrently with timeout
   # protection. If any query times out, it falls back to an empty list for

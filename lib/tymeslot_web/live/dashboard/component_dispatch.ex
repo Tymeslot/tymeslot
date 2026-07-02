@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
   use Phoenix.Component
 
   alias Phoenix.Naming
+  alias Tymeslot.Agenda.Day
   alias Tymeslot.Profiles
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
   alias TymeslotWeb.Dashboard.BookingsManagementComponent
@@ -63,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
   """
   @spec props_for_action(map()) :: map()
   def props_for_action(%{live_action: :overview} = assigns) do
-    %{shared_data: %{upcoming_meetings: assigns[:upcoming_meetings] || []}}
+    %{shared_data: %{agenda: assigns[:agenda] || %Day{}}}
   end
 
   def props_for_action(%{live_action: action} = assigns)

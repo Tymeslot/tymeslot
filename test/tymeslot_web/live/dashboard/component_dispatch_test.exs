@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatchTest do
 
   @moduletag :unit
 
+  alias Tymeslot.Agenda.Day
   alias TymeslotWeb.Dashboard.AutomationSettingsComponent
   alias TymeslotWeb.Dashboard.BookingsManagementComponent
   alias TymeslotWeb.Dashboard.CalendarGridComponent
@@ -68,17 +69,16 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatchTest do
   end
 
   describe "props_for_action/1" do
-    test ":overview surfaces upcoming_meetings as shared_data" do
-      meetings = [%{id: 1}, %{id: 2}]
-      assigns = %{live_action: :overview, upcoming_meetings: meetings}
+    test ":overview surfaces the agenda as shared_data" do
+      agenda = %Day{today: [%{id: 1}]}
+      assigns = %{live_action: :overview, agenda: agenda}
 
-      assert ComponentDispatch.props_for_action(assigns) ==
-               %{shared_data: %{upcoming_meetings: meetings}}
+      assert ComponentDispatch.props_for_action(assigns) == %{shared_data: %{agenda: agenda}}
     end
 
-    test ":overview defaults upcoming_meetings to [] when missing" do
+    test ":overview defaults the agenda to an empty Day when missing" do
       assert ComponentDispatch.props_for_action(%{live_action: :overview}) ==
-               %{shared_data: %{upcoming_meetings: []}}
+               %{shared_data: %{agenda: %Day{}}}
     end
 
     test ":settings prefills the profile timezone from the detected timezone" do
