@@ -91,4 +91,44 @@ defmodule Tymeslot.Integrations.Calendar.EventColourTest do
       assert EventColour.css_colour(nil) == nil
     end
   end
+
+  describe "from_google_color_id/1" do
+    test "maps a known Google colorId to its palette key" do
+      assert EventColour.from_google_color_id("9") == "blueberry"
+      assert EventColour.from_google_color_id("11") == "tomato"
+      assert EventColour.from_google_color_id("3") == "grape"
+    end
+
+    test "returns nil for unknown or nil colorId" do
+      assert EventColour.from_google_color_id("999") == nil
+      assert EventColour.from_google_color_id(nil) == nil
+      assert EventColour.from_google_color_id(42) == nil
+    end
+  end
+
+  describe "nearest_key/1" do
+    test "snaps an exact palette hex to its key" do
+      assert EventColour.nearest_key("#4169E1") == "blueberry"
+      assert EventColour.nearest_key("#FF6347") == "tomato"
+    end
+
+    test "snaps a near hex to the closest key" do
+      assert EventColour.nearest_key("#4269E2") == "blueberry"
+    end
+
+    test "accepts a known CSS colour name" do
+      assert EventColour.nearest_key("royalblue") == "blueberry"
+      assert EventColour.nearest_key("teal") == "peacock"
+    end
+
+    test "ignores an alpha channel (#RRGGBBAA)" do
+      assert EventColour.nearest_key("#4169E1FF") == "blueberry"
+    end
+
+    test "returns nil for nil or unparseable input" do
+      assert EventColour.nearest_key(nil) == nil
+      assert EventColour.nearest_key("not-a-colour") == nil
+      assert EventColour.nearest_key(123) == nil
+    end
+  end
 end
