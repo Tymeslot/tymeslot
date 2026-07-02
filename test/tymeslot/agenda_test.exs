@@ -139,6 +139,25 @@ defmodule Tymeslot.AgendaTest do
       assert "Solo booking" in titles(day)
     end
 
+    test "excludes events from an inactive integration and reports no calendar presence",
+         %{user: user, tomorrow: tomorrow} do
+      integration = insert(:calendar_integration, user: user, is_active: false)
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        summary: "Should not appear",
+        start_at: at(tomorrow, ~T[12:00:00]),
+        end_at: at(tomorrow, ~T[13:00:00]),
+        all_day: false
+      )
+
+      day = Agenda.day_agenda(user, "Etc/UTC")
+
+      refute "Should not appear" in titles(day)
+      assert Day.empty?(day)
+      refute day.has_calendar?
+    end
+
     test "keeps the hero populated with the next appointment beyond tomorrow",
          %{user: user, today: today} do
       booking(user, at(Date.add(today, 5), ~T[12:00:00]), title: "Next week")

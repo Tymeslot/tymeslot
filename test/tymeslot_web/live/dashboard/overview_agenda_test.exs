@@ -143,6 +143,38 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
            |> render_click() =~ "agenda-detail-modal"
   end
 
+  test "the 60s agenda tick refreshes the agenda without a page reload",
+       %{conn: conn, user: user} do
+    {:ok, view, html} = live(conn, ~p"/dashboard")
+
+    assert html =~ "Nothing on your plate today or tomorrow"
+
+    # Inserted after mount, so it can only appear once the tick re-fetches.
+    tomorrow = Date.add(Date.utc_today(), 1)
+    start = DateTime.new!(tomorrow, ~T[12:00:00], "Etc/UTC")
+
+    insert(:meeting,
+      organizer_email: user.email,
+      start_time: start,
+      end_time: DateTime.add(start, 3600, :second),
+      status: "confirmed",
+      title: "Freshly booked"
+    )
+
+    send(view.pid, :agenda_tick)
+    html = render(view)
+
+    assert html =~ "Freshly booked"
+    refute html =~ "Nothing on your plate today or tomorrow"
+
+    # A second tick (mirroring the rescheduled timer firing again) is still a
+    # clean no-op re-render, not a crash or a stacked/duplicate refresh.
+    send(view.pid, :agenda_tick)
+    html = render(view)
+    assert html =~ "Freshly booked"
+    assert Process.alive?(view.pid)
+  end
+
   test "a synced calendar event offers Join but no booking management",
        %{conn: conn, user: user} do
     tomorrow = Date.add(Date.utc_today(), 1)
