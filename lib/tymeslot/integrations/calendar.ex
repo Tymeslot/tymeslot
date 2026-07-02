@@ -36,6 +36,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Workers.ColourWriteBackWorker
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
@@ -470,9 +471,9 @@ defmodule Tymeslot.Integrations.Calendar do
     do: ColourOverrideQueries.clear_meeting(user_id, meeting_id)
 
   def clear_event_colour(user_id, {:external, integration_id, uid}) do
+    # Clearing drops the override only; the host calendar is left untouched and
+    # the next sync reconciles — so no write-back is enqueued here.
     ColourOverrideQueries.clear_external(user_id, integration_id, uid)
-    maybe_enqueue_colour_write_back(user_id, integration_id, uid, nil)
-    :ok
   end
 
   @doc """
@@ -482,7 +483,14 @@ defmodule Tymeslot.Integrations.Calendar do
   @spec overrides_for(user_id()) :: %{optional(tuple()) => String.t()}
   def overrides_for(user_id), do: ColourOverrideQueries.for_user(user_id)
 
-  # Provider write-back is wired in a later task (reuses the existing update
-  # path). Stubbed as a no-op for now.
-  defp maybe_enqueue_colour_write_back(_user_id, _integration_id, _uid, _colour), do: :ok
+  # Best-effort provider write-back for a *set*. The worker sends the event's
+  # full timing so the provider write cannot wipe fields; Outlook and read-only
+  # calendars are handled inside the worker.
+  defp maybe_enqueue_colour_write_back(user_id, integration_id, uid, colour) do
+    %{"user_id" => user_id, "integration_id" => integration_id, "uid" => uid, "colour" => colour}
+    |> ColourWriteBackWorker.new()
+    |> Oban.insert()
+
+    :ok
+  end
 end
