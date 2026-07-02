@@ -248,6 +248,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       assert event.visibility == :private
     end
 
+    test "maps colour to the nearest palette key" do
+      raw = %{
+        uid: "colour-001@example.com",
+        summary: "Coloured Event",
+        dtstart: ~U[2030-06-15 09:00:00Z],
+        dtend: ~U[2030-06-15 10:00:00Z],
+        colour: "royalblue"
+      }
+
+      assert {:ok, [event]} = EventProcessor.normalise_events([raw], @context)
+      assert event.colour == "blueberry"
+    end
+
     test "expands recurring event with RRULE into multiple CalendarEvent structs" do
       raw = %{
         uid: "recurring-001@example.com",

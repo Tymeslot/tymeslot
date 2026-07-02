@@ -157,7 +157,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         end_time: end_time,
         transparency: normalize_transp(extract_property(lines, "TRANSP")),
         status: extract_property(lines, "STATUS"),
-        class: extract_property(lines, "CLASS")
+        class: extract_property(lines, "CLASS"),
+        colour:
+          extract_property(lines, "COLOR") || extract_property(lines, "X-APPLE-CALENDAR-COLOR")
       }
     else
       Logger.debug("Skipping event with missing required fields",
