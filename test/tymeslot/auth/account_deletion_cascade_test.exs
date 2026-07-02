@@ -280,6 +280,29 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
              "availability_break: expected transitive delete-cascade through its weekly_availability"
     end
 
+    test "payment_transactions FK nilifies (not deletes) a row missed by the retention pass" do
+      # Safety net independent of delete_user/1's ordering. DataRetention
+      # nilifies user_id before the user row is removed, so the normal path
+      # never relies on the FK's on_delete. But if a row is ever missed — a
+      # new code path, a reordering — the FK must NILIFY, not DELETE, or a
+      # tax record is silently destroyed. Delete the user row directly here
+      # to bypass the retention pass and exercise the FK behaviour alone.
+      user = insert(:user)
+
+      payment_transaction =
+        insert(:payment_transaction, user: user, host_email: user.email, host_name: "Host")
+
+      assert {:ok, _} = Repo.delete(user)
+
+      survived = Repo.get(PaymentTransactionSchema, payment_transaction.id)
+
+      assert survived,
+             "payment_transaction must survive a user delete via :nilify_all FK, " <>
+               "even without the retention pre-pass"
+
+      assert survived.user_id == nil, "user_id must be nilified by the FK, not the row deleted"
+    end
+
     test "does not touch rows belonging to another user" do
       # Co-tenant isolation: deleting user A must only cascade to
       # associations that point at user A. A concurrent user B's
