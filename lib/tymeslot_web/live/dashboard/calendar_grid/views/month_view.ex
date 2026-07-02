@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
   # Vertical rhythm for the bar band, in rem. The day number occupies the top
   # `@band_top`; each multi-day/all-day bar lane is `@lane_h` tall with the bar
   # itself `@bar_h`. Single-day chips are pushed below the reserved lane band.
-  @band_top 1.5
+  @band_top 1.75
   @lane_h 1.25
   @bar_h 1.1
 
@@ -33,8 +33,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
       <%!-- Day-of-week headers --%>
       <div class="grid border-b border-tymeslot-200 bg-white sticky top-0 z-10"
         style={if Helpers.show_week_numbers?(assigns), do: "grid-template-columns: 2rem repeat(7, 1fr)", else: "grid-template-columns: repeat(7, 1fr)"}>
-        <div :if={Helpers.show_week_numbers?(assigns)} class="text-center text-token-xs font-medium text-tymeslot-400 py-1 sm:py-2">Wk</div>
-        <div :for={day_name <- Helpers.day_name_headers(assigns)} class="text-center text-token-xs font-medium text-tymeslot-500 py-1 sm:py-2 uppercase tracking-wide">
+        <div :if={Helpers.show_week_numbers?(assigns)} class="text-center text-token-xs font-semibold text-tymeslot-500 py-1 sm:py-2">Wk</div>
+        <div :for={day_name <- Helpers.day_name_headers(assigns)} class="text-center text-token-xs font-semibold text-tymeslot-600 py-1 sm:py-2 uppercase tracking-wide">
           <span class="hidden sm:inline"><%= day_name %></span>
           <span class="sm:hidden"><%= String.first(day_name) %></span>
         </div>
@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
       <%!-- One row per week (keyed on month to retrigger fade on navigation).
             Each week is its own positioning context so multi-day / all-day bars
             can span its day columns. --%>
-      <div id={"month-grid-#{@date.year}-#{@date.month}"} class="animate-fade-in border-l border-t border-tymeslot-100">
+      <div id={"month-grid-#{@date.year}-#{@date.month}"} class="animate-fade-in border-l border-t border-tymeslot-200">
         <.month_week
           :for={week_days <- Enum.chunk_every(@visible_days, 7)}
           week_days={week_days}
@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
     <div class="flex">
       <div
         :if={Helpers.show_week_numbers?(@assigns_ref)}
-        class="w-8 shrink-0 text-token-xs text-tymeslot-400 flex items-start justify-center pt-1 border-b border-r border-tymeslot-100"
+        class="w-8 shrink-0 text-token-xs font-medium text-tymeslot-500 flex items-start justify-center pt-1 border-b border-r border-tymeslot-200"
       ><%= Helpers.week_number(List.first(@week_days)) %></div>
 
       <div class="relative flex-1">
@@ -95,7 +95,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
         <div class="absolute inset-0 pointer-events-none">
           <div
             :for={seg <- @segments}
-            class={"absolute px-1 flex items-center text-token-2xs text-white truncate cursor-pointer pointer-events-auto #{bar_round_class(seg)} #{Helpers.color_for_event(@assigns_ref, seg.event)}"}
+            class={"absolute px-1 flex items-center text-token-xs font-medium text-white truncate cursor-pointer pointer-events-auto #{bar_round_class(seg)} #{Helpers.color_for_event(@assigns_ref, seg.event)}"}
             style={bar_style(seg)}
             phx-click="show_event"
             phx-value-event-id={seg.event.id}
@@ -138,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
 
     ~H"""
     <div
-      class={"relative min-h-16 sm:min-h-24 border-b border-r border-tymeslot-100 p-1 cursor-pointer hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-inset #{Helpers.month_cell_class(@day, @assigns_ref)}"}
+      class={"relative min-h-16 sm:min-h-24 border-b border-r border-tymeslot-200 p-1 cursor-pointer hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-inset #{Helpers.month_cell_class(@day, @assigns_ref)}"}
       style={cell_padding_top(@lane_count)}
       phx-click="navigate_to_day"
       phx-value-date={Date.to_iso8601(@day)}
@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
       tabindex="0"
       aria-label={Calendar.strftime(@day, "%A, %B %-d") <> ", #{length(@chips)} events"}
     >
-      <div class={"absolute top-1 left-1 text-token-xs font-medium #{day_number_class(@is_today, @is_current_month)}"}>
+      <div class={"absolute top-1 left-1 text-token-sm font-semibold #{day_number_class(@is_today, @is_current_month)}"}>
         <%= @day.day %>
       </div>
 
@@ -155,7 +155,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
       <div class="hidden sm:block">
         <div
           :for={event <- Enum.take(@chips, 3)}
-          class={"rounded px-1 text-token-xs text-white truncate mb-0.5 cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
+          class={"rounded px-1 text-token-xs font-medium text-white truncate mb-0.5 cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
           phx-click="show_event"
           phx-value-event-id={event.id}
           phx-target={@myself}
@@ -171,7 +171,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
             title={EventBadges.guest_badge_title(EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event))}
           ></span>
         </div>
-        <div :if={length(@chips) > 3} class="text-token-xs text-tymeslot-400 mt-0.5">
+        <div :if={length(@chips) > 3} class="text-token-xs font-medium text-tymeslot-500 mt-0.5">
           +<%= length(@chips) - 3 %> more
         </div>
       </div>
@@ -180,7 +180,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
       <div class="sm:hidden flex flex-col gap-0.5">
         <div
           :if={List.first(@chips)}
-          class={"rounded px-1 text-token-2xs text-white truncate #{Helpers.color_for_event(@assigns_ref, List.first(@chips))}"}
+          class={"rounded px-1 text-token-xs font-medium text-white truncate #{Helpers.color_for_event(@assigns_ref, List.first(@chips))}"}
         ><%= List.first(@chips).summary || "(No title)" %></div>
         <div
           :if={length(@chips) > 1}
@@ -218,8 +218,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
 
   defp day_number_class(true = _is_today, _is_current_month),
     do:
-      "w-5 h-5 rounded-full bg-turquoise-600 text-white flex items-center justify-center text-center"
+      "w-6 h-6 rounded-full bg-turquoise-600 text-white flex items-center justify-center text-center"
 
-  defp day_number_class(_is_today, false = _is_current_month), do: "text-tymeslot-300"
-  defp day_number_class(_is_today, _is_current_month), do: "text-tymeslot-600"
+  defp day_number_class(_is_today, false = _is_current_month), do: "text-tymeslot-400"
+  defp day_number_class(_is_today, _is_current_month), do: "text-tymeslot-800"
 end
