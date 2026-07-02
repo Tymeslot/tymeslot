@@ -7,6 +7,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
   2. Incoming Stripe webhook events (90 days retention)
   3. Slack delivery logs (60 days retention)
   4. Telegram delivery logs (60 days retention)
+  5. Analytics page-view events (90 days retention)
 
   Ensures the database doesn't grow indefinitely by removing
   old records based on configured retention periods.
@@ -19,6 +20,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
 
   require Logger
 
+  alias Tymeslot.Analytics
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
   alias Tymeslot.Webhooks.WebhookQueries
@@ -41,6 +43,9 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
 
     # Clean up Telegram delivery logs (one row per attempt — grows fast)
     cleanup_telegram_deliveries(args)
+
+    # Clean up analytics page-view events (one row per page view — grows fast)
+    cleanup_analytics_events(args)
 
     :ok
   end
@@ -113,6 +118,23 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
     {count, _rows} = Telegram.prune_deliveries(retention_days)
 
     Logger.info("Telegram delivery cleanup completed",
+      deleted_count: count,
+      retention_days: retention_days
+    )
+  end
+
+  defp cleanup_analytics_events(args) do
+    # Default to 90 days retention, matching Stripe event retention.
+    retention_days =
+      Map.get(args, "analytics_event_retention_days") ||
+        @retention[:analytics_event_days] ||
+        90
+
+    Logger.info("Starting analytics event cleanup", retention_days: retention_days)
+
+    {count, _rows} = Analytics.prune_events(retention_days)
+
+    Logger.info("Analytics event cleanup completed",
       deleted_count: count,
       retention_days: retention_days
     )

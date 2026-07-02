@@ -15,6 +15,23 @@ defmodule Tymeslot.Analytics.EventQueries do
     %EventSchema{} |> EventSchema.changeset(attrs) |> Repo.insert()
   end
 
+  @doc """
+  Deletes analytics events older than `days`. One row is written per page view,
+  so this table grows unbounded without pruning. A negative or non-integer
+  retention is treated as a no-op so a misconfigured value can never wipe the
+  whole table.
+  """
+  @spec delete_events_older_than(integer()) :: {non_neg_integer(), nil}
+  def delete_events_older_than(days) when is_integer(days) and days >= 0 do
+    cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
+
+    EventSchema
+    |> where([e], e.inserted_at < ^cutoff)
+    |> Repo.delete_all()
+  end
+
+  def delete_events_older_than(_days), do: {0, nil}
+
   @spec count_visits(integer(), DateTime.t(), DateTime.t()) :: non_neg_integer()
   def count_visits(user_id, from, to) do
     EventSchema

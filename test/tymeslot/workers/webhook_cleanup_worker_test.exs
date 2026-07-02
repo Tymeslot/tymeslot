@@ -7,6 +7,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Analytics.EventSchema
   alias Tymeslot.Slack.SlackDeliverySchema
   alias Tymeslot.Telegram.TelegramDeliverySchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
@@ -243,6 +244,34 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
 
       assert :ok = perform_job(WebhookCleanupWorker, %{"telegram_delivery_retention_days" => 30})
       refute Repo.get(TelegramDeliverySchema, delivery.id)
+    end
+  end
+
+  describe "perform/1 - analytics event cleanup" do
+    defp insert_analytics_event(inserted_at) do
+      Repo.insert!(%EventSchema{
+        event_type: "page_view",
+        path: "/#{System.unique_integer([:positive])}",
+        visitor_hash: "v#{System.unique_integer([:positive])}",
+        inserted_at: inserted_at
+      })
+    end
+
+    test "removes analytics events older than 90 days, keeps recent ones" do
+      old = insert_analytics_event(DateTime.add(DateTime.utc_now(), -91, :day))
+      recent = insert_analytics_event(DateTime.add(DateTime.utc_now(), -30, :day))
+
+      assert :ok = perform_job(WebhookCleanupWorker, %{})
+
+      refute Repo.get(EventSchema, old.id)
+      assert Repo.get(EventSchema, recent.id)
+    end
+
+    test "respects the analytics_event_retention_days argument" do
+      event = insert_analytics_event(DateTime.add(DateTime.utc_now(), -45, :day))
+
+      assert :ok = perform_job(WebhookCleanupWorker, %{"analytics_event_retention_days" => 30})
+      refute Repo.get(EventSchema, event.id)
     end
   end
 end
