@@ -279,6 +279,47 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   @doc """
+  Bulk-deletes events for the integration whose uid is in `uids`, in a single
+  statement rather than one round-trip per uid. Returns the number of rows
+  deleted.
+  """
+  @spec delete_by_uids(integer(), [String.t()]) :: non_neg_integer()
+  def delete_by_uids(_calendar_integration_id, []), do: 0
+
+  def delete_by_uids(calendar_integration_id, uids) do
+    {count, _rows} =
+      ProviderCalendarEventSchema
+      |> where(
+        [e],
+        e.calendar_integration_id == ^calendar_integration_id and e.uid in ^uids
+      )
+      |> Repo.delete_all()
+
+    count
+  end
+
+  @doc """
+  Bulk-deletes events for the integration whose provider_event_id is in
+  `provider_event_ids`, in a single statement. Returns the number of rows
+  deleted.
+  """
+  @spec delete_by_provider_event_ids(integer(), [String.t()]) :: non_neg_integer()
+  def delete_by_provider_event_ids(_calendar_integration_id, []), do: 0
+
+  def delete_by_provider_event_ids(calendar_integration_id, provider_event_ids) do
+    {count, _rows} =
+      ProviderCalendarEventSchema
+      |> where(
+        [e],
+        e.calendar_integration_id == ^calendar_integration_id and
+          e.provider_event_id in ^provider_event_ids
+      )
+      |> Repo.delete_all()
+
+    count
+  end
+
+  @doc """
   Deletes a single event identified by its integration and provider event ID.
 
   Returns `{:ok, :deleted}` if a row was removed, `{:ok, :not_found}` if nothing matched.

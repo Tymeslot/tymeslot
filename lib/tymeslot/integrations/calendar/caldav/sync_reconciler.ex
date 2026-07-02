@@ -231,9 +231,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
       Repo.transaction(fn ->
         case Sync.upsert_cache(integration, calendar_events) do
           {:ok, _count} ->
-            Enum.each(deleted_hrefs, fn href ->
-              ProviderCalendarEventQueries.delete_by_provider_event_id(integration.id, href)
-            end)
+            ProviderCalendarEventQueries.delete_by_provider_event_ids(
+              integration.id,
+              deleted_hrefs
+            )
 
             deleted_hrefs
 
@@ -290,9 +291,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
         missing_count: length(missing_uids)
       )
 
-      Enum.each(missing_uids, fn uid ->
-        ProviderCalendarEventQueries.delete_by_uid(integration.id, uid)
-      end)
+      ProviderCalendarEventQueries.delete_by_uids(integration.id, missing_uids)
     end
 
     missing_uids
