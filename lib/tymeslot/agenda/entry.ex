@@ -26,10 +26,18 @@ defmodule Tymeslot.Agenda.Entry do
     :location,
     :join_url,
     :who,
-    :calendar
+    :calendar,
+    :colour,
+    :target
   ]
 
   @type source :: :tymeslot | :external
+
+  @typedoc """
+  The stable override target for this entry: a booking (`{:meeting, uuid}`) or an
+  external event (`{:external, integration_id, uid}`). Used to set/clear a colour.
+  """
+  @type target :: {:meeting, Ecto.UUID.t()} | {:external, integer(), String.t()}
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -42,7 +50,9 @@ defmodule Tymeslot.Agenda.Entry do
           location: String.t() | nil,
           join_url: String.t() | nil,
           who: String.t() | nil,
-          calendar: String.t() | nil
+          calendar: String.t() | nil,
+          colour: String.t() | nil,
+          target: target() | nil
         }
 
   @doc """

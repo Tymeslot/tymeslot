@@ -13,6 +13,8 @@ defmodule Tymeslot.Agenda do
   alias Tymeslot.Agenda.Entry
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
+  alias Tymeslot.Integrations.Calendar.ColourResolver
   alias Tymeslot.Meetings
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -44,10 +46,11 @@ defmodule Tymeslot.Agenda do
     integrations = active_integrations(user)
     integration_ids = Enum.map(integrations, & &1.id)
     calendar_names = Map.new(integrations, &{&1.id, &1.name})
+    overrides = load_overrides(user)
 
     entries =
       user
-      |> gather_entries(integration_ids, calendar_names, now, window_end, tz)
+      |> gather_entries(integration_ids, calendar_names, overrides, now, window_end, tz)
       |> Enum.filter(&upcoming?(&1, now))
       |> Enum.sort_by(& &1.start_at, DateTime)
 
@@ -65,7 +68,7 @@ defmodule Tymeslot.Agenda do
 
   # --- Gathering & merging ---------------------------------------------------
 
-  defp gather_entries(user, integration_ids, calendar_names, now, window_end, tz) do
+  defp gather_entries(user, integration_ids, calendar_names, overrides, now, window_end, tz) do
     # The `/2` query filters to confirmed bookings; `/1` would include pending
     # and cancelled ones, which have no place on the agenda.
     meetings = Meetings.list_upcoming_meetings_for_user(user.email, @meeting_limit)
@@ -83,8 +86,8 @@ defmodule Tymeslot.Agenda do
       |> CalendarGrid.list_events_for_range(now, window_end, limit: @external_event_limit)
       |> Enum.reject(&drop_external?(&1, booked_event_ids))
 
-    Enum.map(meetings, &entry_from_meeting(&1, tz)) ++
-      Enum.map(external, &entry_from_event(&1, tz, calendar_names))
+    Enum.map(meetings, &entry_from_meeting(&1, tz, overrides)) ++
+      Enum.map(external, &entry_from_event(&1, tz, calendar_names, overrides))
   end
 
   # An external event is dropped when it is one of our own synced bookings, a
@@ -110,7 +113,9 @@ defmodule Tymeslot.Agenda do
 
   # --- Normalisation ---------------------------------------------------------
 
-  defp entry_from_meeting(meeting, tz) do
+  defp entry_from_meeting(meeting, tz, overrides) do
+    target = {:meeting, meeting.id}
+
     %Entry{
       id: "meeting-" <> to_string(meeting.id),
       source: :tymeslot,
@@ -122,12 +127,15 @@ defmodule Tymeslot.Agenda do
       location: presence(meeting.location),
       join_url: presence(meeting.organizer_video_url) || presence(meeting.meeting_url),
       who: presence(meeting.attendee_name),
-      calendar: nil
+      calendar: nil,
+      colour: ColourResolver.resolve(Map.get(overrides, target), nil),
+      target: target
     }
   end
 
-  defp entry_from_event(%{all_day: true} = event, tz, calendar_names) do
+  defp entry_from_event(%{all_day: true} = event, tz, calendar_names, overrides) do
     end_date = event.end_date || Date.add(event.start_date, 1)
+    target = event_target(event)
 
     %Entry{
       id: "event-" <> to_string(event.id),
@@ -140,12 +148,15 @@ defmodule Tymeslot.Agenda do
       location: presence(event.location),
       join_url: nil,
       who: organiser_name(event.organiser),
-      calendar: calendar_name(event, calendar_names)
+      calendar: calendar_name(event, calendar_names),
+      colour: ColourResolver.resolve(Map.get(overrides, target), event.colour),
+      target: target
     }
   end
 
-  defp entry_from_event(event, tz, calendar_names) do
+  defp entry_from_event(event, tz, calendar_names, overrides) do
     end_at = event.end_at || DateTime.add(event.start_at, 3600, :second)
+    target = event_target(event)
 
     %Entry{
       id: "event-" <> to_string(event.id),
@@ -158,9 +169,13 @@ defmodule Tymeslot.Agenda do
       location: presence(event.location),
       join_url: presence(event.video_link),
       who: organiser_name(event.organiser),
-      calendar: calendar_name(event, calendar_names)
+      calendar: calendar_name(event, calendar_names),
+      colour: ColourResolver.resolve(Map.get(overrides, target), event.colour),
+      target: target
     }
   end
+
+  defp event_target(event), do: {:external, event.calendar_integration_id, event.uid}
 
   # --- Helpers ---------------------------------------------------------------
 
@@ -171,6 +186,9 @@ defmodule Tymeslot.Agenda do
   end
 
   defp active_integrations(_user), do: []
+
+  defp load_overrides(%{id: id}) when is_integer(id), do: ColourOverrideQueries.for_user(id)
+  defp load_overrides(_user), do: %{}
 
   defp calendar_name(%{calendar_integration_id: id}, calendar_names),
     do: presence(Map.get(calendar_names, id))
