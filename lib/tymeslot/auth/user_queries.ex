@@ -330,14 +330,26 @@ defmodule Tymeslot.Auth.UserQueries do
   """
   @spec delete_user(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t() | term()}
   def delete_user(%UserSchema{} = user) do
-    Repo.transaction(fn ->
-      with :ok <- MeetingPayments.anonymise_host(user.id),
-           {:ok, deleted} <- Repo.delete(user) do
-        deleted
-      else
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+    # Run the external-cleanup hook (e.g. SaaS subscription cancellation) before
+    # any DB change. If it fails, abort: we never delete a user while external
+    # state that keeps billing them could not be torn down.
+    with :ok <- run_account_deletion_hook(user.id) do
+      Repo.transaction(fn ->
+        with :ok <- MeetingPayments.anonymise_host(user.id),
+             {:ok, deleted} <- Repo.delete(user) do
+          deleted
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+    end
+  end
+
+  defp run_account_deletion_hook(user_id) do
+    case Application.get_env(:tymeslot, :account_deletion_hook) do
+      nil -> :ok
+      hook -> hook.on_account_deletion(user_id)
+    end
   end
 
   @doc """

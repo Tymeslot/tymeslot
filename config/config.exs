@@ -95,6 +95,12 @@ config :tymeslot,
   # Subscription manager - nil by default (can be provided by external layers)
   subscription_manager: nil,
 
+  # Account-deletion hook - nil by default. An external layer (e.g. SaaS billing)
+  # can provide a module implementing Tymeslot.Auth.Behaviours.AccountDeletionHook
+  # to perform external cleanup (e.g. cancelling a subscription) that must
+  # succeed before a user is deleted. See delete_user/1.
+  account_deletion_hook: nil,
+
   # Admin alerts — disabled by default. Self-hosters can enable via the
   # ADMIN_ALERTS_ENABLED env var (set true) plus a valid ADMIN_ALERT_EMAIL.
   # SaaS overrides admin_alerts_enabled to true in apps/tymeslot_saas/config/config.exs.
