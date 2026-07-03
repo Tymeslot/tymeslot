@@ -7,7 +7,7 @@ defmodule Tymeslot.Meetings do
 
   require Logger
 
-  alias Tymeslot.Bookings.{Cancel, Create, Reschedule, RescheduleRequest}
+  alias Tymeslot.Bookings.{Cancel, Create, Errors, Reschedule, RescheduleRequest}
 
   alias Tymeslot.Meetings.{
     CalendarEvents,
@@ -39,11 +39,11 @@ defmodule Tymeslot.Meetings do
 
   ## Returns
     - {:ok, meeting} on success
-    - {:error, :slot_unavailable} if slot is no longer available
+    - {:error, :slot_taken} if slot is no longer available
     - {:error, reason} on other failures
   """
   @spec create_appointment_with_validation(Create.meeting_params(), map()) ::
-          {:ok, Ecto.Schema.t()} | {:error, String.t()}
+          {:ok, Ecto.Schema.t()} | {:error, Errors.classified_error() | String.t()}
   def create_appointment_with_validation(meeting_params, validated_form_data) do
     Create.execute(meeting_params, validated_form_data)
   end

@@ -62,15 +62,20 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers do
 
   ### Chaining Handlers
 
-      alias TymeslotWeb.Live.Scheduling.Handlers.{
-        FormValidationHandlerComponent,
-        BookingSubmissionHandlerComponent
-      }
+  Note: `BookingSubmissionHandlerComponent.submit_booking/2` has multiple
+  success-shaped return tags (`:ok`, `:redirect`, `:awaiting_payment`,
+  `:honeypot`, `:slot_taken`, `:error` — see its own `@doc`), so a plain
+  `with {:ok, socket} <- ...` chain would raise a `WithClauseError` on any
+  of the non-`:ok` outcomes. The canonical dispatch site that handles every
+  variant is `TymeslotWeb.Themes.Shared.BookingFlow.submit_booking/3` —
+  themes should call that rather than chaining
+  `BookingSubmissionHandlerComponent.submit_booking/2` directly with `with`.
+
+      alias TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent
 
       def handle_info({:step_event, :booking, :submit, data}, socket) do
-        with {:ok, socket} <- FormValidationHandlerComponent.validate_form(socket, data),
-             {:ok, socket} <- BookingSubmissionHandlerComponent.submit_booking(socket, data) do
-          {:noreply, socket}
+        with {:ok, socket} <- FormValidationHandlerComponent.validate_form(socket, data) do
+          BookingFlow.submit_booking(socket, data, &transition_to_confirmation/1)
         else
           {:error, socket} -> {:noreply, socket}
         end

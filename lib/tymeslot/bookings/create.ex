@@ -7,7 +7,7 @@ defmodule Tymeslot.Bookings.Create do
   require Logger
 
   alias Tymeslot.Availability.TimeSlots
-  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Policy, Validation}
+  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Errors, Policy, Validation}
   alias Tymeslot.CustomFields
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
@@ -32,11 +32,20 @@ defmodule Tymeslot.Bookings.Create do
 
   @type error_reason :: String.t() | atom() | {:validation_error, any()}
 
-  @typedoc "Result returned by `execute/3` and `execute_with_video_room/3`."
+  @typedoc """
+  Result returned by `execute/3` and `execute_with_video_room/3`.
+
+  The domain layer classifies every failure reason into one of
+  `Tymeslot.Bookings.Errors.classified_error/0` (or, for reasons that
+  already arrive as arbitrary changeset/validation text, passes the binary
+  through unchanged). Rendering an atom to user-facing copy is entirely the
+  web layer's responsibility — see
+  `TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage`.
+  """
   @type execute_result ::
           {:ok, map()}
           | {:ok, :payment_required, %{meeting: map(), checkout_url: String.t()}}
-          | {:error, String.t()}
+          | {:error, Errors.classified_error() | String.t()}
 
   @doc """
   Creates a booking with fresh calendar validation.
@@ -60,7 +69,7 @@ defmodule Tymeslot.Bookings.Create do
          {:ok, :validated} <- validate_booking(booking_data, opts) do
       create_meeting_and_all_side_effects_atomically(booking_data, opts)
     else
-      {:error, reason} -> {:error, map_error_to_message(reason)}
+      {:error, reason} -> {:error, classify_error(reason)}
     end
   end
 
@@ -84,14 +93,14 @@ defmodule Tymeslot.Bookings.Create do
 
         {:error, :slot_unavailable} ->
           # Fail fast for better UX
-          {:error, map_error_to_message(:slot_unavailable)}
+          {:error, classify_error(:slot_unavailable)}
 
         {:error, _reason} ->
           # Calendar check failed, but continue with atomic booking
           execute_internal(booking_data, form_data, opts)
       end
     else
-      {:error, reason} -> {:error, map_error_to_message(reason)}
+      {:error, reason} -> {:error, classify_error(reason)}
     end
   end
 
@@ -271,7 +280,7 @@ defmodule Tymeslot.Bookings.Create do
         create_meeting_and_all_side_effects_atomically(booking_data, opts)
 
       {:error, reason} ->
-        {:error, map_error_to_message(reason)}
+        {:error, classify_error(reason)}
     end
   end
 
@@ -334,16 +343,16 @@ defmodule Tymeslot.Bookings.Create do
                 {:ok, :payment_required, %{meeting: meeting, checkout_url: url}}
 
               {:error, reason} ->
-                {:error, map_error_to_message(reason)}
+                {:error, classify_error(reason)}
             end
 
           {:error, reason} ->
             expire_unpaid_meeting(meeting, reason)
-            {:error, map_error_to_message(reason)}
+            {:error, classify_error(reason)}
         end
 
       {:error, reason} ->
-        {:error, map_error_to_message(reason)}
+        {:error, classify_error(reason)}
     end
   end
 
@@ -427,51 +436,62 @@ defmodule Tymeslot.Bookings.Create do
     {:ok, meeting}
   end
 
-  defp map_transaction_result({:error, reason}), do: {:error, map_error_to_message(reason)}
+  defp map_transaction_result({:error, reason}), do: {:error, classify_error(reason)}
 
-  defp map_error_to_message(reason) do
+  # Classifies every failure reason into a semantic atom rather than a
+  # display string, so callers can dispatch on the error's identity (e.g.
+  # bounce the booker back to the schedule step on `:slot_taken`) without
+  # depending on copy text. The web layer owns rendering these atoms to
+  # user-facing messages. `:time_conflict` and `:slot_unavailable` both
+  # describe the same lost-race outcome and collapse to `:slot_taken`;
+  # `:host_not_found`/`:host_missing` and `:meeting_type_not_found`/
+  # `:meeting_type_missing` are likewise distinct upstream reasons that
+  # share one user-facing meaning, so they collapse to a single atom each.
+  # Reasons that already arrive as arbitrary changeset/validation text pass
+  # through unchanged (`is_binary/1` clause).
+  defp classify_error(reason) do
     case reason do
       :meeting_type_inactive ->
-        "This meeting type is no longer available. Please refresh the page."
+        :meeting_type_inactive
 
       :meeting_type_not_found ->
-        "This meeting type is no longer available. Please go back and select another."
+        :meeting_type_not_found
 
       :time_conflict ->
-        "This time slot is no longer available. Please select a different time."
+        :slot_taken
 
       :slot_unavailable ->
-        "This time slot is no longer available. Please select a different time."
+        :slot_taken
 
       :organizer_required ->
-        "Organizer is required for booking"
+        :organizer_required
 
       :validation_error ->
-        "Failed to save meeting to database"
+        :booking_failed
 
       :payments_unavailable ->
-        "Payments are not available for this booking. Please contact the host."
+        :payments_unavailable
 
       :host_not_found ->
-        "Host could not be found. Please refresh and try again."
+        :host_not_found
 
       :host_missing ->
-        "Host could not be found. Please refresh and try again."
+        :host_not_found
 
       :meeting_type_missing ->
-        "This meeting type is no longer available. Please go back and select another."
+        :meeting_type_not_found
 
       {:custom_field_errors, _errors} ->
-        "Please fill in all required fields before submitting."
+        :custom_field_errors
 
       {:checkout_failed, _reason} ->
-        "We couldn't start the payment process. Please try again."
+        :checkout_failed
 
       reason when is_binary(reason) ->
         reason
 
       _other ->
-        "Failed to save meeting to database"
+        :booking_failed
     end
   end
 

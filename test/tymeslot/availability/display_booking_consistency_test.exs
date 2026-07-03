@@ -136,10 +136,10 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
           "message" => "Attempting a time the display hid"
         }
 
-        assert {:error, message} = Create.execute(meeting_params, form_data)
-
-        assert message =~ "no longer available",
-               "expected rejection for blocked slot #{blocked_slot}, got: #{inspect(message)}"
+        # The domain layer surfaces the semantic :slot_taken atom — the web
+        # layer, not the domain layer, renders it to "no longer available"
+        # display text.
+        assert {:error, :slot_taken} = Create.execute(meeting_params, form_data)
       end)
     end
   end
