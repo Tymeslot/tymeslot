@@ -36,6 +36,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
   attr :google_signup_email, :string, default: nil
   attr :caldav_form_data, :map, required: true
   attr :caldav_form_errors, :map, required: true
+  attr :caldav_discovering, :boolean, default: false
 
   @spec connect_calendar_step(map()) :: Phoenix.LiveView.Rendered.t()
   def connect_calendar_step(assigns) do
@@ -56,6 +57,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
         <.caldav_form
           caldav_form_data={@caldav_form_data}
           caldav_form_errors={@caldav_form_errors}
+          caldav_discovering={@caldav_discovering}
         />
       <% else %>
         <div class="onboarding-provider-cards">
@@ -245,11 +247,21 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
       <% end %>
 
       <div class="flex gap-3">
-        <button type="button" phx-click="cancel_caldav" class="btn-secondary px-5 py-2.5">
+        <button
+          type="button"
+          phx-click="cancel_caldav"
+          class="btn-secondary px-5 py-2.5"
+          disabled={@caldav_discovering}
+        >
           Cancel
         </button>
-        <button type="submit" class="btn-primary px-5 py-2.5 flex-1">
-          Discover calendars
+        <button
+          type="submit"
+          class="btn-primary px-5 py-2.5 flex-1 flex items-center justify-center gap-2"
+          disabled={@caldav_discovering}
+        >
+          <.icon :if={@caldav_discovering} name="hero-arrow-path" class="w-5 h-5 animate-spin" />
+          {if @caldav_discovering, do: "Discovering…", else: "Discover calendars"}
         </button>
       </div>
     </.form>

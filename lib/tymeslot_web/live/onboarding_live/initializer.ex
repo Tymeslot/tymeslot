@@ -64,6 +64,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     |> Component.assign(:google_signup_email, Auth.google_signup_login_hint(user))
     |> Component.assign(:caldav_form_data, %{})
     |> Component.assign(:caldav_form_errors, %{})
+    |> Component.assign(:caldav_discovering, false)
     |> Component.assign(:booking_url, build_booking_url(profile))
     |> Component.assign(:theme_options, ThemeInfo.theme_options())
     |> Component.assign(:theme_customization, customization)

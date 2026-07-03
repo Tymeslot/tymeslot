@@ -133,6 +133,7 @@ defmodule TymeslotWeb.OnboardingLive do
             google_signup_email={@google_signup_email}
             caldav_form_data={@caldav_form_data}
             caldav_form_errors={@caldav_form_errors}
+            caldav_discovering={@caldav_discovering}
           />
         <% :buffer_time -> %>
           <PreferencesStep.buffer_time_step
@@ -298,6 +299,15 @@ defmodule TymeslotWeb.OnboardingLive do
 
   def handle_event("change_timezone", %{"timezone" => timezone}, socket) do
     TimezoneHandlers.handle_change_timezone(timezone, socket)
+  end
+
+  # ------------------------------------------------------------------
+  # handle_async
+  # ------------------------------------------------------------------
+
+  @impl Phoenix.LiveView
+  def handle_async(:discover_caldav, result, socket) do
+    CalendarHandlers.handle_discover_caldav_result(result, socket)
   end
 
   # ------------------------------------------------------------------
