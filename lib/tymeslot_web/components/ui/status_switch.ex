@@ -18,6 +18,10 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
   # Optional attributes for custom values
   attr :phx_value_id, :string, default: nil, doc: "Custom phx-value-id attribute"
 
+  attr :aria_label, :string,
+    default: nil,
+    doc: "Accessible label describing what the switch toggles"
+
   @spec status_switch(map()) :: Phoenix.LiveView.Rendered.t()
   def status_switch(assigns) do
     ~H"""
@@ -35,6 +39,7 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
       ]}
       role="switch"
       aria-checked={@checked}
+      aria-label={@aria_label}
       id={@id}
     >
       <span class={[
