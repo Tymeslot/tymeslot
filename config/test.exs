@@ -44,7 +44,10 @@ config :tymeslot, TymeslotWeb.Endpoint,
   session_signing_salt: "test_session_signing_salt",
   server: false
 
-# Configure the database
+# Configure the database.
+# NOTE: the SaasRepo copy of this pool-size formula lives in the umbrella
+# `config/test.exs` (SaasRepo can't be configured from Core). Keep the two in
+# sync — the Core/SaaS boundary forces the duplication.
 default_pool_size = min(max(System.schedulers_online() * 2, 5), 10)
 
 test_pool_size =

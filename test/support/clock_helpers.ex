@@ -12,10 +12,15 @@ defmodule Tymeslot.Test.ClockHelpers do
   Pins `Tymeslot.Clock.utc_now/0` to `at` for the current process. Cleared
   automatically when the test process ends; use `unfreeze_clock/0` or
   `with_frozen_clock/2` to clear it sooner.
+
+  `at` is normalised to UTC before it is stored, so freezing with a zoned
+  `DateTime` still yields a correct `utc_now/0`/`utc_today/0` — otherwise
+  `utc_today/0` would return the frozen zone's local date, off by a day near
+  midnight.
   """
   @spec freeze_clock(DateTime.t()) :: :ok
   def freeze_clock(%DateTime{} = at) do
-    Process.put(Clock.process_key(), at)
+    Process.put(Clock.process_key(), DateTime.shift_zone!(at, "Etc/UTC"))
     :ok
   end
 

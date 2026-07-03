@@ -4,13 +4,20 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
   `Tymeslot.Availability.DisplayBookingConsistencyTest`.
 
   The example-based test covers two fixed scenarios (no events, all-day block).
-  This one fuzzes the space the two example scenarios leave open — non-UTC and
-  DST/half-hour timezones, sub-hour and multi-hour durations, and blocking-event
+  This one fuzzes the space the two example scenarios leave open — timezones
+  with varied UTC offsets (DST-observing zones on either hemisphere and a
+  half-hour offset), sub-hour and multi-hour durations, and blocking-event
   layouts with partial overlaps and multiple events — and asserts the
   safety-critical direction of the invariant: **any slot the display offers must
   be bookable via the booking API.** A violation means a user sees a slot,
   clicks it, and gets "no longer available" — or worse, a slot is offered that
   booking would have to reject.
+
+  Scope note: the target date is a single near-future weekday (booking-window
+  validation runs against the real clock, so it must be), so a given run
+  exercises whichever UTC offset each zone is in that day, not the DST
+  *transition* day itself. Transition-day gap/overlap handling is guarded
+  defensively in `build_event/4` but is not the focus of this property.
   """
 
   use Tymeslot.DataCase, async: false
@@ -35,8 +42,8 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
     :ok
   end
 
-  # A spread that exercises the tricky conversions: UTC, a DST northern zone,
-  # a DST southern zone (opposite transition), and a half-hour offset.
+  # A spread that exercises the tricky conversions: UTC, DST-observing zones in
+  # both hemispheres, and a half-hour offset (Asia/Kolkata, +05:30).
   @timezones ["Etc/UTC", "America/New_York", "Europe/Berlin", "Australia/Sydney", "Asia/Kolkata"]
 
   property "any slot the display offers can be booked" do
@@ -95,8 +102,9 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyPropertyTest do
     end
   end
 
-  # 0–3 blocking events, each covering a random sub-window of the day. Times that
-  # land in a DST gap/overlap for the timezone are dropped rather than forced.
+  # 0–3 blocking events, each covering a random sub-window of the day. On the
+  # rare transition day, a start/end that lands in a DST gap/overlap for the
+  # timezone is dropped rather than forced (defensive; see the scope note above).
   defp events_generator(date, timezone) do
     gen all(specs <- list_of(event_spec(), max_length: 3)) do
       specs
