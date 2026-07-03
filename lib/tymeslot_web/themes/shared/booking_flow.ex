@@ -50,6 +50,9 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
         {:awaiting_payment, socket} ->
           {:noreply, transition_fun.(socket, :awaiting_payment, %{})}
 
+        {:slot_taken, socket} ->
+          {:noreply, return_to_schedule_for_new_slot(socket, transition_fun)}
+
         {:honeypot, socket} ->
           {:noreply,
            put_flash(
@@ -64,6 +67,28 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
         {:error, socket} ->
           {:noreply, assign(socket, :submitting, false)}
       end
+    end
+  end
+
+  # Recover from a lost slot race: drop the stale time, return to the schedule
+  # step (which refreshes month availability), and reload that day's slots so
+  # the just-taken time disappears and the booker can immediately pick another.
+  # The error flash was already set by the submission handler.
+  defp return_to_schedule_for_new_slot(socket, transition_fun) do
+    socket =
+      socket
+      |> assign(:submitting, false)
+      |> assign(:selected_time, nil)
+      |> assign(:available_slots, [])
+      |> transition_fun.(:schedule, %{})
+
+    case socket.assigns[:selected_date] do
+      nil ->
+        socket
+
+      date ->
+        send(self(), {:load_slots, date})
+        assign(socket, :loading_slots, true)
     end
   end
 
