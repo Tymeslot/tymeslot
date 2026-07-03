@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
-  @parent_component_id "calendar_integration"
+  @parent_component_id "calendar-settings"
 
   @impl Phoenix.LiveComponent
   def mount(socket) do

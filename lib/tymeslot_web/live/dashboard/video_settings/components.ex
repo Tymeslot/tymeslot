@@ -13,8 +13,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   Renders a single connected video integration as a shared `connection_row`:
   a status-first header with a one-line summary, the connection meta
   (provider type, account/host/custom link, and a short description) in the
-  expandable `:detail` slot, and the test/reconnect/edit/delete controls in
-  the `:actions` slot.
+  expandable `:detail` slot, and the test/edit/delete controls in the
+  `:actions` slot. When an OAuth integration needs re-authentication
+  (`needs_reauth`), the Reconnect control is surfaced on the collapsed header
+  via `:header_action` instead of the expanded actions, so the fix is one click
+  away without opening the row.
   """
   attr :integration, :map, required: true
   attr :expanded?, :boolean, default: false
@@ -54,6 +57,18 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
       toggle_event="toggle_integration"
       myself={@myself}
     >
+      <:header_action :if={@oauth? && @integration.needs_reauth}>
+        <button
+          phx-click="reconnect_integration"
+          phx-value-id={@integration.id}
+          phx-target={@myself}
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-token-xl font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
+          title="Reconnect OAuth"
+        >
+          <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
+        </button>
+      </:header_action>
+
       <:detail>
         <dl class="space-y-2 text-token-sm">
           <div class="flex items-center gap-2">
@@ -103,7 +118,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
           {(@testing_connection == @integration.id && "Testing...") || "Test connection"}
         </button>
         <button
-          :if={@oauth?}
+          :if={@oauth? && !@integration.needs_reauth}
           phx-click="reconnect_integration"
           phx-value-id={@integration.id}
           phx-target={@myself}

@@ -181,8 +181,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
         provider_account_email: nil
       }
 
-      # Collapsed so the actions slot (with its own Reconnect button) is not
-      # rendered — only the status badge can be the source of "Reconnect".
+      # Collapsed row for a needs_reauth integration: the expanded actions slot
+      # is hidden, but the warning status badge and the collapsed-header
+      # Reconnect control both surface "Reconnect" so the fix is one click away.
       html =
         render_component(&Components.calendar_connection_row/1,
           integration: integration,

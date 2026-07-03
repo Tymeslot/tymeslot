@@ -4,7 +4,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
   integration hubs.
 
   Renders a `card-glass` shell with the provider icon, title (plus optional
-  type tag), a one-line summary, a status badge, a `StatusSwitch`, and — when a
+  type tag), a one-line summary, a status badge, an optional `:header_action`
+  slot (always visible in the collapsed header — used to surface a Reconnect
+  control for integrations needing attention), a `StatusSwitch`, and — when a
   `:detail` slot is provided — an expand chevron. Collapse/expand state is owned
   by the caller via the `expanded?` attribute; the row is stateless and emits
   `toggle_event`/`expand_event` back to `@myself`.
@@ -29,6 +31,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
   attr :toggle_event, :string, required: true
   attr :expand_event, :string, default: "toggle_row"
   attr :myself, :any, required: true
+  slot :header_action
   slot :detail
   slot :actions
 
@@ -59,6 +62,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
           <p class="mt-0.5 truncate text-token-sm text-tymeslot-500">{@summary}</p>
         </div>
         <.status_badge variant={@variant} label={@status_label} />
+        <div :if={@header_action != []} class="shrink-0">
+          {render_slot(@header_action)}
+        </div>
         <.status_switch
           id={"toggle-#{@id}"}
           checked={@active?}

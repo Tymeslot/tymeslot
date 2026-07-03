@@ -45,6 +45,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.ConnectionRowTest do
           expand_event={@expand_event}
           myself={@myself}
         >
+          <:header_action>Header action content</:header_action>
           <:detail>Detail slot content</:detail>
           <:actions>Actions slot content</:actions>
         </ConnectionRow.connection_row>
@@ -69,6 +70,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.ConnectionRowTest do
 
       refute html =~ "Detail slot content"
       refute html =~ "Actions slot content"
+    end
+
+    test "renders header_action slot content on the collapsed row" do
+      html = render_row(%{expanded?: false})
+
+      # The header action is always visible in the collapsed header — it's how
+      # a Reconnect control reaches an integration that needs attention without
+      # opening the expandable detail.
+      assert html =~ "Header action content"
     end
 
     test "omits the type tag when not given" do

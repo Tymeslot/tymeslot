@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
   describe "OAuth reconnect (Google)" do
     test "clicking Reconnect on a Google integration redirects to the Google OAuth URL",
          %{conn: conn, user: user} do
-      _integration =
+      integration =
         insert(:calendar_integration,
           user: user,
           provider: "google",
@@ -47,6 +47,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
+      # The Reconnect control lives in the connection row's expandable
+      # actions slot; open the row before clicking it.
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
       view
       |> element(
         "button[phx-click='connect_provider'][phx-value-provider='google'][title='Reconnect integration']"
@@ -60,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
   describe "OAuth reconnect (Outlook)" do
     test "clicking Reconnect on an Outlook integration redirects to the Outlook OAuth URL",
          %{conn: conn, user: user} do
-      _integration =
+      integration =
         insert(:calendar_integration,
           user: user,
           provider: "outlook",
@@ -79,6 +85,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
       end)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      # The Reconnect control lives in the connection row's expandable
+      # actions slot; open the row before clicking it.
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
 
       view
       |> element(
@@ -111,6 +123,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
         )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      # The Reconnect control lives in the connection row's expandable
+      # actions slot; open the row before clicking it.
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
 
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
@@ -154,6 +172,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
+      # The Reconnect control lives in the connection row's expandable
+      # actions slot; open the row before clicking it.
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{own_integration.id}']")
+      |> render_click()
+
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{own_integration.id}']")
       |> render_click(%{"id" => to_string(other_integration.id)})
@@ -181,6 +205,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
+      # A needs_reauth integration surfaces its Reconnect control on the
+      # collapsed header, so click it without expanding the row.
       html =
         view
         |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
@@ -212,6 +238,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
+      # A needs_reauth integration surfaces its Reconnect control on the
+      # collapsed header, so click it without expanding the row.
       html =
         view
         |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")

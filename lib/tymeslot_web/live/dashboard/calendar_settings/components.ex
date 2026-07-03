@@ -279,7 +279,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   Renders a single connected calendar integration as a shared
   `connection_row`: status-first header with a one-line summary, the
   calendar-selection chip grid in the expandable `:detail` slot, and the
-  reconnect/upgrade/delete controls in the `:actions` slot.
+  upgrade/delete controls in the `:actions` slot. When the integration needs
+  re-authentication (`needs_reauth`), the Reconnect control is surfaced on the
+  collapsed header via `:header_action` instead of the expanded actions, so the
+  fix is one click away without opening the row.
   """
   attr :integration, :map, required: true
   attr :expanded?, :boolean, default: false
@@ -315,6 +318,29 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       toggle_event="toggle_integration"
       myself={@myself}
     >
+      <:header_action :if={@integration.needs_reauth}>
+        <button
+          :if={@integration.provider in ["google", "outlook"]}
+          phx-click="connect_provider"
+          phx-value-provider={@integration.provider}
+          phx-target={@myself}
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-token-xl font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
+          title="Reconnect integration"
+        >
+          <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
+        </button>
+        <button
+          :if={@integration.provider not in ["google", "outlook"]}
+          phx-click="show_reconnect"
+          phx-value-id={@integration.id}
+          phx-target="#caldav-reconnect-modal"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-token-xl font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
+          title="Reconnect integration"
+        >
+          <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
+        </button>
+      </:header_action>
+
       <:detail>
         <div :if={@integration.is_active}>
           <div class="flex items-center gap-2 mb-3">
@@ -407,7 +433,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           <.icon name="hero-bolt" class="w-4 h-4" /> Upgrade
         </button>
         <button
-          :if={@integration.provider in ["google", "outlook"]}
+          :if={@integration.provider in ["google", "outlook"] && !@integration.needs_reauth}
           phx-click="connect_provider"
           phx-value-provider={@integration.provider}
           phx-target={@myself}
@@ -417,7 +443,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
         </button>
         <button
-          :if={@integration.provider not in ["google", "outlook"]}
+          :if={@integration.provider not in ["google", "outlook"] && !@integration.needs_reauth}
           phx-click="show_reconnect"
           phx-value-id={@integration.id}
           phx-target="#caldav-reconnect-modal"

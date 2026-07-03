@@ -95,6 +95,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
+      # A needs_reauth integration surfaces its Reconnect control on the
+      # collapsed header, so click it without expanding the row.
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
       |> render_click()
@@ -151,6 +153,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
+      # A needs_reauth integration surfaces its Reconnect control on the
+      # collapsed header, so click it without expanding the row.
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
       |> render_click()
@@ -204,6 +208,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
+      # A needs_reauth integration surfaces its Reconnect control on the
+      # collapsed header, so click it without expanding the row.
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
       |> render_click()
@@ -262,6 +268,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
+      # The Reconnect control lives in the connection row's expandable
+      # actions slot; open the row before clicking it.
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
       |> render_click()
@@ -305,6 +317,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
+      # The Reconnect control lives in the connection row's expandable
+      # actions slot; open the row before clicking it.
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
       |> render_click()
@@ -344,6 +362,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      # The Reconnect control lives in the connection row's expandable
+      # actions slot; open the row before clicking it.
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
 
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
@@ -420,8 +444,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       flagged = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert flagged.needs_reauth == true
 
-      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
-      assert html =~ "Reconnect required"
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+      # The needs-reauth warning badge (amber) shows on the collapsed row.
+      assert has_element?(view, "span.text-amber-800", "Reconnect")
 
       # Phase 2: the server now accepts the rotated password and the user
       # reconnects through the modal. Unified reconnect always shows the
@@ -435,6 +460,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
         calendar_name: "Default"
       )
 
+      # The integration is flagged needs_reauth, so its Reconnect control sits
+      # on the collapsed header — click it without expanding the row.
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
       |> render_click()
@@ -455,7 +482,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       })
       |> render_submit()
 
-      refute render(view) =~ "Reconnect required"
+      # The needs-reauth warning badge (the amber `span.text-amber-800`) is gone
+      # once the credential is refreshed — needs_reauth is cleared, so neither
+      # the badge nor the collapsed-header Reconnect control renders any more.
+      refute has_element?(view, "span.text-amber-800", "Reconnect")
 
       reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert reloaded.needs_reauth == false
