@@ -44,14 +44,16 @@ defmodule TymeslotWeb.Live.Themes.RhythmMeetingTest do
       assert has_element?(view, "button", "Go to Calendar")
     end
 
-    test "Go to Calendar button navigates back to profile", %{
+    test "Go to Calendar button navigates back to profile carrying the reschedule uid", %{
       view: view,
-      profile: profile
+      profile: profile,
+      meeting: meeting
     } do
       ThemeMeetingTestCases.test_reschedule_page_navigation(
         view,
         "Go to Calendar",
-        profile.username
+        profile.username,
+        meeting.uid
       )
     end
   end

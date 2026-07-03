@@ -100,11 +100,37 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       path = PathHandlers.build_path_with_locale(socket, "de")
       assert path == "/johndoe?locale=de"
     end
+
+    test "carries the reschedule uid so a locale switch mid-reschedule keeps context" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          live_action: :overview,
+          theme_id: "1",
+          reschedule_meeting_uid: "abc-123"
+        }
+      }
+
+      path = PathHandlers.build_path_with_locale(socket, "de")
+      assert path == "/johndoe?locale=de&reschedule_meeting_uid=abc-123&theme=1"
+    end
   end
 
   describe "organizer_scheduling_path/1" do
     test "returns path with username when organizer profile has username" do
       assigns = %{organizer_profile: %{username: "janedoe"}}
+      assert PathHandlers.organizer_scheduling_path(assigns) == "/janedoe"
+    end
+
+    test "appends the reschedule uid when a meeting_uid is present" do
+      assigns = %{organizer_profile: %{username: "janedoe"}, meeting_uid: "abc-123"}
+
+      assert PathHandlers.organizer_scheduling_path(assigns) ==
+               "/janedoe?reschedule_meeting_uid=abc-123"
+    end
+
+    test "omits the reschedule param when meeting_uid is blank" do
+      assigns = %{organizer_profile: %{username: "janedoe"}, meeting_uid: ""}
       assert PathHandlers.organizer_scheduling_path(assigns) == "/janedoe"
     end
 
