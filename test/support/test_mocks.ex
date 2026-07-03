@@ -173,6 +173,14 @@ defmodule Tymeslot.TestMocks do
   defdelegate setup_calendar_mocks(opts \\ []), to: Mocks.Calendar, as: :setup
 
   @doc """
+  Stubs the calendar read paths to return no events. Lighter than
+  `setup_calendar_mocks/1` when a test only needs "this user has no conflicting
+  calendar events".
+  """
+  @spec stub_no_calendar_events() :: term()
+  defdelegate stub_no_calendar_events(), to: Mocks.Calendar, as: :stub_no_events
+
+  @doc """
   Sets up Email Service mocks for all notification types.
 
   ## Options
