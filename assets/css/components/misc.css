@@ -17,3 +17,8 @@
   opacity: 0;
   transform: translateY(-8px) scale(0.98);
 }
+
+/* Loading Spinner — backs the <.spinner> component */
+.spinner {
+  @apply animate-spin h-5 w-5;
+}

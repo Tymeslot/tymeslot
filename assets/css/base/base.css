@@ -61,6 +61,40 @@ body {
   @apply bg-slate-400;
 }
 
+/* Branded scrollbar for the body and explicitly scrollable panels — a
+   higher-specificity override of the global greyscale scrollbar above. */
+body::-webkit-scrollbar,
+.scrollable::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body::-webkit-scrollbar-track,
+.scrollable::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  margin: 4px;
+}
+
+body::-webkit-scrollbar-thumb,
+.scrollable::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.5), rgba(247, 37, 133, 0.5));
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+body::-webkit-scrollbar-thumb:hover,
+.scrollable::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.7), rgba(247, 37, 133, 0.7));
+}
+
+/* Firefox scrollbar styling — body and main scrollable areas */
+body,
+.scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.5) rgba(255, 255, 255, 0.4);
+}
+
 /* Print Utilities */
 @media print {
   .no-print { display: none !important; }
