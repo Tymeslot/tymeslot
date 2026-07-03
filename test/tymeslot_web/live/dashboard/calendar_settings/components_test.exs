@@ -10,8 +10,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
     test "renders nothing when integrations list is empty" do
       assigns = %{
         integrations: [],
-        testing_integration_id: nil,
-        validating_integration_id: nil,
         myself: "target"
       }
 
@@ -36,8 +34,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
 
       assigns = %{
         integrations: [integration],
-        testing_integration_id: nil,
-        validating_integration_id: nil,
         is_refreshing: false,
         myself: "target"
       }

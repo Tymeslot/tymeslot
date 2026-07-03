@@ -29,9 +29,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
      |> assign(:integrations, [])
      |> assign(:view, :providers)
      |> assign(:selected_provider, nil)
-     |> assign(:testing_integration_id, nil)
      |> assign(:is_refreshing, false)
-     |> assign(:validating_integration_id, nil)
      |> assign(:health_states, %{})
      |> assign(:expanded_rows, MapSet.new())
      |> assign(:show_all_caldav, false)
@@ -239,20 +237,19 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
       :ok ->
         with {:ok, int_id} <- parse_int(id),
-             socket = assign(socket, :testing_integration_id, int_id),
              {:ok, integration} <-
                Calendar.get_integration(int_id, socket.assigns.current_user.id),
              {:ok, message} <- Diagnostics.test_connection(integration) do
           Flash.info(message)
-          {:noreply, assign(socket, :testing_integration_id, nil)}
+          {:noreply, socket}
         else
           {:error, :not_found} ->
             Flash.error("Integration not found")
-            {:noreply, assign(socket, :testing_integration_id, nil)}
+            {:noreply, socket}
 
           {:error, reason} ->
             Flash.error("Connection test failed: #{inspect(reason)}")
-            {:noreply, assign(socket, :testing_integration_id, nil)}
+            {:noreply, socket}
 
           :error ->
             Flash.error("Invalid calendar ID")
@@ -394,8 +391,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
       <% else %>
         <Components.connected_calendars_section
           integrations={@integrations}
-          testing_integration_id={@testing_integration_id}
-          validating_integration_id={@validating_integration_id}
           is_refreshing={@is_refreshing}
           myself={@myself}
           health_states={@health_states}
