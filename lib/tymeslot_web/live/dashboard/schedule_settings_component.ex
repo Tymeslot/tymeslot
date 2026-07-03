@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     <div class="space-y-10 pb-20">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <.section_header
-          icon={:calendar}
+          icon="hero-calendar-days"
           title="Availability"
           saving={@saving}
         />

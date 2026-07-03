@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
         <div class="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
           <.section_header
             level={2}
-            icon={:grid}
+            icon="hero-squares-2x2"
             title="Weekly Visual Grid"
           />
           <div class="shrink-0">

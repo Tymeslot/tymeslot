@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Components.UI.CheckToggle do
   """
   use Phoenix.Component
 
-  alias TymeslotWeb.Components.Icons.IconComponents
+  alias TymeslotWeb.Components.CoreComponents
 
   attr :id, :string, required: true, doc: "Unique identifier for the control"
   attr :checked, :boolean, required: true, doc: "Whether the item is done"
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Components.UI.CheckToggle do
       ]}
       id={@id}
     >
-      <IconComponents.icon name={:check} class={icon_size_class(@size)} />
+      <CoreComponents.icon name="hero-check" class={icon_size_class(@size)} />
     </button>
     """
   end

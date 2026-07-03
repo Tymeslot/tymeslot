@@ -9,7 +9,6 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Components.UserDropdownComponent
 
   attr :live_action, :atom, required: true
@@ -29,7 +28,7 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
               patch={~p"/dashboard"}
               class="inline-flex items-center space-x-2 btn-secondary text-sm px-4 py-2"
             >
-              <IconComponents.icon name={:arrow_left} class="w-4 h-4" />
+              <.icon name="hero-arrow-left" class="w-4 h-4" />
               <span>{dgettext("dashboard", "Back to Dashboard")}</span>
             </.link>
 
@@ -48,7 +47,7 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
       <div class="container mx-auto px-4 py-8">
         <main>
           <div class="max-w-6xl mx-auto">
-            <.section_header icon={:cog} title={dgettext("dashboard", "Admin")} />
+            <.section_header icon="hero-cog-6-tooth" title={dgettext("dashboard", "Admin")} />
             <p class="mb-8 -mt-2 text-base text-tymeslot-600 font-medium">
               {dgettext("dashboard", "Manage this self-hosted Tymeslot install.")}
             </p>

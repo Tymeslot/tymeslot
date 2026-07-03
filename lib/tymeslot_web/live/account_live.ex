@@ -6,7 +6,6 @@ defmodule TymeslotWeb.AccountLive do
   use TymeslotWeb, :live_view
 
   alias TymeslotWeb.AccountLive.{Handlers, Helpers}
-  alias TymeslotWeb.Components.Icons.IconComponents
 
   import TymeslotWeb.AccountLive.Components
 
@@ -36,7 +35,7 @@ defmodule TymeslotWeb.AccountLive do
               patch={~p"/dashboard"}
               class="inline-flex items-center space-x-2 btn-secondary text-sm px-4 py-2"
             >
-              <IconComponents.icon name={:arrow_left} class="w-4 h-4" />
+              <.icon name="hero-arrow-left" class="w-4 h-4" />
               <span>Back to Dashboard</span>
             </.link>
             

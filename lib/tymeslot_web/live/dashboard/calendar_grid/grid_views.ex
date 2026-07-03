@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
 
   use TymeslotWeb, :html
 
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges
@@ -202,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
           phx-click={JS.dispatch("calendar:scroll-to-current", to: "#calendar-drag-zone")}
           class="hidden fixed bottom-6 right-6 z-30 flex items-center gap-1.5 px-3 py-2 rounded-token-full bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-sm font-medium shadow-lg shadow-turquoise-500/30 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-2"
         >
-          <IconComponents.icon name={:calendar} class="w-4 h-4" />
+          <.icon name="hero-calendar-days" class="w-4 h-4" />
           Now
         </button>
       </div>

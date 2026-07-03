@@ -86,14 +86,14 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
         %{
           id: :test_extension,
           label: "Test Extension",
-          icon: :puzzle,
+          icon: "hero-puzzle-piece",
           path: "/dashboard/test-extension",
           action: :test_extension
         },
         %{
           id: :another_feature,
           label: "Another Feature",
-          icon: :code,
+          icon: "hero-code-bracket",
           path: "/dashboard/another-feature",
           action: :another_feature
         }
@@ -183,7 +183,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
         %{
           id: :custom_page,
           label: "Custom Page",
-          icon: :home,
+          icon: "hero-home",
           path: "/dashboard/custom-page",
           action: :custom_page
         }
@@ -222,7 +222,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
         %{
           id: :icon_test,
           label: "Icon Test",
-          icon: :puzzle,
+          icon: "hero-puzzle-piece",
           path: "/dashboard/icon-test",
           action: :icon_test
         }
@@ -246,21 +246,21 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
         %{
           id: :first,
           label: "First Extension",
-          icon: :home,
+          icon: "hero-home",
           path: "/dashboard/first",
           action: :first
         },
         %{
           id: :second,
           label: "Second Extension",
-          icon: :user,
+          icon: "hero-user",
           path: "/dashboard/second",
           action: :second
         },
         %{
           id: :third,
           label: "Third Extension",
-          icon: :calendar,
+          icon: "hero-calendar-days",
           path: "/dashboard/third",
           action: :third
         }
@@ -293,7 +293,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
         %{
           id: :integrated,
           label: "Integrated Feature",
-          icon: :grid,
+          icon: "hero-squares-2x2",
           path: "/dashboard/integrated",
           action: :integrated
         }

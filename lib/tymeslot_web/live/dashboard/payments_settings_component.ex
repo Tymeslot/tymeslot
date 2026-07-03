@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   def render(assigns) do
     ~H"""
     <div id="payments-settings" class="space-y-10 pb-20">
-      <.section_header icon={:credit_card} title="Payments" />
+      <.section_header icon="hero-credit-card" title="Payments" />
 
       <div :if={is_nil(@connect_account)}>
         <.connect_cta />

@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
           />
         </div>
       <% else %>
-        <.section_header icon={:paint_brush} title="Choose Your Style" />
+        <.section_header icon="hero-paint-brush" title="Choose Your Style" />
 
         <div class="mb-16 max-w-2xl">
           <p class="text-xl text-tymeslot-500 font-medium leading-relaxed">
