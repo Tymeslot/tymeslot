@@ -363,6 +363,16 @@ defmodule TymeslotWeb.Router do
     get "/embed-unavailable", EmbedBlockedController, :index
   end
 
+  # Public per-meeting calendar download (.ics). Access is gated by the
+  # unguessable meeting UID scoped to the organiser's username (IDOR-safe).
+  # Runs through :public_feed (accepts the `ics` format) and must be declared
+  # before the `/:username` catch-all so it isn't shadowed by a username route.
+  scope "/", TymeslotWeb do
+    pipe_through :public_feed
+
+    get "/:username/meeting/:meeting_uid/calendar.ics", MeetingCalendarController, :show
+  end
+
   # Username-based scheduling routes (must be before catch-all)
   scope "/", TymeslotWeb do
     pipe_through [:theme_browser, TymeslotWeb.Plugs.CaptureReferrerPlug]

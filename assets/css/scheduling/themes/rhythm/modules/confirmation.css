@@ -267,6 +267,19 @@
   margin: 0;
 }
 
+/* Add-to-calendar download link — reuses the secondary action-button styling
+   on an <a>, with a leading calendar icon. */
+.calendar-download-button {
+  color: var(--theme-text);
+  text-decoration: none;
+}
+
+.calendar-download-button .calendar-download-icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  flex-shrink: 0;
+}
+
 /* Booking Detail Styling */
 .booking-detail-label {
   color: var(--theme-text-secondary, #94a3b8);

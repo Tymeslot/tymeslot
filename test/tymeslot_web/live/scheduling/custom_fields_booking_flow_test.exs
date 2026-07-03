@@ -172,6 +172,10 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
       # --- Persisted booking carries snapshot and answers ---
       [meeting] = MeetingListQueries.list_meetings_by_attendee_email("jane.cf@example.com")
 
+      # --- Confirmation offers an "Add to calendar" download for this meeting ---
+      assert html =~ "Add to calendar"
+      assert html =~ ~s(href="/#{profile.username}/meeting/#{meeting.uid}/calendar.ics")
+
       assert length(meeting.custom_fields_snapshot) == 2
 
       labels = Enum.map(meeting.custom_fields_snapshot, & &1["label"])

@@ -158,6 +158,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                   <% end %>
 
                   <div class="confirmation-actions">
+                    <a
+                      :if={@meeting_uid not in [nil, ""] and @username_context not in [nil, ""]}
+                      href={~p"/#{@username_context}/meeting/#{@meeting_uid}/calendar.ics"}
+                      download
+                      class="action-button action-button--secondary calendar-download-button"
+                      data-testid="add-to-calendar"
+                    >
+                      <.icon name="hero-calendar-days" class="calendar-download-icon" />
+                      {dgettext("booking", "Add to calendar")}
+                    </a>
                     <.action_button
                       phx-click="schedule_another"
                       phx-target={@myself}
