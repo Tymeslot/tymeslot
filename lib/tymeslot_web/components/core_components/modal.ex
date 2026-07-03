@@ -71,17 +71,25 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
       style={if @show, do: "display: flex;", else: "display: none;"}
       phx-window-keydown={@on_cancel}
       phx-key="escape"
+      phx-hook="ModalFocusTrap"
     >
       <div class="modal-container p-6">
         <div
           id={"#{@id}-content"}
           class={["modal-content bg-white rounded-[2.5rem] shadow-2xl border-2 border-tymeslot-50 relative overflow-hidden", modal_size_class(@size)]}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={@header != [] && "#{@id}-title"}
+          tabindex="-1"
           phx-click-away={if @show, do: @on_cancel}
         >
           <%!-- Header --%>
           <%= if @header != [] do %>
             <div class="modal-header px-8 py-6 border-b-2 border-tymeslot-50 flex items-center justify-between">
-              <h3 class="modal-title text-2xl font-black text-tymeslot-900 tracking-tight">
+              <h3
+                id={"#{@id}-title"}
+                class="modal-title text-2xl font-black text-tymeslot-900 tracking-tight"
+              >
                 {render_slot(@header)}
               </h3>
               <button

@@ -89,6 +89,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       |> assign_new(:checked, fn -> nil end)
       |> assign_new(:value, fn -> nil end)
 
+    error_id = assigns.id && assigns.errors != [] && "#{assigns.id}-error"
+
+    assigns =
+      assigns
+      |> assign(:error_id, error_id)
+      |> assign(:rest, Map.merge(error_aria(assigns.errors, error_id), assigns.rest))
+
     ~H"""
     <div class={["form-field-wrapper", @class]}>
       <%= if @label do %>
@@ -145,10 +152,19 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
         {render_slot(@inner_block)}
       </div>
 
-      <.field_error errors={@errors} />
+      <.field_error errors={@errors} id={@error_id} />
     </div>
     """
   end
+
+  # Associates a field's error message with the control for assistive tech.
+  # `aria-invalid` flags the failed state; `aria-describedby` points screen
+  # readers at the `<.field_error>` region (which carries the same id).
+  defp error_aria([], _error_id), do: %{}
+  defp error_aria(_errors, nil), do: %{"aria-invalid" => "true"}
+
+  defp error_aria(_errors, error_id),
+    do: %{"aria-invalid" => "true", "aria-describedby" => error_id}
 
   defp input_element(%{type: "select"} = assigns) do
     assigns = assign_new(assigns, :rest, fn -> %{} end)
@@ -269,12 +285,16 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   Renders a field error message.
   """
   attr :errors, :list, default: []
+  attr :id, :any, default: nil, doc: "id for aria-describedby association with the field"
 
   @spec field_error(map()) :: Phoenix.LiveView.Rendered.t()
   def field_error(assigns) do
     ~H"""
     <%= if Enum.any?(@errors) do %>
-      <div class="mt-2 flex items-center gap-2 text-red-600 font-bold text-sm">
+      <div
+        id={@id}
+        class="mt-2 flex items-center gap-2 text-red-600 font-bold text-sm"
+      >
         <TymeslotWeb.Components.CoreComponents.Icons.icon
           name="hero-exclamation-circle-solid"
           class="w-4 h-4"
