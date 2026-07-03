@@ -13,6 +13,7 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.Validation
+  alias Tymeslot.Clock
   alias Tymeslot.Demo
 
   require Logger
@@ -182,8 +183,8 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
         reschedule_url: attrs.reschedule_url,
         cancel_url: attrs.cancel_url,
         status: "confirmed",
-        inserted_at: DateTime.utc_now(),
-        updated_at: DateTime.utc_now()
+        inserted_at: Clock.utc_now(),
+        updated_at: Clock.utc_now()
       }
 
       # Log what would have happened in production

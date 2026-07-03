@@ -7,6 +7,7 @@ defmodule Tymeslot.Bookings.Validation do
   """
 
   alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
 
@@ -213,7 +214,7 @@ defmodule Tymeslot.Bookings.Validation do
 
   defp validate_booking_time_with_defaults(start_datetime, config, overrides) do
     defaults = %{
-      current_time: DateTime.utc_now(),
+      current_time: Clock.utc_now(),
       min_advance_hours: 3,
       max_advance_booking_days: 365
     }
