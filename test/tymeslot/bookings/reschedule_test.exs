@@ -10,6 +10,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   import Mox
 
   alias Tymeslot.Bookings.Reschedule
+  alias Tymeslot.Bookings.Validation
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Security.Encryption
@@ -79,8 +80,48 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         user_timezone: "America/New_York"
       }
 
-      assert {:error, "Original meeting not found"} =
+      # The domain layer surfaces the semantic :meeting_not_found atom — the
+      # web layer, not the domain layer, renders it to display text.
+      assert {:error, :meeting_not_found} =
                Reschedule.execute("non-existent-uid", new_params, %{}, 0)
+    end
+  end
+
+  describe "execute/4 - concurrent slot conflict" do
+    test "returns {:error, :slot_taken} when a concurrent booking claims the new time first" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_meeting_for_user(user)
+
+      new_params = %{
+        date: Date.to_string(Date.add(Date.utc_today(), 2)),
+        time: "2:00 PM",
+        duration: "60min",
+        user_timezone: "America/New_York"
+      }
+
+      {:ok, {start_time, end_time}} =
+        Validation.parse_meeting_times(
+          new_params.date,
+          new_params.time,
+          new_params.duration,
+          new_params.user_timezone
+        )
+
+      # Simulate a concurrent booking that claimed the target slot first.
+      insert(:meeting,
+        organizer_user_id: user.id,
+        organizer_email: user.email,
+        status: "confirmed",
+        start_time: start_time,
+        end_time: end_time
+      )
+
+      # The domain layer surfaces the semantic :slot_taken atom (mirroring the
+      # fresh-booking path) rather than the generic :failed_to_update_meeting,
+      # so the booker is bounced back to the schedule step instead of seeing
+      # an opaque error.
+      assert {:error, :slot_taken} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
     end
   end
 
@@ -103,7 +144,9 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         user_timezone: "America/New_York"
       }
 
-      assert {:error, "Original meeting not found"} =
+      # The domain layer surfaces the semantic :meeting_not_found atom — the
+      # web layer, not the domain layer, renders it to display text.
+      assert {:error, :meeting_not_found} =
                Reschedule.execute(victim_meeting.uid, new_params, %{}, attacker_user.id)
     end
 

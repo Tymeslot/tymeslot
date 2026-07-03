@@ -151,6 +151,12 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmitCompositionTest do
     assert drained.socket.assigns.current_state == :schedule
     assert drained.socket.assigns.selected_time == nil
     refute has_element?(view, "form[phx-submit='submit']")
+
+    # The day's slots are reloaded on the bounce-back (the queued
+    # {:load_slots, date} was drained by :sys.get_state above); with the whole
+    # day blocked the just-taken time is gone, so the booker sees a fresh,
+    # empty slot list rather than the stale slot they lost the race on.
+    assert drained.socket.assigns.available_slots == []
   end
 
   @tag :capture_log
