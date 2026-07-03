@@ -23,7 +23,7 @@ defmodule TymeslotWeb.OAuthErrorMessagingTest do
     test "access_denied maps to 'Authorization was denied'", %{conn: conn} do
       conn = get(conn, "/auth/google/calendar/callback", %{"error" => "access_denied"})
 
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
       assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
     end
 
@@ -35,7 +35,7 @@ defmodule TymeslotWeb.OAuthErrorMessagingTest do
           "state" => "anything"
         })
 
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
       assert Flash.get(conn.assigns.flash, :error) =~ "Authentication failed"
     end
   end
@@ -52,7 +52,7 @@ defmodule TymeslotWeb.OAuthErrorMessagingTest do
           "error_description" => "AADSTS65001: The user or administrator has not consented"
         })
 
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
       assert Flash.get(conn.assigns.flash, :error) =~ "admin approval"
     end
 
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.OAuthErrorMessagingTest do
           "error_description" => "user cancelled"
         })
 
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
       assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
     end
   end
@@ -73,7 +73,7 @@ defmodule TymeslotWeb.OAuthErrorMessagingTest do
     test "access_denied maps to 'Authorization was denied'", %{conn: conn} do
       conn = get(conn, "/auth/google/video/callback", %{"error" => "access_denied"})
 
-      assert redirected_to(conn) == "/dashboard/video-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
     end
 
@@ -81,7 +81,7 @@ defmodule TymeslotWeb.OAuthErrorMessagingTest do
          %{conn: conn} do
       conn = get(conn, "/auth/google/video/callback", %{})
 
-      assert redirected_to(conn) == "/dashboard/video-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "Invalid authentication response"
     end
   end
@@ -95,7 +95,7 @@ defmodule TymeslotWeb.OAuthErrorMessagingTest do
           "error_description" => "AADSTS90094: Admin consent required"
         })
 
-      assert redirected_to(conn) == "/dashboard/video-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "admin approval"
     end
 
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.OAuthErrorMessagingTest do
           "error_description" => "transient upstream failure"
         })
 
-      assert redirected_to(conn) == "/dashboard/video-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "Authentication failed"
     end
   end

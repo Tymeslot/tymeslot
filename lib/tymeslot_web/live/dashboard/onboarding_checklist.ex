@@ -262,7 +262,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         title: "Connect a calendar",
         description: "Sync to avoid double-bookings",
         cta: "Connect",
-        path: ~p"/dashboard/calendar-integration"
+        path: ~p"/dashboard/integrations?tab=calendars"
       },
       %{
         key: "video",
@@ -271,7 +271,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         title: "Add a video provider",
         description: "Auto-add links to online meetings",
         cta: "Connect",
-        path: ~p"/dashboard/video-integration"
+        path: ~p"/dashboard/integrations?tab=video"
       },
       %{
         key: "theme",

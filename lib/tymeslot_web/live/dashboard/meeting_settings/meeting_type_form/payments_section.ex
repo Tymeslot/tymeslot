@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
 
       <.info_box :if={not @charges_enabled} variant={:info}>
         Connect Stripe on the
-        <.link navigate={~p"/dashboard/payments"} class="underline text-turquoise-600">
+        <.link navigate={~p"/dashboard/integrations?tab=payments"} class="underline text-turquoise-600">
           Payments
         </.link>
         page to charge for this meeting type.

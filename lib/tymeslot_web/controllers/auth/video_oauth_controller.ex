@@ -33,7 +33,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
       conn
       |> put_flash(:info, "Google Meet connected successfully!")
-      |> redirect(to: ~p"/dashboard/video-integration")
+      |> redirect(to: ~p"/dashboard/integrations?tab=video")
     else
       error -> handle_google_meet_error(conn, error)
     end
@@ -50,7 +50,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, error_message)
-    |> redirect(to: ~p"/dashboard/video-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=video")
   end
 
   def google_callback(conn, params) do
@@ -60,7 +60,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
-    |> redirect(to: ~p"/dashboard/video-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=video")
   end
 
   @doc """
@@ -80,7 +80,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
       conn
       |> put_flash(:info, "Microsoft Teams connected successfully!")
-      |> redirect(to: ~p"/dashboard/video-integration")
+      |> redirect(to: ~p"/dashboard/integrations?tab=video")
     else
       error -> handle_teams_oauth_error(conn, error)
     end
@@ -104,7 +104,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, error_message)
-    |> redirect(to: ~p"/dashboard/video-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=video")
   end
 
   def teams_callback(conn, params) do
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
-    |> redirect(to: ~p"/dashboard/video-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=video")
   end
 
   @doc """
@@ -134,7 +134,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
       conn
       |> put_flash(:info, "Zoom connected successfully!")
-      |> redirect(to: ~p"/dashboard/video-integration")
+      |> redirect(to: ~p"/dashboard/integrations?tab=video")
     else
       error -> handle_zoom_oauth_error(conn, error)
     end
@@ -152,7 +152,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, error_message)
-    |> redirect(to: ~p"/dashboard/video-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=video")
   end
 
   def zoom_callback(conn, params) do
@@ -162,7 +162,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
-    |> redirect(to: ~p"/dashboard/video-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=video")
   end
 
   defp handle_google_meet_error(conn, error) do
@@ -176,14 +176,14 @@ defmodule TymeslotWeb.VideoOAuthController do
 
         conn
         |> put_flash(:error, message)
-        |> redirect(to: ~p"/dashboard/video-integration")
+        |> redirect(to: ~p"/dashboard/integrations?tab=video")
 
       {:error, reason} ->
         Logger.error("Google Meet OAuth flow failed", reason: inspect(reason))
 
         conn
         |> put_flash(:error, "Failed to connect Google Meet. Please try again.")
-        |> redirect(to: ~p"/dashboard/video-integration")
+        |> redirect(to: ~p"/dashboard/integrations?tab=video")
     end
   end
 
@@ -212,7 +212,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, message)
-    |> redirect(to: ~p"/dashboard/video-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=video")
   end
 
   defp handle_zoom_oauth_error(conn, {:error, guard_reason})
@@ -237,13 +237,13 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, message)
-    |> redirect(to: ~p"/dashboard/video-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=video")
   end
 
   defp reject_callback(conn) do
     conn
     |> put_flash(:error, "Authentication session mismatch. Please sign in and try again.")
-    |> redirect(to: ~p"/dashboard/video-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=video")
     |> halt()
   end
 

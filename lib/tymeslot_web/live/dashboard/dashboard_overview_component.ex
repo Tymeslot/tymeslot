@@ -202,7 +202,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
         <%!-- Connect-a-calendar nudge --%>
         <.link
           :if={not @agenda.has_calendar?}
-          navigate={~p"/dashboard/calendar-integration"}
+          navigate={~p"/dashboard/integrations?tab=calendars"}
           class="mt-2 flex items-center justify-center gap-2 text-token-sm font-bold text-turquoise-600 hover:text-turquoise-700 transition-colors"
         >
           <.icon name="hero-calendar-days" class="w-4 h-4" />

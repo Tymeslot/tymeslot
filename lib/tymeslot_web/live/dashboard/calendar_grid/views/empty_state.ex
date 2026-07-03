@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EmptyState do
           Connect at least one calendar to see your events here.
         </p>
         <.link
-          patch={~p"/dashboard/calendar-integration"}
+          patch={~p"/dashboard/integrations?tab=calendars"}
           class="inline-flex items-center gap-2 px-6 py-3 bg-turquoise-600 hover:bg-turquoise-700 text-white font-bold rounded-token-xl transition-colors shadow-lg shadow-turquoise-500/20"
         >
           <.icon name="hero-plus" class="w-5 h-5" />
