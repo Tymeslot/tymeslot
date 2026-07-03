@@ -114,6 +114,20 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       path = PathHandlers.build_path_with_locale(socket, "de")
       assert path == "/johndoe?locale=de&reschedule_meeting_uid=abc-123&theme=1"
     end
+
+    test "omits the reschedule uid when it is an empty string" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{
+          username_context: "johndoe",
+          live_action: :overview,
+          theme_id: "1",
+          reschedule_meeting_uid: ""
+        }
+      }
+
+      path = PathHandlers.build_path_with_locale(socket, "de")
+      assert path == "/johndoe?locale=de&theme=1"
+    end
   end
 
   describe "organizer_scheduling_path/1" do

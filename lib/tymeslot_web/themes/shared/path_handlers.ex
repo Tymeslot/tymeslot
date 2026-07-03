@@ -71,7 +71,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     MeetingTypes.normalize_duration_slug(duration)
   end
 
-  defp maybe_put_query_param(params, _param_key, nil), do: params
+  defp maybe_put_query_param(params, _param_key, value) when value in [nil, ""], do: params
   defp maybe_put_query_param(params, key, value), do: Map.put(params, key, value)
 
   @doc """
