@@ -63,6 +63,11 @@
   font-size: var(--theme-font-size-xs);
 }
 
+.time-slot:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+
 .time-slot:hover {
   background: var(--surface-intense);
   border-color: var(--theme-primary);

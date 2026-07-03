@@ -128,6 +128,32 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       state = :sys.get_state(view.pid).socket.assigns
       assert state.selected_time == nil
     end
+
+    @tag :capture_log
+    test "calendar days carry full date labels and a live region announces slot loading",
+         %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{profile.timezone}")
+
+      view |> element("button[data-testid='duration-option']") |> render_click()
+      view |> element("button[data-testid='next-step']") |> render_click()
+
+      html = render(view)
+
+      labels =
+        html |> Floki.parse_document!() |> Floki.attribute("button.calendar-day", "aria-label")
+
+      # Screen readers hear a full date, not a bare day number.
+      assert labels != []
+
+      assert Enum.any?(
+               labels,
+               &(&1 =~ ~r/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), .+ \d{4}$/)
+             )
+
+      # A polite live region announces the slot-loading state.
+      assert html =~ ~s(role="status")
+      assert html =~ ~s(aria-live="polite")
+    end
   end
 
   describe "timezone search — boundary inputs" do

@@ -54,4 +54,25 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
       assert LocalizationHelpers.format_meeting_datetime(nil, "America/New_York") == ""
     end
   end
+
+  describe "format_full_date_label/1" do
+    test "builds a weekday + date label from an ISO date string" do
+      # 2026-06-15 is a Monday.
+      assert LocalizationHelpers.format_full_date_label("2026-06-15") ==
+               "Monday, June 15, 2026"
+    end
+
+    test "accepts a Date struct" do
+      assert LocalizationHelpers.format_full_date_label(~D[2026-06-15]) ==
+               "Monday, June 15, 2026"
+    end
+
+    test "returns an empty string for nil" do
+      assert LocalizationHelpers.format_full_date_label(nil) == ""
+    end
+
+    test "falls back to the raw input when the string is not a valid date" do
+      assert LocalizationHelpers.format_full_date_label("not-a-date") == "not-a-date"
+    end
+  end
 end

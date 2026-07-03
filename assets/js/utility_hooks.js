@@ -139,10 +139,14 @@ export const ConnectionStatus = {
   }
 };
 
-// Auto-scroll to slots on mobile and tablet when slots are loaded
+// Auto-scroll to slots on mobile and tablet when slots are loaded, and move
+// keyboard focus into the slots region so a screen-reader / keyboard user who
+// just picked a date is carried to the next step of the flow.
 export const AutoScrollToSlots = {
   mounted() {
     this.handleSlotsUpdate = () => {
+      this.manageFocus();
+
       // Skip auto-scroll when embedded in an iframe (modal handles its own viewport)
       if (document.documentElement.hasAttribute('data-embedded')) return;
 
@@ -152,14 +156,14 @@ export const AutoScrollToSlots = {
         const hasSlots = this.el.querySelector('[data-slots-loaded]') ||
                         this.el.querySelector('.space-y-3') ||
                         this.el.querySelector('.animate-spin');
-        
+
         if (hasSlots) {
           // Small delay to ensure DOM is fully updated
           setTimeout(() => {
-            this.el.scrollIntoView({ 
-              behavior: 'smooth', 
+            this.el.scrollIntoView({
+              behavior: 'smooth',
               block: 'start',
-              inline: 'nearest' 
+              inline: 'nearest'
             });
           }, 100);
         }
@@ -168,10 +172,34 @@ export const AutoScrollToSlots = {
 
     // Observe changes to the slots container
     this.observer = new MutationObserver(this.handleSlotsUpdate);
-    this.observer.observe(this.el, { 
-      childList: true, 
-      subtree: true 
+    this.observer.observe(this.el, {
+      childList: true,
+      subtree: true
     });
+  },
+
+  // When the loaded slots appear, move focus to the "Available Times" heading —
+  // but only if the user just activated a day (focus is still on a calendar day
+  // button). This carries a keyboard user forward without stealing focus on the
+  // initial page load or while they are interacting elsewhere on the page.
+  manageFocus() {
+    const loaded = this.el.querySelector('[data-slots-loaded]');
+    if (!loaded) {
+      this.focusMoved = false;
+      return;
+    }
+    if (this.focusMoved) return;
+
+    const active = document.activeElement;
+    const fromDay = active && active.closest &&
+      active.closest('[data-testid="calendar-day"], .week-day-cell');
+    if (!fromDay) return;
+
+    const heading = this.el.querySelector('.slots-heading');
+    if (heading) {
+      heading.focus();
+      this.focusMoved = true;
+    }
   },
 
   destroyed() {

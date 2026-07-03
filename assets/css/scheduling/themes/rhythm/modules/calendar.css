@@ -76,6 +76,12 @@
   border-color: var(--theme-primary);
 }
 
+/* Keyboard-only focus ring for better accessibility */
+.calendar-day:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+
 .calendar-day.selected {
   background: var(--theme-surface);
   border-color: var(--theme-primary);

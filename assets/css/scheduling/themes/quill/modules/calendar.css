@@ -71,6 +71,12 @@
   transform: translateY(-1px);
 }
 
+/* Keyboard-only focus ring for better accessibility */
+.calendar-day:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+
 .calendar-day--selected {
   background: var(--theme-primary);
   border-color: var(--theme-primary);
@@ -169,6 +175,11 @@
   /* Let the seven 1fr tracks shrink to equal widths on narrow phones instead of
      each holding its content's min-width and overflowing the strip. */
   min-width: 0;
+}
+
+.week-day-cell:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
 }
 
 .week-day-cell:hover:not(:disabled) {

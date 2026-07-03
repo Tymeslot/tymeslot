@@ -146,9 +146,25 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
     ~H"""
     <div class="time-slots-panel flex flex-col" id="slots-container" phx-hook="AutoScrollToSlots">
       <% normalized_slots = MeetingUtils.normalize_slot_list(@available_slots) %>
-      <h2 class="slots-heading font-bold text-glass-primary">
+      <h2 class="slots-heading font-bold text-glass-primary" tabindex="-1">
         {dgettext("booking", "Available Times")}
       </h2>
+      <%!-- Concise, screen-reader-only announcement of the slot-loading state
+            so keyboard/AT users hear the result of picking a date. --%>
+      <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        <%= cond do %>
+          <% is_nil(@selected_date) -> %>
+            {dgettext("booking", "Please select a date to see available times")}
+          <% @loading_slots -> %>
+            {dgettext("booking", "Loading available times...")}
+          <% @calendar_error -> %>
+            {@calendar_error}
+          <% normalized_slots != [] -> %>
+            {dgettext("booking", "Available Times")}
+          <% true -> %>
+            {dgettext("booking", "This date is fully booked")}
+        <% end %>
+      </div>
       <div class="slots-box flex-1">
         <%= if @selected_date do %>
           <%= if @loading_slots do %>
