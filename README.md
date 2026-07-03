@@ -183,7 +183,7 @@ Optional. Charge attendees through Stripe at booking time. Off by default — se
 | `MEETING_PAYMENTS_ENABLED` | Set to `true` to expose the payments dashboard and the per-event payment toggle. Defaults to `false`. |
 | `MEETING_PAYMENTS_APPLICATION_FEE_BP` | Optional platform fee in basis points (`100` = 1%). Defaults to `0`, so self-hosters never take a cut unless they opt in. Range `0`–`10000`. |
 
-Once enabled, hosts connect their own Stripe account from **Dashboard → Payments**, pick a currency, and switch on **Require payment** for any event type. Direct charges flow into the host's Stripe balance on their existing payout schedule.
+Once enabled, hosts connect their own Stripe account from **Dashboard → Integrations → Payments**, pick a currency, and switch on **Require payment** for any event type. Direct charges flow into the host's Stripe balance on their existing payout schedule.
 
 </details>
 
