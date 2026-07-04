@@ -65,6 +65,17 @@
   @apply from-turquoise-600 to-cyan-600 shadow-lg transform-none;
 }
 
+/* Secondary button carries its own hover affordances (lift, shadow, border
+   colour shift) without the base .btn class, so it needs an explicit disabled
+   treatment: grey it out and strip every hover effect to signal it is inert. */
+.btn-secondary:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+.btn-secondary:disabled:hover {
+  @apply border-tymeslot-100 bg-white shadow-sm transform-none;
+}
+
 .btn-auth {
   @apply bg-white border-2 border-tymeslot-100 text-tymeslot-700 font-bold rounded-token-2xl px-4 py-3 transition-glass shadow-sm w-full;
   @apply hover:border-turquoise-100 hover:bg-tymeslot-50 hover:shadow-md;
