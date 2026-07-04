@@ -30,7 +30,7 @@ defmodule Tymeslot.Availability.AvailabilityBreakSchema do
 
     belongs_to(:weekly_availability, WeeklyAvailabilitySchema)
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @doc false

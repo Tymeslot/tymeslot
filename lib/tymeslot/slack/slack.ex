@@ -342,7 +342,7 @@ defmodule Tymeslot.Slack do
 
   @doc """
   Prunes Slack delivery log rows older than `days` (default 60). Called by the
-  shared `WebhookCleanupWorker` so the per-attempt delivery log does not grow
+  shared `DataRetentionWorker` so the per-attempt delivery log does not grow
   unbounded. Returns the `{deleted_count, nil}` tuple from `delete_all`.
   """
   @spec prune_deliveries(integer()) :: {non_neg_integer(), nil}

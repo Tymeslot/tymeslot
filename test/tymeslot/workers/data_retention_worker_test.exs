@@ -1,4 +1,4 @@
-defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
+defmodule Tymeslot.Workers.DataRetentionWorkerTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :workers
@@ -7,10 +7,12 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Analytics.EventSchema
   alias Tymeslot.Slack.SlackDeliverySchema
+  alias Tymeslot.Telegram.TelegramDeliverySchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookEventSchema
-  alias Tymeslot.Workers.WebhookCleanupWorker
+  alias Tymeslot.Workers.DataRetentionWorker
 
   describe "perform/1 - outgoing webhook delivery cleanup" do
     test "removes delivery records older than the retention period" do
@@ -22,7 +24,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
       recent_date = DateTime.add(DateTime.utc_now(), -10, :day)
       recent_delivery = insert(:webhook_delivery, webhook: webhook, inserted_at: recent_date)
 
-      assert :ok = perform_job(WebhookCleanupWorker, %{})
+      assert :ok = perform_job(DataRetentionWorker, %{})
 
       refute Repo.get(WebhookDeliverySchema, old_delivery.id)
       assert Repo.get(WebhookDeliverySchema, recent_delivery.id)
@@ -34,11 +36,11 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
       date_35 = DateTime.add(DateTime.utc_now(), -35, :day)
       delivery_35 = insert(:webhook_delivery, webhook: webhook, inserted_at: date_35)
 
-      assert :ok = perform_job(WebhookCleanupWorker, %{"retention_days" => 30})
+      assert :ok = perform_job(DataRetentionWorker, %{"retention_days" => 30})
       refute Repo.get(WebhookDeliverySchema, delivery_35.id)
 
       delivery_35_new = insert(:webhook_delivery, webhook: webhook, inserted_at: date_35)
-      assert :ok = perform_job(WebhookCleanupWorker, %{"retention_days" => 40})
+      assert :ok = perform_job(DataRetentionWorker, %{"retention_days" => 40})
       assert Repo.get(WebhookDeliverySchema, delivery_35_new.id)
     end
 
@@ -53,17 +55,17 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
           inserted_at: DateTime.add(DateTime.utc_now(), -100, :day)
         )
 
-      assert :ok = perform_job(WebhookCleanupWorker, %{"retention_days" => -1})
+      assert :ok = perform_job(DataRetentionWorker, %{"retention_days" => -1})
 
       # Negative retention is treated as a guard: no records are deleted
       assert Repo.get(WebhookDeliverySchema, recent_delivery.id)
       assert Repo.get(WebhookDeliverySchema, old_delivery.id)
     end
 
-    test "zero retention days removes everything older than today" do
+    test "zero retention days is a safe no-op and deletes nothing" do
       webhook = insert(:webhook)
 
-      _recent_delivery = insert(:webhook_delivery, webhook: webhook)
+      recent_delivery = insert(:webhook_delivery, webhook: webhook)
 
       old_delivery =
         insert(:webhook_delivery,
@@ -71,9 +73,12 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
           inserted_at: DateTime.add(DateTime.utc_now(), -10, :day)
         )
 
-      assert :ok = perform_job(WebhookCleanupWorker, %{"retention_days" => 0})
+      assert :ok = perform_job(DataRetentionWorker, %{"retention_days" => 0})
 
-      refute Repo.get(WebhookDeliverySchema, old_delivery.id)
+      # Zero is treated as a guard, like negative: a misconfigured
+      # `retention_days: 0` can never wipe the whole table.
+      assert Repo.get(WebhookDeliverySchema, recent_delivery.id)
+      assert Repo.get(WebhookDeliverySchema, old_delivery.id)
     end
 
     test "very large retention days keeps all records" do
@@ -85,7 +90,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
           inserted_at: DateTime.add(DateTime.utc_now(), -1000, :day)
         )
 
-      assert :ok = perform_job(WebhookCleanupWorker, %{"retention_days" => 10_000})
+      assert :ok = perform_job(DataRetentionWorker, %{"retention_days" => 10_000})
 
       assert Repo.get(WebhookDeliverySchema, very_old_delivery.id)
     end
@@ -96,13 +101,12 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
     # override any value we set via Repo.insert!/1 with the current timestamp.
     defp insert_webhook_event(stripe_event_id, dt, opts \\ []) do
       truncated = DateTime.truncate(dt, :second)
-      naive = DateTime.to_naive(truncated)
 
       base_attrs = %{
         stripe_event_id: stripe_event_id,
         event_type: "customer.subscription.updated",
         processed_at: truncated,
-        inserted_at: naive
+        inserted_at: truncated
       }
 
       attrs =
@@ -132,7 +136,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
           payload: payload
         )
 
-      assert :ok = perform_job(WebhookCleanupWorker, %{})
+      assert :ok = perform_job(DataRetentionWorker, %{})
 
       old_event = Repo.get(WebhookEventSchema, old_id)
       assert old_event, "row should still exist"
@@ -152,7 +156,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
         )
 
       # With 10-day retention the 15-day-old payload should be nullified
-      assert :ok = perform_job(WebhookCleanupWorker, %{"payload_retention_days" => 10})
+      assert :ok = perform_job(DataRetentionWorker, %{"payload_retention_days" => 10})
 
       event = Repo.get(WebhookEventSchema, event_id)
       assert is_nil(event.payload)
@@ -165,7 +169,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
       old_id = insert_webhook_event("evt_old_#{System.unique_integer()}", old_date)
       recent_id = insert_webhook_event("evt_recent_#{System.unique_integer()}", recent_date)
 
-      assert :ok = perform_job(WebhookCleanupWorker, %{})
+      assert :ok = perform_job(DataRetentionWorker, %{})
 
       refute Repo.get(WebhookEventSchema, old_id)
       assert Repo.get(WebhookEventSchema, recent_id)
@@ -176,7 +180,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
       event_id = insert_webhook_event("evt_45d_#{System.unique_integer()}", date_45)
 
       # With 30-day retention the 45-day-old event should be removed
-      assert :ok = perform_job(WebhookCleanupWorker, %{"stripe_event_retention_days" => 30})
+      assert :ok = perform_job(DataRetentionWorker, %{"stripe_event_retention_days" => 30})
       refute Repo.get(WebhookEventSchema, event_id)
     end
 
@@ -187,7 +191,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
       old_delivery = insert(:webhook_delivery, webhook: webhook, inserted_at: old_date)
       old_event_id = insert_webhook_event("evt_combined_#{System.unique_integer()}", old_date)
 
-      assert :ok = perform_job(WebhookCleanupWorker, %{})
+      assert :ok = perform_job(DataRetentionWorker, %{})
 
       refute Repo.get(WebhookDeliverySchema, old_delivery.id)
       refute Repo.get(WebhookEventSchema, old_event_id)
@@ -203,7 +207,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
       old = insert(:slack_delivery, integration: integration, inserted_at: old_date)
       recent = insert(:slack_delivery, integration: integration, inserted_at: recent_date)
 
-      assert :ok = perform_job(WebhookCleanupWorker, %{})
+      assert :ok = perform_job(DataRetentionWorker, %{})
 
       refute Repo.get(SlackDeliverySchema, old.id)
       assert Repo.get(SlackDeliverySchema, recent.id)
@@ -215,8 +219,62 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
 
       delivery = insert(:slack_delivery, integration: integration, inserted_at: date_45)
 
-      assert :ok = perform_job(WebhookCleanupWorker, %{"slack_delivery_retention_days" => 30})
+      assert :ok = perform_job(DataRetentionWorker, %{"slack_delivery_retention_days" => 30})
       refute Repo.get(SlackDeliverySchema, delivery.id)
+    end
+  end
+
+  describe "perform/1 - Telegram delivery log cleanup" do
+    test "removes Telegram delivery rows older than 60 days, keeps recent ones" do
+      integration = insert(:telegram_integration)
+      old_date = DateTime.add(DateTime.utc_now(), -61, :day)
+      recent_date = DateTime.add(DateTime.utc_now(), -10, :day)
+
+      old = insert(:telegram_delivery, integration: integration, inserted_at: old_date)
+      recent = insert(:telegram_delivery, integration: integration, inserted_at: recent_date)
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      refute Repo.get(TelegramDeliverySchema, old.id)
+      assert Repo.get(TelegramDeliverySchema, recent.id)
+    end
+
+    test "respects the telegram_delivery_retention_days argument" do
+      integration = insert(:telegram_integration)
+      date_45 = DateTime.add(DateTime.utc_now(), -45, :day)
+
+      delivery = insert(:telegram_delivery, integration: integration, inserted_at: date_45)
+
+      assert :ok = perform_job(DataRetentionWorker, %{"telegram_delivery_retention_days" => 30})
+      refute Repo.get(TelegramDeliverySchema, delivery.id)
+    end
+  end
+
+  describe "perform/1 - analytics event cleanup" do
+    defp insert_analytics_event(inserted_at) do
+      Repo.insert!(%EventSchema{
+        event_type: "page_view",
+        path: "/#{System.unique_integer([:positive])}",
+        visitor_hash: "v#{System.unique_integer([:positive])}",
+        inserted_at: inserted_at
+      })
+    end
+
+    test "removes analytics events older than 90 days, keeps recent ones" do
+      old = insert_analytics_event(DateTime.add(DateTime.utc_now(), -91, :day))
+      recent = insert_analytics_event(DateTime.add(DateTime.utc_now(), -30, :day))
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      refute Repo.get(EventSchema, old.id)
+      assert Repo.get(EventSchema, recent.id)
+    end
+
+    test "respects the analytics_event_retention_days argument" do
+      event = insert_analytics_event(DateTime.add(DateTime.utc_now(), -45, :day))
+
+      assert :ok = perform_job(DataRetentionWorker, %{"analytics_event_retention_days" => 30})
+      refute Repo.get(EventSchema, event.id)
     end
   end
 end

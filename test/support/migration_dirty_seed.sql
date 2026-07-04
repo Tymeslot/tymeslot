@@ -11,9 +11,10 @@
 -- 3. Every INSERT must use explicit column lists — never INSERT INTO t VALUES.
 -- 4. Comments explain WHY each row is adversarial, not what it contains.
 --
--- Tables seeded: users, profiles, calendar_integrations, video_integrations,
---                calendar_events (renamed to provider_calendar_events by migration),
---                connect_accounts, booking_payments, meetings
+-- Tables seeded: users, profiles, user_sessions, calendar_integrations,
+--                video_integrations, calendar_events (renamed to
+--                provider_calendar_events by migration), connect_accounts,
+--                booking_payments, meetings
 
 -- ============================================================================
 -- USERS
@@ -42,6 +43,25 @@ SELECT id, 'Europe/Tallinn', 15, 90, 3, NOW(), NOW() FROM users WHERE email = 's
 -- Profile with NULL optional fields (username, primary_calendar_integration_id)
 INSERT INTO profiles (user_id, timezone, buffer_minutes, advance_booking_days, min_advance_hours, inserted_at, updated_at)
 SELECT id, 'UTC', 0, 30, 0, NOW(), NOW() FROM users WHERE email = 'seed-user-2@example.com';
+
+-- ============================================================================
+-- USER SESSIONS
+-- ============================================================================
+--
+-- Present before 20260702214204_hash_user_session_tokens — exercises the
+-- plaintext-token backfill into token_hash (and the resulting unique index)
+-- against pre-existing rows, not an empty table.
+
+-- Standard active session for user 1.
+INSERT INTO user_sessions (user_id, token, expires_at, inserted_at, updated_at)
+SELECT id, 'seed-session-token-alpha', NOW() + INTERVAL '24 hours', NOW(), NOW()
+FROM users WHERE email = 'seed-user-1@example.com';
+
+-- A second, distinct session for the same user (same user_id, distinct token) —
+-- exercises the per-row backfill rather than a single-row happy path.
+INSERT INTO user_sessions (user_id, token, expires_at, inserted_at, updated_at)
+SELECT id, 'seed-session-token-beta', NOW() + INTERVAL '24 hours', NOW(), NOW()
+FROM users WHERE email = 'seed-user-1@example.com';
 
 -- ============================================================================
 -- CALENDAR INTEGRATIONS

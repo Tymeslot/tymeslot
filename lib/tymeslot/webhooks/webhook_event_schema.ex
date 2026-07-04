@@ -14,7 +14,7 @@ defmodule Tymeslot.Webhooks.WebhookEventSchema do
           event_type: String.t() | nil,
           payload: map() | nil,
           processed_at: DateTime.t() | nil,
-          inserted_at: NaiveDateTime.t() | nil
+          inserted_at: DateTime.t() | nil
         }
 
   schema "webhook_events" do
@@ -23,7 +23,7 @@ defmodule Tymeslot.Webhooks.WebhookEventSchema do
     field :payload, :map
     field :processed_at, :utc_datetime
 
-    timestamps(updated_at: false)
+    timestamps(type: :utc_datetime, updated_at: false)
   end
 
   @doc """

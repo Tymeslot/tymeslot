@@ -5,9 +5,11 @@ defmodule Tymeslot.Auth.UserSessionQueries do
   import Ecto.Query, warn: false
   alias Tymeslot.Auth.{UserSchema, UserSessionSchema}
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Token
 
   @doc """
-  Creates a session for a user.
+  Creates a session for a user. The plaintext `token` is hashed before storage;
+  only its hash is persisted.
   """
   @spec create_session(integer(), String.t(), DateTime.t()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
@@ -15,22 +17,28 @@ defmodule Tymeslot.Auth.UserSessionQueries do
     %UserSessionSchema{}
     |> UserSessionSchema.changeset(%{
       user_id: user_id,
-      token: token,
+      token_hash: hash_token(token),
       expires_at: expires_at
     })
     |> Repo.insert()
   end
 
+  defp hash_token(token) when is_binary(token), do: Token.hash_token(token)
+  defp hash_token(_token), do: nil
+
   @doc """
-  Gets a user by session token.
+  Gets a user by session token. The plaintext `token` is hashed and matched
+  against the stored hash.
   """
   @spec get_user_by_session_token(String.t()) :: Ecto.Schema.t() | nil
   def get_user_by_session_token(token) when is_binary(token) do
+    token_hash = Token.hash_token(token)
+
     query =
       from(s in UserSessionSchema,
         join: u in UserSchema,
         on: s.user_id == u.id,
-        where: s.token == ^token and s.expires_at > ^DateTime.utc_now(),
+        where: s.token_hash == ^token_hash and s.expires_at > ^DateTime.utc_now(),
         select: u
       )
 
@@ -38,17 +46,19 @@ defmodule Tymeslot.Auth.UserSessionQueries do
   end
 
   @doc """
-  Lists the tokens of all sessions belonging to a user.
+  Lists the token hashes of all sessions belonging to a user.
 
-  Used to force-disconnect any live sockets bound to those tokens when the
-  sessions are revoked (password reset, password change, email change).
+  Used to force-disconnect any live sockets bound to those sessions when the
+  sessions are revoked (password reset, password change, email change). The
+  socket's `live_socket_id` is derived from the token hash, so these values map
+  directly to the topics to broadcast a disconnect on.
   """
-  @spec list_user_session_tokens(integer()) :: [String.t()]
-  def list_user_session_tokens(user_id) do
+  @spec list_user_session_token_hashes(integer()) :: [String.t()]
+  def list_user_session_token_hashes(user_id) do
     query =
       from(s in UserSessionSchema,
         where: s.user_id == ^user_id,
-        select: s.token
+        select: s.token_hash
       )
 
     Repo.all(query)
@@ -68,13 +78,16 @@ defmodule Tymeslot.Auth.UserSessionQueries do
   end
 
   @doc """
-  Deletes a specific session by token.
+  Deletes a specific session by token. The plaintext `token` is hashed and
+  matched against the stored hash.
   """
   @spec delete_session_by_token(String.t()) :: {non_neg_integer(), nil}
   def delete_session_by_token(token) when is_binary(token) do
+    token_hash = Token.hash_token(token)
+
     query =
       from(s in UserSessionSchema,
-        where: s.token == ^token
+        where: s.token_hash == ^token_hash
       )
 
     Repo.delete_all(query)

@@ -81,12 +81,12 @@ defmodule Tymeslot.Payments.TaxExtractor do
       nil ->
         0
 
-      amount when is_integer(amount) ->
+      amount when is_integer(amount) and amount >= 0 ->
         amount
 
       amount when is_binary(amount) ->
         case Integer.parse(amount) do
-          {parsed, _value} -> parsed
+          {parsed, _value} -> max(parsed, 0)
           :error -> 0
         end
 

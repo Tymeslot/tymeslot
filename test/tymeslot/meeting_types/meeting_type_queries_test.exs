@@ -297,7 +297,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueriesTest do
   describe "bulk_insert_meeting_types/1" do
     test "inserts multiple meeting types at once" do
       user = insert(:user)
-      now = NaiveDateTime.utc_now(:second)
+      now = DateTime.utc_now(:second)
 
       attrs_list = [
         %{

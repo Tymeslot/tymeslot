@@ -90,6 +90,36 @@ defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
       assert changeset.valid?
     end
 
+    test "validates tax_amount is greater than or equal to 0" do
+      user = insert(:user)
+
+      changeset =
+        PaymentTransactionSchema.changeset(%PaymentTransactionSchema{}, %{
+          user_id: user.id,
+          amount: 500,
+          status: "completed",
+          tax_amount: -1
+        })
+
+      refute changeset.valid?
+      assert "must be greater than or equal to 0" in errors_on(changeset).tax_amount
+    end
+
+    test "validates discount_amount is greater than or equal to 0" do
+      user = insert(:user)
+
+      changeset =
+        PaymentTransactionSchema.changeset(%PaymentTransactionSchema{}, %{
+          user_id: user.id,
+          amount: 500,
+          status: "completed",
+          discount_amount: -1
+        })
+
+      refute changeset.valid?
+      assert "must be greater than or equal to 0" in errors_on(changeset).discount_amount
+    end
+
     test "validates country_code length is exactly 2" do
       user = insert(:user)
 

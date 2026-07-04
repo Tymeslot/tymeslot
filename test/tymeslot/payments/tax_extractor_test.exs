@@ -83,6 +83,16 @@ defmodule Tymeslot.Payments.TaxExtractorTest do
       session = %{"total_details" => %{"amount_tax" => %{"nested" => "value"}}}
       assert TaxExtractor.extract_tax_amount(session) == 0
     end
+
+    test "clamps a negative integer tax amount to 0" do
+      session = %{"total_details" => %{"amount_tax" => -500}}
+      assert TaxExtractor.extract_tax_amount(session) == 0
+    end
+
+    test "clamps a negative string tax amount to 0" do
+      session = %{"total_details" => %{"amount_tax" => "-500"}}
+      assert TaxExtractor.extract_tax_amount(session) == 0
+    end
   end
 
   describe "extract_tax_id/1" do

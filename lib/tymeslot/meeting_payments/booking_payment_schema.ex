@@ -76,7 +76,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
 
     belongs_to :meeting, MeetingSchema, type: :binary_id
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @required_on_create ~w(

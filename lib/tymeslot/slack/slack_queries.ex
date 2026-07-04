@@ -10,6 +10,7 @@ defmodule Tymeslot.Slack.SlackQueries do
 
   import Ecto.Query, warn: false
 
+  alias Tymeslot.Infrastructure.BatchDeleteQueries
   alias Tymeslot.Notifications.IntegrationQueries
   alias Tymeslot.Repo
   alias Tymeslot.Slack.{SlackDeliverySchema, SlackIntegrationSchema}
@@ -170,17 +171,17 @@ defmodule Tymeslot.Slack.SlackQueries do
 
   @doc """
   Deletes Slack delivery log rows older than `days`. One row is written per
-  attempt, so this table grows unbounded without pruning. A negative or
-  non-integer retention is treated as a no-op so a misconfigured value can
-  never wipe the whole table.
+  attempt, so this table grows unbounded without pruning. Deletes in bounded
+  batches (see `BatchDeleteQueries`) so a large backlog can't blow past the
+  database timeout in a single transaction. A zero, negative, or non-integer
+  retention is treated as a no-op so a misconfigured value can never wipe the
+  whole table.
   """
   @spec cleanup_old_deliveries(integer()) :: {non_neg_integer(), nil}
-  def cleanup_old_deliveries(days) when is_integer(days) and days >= 0 do
+  def cleanup_old_deliveries(days) when is_integer(days) and days > 0 do
     cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
 
-    SlackDeliverySchema
-    |> where([d], d.inserted_at < ^cutoff)
-    |> Repo.delete_all()
+    BatchDeleteQueries.delete_older_than(SlackDeliverySchema, :inserted_at, cutoff)
   end
 
   def cleanup_old_deliveries(_days), do: {0, nil}

@@ -94,9 +94,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueriesReorderTest do
 
       # Use a slightly older timestamp for initial records to ensure updated_at is greater
       past_time =
-        NaiveDateTime.utc_now()
-        |> NaiveDateTime.add(-10, :second)
-        |> NaiveDateTime.truncate(:second)
+        DateTime.utc_now()
+        |> DateTime.add(-10, :second)
+        |> DateTime.truncate(:second)
 
       Repo.update_all(MeetingTypeSchema, set: [updated_at: past_time])
 
@@ -113,7 +113,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueriesReorderTest do
       assert Enum.at(types, 2).id == mt1.id
 
       # Verify updated_at was updated (should be after past_time)
-      assert NaiveDateTime.compare(Enum.at(types, 0).updated_at, mt3.updated_at) == :gt
+      assert DateTime.compare(Enum.at(types, 0).updated_at, mt3.updated_at) == :gt
     end
 
     test "rolls back when list contains nonexistent IDs" do

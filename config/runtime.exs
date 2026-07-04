@@ -348,8 +348,8 @@ if config_env() == :prod do
          {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
          # Run every 15 min; CalDAV tier-aware filtering decides which integrations sync
          {"*/15 * * * *", Tymeslot.Workers.FallbackSyncSweepWorker},
-         # Run daily at 04:00 UTC for webhook cleanup
-         {"0 4 * * *", Tymeslot.Workers.WebhookCleanupWorker, args: %{retention_days: 60}},
+         # Run daily at 04:00 UTC for cross-domain data retention pruning
+         {"0 4 * * *", Tymeslot.Workers.DataRetentionWorker, args: %{retention_days: 60}},
          # Run every 6 hours to detect silent/dead webhook channels
          {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
          # Run daily at 03:30 UTC to prune old/inactive calendar event cache
