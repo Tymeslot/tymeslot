@@ -2,7 +2,7 @@ defmodule Tymeslot.Repo.Migrations.ConvertProviderCalendarEventsTimestampsToUtc 
   @moduledoc """
   Converts provider_calendar_events.inserted_at/updated_at from naive
   `timestamp` to `timestamptz`, matching the schema's new
-  `timestamps(type: :utc_datetime)`.
+  `timestamps(type: :utc_datetime_usec)`.
 
   Isolated from the bulk timestamp migration because this is the calendar-event
   cache — the largest of the affected tables. The ALTER rewrites the table under

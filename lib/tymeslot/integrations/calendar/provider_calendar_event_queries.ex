@@ -279,44 +279,53 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   @doc """
-  Bulk-deletes events for the integration whose uid is in `uids`, in a single
-  statement rather than one round-trip per uid. Returns the number of rows
-  deleted.
+  Bulk-deletes events for the integration whose uid is in `uids`, chunked so a
+  single statement never exceeds PostgreSQL's 65,535 bind-parameter limit.
+  Returns the number of rows deleted.
   """
   @spec delete_by_uids(integer(), [String.t()]) :: non_neg_integer()
   def delete_by_uids(_calendar_integration_id, []), do: 0
 
   def delete_by_uids(calendar_integration_id, uids) do
-    {count, _rows} =
-      ProviderCalendarEventSchema
-      |> where(
-        [e],
-        e.calendar_integration_id == ^calendar_integration_id and e.uid in ^uids
-      )
-      |> Repo.delete_all()
+    uids
+    |> Enum.chunk_every(@upsert_chunk_size)
+    |> Enum.reduce(0, fn chunk, acc ->
+      {count, _rows} =
+        ProviderCalendarEventSchema
+        |> where(
+          [e],
+          e.calendar_integration_id == ^calendar_integration_id and e.uid in ^chunk
+        )
+        |> Repo.delete_all()
 
-    count
+      acc + count
+    end)
   end
 
   @doc """
   Bulk-deletes events for the integration whose provider_event_id is in
-  `provider_event_ids`, in a single statement. Returns the number of rows
+  `provider_event_ids`, chunked so a single statement never exceeds
+  PostgreSQL's 65,535 bind-parameter limit. Returns the number of rows
   deleted.
   """
   @spec delete_by_provider_event_ids(integer(), [String.t()]) :: non_neg_integer()
   def delete_by_provider_event_ids(_calendar_integration_id, []), do: 0
 
   def delete_by_provider_event_ids(calendar_integration_id, provider_event_ids) do
-    {count, _rows} =
-      ProviderCalendarEventSchema
-      |> where(
-        [e],
-        e.calendar_integration_id == ^calendar_integration_id and
-          e.provider_event_id in ^provider_event_ids
-      )
-      |> Repo.delete_all()
+    provider_event_ids
+    |> Enum.chunk_every(@upsert_chunk_size)
+    |> Enum.reduce(0, fn chunk, acc ->
+      {count, _rows} =
+        ProviderCalendarEventSchema
+        |> where(
+          [e],
+          e.calendar_integration_id == ^calendar_integration_id and
+            e.provider_event_id in ^chunk
+        )
+        |> Repo.delete_all()
 
-    count
+      acc + count
+    end)
   end
 
   @doc """

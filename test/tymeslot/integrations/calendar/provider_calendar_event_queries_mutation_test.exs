@@ -237,6 +237,199 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueriesMutationTes
     end
   end
 
+  describe "delete_by_uids/2" do
+    test "returns {0, _} and deletes nothing for an empty list" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+      insert(:provider_calendar_event, calendar_integration: integration, uid: "kept")
+
+      assert 0 = ProviderCalendarEventQueries.delete_by_uids(integration.id, [])
+
+      assert Repo.aggregate(
+               from(e in ProviderCalendarEventSchema,
+                 where: e.calendar_integration_id == ^integration.id
+               ),
+               :count
+             ) == 1
+    end
+
+    test "deletes exactly the matching rows and returns the correct count" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      insert(:provider_calendar_event, calendar_integration: integration, uid: "delete-1")
+      insert(:provider_calendar_event, calendar_integration: integration, uid: "delete-2")
+      insert(:provider_calendar_event, calendar_integration: integration, uid: "keep")
+
+      assert 2 =
+               ProviderCalendarEventQueries.delete_by_uids(integration.id, [
+                 "delete-1",
+                 "delete-2"
+               ])
+
+      remaining =
+        Repo.all(
+          from(e in ProviderCalendarEventSchema,
+            where: e.calendar_integration_id == ^integration.id
+          )
+        )
+
+      assert [%{uid: "keep"}] = remaining
+    end
+
+    test "does not delete events belonging to a different integration" do
+      user = insert(:user)
+      int1 = insert(:calendar_integration, user: user)
+      int2 = insert(:calendar_integration, user: user)
+
+      insert(:provider_calendar_event, calendar_integration: int1, uid: "shared-uid")
+      other = insert(:provider_calendar_event, calendar_integration: int2, uid: "shared-uid")
+
+      assert 1 = ProviderCalendarEventQueries.delete_by_uids(int1.id, ["shared-uid"])
+
+      assert Repo.get(ProviderCalendarEventSchema, other.id)
+    end
+
+    test "deletes all matching rows across chunks for a list larger than the chunk size" do
+      # Regression: delete_by_uids must chunk the `in` list the same way
+      # upsert_batch does, or it can exceed Postgres' 65,535 bind-parameter
+      # limit. 1,200 uids exercises more than one chunk at the 1,000-row
+      # chunk size.
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      uids =
+        Enum.map(1..1200, fn n ->
+          event =
+            insert(:provider_calendar_event, calendar_integration: integration, uid: "bulk-#{n}")
+
+          event.uid
+        end)
+
+      assert 1200 = ProviderCalendarEventQueries.delete_by_uids(integration.id, uids)
+
+      assert Repo.aggregate(
+               from(e in ProviderCalendarEventSchema,
+                 where: e.calendar_integration_id == ^integration.id
+               ),
+               :count
+             ) == 0
+    end
+  end
+
+  describe "delete_by_provider_event_ids/2" do
+    test "returns {0, _} and deletes nothing for an empty list" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        provider_event_id: "kept"
+      )
+
+      assert 0 = ProviderCalendarEventQueries.delete_by_provider_event_ids(integration.id, [])
+
+      assert Repo.aggregate(
+               from(e in ProviderCalendarEventSchema,
+                 where: e.calendar_integration_id == ^integration.id
+               ),
+               :count
+             ) == 1
+    end
+
+    test "deletes exactly the matching rows and returns the correct count" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        provider_event_id: "provider-delete-1"
+      )
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        provider_event_id: "provider-delete-2"
+      )
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        provider_event_id: "provider-keep"
+      )
+
+      assert 2 =
+               ProviderCalendarEventQueries.delete_by_provider_event_ids(integration.id, [
+                 "provider-delete-1",
+                 "provider-delete-2"
+               ])
+
+      remaining =
+        Repo.all(
+          from(e in ProviderCalendarEventSchema,
+            where: e.calendar_integration_id == ^integration.id
+          )
+        )
+
+      assert [%{provider_event_id: "provider-keep"}] = remaining
+    end
+
+    test "does not delete events belonging to a different integration" do
+      user = insert(:user)
+      int1 = insert(:calendar_integration, user: user)
+      int2 = insert(:calendar_integration, user: user)
+
+      insert(:provider_calendar_event,
+        calendar_integration: int1,
+        provider_event_id: "shared-provider-id"
+      )
+
+      other =
+        insert(:provider_calendar_event,
+          calendar_integration: int2,
+          provider_event_id: "shared-provider-id"
+        )
+
+      assert 1 =
+               ProviderCalendarEventQueries.delete_by_provider_event_ids(int1.id, [
+                 "shared-provider-id"
+               ])
+
+      assert Repo.get(ProviderCalendarEventSchema, other.id)
+    end
+
+    test "deletes all matching rows across chunks for a list larger than the chunk size" do
+      # Regression: delete_by_provider_event_ids must chunk the `in` list the
+      # same way upsert_batch does, or it can exceed Postgres' 65,535
+      # bind-parameter limit. 1,200 ids exercises more than one chunk at the
+      # 1,000-row chunk size.
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      provider_event_ids =
+        Enum.map(1..1200, fn n ->
+          event =
+            insert(:provider_calendar_event,
+              calendar_integration: integration,
+              provider_event_id: "provider-bulk-#{n}"
+            )
+
+          event.provider_event_id
+        end)
+
+      assert 1200 =
+               ProviderCalendarEventQueries.delete_by_provider_event_ids(
+                 integration.id,
+                 provider_event_ids
+               )
+
+      assert Repo.aggregate(
+               from(e in ProviderCalendarEventSchema,
+                 where: e.calendar_integration_id == ^integration.id
+               ),
+               :count
+             ) == 0
+    end
+  end
+
   describe "full_refresh_for_integration/2" do
     test "replaces all events for an integration" do
       user = insert(:user)
