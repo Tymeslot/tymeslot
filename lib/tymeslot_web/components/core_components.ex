@@ -422,6 +422,10 @@ defmodule TymeslotWeb.Components.CoreComponents do
     default: :medium,
     values: [:xsmall, :small, :medium, :large, :xlarge, :full]
 
+  attr :aria_label, :string,
+    default: nil,
+    doc: "Accessible name for the dialog when no :header slot is rendered"
+
   slot :header, required: false
   slot :inner_block, required: true
   slot :footer, required: false

@@ -58,12 +58,18 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
     default: :medium,
     values: [:xsmall, :small, :medium, :large, :xlarge, :full]
 
+  attr :aria_label, :string,
+    default: nil,
+    doc: "Accessible name for the dialog when no :header slot is rendered"
+
   slot :header, required: false
   slot :inner_block, required: true
   slot :footer, required: false
 
   @spec modal(map()) :: Phoenix.LiveView.Rendered.t()
   def modal(assigns) do
+    assigns = assign(assigns, :dialog_label_attrs, dialog_label_attrs(assigns))
+
     ~H"""
     <div
       id={@id}
@@ -79,7 +85,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
           class={["modal-content bg-white rounded-[2.5rem] shadow-2xl border-2 border-tymeslot-50 relative overflow-hidden", modal_size_class(@size)]}
           role="dialog"
           aria-modal="true"
-          aria-labelledby={@header != [] && "#{@id}-title"}
+          {@dialog_label_attrs}
           tabindex="-1"
           phx-click-away={if @show, do: @on_cancel}
         >
@@ -125,6 +131,16 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
       </div>
     </div>
     """
+  end
+
+  # Prefer aria-labelledby (pointing at the rendered header slot); fall back to
+  # the caller-supplied aria-label when there is no header to label the dialog.
+  defp dialog_label_attrs(%{header: header, id: id}) when header != [] do
+    %{"aria-labelledby" => "#{id}-title"}
+  end
+
+  defp dialog_label_attrs(%{aria_label: aria_label}) do
+    %{"aria-label" => aria_label}
   end
 
   # Helper function for modal size classes

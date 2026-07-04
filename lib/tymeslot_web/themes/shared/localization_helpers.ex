@@ -136,7 +136,10 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   def format_full_date_label(%Date{} = date) do
-    "#{get_weekday_name(Date.day_of_week(date))}, #{format_date(date)}"
+    dgettext("booking", "%{weekday}, %{date}",
+      weekday: get_weekday_name(Date.day_of_week(date)),
+      date: format_date(date)
+    )
   end
 
   @doc """

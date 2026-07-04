@@ -40,6 +40,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       show={true}
       on_cancel={JS.push("close_event_detail", target: @myself)}
       size={:medium}
+      aria_label={@selected_event.summary || "Event details"}
     >
       <%!-- Pending-notification banner --%>
       <div

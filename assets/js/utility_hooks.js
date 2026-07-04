@@ -142,6 +142,14 @@ export const ConnectionStatus = {
 // Auto-scroll to slots on mobile and tablet when slots are loaded, and move
 // keyboard focus into the slots region so a screen-reader / keyboard user who
 // just picked a date is carried to the next step of the flow.
+//
+// Mounted on both Quill's `.time-slots-panel` and Rhythm's `.time-slots-section`
+// containers (both `#slots-container`), so the selectors below must keep
+// matching both themes' markup — update both sides together if either changes.
+const SLOTS_LOADED_SELECTOR = '[data-slots-loaded]';
+const SLOTS_HEADING_SELECTOR = '.slots-heading, .time-slots-section-heading';
+const FOCUS_SOURCE_SELECTOR = '[data-testid="calendar-day"], .week-day-cell';
+
 export const AutoScrollToSlots = {
   mounted() {
     this.handleSlotsUpdate = () => {
@@ -153,7 +161,7 @@ export const AutoScrollToSlots = {
       // Scroll on mobile and tablet viewports (when layout is stacked)
       if (window.innerWidth < 1024) {
         // Check if slots have been loaded (not empty state)
-        const hasSlots = this.el.querySelector('[data-slots-loaded]') ||
+        const hasSlots = this.el.querySelector(SLOTS_LOADED_SELECTOR) ||
                         this.el.querySelector('.space-y-3') ||
                         this.el.querySelector('.animate-spin');
 
@@ -183,7 +191,7 @@ export const AutoScrollToSlots = {
   // button). This carries a keyboard user forward without stealing focus on the
   // initial page load or while they are interacting elsewhere on the page.
   manageFocus() {
-    const loaded = this.el.querySelector('[data-slots-loaded]');
+    const loaded = this.el.querySelector(SLOTS_LOADED_SELECTOR);
     if (!loaded) {
       this.focusMoved = false;
       return;
@@ -192,10 +200,10 @@ export const AutoScrollToSlots = {
 
     const active = document.activeElement;
     const fromDay = active && active.closest &&
-      active.closest('[data-testid="calendar-day"], .week-day-cell');
+      active.closest(FOCUS_SOURCE_SELECTOR);
     if (!fromDay) return;
 
-    const heading = this.el.querySelector('.slots-heading');
+    const heading = this.el.querySelector(SLOTS_HEADING_SELECTOR);
     if (heading) {
       heading.focus();
       this.focusMoved = true;

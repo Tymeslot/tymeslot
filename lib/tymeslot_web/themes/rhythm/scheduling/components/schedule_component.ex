@@ -239,11 +239,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 </div>
               </div>
 
-              <div class="time-slots-section">
+              <div class="time-slots-section" id="slots-container" phx-hook="AutoScrollToSlots">
                 <h3 class="time-slots-section-heading" tabindex="-1">
                   {dgettext("booking", "Available Times")}
                 </h3>
                 <% normalized_slots = MeetingUtils.normalize_slot_list(@available_slots) %>
+                <% slots_loaded? = @selected_date && !@loading_slots && !@calendar_error && normalized_slots != [] %>
                 <%!-- Concise, screen-reader-only announcement of the slot-loading
                       state so keyboard/AT users hear the result of picking a date. --%>
                 <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
@@ -260,7 +261,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       {dgettext("booking", "This date is fully booked")}
                   <% end %>
                 </div>
-                <div class="time-slots-grid scroll-y">
+                <div class="time-slots-grid scroll-y" data-slots-loaded={slots_loaded?}>
                   <%= if @selected_date do %>
                     <%= if @loading_slots do %>
                       <div class="loading-slots">

@@ -4,8 +4,8 @@
  * The hook is what makes every core <.modal> keyboard-accessible: when the
  * overlay becomes visible it moves focus into the dialog and traps Tab within
  * it; when it hides it restores focus to the element that opened it. jsdom has
- * no layout engine, so we simulate `offsetParent` on the focusable elements and
- * run requestAnimationFrame synchronously to make the focus moves observable.
+ * no layout engine, so we simulate `getClientRects()` on the focusable elements
+ * and run requestAnimationFrame synchronously to make the focus moves observable.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -13,9 +13,9 @@ import { ModalFocusTrap } from '../ui_interaction_hooks';
 
 function simulateLayout(...els) {
   for (const el of els) {
-    Object.defineProperty(el, 'offsetParent', {
+    Object.defineProperty(el, 'getClientRects', {
       configurable: true,
-      get: () => document.body,
+      value: () => [{}],
     });
   }
 }

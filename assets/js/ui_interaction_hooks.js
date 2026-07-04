@@ -73,7 +73,11 @@ const FOCUSABLE_SELECTOR = [
   'input:not([disabled])',
   'select:not([disabled])',
   'textarea:not([disabled])',
-  '[tabindex]:not([tabindex="-1"])'
+  '[tabindex]:not([tabindex="-1"])',
+  'iframe',
+  'audio[controls]',
+  'video[controls]',
+  '[contenteditable]:not([contenteditable="false"])'
 ].join(',');
 
 export const ModalFocusTrap = {
@@ -111,8 +115,15 @@ export const ModalFocusTrap = {
   },
 
   focusable() {
+    // getClientRects().length also catches position:fixed elements, which
+    // offsetParent === null incorrectly treats as hidden.
+    //
+    // Note: an <iframe> can be included in this list and act as the first/
+    // last stop for Tab, but a keydown fired inside a cross-document iframe
+    // cannot be intercepted by this listener — full containment of the
+    // iframe's own document content is not achievable from the parent frame.
     return Array.from(this.el.querySelectorAll(FOCUSABLE_SELECTOR))
-      .filter((el) => el.offsetParent !== null);
+      .filter((el) => el.getClientRects().length > 0);
   },
 
   activate() {
