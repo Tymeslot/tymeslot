@@ -305,6 +305,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
       name: :unique_confirmed_meeting_per_organizer_at_time,
       message: "You already have a confirmed meeting at this time."
     )
+    |> check_constraint(:end_time, name: :meetings_end_after_start)
   end
 
   defp calculate_duration(changeset) do

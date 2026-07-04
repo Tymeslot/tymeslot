@@ -101,8 +101,15 @@ defmodule Tymeslot.Payments.PaymentTransactionSchema do
     |> validate_inclusion(:status, ~w(pending completed failed pending_reconciliation))
     |> validate_length(:country_code, is: 2)
     |> validate_number(:amount, greater_than_or_equal_to: 0)
+    |> validate_number(:tax_amount, greater_than_or_equal_to: 0)
+    |> validate_number(:discount_amount, greater_than_or_equal_to: 0)
     |> foreign_key_constraint(:user_id)
     |> unique_constraint(:stripe_id)
     |> unique_constraint(:user_id, name: :unique_pending_transaction_per_user)
+    |> check_constraint(:amount, name: :payment_transactions_amount_non_negative)
+    |> check_constraint(:tax_amount, name: :payment_transactions_tax_amount_non_negative)
+    |> check_constraint(:discount_amount,
+      name: :payment_transactions_discount_amount_non_negative
+    )
   end
 end
