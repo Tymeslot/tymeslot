@@ -32,6 +32,9 @@ defmodule Tymeslot.Auth.Session do
     token = Token.generate_session_token()
     # The socket's disconnect topic is derived from the token *hash*, so it can
     # be reconstructed at revocation time (which only has the stored hash).
+    # This hash is baked into `live_socket_id` below and stored, unrecomputed,
+    # in the signed cookie for the session's entire life — see the caveat on
+    # `live_socket_topic/1` for the resulting pre-deploy live-socket gap.
     token_hash = Token.hash_token(token)
     expires_at = DateTime.truncate(DateTime.add(DateTime.utc_now(), 24, :hour), :second)
 
@@ -221,6 +224,17 @@ defmodule Tymeslot.Auth.Session do
   # The `live_socket_id` topic a connected socket is subscribed to, derived from
   # its session token *hash* so revocation (which only has the stored hash) can
   # reconstruct the same topic. Broadcasting "disconnect" here closes the socket.
+  #
+  # DEPLOY-WINDOW CAVEAT: `live_socket_id` is written into the signed session
+  # cookie once, at `create_session/2`, and is never recomputed for the life of
+  # that cookie. Sessions issued *before* this hash-based topic shipped carry a
+  # `live_socket_id` computed from the old (plaintext-derived) scheme, so
+  # broadcasting to the new hash topic will not reach their sockets — a
+  # password/email change or logout won't force-close them. Those stale
+  # sessions still get cleared correctly on their *next* HTTP request once
+  # their `user_sessions` row is revoked (`get_current_user_id/1` will fail to
+  # resolve the deleted row), so the gap is a live-socket-disconnect miss only,
+  # bounded by the 24h session validity window, not a permanent security hole.
   defp live_socket_topic(token_hash), do: "users_sessions:#{Base.url_encode64(token_hash)}"
 
   # Helper function to safely get peer data
