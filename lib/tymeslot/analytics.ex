@@ -187,7 +187,7 @@ defmodule Tymeslot.Analytics do
 
   @doc """
   Prunes analytics events older than `days` (default 90). Called by the shared
-  `WebhookCleanupWorker` so the per-page-view event log does not grow unbounded.
+  `DataRetentionWorker` so the per-page-view event log does not grow unbounded.
   Dashboard aggregates only reflect events within the retention window.
   Returns the `{deleted_count, nil}` tuple from `delete_all`.
   """

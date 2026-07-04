@@ -413,7 +413,9 @@ config :tymeslot, :payments,
   ],
   retention: [
     outgoing_webhook_days: 60,
-    stripe_event_days: 90
+    stripe_event_days: 90,
+    analytics_event_days: 90,
+    payload_days: 30
   ]
 
 # Subscription reconciliation configuration

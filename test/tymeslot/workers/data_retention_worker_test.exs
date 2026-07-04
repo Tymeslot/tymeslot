@@ -62,10 +62,10 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
       assert Repo.get(WebhookDeliverySchema, old_delivery.id)
     end
 
-    test "zero retention days removes everything older than today" do
+    test "zero retention days is a safe no-op and deletes nothing" do
       webhook = insert(:webhook)
 
-      _recent_delivery = insert(:webhook_delivery, webhook: webhook)
+      recent_delivery = insert(:webhook_delivery, webhook: webhook)
 
       old_delivery =
         insert(:webhook_delivery,
@@ -75,7 +75,10 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
 
       assert :ok = perform_job(DataRetentionWorker, %{"retention_days" => 0})
 
-      refute Repo.get(WebhookDeliverySchema, old_delivery.id)
+      # Zero is treated as a guard, like negative: a misconfigured
+      # `retention_days: 0` can never wipe the whole table.
+      assert Repo.get(WebhookDeliverySchema, recent_delivery.id)
+      assert Repo.get(WebhookDeliverySchema, old_delivery.id)
     end
 
     test "very large retention days keeps all records" do

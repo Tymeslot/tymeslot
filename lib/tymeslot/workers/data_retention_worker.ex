@@ -120,9 +120,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
         @retention[:payload_days] ||
         30
 
-    cutoff_date =
-      DateTime.utc_now()
-      |> DateTime.add(-retention_days, :day)
+    cutoff_date = DateTime.add(DateTime.utc_now(), -retention_days, :day)
 
     case WebhookQueries.nullify_stale_payloads(cutoff_date) do
       {count, _nil} when count > 0 ->

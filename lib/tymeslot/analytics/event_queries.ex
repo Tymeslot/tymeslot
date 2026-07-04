@@ -8,6 +8,7 @@ defmodule Tymeslot.Analytics.EventQueries do
   import Ecto.Query
 
   alias Tymeslot.Analytics.EventSchema
+  alias Tymeslot.Infrastructure.BatchDeleteQueries
   alias Tymeslot.Repo
 
   @spec insert(map()) :: {:ok, EventSchema.t()} | {:error, Ecto.Changeset.t()}
@@ -17,17 +18,17 @@ defmodule Tymeslot.Analytics.EventQueries do
 
   @doc """
   Deletes analytics events older than `days`. One row is written per page view,
-  so this table grows unbounded without pruning. A negative or non-integer
-  retention is treated as a no-op so a misconfigured value can never wipe the
-  whole table.
+  so this table grows unbounded without pruning. Deletes in bounded batches
+  (see `BatchDeleteQueries`) so a large backlog can't blow past the database
+  timeout in a single transaction. A zero, negative, or non-integer retention
+  is treated as a no-op so a misconfigured value can never wipe the whole
+  table.
   """
   @spec delete_events_older_than(integer()) :: {non_neg_integer(), nil}
-  def delete_events_older_than(days) when is_integer(days) and days >= 0 do
+  def delete_events_older_than(days) when is_integer(days) and days > 0 do
     cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
 
-    EventSchema
-    |> where([e], e.inserted_at < ^cutoff)
-    |> Repo.delete_all()
+    BatchDeleteQueries.delete_older_than(EventSchema, :inserted_at, cutoff)
   end
 
   def delete_events_older_than(_days), do: {0, nil}
