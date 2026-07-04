@@ -6,7 +6,6 @@ defmodule Tymeslot.Auth.UserQueries do
 
   alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
-  alias Tymeslot.MeetingPayments
   alias Tymeslot.Repo
   alias Tymeslot.Security.Password
 
@@ -316,40 +315,16 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Deletes a user.
+  Deletes the given user row.
 
-  Runs `Tymeslot.MeetingPayments.anonymise_host/1` before the
-  delete so booking-payment and payment-transaction rows are scrubbed and
-  marked retained. The ordering is what guarantees survival: anonymisation
-  nils the host reference on each row (`booking_payments.host_user_id` is a
-  bare integer with no FK; `payment_transactions.user_id` is set to nil)
-  before the user row is deleted, so no retained row still points at the
-  user when the delete runs — regardless of the FK's `on_delete`. Both must
-  happen in the same transaction. Required for tax-record retention under EU
-  and Swiss commercial law (GDPR Art. 17(3)(b) carve-out).
+  Bare single-table delete. Callers needing the anonymise-then-delete
+  transaction (required for tax-record retention, see
+  `Tymeslot.Auth.AccountDeletion`) must use `Tymeslot.Auth.delete_account/1`
+  rather than calling this directly.
   """
-  @spec delete_user(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t() | term()}
-  def delete_user(%UserSchema{} = user) do
-    # Run the external-cleanup hook (e.g. SaaS subscription cancellation) before
-    # any DB change. If it fails, abort: we never delete a user while external
-    # state that keeps billing them could not be torn down.
-    with :ok <- run_account_deletion_hook(user.id) do
-      Repo.transaction(fn ->
-        with :ok <- MeetingPayments.anonymise_host(user.id),
-             {:ok, deleted} <- Repo.delete(user) do
-          deleted
-        else
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
-    end
-  end
-
-  defp run_account_deletion_hook(user_id) do
-    case Application.get_env(:tymeslot, :account_deletion_hook) do
-      nil -> :ok
-      hook -> hook.on_account_deletion(user_id)
-    end
+  @spec delete_user_row(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def delete_user_row(%UserSchema{} = user) do
+    Repo.delete(user)
   end
 
   @doc """

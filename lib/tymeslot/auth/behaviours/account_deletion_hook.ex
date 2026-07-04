@@ -7,8 +7,8 @@ defmodule Tymeslot.Auth.Behaviours.AccountDeletionHook do
   Configured via `config :tymeslot, :account_deletion_hook, MyHook`. Core keeps
   a safe `nil` default and behaves identically whether or not a hook is set.
 
-  **Returning `{:error, reason}` aborts the deletion.** `delete_user/1` returns
-  the error and the user, along with all their data, is left intact. This is
+  **Returning `{:error, reason}` aborts the deletion.** `Tymeslot.Auth.delete_account/1`
+  returns the error and the user, along with all their data, is left intact. This is
   deliberate: we never destroy a user while external state that keeps costing
   them money (an active subscription) could not be cancelled. The hook must be
   safe to run for a user who has nothing to clean up (return `:ok`).

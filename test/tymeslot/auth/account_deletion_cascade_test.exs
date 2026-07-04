@@ -1,7 +1,7 @@
 defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
   @moduledoc """
   Enumerates every database-level association that a user owns and pins
-  the intended outcome of `UserQueries.delete_user/1` for each. The
+  the intended outcome of `Auth.delete_account/1` for each. The
   cascades are set in migrations (`on_delete: :delete_all` or
   `:nilify_all`), so any reversal — an accidental `:restrict`, a new
   table wired in without an FK cascade, a `nilify_all` silently
@@ -27,7 +27,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
   @moduletag :auth
 
   alias Tymeslot.Announcements.UserSeenAnnouncementSchema
-  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Auth
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Auth.UserSessionSchema
   alias Tymeslot.Availability.AvailabilityBreakSchema
@@ -165,7 +165,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       assert Repo.get(TelegramDeliverySchema, telegram_delivery.id)
       assert Repo.get(AvailabilityBreakSchema, availability_break.id)
 
-      assert {:ok, _deleted} = UserQueries.delete_user(user)
+      assert {:ok, _deleted} = Auth.delete_account(user)
 
       # User row gone.
       refute Repo.get(UserSchema, user.id)
@@ -315,7 +315,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       calendar_b = insert(:calendar_integration, user: user_b)
       theme_b = insert(:theme_customization, profile: profile_b)
 
-      assert {:ok, _deleted} = UserQueries.delete_user(user_a)
+      assert {:ok, _deleted} = Auth.delete_account(user_a)
 
       assert Repo.get(UserSchema, user_b.id)
       assert Repo.get(MeetingSchema, meeting_b.id)

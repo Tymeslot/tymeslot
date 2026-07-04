@@ -1,9 +1,9 @@
 defmodule Tymeslot.Auth.AccountDeletionHookTest do
   @moduledoc """
-  delete_user/1 runs the configured account-deletion hook before touching the
-  database. A failing hook must abort the deletion so a user is never destroyed
-  while external state that keeps billing them (a live subscription) could not
-  be torn down.
+  Auth.delete_account/1 runs the configured account-deletion hook before
+  touching the database. A failing hook must abort the deletion so a user is
+  never destroyed while external state that keeps billing them (a live
+  subscription) could not be torn down.
   """
 
   use Tymeslot.DataCase, async: false
@@ -12,7 +12,7 @@ defmodule Tymeslot.Auth.AccountDeletionHookTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Auth
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
 
@@ -38,7 +38,7 @@ defmodule Tymeslot.Auth.AccountDeletionHookTest do
     Application.put_env(:tymeslot, :account_deletion_hook, nil)
     user = insert(:user)
 
-    assert {:ok, _deleted} = UserQueries.delete_user(user)
+    assert {:ok, _deleted} = Auth.delete_account(user)
     refute Repo.get(UserSchema, user.id)
   end
 
@@ -46,7 +46,7 @@ defmodule Tymeslot.Auth.AccountDeletionHookTest do
     Application.put_env(:tymeslot, :account_deletion_hook, OkHook)
     user = insert(:user)
 
-    assert {:ok, _deleted} = UserQueries.delete_user(user)
+    assert {:ok, _deleted} = Auth.delete_account(user)
     refute Repo.get(UserSchema, user.id)
   end
 
@@ -54,7 +54,7 @@ defmodule Tymeslot.Auth.AccountDeletionHookTest do
     Application.put_env(:tymeslot, :account_deletion_hook, FailingHook)
     user = insert(:user)
 
-    assert {:error, :subscription_cancel_failed} = UserQueries.delete_user(user)
+    assert {:error, :subscription_cancel_failed} = Auth.delete_account(user)
     assert Repo.get(UserSchema, user.id), "user must survive when external cleanup fails"
   end
 end
