@@ -68,13 +68,19 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
         </dl>
 
         <div :if={@entry.target}>
-          <p class="text-token-xs font-black uppercase tracking-widest text-tymeslot-400 mb-2">
+          <p id="agenda-colour-picker-label" class="text-token-xs font-black uppercase tracking-widest text-tymeslot-400 mb-2">
             Colour
           </p>
-          <div class="flex flex-wrap items-center gap-2">
+          <div
+            role="radiogroup"
+            aria-labelledby="agenda-colour-picker-label"
+            class="flex flex-wrap items-center gap-2"
+          >
             <button
               :for={{key, label, swatch_class} <- EventColour.palette()}
               type="button"
+              role="radio"
+              aria-checked={@entry.colour == key}
               phx-click="set_entry_colour"
               phx-value-colour={key}
               phx-value-target={encode_target(@entry.target)}
@@ -90,6 +96,8 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
             </button>
             <button
               type="button"
+              role="radio"
+              aria-checked={@entry.colour == nil}
               phx-click="clear_entry_colour"
               phx-value-target={encode_target(@entry.target)}
               phx-target={@myself}

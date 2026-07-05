@@ -30,7 +30,7 @@ defmodule Tymeslot.Repo.Migrations.CreateEventColourOverrides do
     create(
       constraint(:event_colour_overrides, :event_colour_overrides_exactly_one_target,
         check:
-          "(meeting_id IS NOT NULL)::int + (calendar_integration_id IS NOT NULL AND provider_uid IS NOT NULL)::int = 1"
+          "((meeting_id IS NOT NULL) AND calendar_integration_id IS NULL AND provider_uid IS NULL) OR (meeting_id IS NULL AND calendar_integration_id IS NOT NULL AND provider_uid IS NOT NULL)"
       )
     )
   end

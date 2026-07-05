@@ -8,6 +8,12 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrideQueries do
   alias Tymeslot.Integrations.Calendar.ColourOverride
   alias Tymeslot.Repo
 
+  @replace_on_conflict [:colour, :updated_at]
+  @meeting_conflict_target {:unsafe_fragment,
+                            "(user_id, meeting_id) WHERE meeting_id IS NOT NULL"}
+  @external_conflict_target {:unsafe_fragment,
+                             "(user_id, calendar_integration_id, provider_uid) WHERE provider_uid IS NOT NULL"}
+
   @spec set_external(integer(), integer(), String.t(), String.t()) ::
           {:ok, ColourOverride.t()} | {:error, Ecto.Changeset.t()}
   def set_external(user_id, integration_id, uid, colour) do
@@ -18,7 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrideQueries do
       colour: colour
     }
 
-    upsert(attrs, &external_match/2, {user_id, integration_id, uid})
+    upsert(attrs, @external_conflict_target)
   end
 
   @spec set_meeting(integer(), Ecto.UUID.t(), String.t()) ::
@@ -26,7 +32,7 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrideQueries do
   def set_meeting(user_id, meeting_id, colour) do
     attrs = %{user_id: user_id, meeting_id: meeting_id, colour: colour}
 
-    upsert(attrs, &meeting_match/2, {user_id, meeting_id})
+    upsert(attrs, @meeting_conflict_target)
   end
 
   @spec clear_external(integer(), integer(), String.t()) :: :ok
@@ -70,10 +76,13 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrideQueries do
     from o in query, where: o.user_id == ^user_id and o.meeting_id == ^meeting_id
   end
 
-  defp upsert(attrs, match_fun, match_args) do
-    case Repo.one(match_fun.(ColourOverride, match_args)) do
-      nil -> %ColourOverride{} |> ColourOverride.changeset(attrs) |> Repo.insert()
-      existing -> existing |> ColourOverride.changeset(attrs) |> Repo.update()
-    end
+  defp upsert(attrs, conflict_target) do
+    %ColourOverride{}
+    |> ColourOverride.changeset(attrs)
+    |> Repo.insert(
+      on_conflict: {:replace, @replace_on_conflict},
+      conflict_target: conflict_target,
+      returning: true
+    )
   end
 end

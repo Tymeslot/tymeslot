@@ -47,19 +47,31 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   end
 
   def handle_event("set_entry_colour", %{"colour" => colour, "target" => target}, socket) do
-    case CalendarContext.set_event_colour(
-           socket.assigns.current_user.id,
-           decode_target(target),
-           colour
-         ) do
-      {:ok, _override} -> {:noreply, reload_agenda_colours(socket)}
-      {:error, _changeset} -> {:noreply, socket}
+    case decode_target(target) do
+      :error ->
+        {:noreply, socket}
+
+      decoded ->
+        case CalendarContext.set_event_colour(socket.assigns.current_user.id, decoded, colour) do
+          {:ok, _override} ->
+            {:noreply, reload_agenda_colours(socket)}
+
+          {:error, _changeset} ->
+            {:noreply,
+             Flash.put_flash(socket, :error, "Couldn't save that colour. Please try again.")}
+        end
     end
   end
 
   def handle_event("clear_entry_colour", %{"target" => target}, socket) do
-    CalendarContext.clear_event_colour(socket.assigns.current_user.id, decode_target(target))
-    {:noreply, reload_agenda_colours(socket)}
+    case decode_target(target) do
+      :error ->
+        {:noreply, socket}
+
+      decoded ->
+        CalendarContext.clear_event_colour(socket.assigns.current_user.id, decoded)
+        {:noreply, reload_agenda_colours(socket)}
+    end
   end
 
   # Rebuilds the agenda from the database (now reflecting the override) and keeps
@@ -79,9 +91,15 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   defp decode_target("meeting:" <> id), do: {:meeting, id}
 
   defp decode_target("external:" <> rest) do
-    [integration_id, uid] = String.split(rest, ":", parts: 2)
-    {:external, String.to_integer(integration_id), uid}
+    with [integration_id, uid] <- String.split(rest, ":", parts: 2),
+         {parsed_id, ""} <- Integer.parse(integration_id) do
+      {:external, parsed_id, uid}
+    else
+      _other -> :error
+    end
   end
+
+  defp decode_target(_other), do: :error
 
   defp find_entry(%Day{} = agenda, id) do
     [agenda.next | agenda.today ++ agenda.tomorrow]

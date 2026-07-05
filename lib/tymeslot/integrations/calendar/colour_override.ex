@@ -38,6 +38,8 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverride do
     |> unique_constraint([:user_id, :calendar_integration_id, :provider_uid],
       name: :event_colour_overrides_user_external_index
     )
+    |> foreign_key_constraint(:meeting_id)
+    |> foreign_key_constraint(:calendar_integration_id)
   end
 
   defp validate_exactly_one_target(changeset) do
