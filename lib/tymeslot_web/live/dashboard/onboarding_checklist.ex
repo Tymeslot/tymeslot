@@ -64,6 +64,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
     <section
       class="card-glass onboarding-checklist"
       data-testid="onboarding-checklist"
+      data-tour="quick-actions"
       aria-label="Setup checklist"
       phx-remove={JS.transition("onboarding-checklist--leaving", time: 500)}
     >
