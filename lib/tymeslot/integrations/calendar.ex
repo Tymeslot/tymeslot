@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
+  alias Tymeslot.Integrations.Calendar.ColourResolver
   alias Tymeslot.Integrations.Calendar.Connection
   alias Tymeslot.Integrations.Calendar.Creation
   alias Tymeslot.Integrations.Calendar.Deletion
@@ -37,6 +38,8 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Workers.ColourWriteBackWorker
+
+  require Logger
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
@@ -483,14 +486,39 @@ defmodule Tymeslot.Integrations.Calendar do
   @spec overrides_for(user_id()) :: %{optional(tuple()) => String.t()}
   def overrides_for(user_id), do: ColourOverrideQueries.for_user(user_id)
 
-  # Best-effort provider write-back for a *set*. The worker sends the event's
-  # full timing so the provider write cannot wipe fields; Outlook and read-only
-  # calendars are handled inside the worker.
+  @doc """
+  Resolves the palette key to display for an event: the user's durable
+  override wins, else the provider-synced colour, else `nil` (caller applies
+  its own source/integration default).
+  """
+  @spec resolve_event_colour(override :: String.t() | nil, provider_colour :: String.t() | nil) ::
+          String.t() | nil
+  def resolve_event_colour(override, provider_colour),
+    do: ColourResolver.resolve(override, provider_colour)
+
+  # Best-effort provider write-back for a *set*. The worker patches only the
+  # provider's colour field; Outlook and read-only calendars are handled
+  # inside the worker. `replace: [:args]` ensures that when a user changes the
+  # colour again before the previous job has run, the pending job's args are
+  # replaced in place to carry the newest colour — without it, `unique` alone
+  # would keep the *older* job (and its stale colour) and silently drop the
+  # newer enqueue.
   defp maybe_enqueue_colour_write_back(user_id, integration_id, uid, colour) do
     %{"user_id" => user_id, "integration_id" => integration_id, "uid" => uid, "colour" => colour}
-    |> ColourWriteBackWorker.new()
+    |> ColourWriteBackWorker.new(replace: [:args])
     |> Oban.insert()
+    |> log_colour_write_back_enqueue_error(user_id, integration_id)
 
     :ok
+  end
+
+  defp log_colour_write_back_enqueue_error({:ok, _job}, _user_id, _integration_id), do: :ok
+
+  defp log_colour_write_back_enqueue_error({:error, reason}, user_id, integration_id) do
+    Logger.warning("Failed to enqueue colour write-back",
+      user_id: user_id,
+      integration_id: integration_id,
+      reason: inspect(reason)
+    )
   end
 end

@@ -167,6 +167,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
 
   @spec call_update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, map()} | {:error, atom(), String.t()}
+  def call_update_event(integration, event_id, %{colour_only: true} = event_attrs) do
+    calendar_id =
+      event_attrs[:calendar_id] || integration.default_booking_calendar_id || "primary"
+
+    effective_id = event_attrs[:provider_event_id] || event_id
+    api_module().patch_event_colour(integration, calendar_id, effective_id, event_attrs[:colour])
+  end
+
   def call_update_event(integration, event_id, event_attrs) do
     calendar_id =
       event_attrs[:calendar_id] || integration.default_booking_calendar_id || "primary"

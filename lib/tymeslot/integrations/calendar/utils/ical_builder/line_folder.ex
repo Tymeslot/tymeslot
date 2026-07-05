@@ -18,6 +18,28 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder do
     |> Enum.map_join("\r\n", &fold_line/1)
   end
 
+  @doc """
+  Reverses `fold_lines/1`: splits an iCal payload into logical (unfolded)
+  content lines, re-joining any continuation line (one starting with a SPACE
+  or TAB per RFC 5545 §3.1) onto its parent. Tolerates bare `\\n` line endings
+  in addition to the spec's `\\r\\n`, since not every CalDAV server is strict.
+  """
+  @spec unfold_lines(String.t()) :: [String.t()]
+  def unfold_lines(ical_string) do
+    ical_string
+    |> String.split(~r/\r\n|\r|\n/)
+    |> Enum.reduce([], &unfold_line/2)
+    |> Enum.reverse()
+  end
+
+  defp unfold_line(line, [] = acc), do: [line | acc]
+
+  defp unfold_line(<<lead, _rest::binary>> = line, [last | rest]) when lead in [?\s, ?\t] do
+    [last <> binary_part(line, 1, byte_size(line) - 1) | rest]
+  end
+
+  defp unfold_line(line, acc), do: [line | acc]
+
   defp fold_line(line), do: fold_line_acc(line, _first = true, _acc = [])
 
   defp fold_line_acc(<<>>, _first, acc), do: acc |> Enum.reverse() |> Enum.join("\r\n ")

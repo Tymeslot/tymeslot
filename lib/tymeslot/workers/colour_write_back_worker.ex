@@ -1,16 +1,29 @@
 defmodule Tymeslot.Workers.ColourWriteBackWorker do
   @moduledoc """
-  Best-effort push of a per-event colour to the host calendar, reusing the
-  existing event-update path (Google `colorId` / CalDAV `COLOR`). The event's
-  full current timing and summary are always sent, so the provider write is a
-  valid update that never wipes fields.
+  Best-effort push of a per-event colour to the host calendar via a
+  colour-only patch (Google `events.patch` sending just `colorId` / CalDAV
+  patching only the `COLOR` property on the event's last-synced `raw_ical`).
+  No other field is ever sent, so recurrence, attendees, alarms, and
+  conference data already on the host event are never touched.
 
   Outlook has no per-event colour concept, so those jobs are discarded. Read-only
   calendars and transient failures surface as errors and are retried by Oban; the
   durable override remains the display source regardless of write-back outcome.
   Only *set* enqueues a job — clearing a colour leaves the host untouched.
+
+  `unique` is keyed on `[:integration_id, :uid, :user_id]` with `replace: [:args]`
+  set at the enqueue site (`Calendar.maybe_enqueue_colour_write_back/4`) so rapid
+  successive colour changes collapse onto one pending job carrying the latest
+  colour, rather than racing to whichever job's PUT/PATCH lands last.
   """
-  use Oban.Worker, queue: :calendar_events, max_attempts: 3, priority: 2
+  use Oban.Worker,
+    queue: :calendar_events,
+    max_attempts: 3,
+    priority: 2,
+    unique: [
+      keys: [:integration_id, :uid, :user_id],
+      states: [:available, :scheduled, :executing, :retryable, :suspended]
+    ]
 
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -35,37 +48,23 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
     do: {:discard, :provider_has_no_event_colour}
 
   defp write_back(event, integration_id, user_id, colour) do
-    event_data = Map.put(base_event_data(event), :colour, colour)
+    event_data = colour_only_event_data(event, colour)
 
-    case CalendarEvents.update_event(event.uid, event_data, {integration_id, user_id}) do
-      :ok -> :ok
-      {:error, reason} -> {:error, reason}
-    end
+    CalendarEvents.update_event(event.uid, event_data, {integration_id, user_id})
   end
 
-  # The full current event payload (timing + core fields), so the provider write
-  # is a complete, valid update — mirrors the grid's colour-update path.
-  defp base_event_data(%{all_day: true} = event) do
+  # Colour-only payload: just enough for the provider path to identify the
+  # event and patch its colour (Google `colorId` via PATCH, CalDAV `COLOR` via
+  # a patched copy of `raw_ical`). Deliberately excludes summary/timing/
+  # description/location — a full-field payload would only be safe to send
+  # via a full REPLACE, which is exactly what silently wiped recurrence,
+  # attendees, alarms, and conference data before this fix.
+  defp colour_only_event_data(event, colour) do
     %{
-      summary: event.summary || "",
-      start_time: event.start_date,
-      end_time: event.end_date,
-      all_day: true,
-      description: event.description || "",
-      location: event.location || "",
-      provider_event_id: event.provider_event_id
-    }
-  end
-
-  defp base_event_data(event) do
-    %{
-      summary: event.summary || "",
-      start_time: event.start_at,
-      end_time: event.end_at,
-      all_day: false,
-      description: event.description || "",
-      location: event.location || "",
-      provider_event_id: event.provider_event_id
+      colour_only: true,
+      colour: colour,
+      provider_event_id: event.provider_event_id,
+      raw_ical: event.raw_ical
     }
   end
 end

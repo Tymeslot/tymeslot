@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour
   alias Tymeslot.Integrations.Calendar.Google.EventMapper
   alias Tymeslot.Integrations.Calendar.Google.PushChannel
@@ -170,6 +171,45 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
         params: %{"sendUpdates" => "none"}
       )
     end)
+  end
+
+  @doc """
+  Patches only the event's `colorId` — used by the colour write-back path so
+  recurrence/attendees/reminders/conference data already on the event are
+  never touched. Uses `PATCH` (not `PUT`), which Google only applies to the
+  fields present in the request body.
+
+  Returns `:ok` without making a request when `colour` does not map to a
+  known Google `colorId` (see `EventColour.google_color_id/1`) — nothing to
+  patch, matching the outbound-mapper convention of leaving Google's default
+  colour untouched for unrecognised values.
+  """
+  @impl CalendarAPIBehaviour
+  @spec patch_event_colour(CalendarIntegrationSchema.t(), String.t(), String.t(), String.t()) ::
+          {:ok, calendar_event()} | :ok | api_error()
+  def patch_event_colour(
+        %CalendarIntegrationSchema{} = integration,
+        calendar_id,
+        event_id,
+        colour
+      ) do
+    case EventColour.google_color_id(colour) do
+      nil ->
+        :ok
+
+      color_id ->
+        google_event_id = EventMapper.uuid_to_google_event_id(event_id)
+
+        AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+          make_request_with_body(
+            :patch,
+            "/calendars/#{calendar_id}/events/#{google_event_id}",
+            token,
+            %{"colorId" => color_id},
+            params: %{"sendUpdates" => "none"}
+          )
+        end)
+    end
   end
 
   @doc """

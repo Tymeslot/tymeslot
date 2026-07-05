@@ -238,9 +238,33 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   `opts` may carry `:etag` (the caller's cached ETag for the event, used
   directly as `If-Match` without a HEAD probe) and any options accepted by
   `Events.update_calendar_event/5`.
+
+  When `event_data` carries `colour_only: true` (the colour write-back
+  path), dispatches to `Events.update_event_colour/5` instead — patching only
+  the `COLOR` property on the event's cached `raw_ical` rather than rebuilding
+  the VEVENT from a reduced payload, which would silently drop
+  RRULE/ATTENDEE/VALARM data.
   """
   @spec update_event(caldav_client(), String.t(), map(), keyword()) :: :ok | {:error, term()}
-  def update_event(client, uid, event_data, opts \\ []) do
+  def update_event(client, uid, event_data, opts \\ [])
+
+  def update_event(client, uid, %{colour_only: true, colour: colour} = event_data, opts) do
+    case primary_calendar_path(client) do
+      nil ->
+        {:error, "Event not found"}
+
+      path ->
+        colour_opts =
+          Keyword.merge(opts,
+            raw_ical: Map.get(event_data, :raw_ical),
+            provider_event_id: Map.get(event_data, :provider_event_id)
+          )
+
+        Events.update_event_colour(client, path, uid, colour, colour_opts)
+    end
+  end
+
+  def update_event(client, uid, event_data, opts) do
     case primary_calendar_path(client) do
       nil -> {:error, "Event not found"}
       path -> Events.update_calendar_event(client, path, uid, event_data, opts)
