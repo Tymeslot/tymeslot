@@ -20,8 +20,15 @@ config :tymeslot, :pubsub_name, Tymeslot.PubSub
 # Force core router for tests
 config :tymeslot, :router, TymeslotWeb.Router
 
-# Configure upload directory for tests
-config :tymeslot, :upload_directory, Path.expand("../test/uploads", __DIR__)
+# Upload directory for tests: a per-partition temp dir, cleaned up after the
+# suite (see test_helper.exs). Keeps generated avatars/attachments out of the
+# repo tree entirely.
+config :tymeslot,
+       :upload_directory,
+       Path.join(
+         System.tmp_dir!(),
+         "tymeslot_test_uploads#{System.get_env("MIX_TEST_PARTITION")}"
+       )
 
 config :tymeslot, TymeslotWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("TEST_PORT") || "4002")],
@@ -37,7 +44,10 @@ config :tymeslot, TymeslotWeb.Endpoint,
   session_signing_salt: "test_session_signing_salt",
   server: false
 
-# Configure the database
+# Configure the database.
+# NOTE: the SaasRepo copy of this pool-size formula lives in the umbrella
+# `config/test.exs` (SaasRepo can't be configured from Core). Keep the two in
+# sync — the Core/SaaS boundary forces the duplication.
 default_pool_size = min(max(System.schedulers_online() * 2, 5), 10)
 
 test_pool_size =
@@ -105,6 +115,8 @@ config :tymeslot, :req_test_plug, {Req.Test, :tymeslot_http}
 config :tymeslot, :email_service, Tymeslot.EmailServiceMock
 config :tymeslot, :transcoder, Tymeslot.Media.TranscoderMock
 config :tymeslot, :health_check_module, Tymeslot.Integrations.HealthCheckMock
+config :tymeslot, :verification_module, Tymeslot.Auth.VerificationMock
+config :tymeslot, :oauth_callback_module, Tymeslot.Auth.OAuth.HelperMock
 
 # MiroTalk test configuration
 config :tymeslot, :mirotalk_api,
@@ -201,6 +213,8 @@ config :wallaby,
   otp_app: :tymeslot,
   ecto_repos: [Tymeslot.Repo],
   driver: Wallaby.Chrome,
+  screenshot_on_failure: true,
+  screenshot_dir: Path.expand("../test/screenshots", __DIR__),
   chromedriver: [
     headless: true,
     binary: "/snap/chromium/current/usr/lib/chromium-browser/chrome"

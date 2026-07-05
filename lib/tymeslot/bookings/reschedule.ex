@@ -7,7 +7,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   require Logger
 
   alias Tymeslot.Availability.TimeSlots
-  alias Tymeslot.Bookings.{CalendarJobs, Policy, Validation}
+  alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, Validation}
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Notifications.Events
@@ -35,10 +35,16 @@ defmodule Tymeslot.Bookings.Reschedule do
   The `organizer_user_id` is required. The meeting lookup is scoped to that
   owner, preventing IDOR attacks from the public booking flow.
 
-  Returns {:ok, meeting} or {:error, reason}
+  Returns `{:ok, meeting}` or `{:error, reason}`, where `reason` is either a
+  semantic atom (`Tymeslot.Bookings.Errors.classified_error/0` — currently
+  `:meeting_not_found` when the lookup fails, `:slot_taken` when a
+  concurrent booking claims the new time first, or `:failed_to_update_meeting`
+  when persisting the new time fails for any other reason) or an arbitrary
+  policy/validation string from `Tymeslot.Bookings.Policy` or
+  `Tymeslot.Bookings.Validation`.
   """
   @spec execute(String.t(), reschedule_params(), any(), integer()) ::
-          {:ok, Ecto.Schema.t()} | {:error, term()}
+          {:ok, Ecto.Schema.t()} | {:error, Errors.classified_error() | String.t()}
   def execute(meeting_uid, new_params, _form_data, organizer_user_id)
       when is_binary(meeting_uid) and is_integer(organizer_user_id) do
     with {:ok, original_meeting} <-
@@ -50,7 +56,7 @@ defmodule Tymeslot.Bookings.Reschedule do
       send_reschedule_notifications(updated_meeting, original_meeting)
       {:ok, updated_meeting}
     else
-      {:error, :not_found} -> {:error, "Original meeting not found"}
+      {:error, :not_found} -> {:error, :meeting_not_found}
       error -> error
     end
   end
@@ -77,6 +83,7 @@ defmodule Tymeslot.Bookings.Reschedule do
            end
          end) do
       {:ok, updated} -> {:ok, updated}
+      {:error, :slot_taken} -> {:error, :slot_taken}
       {:error, :failed_to_update_meeting} -> {:error, :failed_to_update_meeting}
       {:error, _reason} -> {:error, :failed_to_update_meeting}
     end
@@ -112,6 +119,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   defp update_meeting(meeting, attrs) do
     case Scheduling.update_meeting_with_conflict_check(meeting, attrs) do
       {:ok, updated} -> {:ok, updated}
+      {:error, :time_conflict} -> {:error, :slot_taken}
       {:error, _reason} -> {:error, :failed_to_update_meeting}
     end
   end

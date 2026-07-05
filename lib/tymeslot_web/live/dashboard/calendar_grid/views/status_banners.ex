@@ -3,8 +3,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.StatusBanners do
 
   use TymeslotWeb, :html
 
-  alias TymeslotWeb.Components.Icons.IconComponents
-
   # ---------- Status banners ----------
 
   attr :stale_integrations, :list, required: true
@@ -29,7 +27,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.StatusBanners do
       >Refresh now</button>
     </div>
     <div :if={@syncing} class="flex items-center gap-2 px-3 py-1.5 md:px-4 bg-turquoise-50 border-b border-turquoise-200 text-token-sm text-turquoise-700">
-      <IconComponents.icon name={:refresh} class="w-4 h-4 animate-spin shrink-0" />
+      <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin shrink-0" />
       <span>Syncing calendars<%= if @sync_total > 1, do: " (#{@sync_completed}/#{@sync_total})", else: "" %>...</span>
     </div>
     """

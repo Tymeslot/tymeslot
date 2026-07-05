@@ -79,4 +79,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Heroicons do
   @doc "Whether a `hero-*` name is known at compile time."
   @spec known?(String.t()) :: boolean()
   def known?(name), do: Map.has_key?(@icons, name)
+
+  @doc "All known `hero-*` icon names."
+  @spec names() :: [String.t()]
+  def names, do: Map.keys(@icons)
 end

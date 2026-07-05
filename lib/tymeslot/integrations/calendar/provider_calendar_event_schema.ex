@@ -141,7 +141,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
                Tymeslot.Integrations.Video.VideoIntegrationSchema,
                type: :id
 
-    timestamps()
+    timestamps(type: :utc_datetime_usec)
   end
 
   @required_fields [:uid, :calendar_integration_id, :provider, :all_day, :synced_at]

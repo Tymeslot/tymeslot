@@ -117,9 +117,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
       data-testid="calendar-day"
       data-date={@day[:date] || @day["date"]}
       disabled={!@available || !@current_month || @loading}
+      aria-label={LocalizationHelpers.format_full_date_label(@day[:date] || @day["date"])}
+      aria-current={@day.is_today && "date"}
       {@rest}
     >
-      <span class="calendar-day__number">{@day.day}</span>
+      <span class="calendar-day__number" aria-hidden="true">{@day.day}</span>
     </button>
     """
   end
@@ -244,9 +246,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                               phx-value-date={day.date}
                               phx-target={@myself}
                               disabled={not day.available || day.loading}
+                              aria-label={LocalizationHelpers.format_full_date_label(day.date)}
+                              aria-current={day.today && "date"}
                             >
-                              <span class="week-day-name">{day.day_name}</span>
-                              <span class="week-day-number">{day.day_number}</span>
+                              <span class="week-day-name" aria-hidden="true">{day.day_name}</span>
+                              <span class="week-day-number" aria-hidden="true">{day.day_number}</span>
                             </button>
                           <% end %>
                         </div>

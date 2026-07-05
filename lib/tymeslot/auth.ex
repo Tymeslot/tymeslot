@@ -10,6 +10,7 @@ defmodule Tymeslot.Auth do
   require Logger
 
   alias Tymeslot.Auth.{
+    AccountDeletion,
     AdminRoles,
     AuthActions,
     Authentication,
@@ -20,6 +21,7 @@ defmodule Tymeslot.Auth do
     Session,
     SocialAuthentication,
     UserQueries,
+    UserSchema,
     Verification
   }
 
@@ -277,6 +279,20 @@ defmodule Tymeslot.Auth do
   @spec get_user!(integer()) :: Ecto.Schema.t()
   def get_user!(id) do
     UserQueries.get_user!(id)
+  end
+
+  @doc """
+  Deletes a user account.
+
+  Runs the configured account-deletion hook (e.g. SaaS subscription
+  cancellation) before any database change; if it fails, the deletion is
+  aborted and the user is left intact. On success, anonymises payment
+  records and deletes the user row in a single transaction.
+  """
+  @spec delete_account(UserSchema.t()) ::
+          {:ok, UserSchema.t()} | {:error, Ecto.Changeset.t() | term()}
+  def delete_account(user) do
+    AccountDeletion.delete_account(user)
   end
 
   @doc """

@@ -163,8 +163,9 @@ defmodule Tymeslot.Bookings.CreateTest do
 
       set_calendar_events([conflicting_event])
 
-      # Validation should detect conflict and return user-friendly error message
-      assert {:error, "This time slot is no longer available. Please select a different time."} =
+      # Validation should detect conflict and surface the semantic :slot_taken
+      # atom — the web layer, not the domain layer, renders it to display text.
+      assert {:error, :slot_taken} =
                Create.execute(meeting_params, form_data, skip_calendar_check: false)
     end
 
@@ -319,9 +320,9 @@ defmodule Tymeslot.Bookings.CreateTest do
         meeting_type_id: other_meeting_type.id
       }
 
-      assert {:error,
-              "This meeting type is no longer available. Please go back and select another."} =
-               Create.execute(meeting_params, form_data)
+      # The domain layer surfaces the semantic :meeting_type_not_found atom —
+      # the web layer, not the domain layer, renders it to display text.
+      assert {:error, :meeting_type_not_found} = Create.execute(meeting_params, form_data)
     end
 
     test "ignores video_integration_id that does not belong to organizer", %{
@@ -367,8 +368,9 @@ defmodule Tymeslot.Bookings.CreateTest do
         meeting_type_id: meeting_type.id
       }
 
-      assert {:error, "This meeting type is no longer available. Please refresh the page."} =
-               Create.execute(meeting_params, form_data)
+      # The domain layer surfaces the semantic :meeting_type_inactive atom —
+      # the web layer, not the domain layer, renders it to display text.
+      assert {:error, :meeting_type_inactive} = Create.execute(meeting_params, form_data)
     end
 
     test "fails when meeting type has been deleted", %{
@@ -392,9 +394,9 @@ defmodule Tymeslot.Bookings.CreateTest do
         meeting_type_id: deleted_id
       }
 
-      assert {:error,
-              "This meeting type is no longer available. Please go back and select another."} =
-               Create.execute(meeting_params, form_data)
+      # The domain layer surfaces the semantic :meeting_type_not_found atom —
+      # the web layer, not the domain layer, renders it to display text.
+      assert {:error, :meeting_type_not_found} = Create.execute(meeting_params, form_data)
     end
   end
 
@@ -424,8 +426,8 @@ defmodule Tymeslot.Bookings.CreateTest do
 
       set_calendar_events([conflicting_event])
 
-      # Should fail fast with user-friendly message
-      assert {:error, "This time slot is no longer available. Please select a different time."} =
+      # Should fail fast with the semantic :slot_taken atom
+      assert {:error, :slot_taken} =
                Create.execute_with_video_room(meeting_params, form_data)
     end
   end
@@ -492,8 +494,9 @@ defmodule Tymeslot.Bookings.CreateTest do
 
       result = Create.execute(meeting_params, form_data)
 
-      assert {:error, error_msg} = result
-      assert error_msg =~ "required"
+      # The domain layer surfaces the semantic :custom_field_errors atom —
+      # the web layer, not the domain layer, renders it to display text.
+      assert {:error, :custom_field_errors} = result
 
       # Verify nothing was persisted
       assert Repo.aggregate(MeetingSchema, :count) == 0

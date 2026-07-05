@@ -53,7 +53,7 @@ defmodule Tymeslot.Bookings.OrchestratorIdorTest do
       insert(:profile, user: attacker)
 
       # Attacker passes victim's UID but their own user ID — must be rejected
-      assert {:error, "Meeting not found"} =
+      assert {:error, :meeting_not_found} =
                Orchestrator.get_meeting_for_reschedule(victim_meeting.uid, attacker.id)
     end
 
@@ -61,7 +61,7 @@ defmodule Tymeslot.Bookings.OrchestratorIdorTest do
       attacker = insert(:user)
       insert(:profile, user: attacker)
 
-      assert {:error, "Meeting not found"} =
+      assert {:error, :meeting_not_found} =
                Orchestrator.get_meeting_for_reschedule("totally-fake-uid", attacker.id)
     end
   end
@@ -120,8 +120,10 @@ defmodule Tymeslot.Bookings.OrchestratorIdorTest do
       ]
 
       # A nil organizer_user_id reaching the reschedule path must return an
-      # error tuple, not raise FunctionClauseError.
-      assert {:error, "Meeting not found"} = Orchestrator.submit_booking(params, opts)
+      # error tuple, not raise FunctionClauseError. The domain layer
+      # surfaces the semantic :meeting_not_found atom — the web layer, not
+      # the domain layer, renders it to display text.
+      assert {:error, :meeting_not_found} = Orchestrator.submit_booking(params, opts)
     end
 
     test "allows rescheduling when organizer_user_id matches the meeting owner" do

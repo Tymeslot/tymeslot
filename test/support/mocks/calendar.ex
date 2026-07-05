@@ -42,6 +42,18 @@ defmodule Tymeslot.Mocks.Calendar do
     end)
   end
 
+  @doc """
+  Stubs just the calendar read paths to return no events — the common
+  "user has no conflicting calendar events" setup, without the extra
+  create/update/oauth stubs that `setup/1` installs.
+  """
+  @spec stub_no_events() :: term()
+  def stub_no_events do
+    Tymeslot.CalendarMock
+    |> stub(:list_events_in_range, fn _user_id, _start_time, _end_time -> {:ok, []} end)
+    |> stub(:get_events_for_range_fresh, fn _user_id, _start_date, _end_date -> {:ok, []} end)
+  end
+
   @spec event(keyword()) :: map()
   def event(opts \\ []) do
     %{

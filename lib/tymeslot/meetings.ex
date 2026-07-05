@@ -7,7 +7,7 @@ defmodule Tymeslot.Meetings do
 
   require Logger
 
-  alias Tymeslot.Bookings.{Cancel, Create, Reschedule, RescheduleRequest}
+  alias Tymeslot.Bookings.{Cancel, Create, Errors, Reschedule, RescheduleRequest}
 
   alias Tymeslot.Meetings.{
     CalendarEvents,
@@ -21,7 +21,8 @@ defmodule Tymeslot.Meetings do
     VideoRooms
   }
 
-  alias Tymeslot.Notifications.Orchestrator
+  alias Tymeslot.Integrations.Calendar.IcsGenerator
+  alias Tymeslot.Notifications.{ContentBuilder, Orchestrator}
 
   alias Tymeslot.Pagination.CursorPage
   alias Tymeslot.Utils.DateTimeUtils
@@ -39,11 +40,11 @@ defmodule Tymeslot.Meetings do
 
   ## Returns
     - {:ok, meeting} on success
-    - {:error, :slot_unavailable} if slot is no longer available
+    - {:error, :slot_taken} if slot is no longer available
     - {:error, reason} on other failures
   """
   @spec create_appointment_with_validation(Create.meeting_params(), map()) ::
-          {:ok, Ecto.Schema.t()} | {:error, String.t()}
+          {:ok, Ecto.Schema.t()} | {:error, Errors.classified_error() | String.t()}
   def create_appointment_with_validation(meeting_params, validated_form_data) do
     Create.execute(meeting_params, validated_form_data)
   end
@@ -264,11 +265,12 @@ defmodule Tymeslot.Meetings do
   end
 
   @doc """
-  Lists all cancelled meetings for a specific user.
+  Lists cancelled meetings for a specific user, bounded by `:limit`
+  (default 200) so the read is never unbounded.
   """
-  @spec list_cancelled_meetings_for_user(String.t()) :: [MeetingSchema.t()]
-  def list_cancelled_meetings_for_user(user_email) do
-    MeetingListQueries.list_cancelled_meetings_for_user(user_email)
+  @spec list_cancelled_meetings_for_user(String.t(), keyword()) :: [MeetingSchema.t()]
+  def list_cancelled_meetings_for_user(user_email, opts \\ []) do
+    MeetingListQueries.list_cancelled_meetings_for_user(user_email, opts)
   end
 
   @doc """
@@ -375,6 +377,50 @@ defmodule Tymeslot.Meetings do
   def get_meeting_by_uid_for_organizer(uid, organizer_user_id) do
     MeetingQueries.get_meeting_by_uid_for_organizer(uid, organizer_user_id)
   end
+
+  # Meeting statuses that still represent a live booking, mirroring
+  # `Bookings.Cancel.execute_external/1`'s definition of "still active" —
+  # the closest existing precedent for which statuses represent a meeting a
+  # user should still be able to interact with. "cancelled", "completed",
+  # "awaiting_payment", and "expired" are excluded.
+  @exportable_statuses ["confirmed", "pending", "reschedule_requested"]
+
+  @doc """
+  Exports a single meeting as iCalendar (`.ics`) content, scoped to its
+  organizer via the same IDOR-safe lookup as `get_meeting_by_uid_for_organizer/2`.
+
+  Returns `{:error, :not_found}` for meetings that are no longer active (e.g.
+  cancelled) so the public download URL can't be used to confirm a cancelled
+  booking ever existed.
+
+  Runs the meeting through `ContentBuilder.build_appointment_details/1` — the
+  same transformation the confirmation/reminder emails use for timezone
+  conversion, location, and organizer contact info — carrying over the
+  description and custom question answers so the download matches what was
+  emailed. The attendee's own video join link is preferred over the generic
+  meeting URL, since the attendee is exporting their own event.
+  """
+  @spec calendar_export(String.t(), integer()) :: {:ok, String.t()} | {:error, :not_found}
+  def calendar_export(uid, organizer_user_id) do
+    with {:ok, meeting} <- get_meeting_by_uid_for_organizer(uid, organizer_user_id),
+         true <- exportable?(meeting) do
+      details =
+        meeting
+        |> ContentBuilder.build_appointment_details()
+        |> Map.merge(%{
+          description: meeting.description,
+          custom_fields_snapshot: meeting.custom_fields_snapshot,
+          custom_field_answers: meeting.custom_field_answers,
+          meeting_url: meeting.attendee_video_url || meeting.meeting_url
+        })
+
+      {:ok, IcsGenerator.generate_ics(details, details.attendee_locale)}
+    else
+      _not_found_or_inactive -> {:error, :not_found}
+    end
+  end
+
+  defp exportable?(%{status: status}), do: status in @exportable_statuses
 
   @doc """
   Updates a meeting for a specific user.

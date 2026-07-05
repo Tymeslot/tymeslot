@@ -60,6 +60,9 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       |> element("button[phx-click='next_step']")
       |> render_click()
 
+      # Continuing without a calendar opens a nudge modal — confirm to advance.
+      render_click(view, "confirm_skip_calendar")
+
       # Verify buffer_time step
       assert has_element?(view, "button[phx-value-buffer_minutes]")
 
@@ -109,6 +112,9 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       |> element("button[phx-click='next_step']")
       |> render_click()
 
+      # Continuing without a calendar opens a nudge modal — confirm to advance.
+      render_click(view, "confirm_skip_calendar")
+
       assert render(view) =~ StepConfig.next_button_text(:buffer_time)
 
       # Navigate through booking_window and minimum_notice to ready
@@ -131,6 +137,8 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       # connect_calendar is a forced choice — skip before Continue
       view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
+      # Continuing without a calendar opens a nudge modal — confirm to advance.
+      render_click(view, "confirm_skip_calendar")
 
       # Verify buffer_time step
       assert has_element?(view, "button[phx-value-buffer_minutes]")
@@ -263,9 +271,10 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       fill_basic_settings(view, "Test", "testuser789b")
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      # Select skip, then Continue, to skip calendar connection
+      # Select skip, Continue, then confirm the nudge modal to skip calendar
       view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
+      render_click(view, "confirm_skip_calendar")
 
       # Should now be at buffer_time
       assert has_element?(view, "button[phx-value-buffer_minutes]")

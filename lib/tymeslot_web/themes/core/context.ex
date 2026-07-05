@@ -205,6 +205,6 @@ defmodule TymeslotWeb.Themes.Core.Context do
   end
 
   defp extract_metadata(theme) do
-    Map.take(theme, [:name, :description, :css_file, :preview_image])
+    Map.take(theme, [:name, :description, :css_file])
   end
 end

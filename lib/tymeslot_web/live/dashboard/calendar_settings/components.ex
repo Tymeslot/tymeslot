@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
         <.section_header
           level={2}
-          icon={:calendar}
+          icon="hero-calendar-days"
           title={"Setup #{format_provider_title(@selected_provider)}"}
         />
       </div>

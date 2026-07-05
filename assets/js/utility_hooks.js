@@ -139,27 +139,39 @@ export const ConnectionStatus = {
   }
 };
 
-// Auto-scroll to slots on mobile and tablet when slots are loaded
+// Auto-scroll to slots on mobile and tablet when slots are loaded, and move
+// keyboard focus into the slots region so a screen-reader / keyboard user who
+// just picked a date is carried to the next step of the flow.
+//
+// Mounted on both Quill's `.time-slots-panel` and Rhythm's `.time-slots-section`
+// containers (both `#slots-container`), so the selectors below must keep
+// matching both themes' markup — update both sides together if either changes.
+const SLOTS_LOADED_SELECTOR = '[data-slots-loaded]';
+const SLOTS_HEADING_SELECTOR = '.slots-heading, .time-slots-section-heading';
+const FOCUS_SOURCE_SELECTOR = '[data-testid="calendar-day"], .week-day-cell';
+
 export const AutoScrollToSlots = {
   mounted() {
     this.handleSlotsUpdate = () => {
+      this.manageFocus();
+
       // Skip auto-scroll when embedded in an iframe (modal handles its own viewport)
       if (document.documentElement.hasAttribute('data-embedded')) return;
 
       // Scroll on mobile and tablet viewports (when layout is stacked)
       if (window.innerWidth < 1024) {
         // Check if slots have been loaded (not empty state)
-        const hasSlots = this.el.querySelector('[data-slots-loaded]') ||
+        const hasSlots = this.el.querySelector(SLOTS_LOADED_SELECTOR) ||
                         this.el.querySelector('.space-y-3') ||
                         this.el.querySelector('.animate-spin');
-        
+
         if (hasSlots) {
           // Small delay to ensure DOM is fully updated
           setTimeout(() => {
-            this.el.scrollIntoView({ 
-              behavior: 'smooth', 
+            this.el.scrollIntoView({
+              behavior: 'smooth',
               block: 'start',
-              inline: 'nearest' 
+              inline: 'nearest'
             });
           }, 100);
         }
@@ -168,10 +180,34 @@ export const AutoScrollToSlots = {
 
     // Observe changes to the slots container
     this.observer = new MutationObserver(this.handleSlotsUpdate);
-    this.observer.observe(this.el, { 
-      childList: true, 
-      subtree: true 
+    this.observer.observe(this.el, {
+      childList: true,
+      subtree: true
     });
+  },
+
+  // When the loaded slots appear, move focus to the "Available Times" heading —
+  // but only if the user just activated a day (focus is still on a calendar day
+  // button). This carries a keyboard user forward without stealing focus on the
+  // initial page load or while they are interacting elsewhere on the page.
+  manageFocus() {
+    const loaded = this.el.querySelector(SLOTS_LOADED_SELECTOR);
+    if (!loaded) {
+      this.focusMoved = false;
+      return;
+    }
+    if (this.focusMoved) return;
+
+    const active = document.activeElement;
+    const fromDay = active && active.closest &&
+      active.closest(FOCUS_SOURCE_SELECTOR);
+    if (!fromDay) return;
+
+    const heading = this.el.querySelector(SLOTS_HEADING_SELECTOR);
+    if (heading) {
+      heading.focus();
+      this.focusMoved = true;
+    }
   },
 
   destroyed() {

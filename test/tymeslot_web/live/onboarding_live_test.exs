@@ -66,6 +66,9 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       |> element("button[phx-click='next_step']")
       |> render_click()
 
+      # Continuing without a calendar opens a nudge modal — confirm to advance.
+      render_click(view, "confirm_skip_calendar")
+
       # Should now be at buffer_time step
       assert has_element?(view, "button[phx-value-buffer_minutes]")
 
@@ -125,8 +128,10 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       view |> element("button[phx-click='next_step']") |> render_click()
       # connect_calendar is a forced choice — skip before Continue
       view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
-      # connect_calendar -> buffer_time -> booking_window -> minimum_notice -> ready
+      # Continue opens the nudge modal; confirm it to leave the calendar step.
       view |> element("button[phx-click='next_step']") |> render_click()
+      render_click(view, "confirm_skip_calendar")
+      # buffer_time -> booking_window -> minimum_notice -> ready
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
@@ -174,6 +179,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
+      render_click(view, "confirm_skip_calendar")
 
       # Buffer time step — click custom
       view
@@ -281,9 +287,12 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       # connect_calendar is a forced choice — skip before Continue.
       view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
 
-      # connect_calendar -> buffer_time -> booking_window -> minimum_notice
-      # -> ready (four advances).
-      Enum.each(1..4, fn _step ->
+      # Continue opens the nudge modal; confirm it to leave the calendar step.
+      view |> element("button[phx-click='next_step']") |> render_click()
+      render_click(view, "confirm_skip_calendar")
+
+      # buffer_time -> booking_window -> minimum_notice -> ready (three advances).
+      Enum.each(1..3, fn _step ->
         view |> element("button[phx-click='next_step']") |> render_click()
       end)
 

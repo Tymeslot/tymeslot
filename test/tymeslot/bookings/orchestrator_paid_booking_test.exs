@@ -143,22 +143,25 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
         }
       }
 
-      assert {:error, message} = Orchestrator.submit_booking(params)
-
-      # The error message must be payment-oriented — never the DB-save fallback.
-      assert message =~ "payment"
-      refute message =~ "database"
+      # The domain layer surfaces the semantic :checkout_failed atom — never
+      # the DB-save fallback — and the web layer renders it to a
+      # payment-oriented message.
+      assert {:error, :checkout_failed} = Orchestrator.submit_booking(params)
 
       # The just-created meeting is expired (slot released), not left dangling
       # in awaiting_payment — so no awaiting_payment meeting remains for the host.
       assert MeetingQueries.count_awaiting_payment_for_organizer(user.id) == 0
     end
 
-    test "returns a payment-oriented message when Stripe returns a Stripe.Error struct",
+    test "returns the semantic :checkout_failed atom when Stripe returns a Stripe.Error struct",
          %{user: user, meeting_type: meeting_type} do
-      # stripity_stripe returns {:error, %Stripe.Error{}} — a struct that is neither
-      # a known atom nor a binary, so without an explicit branch it would hit the
-      # catch-all and show "Failed to save meeting to database" (wrong).
+      # stripity_stripe returns {:error, %Stripe.Error{}} — a struct that is
+      # neither a known atom nor a binary. `Create.classify_error/1` folds
+      # any `{:checkout_failed, reason}` tuple (regardless of the inner
+      # reason's shape) to the single `:checkout_failed` atom, so the
+      # Stripe.Error internals (e.g. "Network timeout") never reach the
+      # booker — the web layer renders a fixed payment-oriented message for
+      # this atom.
       expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
         {:error,
          %{
@@ -185,12 +188,7 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
         }
       }
 
-      assert {:error, message} = Orchestrator.submit_booking(params)
-
-      # The Stripe.Error internals must not be leaked to the booker.
-      assert message =~ "payment"
-      refute message =~ "database"
-      refute message =~ "Network timeout"
+      assert {:error, :checkout_failed} = Orchestrator.submit_booking(params)
 
       assert MeetingQueries.count_awaiting_payment_for_organizer(user.id) == 0
     end

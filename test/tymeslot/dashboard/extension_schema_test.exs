@@ -9,7 +9,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
       extension = %{
         id: :subscription,
         label: "Subscription",
-        icon: :credit_card,
+        icon: "hero-credit-card",
         path: "/dashboard/subscription",
         action: :subscription
       }
@@ -31,7 +31,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
       extension = %{
         id: "not_an_atom",
         label: "Test",
-        icon: :home,
+        icon: "hero-home",
         path: "/test",
         action: :test
       }
@@ -44,7 +44,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
       extension = %{
         id: :test,
         label: 123,
-        icon: :home,
+        icon: "hero-home",
         path: "/test",
         action: :test
       }
@@ -57,13 +57,26 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
       extension = %{
         id: :test,
         label: "Test",
-        icon: :invalid_icon,
+        icon: "hero-invalid-icon",
         path: "/test",
         action: :test
       }
 
       assert {:error, errors} = ExtensionSchema.validate(extension)
-      assert Enum.any?(errors, &String.contains?(&1, "Invalid icon :invalid_icon"))
+      assert Enum.any?(errors, &String.contains?(&1, ~s(Invalid icon "hero-invalid-icon")))
+    end
+
+    test "rejects extension with atom icon" do
+      extension = %{
+        id: :test,
+        label: "Test",
+        icon: :home,
+        path: "/test",
+        action: :test
+      }
+
+      assert {:error, errors} = ExtensionSchema.validate(extension)
+      assert Enum.any?(errors, &String.contains?(&1, "Field :icon must be a string"))
     end
 
     test "accepts all available icons" do
@@ -84,7 +97,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
       extension = %{
         id: :test,
         label: "Test",
-        icon: :home,
+        icon: "hero-home",
         path: "dashboard/test",
         action: :test
       }
@@ -97,7 +110,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
       extension = %{
         id: :test,
         label: "Test",
-        icon: :home,
+        icon: "hero-home",
         path: "/dashboard/test",
         action: :test
       }
@@ -109,7 +122,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
       extension = %{
         id: :test,
         label: "Test",
-        icon: :home,
+        icon: "hero-home",
         path: "/test",
         action: "not_an_atom"
       }
@@ -122,7 +135,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
       extension = %{
         id: nil,
         label: "Test",
-        icon: :home,
+        icon: "hero-home",
         path: "/test",
         action: :test
       }
@@ -138,14 +151,14 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
         %{
           id: :subscription,
           label: "Subscription",
-          icon: :credit_card,
+          icon: "hero-credit-card",
           path: "/dashboard/subscription",
           action: :subscription
         },
         %{
           id: :support,
           label: "Support",
-          icon: :chat_bubble_left_right,
+          icon: "hero-chat-bubble-left-right",
           path: "/dashboard/support",
           action: :support
         }
@@ -159,14 +172,14 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
         %{
           id: :valid,
           label: "Valid",
-          icon: :home,
+          icon: "hero-home",
           path: "/valid",
           action: :valid
         },
         %{
           id: :invalid,
           label: "Invalid",
-          icon: :nonexistent,
+          icon: "hero-nonexistent",
           path: "/invalid",
           action: :invalid
         }
@@ -174,7 +187,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
 
       assert {:error, errors} = ExtensionSchema.validate_all(extensions)
       assert [{1, error}] = errors
-      assert String.contains?(error, "Invalid icon :nonexistent")
+      assert String.contains?(error, ~s(Invalid icon "hero-nonexistent"))
     end
 
     test "rejects empty extension map" do
@@ -195,7 +208,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
         %{
           id: :third,
           label: "Valid",
-          icon: :home,
+          icon: "hero-home",
           path: "/valid",
           action: :valid
         }
@@ -212,43 +225,39 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
   end
 
   describe "available_icons/0" do
-    test "returns a list of atom icon names" do
+    test "returns a list of hero-* icon name strings" do
       icons = ExtensionSchema.available_icons()
 
       assert is_list(icons)
-      assert Enum.all?(icons, &is_atom/1)
-      assert :home in icons
-      assert :credit_card in icons
-      assert :chat_bubble_left_right in icons
+      assert Enum.all?(icons, &is_binary/1)
+      assert "hero-home" in icons
+      assert "hero-credit-card" in icons
+      assert "hero-chat-bubble-left-right" in icons
     end
 
     test "includes all expected icons" do
       icons = ExtensionSchema.available_icons()
 
       expected_icons = [
-        :arrow_left,
-        :bell,
-        :calendar,
-        :chat_bubble_left_right,
-        :clock,
-        :cloudron,
-        :code,
-        :credit_card,
-        :docker,
-        :grid,
-        :home,
-        :lock,
-        :n8n,
-        :paint_brush,
-        :puzzle,
-        :user,
-        :video,
-        :webhook
+        "hero-arrow-left",
+        "hero-bell",
+        "hero-calendar-days",
+        "hero-chat-bubble-left-right",
+        "hero-clock",
+        "hero-code-bracket",
+        "hero-credit-card",
+        "hero-squares-2x2",
+        "hero-home",
+        "hero-lock-closed",
+        "hero-paint-brush",
+        "hero-puzzle-piece",
+        "hero-user",
+        "hero-video-camera"
       ]
 
       for expected <- expected_icons do
         assert expected in icons,
-               "Expected icon :#{expected} to be in available icons, but it wasn't"
+               "Expected icon #{expected} to be in available icons, but it wasn't"
       end
     end
   end
@@ -275,7 +284,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
         %{
           id: :test,
           label: "Test",
-          icon: :home,
+          icon: "hero-home",
           path: "/test",
           action: :test
         }

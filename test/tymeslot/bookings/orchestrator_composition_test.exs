@@ -161,16 +161,15 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
     end
 
     test "returns a descriptive error when the reschedule uid does not exist", %{user: user} do
-      assert {:error, reason} =
+      # The domain layer surfaces the semantic :meeting_not_found atom — the
+      # web layer, not the domain layer, renders it to display text.
+      assert {:error, :meeting_not_found} =
                Orchestrator.submit_booking(
                  %{form_data: %{}, meeting_params: %{}},
                  is_rescheduling: true,
                  reschedule_uid: "nope",
                  organizer_user_id: user.id
                )
-
-      assert is_binary(reason)
-      assert reason =~ "not found"
     end
   end
 

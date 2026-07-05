@@ -5,6 +5,7 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
 
   import Ecto.Query, warn: false
 
+  alias Tymeslot.Infrastructure.BatchDeleteQueries
   alias Tymeslot.Repo
   alias Tymeslot.Webhooks.{WebhookDeliverySchema, WebhookEventSchema, WebhookSchema}
 
@@ -251,20 +252,22 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
   end
 
   @doc """
-  Cleans up old webhook deliveries.
-  Defaults to 30 days but can be overridden.
+  Cleans up old webhook deliveries. Defaults to 30 days but can be
+  overridden. Deletes in bounded batches (see `BatchDeleteQueries`) so a
+  large backlog can't blow past the database timeout in a single
+  transaction. A zero, negative, or non-integer retention is treated as a
+  no-op so a misconfigured value can never wipe the whole table.
   """
-  @spec cleanup_old_deliveries(integer()) :: {integer(), nil}
+  @spec cleanup_old_deliveries(integer()) :: {non_neg_integer(), nil}
   def cleanup_old_deliveries(days \\ 30)
-  def cleanup_old_deliveries(days) when is_integer(days) and days < 0, do: {0, nil}
 
-  def cleanup_old_deliveries(days) do
+  def cleanup_old_deliveries(days) when is_integer(days) and days > 0 do
     cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
 
-    WebhookDeliverySchema
-    |> where([d], d.inserted_at < ^cutoff)
-    |> Repo.delete_all()
+    BatchDeleteQueries.delete_older_than(WebhookDeliverySchema, :inserted_at, cutoff)
   end
+
+  def cleanup_old_deliveries(_days), do: {0, nil}
 
   # ============================================================================
   # Webhook Event Queries (incoming Stripe events)
@@ -302,8 +305,8 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
 
   Returns `{count, nil}` where count is the number of rows updated.
   """
-  @spec nullify_stale_payloads(NaiveDateTime.t()) :: {non_neg_integer(), nil}
-  def nullify_stale_payloads(%NaiveDateTime{} = cutoff_date) do
+  @spec nullify_stale_payloads(DateTime.t()) :: {non_neg_integer(), nil}
+  def nullify_stale_payloads(%DateTime{} = cutoff_date) do
     query =
       from(w in WebhookEventSchema,
         where: w.inserted_at < ^cutoff_date and not is_nil(w.payload)
@@ -315,15 +318,13 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
   @doc """
   Deletes webhook events older than the given cutoff date.
 
+  Deletes in bounded batches (see `BatchDeleteQueries`) so a large backlog
+  can't blow past the database timeout in a single transaction.
+
   Returns `{count, nil}` where count is the number of rows deleted.
   """
-  @spec delete_old_webhook_events(NaiveDateTime.t()) :: {non_neg_integer(), nil}
-  def delete_old_webhook_events(%NaiveDateTime{} = cutoff_date) do
-    query =
-      from(w in WebhookEventSchema,
-        where: w.inserted_at < ^cutoff_date
-      )
-
-    Repo.delete_all(query)
+  @spec delete_old_webhook_events(DateTime.t()) :: {non_neg_integer(), nil}
+  def delete_old_webhook_events(%DateTime{} = cutoff_date) do
+    BatchDeleteQueries.delete_older_than(WebhookEventSchema, :inserted_at, cutoff_date)
   end
 end

@@ -7,8 +7,6 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
   """
   use TymeslotWeb, :live_component
 
-  alias TymeslotWeb.Components.DashboardComponents
-
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
@@ -20,7 +18,7 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
           </div>
         <% end %>
         <div class="mt-6">
-          <DashboardComponents.button type="submit">Save</DashboardComponents.button>
+          <.action_button type="submit">Save</.action_button>
         </div>
       </.form>
     </div>

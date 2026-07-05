@@ -7,7 +7,6 @@ defmodule TymeslotWeb.Components.DashboardLayout do
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.DashboardSidebar
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Components.UserDropdownComponent
 
   @doc """
@@ -167,7 +166,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
           class={["mode-tab flex-1 justify-center", if(mode(@current_action) == :scheduling, do: "mode-tab--active", else: "mode-tab--inactive")]}
           data-testid="mode-tab-scheduling"
         >
-          <IconComponents.icon name={:grid} class="w-4 h-4" />
+          <.icon name="hero-squares-2x2" class="w-4 h-4" />
           Scheduling
         </.link>
 
@@ -176,7 +175,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
           class={["mode-tab flex-1 justify-center", if(mode(@current_action) == :calendar, do: "mode-tab--active", else: "mode-tab--inactive")]}
           data-testid="mode-tab-calendar"
         >
-          <IconComponents.icon name={:calendar} class="w-4 h-4" />
+          <.icon name="hero-calendar-days" class="w-4 h-4" />
           Calendar
         </.link>
       </div>

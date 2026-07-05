@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Icons.ProviderIcon
+  alias TymeslotWeb.Components.UI.StatusSwitch
 
   @doc """
   Renders a meeting type card with status toggle and action buttons.
@@ -169,49 +170,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             </svg>
           </button>
 
-          <button
-            phx-click="toggle_type"
-            phx-value-id={@type.id}
-            phx-target={@myself}
-            class={[
-              "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-hidden focus:ring-2 focus:ring-teal-500 focus:ring-offset-2",
-              if(@type.is_active,
-                do: "bg-teal-500 border-teal-500",
-                else: "bg-tymeslot-300 border-tymeslot-300"
-              )
-            ]}
-            role="switch"
-            aria-checked={@type.is_active}
-            aria-label={"Toggle #{@type.name} availability"}
-          >
-            <span class={[
-              "pointer-events-none relative inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-              if(@type.is_active, do: "translate-x-4", else: "translate-x-0")
-            ]}>
-              <span class={[
-                "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in-out",
-                if(@type.is_active, do: "opacity-0", else: "opacity-100")
-              ]}>
-                <svg class="h-2.5 w-2.5 text-tymeslot-400" fill="none" viewBox="0 0 12 12">
-                  <path
-                    d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-              </span>
-              <span class={[
-                "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in-out",
-                if(@type.is_active, do: "opacity-100", else: "opacity-0")
-              ]}>
-                <svg class="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 12 12">
-                  <path d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 7l-.707.707a1 1 0 001.414 0L5 7zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
-                </svg>
-              </span>
-            </span>
-          </button>
+          <StatusSwitch.status_switch
+            id={"meeting-type-toggle-#{@type.id}"}
+            checked={@type.is_active}
+            size={:small}
+            on_change="toggle_type"
+            target={@myself}
+            phx_value_id={to_string(@type.id)}
+            aria_label={"Toggle #{@type.name} availability"}
+            class="shrink-0"
+          />
         </div>
       </div>
     </div>

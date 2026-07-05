@@ -50,7 +50,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
     field(:name, :string)
     field(:app_mode, :string)
 
-    field(:bot_token, :string, virtual: true)
+    field(:bot_token, :string, virtual: true, redact: true)
     field(:bot_token_encrypted, :binary)
 
     field(:team_id, :string)
@@ -60,7 +60,7 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
     field(:authed_user_id, :string)
     field(:scope, :string)
 
-    field(:webhook_url, :string, virtual: true)
+    field(:webhook_url, :string, virtual: true, redact: true)
     field(:webhook_url_encrypted, :binary)
     field(:webhook_channel_hint, :string)
 

@@ -284,7 +284,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">
-      <.section_header icon={:video} title="Video Integration" />
+      <.section_header icon="hero-video-camera" title="Video Integration" />
 
       <.info_box :if={not (@integration_status[:has_video] || false)} variant={:info} class="mb-0">
         You haven't connected a video provider yet. Connect one so online meetings
@@ -313,7 +313,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
             <.section_header
               level={2}
-              icon={:video}
+              icon="hero-video-camera"
               title={"Setup #{Directory.format_provider_name(:video, @config_provider)}"}
             />
           </div>

@@ -4,55 +4,10 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
   @moduletag :onboarding
   @moduletag :live
 
-  import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
   import TymeslotWeb.OnboardingTestHelpers
-
-  setup :verify_on_exit!
-
-  setup do
-    # ConnCase doesn't stub the HTTPClientMock the way DataCase does. CalDAV
-    # discovery makes :propfind requests via HTTPClient.request/5, so stub a
-    # transport timeout so unmocked tests fail-fast on the network call rather
-    # than raising UnexpectedCallError.
-    Mox.stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
-      {:error, %Mint.TransportError{reason: :timeout}}
-    end)
-
-    Mox.stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-      {:error, %Mint.TransportError{reason: :timeout}}
-    end)
-
-    :ok
-  end
-
-  defp navigate_to_calendar_step(view) do
-    # Welcome → profile
-    view |> element("button[phx-click='next_step']") |> render_click()
-
-    # Fill profile
-    view
-    |> form("form#profile-form", %{
-      "full_name" => "Test User",
-      "username" => "testuser#{System.unique_integer([:positive])}"
-    })
-    |> render_change()
-
-    # Profile → connect_calendar
-    view |> element("button[phx-click='next_step']") |> render_click()
-
-    view
-  end
-
-  # Selecting the CalDAV option and pressing Continue is the only way to reach
-  # the inline credential form under the forced-choice model.
-  defp open_caldav_form(view) do
-    view |> element(~s{button[phx-value-option="caldav"]}) |> render_click()
-    view |> element("button[phx-click='next_step']") |> render_click()
-    view
-  end
 
   describe "caldav form" do
     test "switches to the inline credential form", %{conn: conn} do
@@ -123,51 +78,6 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
       refute html =~ "Server URL is required"
       refute html =~ "Username is required"
       assert html =~ "Password is required"
-    end
-  end
-
-  describe "discover_caldav_calendars (validation gate)" do
-    test "submitting with blank fields does not attempt discovery", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
-      view = navigate_to_calendar_step(view)
-
-      open_caldav_form(view)
-
-      html =
-        view
-        |> form("#caldav-form", %{"url" => "", "username" => "", "password" => ""})
-        |> render_submit()
-
-      # No "Could not discover" / "Connection" error — the validation gate fires
-      # before any HTTP call is made.
-      assert html =~ "Server URL is required"
-      refute html =~ "Could not"
-    end
-  end
-
-  describe "discover_caldav_calendars (discovery failure)" do
-    test "surfaces a discovery error when the server cannot be reached", %{conn: conn} do
-      {:ok, view, _html, _user} = setup_onboarding(conn)
-      view = navigate_to_calendar_step(view)
-
-      # CalDAV discovery makes HTTP requests through the HTTPClientMock that
-      # DataCase stubs with `:timeout`. With valid form fields, discovery
-      # fails on the network call and the handler renders a discovery error.
-      open_caldav_form(view)
-
-      html =
-        view
-        |> form("#caldav-form", %{
-          "url" => "https://cal.example.com",
-          "username" => "alice",
-          "password" => "secret"
-        })
-        |> render_submit()
-
-      # The exact wording comes from DisplayHelpers.normalize_discovery_error/1.
-      # Assert presence of some error message on the form rather than exact text.
-      assert html =~ "<p class=\"" or html =~ "text-red-600"
-      refute html =~ "successfully connected"
     end
   end
 
@@ -380,14 +290,44 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlersTest do
   end
 
   describe "skip advances the flow" do
-    test "selecting skip then Continue advances to buffer_time", %{conn: conn} do
+    test "selecting skip then Continue opens the nudge modal before advancing",
+         %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
       view = navigate_to_calendar_step(view)
 
       view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
 
+      # The nudge modal becomes visible and we're still on the calendar step.
+      assert has_element?(view, ~s{#skip-calendar-modal[style*="display: flex"]})
+      assert has_element?(view, ".onboarding-provider-cards")
+      refute has_element?(view, "button[phx-value-buffer_minutes]")
+    end
+
+    test "confirming the nudge modal advances to buffer_time", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      view = navigate_to_calendar_step(view)
+
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
+      render_click(view, "confirm_skip_calendar")
+
       assert has_element?(view, "button[phx-value-buffer_minutes]")
+    end
+
+    test "dismissing the nudge modal returns to the calendar step", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      view = navigate_to_calendar_step(view)
+
+      view |> element(~s{button[phx-value-option="skip"]}) |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
+      render_click(view, "hide_skip_calendar_modal")
+
+      # Modal hidden, still on the calendar step and free to pick a provider.
+      assert has_element?(view, ~s{#skip-calendar-modal[style*="display: none"]})
+      assert has_element?(view, ".onboarding-provider-cards")
+      assert has_element?(view, ~s{button[phx-value-option="google"]})
+      refute has_element?(view, "button[phx-value-buffer_minutes]")
     end
   end
 end

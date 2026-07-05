@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
 
   use TymeslotWeb, :html
 
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   attr :view, :atom, required: true
@@ -31,7 +30,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
     >
       <div :if={@groups == []} class="flex flex-col items-center justify-center h-full px-6 py-16 text-center">
         <div class="w-16 h-16 bg-tymeslot-50 rounded-token-2xl flex items-center justify-center mb-4 border-2 border-dashed border-tymeslot-100">
-          <IconComponents.icon name={:calendar} class="w-8 h-8 text-tymeslot-300" />
+          <.icon name="hero-calendar-days" class="w-8 h-8 text-tymeslot-300" />
         </div>
         <h2 class="text-token-lg font-bold text-tymeslot-800 mb-1">No upcoming events</h2>
         <p class="text-token-sm text-tymeslot-500 max-w-sm">

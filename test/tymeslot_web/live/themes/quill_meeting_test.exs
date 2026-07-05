@@ -39,14 +39,16 @@ defmodule TymeslotWeb.Live.Themes.QuillMeetingTest do
       ThemeMeetingTestCases.assert_meeting_details_rendered(view, meeting, "Jane Smith", 45)
     end
 
-    test "Choose New Time button navigates back to profile", %{
+    test "Choose New Time button navigates back to profile carrying the reschedule uid", %{
       view: view,
-      profile: profile
+      profile: profile,
+      meeting: meeting
     } do
       ThemeMeetingTestCases.test_reschedule_page_navigation(
         view,
         "Choose New Time",
-        profile.username
+        profile.username,
+        meeting.uid
       )
     end
   end

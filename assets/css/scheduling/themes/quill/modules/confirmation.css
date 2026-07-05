@@ -139,6 +139,18 @@
   gap: var(--space-xs);
 }
 
+/* Add-to-calendar download link — reuses the shared .action-button secondary
+   styling (rendered on an <a>) with a leading calendar icon. */
+.calendar-download-button {
+  gap: var(--space-2xs);
+}
+
+.calendar-download-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+}
+
 /* booking-details-grid: replaces grid grid-cols-2 gap-2 text-xs */
 .booking-details-grid {
   display: grid;

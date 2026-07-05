@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     <div class="space-y-10 pb-20">
       <%!-- Header --%>
       <.section_header
-        icon={:code}
+        icon="hero-code-bracket"
         title="Embed & Share"
         class="mb-4"
       />
@@ -86,7 +86,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
 
       <%!-- Tabbed Interface --%>
       <.tabs active_tab={@active_tab} target={@myself}>
-        <:tab id="options" label="Embed Options" icon={:code}>
+        <:tab id="options" label="Embed Options" icon="hero-code-bracket">
           <OptionsGrid.options_grid
             selected_embed_type={@selected_embed_type}
             username={@username}
@@ -99,14 +99,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
           />
         </:tab>
 
-        <:tab id="security" label="Security" icon={:lock}>
+        <:tab id="security" label="Security" icon="hero-lock-closed">
           <SecuritySection.security_section
             allowed_domains={@allowed_domains}
             myself={@myself}
           />
         </:tab>
 
-        <:tab id="preview" label="Live Preview" icon={:video}>
+        <:tab id="preview" label="Live Preview" icon="hero-video-camera">
           <LivePreview.live_preview
             selected_embed_type={@selected_embed_type}
             username={@username}

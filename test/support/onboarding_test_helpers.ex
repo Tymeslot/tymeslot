@@ -147,10 +147,12 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
     |> element(~s{button[phx-value-option="skip"]})
     |> render_click()
 
-    # connect_calendar to buffer_time
+    # Continue without a calendar opens a nudge modal — confirm it to advance.
     view
     |> element("button[phx-click='next_step']")
     |> render_click()
+
+    render_click(view, "confirm_skip_calendar")
 
     view
   end
@@ -192,6 +194,39 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
     |> element("button[phx-click='next_step']")
     |> render_click()
 
+    view
+  end
+
+  @doc """
+  Navigates from the welcome step to the `connect_calendar` step.
+  """
+  @spec navigate_to_calendar_step(any()) :: any()
+  def navigate_to_calendar_step(view) do
+    # Welcome → profile
+    view |> element("button[phx-click='next_step']") |> render_click()
+
+    # Fill profile
+    view
+    |> form("form#profile-form", %{
+      "full_name" => "Test User",
+      "username" => "testuser#{System.unique_integer([:positive])}"
+    })
+    |> render_change()
+
+    # Profile → connect_calendar
+    view |> element("button[phx-click='next_step']") |> render_click()
+
+    view
+  end
+
+  @doc """
+  Selects the CalDAV option and presses Continue — the only way to reach the
+  inline credential form under the forced-choice model.
+  """
+  @spec open_caldav_form(any()) :: any()
+  def open_caldav_form(view) do
+    view |> element(~s{button[phx-value-option="caldav"]}) |> render_click()
+    view |> element("button[phx-click='next_step']") |> render_click()
     view
   end
 end

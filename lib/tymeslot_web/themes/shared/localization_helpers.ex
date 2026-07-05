@@ -120,6 +120,29 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   @doc """
+  Builds a full, screen-reader-friendly date label — the localized weekday
+  followed by the localized date, e.g. "Monday, July 15, 2026". Accepts an ISO
+  date string (as carried in the calendar day maps) or a `Date`, and falls back
+  to the raw input on a parse failure so a day button is never left unlabelled.
+  """
+  @spec format_full_date_label(String.t() | Date.t() | nil) :: String.t()
+  def format_full_date_label(nil), do: ""
+
+  def format_full_date_label(date_string) when is_binary(date_string) do
+    case Date.from_iso8601(date_string) do
+      {:ok, date} -> format_full_date_label(date)
+      _other -> date_string
+    end
+  end
+
+  def format_full_date_label(%Date{} = date) do
+    dgettext("booking", "%{weekday}, %{date}",
+      weekday: get_weekday_name(Date.day_of_week(date)),
+      date: format_date(date)
+    )
+  end
+
+  @doc """
   Formats duration for display.
   """
   @spec format_duration(String.t()) :: String.t()

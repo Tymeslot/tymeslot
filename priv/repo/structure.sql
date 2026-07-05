@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict FMGjLLgZU6TkxIKhYZlQoq7J6UAXaf83OE9lmL3KVD2NbtAoXtdUlXq0b4j6IUx
+\restrict 851pY9qBv6UOIiRaukzRNKySlbqW7ZYVy1Brbb8N7G32qbUaCG7DNw39hxDJv1O
 
 -- Dumped from database version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
@@ -151,8 +151,8 @@ CREATE TABLE public.availability_breaks (
     end_time time(0) without time zone NOT NULL,
     label character varying(255),
     sort_order integer DEFAULT 0,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL
 );
 
 
@@ -187,8 +187,8 @@ CREATE TABLE public.availability_overrides (
     start_time time(0) without time zone,
     end_time time(0) without time zone,
     reason character varying(255),
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL,
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
     CONSTRAINT override_type_check CHECK (((override_type)::text = ANY ((ARRAY['unavailable'::character varying, 'custom_hours'::character varying, 'available'::character varying])::text[])))
 );
 
@@ -230,17 +230,16 @@ CREATE TABLE public.booking_payments (
     stripe_checkout_session_id character varying(255),
     stripe_payment_intent_id character varying(255),
     stripe_charge_id character varying(255),
-    amount_cents integer NOT NULL,
+    amount_cents bigint NOT NULL,
     currency character varying(3) NOT NULL,
-    application_fee_cents integer NOT NULL,
+    application_fee_cents bigint NOT NULL,
     status character varying(255) DEFAULT 'pending'::character varying NOT NULL,
     paid_at timestamp(0) without time zone,
-    refunded_amount_cents integer DEFAULT 0 NOT NULL,
+    refunded_amount_cents bigint DEFAULT 0 NOT NULL,
     last_event_id character varying(255),
     host_deleted_at timestamp(0) without time zone,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL,
-    meeting_attendee_id uuid,
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
     CONSTRAINT refunded_amount_within_bounds CHECK (((refunded_amount_cents >= 0) AND (refunded_amount_cents <= amount_cents)))
 );
 
@@ -265,8 +264,8 @@ CREATE TABLE public.provider_calendar_events (
     status character varying(255) DEFAULT 'confirmed'::character varying NOT NULL,
     etag text,
     synced_at timestamp(6) without time zone NOT NULL,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL,
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
     provider character varying(255) NOT NULL,
     provider_calendar_id text NOT NULL,
     summary text,
@@ -334,8 +333,8 @@ CREATE TABLE public.calendar_integrations (
     is_active boolean DEFAULT true,
     last_sync_at timestamp(0) without time zone,
     sync_error text,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL,
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
     access_token_encrypted bytea,
     refresh_token_encrypted bytea,
     token_expires_at timestamp(0) without time zone,
@@ -360,7 +359,7 @@ CREATE TABLE public.calendar_integrations (
     last_external_sync_at timestamp(0) without time zone,
     last_full_sync_at timestamp(0) without time zone,
     needs_reauth boolean DEFAULT false NOT NULL,
-    CONSTRAINT calendar_integrations_provider_check CHECK (((provider)::text = ANY ((ARRAY['caldav'::character varying, 'radicale'::character varying, 'nextcloud'::character varying, 'zimbra'::character varying, 'mailbox_org'::character varying, 'baikal'::character varying, 'google'::character varying, 'outlook'::character varying, 'demo'::character varying, 'debug'::character varying])::text[])))
+    CONSTRAINT calendar_integrations_provider_check CHECK (((provider)::text = ANY ((ARRAY['caldav'::character varying, 'radicale'::character varying, 'nextcloud'::character varying, 'zimbra'::character varying, 'mailbox_org'::character varying, 'apple'::character varying, 'baikal'::character varying, 'google'::character varying, 'outlook'::character varying, 'demo'::character varying, 'debug'::character varying])::text[])))
 );
 
 
@@ -392,12 +391,13 @@ CREATE TABLE public.calendar_preferences (
     user_id bigint NOT NULL,
     default_view character varying(255) DEFAULT 'week'::character varying NOT NULL,
     hidden_integration_ids bigint[] DEFAULT ARRAY[]::bigint[] NOT NULL,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL,
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
     week_start_day character varying(255) DEFAULT 'monday'::character varying NOT NULL,
     time_format character varying(255) DEFAULT '12h'::character varying NOT NULL,
     show_week_numbers boolean DEFAULT false NOT NULL,
-    show_weekends boolean DEFAULT true NOT NULL
+    show_weekends boolean DEFAULT true NOT NULL,
+    desktop_reminders_enabled boolean DEFAULT false NOT NULL
 );
 
 
@@ -438,8 +438,8 @@ CREATE TABLE public.connect_accounts (
     last_account_event_at timestamp(0) without time zone,
     deleted_at timestamp(0) without time zone,
     status character varying(255) DEFAULT 'creating'::character varying NOT NULL,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL
 );
 
 
@@ -582,7 +582,8 @@ CREATE TABLE public.legal_acceptances (
     document_id bigint NOT NULL,
     accepted_at timestamp(0) without time zone NOT NULL,
     ip_address text,
-    user_agent text
+    user_agent text,
+    document_content_hash character varying(255)
 );
 
 
@@ -599,6 +600,9 @@ CREATE TABLE public.legal_documents (
     is_current boolean DEFAULT false NOT NULL,
     inserted_at timestamp(0) without time zone NOT NULL,
     updated_at timestamp(0) without time zone NOT NULL,
+    content text NOT NULL,
+    content_hash character varying(255) NOT NULL,
+    content_source character varying(255) NOT NULL,
     CONSTRAINT legal_documents_type_check CHECK (((type)::text = ANY ((ARRAY['terms'::character varying, 'privacy'::character varying])::text[])))
 );
 
@@ -623,30 +627,35 @@ ALTER SEQUENCE public.legal_documents_id_seq OWNED BY public.legal_documents.id;
 
 
 --
--- Name: meeting_attendees; Type: TABLE; Schema: public; Owner: -
+-- Name: marketing_unsubscriptions; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.meeting_attendees (
-    id uuid NOT NULL,
-    uid character varying(255) NOT NULL,
-    meeting_id uuid NOT NULL,
-    name character varying(255),
-    email character varying(255) NOT NULL,
-    phone character varying(255),
-    company character varying(255),
-    message text,
-    timezone character varying(255),
-    locale character varying(255) DEFAULT 'en'::character varying NOT NULL,
-    custom_field_answers jsonb DEFAULT '{}'::jsonb NOT NULL,
-    status character varying(255) DEFAULT 'pending'::character varying NOT NULL,
-    cancelled_at timestamp(0) without time zone,
-    cancellation_reason character varying(255),
-    attendee_video_url character varying(1000),
-    attendee_email_sent boolean DEFAULT false NOT NULL,
-    reminder_email_sent boolean DEFAULT false NOT NULL,
+CREATE TABLE public.marketing_unsubscriptions (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    unsubscribed_at timestamp(0) without time zone NOT NULL,
     inserted_at timestamp(0) without time zone NOT NULL,
     updated_at timestamp(0) without time zone NOT NULL
 );
+
+
+--
+-- Name: marketing_unsubscriptions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.marketing_unsubscriptions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: marketing_unsubscriptions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.marketing_unsubscriptions_id_seq OWNED BY public.marketing_unsubscriptions.id;
 
 
 --
@@ -680,21 +689,22 @@ CREATE TABLE public.meeting_types (
     icon character varying(255),
     is_active boolean DEFAULT true,
     sort_order integer DEFAULT 0,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL,
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
     allow_video boolean DEFAULT true NOT NULL,
     video_integration_id bigint,
     calendar_integration_id bigint,
     target_calendar_id character varying(255),
     reminder_config jsonb[],
     payment_required boolean DEFAULT false NOT NULL,
-    price_cents integer,
+    price_cents bigint,
     is_archived boolean DEFAULT false NOT NULL,
     custom_fields jsonb[] DEFAULT ARRAY[]::jsonb[] NOT NULL,
     slug character varying(255),
     is_private boolean DEFAULT false NOT NULL,
     allow_guests boolean DEFAULT false NOT NULL,
-    max_attendees integer DEFAULT 1 NOT NULL
+    show_as_free boolean DEFAULT false NOT NULL,
+    attachments jsonb[] DEFAULT ARRAY[]::jsonb[] NOT NULL
 );
 
 
@@ -783,7 +793,9 @@ CREATE TABLE public.meetings (
     utm_term character varying(255),
     referrer_host character varying(255),
     tracking_params jsonb DEFAULT '{}'::jsonb NOT NULL,
-    visitor_hash character varying(255)
+    visitor_hash character varying(255),
+    show_as_free boolean DEFAULT false NOT NULL,
+    attachments_snapshot jsonb[] DEFAULT ARRAY[]::jsonb[] NOT NULL
 );
 
 
@@ -991,15 +1003,17 @@ CREATE TABLE public.profiles (
     buffer_minutes integer DEFAULT 15,
     advance_booking_days integer DEFAULT 90,
     min_advance_hours integer DEFAULT 3,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL,
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
     username character varying(255),
     avatar character varying(255),
     full_name character varying(255),
     booking_theme character varying(255) DEFAULT 'theme1'::character varying,
     has_custom_theme boolean DEFAULT false NOT NULL,
     primary_calendar_integration_id bigint,
-    allowed_embed_domains character varying(255)[] DEFAULT ARRAY[]::character varying[]
+    allowed_embed_domains character varying(255)[] DEFAULT ARRAY[]::character varying[],
+    booking_page_published_at timestamp(0) without time zone,
+    freebusy_token character varying(255)
 );
 
 
@@ -1227,8 +1241,8 @@ CREATE TABLE public.theme_customizations (
     background_value text,
     background_image_path character varying(255),
     background_video_path character varying(255),
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL,
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
     theme_id character varying(255) DEFAULT '1'::character varying NOT NULL,
     video_processing character varying(255),
     custom_palette_seed character varying(255)
@@ -1292,10 +1306,10 @@ ALTER SEQUENCE public.user_seen_announcements_id_seq OWNED BY public.user_seen_a
 CREATE TABLE public.user_sessions (
     id bigint NOT NULL,
     user_id bigint NOT NULL,
-    token character varying(255) NOT NULL,
     expires_at timestamp(0) without time zone NOT NULL,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    token_hash character varying(255) NOT NULL
 );
 
 
@@ -1335,8 +1349,8 @@ CREATE TABLE public.users (
     provider_uid character varying(255),
     provider_email character varying(255),
     provider_meta jsonb,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL,
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
     onboarding_completed_at timestamp(0) without time zone,
     verification_token_used_at timestamp(0) without time zone,
     reset_token_used_at timestamp(0) without time zone,
@@ -1350,7 +1364,10 @@ CREATE TABLE public.users (
     signup_ip character varying(255),
     marketing_unsubscribed_at timestamp(0) without time zone,
     is_admin boolean DEFAULT false NOT NULL,
-    dashboard_tour_seen_at timestamp(0) without time zone
+    dashboard_tour_seen_at timestamp(0) without time zone,
+    last_active_at timestamp(0) without time zone,
+    dashboard_setup_done_items character varying(255)[] DEFAULT ARRAY[]::character varying[] NOT NULL,
+    dashboard_setup_dismissed_at timestamp(0) without time zone
 );
 
 
@@ -1387,8 +1404,8 @@ CREATE TABLE public.video_integrations (
     is_active boolean DEFAULT true,
     is_default boolean DEFAULT false,
     settings jsonb DEFAULT '{}'::jsonb,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL,
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
     access_token_encrypted bytea,
     refresh_token_encrypted bytea,
     token_expires_at timestamp(0) without time zone,
@@ -1453,7 +1470,7 @@ CREATE TABLE public.webhook_events (
     stripe_event_id character varying(255) NOT NULL,
     event_type character varying(255) NOT NULL,
     processed_at timestamp(0) without time zone NOT NULL,
-    inserted_at timestamp(0) without time zone NOT NULL,
+    inserted_at timestamp with time zone NOT NULL,
     payload jsonb
 );
 
@@ -1529,8 +1546,8 @@ CREATE TABLE public.weekly_availability (
     is_available boolean DEFAULT false,
     start_time time(0) without time zone,
     end_time time(0) without time zone,
-    inserted_at timestamp(0) without time zone NOT NULL,
-    updated_at timestamp(0) without time zone NOT NULL
+    inserted_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL
 );
 
 
@@ -1621,6 +1638,13 @@ ALTER TABLE ONLY public.integration_health_states ALTER COLUMN id SET DEFAULT ne
 --
 
 ALTER TABLE ONLY public.legal_documents ALTER COLUMN id SET DEFAULT nextval('public.legal_documents_id_seq'::regclass);
+
+
+--
+-- Name: marketing_unsubscriptions id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.marketing_unsubscriptions ALTER COLUMN id SET DEFAULT nextval('public.marketing_unsubscriptions_id_seq'::regclass);
 
 
 --
@@ -1855,11 +1879,11 @@ ALTER TABLE ONLY public.legal_documents
 
 
 --
--- Name: meeting_attendees meeting_attendees_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: marketing_unsubscriptions marketing_unsubscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.meeting_attendees
-    ADD CONSTRAINT meeting_attendees_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.marketing_unsubscriptions
+    ADD CONSTRAINT marketing_unsubscriptions_pkey PRIMARY KEY (id);
 
 
 --
@@ -1876,6 +1900,14 @@ ALTER TABLE ONLY public.meeting_guests
 
 ALTER TABLE ONLY public.meeting_types
     ADD CONSTRAINT meeting_types_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: meetings meetings_end_after_start; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.meetings
+    ADD CONSTRAINT meetings_end_after_start CHECK ((end_time > start_time)) NOT VALID;
 
 
 --
@@ -1919,11 +1951,35 @@ ALTER TABLE ONLY public.onboarding_emails_sent
 
 
 --
+-- Name: payment_transactions payment_transactions_amount_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.payment_transactions
+    ADD CONSTRAINT payment_transactions_amount_non_negative CHECK ((amount >= 0)) NOT VALID;
+
+
+--
+-- Name: payment_transactions payment_transactions_discount_amount_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.payment_transactions
+    ADD CONSTRAINT payment_transactions_discount_amount_non_negative CHECK ((discount_amount >= 0)) NOT VALID;
+
+
+--
 -- Name: payment_transactions payment_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.payment_transactions
     ADD CONSTRAINT payment_transactions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payment_transactions payment_transactions_tax_amount_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.payment_transactions
+    ADD CONSTRAINT payment_transactions_tax_amount_non_negative CHECK ((tax_amount >= 0)) NOT VALID;
 
 
 --
@@ -2138,13 +2194,6 @@ CREATE INDEX booking_payments_host_deleted_at_index ON public.booking_payments U
 --
 
 CREATE INDEX booking_payments_host_user_id_index ON public.booking_payments USING btree (host_user_id);
-
-
---
--- Name: booking_payments_meeting_attendee_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX booking_payments_meeting_attendee_id_index ON public.booking_payments USING btree (meeting_attendee_id);
 
 
 --
@@ -2400,31 +2449,10 @@ CREATE UNIQUE INDEX legal_documents_type_version_index ON public.legal_documents
 
 
 --
--- Name: meeting_attendees_meeting_id_email_index; Type: INDEX; Schema: public; Owner: -
+-- Name: marketing_unsubscriptions_user_id_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX meeting_attendees_meeting_id_email_index ON public.meeting_attendees USING btree (meeting_id, email);
-
-
---
--- Name: meeting_attendees_meeting_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX meeting_attendees_meeting_id_index ON public.meeting_attendees USING btree (meeting_id);
-
-
---
--- Name: meeting_attendees_meeting_id_status_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX meeting_attendees_meeting_id_status_index ON public.meeting_attendees USING btree (meeting_id, status);
-
-
---
--- Name: meeting_attendees_uid_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX meeting_attendees_uid_index ON public.meeting_attendees USING btree (uid);
+CREATE UNIQUE INDEX marketing_unsubscriptions_user_id_index ON public.marketing_unsubscriptions USING btree (user_id);
 
 
 --
@@ -2813,6 +2841,13 @@ CREATE INDEX profiles_allowed_embed_domains_index ON public.profiles USING gin (
 
 
 --
+-- Name: profiles_freebusy_token_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX profiles_freebusy_token_index ON public.profiles USING btree (freebusy_token);
+
+
+--
 -- Name: profiles_has_custom_theme_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2837,7 +2872,7 @@ CREATE UNIQUE INDEX profiles_user_id_index ON public.profiles USING btree (user_
 -- Name: profiles_username_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX profiles_username_index ON public.profiles USING btree (username);
+CREATE UNIQUE INDEX profiles_username_index ON public.profiles USING btree (lower((username)::text));
 
 
 --
@@ -3072,10 +3107,10 @@ CREATE INDEX user_seen_announcements_user_id_index ON public.user_seen_announcem
 
 
 --
--- Name: user_sessions_token_index; Type: INDEX; Schema: public; Owner: -
+-- Name: user_sessions_token_hash_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX user_sessions_token_index ON public.user_sessions USING btree (token);
+CREATE UNIQUE INDEX user_sessions_token_hash_index ON public.user_sessions USING btree (token_hash);
 
 
 --
@@ -3096,7 +3131,7 @@ CREATE UNIQUE INDEX users_email_change_token_hash_index ON public.users USING bt
 -- Name: users_email_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX users_email_index ON public.users USING btree (email);
+CREATE UNIQUE INDEX users_email_index ON public.users USING btree (lower((email)::text));
 
 
 --
@@ -3293,14 +3328,6 @@ ALTER TABLE ONLY public.availability_overrides
 
 
 --
--- Name: booking_payments booking_payments_meeting_attendee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.booking_payments
-    ADD CONSTRAINT booking_payments_meeting_attendee_id_fkey FOREIGN KEY (meeting_attendee_id) REFERENCES public.meeting_attendees(id) ON DELETE SET NULL;
-
-
---
 -- Name: booking_payments booking_payments_meeting_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3354,14 +3381,6 @@ ALTER TABLE ONLY public.integration_health_states
 
 ALTER TABLE ONLY public.legal_acceptances
     ADD CONSTRAINT legal_acceptances_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.legal_documents(id);
-
-
---
--- Name: meeting_attendees meeting_attendees_meeting_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.meeting_attendees
-    ADD CONSTRAINT meeting_attendees_meeting_id_fkey FOREIGN KEY (meeting_id) REFERENCES public.meetings(id) ON DELETE CASCADE;
 
 
 --
@@ -3433,7 +3452,7 @@ ALTER TABLE ONLY public.meetings
 --
 
 ALTER TABLE ONLY public.payment_transactions
-    ADD CONSTRAINT payment_transactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT payment_transactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --
@@ -3552,7 +3571,7 @@ ALTER TABLE ONLY public.weekly_availability
 -- PostgreSQL database dump complete
 --
 
-\unrestrict FMGjLLgZU6TkxIKhYZlQoq7J6UAXaf83OE9lmL3KVD2NbtAoXtdUlXq0b4j6IUx
+\unrestrict 851pY9qBv6UOIiRaukzRNKySlbqW7ZYVy1Brbb8N7G32qbUaCG7DNw39hxDJv1O
 
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180112);
 INSERT INTO public."schema_migrations" (version) VALUES (20250701180204);
@@ -3708,11 +3727,24 @@ INSERT INTO public."schema_migrations" (version) VALUES (20260616071545);
 INSERT INTO public."schema_migrations" (version) VALUES (20260616144719);
 INSERT INTO public."schema_migrations" (version) VALUES (20260616153255);
 INSERT INTO public."schema_migrations" (version) VALUES (20260616153358);
-INSERT INTO public."schema_migrations" (version) VALUES (20260616164928);
-INSERT INTO public."schema_migrations" (version) VALUES (20260616170610);
 INSERT INTO public."schema_migrations" (version) VALUES (20260616181029);
-INSERT INTO public."schema_migrations" (version) VALUES (20260617071224);
-INSERT INTO public."schema_migrations" (version) VALUES (20260617134119);
+INSERT INTO public."schema_migrations" (version) VALUES (20260618140358);
 INSERT INTO public."schema_migrations" (version) VALUES (20260619141916);
 INSERT INTO public."schema_migrations" (version) VALUES (20260619151128);
 INSERT INTO public."schema_migrations" (version) VALUES (20260622110527);
+INSERT INTO public."schema_migrations" (version) VALUES (20260624135300);
+INSERT INTO public."schema_migrations" (version) VALUES (20260625121243);
+INSERT INTO public."schema_migrations" (version) VALUES (20260626073042);
+INSERT INTO public."schema_migrations" (version) VALUES (20260626073044);
+INSERT INTO public."schema_migrations" (version) VALUES (20260626074959);
+INSERT INTO public."schema_migrations" (version) VALUES (20260626080356);
+INSERT INTO public."schema_migrations" (version) VALUES (20260626080816);
+INSERT INTO public."schema_migrations" (version) VALUES (20260629084457);
+INSERT INTO public."schema_migrations" (version) VALUES (20260630114709);
+INSERT INTO public."schema_migrations" (version) VALUES (20260701135118);
+INSERT INTO public."schema_migrations" (version) VALUES (20260702165041);
+INSERT INTO public."schema_migrations" (version) VALUES (20260702180346);
+INSERT INTO public."schema_migrations" (version) VALUES (20260702180350);
+INSERT INTO public."schema_migrations" (version) VALUES (20260702200554);
+INSERT INTO public."schema_migrations" (version) VALUES (20260702201528);
+INSERT INTO public."schema_migrations" (version) VALUES (20260702214204);

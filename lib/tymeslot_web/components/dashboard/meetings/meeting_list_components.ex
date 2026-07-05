@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   alias Tymeslot.Meetings
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
-  alias TymeslotWeb.Components.Icons.IconComponents, as: Icons
 
   # Filter Tabs
   attr :active, :string, required: true
@@ -23,21 +22,21 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
         active={@active == "upcoming"}
         filter="upcoming"
         label="Upcoming"
-        icon={:clock}
+        icon="hero-clock"
         target={@target}
       />
       <.filter_tab_button
         active={@active == "past"}
         filter="past"
         label="Past"
-        icon={:calendar}
+        icon="hero-calendar-days"
         target={@target}
       />
       <.filter_tab_button
         active={@active == "cancelled"}
         filter="cancelled"
         label="Cancelled"
-        icon={:x_mark}
+        icon="hero-x-mark"
         target={@target}
       />
     </div>
@@ -47,7 +46,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   attr :active, :boolean, required: true
   attr :filter, :string, required: true
   attr :label, :string, required: true
-  attr :icon, :atom, required: true
+  attr :icon, :string, required: true
   attr :target, :any, required: true
 
   defp filter_tab_button(assigns) do
@@ -64,7 +63,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
         )
       ]}
     >
-      <Icons.icon name={@icon} class={if @active, do: "text-white/90", else: ""} />
+      <CoreComponents.icon name={@icon} class={if @active, do: "text-white/90", else: ""} />
       <span>{@label}</span>
     </button>
     """
@@ -131,14 +130,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             </span>
             <.status_badges meeting={@meeting} />
             <span :if={@meeting.meeting_url} class="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-50 text-cyan-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-cyan-100 shadow-sm">
-              <Icons.icon name={:video} class="w-3.5 h-3.5" /> Video Call
+              <CoreComponents.icon name="hero-video-camera" class="w-3.5 h-3.5" /> Video Call
             </span>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="flex items-center gap-4">
               <div class="w-12 h-12 rounded-token-2xl bg-turquoise-50 flex items-center justify-center shadow-sm border border-turquoise-100 transition-transform group-hover/card:scale-110">
-                <Icons.icon name={:calendar} class="w-6 h-6 text-turquoise-600" />
+                <CoreComponents.icon name="hero-calendar-days" class="w-6 h-6 text-turquoise-600" />
               </div>
               <div>
                 <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mb-0.5">
@@ -161,7 +160,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
             <div class="flex items-center gap-4">
               <div class="w-12 h-12 rounded-token-2xl bg-blue-50 flex items-center justify-center shadow-sm border border-blue-100 transition-transform group-hover/card:scale-110">
-                <Icons.icon name={:envelope} class="w-6 h-6 text-blue-600" />
+                <CoreComponents.icon name="hero-envelope" class="w-6 h-6 text-blue-600" />
               </div>
               <div>
                 <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mb-0.5">
@@ -214,7 +213,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
           <div :if={@meeting.description && @meeting.description != ""} class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50 flex gap-4 items-start">
             <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-tymeslot-100">
-              <Icons.icon name={:pencil_square} class="w-4 h-4 text-tymeslot-400" />
+              <CoreComponents.icon name="hero-pencil-square" class="w-4 h-4 text-tymeslot-400" />
             </div>
             <div class="flex-1">
               <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mb-1">
@@ -236,7 +235,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
           >
             <div class="flex gap-4 items-start mb-4">
               <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-tymeslot-100">
-                <Icons.icon name={:list_bullet} class="w-4 h-4 text-tymeslot-400" />
+                <CoreComponents.icon name="hero-list-bullet" class="w-4 h-4 text-tymeslot-400" />
               </div>
               <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mt-2">
                 {dgettext("dashboard", "Custom answers")}
@@ -267,7 +266,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               rel="noopener noreferrer"
               class="btn-primary py-3 px-4 text-token-sm w-full flex items-center justify-center whitespace-nowrap"
             >
-              <Icons.icon name={:video} class="w-4 h-4 mr-2 shrink-0" /> Join Meeting
+              <CoreComponents.icon name="hero-video-camera" class="w-4 h-4 mr-2 shrink-0" /> Join Meeting
             </a>
 
             <button
@@ -280,7 +279,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                 if(!Helpers.can_reschedule?(@meeting), do: "opacity-50 cursor-not-allowed", else: "")
               ]}
             >
-              <Icons.icon name={:swap} class="w-4 h-4 mr-2 shrink-0" /> Reschedule
+              <CoreComponents.icon name="hero-arrows-right-left" class="w-4 h-4 mr-2 shrink-0" /> Reschedule
             </button>
 
             <button
@@ -295,7 +294,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               ]}
             >
               <span :if={@cancelling_meeting == @meeting.id} class="flex items-center"><CoreComponents.spinner class="h-4 w-4 mr-2" /> Processing...</span>
-              <span :if={@cancelling_meeting != @meeting.id} class="flex items-center"><Icons.icon name={:x_mark} class="w-4 h-4 mr-2 shrink-0" /> Cancel</span>
+              <span :if={@cancelling_meeting != @meeting.id} class="flex items-center"><CoreComponents.icon name="hero-x-mark" class="w-4 h-4 mr-2 shrink-0" /> Cancel</span>
             </button>
           </div>
           <div :if={@meeting.status == "cancelled" or Helpers.past_meeting?(@meeting)} class="hidden lg:block">&nbsp;</div>
@@ -342,16 +341,16 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   defp status_badges(assigns) do
     ~H"""
     <span :if={@meeting.status == "cancelled"} class="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-red-100 shadow-sm">
-      <Icons.icon name={:x_mark} class="w-3 h-3" /> Cancelled
+      <CoreComponents.icon name="hero-x-mark" class="w-3 h-3" /> Cancelled
     </span>
     <span :if={@meeting.status == "reschedule_requested"} class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-amber-100 shadow-sm">
-      <Icons.icon name={:clock} class="w-3 h-3" /> Reschedule Requested
+      <CoreComponents.icon name="hero-clock" class="w-3 h-3" /> Reschedule Requested
     </span>
     <span :if={@meeting.status not in ["cancelled", "reschedule_requested"] and Helpers.past_meeting?(@meeting)} class="inline-flex items-center gap-1.5 px-3 py-1 bg-tymeslot-100 text-tymeslot-600 text-token-xs font-black uppercase tracking-wider rounded-full border border-tymeslot-200 shadow-sm">
-      <Icons.icon name={:check} class="w-3 h-3" /> Completed
+      <CoreComponents.icon name="hero-check" class="w-3 h-3" /> Completed
     </span>
     <span :if={@meeting.status not in ["cancelled", "reschedule_requested"] and !Helpers.past_meeting?(@meeting)} class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-emerald-100 shadow-sm">
-      <Icons.icon name={:calendar} class="w-3 h-3" /> Scheduled
+      <CoreComponents.icon name="hero-calendar-days" class="w-3 h-3" /> Scheduled
     </span>
     """
   end
@@ -364,7 +363,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     <div class="card-glass py-20">
       <div class="text-center max-w-sm mx-auto">
         <div class="w-24 h-24 mx-auto mb-8 rounded-token-3xl bg-tymeslot-50 flex items-center justify-center border-2 border-tymeslot-100 shadow-sm transition-transform hover:scale-110 hover:rotate-3 duration-500">
-          <Icons.icon name={:calendar} class="w-12 h-12 text-tymeslot-300" />
+          <CoreComponents.icon name="hero-calendar-days" class="w-12 h-12 text-tymeslot-300" />
         </div>
         <h3 class="text-token-2xl font-black text-tymeslot-900 tracking-tight mb-3">
           <%= case @filter do %>
@@ -407,7 +406,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
       <div class="flex flex-col lg:flex-row gap-12 relative z-10">
         <div class="flex-1">
-          <CoreComponents.section_header level={2} icon={:calendar} title="Meeting Management" class="mb-6" />
+          <CoreComponents.section_header level={2} icon="hero-calendar-days" title="Meeting Management" class="mb-6" />
 
           <p class="text-tymeslot-500 font-bold text-lg leading-relaxed max-w-2xl mb-8">
             Manage all your scheduled meetings in one place. Filter by status and take quick actions on your appointments.
@@ -424,9 +423,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
         </div>
 
         <div class="lg:w-80 space-y-4">
-          <.info_card icon={:swap} title="Reschedule" description="Change meeting times" color="turquoise" />
-          <.info_card icon={:x_mark} title="Cancel" description="With auto notifications" color="red" />
-          <.info_card icon={:video} title="Join Video" description="Quick meeting access" color="blue" />
+          <.info_card icon="hero-arrows-right-left" title="Reschedule" description="Change meeting times" color="turquoise" />
+          <.info_card icon="hero-x-mark" title="Cancel" description="With auto notifications" color="red" />
+          <.info_card icon="hero-video-camera" title="Join Video" description="Quick meeting access" color="blue" />
         </div>
       </div>
     </div>
@@ -446,7 +445,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             _other -> "bg-tymeslot-50 group-hover/item:bg-tymeslot-100 text-tymeslot-600"
           end
         ]}>
-          <Icons.icon name={@icon} class="w-5 h-5" />
+          <CoreComponents.icon name={@icon} class="w-5 h-5" />
         </div>
         <div>
           <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mb-0.5">{@title}</p>

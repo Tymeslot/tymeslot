@@ -32,7 +32,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchema do
     field :status, :string, default: "creating"
 
     belongs_to :user, UserSchema, type: :id
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @castable ~w(

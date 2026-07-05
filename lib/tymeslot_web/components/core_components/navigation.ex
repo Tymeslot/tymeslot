@@ -44,10 +44,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   ## Usage
 
       <.tabs active_tab={@active_tab} target={@myself}>
-        <:tab id="overview" label="Overview" icon={:home}>
+        <:tab id="overview" label="Overview" icon="hero-home">
           <p>Overview content here</p>
         </:tab>
-        <:tab id="settings" label="Settings" icon={:cog}>
+        <:tab id="settings" label="Settings" icon="hero-cog-6-tooth">
           <p>Settings content here</p>
         </:tab>
       </.tabs>
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   slot :tab, required: true do
     attr :id, :string, required: true
     attr :label, :string, required: true
-    attr :icon, :atom
+    attr :icon, :string, doc: "Optional `hero-…` icon name"
   end
 
   @spec tabs(map()) :: Phoenix.LiveView.Rendered.t()
@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
               ]}
             >
               <%= if Map.get(tab, :icon) do %>
-                <TymeslotWeb.Components.Icons.IconComponents.icon
+                <TymeslotWeb.Components.CoreComponents.Icons.icon
                   name={tab.icon}
                   class="w-5 h-5"
                 />

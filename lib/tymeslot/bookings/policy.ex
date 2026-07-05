@@ -4,6 +4,7 @@ defmodule Tymeslot.Bookings.Policy do
   Pure functions that define what is allowed.
   """
   alias Tymeslot.Bookings.BuildParams
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Locales
@@ -353,7 +354,7 @@ defmodule Tymeslot.Bookings.Policy do
           optional(atom()) => term()
         }) :: boolean()
   def meeting_is_current?(%{start_time: start_time, end_time: end_time}) do
-    now = DateTime.utc_now()
+    now = Clock.utc_now()
     DateTime.compare(start_time, now) != :gt && DateTime.compare(end_time, now) == :gt
   end
 
@@ -364,7 +365,7 @@ defmodule Tymeslot.Bookings.Policy do
   @spec meeting_is_past?(%{required(:end_time) => DateTime.t(), optional(atom()) => term()}) ::
           boolean()
   def meeting_is_past?(%{end_time: end_time}) do
-    DateTime.compare(end_time, DateTime.utc_now()) == :lt
+    DateTime.compare(end_time, Clock.utc_now()) == :lt
   end
 
   # Private functions

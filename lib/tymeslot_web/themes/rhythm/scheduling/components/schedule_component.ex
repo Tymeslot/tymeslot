@@ -229,18 +229,39 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       phx-value-date={day.date}
                       phx-target={@myself}
                       disabled={not day.available || day.loading}
+                      aria-label={LocalizationHelpers.format_full_date_label(day.date)}
+                      aria-current={day.today && "date"}
                     >
-                      <div class="day-name">{day.day_name}</div>
-                      <div class="day-number">{day.day_number}</div>
+                      <div class="day-name" aria-hidden="true">{day.day_name}</div>
+                      <div class="day-number" aria-hidden="true">{day.day_number}</div>
                     </button>
                   <% end %>
                 </div>
               </div>
 
-              <div class="time-slots-section">
-                <h3 class="time-slots-section-heading">{dgettext("booking", "Available Times")}</h3>
+              <div class="time-slots-section" id="slots-container" phx-hook="AutoScrollToSlots">
+                <h3 class="time-slots-section-heading" tabindex="-1">
+                  {dgettext("booking", "Available Times")}
+                </h3>
                 <% normalized_slots = MeetingUtils.normalize_slot_list(@available_slots) %>
-                <div class="time-slots-grid scroll-y">
+                <% slots_loaded? = @selected_date && !@loading_slots && !@calendar_error && normalized_slots != [] %>
+                <%!-- Concise, screen-reader-only announcement of the slot-loading
+                      state so keyboard/AT users hear the result of picking a date. --%>
+                <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+                  <%= cond do %>
+                    <% is_nil(@selected_date) -> %>
+                      {dgettext("booking", "Please select a date to see available times")}
+                    <% @loading_slots -> %>
+                      {dgettext("booking", "Loading available times...")}
+                    <% @calendar_error -> %>
+                      {@calendar_error}
+                    <% normalized_slots != [] -> %>
+                      {dgettext("booking", "Available Times")}
+                    <% true -> %>
+                      {dgettext("booking", "This date is fully booked")}
+                  <% end %>
+                </div>
+                <div class="time-slots-grid scroll-y" data-slots-loaded={slots_loaded?}>
                   <%= if @selected_date do %>
                     <%= if @loading_slots do %>
                       <div class="loading-slots">

@@ -14,6 +14,10 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Repo
 
+  # Cancelled meetings accumulate indefinitely; bound the default read so the
+  # list can never grow unbounded. Callers needing more can pass :limit.
+  @default_cancelled_limit 200
+
   # Query building helpers
 
   defp for_user_email(query, email),
@@ -278,13 +282,19 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   @doc """
   Get cancelled meetings for a specific user with proper database filtering.
   Replaces the N+1 pattern of loading all meetings and filtering in memory.
+
+  Bounded by `:limit` (default #{@default_cancelled_limit}) so this read is
+  never unbounded as cancelled meetings accrue over time.
   """
-  @spec list_cancelled_meetings_for_user(String.t()) :: [Meeting.t()]
-  def list_cancelled_meetings_for_user(user_email) do
+  @spec list_cancelled_meetings_for_user(String.t(), keyword()) :: [Meeting.t()]
+  def list_cancelled_meetings_for_user(user_email, opts \\ []) do
+    limit = Keyword.get(opts, :limit, @default_cancelled_limit)
+
     Meeting
     |> with_status("cancelled")
     |> for_user_email(user_email)
     |> order_by_start_desc()
+    |> apply_limit(limit)
     |> Repo.all()
   end
 

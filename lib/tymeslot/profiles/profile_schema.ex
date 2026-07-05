@@ -64,7 +64,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
 
     has_one(:theme_customization, ThemeCustomizationSchema, foreign_key: :profile_id)
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @doc false

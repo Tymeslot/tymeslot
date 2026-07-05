@@ -6,7 +6,7 @@ defmodule Tymeslot.Bookings.Orchestrator do
   delegating business logic to appropriate domain modules.
   """
 
-  alias Tymeslot.Bookings.{Create, Validation}
+  alias Tymeslot.Bookings.{Create, Errors, Validation}
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
 
@@ -27,12 +27,19 @@ defmodule Tymeslot.Bookings.Orchestrator do
     * `{:ok, :payment_required, %{meeting: meeting, checkout_url: url}}` when
       the meeting type requires payment — caller should redirect the
       attendee to the Stripe Checkout URL
-    * `{:error, reason}` on validation or persistence failure
+    * `{:error, reason}` on validation or persistence failure, where
+      `reason` is either a semantic atom classified by the domain layer
+      (`Tymeslot.Bookings.Errors.classified_error/0`, e.g. `:slot_taken`,
+      `:meeting_type_inactive`, `:meeting_not_found`) or an arbitrary
+      changeset/validation string. Atoms and binaries are passed through
+      unchanged — this module never manufactures display copy, that is the
+      web layer's job. Any other shape collapses to the generic
+      `:booking_failed` atom.
   """
   @spec submit_booking(booking_submission_params(), keyword()) ::
           {:ok, term()}
           | {:ok, :payment_required, %{meeting: map(), checkout_url: String.t()}}
-          | {:error, term()}
+          | {:error, Errors.classified_error() | String.t()}
   def submit_booking(params, opts \\ []) do
     %{
       form_data: form_data,
@@ -55,11 +62,11 @@ defmodule Tymeslot.Bookings.Orchestrator do
       {:ok, meeting} ->
         {:ok, meeting}
 
-      {:error, reason} when is_binary(reason) ->
+      {:error, reason} when is_atom(reason) or is_binary(reason) ->
         {:error, reason}
 
       {:error, _reason} ->
-        {:error, "Failed to process booking. Please try again."}
+        {:error, :booking_failed}
     end
   end
 
@@ -80,7 +87,7 @@ defmodule Tymeslot.Bookings.Orchestrator do
   preventing IDOR pre-fill of attendee PII from the public booking form.
   """
   @spec get_meeting_for_reschedule(String.t(), integer()) ::
-          {:ok, Ecto.Schema.t()} | {:error, String.t()}
+          {:ok, Ecto.Schema.t()} | {:error, Errors.classified_error() | String.t()}
   def get_meeting_for_reschedule(meeting_uid, organizer_user_id)
       when is_integer(organizer_user_id) do
     with {:ok, meeting} <-
@@ -88,7 +95,7 @@ defmodule Tymeslot.Bookings.Orchestrator do
          {:ok, meeting} <- Validation.validate_meeting_for_reschedule(meeting) do
       {:ok, meeting}
     else
-      {:error, :not_found} -> {:error, "Meeting not found"}
+      {:error, :not_found} -> {:error, :meeting_not_found}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -137,7 +144,7 @@ defmodule Tymeslot.Bookings.Orchestrator do
   end
 
   defp reschedule_meeting(_meeting_uid, _meeting_params, _sanitized_data, nil),
-    do: {:error, "Meeting not found"}
+    do: {:error, :meeting_not_found}
 
   defp reschedule_meeting(meeting_uid, meeting_params, sanitized_data, organizer_user_id)
        when is_integer(organizer_user_id) do

@@ -36,6 +36,11 @@
   justify-content: center;
 }
 
+.time-slot-button:focus-visible {
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
+}
+
 .time-slot-button:hover {
   background: var(--surface-medium-light);
   border-color: var(--border-strong);

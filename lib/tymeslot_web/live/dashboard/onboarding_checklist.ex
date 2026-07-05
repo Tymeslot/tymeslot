@@ -21,7 +21,6 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
 
   alias Tymeslot.Onboarding
   alias Tymeslot.Scheduling.LinkAccessPolicy
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Components.UI.CheckToggle
   alias TymeslotWeb.Endpoint
 
@@ -87,7 +86,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
             aria-label="Dismiss setup checklist"
             class="w-8 h-8 flex items-center justify-center rounded-token-lg text-tymeslot-400 hover:text-tymeslot-600 hover:bg-tymeslot-100 transition-colors"
           >
-            <IconComponents.icon name={:x_mark} class="w-5 h-5" />
+            <.icon name="hero-x-mark" class="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -139,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         "shrink-0 w-11 h-11 rounded-token-xl flex items-center justify-center shadow-sm transition-colors",
         if(@item.done, do: "bg-tymeslot-100 text-tymeslot-400", else: "bg-turquoise-50 text-turquoise-600")
       ]}>
-        <IconComponents.icon name={@item.icon} class="w-6 h-6" />
+        <.icon name={@item.icon} class="w-6 h-6" />
       </div>
 
       <div class="flex-1 min-w-0">
@@ -186,7 +185,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       data-copy-feedback="Booking link copied to clipboard!"
       class="shrink-0 inline-flex items-center justify-center gap-1.5 w-32 px-4 py-2 rounded-token-xl bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-sm font-black transition-colors"
     >
-      <IconComponents.icon name={:clipboard} class="w-4 h-4" /> {@item.cta}
+      <.icon name="hero-clipboard" class="w-4 h-4" /> {@item.cta}
     </button>
     """
   end
@@ -197,7 +196,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       class="shrink-0 inline-flex items-center justify-center gap-1.5 w-32 px-4 py-2 rounded-token-xl bg-tymeslot-100 text-tymeslot-400 text-token-sm font-black cursor-not-allowed"
       title={@item.disabled_tooltip}
     >
-      <IconComponents.icon name={:clipboard} class="w-4 h-4" /> {@item.cta}
+      <.icon name="hero-clipboard" class="w-4 h-4" /> {@item.cta}
     </span>
     """
   end
@@ -258,7 +257,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       %{
         key: "calendar",
         auto: :has_calendar,
-        icon: :calendar,
+        icon: "hero-calendar-days",
         title: "Connect a calendar",
         description: "Sync to avoid double-bookings",
         cta: "Connect",
@@ -267,7 +266,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       %{
         key: "video",
         auto: :has_video,
-        icon: :video,
+        icon: "hero-video-camera",
         title: "Add a video provider",
         description: "Auto-add links to online meetings",
         cta: "Connect",
@@ -276,7 +275,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       %{
         key: "theme",
         auto: nil,
-        icon: :paint_brush,
+        icon: "hero-paint-brush",
         title: "Customise your theme",
         description: "Make your booking page yours",
         cta: "Customise",
@@ -285,7 +284,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       %{
         key: "meeting_types",
         auto: nil,
-        icon: :grid,
+        icon: "hero-squares-2x2",
         title: "Review your meeting types",
         description: "Tune durations and questions",
         cta: "Review",
@@ -295,7 +294,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         key: "share",
         auto: nil,
         action: :copy,
-        icon: :external_link,
+        icon: "hero-arrow-top-right-on-square",
         title: "Share your booking page",
         description: "Send guests your booking link",
         cta: "Copy link"

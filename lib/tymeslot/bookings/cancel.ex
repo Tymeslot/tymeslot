@@ -7,6 +7,7 @@ defmodule Tymeslot.Bookings.Cancel do
   require Logger
 
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Clock
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -132,7 +133,7 @@ defmodule Tymeslot.Bookings.Cancel do
   defp update_meeting_status(meeting) do
     attrs = %{
       status: "cancelled",
-      cancelled_at: DateTime.utc_now(:second)
+      cancelled_at: DateTime.truncate(Clock.utc_now(), :second)
     }
 
     case MeetingQueries.update_meeting(meeting, attrs) do
@@ -156,7 +157,7 @@ defmodule Tymeslot.Bookings.Cancel do
   defp update_meeting_status_external(meeting) do
     attrs = %{
       status: "cancelled",
-      cancelled_at: DateTime.utc_now(:second),
+      cancelled_at: DateTime.truncate(Clock.utc_now(), :second),
       cancellation_reason: "Cancelled externally via calendar sync"
     }
 

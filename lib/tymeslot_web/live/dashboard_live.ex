@@ -32,7 +32,7 @@ defmodule TymeslotWeb.DashboardLive do
           %{
             id: :my_feature,
             label: "My Feature",
-            icon: :puzzle,
+            icon: "hero-puzzle-piece",
             path: "/dashboard/my-feature",
             action: :my_feature
           }
@@ -50,7 +50,7 @@ defmodule TymeslotWeb.DashboardLive do
 
   - `:id` (atom) - Unique identifier for this extension
   - `:label` (string) - Display text shown in the sidebar
-  - `:icon` (atom) - Icon name from `TymeslotWeb.Components.Icons.IconComponents`
+  - `:icon` (string) - A `hero-…` icon name (see `TymeslotWeb.Components.CoreComponents.Icons`)
   - `:path` (string) - Route path (must start with "/")
   - `:action` (atom) - LiveView action for routing and highlighting
 

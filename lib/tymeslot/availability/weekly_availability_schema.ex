@@ -31,7 +31,7 @@ defmodule Tymeslot.Availability.WeeklyAvailabilitySchema do
     belongs_to(:profile, ProfileSchema)
     has_many(:breaks, AvailabilityBreakSchema, foreign_key: :weekly_availability_id)
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @doc false

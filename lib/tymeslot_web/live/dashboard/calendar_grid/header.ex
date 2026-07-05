@@ -3,7 +3,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
 
   use TymeslotWeb, :html
 
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Availability.Helpers, as: AvailabilityHelpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -50,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
             aria-label="Previous period"
           >
-            <IconComponents.icon name={:chevron_left} class="w-4 h-4" />
+            <.icon name="hero-chevron-left" class="w-4 h-4" />
           </button>
           <button
             phx-click="next_period"
@@ -58,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
             aria-label="Next period"
           >
-            <IconComponents.icon name={:chevron_right} class="w-4 h-4" />
+            <.icon name="hero-chevron-right" class="w-4 h-4" />
           </button>
           <button
             phx-click={
@@ -135,7 +134,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             class="min-w-[40px] min-h-[40px] flex items-center justify-center text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
             aria-label="Calendar settings"
           >
-            <IconComponents.icon name={:cog} class="w-4 h-4" />
+            <.icon name="hero-cog-6-tooth" class="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -164,7 +163,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
       aria-label="Toggle calendars"
     >
       <:trigger>
-        <IconComponents.icon name={:menu} class="w-4 h-4" />
+        <.icon name="hero-bars-3" class="w-4 h-4" />
         <span class="hidden md:inline">Calendars</span>
       </:trigger>
       <:panel>
@@ -218,9 +217,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         aria-label="Switch view"
       >
         <:trigger>
-          <IconComponents.icon name={:calendar} class="w-4 h-4" />
+          <.icon name="hero-calendar-days" class="w-4 h-4" />
           <span class="text-token-xs font-medium">{Helpers.view_label(@view)}</span>
-          <IconComponents.icon name={:chevron_down} class="w-3 h-3" />
+          <.icon name="hero-chevron-down" class="w-3 h-3" />
         </:trigger>
         <:panel>
           <button
@@ -298,7 +297,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
       class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 flex items-center justify-center gap-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
       aria-label="Refresh"
     >
-      <IconComponents.icon name={:refresh} class={if @syncing, do: "w-4 h-4 animate-spin", else: "w-4 h-4"} />
+      <.icon name="hero-arrow-path" class={if @syncing, do: "w-4 h-4 animate-spin", else: "w-4 h-4"} />
       <span class="hidden md:inline">Refresh</span>
     </button>
     """

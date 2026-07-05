@@ -61,7 +61,9 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   defp do_get_base_path(_action, username, _socket), do: "/#{username}"
 
   defp build_query_params(socket, locale) do
-    maybe_put_query_param(%{"locale" => locale}, "theme", socket.assigns[:theme_id])
+    %{"locale" => locale}
+    |> maybe_put_query_param("theme", socket.assigns[:theme_id])
+    |> maybe_put_query_param("reschedule_meeting_uid", socket.assigns[:reschedule_meeting_uid])
   end
 
   defp get_slug(socket) do
@@ -69,21 +71,36 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     MeetingTypes.normalize_duration_slug(duration)
   end
 
-  defp maybe_put_query_param(params, _param_key, nil), do: params
+  defp maybe_put_query_param(params, _param_key, value) when value in [nil, ""], do: params
   defp maybe_put_query_param(params, key, value), do: Map.put(params, key, value)
 
   @doc """
-  Returns the organizer's scheduling page path, e.g. "/username".
+  Returns the organizer's scheduling page path for restarting a booking,
+  e.g. "/username".
+
+  Invoked from the reschedule flow's "Choose New Time" CTA. When a
+  `:meeting_uid` is present in the assigns it is carried forward as the
+  `reschedule_meeting_uid` query param, so the restarted booking updates
+  the existing meeting instead of silently creating a duplicate — the
+  reschedule context is derived solely from that param
+  (`LiveHelpers.handle_param_updates/2`).
+
   Falls back to "/" if the profile or username is unavailable.
   """
   @spec organizer_scheduling_path(map()) :: String.t()
   def organizer_scheduling_path(assigns) do
     case assigns[:organizer_profile] do
       %{username: username} when is_binary(username) and username != "" ->
-        "/#{username}"
+        maybe_append_reschedule_uid("/#{username}", assigns[:meeting_uid])
 
       _other ->
         "/"
     end
   end
+
+  defp maybe_append_reschedule_uid(base_path, uid) when is_binary(uid) and uid != "" do
+    "#{base_path}?#{URI.encode_query(%{"reschedule_meeting_uid" => uid})}"
+  end
+
+  defp maybe_append_reschedule_uid(base_path, _uid), do: base_path
 end

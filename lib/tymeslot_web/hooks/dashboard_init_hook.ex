@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
   import Phoenix.LiveView
   import Phoenix.Component
   alias Tymeslot.Dashboard.DashboardContext
+  alias Tymeslot.Dashboard.ExtensionSchema
   alias Tymeslot.Features
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
@@ -76,7 +77,9 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
       |> assign_new(:saving_timer_ref, fn -> nil end)
       |> assign(
         :sidebar_extensions,
-        Application.get_env(:tymeslot, :dashboard_sidebar_extensions, [])
+        :tymeslot
+        |> Application.get_env(:dashboard_sidebar_extensions, [])
+        |> ExtensionSchema.filter_valid()
       )
       |> assign(
         :feature_placeholder_components,

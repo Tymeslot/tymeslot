@@ -30,17 +30,6 @@
     @apply text-token-3xl md:text-token-4xl font-black tracking-tight;
   }
 
-  /* Glass Card Component */
-  .glass-card {
-    @apply rounded-token-3xl border-2 border-white/20 backdrop-blur-glass-medium transition-all duration-300;
-    background: var(--color-glass-bg-card-enhanced);
-    box-shadow: var(--shadow-glass-card-enhanced);
-  }
-
-  .glass-card:hover {
-    @apply border-white/30 shadow-glass-xl;
-  }
-
   /* Semantic Tag Components */
   .tag-semantic {
     @apply inline-flex items-center gap-2 px-3 py-1 rounded-token-xl border-2 font-semibold text-token-sm transition-all duration-300;

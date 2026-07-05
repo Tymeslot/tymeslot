@@ -13,6 +13,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       def handle_info({:step_event, :booking, :submit, data}, socket) do
         case BookingSubmissionHandlerComponent.submit_booking(socket, data) do
           {:ok, updated_socket} -> {:noreply, updated_socket}
+          {:redirect, updated_socket} -> {:noreply, updated_socket}
+          {:awaiting_payment, updated_socket} -> {:noreply, updated_socket}
+          {:honeypot, updated_socket} -> {:noreply, updated_socket}
+          {:slot_taken, updated_socket} -> {:noreply, updated_socket}
           {:error, error_socket} -> {:noreply, error_socket}
         end
       end
@@ -41,6 +45,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.BookingConfig
+  alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Shared.Flash
 
   require Logger
@@ -63,6 +68,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     * `{:awaiting_payment, socket}` — paid booking inside an embed iframe;
       the socket has been told to open Stripe Checkout in a new tab and
       carries the meeting + checkout URL for the in-iframe wait screen
+    * `{:slot_taken, socket}` — the chosen slot was booked by someone else
+      between selection and submit; the caller should return the booker to
+      the schedule step with a fresh slot list rather than strand them on
+      the form with the now-invalid slot
     * `{:error, socket}` — validation or persistence failure
 
   ## Examples
@@ -71,6 +80,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         {:ok, updated_socket} -> {:noreply, updated_socket}
         {:redirect, redirect_socket} -> {:noreply, redirect_socket}
         {:awaiting_payment, awaiting_socket} -> {:noreply, awaiting_socket}
+        {:slot_taken, retry_socket} -> {:noreply, retry_socket}
         {:error, error_socket} -> {:noreply, error_socket}
       end
   """
@@ -79,6 +89,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
           | {:redirect, Phoenix.LiveView.Socket.t()}
           | {:awaiting_payment, Phoenix.LiveView.Socket.t()}
           | {:honeypot, Phoenix.LiveView.Socket.t()}
+          | {:slot_taken, Phoenix.LiveView.Socket.t()}
           | {:error, Phoenix.LiveView.Socket.t()}
   def submit_booking(socket, booking_params) do
     Logger.info("Submit event triggered for booking form")
@@ -261,30 +272,14 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         "Time slot unavailable"
       )
   """
-  @spec handle_booking_error(Phoenix.LiveView.Socket.t(), String.t()) ::
+  @spec handle_booking_error(Phoenix.LiveView.Socket.t(), atom() | String.t()) ::
           {:error, Phoenix.LiveView.Socket.t()}
   def handle_booking_error(socket, reason) do
-    error_message =
-      case reason do
-        "This time slot is no longer available. Please select a different time." ->
-          reason
-
-        "Booking time must be in the future" ->
-          reason
-
-        _other ->
-          if is_binary(reason) and String.length(reason) < 100 do
-            reason
-          else
-            "Failed to create appointment. Please try again."
-          end
-      end
-
     socket =
       socket
       |> assign(:submitting, false)
       |> assign(:submission_processed, false)
-      |> Flash.put_flash(:error, error_message)
+      |> Flash.put_flash(:error, BookingErrorMessage.message(reason))
 
     Logger.error("Failed to create meeting appointment", reason: inspect(reason))
 
@@ -411,45 +406,76 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
     case booking_orchestrator(socket) do
       :preview_without_valid_token ->
-        socket =
-          socket
-          |> assign(:submitting, false)
-          |> assign(:submission_processed, false)
-          |> Flash.put_flash(
-            :error,
-            dgettext("booking", "Preview session expired. Reload the page to continue.")
-          )
-
-        {:error, socket}
+        handle_expired_preview(socket)
 
       orchestrator ->
-        case orchestrator.submit_booking(params, opts) do
-          {:ok, :payment_required, %{meeting: meeting, checkout_url: url}} ->
-            handle_payment_required(socket, meeting, url, sanitized_params)
-
-          {:ok, meeting} ->
-            handle_booking_success(socket, meeting, sanitized_params)
-
-          {:error, errors} when is_list(errors) ->
-            error_map = Enum.into(errors, %{})
-
-            socket =
-              socket
-              |> assign(:form, Component.to_form(sanitized_params))
-              |> assign(:validation_errors, error_map)
-              |> assign(:submitting, false)
-              |> assign(:submission_processed, false)
-              |> Flash.put_flash(
-                :error,
-                dgettext("booking", "Please correct the errors below before submitting.")
-              )
-
-            {:error, socket}
-
-          {:error, reason} ->
-            handle_booking_error(socket, reason)
-        end
+        handle_submit_result(socket, orchestrator.submit_booking(params, opts), sanitized_params)
     end
+  end
+
+  defp handle_submit_result(socket, result, sanitized_params) do
+    case result do
+      {:ok, :payment_required, %{meeting: meeting, checkout_url: url}} ->
+        handle_payment_required(socket, meeting, url, sanitized_params)
+
+      {:ok, meeting} ->
+        handle_booking_success(socket, meeting, sanitized_params)
+
+      {:error, errors} when is_list(errors) ->
+        handle_field_errors(socket, errors, sanitized_params)
+
+      {:error, :slot_taken} ->
+        handle_slot_taken(socket)
+
+      {:error, reason} ->
+        handle_booking_error(socket, reason)
+    end
+  end
+
+  defp handle_expired_preview(socket) do
+    socket =
+      socket
+      |> assign(:submitting, false)
+      |> assign(:submission_processed, false)
+      |> Flash.put_flash(
+        :error,
+        dgettext("booking", "Preview session expired. Reload the page to continue.")
+      )
+
+    {:error, socket}
+  end
+
+  defp handle_field_errors(socket, errors, sanitized_params) do
+    socket =
+      socket
+      |> assign(:form, Component.to_form(sanitized_params))
+      |> assign(:validation_errors, Enum.into(errors, %{}))
+      |> assign(:submitting, false)
+      |> assign(:submission_processed, false)
+      |> Flash.put_flash(
+        :error,
+        dgettext("booking", "Please correct the errors below before submitting.")
+      )
+
+    {:error, socket}
+  end
+
+  # The slot was booked out from under this attendee between selecting it and
+  # submitting (server-side `FOR UPDATE NOWAIT` correctly refused the double
+  # booking). The domain layer signals this with the semantic `:slot_taken`
+  # atom (see `Tymeslot.Bookings.Orchestrator.submit_booking/2`) rather than a
+  # display string, so this routing decision never depends on copy text. Stop
+  # the in-flight submission and hand back a `:slot_taken` tuple so the flow
+  # returns the booker to the schedule step with refreshed availability —
+  # never leave them stranded on the form re-submitting a dead slot.
+  defp handle_slot_taken(socket) do
+    socket =
+      socket
+      |> assign(:submitting, false)
+      |> assign(:submission_processed, false)
+      |> Flash.put_flash(:error, BookingErrorMessage.message(:slot_taken))
+
+    {:slot_taken, socket}
   end
 
   # Selects the booking orchestrator based on the current preview state.

@@ -55,8 +55,8 @@ defmodule Tymeslot.Auth.UserSchema do
   schema "users" do
     field(:email, :string)
     field(:password_hash, :string)
-    field(:password, :string, virtual: true)
-    field(:password_confirmation, :string, virtual: true)
+    field(:password, :string, virtual: true, redact: true)
+    field(:password_confirmation, :string, virtual: true, redact: true)
     field(:verified_at, :utc_datetime)
     field(:verification_token, :string)
     field(:verification_sent_at, :utc_datetime)
@@ -95,7 +95,7 @@ defmodule Tymeslot.Auth.UserSchema do
 
     has_many(:meeting_types, Tymeslot.MeetingTypes.MeetingTypeSchema, foreign_key: :user_id)
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @doc false

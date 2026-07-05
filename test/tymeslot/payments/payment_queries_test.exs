@@ -63,6 +63,32 @@ defmodule Tymeslot.Payments.PaymentQueriesTest do
       assert "is invalid" in errors_on(changeset).status
     end
 
+    test "returns an error tuple instead of raising for a negative tax_amount", %{user: user} do
+      attrs = %{
+        user_id: user.id,
+        amount: 500,
+        status: "pending",
+        tax_amount: -500
+      }
+
+      assert {:error, changeset} = PaymentQueries.create_transaction(attrs)
+      assert "must be greater than or equal to 0" in errors_on(changeset).tax_amount
+    end
+
+    test "returns an error tuple instead of raising for a negative discount_amount", %{
+      user: user
+    } do
+      attrs = %{
+        user_id: user.id,
+        amount: 500,
+        status: "pending",
+        discount_amount: -100
+      }
+
+      assert {:error, changeset} = PaymentQueries.create_transaction(attrs)
+      assert "must be greater than or equal to 0" in errors_on(changeset).discount_amount
+    end
+
     test "prevents duplicate stripe_id", %{user: user} do
       attrs = %{
         user_id: user.id,

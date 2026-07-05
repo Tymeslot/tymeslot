@@ -235,3 +235,29 @@
   color: var(--color-text-glass-primary);
   transition: var(--transition-glass);
 }
+
+/* Brand Card */
+.brand-card {
+  @apply bg-white border-2 border-tymeslot-100 rounded-token-3xl p-6 shadow-xl shadow-tymeslot-200/50 transition-glass;
+}
+
+.brand-card:hover {
+  @apply border-turquoise-100 shadow-xl shadow-turquoise-500/10;
+}
+
+/* Glass Morphism Card — backs the <.glass_morphism_card> component */
+.glass-morphism-card {
+  @apply bg-white/80 backdrop-blur-xl rounded-token-3xl border border-white/40 shadow-2xl;
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.1);
+}
+
+/* Meeting Details Card */
+.meeting-details-card {
+  @apply bg-linear-to-br from-turquoise-50 to-cyan-50 border border-turquoise-100 rounded-token-2xl p-6 shadow-sm;
+}
+
+@media (min-width: 640px) {
+  .meeting-details-card {
+    padding: 1rem;
+  }
+}

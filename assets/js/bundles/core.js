@@ -11,7 +11,7 @@ import {LiveSocket} from "phoenix_live_view"
 import topbar from "../../vendor/topbar.cjs"
 
 // Core utility hooks used everywhere
-import { ConfirmDelete, PageReload, VideoHoverPreview, StopClickPropagation } from "../ui_interaction_hooks"
+import { ConfirmDelete, PageReload, VideoHoverPreview, StopClickPropagation, ModalFocusTrap } from "../ui_interaction_hooks"
 import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick, scrollPageToTop, shouldScrollToTopOnNavigate } from "../utility_hooks"
 import { ClipboardCopy } from "../clipboard_hook"
 import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView, HeroDemo } from "../analytics"
@@ -43,6 +43,7 @@ const CoreHooks = {
   PageReload,
   VideoHoverPreview,
   StopClickPropagation,
+  ModalFocusTrap,
 
   // Utilities
   Flash,

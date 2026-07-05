@@ -32,6 +32,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerCompositionTest do
   alias Tymeslot.Auth.OAuth.{Client, FlowHandler, State}
   alias Tymeslot.Auth.UserSessionSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Token
 
   setup do
     :meck.new(Client, [:passthrough])
@@ -97,8 +98,10 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerCompositionTest do
         )
 
       assert [session_row] = sessions
-      # The conn carries the token in the session bag.
-      assert Conn.get_session(result_conn, :user_token) == session_row.token
+      # The conn carries the plaintext token; the row stores only its hash.
+      assert Token.hash_token(Conn.get_session(result_conn, :user_token)) ==
+               session_row.token_hash
+
       # The session row is for the correct user — matched via GitHub ID, not email.
       assert session_row.user_id == user.id
     end

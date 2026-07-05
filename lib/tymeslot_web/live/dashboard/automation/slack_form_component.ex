@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
     <div class="space-y-8 pb-20">
       <%!-- Toolbar --%>
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
-        <.section_header icon={:automation} title={form_title(@mode)} class="mb-0" />
+        <.section_header icon="hero-bolt" title={form_title(@mode)} class="mb-0" />
 
         <button
           phx-click="slack_close_form"

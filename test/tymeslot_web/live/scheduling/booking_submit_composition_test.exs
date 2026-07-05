@@ -15,7 +15,9 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmitCompositionTest do
       on the calendar, submit fires. The calendar pre-check must reject
       the slot and surface the "no longer available" flash. Without this
       we'd double-book silently (before fresh-check) or crash (if the
-      error atom ever stops being mapped).
+      error atom ever stops being mapped). The booker must also be bounced
+      back to the schedule step with the stale time cleared — not stranded
+      on the form re-submitting a dead slot.
 
     * **Meeting type deactivated mid-flow** — the organiser toggles a
       meeting type off while the attendee is on the form step. The
@@ -97,7 +99,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmitCompositionTest do
   end
 
   @tag :capture_log
-  test "slot becomes unavailable between render and submit → user-friendly flash, no crash",
+  test "slot becomes unavailable between render and submit → flash, no crash, back to schedule",
        %{conn: conn, profile: profile, meeting_type: meeting_type} do
     view = navigate_to_booking_form(conn, profile, meeting_type)
 
@@ -138,11 +140,23 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmitCompositionTest do
     })
     |> render_submit()
 
-    _drain = :sys.get_state(view.pid)
+    drained = :sys.get_state(view.pid)
 
     rendered = render(view)
     assert rendered =~ "select a different time"
     refute rendered =~ "Meeting Confirmed"
+
+    # Recovery: the booker is returned to the schedule step with the now-dead
+    # slot cleared, rather than left on the form re-submitting it.
+    assert drained.socket.assigns.current_state == :schedule
+    assert drained.socket.assigns.selected_time == nil
+    refute has_element?(view, "form[phx-submit='submit']")
+
+    # The day's slots are reloaded on the bounce-back (the queued
+    # {:load_slots, date} was drained by :sys.get_state above); with the whole
+    # day blocked the just-taken time is gone, so the booker sees a fresh,
+    # empty slot list rather than the stale slot they lost the race on.
+    assert drained.socket.assigns.available_slots == []
   end
 
   @tag :capture_log

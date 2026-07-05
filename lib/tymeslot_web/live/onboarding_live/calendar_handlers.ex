@@ -17,6 +17,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   alias TymeslotWeb.OnboardingLive.ThemeHandlers
 
   require Logger
+  require Phoenix.LiveView
 
   @doc """
   Initiates Google Calendar OAuth and redirects the user externally.
@@ -85,7 +86,8 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
      socket
      |> Component.assign(:calendar_state, :selecting)
      |> Component.assign(:caldav_form_data, %{})
-     |> Component.assign(:caldav_form_errors, %{})}
+     |> Component.assign(:caldav_form_errors, %{})
+     |> Component.assign(:caldav_discovering, false)}
   end
 
   @doc """
@@ -154,15 +156,38 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
     end
   end
 
+  # CalDAV discovery and integration creation both make blocking network
+  # round-trips to the remote server. Running them inline in handle_event would
+  # freeze the LiveView process, so the "Discover calendars" button could never
+  # render its loading state. Kick the work off with start_async and let
+  # handle_discover_caldav_result/2 fold the outcome back into the socket.
   defp discover_and_create_caldav(socket, form_data) do
-    user_id = socket.assigns.current_user.id
+    if socket.assigns.caldav_discovering do
+      {:noreply, socket}
+    else
+      user_id = socket.assigns.current_user.id
+
+      {:noreply,
+       socket
+       |> Component.assign(:caldav_discovering, true)
+       |> Component.assign(:caldav_form_data, form_data)
+       |> Component.assign(:caldav_form_errors, %{})
+       |> LiveView.start_async(:discover_caldav, fn ->
+         run_caldav_discovery(user_id, form_data)
+       end)}
+    end
+  end
+
+  # Runs in the async task process — must not touch the socket. Returns a
+  # tagged result the LiveView folds back in via handle_discover_caldav_result/2.
+  defp run_caldav_discovery(user_id, form_data) do
     url = form_data["url"]
     username = form_data["username"]
     password = form_data["password"]
 
     case Calendar.discover_and_filter_calendars(:caldav, url, username, password) do
-      {:ok, %{calendars: _calendars, discovery_credentials: credentials}} ->
-        integration_params = %{
+      {:ok, %{discovery_credentials: credentials}} ->
+        params = %{
           "provider" => "caldav",
           "name" => "CalDAV Calendar",
           "url" => credentials[:url] || url,
@@ -170,42 +195,97 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
           "password" => credentials[:password] || password
         }
 
-        case Calendar.create_integration_with_validation(user_id, integration_params) do
-          {:ok, _integration} ->
-            connected = Calendar.list_integrations(user_id)
-            ThemeHandlers.seed_video_backgrounds(socket.assigns.profile, connected)
-
-            {:noreply,
-             socket
-             |> Component.assign(:connected_calendars, connected)
-             |> Component.assign(:steps, StepConfig.steps(connected != []))
-             |> Component.assign(:calendar_state, :selecting)
-             |> Component.assign(:calendar_choice, nil)
-             |> Component.assign(:caldav_form_data, %{})
-             |> Component.assign(:caldav_form_errors, %{})}
-
-          {:error, {:form_errors, errors}} ->
-            {:noreply, Component.assign(socket, :caldav_form_errors, errors)}
-
-          {:error, reason} ->
-            Logger.warning("CalDAV integration creation failed",
-              user_id: user_id,
-              reason: inspect(reason)
-            )
-
-            {:noreply,
-             Component.assign(socket, :caldav_form_errors, %{
-               discovery: "Could not create calendar integration. Please try again."
-             })}
+        case Calendar.create_integration_with_validation(user_id, params) do
+          {:ok, _integration} -> :created
+          {:error, {:form_errors, errors}} -> {:form_errors, errors}
+          {:error, reason} -> {:creation_failed, reason}
         end
 
       {:error, reason} ->
-        {:noreply,
-         socket
-         |> Component.assign(:caldav_form_data, form_data)
-         |> Component.assign(:caldav_form_errors, %{
-           discovery: DisplayHelpers.normalize_discovery_error(reason)
-         })}
+        {:discovery_failed, reason}
     end
   end
+
+  @doc """
+  Folds a CalDAV discovery async result back into the socket. Dispatched from
+  `OnboardingLive.handle_async/3`.
+  """
+  @spec handle_discover_caldav_result(
+          {:ok, term()} | {:exit, term()},
+          Phoenix.LiveView.Socket.t()
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_discover_caldav_result({:ok, :created}, socket) do
+    socket
+    |> refresh_connected_calendars()
+    |> maybe_reset_caldav_step()
+    |> then(&{:noreply, Component.assign(&1, :caldav_discovering, false)})
+  end
+
+  def handle_discover_caldav_result({:ok, {:form_errors, errors}}, socket) do
+    {:noreply,
+     socket
+     |> Component.assign(:caldav_form_errors, errors)
+     |> Component.assign(:caldav_discovering, false)}
+  end
+
+  def handle_discover_caldav_result({:ok, {:creation_failed, reason}}, socket) do
+    Logger.warning("CalDAV integration creation failed",
+      user_id: socket.assigns.current_user.id,
+      reason: inspect(reason)
+    )
+
+    {:noreply,
+     socket
+     |> Component.assign(:caldav_form_errors, %{
+       discovery: "Could not create calendar integration. Please try again."
+     })
+     |> Component.assign(:caldav_discovering, false)}
+  end
+
+  def handle_discover_caldav_result({:ok, {:discovery_failed, reason}}, socket) do
+    {:noreply,
+     socket
+     |> Component.assign(:caldav_form_errors, %{
+       discovery: DisplayHelpers.normalize_discovery_error(reason)
+     })
+     |> Component.assign(:caldav_discovering, false)}
+  end
+
+  def handle_discover_caldav_result({:exit, reason}, socket) do
+    Logger.error("CalDAV discovery task crashed",
+      user_id: socket.assigns.current_user.id,
+      reason: inspect(reason)
+    )
+
+    {:noreply,
+     socket
+     |> Component.assign(:caldav_form_errors, %{
+       discovery: "Something went wrong while contacting the calendar server. Please try again."
+     })
+     |> Component.assign(:caldav_discovering, false)}
+  end
+
+  defp refresh_connected_calendars(socket) do
+    user_id = socket.assigns.current_user.id
+    connected = Calendar.list_integrations(user_id)
+    ThemeHandlers.seed_video_backgrounds(socket.assigns.profile, connected)
+
+    socket
+    |> Component.assign(:connected_calendars, connected)
+    |> Component.assign(:steps, StepConfig.steps(connected != []))
+  end
+
+  # The async result can settle after the user has already navigated away from
+  # the connect-calendar step (e.g. clicked Back mid-discovery). Only reset the
+  # CalDAV step's UI state while the user is still looking at it — resetting it
+  # from elsewhere would silently rewrite the state of a step no longer shown.
+  defp maybe_reset_caldav_step(%{assigns: %{current_step: :connect_calendar}} = socket) do
+    socket
+    |> Component.assign(:calendar_state, :selecting)
+    |> Component.assign(:calendar_choice, nil)
+    |> Component.assign(:caldav_form_data, %{})
+    |> Component.assign(:caldav_form_errors, %{})
+  end
+
+  defp maybe_reset_caldav_step(socket), do: socket
 end
