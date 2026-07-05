@@ -28,10 +28,6 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.EmailWorker
 
-  @endpoint TymeslotWeb.Endpoint
-  @key_a String.duplicate("a", 64)
-  @key_b String.duplicate("b", 64)
-
   setup :verify_on_exit!
 
   describe "run_create_event/1 — Google calendar + Google Meet (same account, inline path)" do
@@ -270,35 +266,19 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
   end
 
   describe "run_create_event/1 — credentials require re-encryption" do
-    setup do
-      original = Application.get_env(:tymeslot, @endpoint)
-
-      on_exit(fn ->
-        if is_nil(original) do
-          Application.delete_env(:tymeslot, @endpoint)
-        else
-          Application.put_env(:tymeslot, @endpoint, original)
-        end
-      end)
-
-      :ok
-    end
-
     test "flags the integration for reauth and returns reauth_required: true (no send/2)" do
-      put_secret_key(@key_a)
       user = insert(:user)
 
-      # Encrypting a credential under key_a then rotating to key_b makes
-      # CalendarIntegrationQueries.get/1 return
-      # {:error, :requires_reencryption, integration} — the path that
-      # previously tried (and failed, from inside a Task) to flash the user.
+      # Undecryptable credential bytes make CalendarIntegrationQueries.get/1 return
+      # {:error, :requires_reencryption, integration} — the path that previously
+      # tried (and failed, from inside a Task) to flash the user.
       integration =
         insert(:calendar_integration,
           user: user,
           provider: "caldav",
           is_active: true,
-          username_encrypted: Encryption.encrypt("myuser"),
-          password_encrypted: Encryption.encrypt("mypassword")
+          username_encrypted: :crypto.strong_rand_bytes(40),
+          password_encrypted: :crypto.strong_rand_bytes(40)
         )
 
       expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
@@ -320,10 +300,6 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
 
       original = Application.get_env(:tymeslot, :event_create_operations_module)
       Application.put_env(:tymeslot, :event_create_operations_module, Tymeslot.CalendarMock)
-
-      # Simulate key rotation without re-encrypting existing rows, so the
-      # metadata lookup hits the :requires_reencryption arm.
-      put_secret_key(@key_b)
 
       try do
         assert {:ok, result} = EventCreation.run_create_event(payload)
@@ -531,15 +507,5 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
       assert result.creating.video_integration_id == video_integration.id
       assert result.description =~ meet_url
     end
-  end
-
-  # Helpers
-
-  defp put_secret_key(key) do
-    base = Application.get_env(:tymeslot, @endpoint) || []
-
-    base
-    |> Keyword.put(:secret_key_base, key)
-    |> then(&Application.put_env(:tymeslot, @endpoint, &1))
   end
 end

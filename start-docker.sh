@@ -70,6 +70,23 @@ fi
 
 echo "✓ All required environment variables are set"
 
+# DATA_ENCRYPTION_KEY is recommended but not required, so existing deployments
+# keep booting after an upgrade. When unset, credentials at rest are encrypted
+# with a key derived from SECRET_KEY_BASE (the historical behaviour) — which
+# means rotating SECRET_KEY_BASE would make them undecryptable. Set a dedicated
+# key to decouple the two secrets. Once set it MUST stay stable across restarts.
+if [ -z "${DATA_ENCRYPTION_KEY:-}" ]; then
+    echo ""
+    echo "⚠ DATA_ENCRYPTION_KEY is not set."
+    echo "  Credentials at rest are encrypted with a key derived from SECRET_KEY_BASE,"
+    echo "  so rotating SECRET_KEY_BASE would make them undecryptable."
+    echo "  Recommended: generate a stable key and add it to your .env —"
+    echo "    DATA_ENCRYPTION_KEY=\$(openssl rand -base64 48 | tr -d '\\n')"
+    echo "  Then migrate existing rows (see README-Docker.md, 'Data-at-rest encryption')."
+else
+    echo "✓ DATA_ENCRYPTION_KEY is set (data-at-rest key decoupled from SECRET_KEY_BASE)"
+fi
+
 echo ""
 echo "========================================"
 echo "Starting Tymeslot (Docker deployment)"

@@ -7,6 +7,11 @@
 #   openssl rand -base64 64 | tr -d '\n'  # SECRET_KEY_BASE
 #   openssl rand -base64 32 | tr -d '\n'  # POSTGRES_PASSWORD
 #
+# Recommended (decouples data-at-rest encryption from SECRET_KEY_BASE):
+#   openssl rand -base64 48 | tr -d '\n'  # DATA_ENCRYPTION_KEY
+# Once set it must stay stable across restarts — losing it makes stored
+# credentials undecryptable. See README-Docker.md, "Data-at-rest encryption".
+#
 # Fill in the required values in .env, then run:
 #   docker compose up -d
 

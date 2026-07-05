@@ -11,7 +11,7 @@ defmodule Tymeslot.Integrations.Video.ReauthTest do
   Once the user reconnects and supplies fresh credentials, `update/2` must
   clear the flag.
   """
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
 
   @moduletag :video
   @moduletag :security
@@ -22,45 +22,18 @@ defmodule Tymeslot.Integrations.Video.ReauthTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
 
-  @endpoint TymeslotWeb.Endpoint
-  @key_a String.duplicate("a", 64)
-  @key_b String.duplicate("b", 64)
-
-  setup do
-    original = Application.get_env(:tymeslot, @endpoint)
-
-    on_exit(fn ->
-      if is_nil(original) do
-        Application.delete_env(:tymeslot, @endpoint)
-      else
-        Application.put_env(:tymeslot, @endpoint, original)
-      end
-    end)
-
-    :ok
-  end
-
-  defp put_secret_key(key) do
-    base = Application.get_env(:tymeslot, @endpoint) || []
-
-    base
-    |> Keyword.put(:secret_key_base, key)
-    |> then(&Application.put_env(:tymeslot, @endpoint, &1))
-  end
-
   describe "VideoIntegrationQueries.get/1 with a stale encryption key" do
     test "returns {:error, :requires_reencryption, integration} when credentials were encrypted under a different key" do
-      put_secret_key(@key_a)
-
+      # A credential whose key is genuinely gone (or a corrupt value) verifies
+      # under no key in the keyring. Decoupling the data key from SECRET_KEY_BASE
+      # means rotating the session secret no longer does this — so simulate real
+      # key loss with undecryptable bytes.
       integration =
         insert(:video_integration,
           provider: "mirotalk",
           is_active: true,
-          api_key_encrypted: Encryption.encrypt("my-api-key")
+          api_key_encrypted: :crypto.strong_rand_bytes(40)
         )
-
-      # Simulate key rotation without re-encrypting existing rows.
-      put_secret_key(@key_b)
 
       assert {:error, :requires_reencryption, stale} =
                VideoIntegrationQueries.get(integration.id)
@@ -71,16 +44,14 @@ defmodule Tymeslot.Integrations.Video.ReauthTest do
 
   describe "Video.handle_reauth_required/1" do
     test "sets needs_reauth: true and returns {:discard, reason} containing 'reauthentication'" do
-      put_secret_key(@key_a)
-
+      # Undecryptable bytes stand in for a credential whose key is genuinely gone
+      # (rotating SECRET_KEY_BASE no longer produces this — see decoupling).
       integration =
         insert(:video_integration,
           provider: "mirotalk",
           is_active: true,
-          api_key_encrypted: Encryption.encrypt("my-api-key")
+          api_key_encrypted: :crypto.strong_rand_bytes(40)
         )
-
-      put_secret_key(@key_b)
 
       {:error, :requires_reencryption, stale} = VideoIntegrationQueries.get(integration.id)
 
@@ -92,16 +63,14 @@ defmodule Tymeslot.Integrations.Video.ReauthTest do
     end
 
     test "records a sync_error after handle_reauth_required/1" do
-      put_secret_key(@key_a)
-
+      # Undecryptable bytes stand in for a credential whose key is genuinely gone
+      # (rotating SECRET_KEY_BASE no longer produces this — see decoupling).
       integration =
         insert(:video_integration,
           provider: "mirotalk",
           is_active: true,
-          api_key_encrypted: Encryption.encrypt("my-api-key")
+          api_key_encrypted: :crypto.strong_rand_bytes(40)
         )
-
-      put_secret_key(@key_b)
 
       {:error, :requires_reencryption, stale} = VideoIntegrationQueries.get(integration.id)
 
@@ -114,8 +83,6 @@ defmodule Tymeslot.Integrations.Video.ReauthTest do
 
   describe "VideoIntegrationQueries.update/2 clearing needs_reauth on reconnect" do
     test "update/2 with fresh credentials clears the flag" do
-      put_secret_key(@key_a)
-
       integration =
         insert(:video_integration,
           provider: "mirotalk",

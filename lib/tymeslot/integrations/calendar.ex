@@ -20,6 +20,8 @@ defmodule Tymeslot.Integrations.Calendar do
       notification tracking.
   """
 
+  @behaviour Tymeslot.Security.EncryptedStorage
+
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
@@ -46,6 +48,12 @@ defmodule Tymeslot.Integrations.Calendar do
   @type integration :: CalendarIntegrationSchema.t()
   @type calendar_selection_params :: %{required(:selected_calendars) => [String.t()]}
   @type colour_target :: {:meeting, Ecto.UUID.t()} | {:external, integration_id(), String.t()}
+
+  @impl Tymeslot.Security.EncryptedStorage
+  def encrypted_storage,
+    do:
+      {CalendarIntegrationSchema.__schema__(:source),
+       CalendarIntegrationSchema.encrypted_credential_fields()}
 
   # ---------------------------
   # Public API: Listing/CRUD

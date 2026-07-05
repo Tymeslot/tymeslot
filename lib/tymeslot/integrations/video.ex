@@ -21,9 +21,17 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
   alias TymeslotWeb.Endpoint
 
+  @behaviour Tymeslot.Security.EncryptedStorage
+
   require Logger
 
   @type provider :: :google_meet | :teams | :zoom | :mirotalk | :custom | :none | String.t()
+
+  @impl Tymeslot.Security.EncryptedStorage
+  def encrypted_storage,
+    do:
+      {VideoIntegrationSchema.__schema__(:source),
+       VideoIntegrationSchema.encrypted_credential_fields()}
 
   # ---------------
   # Read

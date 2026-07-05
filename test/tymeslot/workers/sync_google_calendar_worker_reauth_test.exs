@@ -5,7 +5,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerReauthTest do
   — never crash. Once the user reconnects, the flag must clear so the
   sweep-level `needs_reauth` filter doesn't keep the integration stranded.
   """
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
 
   @moduletag :workers
   @moduletag :calendar
@@ -19,49 +19,21 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerReauthTest do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
-  @endpoint TymeslotWeb.Endpoint
-  @key_a String.duplicate("a", 64)
-  @key_b String.duplicate("b", 64)
-
-  setup do
-    original = Application.get_env(:tymeslot, @endpoint)
-
-    on_exit(fn ->
-      if is_nil(original) do
-        Application.delete_env(:tymeslot, @endpoint)
-      else
-        Application.put_env(:tymeslot, @endpoint, original)
-      end
-    end)
-
-    :ok
-  end
-
-  defp put_secret_key(key) do
-    base = Application.get_env(:tymeslot, @endpoint) || []
-
-    base
-    |> Keyword.put(:secret_key_base, key)
-    |> then(&Application.put_env(:tymeslot, @endpoint, &1))
-  end
-
   describe "perform/1 when stored credentials cannot be decrypted" do
     test "flags the integration for reauth and discards the job without crashing" do
-      put_secret_key(@key_a)
-
+      # A credential encrypted under a key that is genuinely gone (or a corrupt
+      # value) verifies under no key in the keyring. Since the data key is now
+      # decoupled from SECRET_KEY_BASE, rotating the session secret no longer
+      # produces this — so simulate real key loss with undecryptable bytes.
       integration =
         insert(:calendar_integration,
           provider: "google",
           is_active: true,
-          access_token_encrypted: Encryption.encrypt("test-access-token"),
-          refresh_token_encrypted: Encryption.encrypt("test-refresh-token")
+          access_token_encrypted: :crypto.strong_rand_bytes(40),
+          refresh_token_encrypted: :crypto.strong_rand_bytes(40)
         )
 
       refute integration.needs_reauth
-
-      # The SECRET_KEY_BASE changed out from under the stored ciphertext (key
-      # loss, not a planned rotation) — the credential can no longer decrypt.
-      put_secret_key(@key_b)
 
       assert {:discard, reason} =
                perform_job(SyncGoogleCalendarWorker, %{
@@ -70,7 +42,6 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerReauthTest do
 
       assert reason =~ "reauthentication"
 
-      # Read the raw row — decrypt_credentials/1 would raise under the new key.
       reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert reloaded.needs_reauth == true
       assert reloaded.sync_error =~ "could not be decrypted"
@@ -79,8 +50,6 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerReauthTest do
 
   describe "sweep filter" do
     test "stream_all_active skips integrations with needs_reauth: true" do
-      put_secret_key(@key_a)
-
       healthy =
         insert(:calendar_integration,
           provider: "google",
@@ -110,8 +79,6 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerReauthTest do
 
   describe "clearing needs_reauth on reconnect" do
     test "update/2 with fresh credentials clears the flag" do
-      put_secret_key(@key_a)
-
       integration =
         insert(:calendar_integration,
           provider: "google",
@@ -131,8 +98,6 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerReauthTest do
     end
 
     test "update/2 without credential changes leaves the flag intact" do
-      put_secret_key(@key_a)
-
       integration =
         insert(:calendar_integration,
           provider: "google",

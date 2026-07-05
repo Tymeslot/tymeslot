@@ -3,12 +3,20 @@ defmodule Tymeslot.Telegram do
   Context module for Telegram integration management and delivery.
   """
 
+  @behaviour Tymeslot.Security.EncryptedStorage
+
   require Logger
 
   alias Tymeslot.Features
   alias Tymeslot.Telegram.{API, MessageBuilder, TelegramDeliverySchema, TelegramIntegrationSchema}
   alias Tymeslot.Telegram.TelegramQueries
   alias Tymeslot.Workers.TelegramWorker
+
+  @impl Tymeslot.Security.EncryptedStorage
+  def encrypted_storage,
+    do:
+      {TelegramIntegrationSchema.__schema__(:source),
+       TelegramIntegrationSchema.encrypted_credential_fields()}
 
   # ============================================================================
   # CRUD Operations

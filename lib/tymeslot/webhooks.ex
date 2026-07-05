@@ -9,6 +9,8 @@ defmodule Tymeslot.Webhooks do
   - Viewing delivery logs and statistics
   """
 
+  @behaviour Tymeslot.Security.EncryptedStorage
+
   require Logger
 
   alias Tymeslot.Features
@@ -25,6 +27,10 @@ defmodule Tymeslot.Webhooks do
   }
 
   alias Tymeslot.Workers.WebhookWorker
+
+  @impl Tymeslot.Security.EncryptedStorage
+  def encrypted_storage,
+    do: {WebhookSchema.__schema__(:source), WebhookSchema.encrypted_credential_fields()}
 
   # ============================================================================
   # CRUD Operations

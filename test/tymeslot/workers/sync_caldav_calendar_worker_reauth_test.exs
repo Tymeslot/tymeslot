@@ -25,32 +25,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
-  @endpoint TymeslotWeb.Endpoint
-  @key_a String.duplicate("a", 64)
-  @key_b String.duplicate("b", 64)
-
-  setup do
-    original = Application.get_env(:tymeslot, @endpoint)
-
-    on_exit(fn ->
-      if is_nil(original) do
-        Application.delete_env(:tymeslot, @endpoint)
-      else
-        Application.put_env(:tymeslot, @endpoint, original)
-      end
-    end)
-
-    :ok
-  end
-
-  defp put_secret_key(key) do
-    base = Application.get_env(:tymeslot, @endpoint) || []
-
-    base
-    |> Keyword.put(:secret_key_base, key)
-    |> then(&Application.put_env(:tymeslot, @endpoint, &1))
-  end
-
   defp assert_flags_reauth_on_401(integration) do
     ReqTest.stub(:tymeslot_http, fn conn -> Conn.send_resp(conn, 401, "Unauthorized") end)
 
@@ -141,13 +115,19 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
 
   describe "perform/1 when stored credentials cannot be decrypted" do
     test "flags the integration for reauth and discards the job without crashing" do
-      put_secret_key(@key_a)
-      integration = insert(:calendar_integration, provider: "caldav", is_active: true)
-      refute integration.needs_reauth
+      # A credential encrypted under a key that is genuinely gone (or a corrupt
+      # value) verifies under no key in the keyring. Since the data key is now
+      # decoupled from SECRET_KEY_BASE, rotating the session secret no longer
+      # produces this — so simulate real key loss with undecryptable bytes.
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          username_encrypted: :crypto.strong_rand_bytes(40),
+          password_encrypted: :crypto.strong_rand_bytes(40)
+        )
 
-      # The SECRET_KEY_BASE changed out from under the stored ciphertext (key
-      # loss, not a planned rotation) — the credential can no longer decrypt.
-      put_secret_key(@key_b)
+      refute integration.needs_reauth
 
       assert {:discard, reason} =
                perform_job(SyncCalDavCalendarWorker, %{
@@ -156,7 +136,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
 
       assert reason =~ "reauthentication"
 
-      # Read the raw row — decrypt_credentials/1 would raise under the new key.
       reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert reloaded.needs_reauth == true
       assert reloaded.sync_error =~ "could not be decrypted"
@@ -165,7 +144,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
 
   describe "sweep filter" do
     test "stream_all_active skips integrations with needs_reauth: true" do
-      put_secret_key(@key_a)
       healthy = insert(:calendar_integration, provider: "caldav", is_active: true)
 
       flagged =
@@ -187,8 +165,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
 
   describe "clearing needs_reauth on reconnect" do
     test "update/2 with fresh credentials clears the flag" do
-      put_secret_key(@key_a)
-
       integration =
         insert(:calendar_integration,
           provider: "caldav",
@@ -206,8 +182,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
     end
 
     test "update/2 without credential changes leaves the flag intact" do
-      put_secret_key(@key_a)
-
       integration =
         insert(:calendar_integration,
           provider: "caldav",

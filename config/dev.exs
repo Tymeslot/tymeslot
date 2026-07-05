@@ -38,6 +38,13 @@ config :tymeslot, TymeslotWeb.Endpoint,
     ]
   ]
 
+# Data-at-rest encryption key, decoupled from SECRET_KEY_BASE. A fixed default is
+# used in dev; production supplies DATA_ENCRYPTION_KEY via runtime.exs.
+config :tymeslot, Tymeslot.Security.Encryption,
+  data_encryption_key:
+    System.get_env("DATA_ENCRYPTION_KEY") ||
+      "RsxoYoIVSu/K+QDV2yukDwTFD3wDyDSFxuGmoauNAX0FcXJF58dAz5LhEyiNqhFP"
+
 # Enable dev routes for dashboard and mailbox
 config :tymeslot, dev_routes: true
 

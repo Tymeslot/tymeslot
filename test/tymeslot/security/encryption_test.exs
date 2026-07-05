@@ -178,4 +178,60 @@ defmodule Tymeslot.Security.EncryptionTest do
       assert Encryption.decrypt_with_status(tampered) == {:error, :requires_reencryption}
     end
   end
+
+  describe "versioned keyring" do
+    test "stamps the current version byte on new writes" do
+      <<version, _rest::binary>> = Encryption.encrypt("token")
+
+      assert version == Encryption.current_version()
+      assert Encryption.current_version() == 1
+    end
+
+    test "current?/1 is true for fresh writes and false for legacy values" do
+      assert Encryption.current?(Encryption.encrypt("token"))
+      refute Encryption.current?(Encryption.encrypt_legacy("token"))
+      refute Encryption.current?("not ciphertext")
+    end
+
+    test "decrypts a legacy v0 value and re-encrypts it to the current version" do
+      legacy = Encryption.encrypt_legacy("secret-token")
+
+      # Legacy values carry no version prefix and open under the fallback key.
+      assert Encryption.decrypt(legacy) == "secret-token"
+      assert Encryption.decrypt_with_status(legacy) == {:ok, "secret-token"}
+      refute Encryption.current?(legacy)
+
+      reencrypted = Encryption.encrypt(Encryption.decrypt(legacy))
+
+      assert Encryption.current?(reencrypted)
+      assert Encryption.decrypt(reencrypted) == "secret-token"
+    end
+
+    test "detects tampering of a current-version value" do
+      <<version, nonce::binary-12, _tag::binary-16, ciphertext::binary>> =
+        Encryption.encrypt("password")
+
+      tampered =
+        <<version, nonce::binary, :crypto.strong_rand_bytes(16)::binary, ciphertext::binary>>
+
+      assert Encryption.decrypt_with_status(tampered) == {:error, :requires_reencryption}
+      assert_raise RuntimeError, fn -> Encryption.decrypt(tampered) end
+    end
+
+    test "a legacy value whose leading byte collides with the current version still decrypts" do
+      current = Encryption.current_version()
+
+      # Legacy blobs begin with a random nonce byte, so ~1/256 start with the
+      # current version id. Trial decryption must still route those to the legacy
+      # key rather than mistaking them for current-version ciphertext.
+      collision =
+        Stream.repeatedly(fn -> Encryption.encrypt_legacy("collide") end)
+        |> Stream.take(50_000)
+        |> Enum.find(fn <<byte, _rest::binary>> -> byte == current end)
+
+      assert is_binary(collision), "expected at least one leading-byte collision in the sample"
+      assert Encryption.decrypt(collision) == "collide"
+      refute Encryption.current?(collision)
+    end
+  end
 end
