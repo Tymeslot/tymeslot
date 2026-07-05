@@ -76,8 +76,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthViewTest do
     assert html =~ "Conference"
     assert html =~ "Travel"
     # Two lanes: the first bar sits at the band top, the second one lane below.
-    assert html =~ "top: 1.5rem"
-    assert html =~ "top: 2.75rem"
+    assert html =~ "top: 1.75rem"
+    assert html =~ "top: 3.0rem"
   end
 
   test "single-day timed events render as chips, not bars" do

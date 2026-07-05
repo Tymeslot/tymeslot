@@ -53,6 +53,7 @@ defmodule Tymeslot.Notifications.OrchestratorTest do
       meeting =
         insert(:meeting,
           start_time: start_time,
+          end_time: DateTime.add(start_time, 60, :minute),
           reminders: [%{value: 1, unit: "hours"}]
         )
 

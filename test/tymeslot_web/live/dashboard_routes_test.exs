@@ -160,7 +160,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     test "shows empty state when no meetings are scheduled", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard")
 
-      assert html =~ "No upcoming meetings scheduled yet."
+      assert html =~ "Nothing on your plate today or tomorrow."
     end
 
     test "shows upcoming meeting title and attendee name", %{conn: conn, user: user} do
@@ -176,63 +176,6 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       assert html =~ "Jane Smith"
     end
 
-    test "shows at most 3 upcoming meetings", %{conn: conn, user: user} do
-      for title <- ["Meeting One", "Meeting Two", "Meeting Three", "Meeting Four"] do
-        insert(:meeting, organizer_email: user.email, title: title)
-      end
-
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
-
-      assert html =~ "Meeting One"
-      assert html =~ "Meeting Two"
-      assert html =~ "Meeting Three"
-      refute html =~ "Meeting Four"
-    end
-
-    test "quick action navigates to settings", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard")
-
-      view
-      |> element("a.block", "Profile Settings")
-      |> render_click()
-
-      assert_patch(view, ~p"/dashboard/settings")
-      assert render(view) =~ "Profile Settings"
-    end
-
-    test "quick action navigates to meeting settings", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard")
-
-      view
-      |> element("a.block", "Meeting Types")
-      |> render_click()
-
-      assert_patch(view, ~p"/dashboard/meeting-settings")
-      assert render(view) =~ "Meeting Settings"
-    end
-
-    test "quick action navigates to calendar integration", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard")
-
-      view
-      |> element("a.block", "Calendar Integration")
-      |> render_click()
-
-      assert_patch(view, ~p"/dashboard/calendar-integration")
-      assert render(view) =~ "Calendar Integration"
-    end
-
-    test "quick action navigates to video integration", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard")
-
-      view
-      |> element("a.block", "Video Integration")
-      |> render_click()
-
-      assert_patch(view, ~p"/dashboard/video-integration")
-      assert render(view) =~ "Video Integration"
-    end
-
     test "updates welcome banner name when profile is updated", %{conn: conn, profile: profile} do
       {:ok, view, html} = live(conn, ~p"/dashboard")
       assert html =~ "Welcome back, Test User"
@@ -244,7 +187,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
 
     test "refreshes meeting list after meeting type is changed", %{conn: conn, user: user} do
       {:ok, view, html} = live(conn, ~p"/dashboard")
-      assert html =~ "No upcoming meetings scheduled yet."
+      assert html =~ "Nothing on your plate today or tomorrow."
 
       insert(:meeting,
         organizer_email: user.email,

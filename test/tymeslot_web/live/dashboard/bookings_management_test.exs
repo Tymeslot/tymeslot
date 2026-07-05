@@ -519,7 +519,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
           organizer_user_id: user.id,
           organizer_email: user.email,
           attendee_name: "Meeting #{i}",
-          start_time: DateTime.add(DateTime.utc_now(), i, :hour)
+          start_time: DateTime.add(DateTime.utc_now(), i, :hour),
+          end_time: DateTime.add(DateTime.utc_now(), i * 60 + 30, :minute)
         )
       end
 
@@ -548,7 +549,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
           organizer_user_id: user.id,
           organizer_email: user.email,
           attendee_name: "Attendee #{String.pad_leading(Integer.to_string(i), 2, "0")}",
-          start_time: DateTime.add(now, i, :hour)
+          start_time: DateTime.add(now, i, :hour),
+          end_time: DateTime.add(now, i * 60 + 30, :minute)
         )
       end
 
