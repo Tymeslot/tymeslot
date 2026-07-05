@@ -14,7 +14,7 @@ defmodule Tymeslot.DataLayer.DomainCheckConstraintsTest do
 
   describe "meetings_end_after_start" do
     test "rejects a meeting whose end_time is not after its start_time" do
-      start = DateTime.utc_now() |> DateTime.truncate(:second)
+      start = DateTime.utc_now(:second)
 
       assert_raise Ecto.ConstraintError, ~r/meetings_end_after_start/, fn ->
         insert(:meeting, start_time: DateTime.add(start, 3600, :second), end_time: start)

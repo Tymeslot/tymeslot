@@ -155,7 +155,7 @@ defmodule Tymeslot.MeetingsTest do
     test "bounds the result set with the :limit option" do
       user = insert(:user)
 
-      for _ <- 1..3 do
+      for _n <- 1..3 do
         insert(:meeting,
           organizer_email: user.email,
           organizer_user_id: user.id,

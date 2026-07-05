@@ -40,7 +40,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessageTest do
           message
         end
 
-      assert MapSet.new(results) |> MapSet.size() == length(@classified_errors),
+      assert MapSet.size(MapSet.new(results)) == length(@classified_errors),
              "expected every classified error atom to render a distinct message"
     end
 

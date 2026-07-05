@@ -292,7 +292,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       payment_transaction =
         insert(:payment_transaction, user: user, host_email: user.email, host_name: "Host")
 
-      assert {:ok, _} = Repo.delete(user)
+      assert {:ok, _deleted} = Repo.delete(user)
 
       survived = Repo.get(PaymentTransactionSchema, payment_transaction.id)
 

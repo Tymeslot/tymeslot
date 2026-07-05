@@ -22,8 +22,10 @@ defmodule Tymeslot.Repo.Migrations.AddCaseInsensitiveUniqueIndexesForEmailAndUse
   use Ecto.Migration
 
   def up do
-    ensure_no_case_collisions("users", "email")
-    ensure_no_case_collisions("profiles", "username")
+    execute(fn ->
+      ensure_no_case_collisions("users", "email")
+      ensure_no_case_collisions("profiles", "username")
+    end)
 
     drop(unique_index(:users, [:email]))
     create(unique_index(:users, ["lower(email)"], name: :users_email_index))

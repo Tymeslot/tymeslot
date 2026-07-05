@@ -18,13 +18,13 @@ defmodule Tymeslot.Auth.AccountDeletionHookTest do
 
   defmodule OkHook do
     @behaviour Tymeslot.Auth.Behaviours.AccountDeletionHook
-    @impl true
+    @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
     def on_account_deletion(_user_id), do: :ok
   end
 
   defmodule FailingHook do
     @behaviour Tymeslot.Auth.Behaviours.AccountDeletionHook
-    @impl true
+    @impl Tymeslot.Auth.Behaviours.AccountDeletionHook
     def on_account_deletion(_user_id), do: {:error, :subscription_cancel_failed}
   end
 

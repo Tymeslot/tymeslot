@@ -21,7 +21,7 @@ defmodule Tymeslot.Repo.Migrations.HashUserSessionTokens do
 
     flush()
 
-    backfill_hashes()
+    execute(fn -> backfill_hashes() end)
 
     create(unique_index(:user_sessions, [:token_hash]))
 
