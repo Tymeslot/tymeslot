@@ -28,12 +28,13 @@ defmodule TymeslotWeb.Components.ConfirmationModal do
       <:header>
         <div class="flex items-center gap-3">
           <div class={[
-            "w-10 h-10 rounded-xl flex items-center justify-center border",
+            "w-10 h-10 rounded-token-xl flex items-center justify-center border",
             if(@confirm_variant == :danger, do: "bg-red-50 border-red-100", else: "bg-turquoise-50 border-turquoise-100")
           ]}>
-            <svg class={["w-6 h-6", if(@confirm_variant == :danger, do: "text-red-500", else: "text-turquoise-600")]} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
+            <CoreComponents.icon
+              name="hero-exclamation-triangle"
+              class={"w-6 h-6 " <> if(@confirm_variant == :danger, do: "text-red-500", else: "text-turquoise-600")}
+            />
           </div>
           <span class="text-2xl font-black text-tymeslot-900 tracking-tight">{@title}</span>
         </div>
