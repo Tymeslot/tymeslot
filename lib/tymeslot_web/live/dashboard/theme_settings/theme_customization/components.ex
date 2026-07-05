@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
   def toolbar(assigns) do
     ~H"""
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
-      <.section_header icon={:paint_brush} title="Customize Style" class="mb-0" />
+      <.section_header icon="hero-paint-brush" title="Customize Style" class="mb-0" />
 
       <div class="flex items-center justify-between gap-3 md:justify-start">
         <%= if @profile && @profile.username do %>

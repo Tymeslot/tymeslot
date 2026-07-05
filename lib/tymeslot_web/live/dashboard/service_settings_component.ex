@@ -424,7 +424,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     ~H"""
     <div class="space-y-10 pb-20">
       <.section_header
-        icon={:grid}
+        icon="hero-squares-2x2"
         title="Meeting Settings"
         saving={@saving}
       />
@@ -440,7 +440,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
           <div class="flex items-start justify-between bg-white p-6 rounded-token-3xl border-2 border-tymeslot-50 shadow-sm">
             <.section_header
               level={2}
-              icon={:grid}
+              icon="hero-squares-2x2"
               title={if @editing_type, do: "Edit Meeting Type", else: "Add Meeting Type"}
             />
             <button

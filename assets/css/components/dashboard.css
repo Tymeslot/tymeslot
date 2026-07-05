@@ -235,15 +235,6 @@
   opacity: 0.75;
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* Dashboard Sidebar */
 .dashboard-sidebar {
   @apply bg-white border-r-2 border-tymeslot-50 transition-glass;

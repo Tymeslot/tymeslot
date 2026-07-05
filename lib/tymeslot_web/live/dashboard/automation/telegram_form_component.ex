@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
       <%!-- Toolbar --%>
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
         <.section_header
-          icon={:automation}
+          icon="hero-bolt"
           title={form_title(@mode, @shared_bot_mode, @wizard_step)}
           class="mb-0"
         />

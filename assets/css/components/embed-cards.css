@@ -28,12 +28,14 @@
   @apply text-tymeslot-200 bg-transparent px-0 rounded-none;
 }
 
-/* Animation for copy button */
+/* Animation for copy button. Scoped keyframe name (not the global `fadeIn`)
+   so it can't override the canonical opacity-only fadeIn in the app.css
+   bundle — this slide-fade is local to the embed copy button. */
 .embed-option-card button[phx-click="copy_code"] {
-  animation: fadeIn 0.3s var(--transition-glass-smooth);
+  animation: embed-fade-in 0.3s var(--transition-glass-smooth);
 }
 
-@keyframes fadeIn {
+@keyframes embed-fade-in {
   from {
     opacity: 0;
     transform: translateY(-10px);

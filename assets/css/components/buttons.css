@@ -11,20 +11,24 @@
   @apply ring-2 ring-turquoise-500 ring-offset-2;
 }
 
-/* Button Variants - Global Branding */
+/* Button Variants — kept visually in sync with the sanctioned <.action_button>
+   component (.action-button--* below) so both class schemes render the same
+   primary/secondary/danger appearance. Only colour, weight and hover are aligned
+   here; display and width behaviour are deliberately left as-is so existing
+   layouts that use these classes are undisturbed. */
 .btn-primary {
-  @apply bg-linear-to-br from-turquoise-600 to-cyan-600 text-white font-black shadow-lg shadow-turquoise-500/20 rounded-token-2xl px-6 py-3 transition-glass;
-  @apply hover:from-turquoise-700 hover:to-cyan-700 hover:-translate-y-1 hover:shadow-xl hover:shadow-turquoise-500/40;
+  @apply bg-linear-to-r from-turquoise-600 to-cyan-600 text-white font-bold shadow-lg shadow-turquoise-500/20 rounded-token-2xl px-6 py-3 transition-glass;
+  @apply hover:from-turquoise-700 hover:to-cyan-700 hover:shadow-turquoise-500/40;
 }
 
 .btn-secondary {
-  @apply bg-white border-2 border-tymeslot-100 text-tymeslot-700 font-bold rounded-token-2xl px-6 py-3 transition-glass shadow-sm;
-  @apply hover:border-turquoise-100 hover:bg-tymeslot-50 hover:-translate-y-1 hover:shadow-md;
+  @apply bg-white border-2 border-tymeslot-200 text-tymeslot-700 font-bold rounded-token-2xl px-6 py-3 transition-glass shadow-sm;
+  @apply hover:border-turquoise-400 hover:text-turquoise-700 hover:bg-turquoise-50/50;
 }
 
 .btn-danger {
-  @apply bg-red-50 border-2 border-red-100 text-red-600 font-bold rounded-token-2xl px-6 py-3 transition-glass;
-  @apply hover:bg-red-600 hover:text-white hover:border-red-600 hover:-translate-y-1 hover:shadow-lg hover:shadow-red-500/20;
+  @apply bg-linear-to-r from-red-500 to-rose-600 text-white font-bold shadow-lg shadow-red-500/20 rounded-token-2xl px-6 py-3 transition-glass;
+  @apply hover:from-red-400 hover:to-rose-500 hover:shadow-red-500/40;
 }
 
 .btn-ghost {
@@ -54,15 +58,15 @@
   @apply opacity-50! cursor-not-allowed! transform-none!;
 }
 
-/* Primary button carries its own hover affordances (lift, shadow, colour shift)
-   without the base .btn class, so it needs an explicit disabled treatment:
-   grey it out and strip every hover effect to signal it is inert. */
+/* Primary button carries its own hover colour shift without the base .btn
+   class, so it needs an explicit disabled treatment: grey it out and hold the
+   base gradient so it reads as inert. */
 .btn-primary:disabled {
   @apply opacity-50 cursor-not-allowed;
 }
 
 .btn-primary:disabled:hover {
-  @apply from-turquoise-600 to-cyan-600 shadow-lg transform-none;
+  @apply from-turquoise-600 to-cyan-600 shadow-lg;
 }
 
 /* Secondary button carries its own hover affordances (lift, shadow, border
@@ -79,4 +83,46 @@
 .btn-auth {
   @apply bg-white border-2 border-tymeslot-100 text-tymeslot-700 font-bold rounded-token-2xl px-4 py-3 transition-glass shadow-sm w-full;
   @apply hover:border-turquoise-100 hover:bg-tymeslot-50 hover:shadow-md;
+}
+
+/* Action Buttons — the sanctioned <.action_button> component surface (variants
+   :primary / :secondary / :danger / :outline). The legacy .btn-* variants above
+   are kept visually aligned with these. */
+.action-button {
+  @apply px-6 py-3 rounded-token-2xl font-bold transition-glass disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-token-base whitespace-nowrap;
+}
+
+.action-button--primary {
+  @apply bg-linear-to-r from-turquoise-600 to-cyan-600 text-white shadow-lg shadow-turquoise-500/20;
+}
+
+.action-button--primary:hover:not(:disabled) {
+  @apply from-turquoise-700 to-cyan-700 shadow-turquoise-500/40;
+}
+
+.action-button--secondary {
+  @apply bg-white border-2 border-tymeslot-200 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 shadow-sm;
+}
+
+.action-button--secondary:hover:not(:disabled) {
+  @apply bg-turquoise-50/50;
+}
+
+.action-button--danger {
+  @apply bg-linear-to-r from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/20;
+}
+
+.action-button--danger:hover:not(:disabled) {
+  @apply from-red-400 to-rose-500 shadow-red-500/40;
+}
+
+.action-button--outline {
+  @apply bg-transparent border-2 border-white text-white hover:bg-white hover:text-turquoise-700;
+}
+
+/* Small-screen action button sizing */
+@media (max-width: 640px) {
+  .action-button {
+    @apply px-4 py-2 text-token-sm;
+  }
 }

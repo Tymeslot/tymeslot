@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
     <div class="card-glass shadow-2xl shadow-tymeslot-200/50">
       <.section_header
         level={3}
-        icon={:clock}
+        icon="hero-clock"
         title="Scheduling Preferences"
         class="mb-10"
       />

@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">
-      <CoreComponents.section_header icon={:user} title="Profile Settings" saving={@saving} />
+      <CoreComponents.section_header icon="hero-user" title="Profile Settings" saving={@saving} />
 
       <div class="card-glass relative overflow-hidden">
         <div class="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">

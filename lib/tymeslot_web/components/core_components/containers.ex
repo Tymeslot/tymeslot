@@ -2,6 +2,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   @moduledoc "Container and display components extracted from CoreComponents."
   use Phoenix.Component
 
+  alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.Icons.IconComponents
+
   # ========== CARDS & CONTAINERS ==========
 
   @doc """
@@ -92,7 +95,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   @doc """
   Renders a section header with consistent styling. Supports optional icon, count badge, and saving indicator.
   """
-  attr :icon, :atom, default: nil
+  attr :icon, :any,
+    default: nil,
+    doc: "A `hero-…` icon name (string) or a brand-mark atom (e.g. `:webhook`)"
+
   attr :title, :string, default: nil
   attr :count, :integer, default: nil
   attr :saving, :boolean, default: false
@@ -122,7 +128,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
     ~H"""
     <div :if={@icon} class={["flex items-center mb-4", @class]}>
       <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mr-5 shadow-sm border border-tymeslot-100 shrink-0">
-        <TymeslotWeb.Components.Icons.IconComponents.icon name={@icon} class="w-8 h-8 text-turquoise-600" />
+        <%!-- Hero icons arrive as `hero-…` strings; the few brand marks with no
+             Heroicon equivalent (e.g. `:webhook`) arrive as atoms. --%>
+        <Icons.icon :if={is_binary(@icon)} name={@icon} class="w-8 h-8 text-turquoise-600" />
+        <IconComponents.icon :if={is_atom(@icon)} name={@icon} class="w-8 h-8 text-turquoise-600" />
       </div>
 
       <h1 class={@computed_title_class}>

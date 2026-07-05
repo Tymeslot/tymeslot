@@ -272,7 +272,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     ~H"""
     <div id="bookings-management" class="space-y-10 pb-20">
       <div>
-        <.section_header icon={:calendar} title="Meetings" />
+        <.section_header icon="hero-calendar-days" title="Meetings" />
 
         <div class="mb-10">
           <MeetingListComponents.filter_tabs active={@filter} target={@myself} />

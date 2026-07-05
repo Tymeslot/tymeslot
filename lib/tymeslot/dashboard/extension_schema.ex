@@ -13,7 +13,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
       %{
         id: :subscription,           # Unique identifier for this extension
         label: "Subscription",        # Display text in sidebar
-        icon: :credit_card,          # Icon name (must exist in IconComponents)
+        icon: "hero-credit-card",     # hero-* icon name
         path: "/dashboard/subscription", # Route path for this section
         action: :subscription        # LiveView action atom
       }
@@ -28,7 +28,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
         %{
           id: :my_feature,
           label: "My Feature",
-          icon: :puzzle,
+          icon: "hero-puzzle-piece",
           path: "/dashboard/my-feature",
           action: :my_feature
         }
@@ -56,12 +56,12 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
 
   require Logger
 
-  alias TymeslotWeb.Components.Icons.IconComponents
+  alias TymeslotWeb.Components.CoreComponents.Heroicons
 
   @type extension :: %{
           id: atom(),
           label: String.t(),
-          icon: atom(),
+          icon: String.t(),
           path: String.t(),
           action: atom()
         }
@@ -79,14 +79,14 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
   ## Examples
 
       iex> ExtensionSchema.validate_all([
-      ...>   %{id: :test, label: "Test", icon: :home, path: "/test", action: :test}
+      ...>   %{id: :test, label: "Test", icon: "hero-home", path: "/test", action: :test}
       ...> ])
       :ok
 
       iex> ExtensionSchema.validate_all([
-      ...>   %{id: :test, label: "Test", icon: :invalid, path: "/test", action: :test}
+      ...>   %{id: :test, label: "Test", icon: "hero-invalid", path: "/test", action: :test}
       ...> ])
-      {:error, [{0, "Invalid icon :invalid. Must be one of: ..."}]}
+      {:error, [{0, "Invalid icon \"hero-invalid\". Must be a known hero-* icon name."}]}
   """
   @spec validate_all([map()]) :: :ok | {:error, [validation_error()]}
   def validate_all(extensions) when is_list(extensions) do
@@ -118,7 +118,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
       iex> ExtensionSchema.validate(%{
       ...>   id: :subscription,
       ...>   label: "Subscription",
-      ...>   icon: :credit_card,
+      ...>   icon: "hero-credit-card",
       ...>   path: "/dashboard/subscription",
       ...>   action: :subscription
       ...> })
@@ -149,10 +149,47 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
   end
 
   @doc """
-  Returns the list of available icon names from the IconComponents system.
+  Returns the list of available `hero-*` icon names.
   """
-  @spec available_icons() :: [atom()]
-  def available_icons, do: IconComponents.supported_icons()
+  @spec available_icons() :: [String.t()]
+  def available_icons, do: Heroicons.names()
+
+  @doc """
+  Filters a list of dashboard extensions down to only the valid ones,
+  logging a warning for each extension that fails validation.
+
+  Consumers that don't call `validate_and_log!/1` at startup (it is opt-in)
+  can still populate `:dashboard_sidebar_extensions` with a malformed entry.
+  Calling this at the point extensions are loaded into assigns guarantees
+  only well-formed extensions ever reach rendering.
+  """
+  @spec filter_valid([map()]) :: [extension()]
+  def filter_valid(extensions) when is_list(extensions) do
+    Enum.filter(extensions, &valid_extension?/1)
+  end
+
+  defp valid_extension?(extension) when is_map(extension) do
+    case validate(extension) do
+      :ok ->
+        true
+
+      {:error, errors} ->
+        Logger.warning("Dropping invalid dashboard extension",
+          extension: inspect(extension),
+          errors: errors
+        )
+
+        false
+    end
+  end
+
+  defp valid_extension?(extension) do
+    Logger.warning("Dropping invalid dashboard extension: not a map",
+      extension: inspect(extension)
+    )
+
+    false
+  end
 
   # Private validation functions
 
@@ -171,7 +208,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
         [
           validate_type(extension, :id, :atom),
           validate_type(extension, :label, :string),
-          validate_type(extension, :icon, :atom),
+          validate_type(extension, :icon, :string),
           validate_type(extension, :path, :string),
           validate_type(extension, :action, :atom)
         ],
@@ -202,23 +239,19 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
   end
 
   defp validate_icon(errors, extension) do
-    available = IconComponents.supported_icons()
-    icon = Map.get(extension, :icon)
-
-    cond do
-      is_nil(icon) ->
+    case Map.get(extension, :icon) do
+      nil ->
         errors
 
-      icon in available ->
-        errors
+      icon when is_binary(icon) ->
+        if Heroicons.known?(icon) do
+          errors
+        else
+          errors ++
+            ["Invalid icon #{inspect(icon)}. Must be a known hero-* icon name."]
+        end
 
-      is_atom(icon) ->
-        errors ++
-          [
-            "Invalid icon :#{icon}. Must be one of: #{Enum.join(available, ", ")}"
-          ]
-
-      true ->
+      _invalid_icon ->
         errors
     end
   end

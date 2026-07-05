@@ -3,8 +3,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EmptyState do
 
   use TymeslotWeb, :html
 
-  alias TymeslotWeb.Components.Icons.IconComponents
-
   @spec no_calendars_banner(map()) :: Phoenix.LiveView.Rendered.t()
   def no_calendars_banner(assigns) do
     hours = Enum.to_list(6..20)
@@ -39,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EmptyState do
       <%!-- Centred content --%>
       <div class="absolute inset-0 flex flex-col items-center justify-center px-6">
         <div class="w-20 h-20 bg-white/90 backdrop-blur rounded-token-2xl flex items-center justify-center mb-6 shadow-sm border-2 border-dashed border-tymeslot-100">
-          <IconComponents.icon name={:calendar} class="w-10 h-10 text-tymeslot-300" />
+          <.icon name="hero-calendar-days" class="w-10 h-10 text-tymeslot-300" />
         </div>
         <h2 class="text-token-xl font-bold text-tymeslot-800 mb-2">Nothing to see here</h2>
         <p class="text-token-base text-tymeslot-500 text-center max-w-md mb-8">

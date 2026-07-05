@@ -128,7 +128,10 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @doc """
   Renders a section header with consistent styling.
   """
-  attr :icon, :atom, default: nil
+  attr :icon, :any,
+    default: nil,
+    doc: "A `hero-…` icon name (string) or a brand-mark atom (e.g. `:webhook`)"
+
   attr :title, :string, default: nil
   attr :count, :integer, default: nil
   attr :saving, :boolean, default: false
@@ -251,10 +254,10 @@ defmodule TymeslotWeb.Components.CoreComponents do
   ## Usage
 
       <.tabs active_tab={@active_tab} target={@myself}>
-        <:tab id="overview" label="Overview" icon={:home}>
+        <:tab id="overview" label="Overview" icon="hero-home">
           <p>Overview content here</p>
         </:tab>
-        <:tab id="settings" label="Settings" icon={:cog}>
+        <:tab id="settings" label="Settings" icon="hero-cog-6-tooth">
           <p>Settings content here</p>
         </:tab>
       </.tabs>
@@ -265,7 +268,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
   slot :tab, required: true do
     attr :id, :string, required: true
     attr :label, :string, required: true
-    attr :icon, :atom
+    attr :icon, :string, doc: "Optional `hero-…` icon name"
   end
 
   @spec tabs(map()) :: Phoenix.LiveView.Rendered.t()

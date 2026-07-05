@@ -12,7 +12,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
 
   use TymeslotWeb, :html
 
-  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   attr :open, :boolean, required: true
@@ -65,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
           :if={@show_week_numbers and @view in [:week, :three_day, :day]}
           class="ml-1 text-token-xs font-normal text-tymeslot-400"
         >W{Helpers.week_number(@date)}</span>
-        <IconComponents.icon name={:chevron_down} class="w-3 h-3 text-tymeslot-400 shrink-0" />
+        <.icon name="hero-chevron-down" class="w-3 h-3 text-tymeslot-400 shrink-0" />
       </:trigger>
       <:panel>
         <%!-- Picker-month header: prev / month-year / next --%>
@@ -77,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
             class="min-w-[32px] min-h-[32px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
             aria-label="Previous month"
           >
-            <IconComponents.icon name={:chevron_left} class="w-4 h-4" />
+            <.icon name="hero-chevron-left" class="w-4 h-4" />
           </button>
           <div class="text-token-sm font-semibold text-tymeslot-800">
             {Calendar.strftime(@cursor, "%B %Y")}
@@ -89,7 +88,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
             class="min-w-[32px] min-h-[32px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
             aria-label="Next month"
           >
-            <IconComponents.icon name={:chevron_right} class="w-4 h-4" />
+            <.icon name="hero-chevron-right" class="w-4 h-4" />
           </button>
         </div>
 

@@ -352,7 +352,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   def render(assigns) do
     ~H"""
     <div class="space-y-12 pb-24">
-      <.section_header icon={:calendar} title="Calendar Settings" />
+      <.section_header icon="hero-calendar-days" title="Calendar Settings" />
 
       <.info_box :if={not (@integration_status[:has_calendar] || false)} variant={:info} class="mb-0">
         You haven't connected a calendar yet. Connect one so Tymeslot can read your

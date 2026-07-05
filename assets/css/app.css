@@ -16,7 +16,6 @@
 @import "./animations/animate-enter.css";
 
 /* Import components */
-@import "./components.css";
 @import "./components/buttons.css";
 @import "./components/forms.css";
 @import "./components/cards.css";

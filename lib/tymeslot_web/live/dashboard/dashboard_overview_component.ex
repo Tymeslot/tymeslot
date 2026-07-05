@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">
-      <.section_header icon={:home} title="Overview" />
+      <.section_header icon="hero-home" title="Overview" />
 
       <%!-- Welcome Section --%>
       <div class="bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 rounded-token-3xl px-8 py-3 lg:px-12 lg:py-4 text-white shadow-2xl shadow-turquoise-500/20 relative overflow-hidden">

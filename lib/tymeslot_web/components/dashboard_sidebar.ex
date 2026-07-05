@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Analytics
   alias Tymeslot.Scheduling.LinkAccessPolicy
-  alias TymeslotWeb.Components.Icons.IconComponents
 
   @doc """
   Renders the left sidebar navigation.
@@ -46,7 +45,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             phx-click={close_sidebar_js()}
             aria-label="Close sidebar"
           >
-            <IconComponents.icon name={:x_mark} class="w-6 h-6 text-tymeslot-700" />
+            <.icon name="hero-x-mark" class="w-6 h-6 text-tymeslot-700" />
           </button>
         </div>
 
@@ -58,7 +57,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             target="_blank"
             class="dashboard-nav-link flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-black rounded-2xl transition-all duration-300 bg-linear-to-br from-turquoise-600 to-cyan-600 text-white hover:text-white hover:translate-x-0 shadow-lg shadow-turquoise-500/30 hover:shadow-xl hover:shadow-turquoise-500/40 hover:from-turquoise-700 hover:to-cyan-700 group"
           >
-            <IconComponents.icon name={:external_link} class="w-5 h-5 shrink-0 text-white" />
+            <.icon name="hero-arrow-top-right-on-square" class="w-5 h-5 shrink-0 text-white" />
             <span class="text-white whitespace-nowrap">View Page</span>
           </.link>
           <div
@@ -66,7 +65,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             class="flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-bold rounded-2xl bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-60 border-2 border-tymeslot-200"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
           >
-            <IconComponents.icon name={:external_link} class="w-5 h-5 shrink-0" />
+            <.icon name="hero-arrow-top-right-on-square" class="w-5 h-5 shrink-0" />
             <span class="whitespace-nowrap">View Page</span>
           </div>
 
@@ -80,7 +79,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             class="dashboard-nav-link px-4 py-4 rounded-2xl transition-all duration-300 bg-white border-2 border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 hover:translate-x-0 shadow-sm hover:shadow-md group"
             title="Copy link to clipboard"
           >
-            <IconComponents.icon name={:clipboard} class="w-5 h-5" />
+            <.icon name="hero-clipboard" class="w-5 h-5" />
           </button>
           <button
             :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
@@ -89,7 +88,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             class="px-3 py-3 rounded-lg bg-tymeslot-200 text-tymeslot-500 cursor-not-allowed opacity-60 relative"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
           >
-            <IconComponents.icon name={:clipboard} class="w-5 h-5" />
+            <.icon name="hero-clipboard" class="w-5 h-5" />
           </button>
         </div>
 
@@ -99,12 +98,12 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             <div class="dashboard-nav-section-title">General</div>
             <div class="space-y-0">
               <.nav_link patch={~p"/dashboard"} current={@current_action} action={:overview}>
-                <IconComponents.icon name={:home} class="w-5 h-5" />
+                <.icon name="hero-home" class="w-5 h-5" />
                 <span>Overview</span>
               </.nav_link>
 
               <.nav_link patch={~p"/dashboard/meetings"} current={@current_action} action={:meetings}>
-                <IconComponents.icon name={:clock} class="w-5 h-5" />
+                <.icon name="hero-clock" class="w-5 h-5" />
                 <span>Meetings</span>
               </.nav_link>
 
@@ -115,7 +114,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 action={:analytics}
                 locked={!@analytics_allowed}
               >
-                <IconComponents.icon name={:bar_chart} class="w-5 h-5" />
+                <.icon name="hero-chart-bar" class="w-5 h-5" />
                 <span>Analytics</span>
                 <.pro_badge :if={!@analytics_allowed} data-testid="analytics-pro-badge" />
               </.nav_link>
@@ -134,7 +133,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 notification_type="info"
                 notification_title="Add a meeting type so guests have something to book"
               >
-                <IconComponents.icon name={:grid} class="w-5 h-5" />
+                <.icon name="hero-squares-2x2" class="w-5 h-5" />
                 <span>Meeting Types</span>
               </.nav_link>
 
@@ -143,7 +142,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 current={@current_action}
                 action={:availability}
               >
-                <IconComponents.icon name={:calendar} class="w-5 h-5" />
+                <.icon name="hero-calendar-days" class="w-5 h-5" />
                 <span>Availability</span>
               </.nav_link>
 
@@ -152,7 +151,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 current={if @current_action == :theme_customization, do: :theme, else: @current_action}
                 action={:theme}
               >
-                <IconComponents.icon name={:paint_brush} class="w-5 h-5" />
+                <.icon name="hero-paint-brush" class="w-5 h-5" />
                 <span>Theme</span>
               </.nav_link>
             </div>
@@ -169,7 +168,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 notification_type="info"
                 notification_title="Connect a calendar to avoid double-bookings"
               >
-                <IconComponents.icon name={:calendar} class="w-5 h-5" />
+                <.icon name="hero-calendar-days" class="w-5 h-5" />
                 <span>Calendar</span>
               </.nav_link>
 
@@ -181,7 +180,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 notification_type="info"
                 notification_title="Connect a video provider to host online meetings"
               >
-                <IconComponents.icon name={:video} class="w-5 h-5" />
+                <.icon name="hero-video-camera" class="w-5 h-5" />
                 <span>Video</span>
               </.nav_link>
             </div>
@@ -191,7 +190,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             <div class="dashboard-nav-section-title">Distribution</div>
             <div class="space-y-0">
               <.nav_link patch={~p"/dashboard/embed"} current={@current_action} action={:embed}>
-                <IconComponents.icon name={:code} class="w-5 h-5" />
+                <.icon name="hero-code-bracket" class="w-5 h-5" />
                 <span>Embed & Share</span>
               </.nav_link>
             </div>
@@ -201,7 +200,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             <div class="dashboard-nav-section-title">Account</div>
             <div class="space-y-0">
               <.nav_link patch={~p"/dashboard/settings"} current={@current_action} action={:settings}>
-                <IconComponents.icon name={:user} class="w-5 h-5" />
+                <.icon name="hero-user" class="w-5 h-5" />
                 <span>Profile</span>
               </.nav_link>
 
@@ -210,7 +209,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 current={@current_action}
                 action={:automation}
                 locked={!@automations_allowed}>
-                <IconComponents.icon name={:bolt} class="w-5 h-5" />
+                <.icon name="hero-bolt" class="w-5 h-5" />
                 <span>Automation</span>
                 <.pro_badge :if={!@automations_allowed} data-testid="automation-pro-badge" />
               </.nav_link>
@@ -222,7 +221,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 action={:payments}
                 data-testid="payments-nav-link"
               >
-                <IconComponents.icon name={:credit_card} class="w-5 h-5" />
+                <.icon name="hero-credit-card" class="w-5 h-5" />
                 <span>Payments</span>
               </.nav_link>
 
@@ -232,7 +231,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 current={@current_action}
                 action={ext.action}
               >
-                <IconComponents.icon name={ext.icon} class="w-5 h-5" />
+                <.icon name={ext.icon} class="w-5 h-5" />
                 <span>{ext.label}</span>
               </.nav_link>
             </div>

@@ -86,14 +86,14 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
         %{
           id: :test_extension,
           label: "Test Extension",
-          icon: :puzzle,
+          icon: "hero-puzzle-piece",
           path: "/dashboard/test-extension",
           action: :test_extension
         },
         %{
           id: :another_feature,
           label: "Another Feature",
-          icon: :code,
+          icon: "hero-code-bracket",
           path: "/dashboard/another-feature",
           action: :another_feature
         }
@@ -183,7 +183,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
         %{
           id: :custom_page,
           label: "Custom Page",
-          icon: :home,
+          icon: "hero-home",
           path: "/dashboard/custom-page",
           action: :custom_page
         }
@@ -222,7 +222,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
         %{
           id: :icon_test,
           label: "Icon Test",
-          icon: :puzzle,
+          icon: "hero-puzzle-piece",
           path: "/dashboard/icon-test",
           action: :icon_test
         }
@@ -240,27 +240,64 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
     end
   end
 
+  describe "malformed extension icon" do
+    test "drops extension with atom icon and still renders the dashboard", %{conn: conn} do
+      Application.put_env(:tymeslot, :dashboard_sidebar_extensions, [
+        %{
+          id: :bad_atom_icon,
+          label: "Bad Atom Icon",
+          icon: :home,
+          path: "/dashboard/bad-atom-icon",
+          action: :bad_atom_icon
+        }
+      ])
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      # Dashboard must still render — no FunctionClauseError from <.icon>
+      assert html =~ "Overview"
+      refute html =~ "Bad Atom Icon"
+    end
+
+    test "drops extension with nil icon and still renders the dashboard", %{conn: conn} do
+      Application.put_env(:tymeslot, :dashboard_sidebar_extensions, [
+        %{
+          id: :bad_nil_icon,
+          label: "Bad Nil Icon",
+          icon: nil,
+          path: "/dashboard/bad-nil-icon",
+          action: :bad_nil_icon
+        }
+      ])
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      assert html =~ "Overview"
+      refute html =~ "Bad Nil Icon"
+    end
+  end
+
   describe "multiple extensions ordering" do
     setup do
       Application.put_env(:tymeslot, :dashboard_sidebar_extensions, [
         %{
           id: :first,
           label: "First Extension",
-          icon: :home,
+          icon: "hero-home",
           path: "/dashboard/first",
           action: :first
         },
         %{
           id: :second,
           label: "Second Extension",
-          icon: :user,
+          icon: "hero-user",
           path: "/dashboard/second",
           action: :second
         },
         %{
           id: :third,
           label: "Third Extension",
-          icon: :calendar,
+          icon: "hero-calendar-days",
           path: "/dashboard/third",
           action: :third
         }
@@ -293,7 +330,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
         %{
           id: :integrated,
           label: "Integrated Feature",
-          icon: :grid,
+          icon: "hero-squares-2x2",
           path: "/dashboard/integrated",
           action: :integrated
         }
