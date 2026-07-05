@@ -211,6 +211,55 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
     end
   end
 
+  describe "attention_status/2" do
+    test "paused wins even when needs_reauth is also true and health is unhealthy" do
+      assert HealthCheck.attention_status(
+               %{is_active: false, needs_reauth: true},
+               %{status: :unhealthy}
+             ) == :paused
+    end
+
+    test "paused wins over a plain needs_reauth integration" do
+      assert HealthCheck.attention_status(%{is_active: false, needs_reauth: true}, nil) ==
+               :paused
+    end
+
+    test "paused wins for an active-flag-false integration with no other issues" do
+      assert HealthCheck.attention_status(%{is_active: false, needs_reauth: false}, nil) ==
+               :paused
+    end
+
+    test "needs_reauth wins over unhealthy health when active" do
+      assert HealthCheck.attention_status(
+               %{is_active: true, needs_reauth: true},
+               %{status: :unhealthy}
+             ) == :needs_reauth
+    end
+
+    test "needs_reauth wins with nil health when active" do
+      assert HealthCheck.attention_status(%{is_active: true, needs_reauth: true}, nil) ==
+               :needs_reauth
+    end
+
+    test "unhealthy health on an active, non-reauth integration" do
+      assert HealthCheck.attention_status(
+               %{is_active: true, needs_reauth: false},
+               %{status: :unhealthy}
+             ) == :unhealthy
+    end
+
+    test "ok for an active, non-reauth integration with nil health" do
+      assert HealthCheck.attention_status(%{is_active: true, needs_reauth: false}, nil) == :ok
+    end
+
+    test "ok for an active, non-reauth integration with healthy health" do
+      assert HealthCheck.attention_status(
+               %{is_active: true, needs_reauth: false},
+               %{status: :healthy}
+             ) == :ok
+    end
+  end
+
   describe "user health report" do
     test "builds correct report for user" do
       user = insert(:user)

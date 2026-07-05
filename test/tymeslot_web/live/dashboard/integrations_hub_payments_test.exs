@@ -87,5 +87,36 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubPaymentsTest do
       assert html =~ "Connected and ready"
       assert html =~ "Recent payments"
     end
+
+    test "shows the restricted-account banner with the error severity dot",
+         %{conn: conn, user: user} do
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_hub_restricted",
+        details_submitted: true,
+        disabled_reason: "requirements.past_due"
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=payments")
+
+      assert html =~ "Your Stripe account is restricted."
+      assert html =~ "bg-red-500"
+    end
+
+    test "shows the pending-review banner with the warning severity dot",
+         %{conn: conn, user: user} do
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_hub_pending",
+        details_submitted: true,
+        charges_enabled: false,
+        payouts_enabled: false
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=payments")
+
+      assert html =~ "Stripe is still reviewing your account."
+      assert html =~ "bg-amber-500"
+    end
   end
 end

@@ -107,6 +107,24 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       end
     end
 
+    test "/dashboard/payments?return=1 carries the Stripe return marker into the hub redirect",
+         %{conn: conn} do
+      assert {:error, {:live_redirect, %{to: to}}} =
+               live(conn, "/dashboard/payments?return=1")
+
+      assert to =~ "tab=payments"
+      assert to =~ "return=1"
+    end
+
+    test "/dashboard/payments?refresh=1 carries the Stripe refresh marker into the hub redirect",
+         %{conn: conn} do
+      assert {:error, {:live_redirect, %{to: to}}} =
+               live(conn, "/dashboard/payments?refresh=1")
+
+      assert to =~ "tab=payments"
+      assert to =~ "refresh=1"
+    end
+
     test "availability can switch to grid view", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/dashboard/availability")
 

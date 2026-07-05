@@ -174,6 +174,56 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       assert_redirect(view, "https://accounts.google.com/o/oauth2/v2/auth")
     end
 
+    test "shows the collapsed-header Reconnect affordance for an OAuth integration needing reauth",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "google_meet",
+          is_active: true,
+          needs_reauth: true
+        )
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      assert html =~ "Reconnect"
+
+      assert has_element?(
+               view,
+               "button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']"
+             )
+    end
+
+    test "does not show the Reconnect affordance for a non-OAuth provider", %{
+      conn: conn,
+      user: user
+    } do
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "mirotalk",
+          is_active: true,
+          needs_reauth: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      refute has_element?(
+               view,
+               "button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']"
+             )
+    end
+
+    # NOTE: the end-to-end click → OAuth-redirect for a *reconnect* is not
+    # asserted here. `Video.oauth_reconnect_url/2` calls the google helper's
+    # `authorization_url/4` (scopes + opts), but the injected test double
+    # `GoogleOAuthHelperMock` is generated from `Calendar.Auth.OAuthHelperBehaviour`,
+    # which only declares arity 2/3 — so `/4` cannot be stubbed, and widening the
+    # behaviour would break the other implementers under --warnings-as-errors. The
+    # reconnect button's presence and `reconnect_integration` wiring are covered by
+    # the "collapsed-header Reconnect affordance" test above; the click → helper →
+    # redirect mechanism itself is covered by "initiates google meet oauth".
+
     test "deletes an integration", %{conn: conn, user: user} do
       integration = insert(:video_integration, user: user, name: "To Delete")
 
