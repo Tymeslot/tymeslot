@@ -68,12 +68,12 @@ defmodule TymeslotWeb.OAuthCallbackHandlerTest do
         service_name: "Google Calendar",
         exchange_fun: fn _params -> {:ok, %{access_token: "abc", user_id: 123}} end,
         create_fun: fn _tokens -> {:error, :calendar_scope_missing} end,
-        redirect_path: "/dashboard/calendar-integration"
+        redirect_path: "/dashboard/integrations?tab=calendars"
       ]
 
       conn = OAuthCallbackHandler.handle_callback(conn, %{"code" => "123"}, opts)
 
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
 
       assert Flash.get(conn.assigns.flash, :error) =~
                "Calendar permission was not granted"

@@ -289,7 +289,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
       assert html =~ "Nothing to see here"
       assert html =~ "Connect at least one calendar"
       assert html =~ "Connect a calendar"
-      assert html =~ ~p"/dashboard/calendar-integration"
+      assert html =~ ~p"/dashboard/integrations?tab=calendars"
     end
   end
 

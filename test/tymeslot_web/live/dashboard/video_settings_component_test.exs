@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
 
   describe "Video Settings Component" do
     test "renders initial view with available providers", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       assert render(view) =~ "Video Integration"
       assert render(view) =~ "Available Providers"
@@ -36,14 +36,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
     end
 
     test "renders Connect Zoom card on the providers grid", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       assert html =~ "Connect Zoom"
       assert html =~ ~s(phx-value-provider="zoom")
     end
 
     test "shows a prompt when no video provider is connected", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       assert html =~ "You haven&#39;t connected a video provider yet"
     end
@@ -51,7 +51,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
     test "hides the prompt once a video provider is connected", %{conn: conn, user: user} do
       insert(:video_integration, user: user, is_active: true)
 
-      {:ok, _view, html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       refute html =~ "You haven&#39;t connected a video provider yet"
     end
@@ -59,19 +59,20 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
     test "lists connected integrations", %{conn: conn, user: user} do
       insert(:video_integration, user: user, name: "My MiroTalk", provider: "mirotalk")
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       assert render(view) =~ "My MiroTalk"
-      assert render(view) =~ "Self-Hosted"
+      # The provider-type tag renders in the collapsed connection row header.
+      assert render(view) =~ "self-hosted"
     end
 
     test "toggles integration status", %{conn: conn, user: user} do
       integration = insert(:video_integration, user: user, is_active: true)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       view
-      |> element("#video-toggle-#{integration.id}")
+      |> element("#toggle-#{integration.id}")
       |> render_click()
 
       assert render(view) =~ "Integration status updated"
@@ -79,16 +80,21 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
     end
 
     test "tests connection for an integration", %{conn: conn, user: user} do
-      _integration = insert(:video_integration, user: user, provider: "mirotalk", is_active: true)
+      integration = insert(:video_integration, user: user, provider: "mirotalk", is_active: true)
 
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200, body: "{}"}}
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      # Actions live behind the expand chevron in the connection row.
+      view
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
 
       view
-      |> element("div.hidden button[phx-click='test_connection']")
+      |> element("button[phx-click='test_connection'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       eventually(fn ->
@@ -97,7 +103,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
     end
 
     test "navigates to setup form for mirotalk", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       view
       |> element("button", "Connect MiroTalk")
@@ -113,7 +119,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
         {:ok, %Req.Response{status: 200, body: "{}"}}
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       view
       |> element("button", "Connect MiroTalk")
@@ -134,7 +140,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
     end
 
     test "shows validation errors when adding integration", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       view
       |> element("button", "Connect MiroTalk")
@@ -158,7 +164,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
         "https://accounts.google.com/o/oauth2/v2/auth"
       end)
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       view
       |> element("button", "Connect Google Meet")
@@ -168,15 +174,72 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       assert_redirect(view, "https://accounts.google.com/o/oauth2/v2/auth")
     end
 
+    test "shows the collapsed-header Reconnect affordance for an OAuth integration needing reauth",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "google_meet",
+          is_active: true,
+          needs_reauth: true
+        )
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      assert html =~ "Reconnect"
+
+      assert has_element?(
+               view,
+               "button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']"
+             )
+    end
+
+    test "does not show the Reconnect affordance for a non-OAuth provider", %{
+      conn: conn,
+      user: user
+    } do
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "mirotalk",
+          is_active: true,
+          needs_reauth: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      refute has_element?(
+               view,
+               "button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']"
+             )
+    end
+
+    # NOTE: the end-to-end click → OAuth-redirect for a *reconnect* is not
+    # asserted here. `Video.oauth_reconnect_url/2` calls the google helper's
+    # `authorization_url/4` (scopes + opts), but the injected test double
+    # `GoogleOAuthHelperMock` is generated from `Calendar.Auth.OAuthHelperBehaviour`,
+    # which only declares arity 2/3 — so `/4` cannot be stubbed, and widening the
+    # behaviour would break the other implementers under --warnings-as-errors. The
+    # reconnect button's presence and `reconnect_integration` wiring are covered by
+    # the "collapsed-header Reconnect affordance" test above; the click → helper →
+    # redirect mechanism itself is covered by "initiates google meet oauth".
+
     test "deletes an integration", %{conn: conn, user: user} do
       integration = insert(:video_integration, user: user, name: "To Delete")
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       assert render(view) =~ "To Delete"
 
+      # Expand the row to reveal its actions, then open the delete modal.
       view
-      |> element("div.hidden button[title='Delete Integration']")
+      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
+      view
+      |> element(
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#delete-video-modal']"
+      )
       |> render_click()
 
       # Confirm delete in modal

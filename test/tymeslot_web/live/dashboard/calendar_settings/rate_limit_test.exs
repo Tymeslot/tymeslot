@@ -29,7 +29,13 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.RateLimitTest do
         RateLimiter.check_calendar_discovery_rate_limit(user.id)
       end
 
-      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      # The generic CalDAV preset is folded behind the "Other CalDAV server"
+      # affordance; reveal it before opening its config form.
+      view
+      |> element("button[phx-click='toggle_caldav_options']")
+      |> render_click()
 
       # Open the CalDAV config form
       view

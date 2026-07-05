@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormPaymentsTest do
 
       html = render(view)
       assert html =~ "Require payment for this meeting type"
-      assert html =~ "/dashboard/payments"
+      assert html =~ "/dashboard/integrations?tab=payments"
       # The checkbox is disabled until Stripe charges are enabled.
       assert html =~ ~r/<input[^>]*type="checkbox"[^>]*disabled/
     end

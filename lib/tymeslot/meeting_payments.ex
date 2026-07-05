@@ -93,6 +93,31 @@ defmodule Tymeslot.MeetingPayments do
     do: ConnectAccountQueries.live_for_user(user_id)
 
   @doc """
+  Maps a Connect account (or `nil`) to its onboarding display state.
+
+  This is the single source of truth for "where is this account in the Stripe
+  Connect lifecycle?" — consumed both by the payments status banner
+  (`TymeslotWeb.Dashboard.PaymentsSettings.StatusCard`) and the integrations
+  hub summary. `nil` (no account) reads as `:not_connected`.
+
+  Two submitted states are distinct on purpose: `:incomplete` is onboarding
+  that was never submitted (Stripe stamps a brand-new account with
+  `requirements.past_due`, so `disabled_reason` must not be read until
+  `details_submitted` is true), while `:pending_review` is a submitted account
+  Stripe is still reviewing.
+  """
+  @spec connect_display_state(map() | nil) ::
+          :not_connected | :incomplete | :pending_review | :ready | :restricted | :deleted
+  def connect_display_state(nil), do: :not_connected
+  def connect_display_state(%{deleted_at: dt}) when is_struct(dt, DateTime), do: :deleted
+  def connect_display_state(%{details_submitted: true} = account), do: submitted_state(account)
+  def connect_display_state(_account), do: :incomplete
+
+  defp submitted_state(%{disabled_reason: reason}) when is_binary(reason), do: :restricted
+  defp submitted_state(%{charges_enabled: true, payouts_enabled: true}), do: :ready
+  defp submitted_state(_account), do: :pending_review
+
+  @doc """
   Returns `true` when the instance has a real Stripe platform API key
   configured — i.e. a `STRIPE_SECRET_KEY` env var was supplied and is not
   the `"sk_test_fake"` placeholder used in dev/test fixtures. The admin UI

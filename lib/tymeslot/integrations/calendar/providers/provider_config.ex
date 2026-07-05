@@ -16,7 +16,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   pinned off via `config :tymeslot, :calendar_providers` in all three
   config sites — `apps/tymeslot/config/config.exs`,
   `apps/tymeslot/config/test.exs`, and `config/test.exs` — otherwise they
-  surface as cards in `/dashboard/calendar-integration`. Add
+  surface as cards in the calendars tab of the integrations hub
+  (`/dashboard/integrations?tab=calendars`). Add
   `<name>: [enabled: false]` to the same three blocks when introducing
   any further internal-only provider.
   """

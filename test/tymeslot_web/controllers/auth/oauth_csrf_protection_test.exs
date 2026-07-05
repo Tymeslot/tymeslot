@@ -76,7 +76,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
           "state" => state
         })
 
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
       assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
 
       refute integration_exists?(session_user.id, "google")
@@ -90,7 +90,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
       conn =
         get(conn, ~p"/auth/google/calendar/callback", %{"code" => "any_code", "state" => state})
 
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
       assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
 
       refute integration_exists?(target.id, "google")
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
           "state" => "not-a-real-signed-state"
         })
 
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
       assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
 
       refute integration_exists?(session_user.id, "google")
@@ -127,7 +127,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
           "state" => state
         })
 
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
       assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
 
       refute integration_exists?(session_user.id, "outlook")
@@ -141,7 +141,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
       conn =
         get(conn, ~p"/auth/outlook/calendar/callback", %{"code" => "any", "state" => state})
 
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
       assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
     end
   end
@@ -157,7 +157,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
       conn =
         get(conn, ~p"/auth/google/video/callback", %{"code" => "attacker_code", "state" => state})
 
-      assert redirected_to(conn) == "/dashboard/video-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
 
       refute video_integration_exists?(session_user.id, "google_meet")
@@ -171,7 +171,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
       conn =
         get(conn, ~p"/auth/google/video/callback", %{"code" => "any", "state" => state})
 
-      assert redirected_to(conn) == "/dashboard/video-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
     end
   end
@@ -187,7 +187,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
       conn =
         get(conn, ~p"/auth/teams/video/callback", %{"code" => "attacker_code", "state" => state})
 
-      assert redirected_to(conn) == "/dashboard/video-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
 
       refute video_integration_exists?(session_user.id, "teams")
@@ -201,7 +201,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
       conn =
         get(conn, ~p"/auth/teams/video/callback", %{"code" => "any", "state" => state})
 
-      assert redirected_to(conn) == "/dashboard/video-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
     end
   end

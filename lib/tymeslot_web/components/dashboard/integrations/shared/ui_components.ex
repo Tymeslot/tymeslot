@@ -172,4 +172,51 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
     </span>
     """
   end
+
+  @doc """
+  Renders a small status pill with a coloured dot and label, driven by a
+  `:variant`. Colours mirror the shared `info_box` variant map and the amber
+  `health_warning_badge` so status indicators stay visually consistent across
+  the integrations UI.
+
+  ## Examples
+
+      <.status_badge variant={:ok} label="Healthy" />
+      <.status_badge variant={:paused} label="Paused" />
+  """
+  attr :variant, :atom, required: true, values: [:ok, :warning, :error, :paused, :info]
+  attr :label, :string, required: true
+  attr :class, :string, default: nil
+
+  @spec status_badge(map()) :: Phoenix.LiveView.Rendered.t()
+  def status_badge(assigns) do
+    ~H"""
+    <span class={[
+      "inline-flex items-center gap-1.5 rounded-token-full px-2.5 py-1 text-token-xs font-semibold",
+      variant_classes(@variant),
+      @class
+    ]}>
+      <span class={["h-1.5 w-1.5 rounded-token-full", dot_classes(@variant)]} aria-hidden="true" />
+      {@label}
+    </span>
+    """
+  end
+
+  defp variant_classes(:ok), do: "bg-emerald-50 border border-emerald-200 text-emerald-800"
+  defp variant_classes(:warning), do: "bg-amber-50 border border-amber-200 text-amber-800"
+  defp variant_classes(:error), do: "bg-red-50 border border-red-200 text-red-800"
+  defp variant_classes(:info), do: "bg-sky-50 border border-sky-200 text-sky-800"
+  defp variant_classes(:paused), do: "bg-tymeslot-50 border border-tymeslot-200 text-tymeslot-800"
+
+  @doc """
+  Maps a status variant to its coloured-dot background class. Shared by
+  `status_badge/1` and `TabNav.integrations_tab_nav/1` so the two status
+  indicators never drift out of sync.
+  """
+  @spec dot_classes(atom()) :: String.t()
+  def dot_classes(:ok), do: "bg-emerald-500"
+  def dot_classes(:warning), do: "bg-amber-500"
+  def dot_classes(:error), do: "bg-red-500"
+  def dot_classes(:info), do: "bg-sky-500"
+  def dot_classes(:paused), do: "bg-tymeslot-400"
 end

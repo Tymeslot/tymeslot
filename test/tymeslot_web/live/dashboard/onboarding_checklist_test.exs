@@ -93,9 +93,9 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistTest do
 
       assert html =~ "1/5"
       # The connected-calendar item shows as done and no longer links out.
-      refute html =~ ~s(href="/dashboard/calendar-integration")
+      refute html =~ ~s(href="/dashboard/integrations?tab=calendars")
       # A manual item is still actionable.
-      assert html =~ ~s(href="/dashboard/video-integration")
+      assert html =~ ~s(href="/dashboard/integrations?tab=video")
     end
 
     test "greys out an item the host ticked off by hand" do

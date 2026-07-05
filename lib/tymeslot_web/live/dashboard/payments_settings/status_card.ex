@@ -2,10 +2,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   @moduledoc """
   Stripe Connect onboarding status banner.
 
-  Stateless function component rendered by `PaymentsSettingsComponent`. Owns
-  the status state machine that maps a connect account's flags
-  (`deleted_at`, `disabled_reason`, `charges_enabled`/`payouts_enabled`,
-  `details_submitted`) to a variant, title, and message.
+  Stateless function component rendered by `PaymentsSettingsComponent`. Maps a
+  connect account's display state — derived once by
+  `Tymeslot.MeetingPayments.connect_display_state/1` — to a variant, title, and
+  message.
 
   Two states are distinct on purpose:
 
@@ -24,11 +24,13 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
 
   use TymeslotWeb, :html
 
+  alias Tymeslot.MeetingPayments
+
   attr :account, :map, required: true
 
   @spec status_card(map()) :: Phoenix.LiveView.Rendered.t()
   def status_card(assigns) do
-    assigns = assign(assigns, :state, status_state(assigns.account))
+    assigns = assign(assigns, :state, MeetingPayments.connect_display_state(assigns.account))
 
     ~H"""
     <div class="space-y-4">
@@ -67,22 +69,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   The parent uses this to decide whether to render the operational sections.
   """
   @spec needs_onboarding?(map()) :: boolean()
-  def needs_onboarding?(account), do: status_state(account) == :incomplete
+  def needs_onboarding?(account),
+    do: MeetingPayments.connect_display_state(account) == :incomplete
 
-  # ── Status state machine ──────────────────────────────────────────
-
-  defp status_state(%{deleted_at: dt}) when is_struct(dt, DateTime), do: :deleted
-  # Onboarding that hasn't been submitted is always :incomplete. Stripe stamps a
-  # brand-new account with `requirements.past_due` simply because the flow isn't
-  # finished — so `disabled_reason` must not be read until `details_submitted`,
-  # otherwise an unfinished account is mislabelled :restricted (and the parent
-  # then wrongly reveals the operational dashboard).
-  defp status_state(%{details_submitted: true} = account), do: submitted_state(account)
-  defp status_state(_account), do: :incomplete
-
-  defp submitted_state(%{disabled_reason: reason}) when is_binary(reason), do: :restricted
-  defp submitted_state(%{charges_enabled: true, payouts_enabled: true}), do: :ready
-  defp submitted_state(_account), do: :pending_review
+  # ── Display mapping (state → variant/title/message) ────────────────
 
   defp status_variant(:ready), do: :success
   defp status_variant(:pending_review), do: :warning
@@ -94,6 +84,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   defp state_title(:restricted), do: "Restricted"
   defp state_title(:deleted), do: "Disconnected"
   defp state_title(:incomplete), do: "Finish connecting Stripe"
+  defp state_title(:not_connected), do: "Not connected"
 
   defp state_message(%{disabled_reason: r}, :restricted), do: "Reason: #{r}"
   defp state_message(_account, :ready), do: "Charges and payouts are enabled."
@@ -108,4 +99,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
 
   defp state_message(_account, :deleted),
     do: "Your Stripe account is disconnected. Reconnect to accept payments again."
+
+  defp state_message(_account, :not_connected),
+    do: "Connect Stripe to start charging for meetings."
 end

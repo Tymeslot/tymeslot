@@ -21,8 +21,7 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert html =~ "Profile"
     assert html =~ "Availability"
     assert html =~ "Meeting Types"
-    assert html =~ "Calendar"
-    assert html =~ "Video"
+    assert html =~ "Integrations"
     assert html =~ "Theme"
     assert html =~ "Meetings"
 
@@ -35,13 +34,17 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
   end
 
   test "renders active link correctly for different actions" do
+    # The merged Integrations item is current for the hub action and for every
+    # legacy action that redirects into it, so all four highlight the same link.
     action_to_path = %{
       overview: "/dashboard",
       settings: "/dashboard/settings",
       availability: "/dashboard/availability",
       meeting_settings: "/dashboard/meeting-settings",
-      calendar_integration: "/dashboard/calendar-integration",
-      video_integration: "/dashboard/video-integration",
+      integrations: "/dashboard/integrations",
+      calendar_integration: "/dashboard/integrations",
+      video_integration: "/dashboard/integrations",
+      payments: "/dashboard/integrations",
       theme: "/dashboard/theme",
       meetings: "/dashboard/meetings"
     }
@@ -145,23 +148,50 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     html = render_component(&DashboardSidebar.sidebar/1, assigns)
     doc = Floki.parse_document!(html)
 
-    # Exactly 3 notification badges for meeting settings, calendar, and video
+    # Exactly 2 notification badges now: one for meeting settings and one for the
+    # merged Integrations item (which flags either an unconnected calendar or an
+    # unconnected video provider).
     assert length(
              Floki.find(doc, "a[href='/dashboard/meeting-settings'] .dashboard-nav-notification")
            ) == 1
 
     assert length(
-             Floki.find(
-               doc,
-               "a[href='/dashboard/calendar-integration'] .dashboard-nav-notification"
-             )
+             Floki.find(doc, "a[href='/dashboard/integrations'] .dashboard-nav-notification")
            ) == 1
+
+    assert length(Floki.find(doc, ".dashboard-nav-notification")) == 2
+    assert html =~ "!"
+  end
+
+  test "Integrations badge shows when only one of calendar/video is unconnected" do
+    assigns = %{
+      current_action: :overview,
+      integration_status: %{has_calendar: true, has_video: false, has_meeting_types: true},
+      profile: %{username: "testuser"}
+    }
+
+    doc =
+      (&DashboardSidebar.sidebar/1)
+      |> render_component(assigns)
+      |> Floki.parse_document!()
 
     assert length(
-             Floki.find(doc, "a[href='/dashboard/video-integration'] .dashboard-nav-notification")
+             Floki.find(doc, "a[href='/dashboard/integrations'] .dashboard-nav-notification")
            ) == 1
+  end
 
-    assert length(Floki.find(doc, ".dashboard-nav-notification")) == 3
-    assert html =~ "!"
+  test "Integrations badge is absent once calendar and video are both connected" do
+    assigns = %{
+      current_action: :overview,
+      integration_status: %{has_calendar: true, has_video: true, has_meeting_types: true},
+      profile: %{username: "testuser"}
+    }
+
+    doc =
+      (&DashboardSidebar.sidebar/1)
+      |> render_component(assigns)
+      |> Floki.parse_document!()
+
+    assert Floki.find(doc, "a[href='/dashboard/integrations'] .dashboard-nav-notification") == []
   end
 end

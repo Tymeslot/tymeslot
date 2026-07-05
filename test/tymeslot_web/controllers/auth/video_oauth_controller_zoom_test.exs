@@ -117,7 +117,7 @@ defmodule TymeslotWeb.VideoOAuthControllerZoomTest do
 
       conn = get(conn, ~p"/auth/zoom/video/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard/video-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :info) =~ "Zoom connected successfully"
     end
 
@@ -128,7 +128,7 @@ defmodule TymeslotWeb.VideoOAuthControllerZoomTest do
           "error_description" => "User cancelled"
         })
 
-      assert redirected_to(conn) == "/dashboard/video-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
     end
 
@@ -140,7 +140,7 @@ defmodule TymeslotWeb.VideoOAuthControllerZoomTest do
 
       conn = get(conn, ~p"/auth/zoom/video/callback", %{"code" => "code", "state" => "bad"})
 
-      assert redirected_to(conn) == "/dashboard/video-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
     end
 
@@ -162,14 +162,14 @@ defmodule TymeslotWeb.VideoOAuthControllerZoomTest do
 
       conn = get(conn, ~p"/auth/zoom/video/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard/video-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "Could not identify your Zoom account"
     end
 
     test "handles invalid callback params (no code, no error)", %{conn: conn} do
       conn = get(conn, ~p"/auth/zoom/video/callback", %{"unrelated" => "junk"})
 
-      assert redirected_to(conn) == "/dashboard/video-integration"
+      assert redirected_to(conn) == "/dashboard/integrations?tab=video"
       assert Flash.get(conn.assigns.flash, :error) =~ "Invalid authentication response"
     end
   end

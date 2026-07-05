@@ -76,8 +76,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
             # Notify the parent LiveView (usually DashboardLive) to refresh lists
             send(self(), {:integration_removed, type})
 
-            # Also trigger a reload of the parent component
-            # The parent component ID is typically the action name (e.g., "calendar", "video")
+            # Also trigger a reload of the parent settings component, addressed
+            # by the id the integrations hub renders it under (e.g.
+            # "calendar-settings", "video-settings").
             parent_component_id = get_parent_component_id(type)
             parent_component_module = get_parent_component_module(type)
 
@@ -173,8 +174,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
   defp get_parent_component_module(:calendar), do: CalendarSettingsComponent
   defp get_parent_component_module(:video), do: VideoSettingsComponent
 
-  defp get_parent_component_id(:calendar), do: "calendar_integration"
-  defp get_parent_component_id(:video), do: "video_integration"
+  defp get_parent_component_id(:calendar), do: "calendar-settings"
+  defp get_parent_component_id(:video), do: "video-settings"
 
   defp format_integration_type(:calendar), do: "Calendar"
   defp format_integration_type(:video), do: "Video"

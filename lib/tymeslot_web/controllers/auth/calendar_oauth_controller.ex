@@ -51,7 +51,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
     conn
     |> put_flash(:error, error_message)
-    |> redirect(to: ~p"/dashboard/calendar-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=calendars")
   end
 
   def google_callback(conn, %{"error" => error}) do
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
     conn
     |> put_flash(:error, error_message)
-    |> redirect(to: ~p"/dashboard/calendar-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=calendars")
   end
 
   def google_callback(conn, params) do
@@ -75,7 +75,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
-    |> redirect(to: ~p"/dashboard/calendar-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=calendars")
   end
 
   @doc """
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
     conn
     |> put_flash(:error, error_message)
-    |> redirect(to: ~p"/dashboard/calendar-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=calendars")
   end
 
   def outlook_callback(conn, %{"error" => error} = params) do
@@ -133,7 +133,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
     conn
     |> put_flash(:error, error_message)
-    |> redirect(to: ~p"/dashboard/calendar-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=calendars")
   end
 
   def outlook_callback(conn, params) do
@@ -143,7 +143,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
-    |> redirect(to: ~p"/dashboard/calendar-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=calendars")
   end
 
   defp handle_outlook_callback(conn, code, state, redirect_path) do
@@ -177,11 +177,11 @@ defmodule TymeslotWeb.CalendarOAuthController do
   defp reject_callback(conn, _reason) do
     conn
     |> put_flash(:error, "Authentication session mismatch. Please sign in and try again.")
-    |> redirect(to: ~p"/dashboard/calendar-integration")
+    |> redirect(to: ~p"/dashboard/integrations?tab=calendars")
     |> halt()
   end
 
   defp return_to_or_default(state) do
-    State.peek_return_to(state) || ~p"/dashboard/calendar-integration"
+    State.peek_return_to(state) || ~p"/dashboard/integrations?tab=calendars"
   end
 end

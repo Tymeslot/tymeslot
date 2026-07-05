@@ -10,8 +10,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
     test "renders nothing when integrations list is empty" do
       assigns = %{
         integrations: [],
-        testing_integration_id: nil,
-        validating_integration_id: nil,
         myself: "target"
       }
 
@@ -36,8 +34,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
 
       assigns = %{
         integrations: [integration],
-        testing_integration_id: nil,
-        validating_integration_id: nil,
         is_refreshing: false,
         myself: "target"
       }
@@ -45,36 +41,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       html = render_component(&Components.connected_calendars_section/1, assigns)
       assert html =~ "Active for Conflict Checking"
       assert html =~ "My Calendar"
-    end
-  end
-
-  describe "available_providers_section" do
-    test "renders available providers" do
-      providers = [
-        %{type: :google, display_name: "Google Calendar"},
-        %{type: :outlook, display_name: "Outlook Calendar"}
-      ]
-
-      assigns = %{
-        available_calendar_providers: providers,
-        myself: "target"
-      }
-
-      html = render_component(&Components.available_providers_section/1, assigns)
-      assert html =~ "Available Providers"
-      assert html =~ "Google Calendar"
-      assert html =~ "Outlook Calendar"
-    end
-
-    test "handles empty providers list" do
-      assigns = %{
-        available_calendar_providers: [],
-        myself: "target"
-      }
-
-      html = render_component(&Components.available_providers_section/1, assigns)
-      assert html =~ "Available Providers"
-      refute html =~ "Google Calendar"
     end
   end
 
@@ -134,7 +100,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
     end
   end
 
-  describe "calendar_item reconnect button" do
+  describe "calendar_connection_row reconnect button" do
     test "renders an OAuth Reconnect button for Google integrations" do
       integration = %{
         id: 42,
@@ -151,9 +117,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       }
 
       html =
-        render_component(&Components.calendar_item/1,
+        render_component(&Components.calendar_connection_row/1,
           integration: integration,
-          validating_integration_id: nil,
+          expanded?: true,
+          health_state: nil,
           myself: "target"
         )
 
@@ -178,9 +145,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       }
 
       html =
-        render_component(&Components.calendar_item/1,
+        render_component(&Components.calendar_connection_row/1,
           integration: integration,
-          validating_integration_id: nil,
+          expanded?: true,
+          health_state: nil,
           myself: "target"
         )
 
@@ -191,8 +159,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
     end
   end
 
-  describe "calendar_item reauth badge" do
-    test "renders a reauth warning badge when needs_reauth is true" do
+  describe "calendar_connection_row status badge" do
+    test "shows a Reconnect status when needs_reauth is true" do
       integration = %{
         id: 99,
         name: "Stale CalDAV",
@@ -209,17 +177,21 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
         provider_account_email: nil
       }
 
+      # Collapsed row for a needs_reauth integration: the expanded actions slot
+      # is hidden, but the warning status badge and the collapsed-header
+      # Reconnect control both surface "Reconnect" so the fix is one click away.
       html =
-        render_component(&Components.calendar_item/1,
+        render_component(&Components.calendar_connection_row/1,
           integration: integration,
-          validating_integration_id: nil,
+          expanded?: false,
+          health_state: nil,
           myself: "target"
         )
 
-      assert html =~ "Reconnect required"
+      assert html =~ "Reconnect"
     end
 
-    test "does not render the reauth badge when needs_reauth is false" do
+    test "shows a Healthy status when needs_reauth is false" do
       integration = %{
         id: 100,
         name: "Healthy CalDAV",
@@ -237,13 +209,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       }
 
       html =
-        render_component(&Components.calendar_item/1,
+        render_component(&Components.calendar_connection_row/1,
           integration: integration,
-          validating_integration_id: nil,
+          expanded?: false,
+          health_state: nil,
           myself: "target"
         )
 
-      refute html =~ "Reconnect required"
+      assert html =~ "Healthy"
+      refute html =~ "Reconnect"
     end
   end
 end

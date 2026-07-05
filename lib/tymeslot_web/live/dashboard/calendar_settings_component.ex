@@ -8,12 +8,13 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Diagnostics
   alias Tymeslot.Integrations.Calendar.ProviderConfig
-  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnectModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
+  alias TymeslotWeb.Dashboard.CalendarSettings.AvailableProviders
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
   alias TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
@@ -28,10 +29,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
      |> assign(:integrations, [])
      |> assign(:view, :providers)
      |> assign(:selected_provider, nil)
-     |> assign(:testing_integration_id, nil)
      |> assign(:is_refreshing, false)
-     |> assign(:validating_integration_id, nil)
      |> assign(:health_states, %{})
+     |> assign(:expanded_rows, MapSet.new())
+     |> assign(:show_all_caldav, false)
      |> assign(:available_calendar_providers, Calendar.list_available_providers(:calendar))}
   end
 
@@ -40,12 +41,28 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     socket =
       socket
       |> assign(assigns)
-      |> load_integrations()
+      |> maybe_reset_caldav_reveal(assigns)
+      |> maybe_load_integrations(assigns)
       |> load_freebusy()
       |> assign_new(:security_metadata, fn -> DashboardHelpers.get_security_metadata(socket) end)
 
     {:ok, socket}
   end
+
+  # The integrations hub already loads the calendar list and health states
+  # for its active tab child (one query per hub render instead of two) and
+  # passes them down as the `integrations`/`health_states` props. Reuse them
+  # when present; fall back to loading independently otherwise — e.g. when
+  # mounted standalone via the `:calendar_integration` dashboard action, or
+  # when a `send_update/2` targets us with a partial assign (those always
+  # want a fresh reload, matching prior behaviour).
+  defp maybe_load_integrations(socket, %{
+         integrations: _integrations,
+         health_states: _health_states
+       }),
+       do: socket
+
+  defp maybe_load_integrations(socket, _assigns), do: load_integrations(socket)
 
   defp load_freebusy(socket) do
     case Profiles.get_or_create_profile(socket.assigns.current_user.id) do
@@ -92,6 +109,14 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("toggle_row", %{"id" => id}, socket) do
+    {:noreply, assign(socket, :expanded_rows, toggle_member(socket.assigns.expanded_rows, id))}
+  end
+
+  def handle_event("toggle_caldav_options", _params, socket) do
+    {:noreply, assign(socket, :show_all_caldav, not socket.assigns.show_all_caldav)}
+  end
+
   def handle_event("toggle_integration", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
@@ -227,20 +252,19 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
       :ok ->
         with {:ok, int_id} <- parse_int(id),
-             socket = assign(socket, :testing_integration_id, int_id),
              {:ok, integration} <-
                Calendar.get_integration(int_id, socket.assigns.current_user.id),
              {:ok, message} <- Diagnostics.test_connection(integration) do
           Flash.info(message)
-          {:noreply, assign(socket, :testing_integration_id, nil)}
+          {:noreply, socket}
         else
           {:error, :not_found} ->
             Flash.error("Integration not found")
-            {:noreply, assign(socket, :testing_integration_id, nil)}
+            {:noreply, socket}
 
           {:error, reason} ->
             Flash.error("Connection test failed: #{inspect(reason)}")
-            {:noreply, assign(socket, :testing_integration_id, nil)}
+            {:noreply, socket}
 
           :error ->
             Flash.error("Invalid calendar ID")
@@ -315,7 +339,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
     health_states =
       user_id
-      |> IntegrationHealthStateQueries.list_unhealthy_for_user()
+      |> HealthCheck.list_unhealthy_for_user()
       |> Enum.filter(&(&1.integration_type == "calendar"))
       |> Map.new(fn s -> {s.integration_id, Monitor.from_db_record(s)} end)
 
@@ -327,6 +351,14 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   defp setup_config_view(socket, provider) do
     assign(socket, view: :config, selected_provider: provider)
   end
+
+  # Collapse the CalDAV reveal when the config view sends us back to the
+  # providers list (a `send_update` carrying `view: :providers`). Routine
+  # parent re-renders don't pass `:view`, so they leave the reveal untouched.
+  defp maybe_reset_caldav_reveal(socket, %{view: :providers}),
+    do: assign(socket, :show_all_caldav, false)
+
+  defp maybe_reset_caldav_reveal(socket, _assigns), do: socket
 
   defp format_refresh_failures(names) when length(names) <= 3 do
     Enum.join(names, ", ")
@@ -347,6 +379,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   defp parse_int(_arg), do: :error
+
+  defp toggle_member(set, id) do
+    if MapSet.member?(set, id), do: MapSet.delete(set, id), else: MapSet.put(set, id)
+  end
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
@@ -370,16 +406,16 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
       <% else %>
         <Components.connected_calendars_section
           integrations={@integrations}
-          testing_integration_id={@testing_integration_id}
-          validating_integration_id={@validating_integration_id}
           is_refreshing={@is_refreshing}
           myself={@myself}
           health_states={@health_states}
+          expanded_rows={@expanded_rows}
         />
 
-        <Components.available_providers_section
+        <AvailableProviders.available_providers_section
           available_calendar_providers={@available_calendar_providers}
           integrations={@integrations}
+          show_all_caldav={@show_all_caldav}
           myself={@myself}
         />
 

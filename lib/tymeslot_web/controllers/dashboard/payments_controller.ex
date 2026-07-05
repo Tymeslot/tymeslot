@@ -23,8 +23,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
     #
     # `:stripe_required` is treated as "allowed" — that error means the user has
     # the plan but no charges-enabled Connect account yet, which is precisely
-    # what this onboarding flow exists to establish. Mirrors the dashboard gate
-    # in `PaymentsHandlers.handle/2`.
+    # what this onboarding flow exists to establish. Mirrors the payments-tab
+    # gate in the integrations hub (`payments_allowed`).
     with :ok <- check_connect_access(user.id),
          {:ok, %{url: url}} <-
            MeetingPayments.start_onboarding(user, country: country_for_user(user)) do

@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @caldav_providers ProviderConfig.caldav_based_providers()
-  @parent_component_id "calendar_integration"
+  @parent_component_id "calendar-settings"
 
   @impl Phoenix.LiveComponent
   def mount(socket) do

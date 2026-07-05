@@ -44,6 +44,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Workers.IntegrationHealthWorker
@@ -133,6 +134,27 @@ defmodule Tymeslot.Integrations.HealthCheck do
   def get_user_health_report(user_id) do
     Monitor.build_user_report(user_id)
   end
+
+  @doc """
+  Lists unhealthy health-state records for a user's active integrations.
+  Queries the database directly; does not go through the GenServer.
+  """
+  @spec list_unhealthy_for_user(integer()) :: [IntegrationHealthStateSchema.t()]
+  def list_unhealthy_for_user(user_id) do
+    IntegrationHealthStateQueries.list_unhealthy_for_user(user_id)
+  end
+
+  @doc """
+  Canonical attention classification for an integration given its current
+  health state, following the single precedence ladder used across the
+  dashboard: paused → needs_reauth → unhealthy → healthy.
+  """
+  @spec attention_status(map(), health_state() | nil) ::
+          :paused | :needs_reauth | :unhealthy | :ok
+  def attention_status(%{is_active: false}, _health), do: :paused
+  def attention_status(%{needs_reauth: true}, _health), do: :needs_reauth
+  def attention_status(_integration, %{status: :unhealthy}), do: :unhealthy
+  def attention_status(_integration, _health), do: :ok
 
   @doc """
   Records that the user has produced an unambiguous success signal — fresh

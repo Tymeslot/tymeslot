@@ -78,8 +78,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       {"/dashboard/availability", "Availability"},
       {"/dashboard/meeting-settings", "Meeting Settings"},
       {"/dashboard/calendar", "calendar-grid"},
-      {"/dashboard/calendar-integration", "Calendar Integration"},
-      {"/dashboard/video-integration", "Video Integration"},
+      {"/dashboard/integrations", "Integrations"},
       {"/dashboard/theme", "Choose Your Style"},
       {"/dashboard/meetings", "Meetings"},
       {"/dashboard/automation", "Automation"}
@@ -90,6 +89,40 @@ defmodule TymeslotWeb.DashboardRoutesTest do
         {:ok, _view, html} = live(conn, unquote(path))
         assert html =~ unquote(expected_text)
       end
+    end
+
+    # The standalone calendar/video/payments pages are now tabs in the unified
+    # hub. Their routes stay defined (deep links, emails and OAuth/Stripe returns
+    # still target them) but redirect to the matching hub tab.
+    @legacy_redirects [
+      {"/dashboard/calendar-integration", "/dashboard/integrations?tab=calendars"},
+      {"/dashboard/video-integration", "/dashboard/integrations?tab=video"},
+      {"/dashboard/payments", "/dashboard/integrations?tab=payments"}
+    ]
+
+    for {from, to} <- @legacy_redirects do
+      test "#{from} redirects into the hub", %{conn: conn} do
+        assert {:error, {:live_redirect, %{to: unquote(to)}}} =
+                 live(conn, unquote(from))
+      end
+    end
+
+    test "/dashboard/payments?return=1 carries the Stripe return marker into the hub redirect",
+         %{conn: conn} do
+      assert {:error, {:live_redirect, %{to: to}}} =
+               live(conn, "/dashboard/payments?return=1")
+
+      assert to =~ "tab=payments"
+      assert to =~ "return=1"
+    end
+
+    test "/dashboard/payments?refresh=1 carries the Stripe refresh marker into the hub redirect",
+         %{conn: conn} do
+      assert {:error, {:live_redirect, %{to: to}}} =
+               live(conn, "/dashboard/payments?refresh=1")
+
+      assert to =~ "tab=payments"
+      assert to =~ "refresh=1"
     end
 
     test "availability can switch to grid view", %{conn: conn} do

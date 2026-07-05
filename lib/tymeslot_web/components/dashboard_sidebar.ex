@@ -9,6 +9,11 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   alias Tymeslot.Analytics
   alias Tymeslot.Scheduling.LinkAccessPolicy
 
+  # Calendars, video and payments now share a single "Integrations" nav item.
+  # The item is marked current for the hub action and for every legacy action
+  # that redirects into it, so the highlight is correct even mid-redirect.
+  @integration_actions [:integrations, :calendar_integration, :video_integration, :payments]
+
   @doc """
   Renders the left sidebar navigation.
   """
@@ -17,7 +22,6 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   attr :profile, :any, default: nil
   attr :automations_allowed, :boolean, default: true
   attr :analytics_allowed, :boolean, default: true
-  attr :payments_allowed, :boolean, default: false
   attr :sidebar_extensions, :list, default: []
 
   @spec sidebar(map()) :: Phoenix.LiveView.Rendered.t()
@@ -161,27 +165,15 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             <div class="dashboard-nav-section-title">Integrations</div>
             <div class="space-y-0">
               <.nav_link
-                patch={~p"/dashboard/calendar-integration"}
-                current={@current_action}
-                action={:calendar_integration}
-                show_notification={not (@integration_status[:has_calendar] || false)}
+                patch={~p"/dashboard/integrations"}
+                current={integrations_current(@current_action)}
+                action={:integrations}
+                show_notification={needs_integration_setup?(@integration_status)}
                 notification_type="info"
-                notification_title="Connect a calendar to avoid double-bookings"
+                notification_title="Connect a calendar or video provider to finish setup"
               >
-                <.icon name="hero-calendar-days" class="w-5 h-5" />
-                <span>Calendar</span>
-              </.nav_link>
-
-              <.nav_link
-                patch={~p"/dashboard/video-integration"}
-                current={@current_action}
-                action={:video_integration}
-                show_notification={not (@integration_status[:has_video] || false)}
-                notification_type="info"
-                notification_title="Connect a video provider to host online meetings"
-              >
-                <.icon name="hero-video-camera" class="w-5 h-5" />
-                <span>Video</span>
+                <.icon name="hero-puzzle-piece" class="w-5 h-5" />
+                <span>Integrations</span>
               </.nav_link>
             </div>
           </div>
@@ -215,17 +207,6 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
               </.nav_link>
 
               <.nav_link
-                :if={@payments_allowed}
-                patch={~p"/dashboard/payments"}
-                current={@current_action}
-                action={:payments}
-                data-testid="payments-nav-link"
-              >
-                <.icon name="hero-credit-card" class="w-5 h-5" />
-                <span>Payments</span>
-              </.nav_link>
-
-              <.nav_link
                 :for={ext <- @sidebar_extensions}
                 navigate={ext.path}
                 current={@current_action}
@@ -240,6 +221,18 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
       </div>
     </aside>
     """
+  end
+
+  # Collapses the hub action and every legacy action that redirects into it to
+  # `:integrations` so the merged nav item highlights for all of them.
+  defp integrations_current(action) when action in @integration_actions, do: :integrations
+  defp integrations_current(action), do: action
+
+  # The single Integrations item flags "needs attention" when either a calendar
+  # or a video provider is still unconnected — the union of the badges the
+  # separate Calendar and Video items used to carry.
+  defp needs_integration_setup?(status) do
+    not (Map.get(status, :has_calendar, false) and Map.get(status, :has_video, false))
   end
 
   @spec close_sidebar_js() :: Phoenix.LiveView.JS.t()

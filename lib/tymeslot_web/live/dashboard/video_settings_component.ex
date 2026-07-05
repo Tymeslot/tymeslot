@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   """
   use TymeslotWeb, :live_component
 
-  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Integrations.Video
@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
-  alias TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow
+  alias TymeslotWeb.Dashboard.VideoSettings.Components
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:saving, false)
      |> assign(:testing_connection, nil)
      |> assign(:health_states, %{})
+     |> assign(:expanded_rows, MapSet.new())
      |> assign(:available_video_providers, Directory.list(:video))}
   end
 
@@ -44,12 +45,31 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     socket =
       socket
       |> assign(assigns)
-      |> load_integrations()
+      |> maybe_load_integrations(assigns)
 
     {:ok, socket}
   end
 
+  # The integrations hub already loads the video list and health states for
+  # its active tab child (one query per hub render instead of two) and
+  # passes them down as the `integrations`/`health_states` props. Reuse them
+  # when present; fall back to loading independently otherwise — e.g. when
+  # mounted standalone via the `:video_integration` dashboard action, or when
+  # a `send_update/2` targets us with a partial assign (those always want a
+  # fresh reload, matching prior behaviour).
+  defp maybe_load_integrations(socket, %{
+         integrations: _integrations,
+         health_states: _health_states
+       }),
+       do: socket
+
+  defp maybe_load_integrations(socket, _assigns), do: load_integrations(socket)
+
   @impl Phoenix.LiveComponent
+  def handle_event("toggle_row", %{"id" => id}, socket) do
+    {:noreply, assign(socket, :expanded_rows, toggle_member(socket.assigns.expanded_rows, id))}
+  end
+
   def handle_event("track_form_change", %{"integration" => params}, socket) do
     {:noreply, assign(socket, :form_values, params)}
   end
@@ -353,8 +373,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
                 <% end %>
 
                 <%= for integration <- active_integrations do %>
-                  <VideoRow.video_row
+                  <Components.video_connection_row
                     integration={integration}
+                    expanded?={MapSet.member?(@expanded_rows, to_string(integration.id))}
                     testing_connection={@testing_connection}
                     myself={@myself}
                     health_state={Map.get(@health_states, integration.id)}
@@ -371,8 +392,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
                 <% end %>
 
                 <%= for integration <- inactive_integrations do %>
-                  <VideoRow.video_row
+                  <Components.video_connection_row
                     integration={integration}
+                    expanded?={MapSet.member?(@expanded_rows, to_string(integration.id))}
                     testing_connection={@testing_connection}
                     myself={@myself}
                     health_state={Map.get(@health_states, integration.id)}
@@ -478,7 +500,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
     health_states =
       user_id
-      |> IntegrationHealthStateQueries.list_unhealthy_for_user()
+      |> HealthCheck.list_unhealthy_for_user()
       |> Enum.filter(&(&1.integration_type == "video"))
       |> Map.new(fn s -> {s.integration_id, Monitor.from_db_record(s)} end)
 
@@ -510,6 +532,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   defp notify_parent(msg), do: send(self(), msg)
+
+  defp toggle_member(set, id) do
+    if MapSet.member?(set, id), do: MapSet.delete(set, id), else: MapSet.put(set, id)
+  end
 
   defp map_keys_to_atoms(%{} = map) do
     for {k, v} <- map, into: %{} do
