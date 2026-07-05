@@ -30,8 +30,8 @@ defmodule TymeslotWeb.Components.Icons.IconComponents do
 
   ## Examples
 
-      <.icon name={:slack} class="w-5 h-5" />
-      <.icon name={:webhook} class="w-6 h-6 text-turquoise-600" />
+      <IconComponents.icon name={:slack} class="w-5 h-5" />
+      <IconComponents.icon name={:webhook} class="w-6 h-6 text-turquoise-600" />
 
   """
   attr :name, :atom, required: true, doc: "The name of the brand mark to render"
