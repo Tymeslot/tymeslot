@@ -13,7 +13,6 @@ defmodule TymeslotWeb.MeetingCalendarController do
 
   use TymeslotWeb, :controller
 
-  alias Tymeslot.Integrations.Calendar.IcsGenerator
   alias Tymeslot.Meetings
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
@@ -34,9 +33,7 @@ defmodule TymeslotWeb.MeetingCalendarController do
 
   defp serve(conn, username, uid) do
     with %{user_id: organizer_user_id} <- Profiles.get_profile_by_username(username),
-         {:ok, meeting} <- Meetings.get_meeting_by_uid_for_organizer(uid, organizer_user_id) do
-      ics = IcsGenerator.generate_ics(calendar_details(meeting), meeting.attendee_locale)
-
+         {:ok, ics} <- Meetings.calendar_export(uid, organizer_user_id) do
       conn
       |> put_resp_content_type("text/calendar")
       |> put_resp_header("content-disposition", ~s(attachment; filename="meeting-#{uid}.ics"))
@@ -44,13 +41,6 @@ defmodule TymeslotWeb.MeetingCalendarController do
     else
       _not_found -> send_status(conn, 404)
     end
-  end
-
-  # The attendee is downloading their own event, so prefer their personal join
-  # link over the generic meeting URL — matching the `.ics` they received by
-  # email.
-  defp calendar_details(meeting) do
-    %{meeting | meeting_url: meeting.attendee_video_url || meeting.meeting_url}
   end
 
   defp send_status(conn, status) do

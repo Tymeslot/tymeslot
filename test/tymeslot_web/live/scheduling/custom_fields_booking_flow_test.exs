@@ -452,6 +452,11 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
       socket = :sys.get_state(view.pid).socket
       assert socket.assigns.custom_fields_snapshot == []
       assert socket.assigns.custom_field_answers == %{}
+
+      # No `meeting_uid` reaches this mount (a bare refresh/direct link carries
+      # none), so the `:if` guard on the "Add to calendar" link must hide it —
+      # rendering it here would dead-link to a meeting the socket never loaded.
+      refute html =~ ~s(data-testid="add-to-calendar")
     end
 
     @tag :capture_log
@@ -461,12 +466,15 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
       |> Changeset.change(booking_theme: "2")
       |> Repo.update!()
 
-      {:ok, view, _html} =
+      {:ok, view, html} =
         live(conn, "/#{profile.username}/thank-you?timezone=#{profile.timezone}")
 
       socket = :sys.get_state(view.pid).socket
       assert socket.assigns.custom_fields_snapshot == []
       assert socket.assigns.custom_field_answers == %{}
+
+      # Same guard as the Quill confirmation component — see comment above.
+      refute html =~ ~s(data-testid="add-to-calendar")
     end
   end
 
