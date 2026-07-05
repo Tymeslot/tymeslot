@@ -98,8 +98,36 @@ describe("AnalyticsView", () => {
 });
 
 describe("HeroDemo", () => {
-  beforeEach(() => { delete window.analytics; delete window.umami; });
-  afterEach(() => { delete window.analytics; delete window.umami; });
+  // Controllable IntersectionObserver stand-in: jsdom ships none, and the hook
+  // now gates playback on visibility. Tests drive `scrollIntoView()` to simulate
+  // the video entering the viewport.
+  let observers;
+
+  class MockIntersectionObserver {
+    constructor(callback, options) {
+      this.callback = callback;
+      this.options = options;
+      this.elements = [];
+      observers.push(this);
+    }
+    observe(el) { this.elements.push(el); }
+    disconnect() { this.disconnected = true; }
+    fire(isIntersecting = true) {
+      this.callback(this.elements.map((el) => ({ target: el, isIntersecting })), this);
+    }
+  }
+
+  beforeEach(() => {
+    delete window.analytics;
+    delete window.umami;
+    observers = [];
+    global.IntersectionObserver = MockIntersectionObserver;
+  });
+  afterEach(() => {
+    delete window.analytics;
+    delete window.umami;
+    delete global.IntersectionObserver;
+  });
 
   // Mirrors the LiveView call convention: mounted() reaches `this.revealCta`,
   // so the context must delegate to the hook object.
@@ -109,12 +137,17 @@ describe("HeroDemo", () => {
     return ctx;
   }
 
+  // Simulate the observed video scrolling into view.
+  function scrollIntoView() {
+    observers.forEach((observer) => observer.fire(true));
+  }
+
   function visibleVideo(props = { variant: "video", surface: "homepage_hero" }) {
     const el = document.createElement("video");
     el.dataset.analyticsEvent = "hero_demo_viewed";
     el.dataset.analyticsProps = JSON.stringify(props);
     el.dataset.ctaTarget = "hero-demo-cta";
-    Object.defineProperty(el, "offsetParent", { value: document.body, configurable: true });
+    el.play = vi.fn(() => Promise.resolve());
     return el;
   }
 
@@ -127,35 +160,35 @@ describe("HeroDemo", () => {
     return cta;
   }
 
-  test("fires hero_demo_viewed when the element is visible", () => {
+  test("does not report or play until the video scrolls into view", () => {
     window.umami = { track: vi.fn() };
     installAnalytics();
-
-    const el = document.createElement("img");
-    el.dataset.analyticsEvent = "hero_demo_viewed";
-    el.dataset.analyticsProps = JSON.stringify({ variant: "poster", surface: "homepage_hero" });
-    Object.defineProperty(el, "offsetParent", { value: document.body, configurable: true });
-
-    mountHook(el);
-
-    expect(window.umami.track).toHaveBeenCalledWith("hero_demo_viewed", {
-      variant: "poster",
-      surface: "homepage_hero",
-    });
-  });
-
-  test("does not fire when the element is hidden (offsetParent is null)", () => {
-    window.umami = { track: vi.fn() };
-    installAnalytics();
-
-    const el = document.createElement("img");
-    el.dataset.analyticsEvent = "hero_demo_viewed";
-    el.dataset.analyticsProps = JSON.stringify({ variant: "poster", surface: "homepage_hero" });
-    Object.defineProperty(el, "offsetParent", { value: null, configurable: true });
+    const el = visibleVideo();
 
     mountHook(el);
 
     expect(window.umami.track).not.toHaveBeenCalled();
+    expect(el.play).not.toHaveBeenCalled();
+
+    scrollIntoView();
+
+    expect(window.umami.track).toHaveBeenCalledWith("hero_demo_viewed", {
+      variant: "video",
+      surface: "homepage_hero",
+    });
+    expect(el.play).toHaveBeenCalledTimes(1);
+  });
+
+  test("ignores non-intersecting observer callbacks", () => {
+    window.umami = { track: vi.fn() };
+    installAnalytics();
+    const el = visibleVideo();
+
+    mountHook(el);
+    observers.forEach((observer) => observer.fire(false));
+
+    expect(window.umami.track).not.toHaveBeenCalled();
+    expect(el.play).not.toHaveBeenCalled();
   });
 
   test("on the video's end, reveals the CTA and reports completion exactly once", () => {
@@ -163,9 +196,9 @@ describe("HeroDemo", () => {
     installAnalytics();
     const cta = hiddenCta();
     const el = visibleVideo();
-    el.play = vi.fn(() => Promise.resolve());
 
     mountHook(el);
+    scrollIntoView();
     el.dispatchEvent(new Event("ended"));
     // A stray second `ended` must not double-report (listener is once-only).
     el.dispatchEvent(new Event("ended"));
@@ -178,14 +211,15 @@ describe("HeroDemo", () => {
     cta.remove();
   });
 
-  test("reveals the CTA immediately when autoplay is blocked, without reporting completion", async () => {
+  test("reveals the CTA immediately when playback is blocked, without reporting completion", async () => {
     window.umami = { track: vi.fn() };
     installAnalytics();
     const cta = hiddenCta();
     const el = visibleVideo();
-    el.play = vi.fn(() => Promise.reject(new Error("autoplay blocked")));
+    el.play = vi.fn(() => Promise.reject(new Error("playback blocked")));
 
     mountHook(el);
+    scrollIntoView();
     await new Promise((resolve) => setTimeout(resolve, 0)); // let the rejected play() settle
 
     expect(cta.style.opacity).toBe("1");
@@ -196,11 +230,12 @@ describe("HeroDemo", () => {
   });
 
   test("is a safe no-op when no provider is present", () => {
-    const el = document.createElement("img");
-    el.dataset.analyticsEvent = "hero_demo_viewed";
-    Object.defineProperty(el, "offsetParent", { value: document.body, configurable: true });
+    const el = visibleVideo();
 
-    expect(() => mountHook(el)).not.toThrow();
+    expect(() => {
+      mountHook(el);
+      scrollIntoView();
+    }).not.toThrow();
   });
 });
 

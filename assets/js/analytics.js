@@ -77,20 +77,19 @@ export const AnalyticsView = {
 };
 
 /**
- * LiveView hook for the homepage hero "booking demo" media.
+ * LiveView hook for the homepage hero "booking demo" <video>.
  *
- * Both the poster `<img>` (phones) and the autoplaying `<video>` (desktop) carry
- * this hook, but only one is rendered per breakpoint — Tailwind's `lg:hidden` /
- * `hidden lg:block` sets `display:none` on the other, so its `offsetParent` is
- * null. The visibility guard reports `hero_demo_viewed` from exactly the element
- * the visitor actually sees, so video and poster never double-count.
+ * Playback is gated on visibility: an IntersectionObserver starts the single
+ * play (no loop) only once the video scrolls into view, so a visitor who meets
+ * it stacked below the hero text on a phone still watches from the first frame
+ * rather than arriving after an on-mount autoplay has already ended. The same
+ * moment reports `hero_demo_viewed`. Where IntersectionObserver is unavailable
+ * the hook starts immediately, matching the old behaviour.
  *
- * The desktop video plays through once (no loop). When it ends, the hook reveals
- * the real CTA (`data-cta-target`) and reports `hero_demo_completed`. If autoplay
- * is blocked, the CTA is revealed immediately so it is never stranded behind a
- * video that will not play — but completion is not reported, since the demo was
- * not watched. The mobile poster has no video, so its CTA stays visible from the
- * start (the markup hides the CTA only at the `lg` breakpoint).
+ * The video plays through once. When it ends, the hook reveals the real CTA
+ * (`data-cta-target`) and reports `hero_demo_completed`. If playback is blocked,
+ * the CTA is revealed immediately so it is never stranded behind a video that
+ * will not play — but completion is not reported, since the demo was not watched.
  *
  * Reads `data-analytics-event` / `data-analytics-props` like AnalyticsView; the
  * props are categorical only (variant/surface — no ids or free text). Safe
@@ -98,8 +97,6 @@ export const AnalyticsView = {
  */
 export const HeroDemo = {
   mounted() {
-    if (this.el.offsetParent === null) return;
-
     let props = {};
     const raw = this.el.dataset.analyticsProps;
     if (raw) {
@@ -110,33 +107,53 @@ export const HeroDemo = {
       }
     }
 
-    const name = this.el.dataset.analyticsEvent;
-    if (name) window.analytics?.track(name, props);
-
-    if (this.el.tagName !== "VIDEO") return;
-
     this._onEnded = () => {
       this.revealCta();
       window.analytics?.track("hero_demo_completed", { surface: props.surface });
     };
     this.el.addEventListener("ended", this._onEnded, { once: true });
 
-    const playing = this.el.play?.();
-    if (playing && typeof playing.catch === "function") {
-      playing.catch(() => this.revealCta());
+    // Report the view and begin the single play the moment the video enters the
+    // viewport — not on mount — so it is never already over by the time a mobile
+    // visitor scrolls down to it.
+    const start = () => {
+      const name = this.el.dataset.analyticsEvent;
+      if (name) window.analytics?.track(name, props);
+
+      const playing = this.el.play?.();
+      if (playing && typeof playing.catch === "function") {
+        playing.catch(() => this.revealCta());
+      }
+    };
+
+    if (typeof IntersectionObserver !== "function") {
+      start();
+      return;
     }
+
+    this._observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        this._observer.disconnect();
+        this._observer = null;
+        start();
+      },
+      { threshold: 0.25 },
+    );
+    this._observer.observe(this.el);
   },
 
   revealCta() {
     const cta = document.getElementById(this.el.dataset.ctaTarget);
     if (!cta) return;
-    // Inline styles override the markup's `lg:opacity-0` / `lg:pointer-events-none`.
+    // Inline styles override the markup's `opacity-0` / `pointer-events-none`.
     cta.style.opacity = "1";
     cta.style.pointerEvents = "auto";
   },
 
   destroyed() {
     if (this._onEnded) this.el.removeEventListener("ended", this._onEnded);
+    if (this._observer) this._observer.disconnect();
   },
 };
 
