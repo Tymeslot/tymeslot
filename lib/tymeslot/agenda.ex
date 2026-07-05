@@ -13,8 +13,6 @@ defmodule Tymeslot.Agenda do
   alias Tymeslot.Agenda.Entry
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
-  alias Tymeslot.Integrations.Calendar.ColourResolver
   alias Tymeslot.Meetings
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -128,7 +126,7 @@ defmodule Tymeslot.Agenda do
       join_url: presence(meeting.organizer_video_url) || presence(meeting.meeting_url),
       who: presence(meeting.attendee_name),
       calendar: nil,
-      colour: ColourResolver.resolve(Map.get(overrides, target), nil),
+      colour: Calendar.resolve_event_colour(Map.get(overrides, target), nil),
       target: target
     }
   end
@@ -149,7 +147,7 @@ defmodule Tymeslot.Agenda do
       join_url: nil,
       who: organiser_name(event.organiser),
       calendar: calendar_name(event, calendar_names),
-      colour: ColourResolver.resolve(Map.get(overrides, target), event.colour),
+      colour: Calendar.resolve_event_colour(Map.get(overrides, target), event.colour),
       target: target
     }
   end
@@ -170,7 +168,7 @@ defmodule Tymeslot.Agenda do
       join_url: presence(event.video_link),
       who: organiser_name(event.organiser),
       calendar: calendar_name(event, calendar_names),
-      colour: ColourResolver.resolve(Map.get(overrides, target), event.colour),
+      colour: Calendar.resolve_event_colour(Map.get(overrides, target), event.colour),
       target: target
     }
   end
@@ -187,13 +185,11 @@ defmodule Tymeslot.Agenda do
 
   defp active_integrations(_user), do: []
 
-  defp load_overrides(%{id: id}) when is_integer(id), do: ColourOverrideQueries.for_user(id)
+  defp load_overrides(%{id: id}) when is_integer(id), do: Calendar.overrides_for(id)
   defp load_overrides(_user), do: %{}
 
   defp calendar_name(%{calendar_integration_id: id}, calendar_names),
     do: presence(Map.get(calendar_names, id))
-
-  defp calendar_name(_event, _calendar_names), do: nil
 
   defp to_local_date(datetime, tz) do
     datetime
