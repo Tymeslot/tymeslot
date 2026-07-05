@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Timezones
 
   @spec normalise_events(list(map()), map()) :: {:ok, list(CalendarEvent.t())}
@@ -62,7 +63,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
         organiser: map_organiser(raw["organizer"]),
         attendees: map_attendees(raw["attendees"]),
         reminders: map_reminders(raw["reminders"]),
-        colour: raw["colorId"],
+        colour: EventColour.from_google_color_id(raw["colorId"]),
         etag: raw["etag"],
         recurrence_rule: map_recurrence_rule(raw["recurrence"]),
         provider_metadata: Map.put(raw, "recurringEventId", raw["recurringEventId"]),

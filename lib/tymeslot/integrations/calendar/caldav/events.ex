@@ -157,6 +157,49 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     end
   end
 
+  @doc """
+  Best-effort colour-only write-back for an existing event.
+
+  Patches the RFC 7986 `COLOR` property on `opts[:raw_ical]` — the event's
+  last-synced iCalendar document — and PUTs the result. Never rebuilds the
+  VEVENT from a reduced payload the way `update_calendar_event/5` does; that
+  would silently drop RRULE/ATTENDEE/VALARM data absent from a colour-only
+  request. Returns `{:error, :raw_ical_unavailable}` when the caller has no
+  cached `raw_ical` to patch (e.g. before the first full sync) so the caller
+  can retry once a sync populates it.
+
+  Uses the same conditional `If-Match` / conflict-resolution semantics as
+  `update_calendar_event/5`; `opts[:provider_event_id]` is honoured the same
+  way for resolving the event's URL.
+  """
+  @spec update_event_colour(Base.client(), String.t(), String.t(), String.t(), keyword()) ::
+          :ok | {:error, Base.error_reason() | :raw_ical_unavailable}
+  def update_event_colour(client, calendar_path, uid, colour, opts \\ []) do
+    case Keyword.get(opts, :raw_ical) do
+      raw_ical when is_binary(raw_ical) and raw_ical != "" ->
+        do_update_event_colour(client, calendar_path, uid, colour, raw_ical, opts)
+
+      _missing ->
+        {:error, :raw_ical_unavailable}
+    end
+  end
+
+  defp do_update_event_colour(client, calendar_path, uid, colour, raw_ical, opts) do
+    policy = Keyword.get(opts, :conflict_resolution, ConflictResolution.default())
+
+    if ConflictResolution.valid?(policy) do
+      with_events_breaker(client, opts, fn ->
+        url = resolve_event_url(client, calendar_path, uid, opts[:provider_event_id])
+        ical_data = ICalBuilder.replace_colour_property(raw_ical, colour)
+        etag = resolve_etag(url, client, opts)
+
+        do_conditional_put(client, url, ical_data, etag, policy, opts)
+      end)
+    else
+      {:error, :invalid_conflict_resolution_policy}
+    end
+  end
+
   defp do_conditional_put(client, url, ical_data, etag, policy, opts) do
     base_put_opts =
       if etag, do: [operation: :update, if_match: etag], else: [operation: :update]

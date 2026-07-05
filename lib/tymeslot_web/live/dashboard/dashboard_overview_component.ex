@@ -12,8 +12,12 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   use TymeslotWeb, :live_component
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Agenda
   alias Tymeslot.Agenda.Day
   alias Tymeslot.Agenda.Entry
+  # Aliased to avoid clashing with the stdlib `Calendar` used for strftime below.
+  alias Tymeslot.Integrations.Calendar, as: CalendarContext
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Dashboard.AgendaDetailModal
   alias TymeslotWeb.Dashboard.AgendaTimeline
@@ -41,6 +45,61 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   def handle_event("close_entry", _params, socket) do
     {:noreply, assign(socket, :selected_entry, nil)}
   end
+
+  def handle_event("set_entry_colour", %{"colour" => colour, "target" => target}, socket) do
+    case decode_target(target) do
+      :error ->
+        {:noreply, socket}
+
+      decoded ->
+        case CalendarContext.set_event_colour(socket.assigns.current_user.id, decoded, colour) do
+          {:ok, _override} ->
+            {:noreply, reload_agenda_colours(socket)}
+
+          {:error, _changeset} ->
+            {:noreply,
+             Flash.put_flash(socket, :error, "Couldn't save that colour. Please try again.")}
+        end
+    end
+  end
+
+  def handle_event("clear_entry_colour", %{"target" => target}, socket) do
+    case decode_target(target) do
+      :error ->
+        {:noreply, socket}
+
+      decoded ->
+        CalendarContext.clear_event_colour(socket.assigns.current_user.id, decoded)
+        {:noreply, reload_agenda_colours(socket)}
+    end
+  end
+
+  # Rebuilds the agenda from the database (now reflecting the override) and keeps
+  # the detail modal open on the same entry so its picker shows the new colour.
+  defp reload_agenda_colours(socket) do
+    agenda = Agenda.day_agenda(socket.assigns.current_user, socket.assigns.agenda.timezone)
+
+    selected =
+      socket.assigns.selected_entry && find_entry(agenda, socket.assigns.selected_entry.id)
+
+    socket
+    |> assign(:agenda, agenda)
+    |> assign(:selected_entry, selected)
+    |> assign_agenda_view(agenda, DateTime.utc_now())
+  end
+
+  defp decode_target("meeting:" <> id), do: {:meeting, id}
+
+  defp decode_target("external:" <> rest) do
+    with [integration_id, uid] <- String.split(rest, ":", parts: 2),
+         {parsed_id, ""} <- Integer.parse(integration_id) do
+      {:external, parsed_id, uid}
+    else
+      _other -> :error
+    end
+  end
+
+  defp decode_target(_other), do: :error
 
   defp find_entry(%Day{} = agenda, id) do
     [agenda.next | agenda.today ++ agenda.tomorrow]
@@ -160,7 +219,20 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
               phx-target={@myself}
               class="inline-flex items-center gap-1.5 rounded-token-full bg-tymeslot-100 px-3 py-1 text-token-xs font-black text-tymeslot-600 cursor-pointer hover:bg-tymeslot-200 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 transition-colors"
             >
-              <.icon name="hero-sun-mini" class="w-4 h-4 text-tymeslot-400" />{entry.title}
+              <span
+                :if={EventColour.tailwind_class(entry.colour)}
+                class={[
+                  "w-2 h-2 rounded-token-full shrink-0",
+                  EventColour.tailwind_class(entry.colour)
+                ]}
+                aria-hidden="true"
+              >
+              </span>
+              <.icon
+                :if={!EventColour.tailwind_class(entry.colour)}
+                name="hero-sun-mini"
+                class="w-4 h-4 text-tymeslot-400"
+              />{entry.title}
             </button>
           </div>
 
@@ -328,14 +400,19 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
     {:event, entry, meta} = assigns.row
 
     assigns =
-      assign(assigns, entry: entry, next?: meta[:next?], in_progress?: meta[:in_progress?])
+      assign(assigns,
+        entry: entry,
+        next?: meta[:next?],
+        in_progress?: meta[:in_progress?],
+        colour_class: EventColour.tailwind_class(entry.colour)
+      )
 
     ~H"""
     <div class="flex gap-3">
       <div class="w-12 shrink-0 pt-3.5 text-right text-token-xs font-black tabular-nums text-tymeslot-400">
         {time_label(@entry, @timezone)}
       </div>
-      <.rail node={if @in_progress?, do: :live, else: :event} />
+      <.rail node={if @in_progress?, do: :live, else: :event} colour_class={@colour_class} />
       <div
         {open_attrs(@entry)}
         phx-target={@myself}
@@ -346,6 +423,12 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           not (@next? or @in_progress?) && "bg-tymeslot-50/50 border-tymeslot-50 hover:bg-white hover:shadow-md"
         ]}
       >
+        <span
+          :if={@colour_class}
+          class={["w-1 self-stretch shrink-0 rounded-token-full", @colour_class]}
+          aria-hidden="true"
+        >
+        </span>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 flex-wrap">
             <span class="text-tymeslot-900 font-black tracking-tight truncate group-hover:text-turquoise-700 transition-colors">
@@ -415,6 +498,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   # The vertical rail column: a centred line with an optional node dot.
   attr :node, :atom, required: true
   attr :dashed, :boolean, default: false
+  attr :colour_class, :string, default: nil
 
   defp rail(assigns) do
     ~H"""
@@ -427,7 +511,11 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
       </span>
       <span
         :if={@node == :event}
-        class="relative mt-4 w-3 h-3 rounded-token-full bg-white border-2 border-tymeslot-300"
+        class={[
+          "relative mt-4 w-3 h-3 rounded-token-full border-2",
+          @colour_class && ["#{@colour_class}", "border-transparent"],
+          !@colour_class && "bg-white border-tymeslot-300"
+        ]}
       >
       </span>
       <span
@@ -461,6 +549,12 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
       <div class="w-14 shrink-0 text-token-xs font-black tabular-nums text-tymeslot-400">
         {if @entry.all_day?, do: "All day", else: time_label(@entry, @timezone)}
       </div>
+      <span
+        :if={EventColour.tailwind_class(@entry.colour)}
+        class={["w-2 h-2 shrink-0 rounded-token-full", EventColour.tailwind_class(@entry.colour)]}
+        aria-hidden="true"
+      >
+      </span>
       <span class="flex-1 min-w-0 text-token-sm text-tymeslot-700 font-bold truncate">
         {@entry.title}
       </span>

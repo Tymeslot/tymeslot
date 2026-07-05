@@ -207,4 +207,62 @@ defmodule TymeslotWeb.Dashboard.OverviewAgendaTest do
     assert modal =~ "Join"
     refute modal =~ "Manage booking"
   end
+
+  describe "per-event colour" do
+    test "renders the palette colour on an all-day event pill", %{conn: conn, user: user} do
+      today = Date.utc_today()
+      integration = insert(:calendar_integration, user: user)
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        summary: "Company offsite",
+        uid: "uid-allday-colour",
+        colour: "blueberry",
+        all_day: true,
+        start_date: today,
+        end_date: Date.add(today, 1),
+        start_at: nil,
+        end_at: nil
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      assert html =~ "Company offsite"
+      # blueberry maps to bg-calendar-2 (EventColour palette).
+      assert html =~ "bg-calendar-2"
+    end
+
+    test "renders the palette colour on a tomorrow peek row", %{conn: conn, user: user} do
+      tomorrow = Date.add(Date.utc_today(), 1)
+      # An earlier booking becomes the cockpit hero, so the coloured event lands
+      # in the tomorrow peek rather than the (brand-gradient) cockpit.
+      early = DateTime.new!(tomorrow, ~T[09:00:00], "Etc/UTC")
+
+      insert(:meeting,
+        organizer_email: user.email,
+        start_time: early,
+        end_time: DateTime.add(early, 3600, :second),
+        status: "confirmed",
+        title: "Standup"
+      )
+
+      integration = insert(:calendar_integration, user: user)
+      later = DateTime.new!(tomorrow, ~T[15:00:00], "Etc/UTC")
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        summary: "Design review",
+        uid: "uid-peek-colour",
+        colour: "blueberry",
+        all_day: false,
+        start_at: later,
+        end_at: DateTime.add(later, 3600, :second)
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      assert html =~ "Design review"
+      assert html =~ "bg-calendar-2"
+    end
+  end
 end

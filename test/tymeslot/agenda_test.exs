@@ -10,6 +10,7 @@ defmodule Tymeslot.AgendaTest do
   alias Tymeslot.Agenda
   alias Tymeslot.Agenda.Day
   alias Tymeslot.Agenda.Entry
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Utils.DateTimeUtils
 
   setup do
@@ -240,7 +241,53 @@ defmodule Tymeslot.AgendaTest do
     end
   end
 
+  describe "day_agenda/2 per-event colour" do
+    test "external entry carries the provider colour when no override", %{
+      user: user,
+      tomorrow: tomorrow
+    } do
+      external_event(user, at(tomorrow, ~T[13:00:00]),
+        summary: "Coloured",
+        uid: "uid-colour-1",
+        colour: "blueberry"
+      )
+
+      day = Agenda.day_agenda(user, "Etc/UTC")
+      entry = find_entry(day, "Coloured")
+
+      assert entry.colour == "blueberry"
+      assert entry.target == {:external, entry_integration_id(entry, day), "uid-colour-1"}
+    end
+
+    test "override wins over the provider colour", %{user: user, tomorrow: tomorrow} do
+      event =
+        external_event(user, at(tomorrow, ~T[13:00:00]),
+          summary: "Coloured",
+          uid: "uid-colour-2",
+          colour: "blueberry"
+        )
+
+      {:ok, _override} =
+        Calendar.set_event_colour(
+          user.id,
+          {:external, event.calendar_integration_id, "uid-colour-2"},
+          "tomato"
+        )
+
+      day = Agenda.day_agenda(user, "Etc/UTC")
+      assert find_entry(day, "Coloured").colour == "tomato"
+    end
+  end
+
   # --- Helpers ---------------------------------------------------------------
+
+  defp find_entry(day, title) do
+    [day.next | day.today ++ day.tomorrow]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.find(&(&1.title == title))
+  end
+
+  defp entry_integration_id(%Entry{target: {:external, id, _uid}}, _day), do: id
 
   defp booking(user, start, opts) do
     {status, opts} = Keyword.pop(opts, :status, "confirmed")

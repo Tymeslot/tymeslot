@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     - `__MODULE__.LineFolder` — RFC 5545 §3.1 content-line folding
   """
 
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Alarms
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
@@ -201,6 +202,42 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     raw = Enum.join(lines, "\r\n") <> "\r\n"
     LineFolder.fold_lines(raw)
   end
+
+  @doc """
+  Replaces (or inserts) the RFC 7986 `COLOR` property on every `VEVENT`
+  component of an existing raw iCalendar document, leaving every other
+  property (RRULE, ATTENDEE, VALARM, ORGANIZER, ...) untouched.
+
+  Used by the colour write-back path: rebuilding a bare VEVENT from a reduced
+  payload (as `build_simple_event/2` does) would silently drop recurrence,
+  attendee, and reminder data already present on a synced calendar entry.
+  Patching the authoritative `raw_ical` last read from the provider instead
+  guarantees no other field is lost.
+
+  Returns the document unchanged when `colour` does not map to a known CSS3
+  colour (see `EventColour.css_colour/1`) — nothing to patch.
+  """
+  @spec replace_colour_property(String.t(), String.t() | nil) :: String.t()
+  def replace_colour_property(raw_ical, colour) when is_binary(raw_ical) do
+    case EventColour.css_colour(colour) do
+      nil ->
+        raw_ical
+
+      css_name ->
+        raw_ical
+        |> LineFolder.unfold_lines()
+        |> Enum.reject(&(&1 == "" or String.starts_with?(&1, "COLOR:")))
+        |> Enum.flat_map(&inject_colour_after_vevent_begin(&1, css_name))
+        |> Enum.join("\r\n")
+        |> Kernel.<>("\r\n")
+        |> LineFolder.fold_lines()
+    end
+  end
+
+  defp inject_colour_after_vevent_begin("BEGIN:VEVENT" = line, css_name),
+    do: [line, "COLOR:#{css_name}"]
+
+  defp inject_colour_after_vevent_begin(line, _css_name), do: [line]
 
   @doc """
   Builds a recurrence rule (RRULE) string from a legacy string-keyed map.

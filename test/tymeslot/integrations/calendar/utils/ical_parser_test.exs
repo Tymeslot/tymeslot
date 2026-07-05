@@ -119,6 +119,42 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       assert String.contains?(event.summary, "multiple lines")
     end
 
+    test "extracts the COLOR property" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:evt-colour@example.com
+      SUMMARY:Coloured
+      DTSTART:20260702T100000Z
+      DTEND:20260702T110000Z
+      COLOR:royalblue
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.colour == "royalblue"
+    end
+
+    test "falls back to X-APPLE-CALENDAR-COLOR" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:evt-apple@example.com
+      SUMMARY:Apple
+      DTSTART:20260702T100000Z
+      DTEND:20260702T110000Z
+      X-APPLE-CALENDAR-COLOR:#4169E1FF
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.colour == "#4169E1FF"
+    end
+
     test "includes past events" do
       # The parser does not filter by time — callers handle date-range filtering.
       past_time = DateTime.add(DateTime.utc_now(), -86_400, :second)

@@ -81,7 +81,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliserTest do
       assert reminder.method == :popup
       assert reminder.minutes_before == 10
 
-      assert event.colour == "5"
+      assert event.colour == "banana"
       assert event.etag == "\"etag-abc\""
       assert event.recurrence_rule == "RRULE:FREQ=DAILY"
       assert event.provider_metadata["recurringEventId"] == "recurring-123"
@@ -261,6 +261,22 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliserTest do
 
       assert {:ok, [event]} = EventNormaliser.normalise_events(raw_events, @context)
       assert event.created_by_tymeslot == false
+    end
+
+    test "maps an unknown Google colorId to nil colour" do
+      raw_events = [
+        %{
+          "iCalUID" => "evt-x@google.com",
+          "id" => "evt-x",
+          "summary" => "X",
+          "colorId" => "999",
+          "start" => %{"dateTime" => "2026-07-02T10:00:00Z"},
+          "end" => %{"dateTime" => "2026-07-02T11:00:00Z"}
+        }
+      ]
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events(raw_events, @context)
+      assert event.colour == nil
     end
   end
 end

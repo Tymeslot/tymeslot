@@ -54,6 +54,21 @@ defmodule Tymeslot.Integrations.Calendar.EventColourTest do
       assert EventColour.tailwind_class("blueberry") == "bg-calendar-2"
     end
 
+    test "every palette entry maps to a distinct Tailwind class" do
+      classes = Enum.map(EventColour.palette(), fn {_key, _label, class} -> class end)
+
+      assert Enum.uniq(classes) == classes
+    end
+
+    test "tangerine and banana render as distinct, non-fallback colours" do
+      tangerine_class = EventColour.tailwind_class("tangerine")
+      banana_class = EventColour.tailwind_class("banana")
+
+      assert tangerine_class != banana_class
+      refute tangerine_class == "bg-calendar-fallback"
+      refute banana_class == "bg-calendar-fallback"
+    end
+
     test "returns nil for nil so callers fall back to integration colour" do
       assert EventColour.tailwind_class(nil) == nil
     end
@@ -89,6 +104,64 @@ defmodule Tymeslot.Integrations.Calendar.EventColourTest do
     test "returns nil for unknown keys so the builder omits the COLOR line" do
       assert EventColour.css_colour("not-a-key") == nil
       assert EventColour.css_colour(nil) == nil
+    end
+  end
+
+  describe "from_google_color_id/1" do
+    test "maps a known Google colorId to its palette key" do
+      assert EventColour.from_google_color_id("9") == "blueberry"
+      assert EventColour.from_google_color_id("11") == "tomato"
+      assert EventColour.from_google_color_id("3") == "grape"
+    end
+
+    test "returns nil for unknown or nil colorId" do
+      assert EventColour.from_google_color_id("999") == nil
+      assert EventColour.from_google_color_id(nil) == nil
+      assert EventColour.from_google_color_id(42) == nil
+    end
+
+    test "snaps Google colorIds without an exact palette match to the nearest key" do
+      assert EventColour.from_google_color_id("1") == "graphite"
+      assert EventColour.from_google_color_id("4") == "tomato"
+      assert EventColour.from_google_color_id("10") == "peacock"
+    end
+  end
+
+  describe "nearest_key/1" do
+    test "snaps an exact palette hex to its key" do
+      assert EventColour.nearest_key("#4169E1") == "blueberry"
+      assert EventColour.nearest_key("#FF6347") == "tomato"
+    end
+
+    test "snaps a near hex to the closest key" do
+      assert EventColour.nearest_key("#4269E2") == "blueberry"
+    end
+
+    test "accepts a known CSS colour name" do
+      assert EventColour.nearest_key("royalblue") == "blueberry"
+      assert EventColour.nearest_key("teal") == "peacock"
+    end
+
+    test "accepts a wider set of CSS3 colour names (RFC 7986 CalDAV COLOR)" do
+      assert EventColour.nearest_key("crimson") == "tomato"
+      assert EventColour.nearest_key("navy") == "peacock"
+      assert EventColour.nearest_key("olive") == "sage"
+      assert EventColour.nearest_key("cornflowerblue") == "blueberry"
+    end
+
+    test "ignores an alpha channel (#RRGGBBAA)" do
+      assert EventColour.nearest_key("#4169E1FF") == "blueberry"
+    end
+
+    test "expands 3-digit shorthand hex before snapping" do
+      assert EventColour.nearest_key("#f00") == "tomato"
+      assert EventColour.nearest_key("#F00") == "tomato"
+    end
+
+    test "returns nil for nil or unparseable input" do
+      assert EventColour.nearest_key(nil) == nil
+      assert EventColour.nearest_key("not-a-colour") == nil
+      assert EventColour.nearest_key(123) == nil
     end
   end
 end

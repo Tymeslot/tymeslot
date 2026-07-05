@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Agenda.Entry
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Utils.DateTimeUtils
 
   attr :entry, Entry, required: true
@@ -65,6 +66,51 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
             {calendar_label(@entry)}
           </.info_line>
         </dl>
+
+        <div :if={@entry.target}>
+          <p id="agenda-colour-picker-label" class="text-token-xs font-black uppercase tracking-widest text-tymeslot-400 mb-2">
+            Colour
+          </p>
+          <div
+            role="radiogroup"
+            aria-labelledby="agenda-colour-picker-label"
+            class="flex flex-wrap items-center gap-2"
+          >
+            <button
+              :for={{key, label, swatch_class} <- EventColour.palette()}
+              type="button"
+              role="radio"
+              aria-checked={@entry.colour == key}
+              phx-click="set_entry_colour"
+              phx-value-colour={key}
+              phx-value-target={encode_target(@entry.target)}
+              phx-target={@myself}
+              aria-label={label}
+              class={[
+                "w-7 h-7 rounded-token-full border-2 transition",
+                swatch_class,
+                @entry.colour == key && "ring-2 ring-turquoise-500 ring-offset-2 border-white",
+                @entry.colour != key && "border-transparent hover:scale-110"
+              ]}
+            >
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={@entry.colour == nil}
+              phx-click="clear_entry_colour"
+              phx-value-target={encode_target(@entry.target)}
+              phx-target={@myself}
+              class={[
+                "inline-flex items-center h-7 px-3 rounded-token-full border text-token-xs font-bold transition",
+                @entry.colour == nil && "border-turquoise-400 text-turquoise-700 bg-turquoise-50",
+                @entry.colour != nil && "border-tymeslot-200 text-tymeslot-500 hover:bg-tymeslot-50"
+              ]}
+            >
+              Default
+            </button>
+          </div>
+        </div>
       </div>
 
       <:footer :if={@entry.join_url || @entry.source == :tymeslot}>
@@ -90,6 +136,12 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
     </.modal>
     """
   end
+
+  # Encodes an entry's colour target into a DOM-safe string for `phx-value-*`.
+  # `DashboardOverviewComponent.decode_target/1` is the inverse. `parts: 2` keeps
+  # any colons inside a provider uid intact on the way back.
+  defp encode_target({:meeting, id}), do: "meeting:#{id}"
+  defp encode_target({:external, integration_id, uid}), do: "external:#{integration_id}:#{uid}"
 
   # --- Info rows -------------------------------------------------------------
 

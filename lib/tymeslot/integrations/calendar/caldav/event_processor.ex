@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
 
@@ -165,6 +166,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
         recurrence_id: raw[:recurrence_id],
         recurrence_id_range: raw[:recurrence_id_range],
         etag: raw[:etag],
+        colour: EventColour.nearest_key(raw[:colour]),
         provider_metadata: Map.drop(raw, [:raw_ical, :href, :_occ_start, :_occ_end, :_recurring]),
         raw_ical: raw[:raw_ical],
         created_by_tymeslot: tymeslot_origin?(raw)
