@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
   test "user clears a colour override", %{conn: conn, user: user} do
     integration = all_day_event(user, "uid-colour-clear")
 
-    {:ok, _} =
+    {:ok, _override} =
       Calendar.set_event_colour(
         user.id,
         {:external, integration.id, "uid-colour-clear"},
@@ -77,5 +77,66 @@ defmodule TymeslotWeb.Dashboard.DashboardAgendaColourTest do
     view |> element(~s{button[phx-click="clear_entry_colour"]}) |> render_click()
 
     assert Calendar.overrides_for(user.id) == %{}
+  end
+
+  test "user colours a booking entry via the {:meeting, id} target", %{conn: conn, user: user} do
+    tomorrow = Date.add(Date.utc_today(), 1)
+    start = DateTime.new!(tomorrow, ~T[12:00:00], "Etc/UTC")
+
+    meeting =
+      insert(:meeting,
+        organizer_email: user.email,
+        start_time: start,
+        end_time: DateTime.add(start, 3600, :second),
+        status: "confirmed",
+        title: "Quarterly review"
+      )
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+    view
+    |> element(~s([aria-label="View details for Quarterly review"]))
+    |> render_click()
+
+    html =
+      view
+      |> element(~s{button[phx-click="set_entry_colour"][phx-value-colour="blueberry"]})
+      |> render_click()
+
+    # Persisted as a durable override, keyed on the meeting id.
+    assert Calendar.overrides_for(user.id) == %{{:meeting, meeting.id} => "blueberry"}
+
+    # And the agenda re-renders in that palette colour (blueberry → bg-calendar-2).
+    assert html =~ "bg-calendar-2"
+  end
+
+  test "malformed colour targets are ignored without crashing the LiveView",
+       %{conn: conn, user: user} do
+    all_day_event(user, "uid-malformed-target")
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+    view |> element("button", "Company offsite") |> render_click()
+
+    for target <- ["foo", "external:5", "external:abc:uid"] do
+      html =
+        view
+        |> element(~s{button[phx-click="set_entry_colour"][phx-value-colour="blueberry"]})
+        |> render_click(%{"target" => target})
+
+      # A tampered target is silently ignored — the modal stays open, no crash.
+      assert html =~ "Company offsite"
+    end
+
+    html =
+      view
+      |> element(~s{button[phx-click="clear_entry_colour"]})
+      |> render_click(%{"target" => "foo"})
+
+    assert html =~ "Company offsite"
+
+    # Nothing was ever persisted, and the LiveView process survived throughout.
+    assert Calendar.overrides_for(user.id) == %{}
+    assert Process.alive?(view.pid)
   end
 end

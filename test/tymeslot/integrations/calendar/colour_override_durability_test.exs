@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrideDurabilityTest do
   """
   use Tymeslot.DataCase, async: true
 
+  @moduletag :calendar
+
   alias Tymeslot.Agenda
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -37,7 +39,7 @@ defmodule Tymeslot.Integrations.Calendar.ColourOverrideDurabilityTest do
 
     insert_cached(integration, start_at)
 
-    {:ok, _} =
+    {:ok, _override} =
       Calendar.set_event_colour(user.id, {:external, integration.id, "uid-dur"}, "tomato")
 
     # Simulate a full re-sync: prune the cache row, then re-insert it from provider

@@ -267,7 +267,7 @@ defmodule Tymeslot.AgendaTest do
           colour: "blueberry"
         )
 
-      {:ok, _} =
+      {:ok, _override} =
         Calendar.set_event_colour(
           user.id,
           {:external, event.calendar_integration_id, "uid-colour-2"},

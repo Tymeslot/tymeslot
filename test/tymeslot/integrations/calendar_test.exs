@@ -1,5 +1,6 @@
 defmodule Tymeslot.Integrations.CalendarTest do
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :integrations
 
   import Tymeslot.Factory
@@ -8,6 +9,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Diagnostics
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Workers.ColourWriteBackWorker
 
   setup :verify_on_exit!
 
@@ -158,16 +160,86 @@ defmodule Tymeslot.Integrations.CalendarTest do
     end
 
     test "sets a durable override for an external event", %{user: user, integ: integ} do
-      assert {:ok, _} =
+      assert {:ok, _override} =
                Calendar.set_event_colour(user.id, {:external, integ.id, "uid-1"}, "blueberry")
 
       assert Calendar.overrides_for(user.id) == %{{:external, integ.id, "uid-1"} => "blueberry"}
     end
 
     test "clears an override", %{user: user, integ: integ} do
-      {:ok, _} = Calendar.set_event_colour(user.id, {:external, integ.id, "uid-1"}, "blueberry")
+      {:ok, _override} =
+        Calendar.set_event_colour(user.id, {:external, integ.id, "uid-1"}, "blueberry")
+
       :ok = Calendar.clear_event_colour(user.id, {:external, integ.id, "uid-1"})
       assert Calendar.overrides_for(user.id) == %{}
+    end
+
+    test "sets a durable override for a meeting", %{user: user} do
+      meeting = insert(:meeting)
+
+      assert {:ok, _override} = Calendar.set_event_colour(user.id, {:meeting, meeting.id}, "sage")
+      assert Calendar.overrides_for(user.id) == %{{:meeting, meeting.id} => "sage"}
+    end
+  end
+
+  describe "set_event_colour cross-tenant safety" do
+    test "an override targeting another user's integration is scoped to the setter, never the target owner" do
+      user_a = insert(:user)
+      user_b = insert(:user)
+      integ_b = insert(:calendar_integration, user: user_b)
+
+      assert {:ok, _override} =
+               Calendar.set_event_colour(user_a.id, {:external, integ_b.id, "uid-x"}, "blueberry")
+
+      assert Calendar.overrides_for(user_b.id) == %{}
+
+      assert Calendar.overrides_for(user_a.id) ==
+               %{{:external, integ_b.id, "uid-x"} => "blueberry"}
+    end
+
+    test "an override targeting another user's meeting is scoped to the setter, never the owner" do
+      user_a = insert(:user)
+      user_b = insert(:user)
+      meeting = insert(:meeting, organizer_email: user_b.email)
+
+      assert {:ok, _override} =
+               Calendar.set_event_colour(user_a.id, {:meeting, meeting.id}, "sage")
+
+      assert Calendar.overrides_for(user_b.id) == %{}
+      assert Calendar.overrides_for(user_a.id) == %{{:meeting, meeting.id} => "sage"}
+    end
+
+    test "write-back for a foreign integration is not authorised" do
+      user_a = insert(:user)
+      user_b = insert(:user)
+      integ_b = insert(:calendar_integration, user: user_b, provider: "google")
+
+      insert(:provider_calendar_event,
+        calendar_integration: integ_b,
+        uid: "uid-x",
+        provider: "google"
+      )
+
+      assert {:ok, _override} =
+               Calendar.set_event_colour(user_a.id, {:external, integ_b.id, "uid-x"}, "blueberry")
+
+      # The write-back job carries the *setter's* user_id, not the target
+      # owner's. When it runs, `Calendar.Events.update_event/3` resolves the
+      # provider client via `fetch_integration_for_user(integration_id, user_id)`,
+      # which returns `:not_found` for an integration the setter does not own
+      # (see the "returns error when belongs to another user" test above), so the
+      # foreign write-back is rejected at the real authorisation gate. That gate
+      # is bypassed here because the calendar module is mocked, so we assert the
+      # observable contract instead: the job is scoped to the setter.
+      assert_enqueued(
+        worker: ColourWriteBackWorker,
+        args: %{
+          "user_id" => user_a.id,
+          "integration_id" => integ_b.id,
+          "uid" => "uid-x",
+          "colour" => "blueberry"
+        }
+      )
     end
   end
 end
