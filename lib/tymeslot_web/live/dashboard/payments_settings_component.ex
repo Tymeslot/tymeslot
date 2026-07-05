@@ -10,10 +10,13 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   This component owns only orchestration: data loading, event handling, and
   composing the presentational sub-components under
   `TymeslotWeb.Dashboard.PaymentsSettings.*`. Following the dashboard
-  convention, it reloads the host's connect account, payments, stats, and
-  pending count in `update/2`. Flash messages are forwarded to the parent
-  LiveView via `Flash` (a bare `put_flash/3` inside a LiveComponent never
-  reaches the rendered flash group).
+  convention, it reloads the host's payments, stats, and pending count in
+  `update/2` — the connect account is reused from the integrations hub's
+  already-loaded `connect_account` assign when present, and loaded
+  independently only when mounted standalone (the `:payments` dashboard
+  action). Flash messages are forwarded to the parent LiveView via `Flash`
+  (a bare `put_flash/3` inside a LiveComponent never reaches the rendered
+  flash group).
   """
   use TymeslotWeb, :live_component
 
@@ -47,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   @spec update(map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def update(assigns, socket) do
     socket = assign(socket, assigns)
-    {:ok, assign_payments_state(socket, socket.assigns.current_user)}
+    {:ok, assign_payments_state(socket, socket.assigns.current_user, assigns)}
   end
 
   @impl Phoenix.LiveComponent
@@ -294,9 +297,24 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     {:noreply, assign(socket, :refund_submitting, false)}
   end
 
-  defp assign_payments_state(socket, user) do
+  # Mutation handlers always want a fresh reload of everything (the account
+  # itself may have just changed), so they call the 2-arity form.
+  defp assign_payments_state(socket, user), do: assign_payments_state(socket, user, %{})
+
+  # `update/2` passes the raw incoming assigns: when the integrations hub has
+  # already loaded the connect account for its active tab child, reuse it
+  # instead of re-querying the same row. Falls back to loading independently
+  # when mounted standalone via the `:payments` dashboard action (no
+  # `connect_account` assign present).
+  defp assign_payments_state(socket, user, assigns) do
+    connect_account =
+      case assigns do
+        %{connect_account: connect_account} -> connect_account
+        _no_connect_account -> MeetingPayments.get_connect_account_for_user(user.id)
+      end
+
     socket
-    |> assign(:connect_account, MeetingPayments.get_connect_account_for_user(user.id))
+    |> assign(:connect_account, connect_account)
     |> assign(:payments, MeetingPayments.list_payments_for_host(user.id))
     |> assign(:stats, MeetingPayments.lifetime_stats_for_host(user.id))
     |> assign(:pending_payments_count, MeetingPayments.count_pending_payments_for_host(user.id))

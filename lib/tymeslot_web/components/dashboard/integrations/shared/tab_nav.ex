@@ -9,6 +9,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav do
   use Phoenix.Component
   use TymeslotWeb, :verified_routes
 
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
+
   attr :active_tab, :atom, required: true
   attr :tabs, :list, required: true
 
@@ -19,8 +21,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav do
       <.link
         :for={tab <- @tabs}
         patch={~p"/dashboard/integrations?tab=#{tab.id}"}
+        id={"tab-#{tab.id}"}
         role="tab"
         aria-selected={to_string(tab.id == @active_tab)}
+        aria-controls={"tab-panel-#{tab.id}"}
         class={[
           "flex items-center gap-2 px-4 py-2.5 text-token-sm font-semibold -mb-px border-b-2",
           (tab.id == @active_tab && "text-turquoise-700 border-turquoise-500") ||
@@ -34,17 +38,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav do
         >
           {tab.count}
         </span>
-        <span
-          :if={tab.status != :ok}
-          class={["h-1.5 w-1.5 rounded-token-full", dot(tab.status)]}
-          aria-hidden="true"
-        />
+        <span :if={tab.status != :ok} class="inline-flex items-center">
+          <span
+            class={["h-1.5 w-1.5 rounded-token-full", UIComponents.dot_classes(tab.status)]}
+            aria-hidden="true"
+          />
+          <span class="sr-only">{tab.status} — needs attention</span>
+        </span>
       </.link>
     </div>
     """
   end
-
-  defp dot(:warning), do: "bg-amber-500"
-  defp dot(:error), do: "bg-red-500"
-  defp dot(_status), do: "bg-transparent"
 end

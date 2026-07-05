@@ -201,6 +201,13 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_params(params, _url, socket) do
     case Map.fetch(@legacy_integration_tabs, socket.assigns.live_action) do
       {:ok, tab} ->
+        socket =
+          if socket.assigns.live_action == :payments && !socket.assigns.payments_allowed do
+            put_flash(socket, :error, "Meeting payments require an upgraded plan.")
+          else
+            socket
+          end
+
         {:noreply, push_navigate(socket, to: hub_tab_path(tab, params))}
 
       :error ->
@@ -295,7 +302,6 @@ defmodule TymeslotWeb.DashboardLive do
       integration_status={@integration_status}
       automations_allowed={@automations_allowed}
       analytics_allowed={@analytics_allowed}
-      payments_allowed={@payments_allowed}
       full_width={@live_action == :calendar}
       sidebar_extensions={@sidebar_extensions}
       unseen_announcements={@unseen_announcements}

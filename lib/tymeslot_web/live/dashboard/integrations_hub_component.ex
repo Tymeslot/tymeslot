@@ -5,7 +5,8 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   import TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav
 
   alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingPayments
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
@@ -23,41 +24,52 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
 
     calendars = Calendar.list_integrations(user_id)
     videos = Video.list_integrations(user_id)
-    unhealthy_ids = unhealthy_ids_by_type(user_id)
-    payment_state = payment_display_state(payments_allowed?, user_id)
+    health_states = health_states_by_type(user_id)
+    connect_account = load_connect_account(payments_allowed?, user_id)
+    payment_state = MeetingPayments.connect_display_state(connect_account)
 
     # A single attention list drives both the aggregated banner and the
     # per-tab status dots — one source of truth for "what needs attention".
-    attention = attention_items(calendars, videos, unhealthy_ids, payment_state)
+    attention = attention_items(calendars, videos, health_states, payment_state)
 
     {:ok,
      socket
      |> assign(:tabs, build_tabs(calendars, videos, attention, payments_allowed?))
      |> assign(:attention, attention)
+     # Handed down to the active tab's child component so it can reuse this
+     # data instead of re-querying it in its own `update/2` — see the
+     # `integrations`/`health_states`/`connect_account` props below.
+     |> assign(:calendars, calendars)
+     |> assign(:videos, videos)
+     |> assign(:health_states, health_states)
+     |> assign(:connect_account, connect_account)
      |> assign(:active_tab, parse_tab(assigns[:params], payments_allowed?))}
   end
 
   # ── Summary data loading ──────────────────────────────────────────
 
-  defp unhealthy_ids_by_type(user_id) do
+  # Builds the same `%{integration_id => health_state}` shape the per-row
+  # calendar/video settings components use, so the hub's attention
+  # classification and the row badges are derived from one health source.
+  defp health_states_by_type(user_id) do
     grouped =
       user_id
-      |> IntegrationHealthStateQueries.list_unhealthy_for_user()
-      |> Enum.group_by(& &1.integration_type, & &1.integration_id)
+      |> HealthCheck.list_unhealthy_for_user()
+      |> Enum.group_by(& &1.integration_type)
+      |> Map.new(fn {type, records} ->
+        {type, Map.new(records, &{&1.integration_id, Monitor.from_db_record(&1)})}
+      end)
 
     %{
-      calendars: MapSet.new(Map.get(grouped, "calendar", [])),
-      video: MapSet.new(Map.get(grouped, "video", []))
+      calendars: Map.get(grouped, "calendar", %{}),
+      video: Map.get(grouped, "video", %{})
     }
   end
 
-  defp payment_display_state(false, _user_id), do: nil
+  defp load_connect_account(false, _user_id), do: nil
 
-  defp payment_display_state(true, user_id) do
-    user_id
-    |> MeetingPayments.get_connect_account_for_user()
-    |> MeetingPayments.connect_display_state()
-  end
+  defp load_connect_account(true, user_id),
+    do: MeetingPayments.get_connect_account_for_user(user_id)
 
   # ── Tabs ──────────────────────────────────────────────────────────
 
@@ -96,30 +108,35 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
 
   # ── Attention aggregation ─────────────────────────────────────────
 
-  defp attention_items(calendars, videos, unhealthy_ids, payment_state) do
+  defp attention_items(calendars, videos, health_states, payment_state) do
     items =
-      integration_attention(calendars, unhealthy_ids.calendars, :calendars) ++
-        integration_attention(videos, unhealthy_ids.video, :video) ++
+      integration_attention(calendars, health_states.calendars, :calendars) ++
+        integration_attention(videos, health_states.video, :video) ++
         payment_attention(payment_state)
 
     Enum.sort_by(items, &severity_rank(&1.severity))
   end
 
-  defp integration_attention(integrations, unhealthy_ids, tab),
-    do: Enum.flat_map(integrations, &attention_for(&1, unhealthy_ids, tab))
+  defp integration_attention(integrations, health_states, tab),
+    do: Enum.flat_map(integrations, &attention_for(&1, health_states, tab))
 
-  # Paused integrations never raise attention; a stale credential (`needs_reauth`)
-  # takes precedence over a failing health probe, mirroring the per-row badge.
-  defp attention_for(%{is_active: true, needs_reauth: true} = integration, _ids, tab),
-    do: [%{tab: tab, severity: :warning, message: "#{integration.name} needs reconnecting."}]
+  # Delegates precedence (paused → needs_reauth → unhealthy → healthy) to the
+  # canonical `HealthCheck.attention_status/2` classifier, the same one the
+  # per-row badges use, so the two can never drift.
+  defp attention_for(integration, health_states, tab) do
+    health = Map.get(health_states, integration.id)
 
-  defp attention_for(%{is_active: true, id: id} = integration, ids, tab) do
-    if MapSet.member?(ids, id),
-      do: [%{tab: tab, severity: :warning, message: "#{integration.name} stopped syncing."}],
-      else: []
+    case HealthCheck.attention_status(integration, health) do
+      :needs_reauth ->
+        [%{tab: tab, severity: :warning, message: "#{integration.name} needs reconnecting."}]
+
+      :unhealthy ->
+        [%{tab: tab, severity: :warning, message: "#{integration.name} stopped syncing."}]
+
+      _no_attention ->
+        []
+    end
   end
-
-  defp attention_for(_integration, _ids, _tab), do: []
 
   defp payment_attention(:restricted),
     do: [%{tab: :payments, severity: :error, message: "Your Stripe account is restricted."}]
@@ -213,7 +230,12 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
       </.info_box>
 
       <.integrations_tab_nav active_tab={@active_tab} tabs={@tabs} />
-      <div data-tab-panel={@active_tab}>
+      <div
+        role="tabpanel"
+        id={"tab-panel-#{@active_tab}"}
+        aria-labelledby={"tab-#{@active_tab}"}
+        data-tab-panel={@active_tab}
+      >
         <.live_component
           :if={@active_tab == :calendars}
           module={CalendarSettingsComponent}
@@ -222,6 +244,8 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
           integration_status={@integration_status}
           client_ip={@client_ip}
           user_agent={@user_agent}
+          integrations={@calendars}
+          health_states={@health_states.calendars}
         />
         <.live_component
           :if={@active_tab == :video}
@@ -231,12 +255,15 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
           integration_status={@integration_status}
           client_ip={@client_ip}
           user_agent={@user_agent}
+          integrations={@videos}
+          health_states={@health_states.video}
         />
         <.live_component
           :if={@active_tab == :payments}
           module={PaymentsSettingsComponent}
           id="payments-settings"
           current_user={@current_user}
+          connect_account={@connect_account}
         />
       </div>
     </div>

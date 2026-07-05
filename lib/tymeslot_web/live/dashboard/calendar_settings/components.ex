@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.TokenUtils
+  alias Tymeslot.Integrations.HealthCheck
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.{
     AppleConfig,
@@ -317,26 +318,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       myself={@myself}
     >
       <:header_action :if={@integration.needs_reauth}>
-        <button
-          :if={@integration.provider in ["google", "outlook"]}
-          phx-click="connect_provider"
-          phx-value-provider={@integration.provider}
-          phx-target={@myself}
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-token-xl font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
-          title="Reconnect integration"
-        >
-          <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
-        </button>
-        <button
-          :if={@integration.provider not in ["google", "outlook"]}
-          phx-click="show_reconnect"
-          phx-value-id={@integration.id}
-          phx-target="#caldav-reconnect-modal"
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-token-xl font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
-          title="Reconnect integration"
-        >
-          <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
-        </button>
+        <.reconnect_button
+          provider={@integration.provider}
+          integration_id={@integration.id}
+          myself={@myself}
+          variant={:header}
+        />
       </:header_action>
 
       <:detail>
@@ -361,7 +348,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
                 phx-value-calendar_id={calendar_id}
                 phx-target={@myself}
                 class={[
-                  "inline-flex items-center gap-2.5 px-3.5 py-2 rounded-token-xl border-2 transition-all text-xs font-bold",
+                  "inline-flex items-center gap-2.5 px-3.5 py-2 rounded-token-xl border-2 transition-all text-token-xs font-bold",
                   is_selected &&
                     "bg-turquoise-50 border-turquoise-400 text-turquoise-900 shadow-sm shadow-turquoise-500/5",
                   !is_selected &&
@@ -370,48 +357,23 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               >
                 <div
                   :if={color && is_selected}
-                  class="w-2.5 h-2.5 rounded-full ring-2 ring-white"
+                  class="w-2.5 h-2.5 rounded-token-full ring-2 ring-white"
                   style={"background-color: #{color}"}
                 />
                 <span>{calendar_name}</span>
                 <span
                   :if={calendar["primary"] || calendar[:primary]}
-                  class="text-[9px] font-black bg-tymeslot-200 px-1.5 py-0.5 rounded text-tymeslot-600 uppercase tracking-tighter"
+                  class="text-token-2xs font-black bg-tymeslot-200 px-1.5 py-0.5 rounded-token-sm text-tymeslot-600 uppercase tracking-tighter"
                 >
                   Primary
                 </span>
-                <svg
-                  :if={is_selected}
-                  class="w-3.5 h-3.5 text-turquoise-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="3"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
+                <.icon :if={is_selected} name="hero-check" class="w-3.5 h-3.5 text-turquoise-600" />
               </button>
             <% end %>
 
             <div :if={@calendar_list == []} class="flex items-center gap-2 text-tymeslot-400 py-2">
-              <svg
-                class="w-4 h-4 animate-pulse"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span class="text-xs font-medium italic">
+              <.icon name="hero-information-circle" class="w-4 h-4 animate-pulse" />
+              <span class="text-token-xs font-medium italic">
                 No calendars found. Try refreshing the integration.
               </span>
             </div>
@@ -430,26 +392,13 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
         >
           <.icon name="hero-bolt" class="w-4 h-4" /> Upgrade
         </button>
-        <button
-          :if={@integration.provider in ["google", "outlook"] && !@integration.needs_reauth}
-          phx-click="connect_provider"
-          phx-value-provider={@integration.provider}
-          phx-target={@myself}
-          class="flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-700 rounded-token-xl font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
-          title="Reconnect integration"
-        >
-          <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
-        </button>
-        <button
-          :if={@integration.provider not in ["google", "outlook"] && !@integration.needs_reauth}
-          phx-click="show_reconnect"
-          phx-value-id={@integration.id}
-          phx-target="#caldav-reconnect-modal"
-          class="flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-700 rounded-token-xl font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
-          title="Reconnect integration"
-        >
-          <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
-        </button>
+        <.reconnect_button
+          :if={!@integration.needs_reauth}
+          provider={@integration.provider}
+          integration_id={@integration.id}
+          myself={@myself}
+          variant={:inline}
+        />
         <button
           phx-click="show"
           phx-value-id={@integration.id}
@@ -463,6 +412,49 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     </ConnectionRow.connection_row>
     """
   end
+
+  # Reconnect control shared by the collapsed-header (`:header) and expanded
+  # (`:inline`) placements: oauth providers re-trigger `connect_provider`,
+  # everything else opens the CalDAV reconnect modal.
+  attr :provider, :string, required: true
+  attr :integration_id, :any, required: true
+  attr :myself, :any, required: true
+  attr :variant, :atom, values: [:header, :inline], required: true
+
+  defp reconnect_button(assigns) do
+    assigns = assign(assigns, :class, reconnect_button_class(assigns.variant))
+
+    ~H"""
+    <button
+      :if={@provider in ["google", "outlook"]}
+      phx-click="connect_provider"
+      phx-value-provider={@provider}
+      phx-target={@myself}
+      class={@class}
+      title="Reconnect integration"
+    >
+      <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
+    </button>
+    <button
+      :if={@provider not in ["google", "outlook"]}
+      phx-click="show_reconnect"
+      phx-value-id={@integration_id}
+      phx-target="#caldav-reconnect-modal"
+      class={@class}
+      title="Reconnect integration"
+    >
+      <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
+    </button>
+    """
+  end
+
+  defp reconnect_button_class(:header),
+    do:
+      "flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-token-xl font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
+
+  defp reconnect_button_class(:inline),
+    do:
+      "flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-700 rounded-token-xl font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
 
   @doc """
   Builds a one-line human summary for a calendar integration — account
@@ -483,14 +475,17 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     |> Enum.join(" · ")
   end
 
-  # Status-first badge mapping, dispatched on integration/health shape.
-  defp integration_status(%{is_active: false}, _health), do: {:paused, "Paused"}
-  defp integration_status(%{needs_reauth: true}, _health), do: {:warning, "Reconnect"}
-
-  defp integration_status(_integration, %{status: :unhealthy}),
-    do: {:warning, "Connection issues"}
-
-  defp integration_status(_integration, _health), do: {:ok, "Healthy"}
+  # Status-first badge mapping. Precedence lives in the canonical
+  # `HealthCheck.attention_status/2` classifier; this just maps the atom to
+  # this row's badge variant/label.
+  defp integration_status(integration, health) do
+    case HealthCheck.attention_status(integration, health) do
+      :paused -> {:paused, "Paused"}
+      :needs_reauth -> {:warning, "Reconnect"}
+      :unhealthy -> {:warning, "Connection issues"}
+      :ok -> {:ok, "Healthy"}
+    end
+  end
 
   defp conflict_segment(%{is_active: true}, calendar_list) when calendar_list != [] do
     selected = Enum.count(calendar_list, &(&1["selected"] || &1[:selected]))

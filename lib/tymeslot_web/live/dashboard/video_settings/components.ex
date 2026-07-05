@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   """
   use TymeslotWeb, :html
 
+  alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Providers.Directory, as: ProviderDirectory
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
 
@@ -179,14 +180,17 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     [integration.provider_account_email || host(integration.base_url)]
   end
 
-  # Status-first badge mapping, dispatched on integration/health shape.
-  defp video_status(%{is_active: false}, _health), do: {:paused, "Paused"}
-  defp video_status(%{needs_reauth: true}, _health), do: {:warning, "Reconnect"}
-
-  defp video_status(_integration, %{status: :unhealthy}),
-    do: {:warning, "Connection issues"}
-
-  defp video_status(_integration, _health), do: {:ok, "Healthy"}
+  # Status-first badge mapping. Precedence lives in the canonical
+  # `HealthCheck.attention_status/2` classifier; this just maps the atom to
+  # this row's badge variant/label.
+  defp video_status(integration, health) do
+    case HealthCheck.attention_status(integration, health) do
+      :paused -> {:paused, "Paused"}
+      :needs_reauth -> {:warning, "Reconnect"}
+      :unhealthy -> {:warning, "Connection issues"}
+      :ok -> {:ok, "Healthy"}
+    end
+  end
 
   defp type_tag(provider) when provider in @oauth_providers, do: "OAuth"
   defp type_tag("mirotalk"), do: "self-hosted"

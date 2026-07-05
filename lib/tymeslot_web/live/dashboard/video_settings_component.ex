@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   """
   use TymeslotWeb, :live_component
 
-  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Integrations.Video
@@ -45,10 +45,25 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     socket =
       socket
       |> assign(assigns)
-      |> load_integrations()
+      |> maybe_load_integrations(assigns)
 
     {:ok, socket}
   end
+
+  # The integrations hub already loads the video list and health states for
+  # its active tab child (one query per hub render instead of two) and
+  # passes them down as the `integrations`/`health_states` props. Reuse them
+  # when present; fall back to loading independently otherwise — e.g. when
+  # mounted standalone via the `:video_integration` dashboard action, or when
+  # a `send_update/2` targets us with a partial assign (those always want a
+  # fresh reload, matching prior behaviour).
+  defp maybe_load_integrations(socket, %{
+         integrations: _integrations,
+         health_states: _health_states
+       }),
+       do: socket
+
+  defp maybe_load_integrations(socket, _assigns), do: load_integrations(socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_row", %{"id" => id}, socket) do
@@ -485,7 +500,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
     health_states =
       user_id
-      |> IntegrationHealthStateQueries.list_unhealthy_for_user()
+      |> HealthCheck.list_unhealthy_for_user()
       |> Enum.filter(&(&1.integration_type == "video"))
       |> Map.new(fn s -> {s.integration_id, Monitor.from_db_record(s)} end)
 

@@ -84,6 +84,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   defp state_title(:restricted), do: "Restricted"
   defp state_title(:deleted), do: "Disconnected"
   defp state_title(:incomplete), do: "Finish connecting Stripe"
+  defp state_title(:not_connected), do: "Not connected"
 
   defp state_message(%{disabled_reason: r}, :restricted), do: "Reason: #{r}"
   defp state_message(_account, :ready), do: "Charges and payouts are enabled."
@@ -98,4 +99,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
 
   defp state_message(_account, :deleted),
     do: "Your Stripe account is disconnected. Reconnect to accept payments again."
+
+  defp state_message(_account, :not_connected),
+    do: "Connect Stripe to start charging for meetings."
 end

@@ -208,9 +208,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   defp variant_classes(:info), do: "bg-sky-50 border border-sky-200 text-sky-800"
   defp variant_classes(:paused), do: "bg-tymeslot-50 border border-tymeslot-200 text-tymeslot-800"
 
-  defp dot_classes(:ok), do: "bg-emerald-500"
-  defp dot_classes(:warning), do: "bg-amber-500"
-  defp dot_classes(:error), do: "bg-red-500"
-  defp dot_classes(:info), do: "bg-sky-500"
-  defp dot_classes(:paused), do: "bg-tymeslot-400"
+  @doc """
+  Maps a status variant to its coloured-dot background class. Shared by
+  `status_badge/1` and `TabNav.integrations_tab_nav/1` so the two status
+  indicators never drift out of sync.
+  """
+  @spec dot_classes(atom()) :: String.t()
+  def dot_classes(:ok), do: "bg-emerald-500"
+  def dot_classes(:warning), do: "bg-amber-500"
+  def dot_classes(:error), do: "bg-red-500"
+  def dot_classes(:info), do: "bg-sky-500"
+  def dot_classes(:paused), do: "bg-tymeslot-400"
 end

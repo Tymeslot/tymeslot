@@ -18,7 +18,6 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   attr :integration_status, :map, default: %{}
   attr :automations_allowed, :boolean, default: true
   attr :analytics_allowed, :boolean, default: true
-  attr :payments_allowed, :boolean, default: false
   attr :full_width, :boolean, default: false
   attr :sidebar_extensions, :list, default: []
   attr :unseen_announcements, :list, default: []
