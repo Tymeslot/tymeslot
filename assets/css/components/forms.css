@@ -141,7 +141,7 @@ select.input {
 
 /* Inline field-level validation message (legacy twin of .form-error above) */
 .field-error {
-  @apply text-red-600 text-sm mt-1;
+  @apply text-red-600 text-token-sm mt-1;
 }
 
 /* Form Field — labelled input group with branded label + input */

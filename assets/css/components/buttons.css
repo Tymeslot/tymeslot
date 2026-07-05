@@ -112,6 +112,6 @@
 /* Small-screen action button sizing */
 @media (max-width: 640px) {
   .action-button {
-    @apply px-4 py-2 text-sm;
+    @apply px-4 py-2 text-token-sm;
   }
 }
