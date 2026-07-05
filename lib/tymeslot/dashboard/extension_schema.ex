@@ -154,6 +154,43 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
   @spec available_icons() :: [String.t()]
   def available_icons, do: Heroicons.names()
 
+  @doc """
+  Filters a list of dashboard extensions down to only the valid ones,
+  logging a warning for each extension that fails validation.
+
+  Consumers that don't call `validate_and_log!/1` at startup (it is opt-in)
+  can still populate `:dashboard_sidebar_extensions` with a malformed entry.
+  Calling this at the point extensions are loaded into assigns guarantees
+  only well-formed extensions ever reach rendering.
+  """
+  @spec filter_valid([map()]) :: [extension()]
+  def filter_valid(extensions) when is_list(extensions) do
+    Enum.filter(extensions, &valid_extension?/1)
+  end
+
+  defp valid_extension?(extension) when is_map(extension) do
+    case validate(extension) do
+      :ok ->
+        true
+
+      {:error, errors} ->
+        Logger.warning("Dropping invalid dashboard extension",
+          extension: inspect(extension),
+          errors: errors
+        )
+
+        false
+    end
+  end
+
+  defp valid_extension?(extension) do
+    Logger.warning("Dropping invalid dashboard extension: not a map",
+      extension: inspect(extension)
+    )
+
+    false
+  end
+
   # Private validation functions
 
   defp validate_required_fields(errors, extension) do

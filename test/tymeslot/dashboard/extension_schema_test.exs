@@ -66,6 +66,19 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
       assert Enum.any?(errors, &String.contains?(&1, ~s(Invalid icon "hero-invalid-icon")))
     end
 
+    test "rejects extension with atom icon" do
+      extension = %{
+        id: :test,
+        label: "Test",
+        icon: :home,
+        path: "/test",
+        action: :test
+      }
+
+      assert {:error, errors} = ExtensionSchema.validate(extension)
+      assert Enum.any?(errors, &String.contains?(&1, "Field :icon must be a string"))
+    end
+
     test "accepts all available icons" do
       for icon <- ExtensionSchema.available_icons() do
         extension = %{

@@ -240,6 +240,43 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
     end
   end
 
+  describe "malformed extension icon" do
+    test "drops extension with atom icon and still renders the dashboard", %{conn: conn} do
+      Application.put_env(:tymeslot, :dashboard_sidebar_extensions, [
+        %{
+          id: :bad_atom_icon,
+          label: "Bad Atom Icon",
+          icon: :home,
+          path: "/dashboard/bad-atom-icon",
+          action: :bad_atom_icon
+        }
+      ])
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      # Dashboard must still render — no FunctionClauseError from <.icon>
+      assert html =~ "Overview"
+      refute html =~ "Bad Atom Icon"
+    end
+
+    test "drops extension with nil icon and still renders the dashboard", %{conn: conn} do
+      Application.put_env(:tymeslot, :dashboard_sidebar_extensions, [
+        %{
+          id: :bad_nil_icon,
+          label: "Bad Nil Icon",
+          icon: nil,
+          path: "/dashboard/bad-nil-icon",
+          action: :bad_nil_icon
+        }
+      ])
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      assert html =~ "Overview"
+      refute html =~ "Bad Nil Icon"
+    end
+  end
+
   describe "multiple extensions ordering" do
     setup do
       Application.put_env(:tymeslot, :dashboard_sidebar_extensions, [
