@@ -133,6 +133,31 @@ Cloudron automatically provides these variables:
 - `CLOUDRON_OIDC_*` — OIDC addon (SSO, auto-detected)
 - `DEPLOYMENT_TYPE=cloudron` — Set automatically
 
+### Data-at-rest encryption
+
+Integration credentials are encrypted at rest with AES-256-GCM. On first boot the container
+automatically generates a dedicated `DATA_ENCRYPTION_KEY` and persists it to
+`/app/data/data_encryption_key` (included in Cloudron backups). This decouples data-at-rest
+encryption from `SECRET_KEY_BASE`, so the session secret can be rotated without making stored
+credentials undecryptable. No action is required for new installs.
+
+**Upgrading an existing install:** the key is generated on the first boot after the upgrade.
+New credentials are written under it immediately; existing credentials keep decrypting under
+the old (`SECRET_KEY_BASE`-derived) key automatically. To migrate the existing rows onto the
+new key, run the re-encryption sweep once. `cloudron exec` starts a fresh session that does
+not see the key unless it is read from the file it was generated into, so export it first:
+
+```bash
+cloudron exec --app tymeslot.yourdomain.com -- sh -c '
+  export DATA_ENCRYPTION_KEY=$(cat /app/data/data_encryption_key)
+  /app/bin/tymeslot eval "Ecto.Migrator.with_repo(Tymeslot.Repo, fn _ -> IO.inspect(Tymeslot.Security.CredentialReencryption.run(), label: \"reencryption\") end)"
+'
+```
+
+Re-run until the reported `migrated_values` is `0`. The sweep is idempotent and safe to
+repeat. Do not delete `/app/data/data_encryption_key` — losing it makes stored credentials
+unrecoverable.
+
 ### Adding Variables After Installation
 
 To add or change variables after the app is running, use `cloudron env set`.

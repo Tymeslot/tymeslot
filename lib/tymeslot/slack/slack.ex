@@ -7,12 +7,20 @@ defmodule Tymeslot.Slack do
   HTTP client directly.
   """
 
+  @behaviour Tymeslot.Security.EncryptedStorage
+
   require Logger
 
   alias Tymeslot.Features
   alias Tymeslot.Repo
   alias Tymeslot.Slack.{API, MessageBuilder, SlackIntegrationSchema, SlackQueries}
   alias Tymeslot.Workers.SlackWorker
+
+  @impl Tymeslot.Security.EncryptedStorage
+  def encrypted_storage,
+    do:
+      {SlackIntegrationSchema.__schema__(:source),
+       SlackIntegrationSchema.encrypted_credential_fields()}
 
   # ============================================================================
   # CRUD Operations

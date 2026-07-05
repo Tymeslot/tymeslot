@@ -110,6 +110,16 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
     |> encrypt_token()
   end
 
+  @encrypted_credential_fields [:webhook_token_encrypted]
+
+  @doc """
+  Returns the list of encrypted credential field atoms on this schema. Used by
+  `Tymeslot.Security.CredentialReencryption` so the authoritative list lives in
+  one place.
+  """
+  @spec encrypted_credential_fields() :: [atom()]
+  def encrypted_credential_fields, do: @encrypted_credential_fields
+
   @doc """
   Decrypts the webhook token field.
   """

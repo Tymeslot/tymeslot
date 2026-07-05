@@ -20,6 +20,38 @@ else
   echo "==> SECRET_KEY_BASE set via environment"
 fi
 
+# Generate DATA_ENCRYPTION_KEY on first run if not already set via env.
+# This encrypts credentials at rest independently of SECRET_KEY_BASE, so the
+# session secret can be rotated without making stored credentials undecryptable.
+# It MUST persist across restarts — losing it makes existing credentials
+# unrecoverable, forcing every integration to be reconnected.
+DATA_KEY_FILE="/app/data/data_encryption_key"
+ENV_FILE="/app/data/.env"
+if [ -z "${DATA_ENCRYPTION_KEY:-}" ]; then
+  if [ ! -f "$DATA_KEY_FILE" ]; then
+    openssl rand -base64 48 | tr -d '\n' > "$DATA_KEY_FILE"
+    chmod 600 "$DATA_KEY_FILE"
+    echo "==> Generated DATA_ENCRYPTION_KEY (first run)"
+  fi
+  export DATA_ENCRYPTION_KEY=$(cat "$DATA_KEY_FILE")
+  echo "==> DATA_ENCRYPTION_KEY loaded from $DATA_KEY_FILE"
+
+  # This script's `export` is local to this process tree and invisible to a
+  # later `cloudron exec`/`eval` session, but config/runtime.exs also loads
+  # /app/data/.env (see DotenvLoader) — persist the key there so exec sessions
+  # (e.g. the re-encryption sweep) see it too. Upsert rather than append so
+  # restarts don't duplicate the line.
+  touch "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
+  if grep -q '^DATA_ENCRYPTION_KEY=' "$ENV_FILE"; then
+    sed -i "s|^DATA_ENCRYPTION_KEY=.*|DATA_ENCRYPTION_KEY=${DATA_ENCRYPTION_KEY}|" "$ENV_FILE"
+  else
+    echo "DATA_ENCRYPTION_KEY=${DATA_ENCRYPTION_KEY}" >> "$ENV_FILE"
+  fi
+else
+  echo "==> DATA_ENCRYPTION_KEY set via environment"
+fi
+
 # Create necessary directories for runtime
 mkdir -p /app/data/tzdata /app/data/uploads
 chown -R cloudron:cloudron /app/data

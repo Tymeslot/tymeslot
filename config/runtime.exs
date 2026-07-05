@@ -200,6 +200,28 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
+  # Data-at-rest encryption key, decoupled from SECRET_KEY_BASE so the cookie
+  # signing secret can be rotated without touching stored credentials. Absent is
+  # allowed (the keyring falls back to the legacy SECRET_KEY_BASE-derived key and
+  # keeps writing the old format), so existing deployments upgrade with no change;
+  # a malformed value raises in the encryption module. Once set, run the
+  # re-encryption sweep (see README, "Data-at-rest encryption") to migrate
+  # existing values, then the two secrets are fully independent.
+  data_encryption_key = System.get_env("DATA_ENCRYPTION_KEY")
+
+  if is_nil(data_encryption_key) do
+    IO.warn(
+      "DATA_ENCRYPTION_KEY is not set; data-at-rest credentials are still encrypted " <>
+        "with a key derived from SECRET_KEY_BASE. Rotating SECRET_KEY_BASE would make " <>
+        "them undecryptable. Set DATA_ENCRYPTION_KEY (e.g. `openssl rand -base64 48`) " <>
+        "and run the re-encryption sweep (see README, \"Data-at-rest encryption\") to " <>
+        "decouple them.",
+      []
+    )
+  end
+
+  config :tymeslot, Tymeslot.Security.Encryption, data_encryption_key: data_encryption_key
+
   host =
     System.get_env("PHX_HOST") ||
       System.get_env("CLOUDRON_APP_DOMAIN") ||

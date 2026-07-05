@@ -44,6 +44,13 @@ config :tymeslot, TymeslotWeb.Endpoint,
   session_signing_salt: "test_session_signing_salt",
   server: false
 
+# Data-at-rest encryption key, decoupled from SECRET_KEY_BASE. A fixed default is
+# used in test; production supplies DATA_ENCRYPTION_KEY via runtime.exs.
+config :tymeslot, Tymeslot.Security.Encryption,
+  data_encryption_key:
+    System.get_env("DATA_ENCRYPTION_KEY") ||
+      "RsxoYoIVSu/K+QDV2yukDwTFD3wDyDSFxuGmoauNAX0FcXJF58dAz5LhEyiNqhFP"
+
 # Configure the database.
 # NOTE: the SaasRepo copy of this pool-size formula lives in the umbrella
 # `config/test.exs` (SaasRepo can't be configured from Core). Keep the two in

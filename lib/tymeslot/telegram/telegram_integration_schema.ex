@@ -102,6 +102,16 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
     %{integration | status: status}
   end
 
+  @encrypted_credential_fields [:bot_token_encrypted]
+
+  @doc """
+  Returns the list of encrypted credential field atoms on this schema. Used by
+  `Tymeslot.Security.CredentialReencryption` so the authoritative list lives in
+  one place.
+  """
+  @spec encrypted_credential_fields() :: [atom()]
+  def encrypted_credential_fields, do: @encrypted_credential_fields
+
   @spec decrypt_token(t()) :: t()
   def decrypt_token(%__MODULE__{bot_token_encrypted: nil} = integration), do: integration
 

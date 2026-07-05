@@ -382,6 +382,9 @@ need not be set.
 # Generate SECRET_KEY_BASE (64+ characters)
 openssl rand -base64 64 | tr -d '\n'
 
+# Generate DATA_ENCRYPTION_KEY (recommended)
+openssl rand -base64 48 | tr -d '\n'
+
 # Generate database password
 openssl rand -base64 32 | tr -d '\n'
 
@@ -389,6 +392,51 @@ openssl rand -base64 32 | tr -d '\n'
 # Note: These are self-generated for security, NOT provided by Google/Microsoft
 openssl rand -base64 32 | tr -d '\n'
 ```
+
+---
+
+## Data-at-rest encryption
+
+Integration credentials (calendar tokens, CalDAV passwords, video API keys, Slack/Telegram
+tokens, webhook secrets) are encrypted at rest with AES-256-GCM.
+
+By default the encryption key is derived from `SECRET_KEY_BASE`. That works, but it welds
+your data-at-rest protection to the cookie-signing secret: **rotating `SECRET_KEY_BASE` would
+make every stored credential undecryptable**, forcing every user to reconnect every
+integration.
+
+Setting a dedicated **`DATA_ENCRYPTION_KEY`** decouples the two, so the session secret can be
+rotated freely without touching stored data.
+
+### Enabling it on an existing install
+
+1. Generate a key and add it to your `.env` (keep it stable forever — losing it makes stored
+   credentials unrecoverable):
+
+   ```bash
+   echo "DATA_ENCRYPTION_KEY=$(openssl rand -base64 48 | tr -d '\n')" >> .env
+   ```
+
+2. Restart so the app starts writing new values under the new key. Existing values keep
+   decrypting under the old (`SECRET_KEY_BASE`-derived) key automatically — nothing breaks.
+
+3. Migrate existing rows onto the new key:
+
+   ```bash
+   docker exec tymeslot /app/bin/tymeslot eval \
+     'Ecto.Migrator.with_repo(Tymeslot.Repo, fn _ -> IO.inspect(Tymeslot.Security.CredentialReencryption.run(), label: "reencryption") end)'
+   ```
+
+   Re-run until the reported `migrated_values` is `0` to confirm every credential is on the
+   new key. The sweep is idempotent and safe to run repeatedly.
+
+Only after the sweep reports zero migrated values is it safe to rotate `SECRET_KEY_BASE`.
+
+### Rotating the data key in the future
+
+`DATA_ENCRYPTION_KEY` itself can be rotated the same way a future key would be added: set the
+new key, redeploy, run the sweep, and only then retire the old key. Never remove a key while
+data still depends on it.
 
 ---
 
