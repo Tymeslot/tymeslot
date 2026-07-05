@@ -1199,10 +1199,10 @@ msgstr "Preview session expired. Reload the page to continue."
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:139
 #, elixir-autogen, elixir-format
 msgid "%{weekday}, %{date}"
-msgstr ""
+msgstr "%{weekday}, %{date}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex:169
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex:158
 #, elixir-autogen, elixir-format
 msgid "Add to calendar"
-msgstr ""
+msgstr "Add to calendar"
