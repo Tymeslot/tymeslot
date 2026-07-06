@@ -161,6 +161,12 @@ defmodule TymeslotWeb.Live.AsyncHandlersTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
+      # The connection row renders its action controls (including the
+      # test-connection button) only once expanded, so open it first.
+      view
+      |> element("button[phx-click='toggle_row']")
+      |> render_click()
+
       # Capture the HTML returned by render_click directly — this is the
       # state right after the click handler assigns :testing_connection
       # and before the LiveView can process the async callback message.
@@ -169,7 +175,7 @@ defmodule TymeslotWeb.Live.AsyncHandlersTest do
       # before the separate render/1 call is dispatched.
       html =
         view
-        |> element("div.hidden button[phx-click='test_connection']")
+        |> element("button[phx-click='test_connection']")
         |> render_click()
 
       # The spinner label appears synchronously as soon as the click is
