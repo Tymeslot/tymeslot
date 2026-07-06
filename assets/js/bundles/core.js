@@ -11,9 +11,11 @@ import {LiveSocket} from "phoenix_live_view"
 import topbar from "../../vendor/topbar.cjs"
 
 // Core utility hooks used everywhere
+import { initializeBundle } from "./bundle_utils"
 import { ConfirmDelete, PageReload, VideoHoverPreview, StopClickPropagation, ModalFocusTrap } from "../ui_interaction_hooks"
 import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick, scrollPageToTop, shouldScrollToTopOnNavigate } from "../utility_hooks"
 import { ClipboardCopy } from "../clipboard_hook"
+import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
 import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView, HeroDemo } from "../analytics"
 import { installImageFallback } from "../image_fallback"
 import { installClipboardCopy } from "../clipboard_copy"
@@ -52,6 +54,11 @@ const CoreHooks = {
   ScrollReset,
   CopyOnClick,
   ClipboardCopy,
+
+  // Spam protection — mounts only on forms that carry the RecaptchaV3 hook
+  // (auth signup, public booking, contact forms), so registering it globally is
+  // free on pages without such a form.
+  RecaptchaV3: RecaptchaV3Hook,
 
   // Analytics (view-on-mount beacon; click tracking is delegated, not a hook)
   AnalyticsView,
@@ -207,8 +214,12 @@ installAnalytics();
 installEventBridge();
 installClickTracking();
 
-// Export for route bundles to extend
+// Export for route bundles to extend. `window.Tymeslot` publishes the shared
+// bundle runtime so any downstream bundle — including one built and served from
+// a separate source tree — can connect via the same window handshake without a
+// compile-time import. Core has no knowledge of who consumes it.
 window.liveSocket = liveSocket;
 window.CoreHooks = CoreHooks;
+window.Tymeslot = { initializeBundle };
 
 export { liveSocket, CoreHooks, getUserTimezone };

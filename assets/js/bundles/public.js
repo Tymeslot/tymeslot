@@ -8,13 +8,12 @@
 import { initializeBundle } from "./bundle_utils"
 import { lazyHook } from "../dynamic_hooks"
 import { AutoScrollToSlots } from "../utility_hooks"
-import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
 import { PaymentRedirectOpenTab } from "../hooks/payment_redirect_open_tab"
 
 // Define public-specific hooks
+// (RecaptchaV3 is already registered in CoreHooks and inherited via initializeBundle)
 const PublicHooks = {
   AutoScrollToSlots,
-  RecaptchaV3: RecaptchaV3Hook,
   PaymentRedirectOpenTab,
   // Lazy-load video hooks - only load when video elements are mounted
   RhythmVideo: lazyHook("RhythmVideo", () =>

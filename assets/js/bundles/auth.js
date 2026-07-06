@@ -8,13 +8,12 @@
 import { initializeBundle } from "./bundle_utils"
 import { lazyHook } from "../dynamic_hooks"
 import { PasswordToggle } from "../password_toggle"
-import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
 import { AuthAutoFocus } from "../utility_hooks"
 
 // Define auth-specific hooks
+// (RecaptchaV3 is already registered in CoreHooks and inherited via initializeBundle)
 const AuthHooks = {
   PasswordToggle,
-  RecaptchaV3: RecaptchaV3Hook,
   AuthAutoFocus,
   // Lazy-load auth video - only load when video element is mounted
   AuthVideo: lazyHook("AuthVideo", () =>
@@ -27,4 +26,4 @@ initializeBundle("auth", AuthHooks).catch(error => {
   console.error("Auth bundle initialization failed:", error);
 });
 
-export { PasswordToggle, RecaptchaV3Hook };
+export { PasswordToggle };
