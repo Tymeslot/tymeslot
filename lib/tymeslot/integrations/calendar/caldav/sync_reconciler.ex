@@ -155,16 +155,72 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
 
     missing_uids = Enum.reject(cached_uids, &MapSet.member?(fetched_uids, &1))
 
-    if missing_uids != [] do
-      Logger.info("CalDAV full fetch detected missing events",
-        calendar_integration_id: integration.id,
-        missing_count: length(missing_uids)
-      )
+    cond do
+      missing_uids == [] ->
+        :ok
 
-      Sync.reconcile_deletions(integration, uid_refs(missing_uids))
+      suspicious_deletion?(cached_uids, missing_uids, fetched_uids) ->
+        log_suspicious_deletion(integration, cached_uids, missing_uids, calendar_path)
+
+      true ->
+        Logger.info("CalDAV full fetch detected missing events",
+          calendar_integration_id: integration.id,
+          missing_count: length(missing_uids)
+        )
+
+        Sync.reconcile_deletions(integration, uid_refs(missing_uids))
     end
 
     :ok
+  end
+
+  # ---------------------------------------------------------------------------
+  # Deletion circuit breaker
+  # ---------------------------------------------------------------------------
+
+  # A full-fetch listing implies deletions by *absence*: any cached UID the
+  # server no longer returns is treated as deleted, which feeds
+  # `apply_external_calendar_change(:deleted)` — auto-cancelling the linked
+  # meeting and emailing both parties. That inference is only sound when the
+  # listing is authoritative. A syntactically valid but empty response, or a
+  # batch where every event failed to parse and was silently dropped, both
+  # arrive here as "the server returned (almost) nothing" and would classify
+  # the entire cache as stale — the one non-self-healing damage path in the
+  # sync stack.
+  #
+  # Refuse the deletions when either: the remote set is empty while the cache
+  # is not (the strongest failed-read signal, applied at any cache size), or a
+  # non-trivial cache would lose more than `@bulk_delete_ratio_threshold` of
+  # its rows in a single sync. Genuine removals are reconciled by a later
+  # healthy fetch; small, ordinary deletions stay below the threshold and are
+  # unaffected.
+  @bulk_delete_ratio_threshold 0.8
+  @bulk_delete_min_cache 5
+
+  defp suspicious_deletion?(cached_uids, missing_uids, fetched_uids) do
+    cached_count = length(cached_uids)
+
+    remote_empty_but_cache_populated?(cached_count, MapSet.size(fetched_uids)) or
+      over_delete_ratio?(cached_count, length(missing_uids))
+  end
+
+  defp remote_empty_but_cache_populated?(cached_count, 0) when cached_count > 0, do: true
+  defp remote_empty_but_cache_populated?(_cached_count, _fetched_count), do: false
+
+  defp over_delete_ratio?(cached_count, missing_count)
+       when cached_count >= @bulk_delete_min_cache,
+       do: missing_count / cached_count >= @bulk_delete_ratio_threshold
+
+  defp over_delete_ratio?(_cached_count, _missing_count), do: false
+
+  defp log_suspicious_deletion(integration, cached_uids, missing_uids, calendar_path) do
+    Logger.error(
+      "CalDAV full fetch would delete a suspicious share of the cache; refusing to reconcile deletions",
+      calendar_integration_id: integration.id,
+      calendar_path: calendar_path,
+      cached_count: length(cached_uids),
+      missing_count: length(missing_uids)
+    )
   end
 
   # ---------------------------------------------------------------------------
@@ -285,16 +341,25 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
 
     missing_uids = Enum.reject(cached_uids, &MapSet.member?(fetched_uids, &1))
 
-    if missing_uids != [] do
-      Logger.info("CalDAV full fetch detected missing events",
-        calendar_integration_id: integration.id,
-        missing_count: length(missing_uids)
-      )
+    cond do
+      missing_uids == [] ->
+        []
 
-      ProviderCalendarEventQueries.delete_by_uids(integration.id, missing_uids)
+      suspicious_deletion?(cached_uids, missing_uids, fetched_uids) ->
+        # Roll the whole batch back: the cache is left untouched, the sync
+        # token is not advanced, and Oban retries against a fresh fetch.
+        log_suspicious_deletion(integration, cached_uids, missing_uids, calendar_path)
+        Repo.rollback(:suspicious_bulk_deletion)
+
+      true ->
+        Logger.info("CalDAV full fetch detected missing events",
+          calendar_integration_id: integration.id,
+          missing_count: length(missing_uids)
+        )
+
+        ProviderCalendarEventQueries.delete_by_uids(integration.id, missing_uids)
+        missing_uids
     end
-
-    missing_uids
   end
 
   # Post-commit side effects for full-fetch deletions. The cache rows were
