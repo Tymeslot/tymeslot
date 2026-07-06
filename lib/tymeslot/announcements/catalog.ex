@@ -19,9 +19,39 @@ defmodule Tymeslot.Announcements.Catalog do
   @guests_published_at ~U[2026-06-19 00:00:00Z]
   @guests_expires_at ~U[2026-07-19 00:00:00Z]
 
+  @hub_published_at ~U[2026-07-06 00:00:00Z]
+  @hub_expires_at ~U[2026-08-05 00:00:00Z]
+
+  @event_colours_published_at ~U[2026-07-06 00:00:00Z]
+  @event_colours_expires_at ~U[2026-08-05 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     [
+      %Announcement{
+        key: "integrations_hub",
+        title: "All your integrations in one place",
+        body:
+          "Calendars, video and payments now live together in one Integrations hub. See at " <>
+            "a glance what's connected and what needs attention, reconnect a provider in a " <>
+            "click, and add something new — all from a single screen instead of hunting " <>
+            "through separate settings pages.",
+        image_path: "/images/announcements/integrations-hub.svg",
+        published_at: @hub_published_at,
+        expires_at: @hub_expires_at
+      },
+      %Announcement{
+        key: "calendar_event_colours",
+        title: "Colour-code your calendar events",
+        body:
+          "Give any event its own colour, right from your dashboard agenda. Colours you set " <>
+            "in Tymeslot write back to your connected calendar, and colours already on your " <>
+            "Google or CalDAV events show up here too — so your day is colour-coded exactly " <>
+            "the way you like it, everywhere you look.",
+        image_path: "/images/announcements/event-colours.svg",
+        published_at: @event_colours_published_at,
+        expires_at: @event_colours_expires_at
+      },
       %Announcement{
         key: "guest_attendees_rsvp",
         title: "Invite guests to any booking",

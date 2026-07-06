@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" fill="none" role="img" aria-label="Unified integrations hub">
+  <defs>
+    <linearGradient id="hub-bg" x1="0" y1="0" x2="640" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ecfeff"/>
+      <stop offset="1" stop-color="#f0fdfa"/>
+    </linearGradient>
+    <filter id="hub-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d9488" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="640" height="240" fill="url(#hub-bg)"/>
+
+  <!-- connectors from the hub core to each provider tile -->
+  <path d="M320 116 L152 86 M320 116 L152 170 M320 116 L488 86 M320 116 L488 170"
+        stroke="#5eead4" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- central hub core -->
+  <g filter="url(#hub-shadow)">
+    <rect x="288" y="84" width="64" height="64" rx="16" fill="#0d9488"/>
+  </g>
+  <circle cx="308" cy="104" r="5" fill="#ffffff"/>
+  <circle cx="332" cy="104" r="5" fill="#ffffff"/>
+  <circle cx="308" cy="128" r="5" fill="#ffffff"/>
+  <circle cx="332" cy="128" r="5" fill="#ffffff"/>
+
+  <!-- provider tiles -->
+  <g filter="url(#hub-shadow)">
+    <rect x="88" y="64" width="128" height="44" rx="12" fill="#ffffff"/>
+    <rect x="88" y="148" width="128" height="44" rx="12" fill="#ffffff"/>
+    <rect x="424" y="64" width="128" height="44" rx="12" fill="#ffffff"/>
+    <rect x="424" y="148" width="128" height="44" rx="12" fill="#ffffff"/>
+  </g>
+
+  <!-- top-left: calendar (connected) -->
+  <rect x="100" y="76" width="20" height="20" rx="5" fill="#ccfbf1"/>
+  <rect x="105" y="81" width="10" height="2.5" rx="1.25" fill="#0d9488"/>
+  <rect x="105" y="87" width="7" height="2.5" rx="1.25" fill="#14b8a6"/>
+  <rect x="132" y="79" width="60" height="7" rx="3.5" fill="#cbd5e1"/>
+  <rect x="132" y="91" width="40" height="6" rx="3" fill="#e2e8f0"/>
+  <circle cx="204" cy="76" r="5" fill="#10b981"/>
+
+  <!-- bottom-left: video (connected) -->
+  <rect x="100" y="160" width="20" height="20" rx="5" fill="#cffafe"/>
+  <path d="M107 166 h6 v8 h-6 z M113 168 l4 -2 v6 l-4 -2 z" fill="#0891b2"/>
+  <rect x="132" y="163" width="60" height="7" rx="3.5" fill="#cbd5e1"/>
+  <rect x="132" y="175" width="40" height="6" rx="3" fill="#e2e8f0"/>
+  <circle cx="204" cy="160" r="5" fill="#10b981"/>
+
+  <!-- top-right: payments (connected) -->
+  <rect x="436" y="76" width="20" height="20" rx="5" fill="#d1fae5"/>
+  <rect x="439" y="82" width="14" height="9" rx="2" fill="#059669"/>
+  <rect x="468" y="79" width="60" height="7" rx="3.5" fill="#cbd5e1"/>
+  <rect x="468" y="91" width="40" height="6" rx="3" fill="#e2e8f0"/>
+  <circle cx="540" cy="76" r="5" fill="#10b981"/>
+
+  <!-- bottom-right: calendar (needs attention) -->
+  <rect x="436" y="160" width="20" height="20" rx="5" fill="#fef3c7"/>
+  <rect x="441" y="165" width="10" height="2.5" rx="1.25" fill="#d97706"/>
+  <rect x="441" y="171" width="7" height="2.5" rx="1.25" fill="#f59e0b"/>
+  <rect x="468" y="163" width="60" height="7" rx="3.5" fill="#cbd5e1"/>
+  <rect x="468" y="175" width="40" height="6" rx="3" fill="#e2e8f0"/>
+  <circle cx="540" cy="160" r="5" fill="#f59e0b"/>
+</svg>
