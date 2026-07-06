@@ -4,8 +4,9 @@
  * In multi-bundle mode, this loads the core bundle which initializes LiveSocket.
  * Route-specific bundles (public.js, auth.js, dashboard.js) extend hooks and connect.
  *
- * For pages without a route bundle (e.g., SaaS marketing pages), the layout
- * should include a connection script AFTER app.js that connects with CoreHooks.
+ * For pages that load no route-specific bundle, a separately-built bundle
+ * connects the LiveSocket with CoreHooks after app.js, reading the shared
+ * runtime off the window handshake (window.Tymeslot / window.CoreHooks).
  */
 
 // Import core bundle (always loaded)

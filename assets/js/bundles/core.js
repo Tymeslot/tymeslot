@@ -16,7 +16,7 @@ import { ConfirmDelete, PageReload, VideoHoverPreview, StopClickPropagation, Mod
 import { Flash, ConnectionStatus, AutoFocus, ScrollReset, CopyOnClick, scrollPageToTop, shouldScrollToTopOnNavigate } from "../utility_hooks"
 import { ClipboardCopy } from "../clipboard_hook"
 import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
-import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView, HeroDemo } from "../analytics"
+import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView } from "../analytics"
 import { installImageFallback } from "../image_fallback"
 import { installClipboardCopy } from "../clipboard_copy"
 
@@ -61,8 +61,7 @@ const CoreHooks = {
   RecaptchaV3: RecaptchaV3Hook,
 
   // Analytics (view-on-mount beacon; click tracking is delegated, not a hook)
-  AnalyticsView,
-  HeroDemo
+  AnalyticsView
 }
 
 // Use /embed-live in cross-site iframes to avoid session cookie dependency
