@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
   describe "OAuth reconnect (Google)" do
     test "clicking Reconnect on a Google integration redirects to the Google OAuth URL",
          %{conn: conn, user: user} do
-      integration =
+      _integration =
         insert(:calendar_integration,
           user: user,
           provider: "google",
@@ -60,7 +60,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
   describe "OAuth reconnect (Outlook)" do
     test "clicking Reconnect on an Outlook integration redirects to the Outlook OAuth URL",
          %{conn: conn, user: user} do
-      integration =
+      _integration =
         insert(:calendar_integration,
           user: user,
           provider: "outlook",
