@@ -20,9 +20,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.ConnectionRowTest do
           summary: "Syncing 2 calendars",
           status: {:ok, "Healthy"},
           active?: true,
-          expanded?: false,
           toggle_event: "toggle_integration",
-          expand_event: "toggle_row",
           myself: "hub"
         },
         overrides
@@ -40,13 +38,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.ConnectionRowTest do
           summary={@summary}
           status={@status}
           active?={@active?}
-          expanded?={@expanded?}
           toggle_event={@toggle_event}
-          expand_event={@expand_event}
           myself={@myself}
         >
-          <:header_action>Header action content</:header_action>
-          <:detail>Detail slot content</:detail>
           <:actions>Actions slot content</:actions>
         </ConnectionRow.connection_row>
         """
@@ -55,9 +49,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.ConnectionRowTest do
     )
   end
 
-  describe "collapsed row" do
+  describe "row content" do
     test "renders title, type tag, summary, and status label" do
-      html = render_row(%{expanded?: false})
+      html = render_row(%{})
 
       assert html =~ "Google Calendar"
       assert html =~ "CalDAV"
@@ -65,20 +59,18 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.ConnectionRowTest do
       assert html =~ "Healthy"
     end
 
-    test "does not render detail or actions slot content" do
-      html = render_row(%{expanded?: false})
+    test "renders the actions slot content always (no expand needed)" do
+      html = render_row(%{})
 
-      refute html =~ "Detail slot content"
-      refute html =~ "Actions slot content"
+      assert html =~ "Actions slot content"
     end
 
-    test "renders header_action slot content on the collapsed row" do
-      html = render_row(%{expanded?: false})
+    test "has no expand/collapse chevron" do
+      html = render_row(%{})
 
-      # The header action is always visible in the collapsed header — it's how
-      # a Reconnect control reaches an integration that needs attention without
-      # opening the expandable detail.
-      assert html =~ "Header action content"
+      refute html =~ ~s(phx-click="toggle_row")
+      refute html =~ "hero-chevron-down"
+      refute html =~ "hero-chevron-up"
     end
 
     test "omits the type tag when not given" do
@@ -88,23 +80,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.ConnectionRowTest do
     end
   end
 
-  describe "expanded row" do
-    test "renders the detail and actions slot content" do
-      html = render_row(%{expanded?: true})
-
-      assert html =~ "Detail slot content"
-      assert html =~ "Actions slot content"
-    end
-  end
-
   describe "controls" do
-    test "expand button targets the expand event with the row id" do
-      html = render_row(%{})
-
-      assert html =~ ~s(phx-click="toggle_row")
-      assert html =~ ~s(phx-value-id="cal-1")
-    end
-
     test "renders the status switch toggle for the row" do
       html = render_row(%{})
 

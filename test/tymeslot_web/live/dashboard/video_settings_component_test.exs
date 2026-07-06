@@ -23,37 +23,37 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
   end
 
   describe "Video Settings Component" do
-    test "renders initial view with available providers", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
-
-      assert render(view) =~ "Video Integration"
-      assert render(view) =~ "Available Providers"
-      assert render(view) =~ "Connect Google Meet"
-      assert render(view) =~ "Connect Teams"
-      assert render(view) =~ "Connect Zoom"
-      assert render(view) =~ "Connect MiroTalk"
-      assert render(view) =~ "Add Custom Link"
-    end
-
-    test "renders Connect Zoom card on the providers grid", %{conn: conn} do
+    test "renders initial view with the provider picker options", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
-      assert html =~ "Connect Zoom"
+      assert html =~ "Video Integration"
+      assert html =~ "Connect a video provider"
+
+      # Each provider is a selectable option in the always-rendered picker modal.
+      for provider <- ~w(google_meet teams zoom mirotalk custom) do
+        assert html =~ ~s(phx-value-provider="#{provider}")
+      end
+    end
+
+    test "renders the Zoom option in the provider picker", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      assert html =~ ~s(phx-click="setup_provider")
       assert html =~ ~s(phx-value-provider="zoom")
     end
 
-    test "shows a prompt when no video provider is connected", %{conn: conn} do
+    test "shows an empty state when no video provider is connected", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
-      assert html =~ "You haven&#39;t connected a video provider yet"
+      assert html =~ "No video providers connected yet"
     end
 
-    test "hides the prompt once a video provider is connected", %{conn: conn, user: user} do
+    test "hides the empty state once a video provider is connected", %{conn: conn, user: user} do
       insert(:video_integration, user: user, is_active: true)
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
-      refute html =~ "You haven&#39;t connected a video provider yet"
+      refute html =~ "No video providers connected yet"
     end
 
     test "lists connected integrations", %{conn: conn, user: user} do
@@ -88,11 +88,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
-      # Actions live behind the expand chevron in the connection row.
-      view
-      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
-      |> render_click()
-
       view
       |> element("button[phx-click='test_connection'][phx-value-id='#{integration.id}']")
       |> render_click()
@@ -106,10 +101,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       view
-      |> element("button", "Connect MiroTalk")
+      |> element("button[phx-click='setup_provider'][phx-value-provider='mirotalk']")
       |> render_click()
 
-      assert render(view) =~ "Setup MiroTalk"
+      assert render(view) =~ "MiroTalk P2P"
       assert has_element?(view, "input[name='integration[base_url]']")
     end
 
@@ -122,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       view
-      |> element("button", "Connect MiroTalk")
+      |> element("button[phx-click='setup_provider'][phx-value-provider='mirotalk']")
       |> render_click()
 
       view
@@ -143,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       view
-      |> element("button", "Connect MiroTalk")
+      |> element("button[phx-click='setup_provider'][phx-value-provider='mirotalk']")
       |> render_click()
 
       view
@@ -167,7 +162,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       view
-      |> element("button", "Connect Google Meet")
+      |> element("button[phx-click='setup_provider'][phx-value-provider='google_meet']")
       |> render_click()
 
       # LiveView test follows redirects
@@ -230,11 +225,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       assert render(view) =~ "To Delete"
-
-      # Expand the row to reveal its actions, then open the delete modal.
-      view
-      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
-      |> render_click()
 
       view
       |> element(

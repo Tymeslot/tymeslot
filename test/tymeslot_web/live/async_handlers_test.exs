@@ -161,12 +161,6 @@ defmodule TymeslotWeb.Live.AsyncHandlersTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
-      # The connection row renders its action controls (including the
-      # test-connection button) only once expanded, so open it first.
-      view
-      |> element("button[phx-click='toggle_row']")
-      |> render_click()
-
       # Capture the HTML returned by render_click directly — this is the
       # state right after the click handler assigns :testing_connection
       # and before the LiveView can process the async callback message.
@@ -178,12 +172,12 @@ defmodule TymeslotWeb.Live.AsyncHandlersTest do
         |> element("button[phx-click='test_connection']")
         |> render_click()
 
-      # The spinner label appears synchronously as soon as the click is
-      # handled, before the async task completes. Asserting this here
-      # pins the "shown" half of the lifecycle so that the negative
-      # `eventually` below cannot pass vacuously (i.e. if a regression
-      # broke the assign such that the spinner never showed at all).
-      assert html =~ "Testing..."
+      # The button's busy state appears synchronously as soon as the click is
+      # handled, before the async task completes. Asserting this here pins the
+      # "shown" half of the lifecycle so that the negative `eventually` below
+      # cannot pass vacuously (i.e. if a regression broke the assign such that
+      # the busy state never showed at all).
+      assert html =~ ~s(aria-busy="true")
 
       # The error surfaces as a flash with the provider-specific message.
       # "MiroTalk server error" is the stable prefix shared by all 5xx
@@ -193,17 +187,17 @@ defmodule TymeslotWeb.Live.AsyncHandlersTest do
       end)
 
       # `testing_connection` must clear so the user can click the
-      # button again. The spinner label ("Testing...") is rendered
-      # only while `@testing_connection == @integration.id`; once the
-      # async settles, that label must disappear. If the handler ever
-      # forgot to reset the assign, the user would stay staring at
-      # "Testing..." with no way back to retry.
+      # button again. The button's busy state (`aria-busy="true"`) is
+      # rendered only while `@testing_connection == @integration.id`;
+      # once the async settles, it must clear. If the handler ever
+      # forgot to reset the assign, the button would stay disabled with
+      # no way back to retry.
       #
       # `eventually/1` retries until the function returns a truthy
       # value, so we return `true` on the negative assertion rather
       # than relying on `refute`'s nil-on-success return value.
       eventually(fn ->
-        not (render(view) =~ "Testing...")
+        not (render(view) =~ ~s(aria-busy="true"))
       end)
     end
   end

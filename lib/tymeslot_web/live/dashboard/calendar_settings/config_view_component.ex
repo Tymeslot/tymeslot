@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("back_to_providers", _params, socket) do
-    close_to_providers()
+    back_to_grid()
     {:noreply, reset_form_state(socket)}
   end
 
@@ -163,7 +163,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
           {:ok, _integration} ->
             send(self(), {:integration_added, :calendar})
             Flash.info("Calendar integration added successfully")
-            close_to_providers()
+            close_modal()
             {:noreply, reset_form_state(socket)}
 
           {:error, :duplicate_integration} ->
@@ -230,11 +230,17 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
     end
   end
 
-  defp close_to_providers do
+  # Cancel: return to the picker grid but keep the modal open.
+  defp back_to_grid do
+    send_update(CalendarSettingsComponent, id: @parent_component_id, selected_provider: nil)
+  end
+
+  # Success: close the whole picker modal.
+  defp close_modal do
     send_update(CalendarSettingsComponent,
       id: @parent_component_id,
-      view: :providers,
-      selected_provider: nil
+      selected_provider: nil,
+      show_picker: false
     )
   end
 

@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       view
-      |> element("button", "Connect MiroTalk")
+      |> element("button[phx-click='setup_provider'][phx-value-provider='mirotalk']")
       |> render_click()
 
       typed_url = "https://miro.example.org"
@@ -114,12 +114,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
-      # Open the edit modal for this integration. The connection row keeps
-      # its actions behind the expand chevron, so reveal them first.
-      view
-      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
-      |> render_click()
-
       view
       |> element(
         "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
@@ -162,10 +156,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
         )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
-
-      view
-      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
-      |> render_click()
 
       view
       |> element(

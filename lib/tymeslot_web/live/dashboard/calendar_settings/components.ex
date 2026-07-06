@@ -37,41 +37,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   @spec config_view(map()) :: Phoenix.LiveView.Rendered.t()
   def config_view(assigns) do
     ~H"""
-    <div
-      id="calendar-config-view"
-      phx-hook="ScrollReset"
-      data-action={@selected_provider}
-      class="space-y-8"
-    >
-      <div class="flex items-center gap-6 bg-white p-6 rounded-token-3xl border-2 border-tymeslot-50 shadow-sm">
-        <button
-          phx-click="back_to_providers"
-          phx-target={@myself}
-          class="flex items-center gap-2 px-4 py-2 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2.5"
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
-          Back
-        </button>
-
-        <div class="h-8 w-px bg-tymeslot-100"></div>
-
-        <.section_header
-          level={2}
-          icon="hero-calendar-days"
-          title={"Setup #{format_provider_title(@selected_provider)}"}
-        />
-      </div>
-
-      <div class="card-glass">
-        <%= case @selected_provider do %>
-          <% :nextcloud -> %>
+    <div id="calendar-config-view" phx-hook="ScrollReset" data-action={@selected_provider}>
+      <%= case @selected_provider do %>
+        <% :nextcloud -> %>
             <.live_component
               module={NextcloudConfig}
               id="nextcloud-config"
@@ -162,12 +130,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               discovery_credentials={@discovery_credentials}
               saving={@is_saving}
             />
-          <% _ -> %>
-            <p class="text-tymeslot-500 font-medium">
-              Configuration form not available for this provider.
-            </p>
-        <% end %>
-      </div>
+        <% _ -> %>
+          <p class="text-tymeslot-500 font-medium">
+            Configuration form not available for this provider.
+          </p>
+      <% end %>
     </div>
     """
   end
@@ -179,7 +146,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   attr :is_refreshing, :boolean, required: true
   attr :myself, :any, required: true
   attr :health_states, :map, default: %{}
-  attr :expanded_rows, :any, default: nil
 
   @spec connected_calendars_section(map()) :: Phoenix.LiveView.Rendered.t()
   def connected_calendars_section(assigns) do
@@ -239,7 +205,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           <%= for integration <- @active_integrations do %>
             <.calendar_connection_row
               integration={integration}
-              expanded?={row_expanded?(@expanded_rows, integration.id)}
               myself={@myself}
               health_state={Map.get(@health_states, integration.id)}
             />
@@ -263,7 +228,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           <%= for integration <- @inactive_integrations do %>
             <.calendar_connection_row
               integration={integration}
-              expanded?={row_expanded?(@expanded_rows, integration.id)}
               myself={@myself}
               health_state={Map.get(@health_states, integration.id)}
             />
@@ -276,15 +240,13 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   @doc """
   Renders a single connected calendar integration as a shared
-  `connection_row`: status-first header with a one-line summary, the
-  calendar-selection chip grid in the expandable `:detail` slot, and the
-  upgrade/delete controls in the `:actions` slot. When the integration needs
-  re-authentication (`needs_reauth`), the Reconnect control is surfaced on the
-  collapsed header via `:header_action` instead of the expanded actions, so the
-  fix is one click away without opening the row.
+  `connection_row`: a status-first, flat row with a one-line summary and an
+  always-visible action cluster — Upgrade (Google scope, when needed), Manage
+  calendars (opens the selection modal), Reconnect (promoted when the
+  integration needs re-authentication), and a Delete icon. There is no
+  expand/collapse; every action is one click away.
   """
   attr :integration, :map, required: true
-  attr :expanded?, :boolean, default: false
   attr :myself, :any, required: true
   attr :health_state, :map, default: nil
 
@@ -313,113 +275,60 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       summary={@summary}
       status={@status}
       active?={@integration.is_active}
-      expanded?={@expanded?}
       toggle_event="toggle_integration"
       myself={@myself}
     >
-      <:header_action :if={@integration.needs_reauth}>
-        <.reconnect_button
-          provider={@integration.provider}
-          integration_id={@integration.id}
-          myself={@myself}
-          variant={:header}
-        />
-      </:header_action>
-
-      <:detail>
-        <div :if={@integration.is_active}>
-          <div class="flex items-center gap-2 mb-3">
-            <span class="text-token-2xs font-black uppercase tracking-widest text-tymeslot-400">
-              Syncing {Enum.count(@calendar_list, &(&1["selected"] || &1[:selected]))} Calendars
-            </span>
-            <div class="h-px bg-tymeslot-100 flex-1"></div>
-          </div>
-
-          <div class="flex flex-wrap gap-2.5">
-            <%= for calendar <- @calendar_list do %>
-              <% calendar_id = calendar["id"] || calendar[:id] %>
-              <% calendar_name = DisplayHelpers.extract_calendar_display_name(calendar) %>
-              <% is_selected = calendar["selected"] || calendar[:selected] %>
-              <% color = calendar["color"] || calendar[:color] %>
-
-              <button
-                phx-click="toggle_calendar_selection"
-                phx-value-integration_id={@integration.id}
-                phx-value-calendar_id={calendar_id}
-                phx-target={@myself}
-                class={[
-                  "inline-flex items-center gap-2.5 px-3.5 py-2 rounded-token-xl border-2 transition-all text-token-xs font-bold",
-                  is_selected &&
-                    "bg-turquoise-50 border-turquoise-400 text-turquoise-900 shadow-sm shadow-turquoise-500/5",
-                  !is_selected &&
-                    "bg-white border-tymeslot-50 text-tymeslot-400 hover:border-tymeslot-200 hover:bg-tymeslot-50"
-                ]}
-              >
-                <div
-                  :if={color && is_selected}
-                  class="w-2.5 h-2.5 rounded-token-full ring-2 ring-white"
-                  style={"background-color: #{color}"}
-                />
-                <span>{calendar_name}</span>
-                <span
-                  :if={calendar["primary"] || calendar[:primary]}
-                  class="text-token-2xs font-black bg-tymeslot-200 px-1.5 py-0.5 rounded-token-sm text-tymeslot-600 uppercase tracking-tighter"
-                >
-                  Primary
-                </span>
-                <.icon :if={is_selected} name="hero-check" class="w-3.5 h-3.5 text-turquoise-600" />
-              </button>
-            <% end %>
-
-            <div :if={@calendar_list == []} class="flex items-center gap-2 text-tymeslot-400 py-2">
-              <.icon name="hero-information-circle" class="w-4 h-4 animate-pulse" />
-              <span class="text-token-xs font-medium italic">
-                No calendars found. Try refreshing the integration.
-              </span>
-            </div>
-          </div>
-        </div>
-      </:detail>
-
       <:actions>
         <button
           :if={@integration.provider == "google" && Helpers.needs_scope_upgrade?(@integration)}
           phx-click="upgrade_google_scope"
           phx-value-id={@integration.id}
           phx-target={@myself}
-          class="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-token-xl font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-token-lg font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
           title="Upgrade Google Calendar permissions"
         >
           <.icon name="hero-bolt" class="w-4 h-4" /> Upgrade
         </button>
+        <button
+          :if={@calendar_list != []}
+          phx-click="manage_calendars"
+          phx-value-id={@integration.id}
+          phx-target={@myself}
+          class="flex items-center justify-center gap-1.5 px-3 py-1.5 lg:h-9 lg:w-9 lg:px-0 lg:py-0 bg-tymeslot-50 text-tymeslot-700 rounded-token-lg font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
+          title="Choose which calendars sync"
+          aria-label="Manage calendars"
+        >
+          <.icon name="hero-squares-2x2" class="w-4 h-4" /><span class="lg:hidden">Manage calendars</span>
+        </button>
         <.reconnect_button
-          :if={!@integration.needs_reauth}
           provider={@integration.provider}
           integration_id={@integration.id}
           myself={@myself}
-          variant={:inline}
+          variant={(@integration.needs_reauth && :attention) || :normal}
         />
         <button
           phx-click="show"
           phx-value-id={@integration.id}
           phx-target="#delete-calendar-modal"
-          class="ml-auto flex items-center gap-2 px-4 py-2 text-tymeslot-500 hover:text-red-500 hover:bg-red-50 rounded-token-xl font-bold border-2 border-transparent hover:border-red-100 transition-all"
-          title="Remove Connection"
+          class="flex items-center justify-center h-9 w-9 text-tymeslot-500 hover:text-red-500 hover:bg-red-50 rounded-token-lg border-2 border-transparent hover:border-red-100 transition-all"
+          title="Remove connection"
+          aria-label="Remove connection"
         >
-          <.icon name="hero-trash" class="w-4 h-4" /> Delete
+          <.icon name="hero-trash" class="w-5 h-5" />
         </button>
       </:actions>
     </ConnectionRow.connection_row>
     """
   end
 
-  # Reconnect control shared by the collapsed-header (`:header) and expanded
-  # (`:inline`) placements: oauth providers re-trigger `connect_provider`,
-  # everything else opens the CalDAV reconnect modal.
+  # Always-visible reconnect control: oauth providers re-trigger
+  # `connect_provider`, everything else opens the CalDAV reconnect modal.
+  # `:attention` is the promoted (amber) style used when the integration needs
+  # re-authentication; `:normal` is the subtle default.
   attr :provider, :string, required: true
   attr :integration_id, :any, required: true
   attr :myself, :any, required: true
-  attr :variant, :atom, values: [:header, :inline], required: true
+  attr :variant, :atom, values: [:normal, :attention], required: true
 
   defp reconnect_button(assigns) do
     assigns = assign(assigns, :class, reconnect_button_class(assigns.variant))
@@ -432,8 +341,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       phx-target={@myself}
       class={@class}
       title="Reconnect integration"
+      aria-label="Reconnect integration"
     >
-      <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
+      <.icon name="hero-arrow-path" class="w-4 h-4" /><span class="lg:hidden">Reconnect</span>
     </button>
     <button
       :if={@provider not in ["google", "outlook"]}
@@ -442,19 +352,25 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       phx-target="#caldav-reconnect-modal"
       class={@class}
       title="Reconnect integration"
+      aria-label="Reconnect integration"
     >
-      <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
+      <.icon name="hero-arrow-path" class="w-4 h-4" /><span class="lg:hidden">Reconnect</span>
     </button>
     """
   end
 
-  defp reconnect_button_class(:header),
-    do:
-      "flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-token-xl font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
+  # Shared layout: full padded pill on mobile, compact icon-only square on
+  # desktop (the label collapses via `lg:hidden`). Only the colour palette
+  # differs between the promoted (:attention) and subtle (:normal) variants.
+  @reconnect_button_layout "flex items-center justify-center gap-1.5 px-3 py-1.5 lg:h-9 lg:w-9 lg:px-0 lg:py-0 rounded-token-lg font-bold border-2 transition-all shadow-sm"
 
-  defp reconnect_button_class(:inline),
+  defp reconnect_button_class(:attention),
     do:
-      "flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-700 rounded-token-xl font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
+      "#{@reconnect_button_layout} bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100 shadow-amber-500/5"
+
+  defp reconnect_button_class(:normal),
+    do:
+      "#{@reconnect_button_layout} bg-tymeslot-50 text-tymeslot-700 border-tymeslot-100 hover:bg-tymeslot-100 shadow-tymeslot-500/5"
 
   @doc """
   Builds a one-line human summary for a calendar integration — account
@@ -512,16 +428,4 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     do: "synced #{TokenUtils.relative_time(synced_at)}"
 
   defp sync_segment(_integration), do: nil
-
-  defp row_expanded?(nil, _id), do: false
-  defp row_expanded?(set, id), do: MapSet.member?(set, to_string(id))
-
-  defp format_provider_title(:nextcloud), do: "Nextcloud"
-  defp format_provider_title(:radicale), do: "Radicale"
-  defp format_provider_title(:caldav), do: "CalDAV"
-  defp format_provider_title(:zimbra), do: "Zimbra"
-  defp format_provider_title(:mailbox_org), do: "mailbox.org"
-  defp format_provider_title(:apple), do: "Apple iCloud"
-  defp format_provider_title(:baikal), do: "Baikal"
-  defp format_provider_title(_provider), do: "Calendar"
 end

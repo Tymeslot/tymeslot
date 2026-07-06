@@ -47,12 +47,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
-      # The Reconnect control lives in the connection row's expandable
-      # actions slot; open the row before clicking it.
-      view
-      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
-      |> render_click()
-
       view
       |> element(
         "button[phx-click='connect_provider'][phx-value-provider='google'][title='Reconnect integration']"
@@ -86,12 +80,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
-      # The Reconnect control lives in the connection row's expandable
-      # actions slot; open the row before clicking it.
-      view
-      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
-      |> render_click()
-
       view
       |> element(
         "button[phx-click='connect_provider'][phx-value-provider='outlook'][title='Reconnect integration']"
@@ -123,12 +111,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
         )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
-
-      # The Reconnect control lives in the connection row's expandable
-      # actions slot; open the row before clicking it.
-      view
-      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
-      |> render_click()
 
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
@@ -171,12 +153,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
         )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
-
-      # The Reconnect control lives in the connection row's expandable
-      # actions slot; open the row before clicking it.
-      view
-      |> element("button[phx-click='toggle_row'][phx-value-id='#{own_integration.id}']")
-      |> render_click()
 
       view
       |> element("button[phx-click='show_reconnect'][phx-value-id='#{own_integration.id}']")

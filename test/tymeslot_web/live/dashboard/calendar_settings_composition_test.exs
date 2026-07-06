@@ -33,14 +33,20 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       cleared on the profile. A dangling FK here would crash the next
       profile load.
 
+  The full in-modal connect flow — pick a CalDAV/Radicale provider →
+  discover calendars → select → submit → persist → modal closes — is
+  covered by the "connect a CalDAV calendar (in-modal)" describe block.
+  The CalDAV HTTP boundary is stubbed at `Tymeslot.HTTPClientMock` with a
+  207 multistatus fixture (the same seam the domain discovery tests use);
+  `async: false` puts Mox in global mode so the circuit-breaker GenServer
+  that wraps the HTTP call sees the stub.
+
   Dropped from the plan with rationale:
 
-    * Full Nextcloud discover → select → submit → persist flow and the
-      related 503 / timeout / empty-list scenarios require raw CalDAV
-      XML mocking infrastructure that does not exist in this repo; each
-      would need several hundred lines of multistatus fixture setup and
-      would reassert behaviour already covered by the CalDAV discovery
-      tests under `tymeslot/integrations/calendar/caldav/`.
+    * The related 503 / timeout / empty-list discovery-error scenarios
+      reassert behaviour already covered by the CalDAV discovery tests
+      under `tymeslot/integrations/calendar/caldav/`; the error banner
+      rendering is exercised there and in the config-component unit tests.
     * `SanitizeMerge` empty-string URL regression — `SanitizeMerge.merge/2`
       preserves `""` by design (sanitisers use the empty string to wipe
       malicious values). Existing unit tests in `sanitize_merge_test.exs`
@@ -78,6 +84,41 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
 
+  # A 207 multistatus PROPFIND response describing two CalDAV calendars.
+  # Stubbing `HTTPClientMock` with this lets the in-modal discovery step run
+  # end-to-end without a real server. Mirrors the fixture the domain
+  # discovery tests use (`discovery_happy_path_test.exs`).
+  @propfind_calendar_response """
+  <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+    <D:response>
+      <D:href>/calendars/user/work/</D:href>
+      <D:propstat>
+        <D:prop>
+          <D:displayname>Work</D:displayname>
+          <D:resourcetype>
+            <D:collection/>
+            <C:calendar/>
+          </D:resourcetype>
+        </D:prop>
+        <D:status>HTTP/1.1 200 OK</D:status>
+      </D:propstat>
+    </D:response>
+    <D:response>
+      <D:href>/calendars/user/personal/</D:href>
+      <D:propstat>
+        <D:prop>
+          <D:displayname>Personal</D:displayname>
+          <D:resourcetype>
+            <D:collection/>
+            <C:calendar/>
+          </D:resourcetype>
+        </D:prop>
+        <D:status>HTTP/1.1 200 OK</D:status>
+      </D:propstat>
+    </D:response>
+  </D:multistatus>
+  """
+
   setup :verify_on_exit!
 
   setup do
@@ -87,28 +128,26 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
   setup :setup_dashboard_user
 
-  describe "setup prompt" do
-    test "shows a prompt when no calendar is connected", %{conn: conn} do
+  describe "empty state" do
+    test "shows an empty state when no calendar is connected", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
-      assert html =~ "You haven&#39;t connected a calendar yet"
+      assert html =~ "No calendars connected yet"
     end
 
-    test "hides the prompt once a calendar is connected", %{conn: conn, user: user} do
+    test "hides the empty state once a calendar is connected", %{conn: conn, user: user} do
       insert(:calendar_integration, user: user, provider: "google", is_active: true)
 
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
-      refute html =~ "You haven&#39;t connected a calendar yet"
+      refute html =~ "No calendars connected yet"
     end
   end
 
   describe "connect_provider navigation" do
-    # Apple and Nextcloud show up-front; the remaining CalDAV presets stay
-    # folded behind the "Other CalDAV server" card until revealed, so their
-    # tests must expand the fold before the provider card is present.
-    @always_shown_caldav_providers ~w(apple nextcloud)
-
+    # Every provider (including all CalDAV presets) is listed in the provider
+    # picker modal, which is always in the DOM — so each provider's select
+    # button is directly reachable without a reveal step.
     for {provider, label} <- [
           {"caldav", "CalDAV"},
           {"radicale", "Radicale"},
@@ -121,14 +160,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       @provider provider
       @label label
 
-      test "clicking #{label} provider card navigates to its config form", %{conn: conn} do
+      test "selecting the #{label} provider navigates to its config form", %{conn: conn} do
         {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
-
-        if @provider not in @always_shown_caldav_providers do
-          view
-          |> element("button[phx-click='toggle_caldav_options']")
-          |> render_click()
-        end
 
         view
         |> element("button[phx-click='connect_provider'][phx-value-provider='#{@provider}']")
@@ -168,6 +201,102 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       |> render_click()
 
       assert_redirect(view, "https://login.microsoftonline.com/oauth?fake=1")
+    end
+  end
+
+  describe "connect a CalDAV calendar (in-modal)" do
+    # The whole add flow now happens inside the provider-picker modal:
+    # selecting a CalDAV-family provider swaps the grid for that provider's
+    # config form, discovery renders the calendar checklist in place, and a
+    # successful submit persists the integration and closes the modal. Both
+    # the generic CalDAV preset and a named preset (Radicale) share the same
+    # config form, so we run the journey for both.
+    for {provider, label} <- [{"caldav", "CalDAV"}, {"radicale", "Radicale"}] do
+      @provider provider
+      @label label
+
+      @tag :capture_log
+      test "discovering and adding a #{label} calendar persists it and closes the modal",
+           %{conn: conn, user: user} do
+        stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 207, body: @propfind_calendar_response}}
+        end)
+
+        {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+        assert html =~ "No calendars connected yet"
+
+        # 1. Pick the provider — the config form replaces the grid in-modal.
+        view
+        |> element("button[phx-click='connect_provider'][phx-value-provider='#{@provider}']")
+        |> render_click()
+
+        assert has_element?(view, "#calendar-discovery-form-#{@provider}")
+
+        # 2. Enter credentials and discover — the stubbed 207 yields two
+        #    calendars, which render as a checklist in the same modal.
+        discovered =
+          view
+          |> form("#calendar-discovery-form-#{@provider}", %{
+            "integration" => %{
+              "name" => "My #{@label}",
+              "url" => "https://caldav.example.com",
+              "username" => "user",
+              "password" => "pass"
+            }
+          })
+          |> render_submit()
+
+        assert discovered =~ "Work"
+        assert discovered =~ "Personal"
+        assert has_element?(view, "#calendar-integration-form-#{@provider}")
+
+        # 3. Submit the selection (both calendars checked by default). The
+        #    success flash, list reload, and modal close all arrive via a
+        #    follow-up message, so assert on a fresh render.
+        view
+        |> form("#calendar-integration-form-#{@provider}")
+        |> render_submit()
+
+        added = render(view)
+
+        # Success: flash shown, modal closed (grid/config gone), row visible.
+        assert added =~ "Calendar integration added successfully"
+        refute added =~ "No calendars connected yet"
+        refute has_element?(view, "#calendar-discovery-form-#{@provider}")
+        assert added =~ "My #{@label}"
+
+        # Persisted with the discovered paths under the right provider.
+        integration =
+          Repo.get_by(CalendarIntegrationSchema, user_id: user.id, provider: @provider)
+
+        assert integration
+        assert integration.calendar_paths != []
+      end
+    end
+
+    @tag :capture_log
+    test "the Back control returns from the config form to the provider grid",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      view
+      |> element("button[phx-click='connect_provider'][phx-value-provider='caldav']")
+      |> render_click()
+
+      assert has_element?(view, "#calendar-discovery-form-caldav")
+
+      # The modal header exposes a Back control that returns to the grid
+      # without closing the modal.
+      view
+      |> element("button[phx-click='back_to_grid']")
+      |> render_click()
+
+      refute has_element?(view, "#calendar-discovery-form-caldav")
+      # The provider grid is back: every preset's select button is present.
+      assert has_element?(
+               view,
+               "button[phx-click='connect_provider'][phx-value-provider='radicale']"
+             )
     end
   end
 
@@ -266,10 +395,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
-      # The chip grid lives in the connection row's expandable detail slot;
-      # open it before clicking a calendar pill.
+      # The chip grid lives in the calendar-selection modal; open it via the
+      # Manage calendars action before clicking a calendar pill.
       view
-      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> element("button[phx-click='manage_calendars'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       view
@@ -309,10 +438,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
       assert html =~ "Soon-to-be-deleted"
 
-      # Expand the row (client-side state only) so the calendar pill is in
-      # the DOM before we simulate the deletion race.
+      # Open the calendar-selection modal so the calendar pill is in the DOM
+      # before we simulate the deletion race.
       view
-      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
+      |> element("button[phx-click='manage_calendars'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       # Simulate the user deleting the integration from another tab
@@ -362,12 +491,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
-      # The delete control lives in the connection row's expandable actions
-      # slot; open the row before reaching for it.
-      view
-      |> element("button[phx-click='toggle_row'][phx-value-id='#{primary.id}']")
-      |> render_click()
-
       # Open the delete modal for the primary integration. The click
       # pushes a `show` event at the dedicated modal component.
       view
@@ -411,10 +534,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       {:ok, _profile} = CalendarPrimary.set_primary_calendar_integration(user.id, integration.id)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
-
-      view
-      |> element("button[phx-click='toggle_row'][phx-value-id='#{integration.id}']")
-      |> render_click()
 
       view
       |> element(

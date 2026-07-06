@@ -15,7 +15,6 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.RadicaleConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents
   alias TymeslotWeb.Components.Dashboard.Integrations.IntegrationForm
-  alias TymeslotWeb.Components.Dashboard.Integrations.ProviderCard
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
@@ -24,7 +23,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
   alias TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
 
-  test "renders calendar_connection_row correctly" do
+  test "renders calendar_connection_row with its flat, always-visible actions" do
     assigns = %{
       integration: %{
         id: 1,
@@ -36,15 +35,26 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         provider_account_email: nil,
         needs_reauth: false
       },
-      expanded?: true,
       health_state: nil,
       myself: "some-target"
     }
 
     html = render_component(&CalendarComponents.calendar_connection_row/1, assigns)
+    doc = Floki.parse_document!(html)
+
     assert html =~ "My Calendar"
-    assert html =~ "Work"
-    assert html =~ "Syncing 1 Calendars"
+    # The row is flat: Manage calendars, Reconnect and Delete are visible
+    # without any expand step. The calendar-selection chips now live in the
+    # dedicated selection modal, not the row.
+    assert html =~ "Manage calendars"
+    assert html =~ "Reconnect"
+
+    assert Floki.find(
+             doc,
+             "button[phx-click='manage_calendars'][phx-value-id='1'][phx-target='some-target']"
+           ) != []
+
+    assert Floki.find(doc, "button[phx-click='show'][phx-target='#delete-calendar-modal']") != []
   end
 
   test "renders calendar_connection_row correctly when inactive" do
@@ -58,7 +68,6 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         provider_account_email: nil,
         needs_reauth: false
       },
-      expanded?: false,
       health_state: nil,
       myself: "some-target"
     }
@@ -67,6 +76,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert html =~ "Paused"
     # The shared connection row dims inactive integrations.
     assert html =~ "opacity-70"
+    # No calendars to manage → the Manage calendars action is not shown.
+    refute html =~ "Manage calendars"
   end
 
   test "renders calendar_connection_row safely when calendar_list is nil" do
@@ -80,7 +91,6 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         provider_account_email: nil,
         needs_reauth: false
       },
-      expanded?: true,
       health_state: nil,
       myself: "some-target"
     }
@@ -88,32 +98,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     # Should not crash
     html = render_component(&CalendarComponents.calendar_connection_row/1, assigns)
     assert html =~ "My Calendar"
-    assert html =~ "Syncing 0 Calendars"
-    assert html =~ "No calendars found"
-  end
-
-  test "renders provider_card correctly" do
-    assigns = %{
-      provider: "google",
-      title: "Google Calendar",
-      description: "Sync with Google",
-      button_text: "Connect",
-      click_event: "connect_google",
-      target: "some-target",
-      provider_value: "google"
-    }
-
-    html = render_component(&ProviderCard.provider_card/1, assigns)
-    doc = Floki.parse_document!(html)
-
-    assert html =~ "Google Calendar"
-    assert html =~ "Sync with Google"
-    assert html =~ "Connect"
-
-    assert Floki.find(
-             doc,
-             "button[phx-click='connect_google'][phx-target='some-target'][phx-value-provider='google']"
-           ) != []
+    refute html =~ "Manage calendars"
   end
 
   test "renders shared close_button correctly" do

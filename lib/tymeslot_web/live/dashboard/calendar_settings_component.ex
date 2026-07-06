@@ -13,8 +13,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnectModal
+  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelectionModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
-  alias TymeslotWeb.Dashboard.CalendarSettings.AvailableProviders
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerModal
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
   alias TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
@@ -27,12 +28,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     {:ok,
      socket
      |> assign(:integrations, [])
-     |> assign(:view, :providers)
      |> assign(:selected_provider, nil)
      |> assign(:is_refreshing, false)
      |> assign(:health_states, %{})
-     |> assign(:expanded_rows, MapSet.new())
-     |> assign(:show_all_caldav, false)
+     |> assign(:show_picker, false)
+     |> assign(:managing_calendar_id, nil)
      |> assign(:available_calendar_providers, Calendar.list_available_providers(:calendar))}
   end
 
@@ -41,7 +41,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     socket =
       socket
       |> assign(assigns)
-      |> maybe_reset_caldav_reveal(assigns)
       |> maybe_load_integrations(assigns)
       |> load_freebusy()
       |> assign_new(:security_metadata, fn -> DashboardHelpers.get_security_metadata(socket) end)
@@ -109,12 +108,27 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("toggle_row", %{"id" => id}, socket) do
-    {:noreply, assign(socket, :expanded_rows, toggle_member(socket.assigns.expanded_rows, id))}
+  def handle_event("show_picker", _params, socket) do
+    {:noreply, assign(socket, :show_picker, true)}
   end
 
-  def handle_event("toggle_caldav_options", _params, socket) do
-    {:noreply, assign(socket, :show_all_caldav, not socket.assigns.show_all_caldav)}
+  def handle_event("hide_picker", _params, socket) do
+    {:noreply, assign(socket, show_picker: false, selected_provider: nil)}
+  end
+
+  def handle_event("back_to_grid", _params, socket) do
+    {:noreply, assign(socket, :selected_provider, nil)}
+  end
+
+  def handle_event("manage_calendars", %{"id" => id}, socket) do
+    case parse_int(id) do
+      {:ok, int_id} -> {:noreply, assign(socket, :managing_calendar_id, int_id)}
+      :error -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("close_manage_calendars", _params, socket) do
+    {:noreply, assign(socket, :managing_calendar_id, nil)}
   end
 
   def handle_event("toggle_integration", %{"id" => id}, socket) do
@@ -165,7 +179,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   def handle_event("connect_provider", %{"provider" => provider}, socket)
       when provider in @caldav_provider_strings do
-    {:noreply, setup_config_view(socket, String.to_existing_atom(provider))}
+    {:noreply,
+     assign(socket, selected_provider: String.to_existing_atom(provider), show_picker: true)}
   end
 
   def handle_event("connect_provider", _params, socket) do
@@ -348,17 +363,30 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     |> assign(:health_states, health_states)
   end
 
-  defp setup_config_view(socket, provider) do
-    assign(socket, view: :config, selected_provider: provider)
+  # Builds the grouped provider list for the picker modal: OAuth providers
+  # (Google, Outlook) first, then all CalDAV presets — no nested reveal.
+  defp picker_groups(available, integrations) do
+    entries = Enum.map(available, &provider_entry(&1, integrations))
+    {oauth, caldav} = Enum.split_with(entries, & &1.oauth?)
+
+    [
+      %{label: nil, providers: oauth},
+      %{label: "CalDAV servers", providers: caldav}
+    ]
   end
 
-  # Collapse the CalDAV reveal when the config view sends us back to the
-  # providers list (a `send_update` carrying `view: :providers`). Routine
-  # parent re-renders don't pass `:view`, so they leave the reveal untouched.
-  defp maybe_reset_caldav_reveal(socket, %{view: :providers}),
-    do: assign(socket, :show_all_caldav, false)
+  defp provider_entry(descriptor, integrations) do
+    provider = Atom.to_string(descriptor.type)
 
-  defp maybe_reset_caldav_reveal(socket, _assigns), do: socket
+    %{
+      provider: provider,
+      title: descriptor.display_name,
+      description: descriptor.description,
+      click_event: ProviderConfig.click_event(descriptor.type),
+      connected?: Enum.any?(integrations, &(&1.provider == provider)),
+      oauth?: descriptor.oauth
+    }
+  end
 
   defp format_refresh_failures(names) when length(names) <= 3 do
     Enum.join(names, ", ")
@@ -380,44 +408,52 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   defp parse_int(_arg), do: :error
 
-  defp toggle_member(set, id) do
-    if MapSet.member?(set, id), do: MapSet.delete(set, id), else: MapSet.put(set, id)
-  end
-
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="space-y-12 pb-24">
-      <.section_header icon="hero-calendar-days" title="Calendar Settings" />
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <.section_header icon="hero-calendar-days" title="Calendar Settings" />
+        <button
+          phx-click="show_picker"
+          phx-target={@myself}
+          class="inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600 shrink-0"
+        >
+          <.icon name="hero-plus" class="w-4 h-4" /> Connect a calendar
+        </button>
+      </div>
 
-      <.info_box :if={not (@integration_status[:has_calendar] || false)} variant={:info} class="mb-0">
-        You haven't connected a calendar yet. Connect one so Tymeslot can read your
-        availability and stop meetings being booked when you're already busy.
-      </.info_box>
-
-      <%= if @view == :config do %>
-        <.live_component
-          module={ConfigViewComponent}
-          id="calendar-config-view-component"
-          selected_provider={@selected_provider}
-          current_user={@current_user}
-          security_metadata={@security_metadata}
-        />
-      <% else %>
-        <Components.connected_calendars_section
-          integrations={@integrations}
-          is_refreshing={@is_refreshing}
-          myself={@myself}
-          health_states={@health_states}
-          expanded_rows={@expanded_rows}
-        />
-
-        <AvailableProviders.available_providers_section
-          available_calendar_providers={@available_calendar_providers}
-          integrations={@integrations}
-          show_all_caldav={@show_all_caldav}
-          myself={@myself}
-        />
+      <div class="space-y-12">
+        <div>
+          <%= if @integrations == [] do %>
+            <div class="card-glass p-10 text-center">
+              <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-token-2xl bg-turquoise-50 text-turquoise-500">
+                <.icon name="hero-calendar-days" class="h-7 w-7" />
+              </div>
+              <h3 class="text-token-lg font-semibold text-tymeslot-800">
+                No calendars connected yet
+              </h3>
+              <p class="mx-auto mt-1 max-w-md text-token-sm text-tymeslot-500">
+                Connect a calendar so Tymeslot can read your availability and stop meetings
+                being booked when you're already busy.
+              </p>
+              <button
+                phx-click="show_picker"
+                phx-target={@myself}
+                class="mt-5 inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600"
+              >
+                <.icon name="hero-plus" class="w-4 h-4" /> Connect a calendar
+              </button>
+            </div>
+          <% else %>
+            <Components.connected_calendars_section
+              integrations={@integrations}
+              is_refreshing={@is_refreshing}
+              myself={@myself}
+              health_states={@health_states}
+            />
+          <% end %>
+        </div>
 
         <section class="space-y-4">
           <div class="flex items-center gap-2">
@@ -466,7 +502,38 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
             <% end %>
           </div>
         </section>
-      <% end %>
+      </div>
+
+      <ProviderPickerModal.provider_picker_modal
+        id="calendar-provider-picker"
+        show={@show_picker}
+        title="Connect a calendar"
+        subtitle="Sync your availability to prevent double bookings."
+        target={@myself}
+        on_cancel={JS.push("hide_picker", target: @myself)}
+        groups={picker_groups(@available_calendar_providers, @integrations)}
+        config_active={@selected_provider != nil}
+        back_event="back_to_grid"
+      >
+        <:config>
+          <.live_component
+            :if={@selected_provider != nil}
+            module={ConfigViewComponent}
+            id="calendar-config-view-component"
+            selected_provider={@selected_provider}
+            current_user={@current_user}
+            security_metadata={@security_metadata}
+          />
+        </:config>
+      </ProviderPickerModal.provider_picker_modal>
+
+      <CalendarSelectionModal.calendar_selection_modal
+        id="calendar-selection"
+        show={@managing_calendar_id != nil}
+        integration={Enum.find(@integrations, &(&1.id == @managing_calendar_id))}
+        target={@myself}
+        on_cancel={JS.push("close_manage_calendars", target: @myself)}
+      />
 
       <.live_component
         module={DeleteIntegrationModal}

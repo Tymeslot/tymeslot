@@ -13,8 +13,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
   alias Tymeslot.Utils.SanitizeMerge
-  alias TymeslotWeb.Components.Dashboard.Integrations.ProviderCard
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
@@ -28,7 +28,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:ok,
      socket
      |> assign(:integrations, [])
-     |> assign(:view_mode, :providers)
      |> assign(:config_provider, nil)
      |> assign(:selected_provider, nil)
      |> assign(:form_errors, %{})
@@ -36,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:saving, false)
      |> assign(:testing_connection, nil)
      |> assign(:health_states, %{})
-     |> assign(:expanded_rows, MapSet.new())
+     |> assign(:show_picker, false)
      |> assign(:available_video_providers, Directory.list(:video))}
   end
 
@@ -66,8 +65,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   defp maybe_load_integrations(socket, _assigns), do: load_integrations(socket)
 
   @impl Phoenix.LiveComponent
-  def handle_event("toggle_row", %{"id" => id}, socket) do
-    {:noreply, assign(socket, :expanded_rows, toggle_member(socket.assigns.expanded_rows, id))}
+  def handle_event("show_picker", _params, socket) do
+    {:noreply, assign(socket, :show_picker, true)}
+  end
+
+  def handle_event("hide_picker", _params, socket) do
+    {:noreply, assign(socket, show_picker: false, config_provider: nil)}
   end
 
   def handle_event("track_form_change", %{"integration" => params}, socket) do
@@ -77,7 +80,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   def handle_event("back_to_providers", _params, socket) do
     {:noreply,
      socket
-     |> assign(:view_mode, :providers)
      |> assign(:config_provider, nil)
      |> assign(:form_errors, %{})
      |> assign(:form_values, %{})}
@@ -91,8 +93,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
         else
           {:noreply,
            socket
-           |> assign(:view_mode, :config)
            |> assign(:config_provider, provider)
+           |> assign(:show_picker, true)
            |> assign(:form_errors, %{})
            |> assign(:form_values, %{})}
         end
@@ -299,68 +301,40 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">
-      <.section_header icon="hero-video-camera" title="Video Integration" />
-
-      <.info_box :if={not (@integration_status[:has_video] || false)} variant={:info} class="mb-0">
-        You haven't connected a video provider yet. Connect one so online meetings
-        get a video link added automatically when they're booked.
-      </.info_box>
-
-      <%= if @view_mode == :config do %>
-        <%!-- Configuration Page Mode --%>
-        <div
-          id="video-config-view"
-          phx-hook="ScrollReset"
-          data-action={@config_provider}
-          class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <.section_header icon="hero-video-camera" title="Video Integration" />
+        <button
+          phx-click="show_picker"
+          phx-target={@myself}
+          class="inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600 shrink-0"
         >
-          <div class="flex items-center gap-6 bg-white p-6 rounded-token-3xl border-2 border-tymeslot-50 shadow-sm">
-            <button
-              phx-click="back_to_providers"
-              phx-target={@myself}
-              class="flex items-center gap-2 px-4 py-2 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all"
-            >
-              <.icon name="hero-arrow-left" class="w-5 h-5" />
-              Back
-            </button>
+          <.icon name="hero-plus" class="w-4 h-4" /> Connect a video provider
+        </button>
+      </div>
 
-            <div class="h-8 w-px bg-tymeslot-100"></div>
-
-            <.section_header
-              level={2}
-              icon="hero-video-camera"
-              title={"Setup #{Directory.format_provider_name(:video, @config_provider)}"}
-            />
-          </div>
-
-          <div class="card-glass">
-            <%= case @config_provider do %>
-              <% "mirotalk" -> %>
-                <.live_component
-                  module={MirotalkConfig}
-                  id="mirotalk-config"
-                  target={@myself}
-                  form_errors={@form_errors}
-                  form_values={@form_values}
-                  saving={@saving}
-                />
-              <% "custom" -> %>
-                <.live_component
-                  module={CustomConfig}
-                  id="custom-config"
-                  target={@myself}
-                  form_errors={@form_errors}
-                  form_values={@form_values}
-                  saving={@saving}
-                />
-              <% _ -> %>
-                <p class="text-tymeslot-500 font-medium">Configuration form not available for this provider.</p>
-            <% end %>
-          </div>
-        </div>
-      <% else %>
+      <div>
         <%!-- Connected Video Providers Section --%>
-        <%= if @integrations != [] do %>
+        <%= if @integrations == [] do %>
+          <div class="card-glass p-10 text-center">
+            <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-token-2xl bg-turquoise-50 text-turquoise-500">
+              <.icon name="hero-video-camera" class="h-7 w-7" />
+            </div>
+            <h3 class="text-token-lg font-semibold text-tymeslot-800">
+              No video providers connected yet
+            </h3>
+            <p class="mx-auto mt-1 max-w-md text-token-sm text-tymeslot-500">
+              Connect one so online meetings get a video link added automatically when
+              they're booked.
+            </p>
+            <button
+              phx-click="show_picker"
+              phx-target={@myself}
+              class="mt-5 inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600"
+            >
+              <.icon name="hero-plus" class="w-4 h-4" /> Connect a video provider
+            </button>
+          </div>
+        <% else %>
           <% {active_integrations, inactive_integrations} = Enum.split_with(@integrations, & &1.is_active) %>
           <% show_section_headers = active_integrations != [] and inactive_integrations != [] %>
 
@@ -375,7 +349,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
                 <%= for integration <- active_integrations do %>
                   <Components.video_connection_row
                     integration={integration}
-                    expanded?={MapSet.member?(@expanded_rows, to_string(integration.id))}
                     testing_connection={@testing_connection}
                     myself={@myself}
                     health_state={Map.get(@health_states, integration.id)}
@@ -394,7 +367,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
                 <%= for integration <- inactive_integrations do %>
                   <Components.video_connection_row
                     integration={integration}
-                    expanded?={MapSet.member?(@expanded_rows, to_string(integration.id))}
                     testing_connection={@testing_connection}
                     myself={@myself}
                     health_state={Map.get(@health_states, integration.id)}
@@ -405,32 +377,39 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
           </div>
         <% end %>
 
-        <%!-- Available Video Providers Section --%>
-        <div class="space-y-8 mt-12">
-          <div class="max-w-4xl">
-            <.section_header level={2} title="Available Providers" />
-            <p class="text-tymeslot-500 font-medium text-token-lg ml-1">
-              Choose from our supported video providers to enable seamless meeting experiences for your clients.
-            </p>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <%= for descp <- @available_video_providers do %>
-              <% provider = Atom.to_string(descp.type) %>
-              <% has_existing = Enum.any?(@integrations, &(&1.provider == provider)) %>
-              <ProviderCard.provider_card
-                provider={provider}
-                title={descp.display_name}
-                description={descp.description}
-                button_text={if has_existing, do: "Add Another Account", else: descp.button_text}
-                click_event="setup_provider"
-                target={@myself}
-                provider_value={provider}
-              />
-            <% end %>
-          </div>
-        </div>
-      <% end %>
+        <ProviderPickerModal.provider_picker_modal
+          id="video-provider-picker"
+          show={@show_picker}
+          title="Connect a video provider"
+          subtitle="Add a video link to online meetings automatically when they're booked."
+          target={@myself}
+          on_cancel={JS.push("hide_picker", target: @myself)}
+          groups={picker_groups(@available_video_providers, @integrations)}
+          config_active={@config_provider != nil}
+          back_event="back_to_providers"
+        >
+          <:config>
+            <.live_component
+              :if={@config_provider == "mirotalk"}
+              module={MirotalkConfig}
+              id="mirotalk-config"
+              target={@myself}
+              form_errors={@form_errors}
+              form_values={@form_values}
+              saving={@saving}
+            />
+            <.live_component
+              :if={@config_provider == "custom"}
+              module={CustomConfig}
+              id="custom-config"
+              target={@myself}
+              form_errors={@form_errors}
+              form_values={@form_values}
+              saving={@saving}
+            />
+          </:config>
+        </ProviderPickerModal.provider_picker_modal>
+      </div>
 
       <%!-- Edit Integration Modal --%>
       <.live_component
@@ -460,6 +439,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:noreply,
      socket
      |> reset_form_state()
+     |> assign(:show_picker, false)
      |> load_integrations()
      |> assign(:form_values, %{})}
   end
@@ -511,7 +491,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
   defp reset_form_state(socket) do
     socket
-    |> assign(:view_mode, :providers)
     |> assign(:config_provider, nil)
     |> assign(:form_errors, %{})
     |> assign(:saving, false)
@@ -533,8 +512,22 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
   defp notify_parent(msg), do: send(self(), msg)
 
-  defp toggle_member(set, id) do
-    if MapSet.member?(set, id), do: MapSet.delete(set, id), else: MapSet.put(set, id)
+  # Builds the single-group provider list for the picker modal.
+  defp picker_groups(available, integrations) do
+    entries = Enum.map(available, &provider_entry(&1, integrations))
+    [%{label: nil, providers: entries}]
+  end
+
+  defp provider_entry(descriptor, integrations) do
+    provider = Atom.to_string(descriptor.type)
+
+    %{
+      provider: provider,
+      title: descriptor.display_name,
+      description: descriptor.description,
+      click_event: "setup_provider",
+      connected?: Enum.any?(integrations, &(&1.provider == provider))
+    }
   end
 
   defp map_keys_to_atoms(%{} = map) do
