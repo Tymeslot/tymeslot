@@ -86,6 +86,29 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
                })
     end
 
+    test "threads the cached ETag into the payload for a conditional write", %{
+      user: user,
+      integration: integ
+    } do
+      cached_event(integ, uid: "uid-1", etag: "\"srv-etag-42\"")
+
+      expect(Tymeslot.CalendarMock, :update_event, fn "uid-1", event_data, _context ->
+        # The CalDAV path uses this as the If-Match precondition so a colour
+        # PUT against a server-edited event 412s and Oban retries, rather than
+        # reverting the edit to our stale raw_ical snapshot.
+        assert event_data.etag == "\"srv-etag-42\""
+        :ok
+      end)
+
+      assert :ok =
+               perform_job(ColourWriteBackWorker, %{
+                 "integration_id" => integ.id,
+                 "uid" => "uid-1",
+                 "user_id" => user.id,
+                 "colour" => "blueberry"
+               })
+    end
+
     test "returns an error so Oban retries when the provider write fails", %{
       user: user,
       integration: integ

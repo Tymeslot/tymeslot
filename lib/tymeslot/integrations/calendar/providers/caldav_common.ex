@@ -257,7 +257,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
         colour_opts =
           Keyword.merge(opts,
             raw_ical: Map.get(event_data, :raw_ical),
-            provider_event_id: Map.get(event_data, :provider_event_id)
+            provider_event_id: Map.get(event_data, :provider_event_id),
+            etag: Map.get(event_data, :etag)
           )
 
         Events.update_event_colour(client, path, uid, colour, colour_opts)

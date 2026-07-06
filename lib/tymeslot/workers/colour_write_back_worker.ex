@@ -59,12 +59,19 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   # description/location — a full-field payload would only be safe to send
   # via a full REPLACE, which is exactly what silently wiped recurrence,
   # attendees, alarms, and conference data before this fix.
+  #
+  # `etag` is the cached ETag for the event. The CalDAV path uses it as the
+  # `If-Match` precondition on the colour PUT so that, if the host event has
+  # been edited on the server since our last sync, the PUT 412s and Oban
+  # retries against fresh data rather than reverting the edit to our stale
+  # `raw_ical` snapshot. Ignored by providers without ETag semantics (Google).
   defp colour_only_event_data(event, colour) do
     %{
       colour_only: true,
       colour: colour,
       provider_event_id: event.provider_event_id,
-      raw_ical: event.raw_ical
+      raw_ical: event.raw_ical,
+      etag: event.etag
     }
   end
 end

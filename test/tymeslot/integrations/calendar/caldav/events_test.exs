@@ -492,6 +492,62 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
   end
 
   # ---------------------------------------------------------------------------
+  # update_event_colour/5
+  # ---------------------------------------------------------------------------
+
+  describe "update_event_colour/5" do
+    @colour_raw_ical "BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:colour-uid\nRRULE:FREQ=WEEKLY\nEND:VEVENT\nEND:VCALENDAR\n"
+
+    test "uses the supplied etag as If-Match and skips HEAD" do
+      # The colour write-back must send the caller's cached ETag rather than
+      # HEAD-probing the current server ETag. A HEAD probe would fetch whatever
+      # the server holds now and let the colour PUT clobber an edit the user
+      # made on the server since our last sync; a conditional PUT with the
+      # cached ETag 412s instead, so Oban retries against fresh data.
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "PUT",
+               "update_event_colour must not issue HEAD when etag is supplied (got #{conn.method})"
+
+        [if_match | _rest] = Conn.get_req_header(conn, "if-match")
+        assert if_match == "\"cached-etag\""
+
+        Conn.send_resp(conn, 204, "")
+      end)
+
+      assert :ok =
+               Events.update_event_colour(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "colour-uid",
+                 "blueberry",
+                 raw_ical: @colour_raw_ical,
+                 etag: "\"cached-etag\"",
+                 skip_breaker: true
+               )
+    end
+
+    test "returns :precondition_failed on 412 so Oban retries against fresh data" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "PUT"
+        [if_match | _rest] = Conn.get_req_header(conn, "if-match")
+        assert if_match == "\"stale-etag\""
+        Conn.send_resp(conn, 412, "Precondition Failed")
+      end)
+
+      assert {:error, :precondition_failed} =
+               Events.update_event_colour(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "colour-uid",
+                 "blueberry",
+                 raw_ical: @colour_raw_ical,
+                 etag: "\"stale-etag\"",
+                 skip_breaker: true
+               )
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # delete_calendar_event/4
   # ---------------------------------------------------------------------------
 
