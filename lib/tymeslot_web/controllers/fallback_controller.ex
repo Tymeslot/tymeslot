@@ -8,12 +8,13 @@ defmodule TymeslotWeb.FallbackController do
   page. Honest 404s keep stale/garbage URLs out of search indexes and let
   clients distinguish "missing" from "moved".
 
-  The root layout is disabled for the error response: every controller applies
-  `put_root_layout({Layouts, :root})`, whose `<head>` emits a self-referential
-  `<link rel="canonical">`. On a 404 that would advertise the missing URL as its
-  own canonical — telling crawlers a dead page is real. Rendering the bare error
-  view (as the raw `NoRouteError` path already does) keeps the canonical off
-  error responses.
+  Both layouts are disabled for the error response so the self-contained
+  `ErrorHTML` 404 template renders on its own. The root layout's `<head>` emits a
+  self-referential `<link rel="canonical">`; on a 404 that would advertise the
+  missing URL as its own canonical, telling crawlers a dead page is real. The app
+  layout would prepend a flash group ahead of the template's `<html>` skeleton.
+  Disabling both matches the bare `NoRouteError` path (`render_errors: layout:
+  false`), which the branded template is also written to render under.
   """
   use TymeslotWeb, :controller
 
@@ -22,6 +23,7 @@ defmodule TymeslotWeb.FallbackController do
     conn
     |> put_status(:not_found)
     |> put_root_layout(html: false)
+    |> put_layout(html: false)
     |> put_view(html: TymeslotWeb.ErrorHTML, json: TymeslotWeb.ErrorJSON)
     |> render(:"404")
   end

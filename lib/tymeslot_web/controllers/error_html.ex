@@ -8,19 +8,15 @@ defmodule TymeslotWeb.ErrorHTML do
 
   alias Phoenix.Controller
 
-  # If you want to customize your error pages,
-  # uncomment the embed_templates/1 call below
-  # and add pages to the error directory:
-  #
-  #   * lib/tymeslot_web/controllers/error_html/404.html.heex
-  #   * lib/tymeslot_web/controllers/error_html/500.html.heex
-  #
-  # embed_templates "error_html/*"
+  # A branded, self-contained 404 page lives in `error_html/404.html.heex` and is
+  # picked up by `embed_templates` as the `render("404.html", assigns)` clause.
+  # Every other status falls through to the plain-text clause below.
+  embed_templates "error_html/*"
 
   # The default is to render a plain text page based on
-  # the template name. For example, "404.html" becomes
-  # "Not Found".
-  @spec render(String.t(), map()) :: String.t()
+  # the template name. For example, "500.html" becomes
+  # "Internal Server Error".
+  @spec render(String.t(), map()) :: Phoenix.LiveView.Rendered.t() | String.t()
   def render(template, _assigns) do
     Controller.status_message_from_template(template)
   end

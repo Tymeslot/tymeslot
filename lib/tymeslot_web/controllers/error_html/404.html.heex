@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Page not found · Tymeslot</title>
+    <link rel="icon" type="image/svg+xml" href={~p"/images/brand/favicon.svg"} />
+    <link rel="alternate icon" href={~p"/images/brand/favicon.ico"} />
+    <%!--
+      Self-contained on purpose: this template renders with no layout (the
+      endpoint's `render_errors` sets `layout: false`, and the catch-all
+      FallbackController disables both layouts), so it must load its own CSS and
+      carry its own `<html>` skeleton. No canonical `<link>` — a 404 must not
+      advertise the missing URL as its own canonical.
+    --%>
+    <link rel="stylesheet" href={~p"/assets/app.css"} />
+  </head>
+  <body>
+    <main class="relative flex min-h-screen items-center justify-center overflow-hidden bg-linear-to-br from-turquoise-100 via-cyan-50 to-turquoise-200 p-4">
+      <%!-- Decorative blurred brand blobs give the background depth --%>
+      <div aria-hidden="true" class="pointer-events-none absolute inset-0 overflow-hidden">
+        <div class="absolute -left-24 -top-24 h-96 w-96 rounded-token-full bg-turquoise-300/40 blur-3xl">
+        </div>
+        <div class="absolute -bottom-32 -right-16 h-[28rem] w-[28rem] rounded-token-full bg-cyan-300/40 blur-3xl">
+        </div>
+      </div>
+
+      <div class="relative z-10 w-full max-w-md rounded-token-3xl border border-white/60 bg-white/95 p-8 text-center shadow-glass-xl backdrop-blur-md sm:p-10">
+        <a
+          href={~p"/"}
+          class="mb-8 inline-block transition-transform duration-300 hover:scale-105"
+          aria-label="Tymeslot"
+        >
+          <.logo img_class="h-12" />
+        </a>
+
+        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-linear-to-br from-turquoise-500 to-cyan-500 text-white shadow-lg shadow-turquoise-500/30">
+          <.icon name="hero-magnifying-glass" class="h-8 w-8" />
+        </div>
+
+        <p class="mt-6 text-token-sm font-bold uppercase tracking-[0.2em] text-turquoise-600">
+          Error 404
+        </p>
+        <h1 class="mt-2 text-token-3xl font-black tracking-tight text-tymeslot-900">
+          This page doesn't exist
+        </h1>
+        <p class="mt-3 text-token-base text-tymeslot-500">
+          The link may be broken, or the page may have moved.
+        </p>
+
+        <a
+          href={~p"/"}
+          class="mt-8 inline-flex items-center justify-center gap-2 rounded-token-2xl bg-linear-to-br from-turquoise-600 to-cyan-600 px-7 py-3.5 text-token-base font-bold text-white shadow-lg shadow-turquoise-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:from-turquoise-700 hover:to-cyan-700 hover:shadow-xl hover:shadow-turquoise-500/40"
+        >
+          Go to Tymeslot
+          <.icon name="hero-arrow-right-mini" class="h-4 w-4" />
+        </a>
+      </div>
+    </main>
+  </body>
+</html>

@@ -10,7 +10,17 @@ defmodule TymeslotWeb.FallbackControllerTest do
 
       conn = get(conn, "/invalid/path/to/trigger/fallback")
       assert conn.status == 404
-      assert response(conn, 404) =~ "Not Found"
+    end
+
+    test "renders the branded 404 page with a link back to the app root", %{conn: conn} do
+      body = conn |> get("/invalid/path/to/trigger/fallback") |> response(404)
+
+      # Not the bare Phoenix "Not Found" text — a self-contained, branded page
+      # whose primary action routes to "/", which sends visitors on to auth.
+      assert body =~ "This page doesn't exist"
+      assert body =~ "<!DOCTYPE html>"
+      assert body =~ ~s(href="/")
+      assert body =~ "app.css"
     end
 
     test "does not redirect (no soft-404)", %{conn: conn} do
