@@ -7,10 +7,7 @@ config :tymeslot, environment: :test, test_mode: true
 # password hash, which compounds across hundreds of factory user inserts.
 config :bcrypt_elixir, log_rounds: 4
 
-# Disable legal acceptance gate in tests
-config :tymeslot, enforce_legal_acceptance_gate: false
-
-# Override SaaS config: Core tests must not enforce legal agreements
+# Core tests must not enforce legal agreements.
 config :tymeslot, enforce_legal_agreements: false
 
 # Force Core to use Tymeslot.PubSub in tests

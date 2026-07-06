@@ -50,6 +50,11 @@ config :tymeslot, Tymeslot.Security.Encryption,
 # Enable dev routes for dashboard and mailbox
 config :tymeslot, dev_routes: true
 
+# Show metadata fields in development logs for observability
+config :logger, :console,
+  format: "[$level] $message $metadata\n",
+  metadata: [:request_id, :user_id, :correlation_id, :event, :domain, :reason]
+
 # Set a higher stacktrace during development
 config :phoenix, :stacktrace_depth, 20
 

@@ -392,44 +392,26 @@ config :tymeslot, :payment_retry,
   # Multiplier for exponential backoff (1 = linear backoff)
   backoff_multiplier: 1
 
-# Subscription trial configuration
-config :tymeslot,
-  # Default trial period for new subscriptions (in days)
-  trial_period_days: 7
-
-# Refund handling configuration
+# Refund handling configuration. The revocation threshold is read by Core's
+# refund webhook handler (Tymeslot.Payments.Webhooks.RefundHandler), so it stays
+# in Core even though only paid deployments exercise it.
 config :tymeslot,
   # Percentage threshold for revoking access after refund (0-100)
   # Access is revoked only if total refunds >= this percentage of original charge
   refund_revocation_threshold_percent: 90.0
 
-# Abandoned transaction configuration
-config :tymeslot,
-  # Time threshold in seconds before a pending transaction is considered abandoned
-  # Used for sending reminder emails to users who didn't complete checkout
-  abandoned_transaction_threshold_seconds: 600
-
-# Dunning and Retention configuration
+# Data retention windows for the cross-domain pruning worker
+# (Tymeslot.Workers.DataRetentionWorker), read via Application.compile_env. Because
+# compile_env requires identical compile-time and runtime values, this key must
+# have a single owner — keep only retention here. An external overlay that adds a
+# dunning schedule must use its own separate config key, never extend :payments.
 config :tymeslot, :payments,
-  dunning: [
-    days_until_cancel: 14,
-    reminder_days: [0, 3, 7, 14]
-  ],
   retention: [
     outgoing_webhook_days: 60,
     stripe_event_days: 90,
     analytics_event_days: 90,
     payload_days: 30
   ]
-
-# Subscription reconciliation configuration
-config :tymeslot, :reconciliation,
-  # Automatically fix safe discrepancies (e.g., status mismatches, missing locally)
-  auto_fix_safe_discrepancies: true,
-  # Send alerts to admins when discrepancies are found
-  alert_admins: true,
-  # Number of days to look back when fetching subscriptions for reconciliation
-  days_back: 7
 
 # Slack notifications — credentials supplied via env at runtime
 config :tymeslot,

@@ -612,9 +612,6 @@ if config_env() == :prod do
       config :tymeslot, :stripe_connect_webhook_secret, stripe_connect_webhook_secret
     end
   end
-
-  # Trial period configuration (default 7 days)
-  config :tymeslot, :trial_period_days, parse_int.("TRIAL_PERIOD_DAYS", 7)
 end
 
 # Self-host opt-in for the meeting-payments feature. Off by default — flipping
@@ -667,9 +664,6 @@ if config_env() in [:dev, :test] do
   config :tymeslot,
          :stripe_connect_webhook_secret,
          System.get_env("STRIPE_CONNECT_WEBHOOK_SECRET")
-
-  # Trial period configuration (default 7 days)
-  config :tymeslot, :trial_period_days, parse_int.("TRIAL_PERIOD_DAYS", 7)
 end
 
 # Telegram integration feature flags (Core defaults)
