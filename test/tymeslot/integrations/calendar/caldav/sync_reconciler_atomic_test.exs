@@ -181,7 +181,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
                )
 
       for i <- 1..3 do
-        assert {:ok, _} = ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-#{i}")
+        assert {:ok, _event} =
+                 ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-#{i}")
       end
     end
 
@@ -201,7 +202,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
                )
 
       for i <- 1..6 do
-        assert {:ok, _} = ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-#{i}")
+        assert {:ok, _event} =
+                 ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-#{i}")
       end
     end
 
@@ -228,7 +230,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
       assert {:error, :not_found} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-6")
 
-      assert {:ok, _} = ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-1")
+      assert {:ok, _event} = ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-1")
     end
   end
 
