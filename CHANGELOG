@@ -1,4 +1,79 @@
 
+[1.4.0]
+* Remove stale saas.js reference from umbrella esbuild config
+* core: Drop canonical tag from catch-all 404 responses
+* core: Stop an empty CalDAV fetch from wrongly cancelling booked meetings
+* core: Stop CalDAV colour change from reverting a server-side event edit
+* core: Restore the setup step in the first-visit dashboard tour
+* core: Harden event-colour overrides, mapping, and the agenda colour picker
+* core: Patch only the colour when writing an event colour back to the host calendar
+* core: Read CalDAV event colour into a palette key
+* core: Read Google event colour as a palette key
+* core: Guard dashboard sidebar against malformed extension icons
+* core: Resolve duplicate .glass-card and @keyframes definitions
+* core: Restore disabled-state styling for secondary buttons
+* core: Return changeset errors for non-negative amount violations
+* core: Chunk CalDAV bulk deletes to respect Postgres parameter limit
+* core: Store session tokens hashed at rest
+* core: Prune analytics events after 90 days to bound table growth
+* core: Bound the cancelled-meetings list query
+* core: Prune Telegram delivery logs to bound table growth
+* core: Enforce meeting-time and non-negative-amount invariants in DB
+* core: Redact plaintext credential virtuals from inspect output
+* core: Enforce case-insensitive uniqueness for email and username
+* core: Retain payment records via nilify_all on user delete
+* core: Prevent calendar sync failure on very large initial imports
+* core: Refine keyboard and screen-reader accessibility from review
+* core: Make the booking calendar accessible to keyboard and screen readers
+* core: Make modals and form errors accessible to keyboard and screen readers
+* core: Ignore a blank reschedule uid in booking navigation URLs
+* core: Recover the reschedule flow when its slot is taken mid-submit
+* core: Preserve reschedule context on Choose New Time
+* core: Return booker to schedule step when a slot is taken mid-submit
+* core: Show progress during onboarding CalDAV calendar discovery
+* core: Stop marking ended appointments as in progress on the agenda
+* core: Render rounded-token-full pills and badges as circles
+* core: Gate admin feature announcements by signup date
+* core: Show the Analytics Pro badge across all dashboard pages
+* core: Redesign integrations with a provider picker and inline actions
+* core: Announce the integrations hub and event colours in a what's-new modal
+* core: Point internal links and OAuth redirects at the integrations hub
+* core: Surface reconnect on collapsed rows for integrations needing attention
+* core: Route legacy integration pages to the hub and unify the sidebar nav
+* core: Surface aggregated integration health in the hub
+* core: Move payments into the integrations hub
+* core: Collapse CalDAV providers and add a hub add-integration control
+* core: Render video integrations in the hub with the new connection row
+* core: Render calendars in the integrations hub with the new connection row
+* core: Add unified integration connection row
+* core: Add integrations hub tab navigation
+* core: Add generic integration status badge
+* core: Scaffold unified integrations hub route and component
+* core: Decouple and make rotatable the data-at-rest encryption key
+* core: Start the hero demo video on scroll into view
+* core: Write per-event colour back to the host calendar
+* core: Colour calendar events from the dashboard agenda
+* core: Show per-event colour on the dashboard agenda
+* core: Resolve per-event colour onto agenda entries
+* core: Add colour resolver and Calendar colour API
+* core: Add durable per-event colour override store
+* core: Add inbound colour-to-palette mapping to EventColour
+* core: Add calendar (.ics) download to the booking confirmation screen
+* core: Gate user deletion on an external account-deletion hook
+* core: Nudge users to reconnect before skipping calendar in onboarding
+* core: Open appointment details in a modal from the dashboard agenda
+* core: Add a live "Your day" agenda to the dashboard overview
+* core: Improve dashboard calendar readability and contrast
+* core: Allow private-IP calendar, video and webhooks for self-hosters via env vars
+* core: Highlight dashboard sidebar items that still need setup
+* core: Redirect common login/signup URL aliases to the auth pages
+* core: Add dismissible dashboard onboarding checklist
+* core: Greet first-time users with "Welcome" on the dashboard
+* core: Prompt to connect a calendar or video provider when none is set up
+* core: Give sidebar setup indicators specific tooltips
+* core: Autofocus the first field on auth pages
+
+
 [1.3.0]
 * core: Describe Calendar as a full calendar view in the onboarding tour
 * core: Address the user as "you" in the Google sign-up confirmation

@@ -1025,6 +1025,53 @@
       "publishState": "published",
       "ts": "Mon, 20 Apr 2026 10:30:17 GMT"
     },
+    "1.4.0": {
+      "creationDate": "Mon, 06 Jul 2026 18:08:26 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "A unified integrations hub, calendar colour sync, and a live dashboard agenda, alongside encryption, security and accessibility hardening.\n* Unified integrations hub for calendars, video and payments with health status and one-click reconnect\n* Event colours now sync both ways with your calendar provider\n* Data-at-rest encryption key can be rotated independently of deployment\n* Live \"Your day\" agenda and setup nudges on the dashboard overview\n* Improved keyboard and screen-reader accessibility across booking and dashboard",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.4.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.4.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Mon, 06 Jul 2026 18:08:26 GMT"
+    },
     "1.0.3": {
       "creationDate": "Fri, 22 May 2026 10:27:45 GMT",
       "manifest": {
