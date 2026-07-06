@@ -50,6 +50,10 @@ config :tymeslot,
   # entirely. SaaS populates this (see config/runtime.exs).
   resources_pages: [],
   pricing_url: nil,
+  # Optional "Enterprise" marketing page, surfaced as a footer link when set.
+  # nil by default so Core standalone omits it entirely; a deployment that ships
+  # an enterprise page overrides it with that route.
+  enterprise_url: nil,
   privacy_policy_url: nil,
   terms_and_conditions_url: nil,
   # Base URL for documentation articles. Self-hosted instances link to the public SaaS docs.

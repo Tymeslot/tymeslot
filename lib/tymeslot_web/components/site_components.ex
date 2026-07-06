@@ -456,6 +456,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
       footer_links([
         {:features_url, "Features"},
         {:pricing_url, "Pricing"},
+        {:enterprise_url, "Enterprise"},
         {:docs_url, "Docs"},
         {:changelog_url, "Changelog"},
         {:about_url, "About"},
