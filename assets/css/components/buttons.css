@@ -117,7 +117,7 @@
 }
 
 .action-button--outline {
-  @apply bg-transparent border-2 border-white text-white hover:bg-white hover:text-turquoise-700;
+  @apply bg-transparent border-2 border-tymeslot-200 text-tymeslot-600 hover:border-turquoise-400 hover:text-turquoise-700 hover:bg-turquoise-50/50;
 }
 
 /* Small-screen action button sizing */
