@@ -41,7 +41,7 @@ msgstr ""
 msgid "Adding"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:209
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:214
 #, elixir-autogen, elixir-format
 msgid "Already whitelisted: %{domains}"
 msgstr ""
@@ -116,7 +116,7 @@ msgstr ""
 msgid "Disabled:"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:229
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:234
 #, elixir-autogen, elixir-format
 msgid "Domain removed successfully"
 msgstr ""
@@ -146,7 +146,7 @@ msgstr ""
 msgid "Embedding is blocked everywhere (default)"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:243
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:248
 #, elixir-autogen, elixir-format
 msgid "Embedding is now disabled"
 msgstr ""
@@ -156,7 +156,7 @@ msgstr ""
 msgid "Enter a domain and press enter to add it. Don't include"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:295
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:300
 #, elixir-autogen, elixir-format
 msgid "Failed to save: %{errors}"
 msgstr ""
@@ -236,7 +236,7 @@ msgstr ""
 msgid "Placeholder shown before the iframe auto-resizes. Inline only."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:204
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:209
 #, elixir-autogen, elixir-format
 msgid "Please enter at least one domain."
 msgstr ""
@@ -286,7 +286,7 @@ msgstr ""
 msgid "Security & Domain Control"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:200
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:205
 #, elixir-autogen, elixir-format
 msgid "Security settings saved successfully!"
 msgstr ""
@@ -316,7 +316,7 @@ msgstr ""
 msgid "This is how your booking widget will appear on external sites"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:303
+#: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:308
 #, elixir-autogen, elixir-format
 msgid "Too many updates. Please wait a moment before trying again."
 msgstr ""
@@ -431,17 +431,17 @@ msgstr ""
 msgid "Language for the booking page. Auto follows each visitor's browser preference."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex:86
+#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex:88
 #, elixir-autogen, elixir-format
 msgid "Book a Meeting"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex:91
+#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex:93
 #, elixir-autogen, elixir-format
 msgid "Booking system is currently unavailable."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex:106
+#: lib/tymeslot_web/live/dashboard/embed_settings/helpers.ex:111
 #, elixir-autogen, elixir-format
 msgid "Schedule a meeting"
 msgstr ""

@@ -42,7 +42,7 @@ msgstr ""
 msgid "Account Security"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live.ex:17
+#: lib/tymeslot_web/live/account_live.ex:18
 #, elixir-autogen, elixir-format
 msgid "Account Settings"
 msgstr ""
@@ -62,7 +62,7 @@ msgstr ""
 msgid "Authentication is managed through %{provider}"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live.ex:41
+#: lib/tymeslot_web/live/account_live.ex:42
 #, elixir-autogen, elixir-format
 msgid "Back to Dashboard"
 msgstr ""
