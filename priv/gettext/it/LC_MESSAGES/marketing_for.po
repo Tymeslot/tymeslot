@@ -147,7 +147,7 @@ msgstr ""
 msgid "Core scheduling is always free. No credit card required."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/for_live.ex:109
+#: lib/tymeslot_saas_web/live/for_live.ex:112
 #, elixir-autogen, elixir-format
 msgid "Create Your Free Account"
 msgstr ""
@@ -243,7 +243,7 @@ msgid "Free"
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/for_hub_live.ex:444
-#: lib/tymeslot_saas_web/live/for_live.ex:102
+#: lib/tymeslot_saas_web/live/for_live.ex:105
 #, elixir-autogen, elixir-format
 msgid "Free plan available. No credit card required. Setup in 5 minutes."
 msgstr ""
@@ -324,7 +324,7 @@ msgid "More scheduling guides"
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/for_hub_live.ex:454
-#: lib/tymeslot_saas_web/live/for_live.ex:122
+#: lib/tymeslot_saas_web/live/for_live.ex:125
 #, elixir-autogen, elixir-format
 msgid "No credit card required"
 msgstr ""
@@ -355,7 +355,7 @@ msgid "Pricing"
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/for_hub_live.ex:462
-#: lib/tymeslot_saas_web/live/for_live.ex:144
+#: lib/tymeslot_saas_web/live/for_live.ex:147
 #, elixir-autogen, elixir-format
 msgid "Privacy-first"
 msgstr ""
@@ -393,7 +393,7 @@ msgid "Read guide"
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/for_hub_live.ex:441
-#: lib/tymeslot_saas_web/live/for_live.ex:99
+#: lib/tymeslot_saas_web/live/for_live.ex:102
 #, elixir-autogen, elixir-format
 msgid "Ready to reclaim your time?"
 msgstr ""
@@ -494,7 +494,7 @@ msgid "Setting up Tymeslot?"
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/for_hub_live.ex:458
-#: lib/tymeslot_saas_web/live/for_live.ex:133
+#: lib/tymeslot_saas_web/live/for_live.ex:136
 #, elixir-autogen, elixir-format
 msgid "Setup in 5 minutes"
 msgstr ""
