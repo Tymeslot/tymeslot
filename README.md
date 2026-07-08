@@ -227,6 +227,8 @@ If Tymeslot is useful to you, **[star the repo](https://github.com/tymeslot/tyme
 
 PRs and issues are welcome — start with [CONTRIBUTING.md](CONTRIBUTING.md). Found a security issue? Please report it via the [contact page](https://tymeslot.app/contact) rather than a public issue.
 
+Tymeslot is better thanks to its contributors — see [CONTRIBUTORS.md](CONTRIBUTORS.md), with special thanks to [@dani](https://github.com/dani) for generic OAuth, French localisation and a stream of CalDAV fixes.
+
 ## Licence
 
 Open source under the [GNU AGPLv3](LICENSE) — free to use, self-host, modify and redistribute; if you run a modified version as a network service, share your changes under the same licence.
