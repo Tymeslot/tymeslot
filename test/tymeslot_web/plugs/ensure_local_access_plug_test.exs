@@ -91,7 +91,7 @@ defmodule TymeslotWeb.Plugs.EnsureLocalAccessPlugTest do
 
       assert returned_conn.status == 403
       assert returned_conn.halted
-      assert response(returned_conn, 403) =~ "Not Found"
+      assert response(returned_conn, 403) =~ "Page not found"
     end
   end
 end
