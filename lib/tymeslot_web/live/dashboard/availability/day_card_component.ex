@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
   @moduledoc "Day card function component for the availability list view."
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.Shared.TimeOptions
@@ -66,7 +67,9 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
               "text-token-sm font-black uppercase tracking-wider",
               if(@day_availability.is_available, do: "text-turquoise-700", else: "text-tymeslot-400")
             ]}>
-              {if @day_availability.is_available, do: "Available", else: "Off"}
+              {if @day_availability.is_available,
+                do: dgettext("dashboard_availability", "Available"),
+                else: dgettext("dashboard_availability", "Off")}
             </span>
           </div>
         </div>
@@ -82,7 +85,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                 <.input
                   type="select"
                   name="start"
-                  label="Start Time"
+                  label={dgettext("dashboard_availability", "Start Time")}
                   options={TimeOptions.time_options()}
                   value={BreakHelpers.format_time(@day_availability.start_time)}
                 />
@@ -91,7 +94,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                 <.input
                   type="select"
                   name="end"
-                  label="End Time"
+                  label={dgettext("dashboard_availability", "End Time")}
                   options={TimeOptions.time_options()}
                   value={BreakHelpers.format_time(@day_availability.end_time)}
                 />
@@ -104,7 +107,9 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
         <div class="space-y-4">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-              <h4 class="text-token-lg font-black text-tymeslot-900 tracking-tight">Breaks</h4>
+              <h4 class="text-token-lg font-black text-tymeslot-900 tracking-tight">
+                {dgettext("dashboard_availability", "Breaks")}
+              </h4>
               <% breaks =
                 case @day_availability.breaks do
                   %Ecto.Association.NotLoaded{} -> []
@@ -112,7 +117,13 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                   _other -> []
                 end %>
               <span class="bg-tymeslot-100 text-tymeslot-500 text-token-2xs font-black uppercase tracking-widest px-2 py-0.5 rounded-md">
-                {length(breaks)} total
+                {dngettext(
+                  "dashboard_availability",
+                  "%{count} total",
+                  "%{count} total",
+                  length(breaks),
+                  count: length(breaks)
+                )}
               </span>
             </div>
 
@@ -126,7 +137,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                 <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                 </svg>
-                Add Break
+                {dgettext("dashboard_availability", "Add Break")}
               </button>
             <% end %>
           </div>
@@ -135,7 +146,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
             <div class="flex flex-wrap gap-3">
               <%= for break <- breaks do %>
                 <div class="inline-flex items-center bg-white border-2 border-tymeslot-100 rounded-token-xl px-4 py-2 text-token-sm font-bold text-tymeslot-700 shadow-sm group/break hover:border-turquoise-200 transition-all">
-                  <span class="mr-3">{break.label || "Break"}</span>
+                  <span class="mr-3">{break.label || dgettext("dashboard_availability", "Break")}</span>
                   <span class="text-turquoise-600">
                     {BreakHelpers.format_time(break.start_time)} - {BreakHelpers.format_time(break.end_time)}
                   </span>
@@ -144,7 +155,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                     phx-value-break_id={break.id}
                     phx-target={@myself}
                     class="ml-3 text-tymeslot-300 hover:text-red-500 transition-colors"
-                    title="Delete Break"
+                    title={dgettext("dashboard_availability", "Delete Break")}
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
@@ -168,8 +179,8 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
               <div class="lg:col-span-1">
                 <.input
                   name="label"
-                  label="Label"
-                  placeholder="e.g. Lunch"
+                  label={dgettext("dashboard_availability", "Label")}
+                  placeholder={dgettext("dashboard_availability", "e.g. Lunch")}
                   maxlength={Constraints.break_label_max_length()}
                   errors={FormValidationHelpers.field_errors(@form_errors, :label)}
                 />
@@ -178,9 +189,9 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                 <.input
                   type="select"
                   name="start"
-                  label="From"
+                  label={dgettext("dashboard_availability", "From")}
                   required
-                  prompt="Start"
+                  prompt={dgettext("dashboard_availability", "Start")}
                   options={TimeOptions.time_options()}
                   errors={FormValidationHelpers.field_errors(@form_errors, :start_time)}
                 />
@@ -189,9 +200,9 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                 <.input
                   type="select"
                   name="end"
-                  label="Until"
+                  label={dgettext("dashboard_availability", "Until")}
                   required
-                  prompt="End"
+                  prompt={dgettext("dashboard_availability", "End")}
                   options={TimeOptions.time_options()}
                   errors={FormValidationHelpers.field_errors(@form_errors, :end_time)}
                 />
@@ -201,14 +212,14 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
                   <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                   </svg>
-                  Add
+                  {dgettext("dashboard_availability", "Add")}
                 </button>
                 <button
                   type="button"
                   phx-click="hide_add_break_form"
                   phx-target={@myself}
                   class="btn-secondary inline-flex items-center justify-center px-3 py-3"
-                  title="Cancel"
+                  title={dgettext("dashboard_availability", "Cancel")}
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
@@ -232,7 +243,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
               <svg class="w-3.5 h-3.5 mr-2 text-tymeslot-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
               </svg>
-              Apply to All Days
+              {dgettext("dashboard_availability", "Apply to All Days")}
             </button>
             <button
               phx-click="copy_to_days"
@@ -244,7 +255,7 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
               <svg class="w-3.5 h-3.5 mr-2 text-tymeslot-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
               </svg>
-              Apply to Workdays
+              {dgettext("dashboard_availability", "Apply to Workdays")}
             </button>
           </div>
           <button
@@ -256,12 +267,14 @@ defmodule TymeslotWeb.Dashboard.Availability.DayCardComponent do
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
-            Clear Day
+            {dgettext("dashboard_availability", "Clear Day")}
           </button>
         </div>
       <% else %>
         <div class="py-4 px-6 bg-tymeslot-50 rounded-token-2xl border-2 border-dashed border-tymeslot-100">
-          <p class="text-tymeslot-400 font-bold text-token-sm">Not taking any bookings on this day.</p>
+          <p class="text-tymeslot-400 font-bold text-token-sm">
+            {dgettext("dashboard_availability", "Not taking any bookings on this day.")}
+          </p>
         </div>
       <% end %>
     </div>

@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
   Shows user's weekly availability schedule in a visual grid format.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.Availability.Helpers
 
@@ -12,15 +13,18 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
   @grid_total_minutes 990
   @slot_duration_minutes 30
 
-  @days [
-    {"Monday", 1},
-    {"Tuesday", 2},
-    {"Wednesday", 3},
-    {"Thursday", 4},
-    {"Friday", 5},
-    {"Saturday", 6},
-    {"Sunday", 7}
-  ]
+  @spec days() :: [{String.t(), 1..7}]
+  defp days do
+    [
+      {dgettext("dashboard_availability", "Monday"), 1},
+      {dgettext("dashboard_availability", "Tuesday"), 2},
+      {dgettext("dashboard_availability", "Wednesday"), 3},
+      {dgettext("dashboard_availability", "Thursday"), 4},
+      {dgettext("dashboard_availability", "Friday"), 5},
+      {dgettext("dashboard_availability", "Saturday"), 6},
+      {dgettext("dashboard_availability", "Sunday"), 7}
+    ]
+  end
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -41,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
       |> assign(assigns)
       |> assign(timezone_info)
       |> assign(:day_map, day_map)
-      |> assign(:days, @days)
+      |> assign(:days, days())
 
     {:ok, socket}
   end
@@ -55,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
           <.section_header
             level={2}
             icon="hero-squares-2x2"
-            title="Weekly Visual Grid"
+            title={dgettext("dashboard_availability", "Weekly Visual Grid")}
           />
           <div class="shrink-0">
             <Helpers.timezone_display timezone_display={@timezone_display} country_code={@country_code} />
@@ -101,7 +105,15 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
             <div class="grid grid-cols-8 gap-2 text-xs sm:text-sm">
               <%!-- Header Row --%>
               <div class="font-black text-tymeslot-400 uppercase tracking-widest text-center py-4"></div>
-              <%= for {day_name, _day_number} <- [{"Mon", 1}, {"Tue", 2}, {"Wed", 3}, {"Thu", 4}, {"Fri", 5}, {"Sat", 6}, {"Sun", 7}] do %>
+              <%= for {day_name, _day_number} <- [
+                {dgettext("dashboard_availability", "Mon"), 1},
+                {dgettext("dashboard_availability", "Tue"), 2},
+                {dgettext("dashboard_availability", "Wed"), 3},
+                {dgettext("dashboard_availability", "Thu"), 4},
+                {dgettext("dashboard_availability", "Fri"), 5},
+                {dgettext("dashboard_availability", "Sat"), 6},
+                {dgettext("dashboard_availability", "Sun"), 7}
+              ] do %>
                 <div class="font-black text-tymeslot-700 text-center py-4 bg-white rounded-token-xl border-2 border-white shadow-sm">
                   {day_name}
                 </div>
@@ -150,7 +162,9 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
               style="background-color: #10b981; opacity: 0.8;"
             >
             </div>
-            <span class="text-tymeslot-700 font-bold text-sm">Full Availability</span>
+            <span class="text-tymeslot-700 font-bold text-sm">
+              {dgettext("dashboard_availability", "Full Availability")}
+            </span>
           </div>
           <div class="flex items-center gap-3">
             <div
@@ -158,11 +172,15 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
               style="background: linear-gradient(45deg, #10b981 50%, #f59e0b 50%); opacity: 0.8;"
             >
             </div>
-            <span class="text-tymeslot-700 font-bold text-sm">Partial (Breaks)</span>
+            <span class="text-tymeslot-700 font-bold text-sm">
+              {dgettext("dashboard_availability", "Partial (Breaks)")}
+            </span>
           </div>
           <div class="flex items-center gap-3">
             <div class="w-5 h-5 bg-tymeslot-200 border-2 border-tymeslot-200 rounded-token-lg opacity-40"></div>
-            <span class="text-tymeslot-700 font-bold text-sm">Unavailable</span>
+            <span class="text-tymeslot-700 font-bold text-sm">
+              {dgettext("dashboard_availability", "Unavailable")}
+            </span>
           </div>
         </div>
       </div>
@@ -190,7 +208,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
           do: %{
             left: bar_left(b_start),
             width: bar_width(b_start, b_end),
-            label: b.label || "Break"
+            label: b.label || dgettext("dashboard_availability", "Break")
           }
       end)
       |> Enum.reject(&is_nil/1)
@@ -205,7 +223,13 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
   end
 
   defp mobile_row_data(_row),
-    do: %{active: false, left: 0, width: 0, label: "Unavailable", breaks: []}
+    do: %{
+      active: false,
+      left: 0,
+      width: 0,
+      label: dgettext("dashboard_availability", "Unavailable"),
+      breaks: []
+    }
 
   # Helper Functions
 
@@ -233,13 +257,14 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
   defp format_time_slot(hour, 0) when hour > 12, do: "#{hour - 12}:00"
   defp format_time_slot(hour, 30) when hour > 12, do: "#{hour - 12}:30"
 
-  defp get_time_slot_status(nil, _hour, _minute), do: {:unavailable, "Day not configured"}
+  defp get_time_slot_status(nil, _hour, _minute),
+    do: {:unavailable, dgettext("dashboard_availability", "Day not configured")}
 
   defp get_time_slot_status(%{is_available: false}, _hour, _minute),
-    do: {:unavailable, "Day unavailable"}
+    do: {:unavailable, dgettext("dashboard_availability", "Day unavailable")}
 
   defp get_time_slot_status(%{is_available: true, start_time: nil}, _hour, _minute),
-    do: {:unavailable, "No hours set"}
+    do: {:unavailable, dgettext("dashboard_availability", "No hours set")}
 
   defp get_time_slot_status(
          %{is_available: true, start_time: start_time, end_time: end_time, breaks: breaks},
@@ -255,7 +280,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
     if slot_in_business_hours do
       check_breaks_for_slot(breaks, slot_start, slot_end)
     else
-      {:unavailable, "Outside business hours"}
+      {:unavailable, dgettext("dashboard_availability", "Outside business hours")}
     end
   end
 
@@ -263,7 +288,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
     overlapping_breaks = Enum.filter(breaks, &break_overlaps_slot?(&1, slot_start, slot_end))
 
     case overlapping_breaks do
-      [] -> {:available, "Available for booking"}
+      [] -> {:available, dgettext("dashboard_availability", "Available for booking")}
       [break | _rest] -> get_break_status(break, slot_start, slot_end)
     end
   end
@@ -279,9 +304,15 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
         Time.compare(break.end_time, slot_end) != :lt
 
     if break_covers_slot do
-      {:unavailable, "Break: #{break.label || "Unavailable"}"}
+      {:unavailable,
+       dgettext("dashboard_availability", "Break: %{label}",
+         label: break.label || dgettext("dashboard_availability", "Unavailable")
+       )}
     else
-      {:partial, "Partially available (Break: #{break.label || "Break"} overlaps)"}
+      {:partial,
+       dgettext("dashboard_availability", "Partially available (Break: %{label} overlaps)",
+         label: break.label || dgettext("dashboard_availability", "Break")
+       )}
     end
   end
 end

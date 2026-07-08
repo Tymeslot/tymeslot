@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
   Handles the traditional day-by-day list view with detailed settings.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Availability.{AvailabilityActions, Breaks}
@@ -56,7 +57,14 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
              day,
              current_availability.is_available
            ) do
-      send(self(), {:flash, {:info, "#{AvailabilityActions.day_name(day)} availability updated"}})
+      send(
+        self(),
+        {:flash,
+         {:info,
+          dgettext("dashboard_availability", "%{day} availability updated",
+            day: AvailabilityActions.day_name(day)
+          )}}
+      )
 
       updated_schedule =
         BreakHelpers.update_day_in_schedule(socket.assigns.weekly_schedule, updated_day)
@@ -66,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       {:noreply, assign(socket, :weekly_schedule, updated_schedule)}
     else
       {:error, _changeset} ->
-        Flash.error("Failed to update availability")
+        Flash.error(dgettext("dashboard_availability", "Failed to update availability"))
         {:noreply, socket}
 
       _other ->
@@ -136,7 +144,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
              sanitized_params["label"]
            ) do
         {:ok, _break} ->
-          Flash.info("Break added")
+          Flash.info(dgettext("dashboard_availability", "Break added"))
           send(self(), {:reload_schedule})
 
           socket =
@@ -147,7 +155,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
           {:noreply, socket}
 
         {:error, :invalid_time_format} ->
-          Flash.error("Invalid time format")
+          Flash.error(dgettext("dashboard_availability", "Invalid time format"))
           {:noreply, socket}
       end
     else
@@ -195,13 +203,13 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
     ModalHook.with_modal_data(socket, :delete_break, fn break_data ->
       case AvailabilityActions.delete_break(break_data.id, profile_id(socket)) do
         {:ok, _break} ->
-          Flash.info("Break deleted")
+          Flash.info(dgettext("dashboard_availability", "Break deleted"))
           send(self(), {:reload_schedule})
 
           {:noreply, ModalHook.hide_modal(socket, :delete_break)}
 
         {:error, _reason} ->
-          Flash.error("Failed to delete break")
+          Flash.error(dgettext("dashboard_availability", "Failed to delete break"))
           {:noreply, socket}
       end
     end)
@@ -231,7 +239,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
              duration
            ) do
         {:ok, _break} ->
-          Flash.info("Quick break added")
+          Flash.info(dgettext("dashboard_availability", "Quick break added"))
           send(self(), {:reload_schedule})
 
           socket =
@@ -242,7 +250,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
           {:noreply, socket}
 
         {:error, :invalid_time_format} ->
-          Flash.error("Invalid time format")
+          Flash.error(dgettext("dashboard_availability", "Invalid time format"))
           {:noreply, socket}
       end
     else
@@ -273,7 +281,13 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
          {:ok, _result} <-
            AvailabilityActions.copy_day_settings(profile_id(socket), from_day, to_days) do
       day_names = Enum.map_join(to_days, ", ", &AvailabilityActions.day_name/1)
-      Flash.info("Settings copied to #{day_names}")
+
+      Flash.info(
+        dgettext("dashboard_availability", "Settings copied to %{day_names}",
+          day_names: day_names
+        )
+      )
+
       send(self(), {:reload_schedule})
 
       {:noreply, socket}
@@ -283,7 +297,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         {:noreply, socket}
 
       {:error, _reason} ->
-        Flash.error("Failed to copy settings")
+        Flash.error(dgettext("dashboard_availability", "Failed to copy settings"))
         {:noreply, socket}
     end
   end
@@ -305,13 +319,18 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
     ModalHook.with_modal_data(socket, :clear_day, fn day_data ->
       case AvailabilityActions.clear_day_settings(profile_id(socket), day_data.day) do
         {:ok, _result} ->
-          Flash.info("#{day_data.day_name} settings cleared")
+          Flash.info(
+            dgettext("dashboard_availability", "%{day_name} settings cleared",
+              day_name: day_data.day_name
+            )
+          )
+
           send(self(), {:reload_schedule})
 
           {:noreply, ModalHook.hide_modal(socket, :clear_day)}
 
         {:error, _reason} ->
-          Flash.error("Failed to clear day settings")
+          Flash.error(dgettext("dashboard_availability", "Failed to clear day settings"))
           {:noreply, socket}
       end
     end)
@@ -356,13 +375,18 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
   defp handle_update_day_hours_result(day, result, socket) do
     case result do
       {:ok, _updated} ->
-        Flash.info("#{AvailabilityActions.day_name(day)} hours updated")
+        Flash.info(
+          dgettext("dashboard_availability", "%{day} hours updated",
+            day: AvailabilityActions.day_name(day)
+          )
+        )
+
         send(self(), {:reload_schedule})
 
         {:noreply, assign(socket, :form_errors, %{})}
 
       {:error, :invalid_time_format} ->
-        Flash.error("Invalid time format")
+        Flash.error(dgettext("dashboard_availability", "Invalid time format"))
         {:noreply, socket}
     end
   end
@@ -378,7 +402,13 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         :ok
 
       {:error, :rate_limited} ->
-        Flash.error("You're adding breaks too quickly. Please wait a bit.")
+        Flash.error(
+          dgettext(
+            "dashboard_availability",
+            "You're adding breaks too quickly. Please wait a bit."
+          )
+        )
+
         throw(:halt)
     end
   end
@@ -391,7 +421,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-2 sm:space-y-0">
         <.section_header
           level={2}
-          title="Weekly Schedule"
+          title={dgettext("dashboard_availability", "Weekly Schedule")}
         />
         <Helpers.timezone_display timezone_display={@timezone_display} country_code={@country_code} />
       </div>

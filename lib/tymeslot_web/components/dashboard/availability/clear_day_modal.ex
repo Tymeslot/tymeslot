@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ClearDayModal do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.CoreComponents
@@ -49,17 +50,20 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ClearDayModal do
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
             />
           </svg>
-          Clear Day Settings
+          {dgettext("dashboard_availability", "Clear Day Settings")}
         </div>
       </:header>
 
       <%= if @day_data do %>
         <div class="space-y-4">
           <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-            Are you sure you want to clear all settings for <strong><%= @day_data.day_name %></strong>?
+            {dgettext("dashboard_availability", "Are you sure you want to clear all settings for")} <strong>{@day_data.day_name}</strong>?
           </p>
           <p class="text-tymeslot-500 font-medium">
-            This will remove all availability hours and breaks for this day. This action cannot be undone.
+            {dgettext(
+              "dashboard_availability",
+              "This will remove all availability hours and breaks for this day. This action cannot be undone."
+            )}
           </p>
         </div>
       <% end %>
@@ -67,10 +71,10 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ClearDayModal do
       <:footer>
         <div class="flex justify-end gap-3">
           <CoreComponents.action_button variant={:secondary} phx-click={@on_cancel}>
-            Cancel
+            {dgettext("dashboard_availability", "Cancel")}
           </CoreComponents.action_button>
           <CoreComponents.action_button variant={:danger} phx-click={@on_confirm}>
-            Clear All Settings
+            {dgettext("dashboard_availability", "Clear All Settings")}
           </CoreComponents.action_button>
         </div>
       </:footer>
