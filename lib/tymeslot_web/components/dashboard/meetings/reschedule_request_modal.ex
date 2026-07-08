@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.CoreComponents
@@ -60,18 +61,20 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
               d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
             />
           </svg>
-          Send Reschedule Request
+          {dgettext("dashboard_bookings", "Send Reschedule Request")}
         </div>
       </:header>
 
       <%= if @meeting do %>
         <div class="space-y-6">
           <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-            Send a reschedule request to <strong>{@meeting.attendee_name}</strong>?
+            {dgettext("dashboard_bookings", "Send a reschedule request to")} <strong>{@meeting.attendee_name}</strong>?
           </p>
 
           <div class="bg-tymeslot-50 rounded-token-2xl p-6 border border-tymeslot-100 space-y-3">
-            <p class="text-token-xs font-black text-tymeslot-500 uppercase tracking-wider">Current Meeting</p>
+            <p class="text-token-xs font-black text-tymeslot-500 uppercase tracking-wider">
+              {dgettext("dashboard_bookings", "Current Meeting")}
+            </p>
             <div class="text-tymeslot-900 font-black text-lg space-y-2">
               <div class="flex items-center gap-3">
                 <CoreComponents.icon name="hero-calendar" class="w-5 h-5 text-turquoise-600" />
@@ -79,31 +82,38 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
               </div>
               <div class="flex items-center gap-3">
                 <CoreComponents.icon name="hero-clock" class="w-5 h-5 text-turquoise-600" />
-                <span>{@meeting.duration} minutes</span>
+                <span>{dgettext("dashboard_bookings", "%{duration} minutes", duration: @meeting.duration)}</span>
               </div>
             </div>
           </div>
 
           <div class="bg-turquoise-50/50 border-2 border-turquoise-100 rounded-token-2xl p-6">
             <p class="text-turquoise-800 font-black mb-3">
-              What happens next:
+              {dgettext("dashboard_bookings", "What happens next:")}
             </p>
             <ul class="text-turquoise-700 font-medium space-y-2">
               <li class="flex items-start gap-2">
                 <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>
-                <span>The current meeting will be cancelled immediately</span>
+                <span>{dgettext("dashboard_bookings", "The current meeting will be cancelled immediately")}</span>
               </li>
               <li class="flex items-start gap-2">
                 <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>
-                <span>{@meeting.attendee_name} will receive an email explaining you need to reschedule</span>
+                <span>{dgettext(
+                  "dashboard_bookings",
+                  "%{attendee_name} will receive an email explaining you need to reschedule",
+                  attendee_name: @meeting.attendee_name
+                )}</span>
               </li>
               <li class="flex items-start gap-2">
                 <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>
-                <span>They can choose a new time from your availability</span>
+                <span>{dgettext("dashboard_bookings", "They can choose a new time from your availability")}</span>
               </li>
               <li class="flex items-start gap-2">
                 <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-turquoise-400 shrink-0"></span>
-                <span>You'll both receive confirmation once they select a new time</span>
+                <span>{dgettext(
+                  "dashboard_bookings",
+                  "You'll both receive confirmation once they select a new time"
+                )}</span>
               </li>
             </ul>
           </div>
@@ -113,15 +123,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
       <:footer>
         <div class="flex justify-end gap-3">
           <CoreComponents.action_button variant={:secondary} phx-click={@on_cancel}>
-            Cancel
+            {dgettext("dashboard_bookings", "Cancel")}
           </CoreComponents.action_button>
           <CoreComponents.loading_button
             variant={:primary}
             phx-click={@on_confirm}
             loading={@sending}
-            loading_text="Sending..."
+            loading_text={dgettext("dashboard_bookings", "Sending...")}
           >
-            Send Request
+            {dgettext("dashboard_bookings", "Send Request")}
           </CoreComponents.loading_button>
         </div>
       </:footer>

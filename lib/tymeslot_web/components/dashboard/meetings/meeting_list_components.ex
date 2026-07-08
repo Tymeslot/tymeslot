@@ -22,21 +22,21 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
       <.filter_tab_button
         active={@active == "upcoming"}
         filter="upcoming"
-        label="Upcoming"
+        label={dgettext("dashboard_bookings", "Upcoming")}
         icon="hero-clock"
         target={@target}
       />
       <.filter_tab_button
         active={@active == "past"}
         filter="past"
-        label="Past"
+        label={dgettext("dashboard_bookings", "Past")}
         icon="hero-calendar-days"
         target={@target}
       />
       <.filter_tab_button
         active={@active == "cancelled"}
         filter="cancelled"
-        label="Cancelled"
+        label={dgettext("dashboard_bookings", "Cancelled")}
         icon="hero-x-mark"
         target={@target}
       />
@@ -131,7 +131,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             </span>
             <.status_badges meeting={@meeting} />
             <span :if={@meeting.meeting_url} class="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-50 text-cyan-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-cyan-100 shadow-sm">
-              <CoreComponents.icon name="hero-video-camera" class="w-3.5 h-3.5" /> Video Call
+              <CoreComponents.icon name="hero-video-camera" class="w-3.5 h-3.5" />
+              {dgettext("dashboard_bookings", "Video Call")}
             </span>
           </div>
 
@@ -142,7 +143,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               </div>
               <div>
                 <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mb-0.5">
-                  Date & Time
+                  {dgettext("dashboard_bookings", "Date & Time")}
                 </p>
                 <p class="text-tymeslot-700 font-bold">
                   {Helpers.format_meeting_date(
@@ -165,7 +166,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               </div>
               <div>
                 <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mb-0.5">
-                  Attendee Email
+                  {dgettext("dashboard_bookings", "Attendee Email")}
                 </p>
                 <a
                   href={"mailto:#{@meeting.attendee_email}"}
@@ -218,7 +219,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             </div>
             <div class="flex-1">
               <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mb-1">
-                Meeting Notes
+                {dgettext("dashboard_bookings", "Meeting Notes")}
               </p>
               <p class="text-tymeslot-600 font-medium leading-relaxed">{@meeting.description}</p>
             </div>
@@ -267,7 +268,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               rel="noopener noreferrer"
               class="btn-primary py-3 px-4 text-token-sm w-full flex items-center justify-center whitespace-nowrap"
             >
-              <CoreComponents.icon name="hero-video-camera" class="w-4 h-4 mr-2 shrink-0" /> Join Meeting
+              <CoreComponents.icon name="hero-video-camera" class="w-4 h-4 mr-2 shrink-0" />
+              {dgettext("dashboard_bookings", "Join Meeting")}
             </a>
 
             <button
@@ -280,7 +282,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                 if(!Helpers.can_reschedule?(@meeting), do: "opacity-50 cursor-not-allowed", else: "")
               ]}
             >
-              <CoreComponents.icon name="hero-arrows-right-left" class="w-4 h-4 mr-2 shrink-0" /> Reschedule
+              <CoreComponents.icon name="hero-arrows-right-left" class="w-4 h-4 mr-2 shrink-0" />
+              {dgettext("dashboard_bookings", "Reschedule")}
             </button>
 
             <button
@@ -294,8 +297,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                 if(!Helpers.can_cancel?(@meeting), do: "opacity-50 cursor-not-allowed", else: "")
               ]}
             >
-              <span :if={@cancelling_meeting == @meeting.id} class="flex items-center"><CoreComponents.spinner class="h-4 w-4 mr-2" /> Processing...</span>
-              <span :if={@cancelling_meeting != @meeting.id} class="flex items-center"><CoreComponents.icon name="hero-x-mark" class="w-4 h-4 mr-2 shrink-0" /> Cancel</span>
+              <span :if={@cancelling_meeting == @meeting.id} class="flex items-center">
+                <CoreComponents.spinner class="h-4 w-4 mr-2" /> {dgettext("dashboard_bookings", "Processing...")}
+              </span>
+              <span :if={@cancelling_meeting != @meeting.id} class="flex items-center">
+                <CoreComponents.icon name="hero-x-mark" class="w-4 h-4 mr-2 shrink-0" /> {dgettext("dashboard_bookings", "Cancel")}
+              </span>
             </button>
           </div>
           <div :if={@meeting.status == "cancelled" or Helpers.past_meeting?(@meeting)} class="hidden lg:block">&nbsp;</div>
@@ -318,8 +325,18 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
       )
     ]}>
       <p class="font-medium text-token-sm">
-        <span :if={@meeting.calendar_sync_status == "externally_deleted"}>This meeting's event was deleted from your external calendar.</span>
-        <span :if={@meeting.calendar_sync_status != "externally_deleted"}>This meeting's event was rescheduled in your external calendar.</span>
+        <span :if={@meeting.calendar_sync_status == "externally_deleted"}>
+          {dgettext(
+            "dashboard_bookings",
+            "This meeting's event was deleted from your external calendar."
+          )}
+        </span>
+        <span :if={@meeting.calendar_sync_status != "externally_deleted"}>
+          {dgettext(
+            "dashboard_bookings",
+            "This meeting's event was rescheduled in your external calendar."
+          )}
+        </span>
       </p>
       <button
         phx-click="dismiss_calendar_sync_banner"
@@ -333,7 +350,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
           )
         ]}
       >
-        Dismiss
+        {dgettext("dashboard_bookings", "Dismiss")}
       </button>
     </div>
     """
@@ -342,16 +359,16 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   defp status_badges(assigns) do
     ~H"""
     <span :if={@meeting.status == "cancelled"} class="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-red-100 shadow-sm">
-      <CoreComponents.icon name="hero-x-mark" class="w-3 h-3" /> Cancelled
+      <CoreComponents.icon name="hero-x-mark" class="w-3 h-3" /> {dgettext("dashboard_bookings", "Cancelled")}
     </span>
     <span :if={@meeting.status != "cancelled" and MeetingState.awaiting_new_time?(@meeting)} class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-amber-100 shadow-sm">
-      <CoreComponents.icon name="hero-clock" class="w-3 h-3" /> Reschedule Requested
+      <CoreComponents.icon name="hero-clock" class="w-3 h-3" /> {dgettext("dashboard_bookings", "Reschedule Requested")}
     </span>
     <span :if={@meeting.status != "cancelled" and !MeetingState.awaiting_new_time?(@meeting) and Helpers.past_meeting?(@meeting)} class="inline-flex items-center gap-1.5 px-3 py-1 bg-tymeslot-100 text-tymeslot-600 text-token-xs font-black uppercase tracking-wider rounded-full border border-tymeslot-200 shadow-sm">
-      <CoreComponents.icon name="hero-check" class="w-3 h-3" /> Completed
+      <CoreComponents.icon name="hero-check" class="w-3 h-3" /> {dgettext("dashboard_bookings", "Completed")}
     </span>
     <span :if={@meeting.status != "cancelled" and !MeetingState.awaiting_new_time?(@meeting) and !Helpers.past_meeting?(@meeting)} class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-emerald-100 shadow-sm">
-      <CoreComponents.icon name="hero-calendar-days" class="w-3 h-3" /> Scheduled
+      <CoreComponents.icon name="hero-calendar-days" class="w-3 h-3" /> {dgettext("dashboard_bookings", "Scheduled")}
     </span>
     """
   end
@@ -368,16 +385,22 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
         </div>
         <h3 class="text-token-2xl font-black text-tymeslot-900 tracking-tight mb-3">
           <%= case @filter do %>
-            <% "upcoming" -> %> No upcoming meetings
-            <% "past" -> %> No past meetings
-            <% "cancelled" -> %> No cancelled meetings
+            <% "upcoming" -> %> {dgettext("dashboard_bookings", "No upcoming meetings")}
+            <% "past" -> %> {dgettext("dashboard_bookings", "No past meetings")}
+            <% "cancelled" -> %> {dgettext("dashboard_bookings", "No cancelled meetings")}
           <% end %>
         </h3>
         <p class="text-tymeslot-500 font-medium text-lg leading-relaxed">
           <%= case @filter do %>
-            <% "upcoming" -> %> Your upcoming appointments will appear here automatically.
-            <% "past" -> %> You haven't had any meetings in this period yet.
-            <% "cancelled" -> %> You don't have any cancelled appointments to show.
+            <% "upcoming" -> %> {dgettext(
+              "dashboard_bookings",
+              "Your upcoming appointments will appear here automatically."
+            )}
+            <% "past" -> %> {dgettext("dashboard_bookings", "You haven't had any meetings in this period yet.")}
+            <% "cancelled" -> %> {dgettext(
+              "dashboard_bookings",
+              "You don't have any cancelled appointments to show."
+            )}
           <% end %>
         </p>
       </div>
@@ -407,26 +430,51 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
       <div class="flex flex-col lg:flex-row gap-12 relative z-10">
         <div class="flex-1">
-          <CoreComponents.section_header level={2} icon="hero-calendar-days" title="Meeting Management" class="mb-6" />
+          <CoreComponents.section_header
+            level={2}
+            icon="hero-calendar-days"
+            title={dgettext("dashboard_bookings", "Meeting Management")}
+            class="mb-6"
+          />
 
           <p class="text-tymeslot-500 font-bold text-lg leading-relaxed max-w-2xl mb-8">
-            Manage all your scheduled meetings in one place. Filter by status and take quick actions on your appointments.
+            {dgettext(
+              "dashboard_bookings",
+              "Manage all your scheduled meetings in one place. Filter by status and take quick actions on your appointments."
+            )}
           </p>
 
           <div class="flex flex-wrap gap-4">
             <span class="inline-flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-600 rounded-token-xl text-token-sm font-black border border-tymeslot-100 shadow-sm">
-              <div class="w-2 h-2 rounded-full bg-turquoise-500"></div> Real-time updates
+              <div class="w-2 h-2 rounded-full bg-turquoise-500"></div>
+              {dgettext("dashboard_bookings", "Real-time updates")}
             </span>
             <span class="inline-flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-600 rounded-token-xl text-token-sm font-black border border-tymeslot-100 shadow-sm">
-              <div class="w-2 h-2 rounded-full bg-cyan-500"></div> Auto-notifications
+              <div class="w-2 h-2 rounded-full bg-cyan-500"></div>
+              {dgettext("dashboard_bookings", "Auto-notifications")}
             </span>
           </div>
         </div>
 
         <div class="lg:w-80 space-y-4">
-          <.info_card icon="hero-arrows-right-left" title="Reschedule" description="Change meeting times" color="turquoise" />
-          <.info_card icon="hero-x-mark" title="Cancel" description="With auto notifications" color="red" />
-          <.info_card icon="hero-video-camera" title="Join Video" description="Quick meeting access" color="blue" />
+          <.info_card
+            icon="hero-arrows-right-left"
+            title={dgettext("dashboard_bookings", "Reschedule")}
+            description={dgettext("dashboard_bookings", "Change meeting times")}
+            color="turquoise"
+          />
+          <.info_card
+            icon="hero-x-mark"
+            title={dgettext("dashboard_bookings", "Cancel")}
+            description={dgettext("dashboard_bookings", "With auto notifications")}
+            color="red"
+          />
+          <.info_card
+            icon="hero-video-camera"
+            title={dgettext("dashboard_bookings", "Join Video")}
+            description={dgettext("dashboard_bookings", "Quick meeting access")}
+            color="blue"
+          />
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingPayments
@@ -59,7 +60,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
             />
           </svg>
-          Cancel Meeting
+          {dgettext("dashboard_bookings", "Cancel Meeting")}
         </div>
       </:header>
 
@@ -71,29 +72,34 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         class="space-y-4"
       >
         <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-          Are you sure you want to cancel the meeting with <strong>{@meeting.attendee_name}</strong>
-          scheduled for <strong>{Helpers.format_meeting_date(@meeting, @timezone)} • {Helpers.format_meeting_time(@meeting, @timezone)}</strong>?
+          {dgettext("dashboard_bookings", "Are you sure you want to cancel the meeting with")} <strong>{@meeting.attendee_name}</strong>
+          {dgettext("dashboard_bookings", "scheduled for")} <strong>{Helpers.format_meeting_date(@meeting, @timezone)} • {Helpers.format_meeting_time(@meeting, @timezone)}</strong>?
         </p>
 
         <.paid_options :if={@paid?} booking_payment={@booking_payment} />
         <p :if={not @paid?} class="text-tymeslot-500 font-medium">
-          This action cannot be undone. The attendee will be notified of the cancellation.
+          {dgettext(
+            "dashboard_bookings",
+            "This action cannot be undone. The attendee will be notified of the cancellation."
+          )}
         </p>
       </form>
 
       <:footer>
         <div class="flex justify-end gap-3">
           <CoreComponents.action_button variant={:secondary} phx-click={@on_cancel}>
-            Keep Meeting
+            {dgettext("dashboard_bookings", "Keep Meeting")}
           </CoreComponents.action_button>
           <CoreComponents.loading_button
             type="submit"
             form="cancel-meeting-form"
             variant={:danger}
             loading={@cancelling}
-            loading_text="Cancelling..."
+            loading_text={dgettext("dashboard_bookings", "Cancelling...")}
           >
-            {if @paid?, do: "Confirm cancellation", else: "Cancel Meeting"}
+            {if @paid?,
+              do: dgettext("dashboard_bookings", "Confirm cancellation"),
+              else: dgettext("dashboard_bookings", "Cancel Meeting")}
           </CoreComponents.loading_button>
         </div>
       </:footer>
@@ -107,8 +113,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     ~H"""
     <div class="rounded-token-md border border-tymeslot-200 bg-tymeslot-50 p-3 text-token-sm space-y-3">
       <p>
-        This booking was paid. Choose how to handle the refund — the attendee always
-        receives the full amount you refund.
+        {dgettext(
+          "dashboard_bookings",
+          "This booking was paid. Choose how to handle the refund — the attendee always receives the full amount you refund."
+        )}
       </p>
 
       <div class="space-y-2">
@@ -120,8 +128,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             checked
           />
           <span>
-            <strong>Full refund.</strong>
-            Refunds the remaining balance ({format_amount(@remaining, @booking_payment.currency)}).
+            <strong>{dgettext("dashboard_bookings", "Full refund.")}</strong>
+            {dgettext("dashboard_bookings", "Refunds the remaining balance (%{amount}).",
+              amount: format_amount(@remaining, @booking_payment.currency)
+            )}
           </span>
         </label>
 
@@ -132,8 +142,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             value="partial"
           />
           <span>
-            <strong>Partial refund.</strong>
-            Refund only part of the booking amount.
+            <strong>{dgettext("dashboard_bookings", "Partial refund.")}</strong>
+            {dgettext("dashboard_bookings", "Refund only part of the booking amount.")}
           </span>
         </label>
 
@@ -141,7 +151,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
           <CoreComponents.input
             type="number"
             name="cancel_refund_amount"
-            label="Partial amount"
+            label={dgettext("dashboard_bookings", "Partial amount")}
             min="0.01"
             max={@remaining / 100}
             step="0.01"
@@ -156,8 +166,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             value="none"
           />
           <span>
-            <strong>Cancel without refund.</strong>
-            The attendee keeps no money. Use only if the attendee already agreed.
+            <strong>{dgettext("dashboard_bookings", "Cancel without refund.")}</strong>
+            {dgettext(
+              "dashboard_bookings",
+              "The attendee keeps no money. Use only if the attendee already agreed."
+            )}
           </span>
         </label>
 
@@ -168,7 +181,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             value="true"
           />
           <span class="text-tymeslot-700">
-            I understand the attendee will not receive a refund.
+            {dgettext(
+              "dashboard_bookings",
+              "I understand the attendee will not receive a refund."
+            )}
           </span>
         </label>
       </div>

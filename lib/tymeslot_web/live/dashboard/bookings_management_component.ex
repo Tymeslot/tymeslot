@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   LiveComponent for viewing and managing meetings in the dashboard.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.Policy
@@ -262,7 +263,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           %{user_id: current_user.id, filter: filter, after: after_cursor}
         )
 
-        Flash.error("Failed to load more meetings")
+        Flash.error(dgettext("dashboard_bookings", "Failed to load more meetings"))
         {:noreply, assign(socket, :loading_more, false)}
     end
   end
@@ -272,7 +273,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     ~H"""
     <div id="bookings-management" class="space-y-10 pb-20">
       <div>
-        <.section_header icon="hero-calendar-days" title="Meetings" />
+        <.section_header
+          icon="hero-calendar-days"
+          title={dgettext("dashboard_bookings", "Meetings")}
+        />
 
         <div class="mb-10">
           <MeetingListComponents.filter_tabs active={@filter} target={@myself} />
@@ -296,8 +300,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
             phx-target={@myself}
             disabled={@loading_more}
           >
-            <span :if={@loading_more}><.spinner class="h-5 w-5 mr-3 inline-block" /> Loading...</span>
-            <span :if={!@loading_more}>Load more meetings</span>
+            <span :if={@loading_more}>
+              <.spinner class="h-5 w-5 mr-3 inline-block" /> {dgettext("dashboard_bookings", "Loading...")}
+            </span>
+            <span :if={!@loading_more}>{dgettext("dashboard_bookings", "Load more meetings")}</span>
           </button>
         </div>
 
@@ -364,7 +370,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     if params["cancel_refund_no_refund_ack"] == "true" do
       {:ok, :none}
     else
-      {:error, "Tick the acknowledgement to cancel without refunding the attendee."}
+      {:error,
+       dgettext(
+         "dashboard_bookings",
+         "Tick the acknowledgement to cancel without refunding the attendee."
+       )}
     end
   end
 
@@ -379,10 +389,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         {:ok, {:refund, cents}}
 
       {:error, :exceeds_remaining} ->
-        {:error, "Refund amount exceeds the remaining refundable balance."}
+        {:error,
+         dgettext("dashboard_bookings", "Refund amount exceeds the remaining refundable balance.")}
 
       {:error, _reason} ->
-        {:error, "Enter a valid partial refund amount."}
+        {:error, dgettext("dashboard_bookings", "Enter a valid partial refund amount.")}
     end
   end
 
@@ -424,8 +435,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         )
 
         Flash.error(
-          "Meeting cancelled but refund could not be issued. " <>
-            "Please issue the refund manually from your Stripe dashboard."
+          dgettext(
+            "dashboard_bookings",
+            "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
+          )
         )
 
         {:noreply,
@@ -467,11 +480,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   defp cancel_success_flash({:refund, _cents}),
-    do: "Meeting cancelled and refund issued."
+    do: dgettext("dashboard_bookings", "Meeting cancelled and refund issued.")
 
-  defp cancel_success_flash(:none), do: "Meeting cancelled successfully"
+  defp cancel_success_flash(:none),
+    do: dgettext("dashboard_bookings", "Meeting cancelled successfully")
 
-  defp cancel_error_flash(_reason), do: "Failed to cancel meeting. Please try again."
+  defp cancel_error_flash(_reason),
+    do: dgettext("dashboard_bookings", "Failed to cancel meeting. Please try again.")
 
   defp do_send_reschedule_request(socket, meeting) do
     socket = assign(socket, :sending_reschedule, meeting.id)
@@ -484,7 +499,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           %{user_id: socket.assigns.current_user.id, meeting_id: meeting.id, result: :ok}
         )
 
-        Flash.info("Reschedule request sent to #{meeting.attendee_name}")
+        Flash.info(
+          dgettext("dashboard_bookings", "Reschedule request sent to %{attendee_name}",
+            attendee_name: meeting.attendee_name
+          )
+        )
 
         {:noreply,
          socket
@@ -509,7 +528,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           meeting_id: meeting.id
         )
 
-        Flash.error("Failed to send reschedule request. Please try again.")
+        Flash.error(
+          dgettext("dashboard_bookings", "Failed to send reschedule request. Please try again.")
+        )
+
         {:noreply, assign(socket, :sending_reschedule, nil)}
     end
   end
@@ -565,7 +587,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           %{user_id: current_user.id, filter: filter}
         )
 
-        Flash.error("Failed to load meetings")
+        Flash.error(dgettext("dashboard_bookings", "Failed to load meetings"))
 
         socket
         |> LiveView.stream(:meetings, [], reset: true)
