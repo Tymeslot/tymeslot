@@ -11,8 +11,8 @@ msgstr ""
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:276
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:279
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:277
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:280
 #: lib/tymeslot_web/live/onboarding_live/text_helpers.ex:23
 #: lib/tymeslot_web/live/onboarding_live/text_helpers.ex:47
 #, elixir-autogen, elixir-format
@@ -21,8 +21,8 @@ msgid_plural "%{count} days"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:273
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:282
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:274
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:283
 #, elixir-autogen, elixir-format
 msgid "%{count} hour"
 msgid_plural "%{count} hours"
@@ -69,7 +69,7 @@ msgstr ""
 msgid "%{field} must be between %{min} and %{max}"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:243
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:256
 #, elixir-autogen, elixir-format
 msgid "%{minutes} min buffer between meetings"
 msgstr ""
@@ -159,7 +159,7 @@ msgstr ""
 msgid "60 min"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:296
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:309
 #, elixir-autogen, elixir-format
 msgid "A breather between meetings (%{minutes} min)"
 msgstr ""
@@ -209,12 +209,12 @@ msgstr ""
 msgid "Back"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:100
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:108
 #, elixir-autogen, elixir-format
 msgid "Book"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:302
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:315
 #, elixir-autogen, elixir-format
 msgid "Bookable up to %{days}"
 msgstr ""
@@ -311,7 +311,7 @@ msgstr ""
 msgid "Connect your calendar"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:293
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:306
 #, elixir-autogen, elixir-format
 msgid "Connect your calendar to fill these slots"
 msgstr ""
@@ -376,7 +376,7 @@ msgstr ""
 msgid "Could not update your photo. Please try a different image."
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:207
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:208
 #, elixir-autogen, elixir-format
 msgid "Custom"
 msgstr ""
@@ -421,7 +421,7 @@ msgstr ""
 msgid "Done"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:308
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:321
 #, elixir-autogen, elixir-format
 msgid "Earliest booking: %{hours}h from now"
 msgstr ""
@@ -451,7 +451,7 @@ msgstr ""
 msgid "I'll connect a calendar later"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:232
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:233
 #, elixir-autogen, elixir-format
 msgid "If someone books a meeting that ends at %{end_time} and your buffer is %{minutes} min, the next available slot starts at %{next_start}."
 msgstr ""
@@ -657,7 +657,7 @@ msgstr ""
 msgid "Skip setup?"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:246
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:247
 #, elixir-autogen, elixir-format
 msgid "Someone visiting your page today can only book up to %{period} ahead — no further."
 msgstr ""
@@ -687,8 +687,8 @@ msgstr ""
 msgid "Sync your calendar to avoid double-bookings and keep everything in one place."
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:284
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:319
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:297
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:332
 #, elixir-autogen, elixir-format
 msgid "This is your live booking page"
 msgstr ""
@@ -764,17 +764,17 @@ msgstr ""
 msgid "Welcome to Tymeslot! Your account is now set up."
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:265
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:266
 #, elixir-autogen, elixir-format
 msgid "With %{notice} of notice, nobody can book a slot that starts sooner than %{notice} from now."
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:224
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:225
 #, elixir-autogen, elixir-format
 msgid "With no buffer, the next available slot starts as soon as a meeting ends."
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:257
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:258
 #, elixir-autogen, elixir-format
 msgid "With no minimum notice, someone can book a slot that starts any time from now."
 msgstr ""
@@ -784,7 +784,7 @@ msgstr ""
 msgid "Without a connected calendar you'll have to manage clashes yourself. You can still carry on and connect one later from your dashboard."
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:314
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:327
 #, elixir-autogen, elixir-format
 msgid "You're all set — %{link} is live"
 msgstr ""
@@ -814,18 +814,18 @@ msgstr ""
 msgid "Your booking theme"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:290
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:303
 #, elixir-autogen, elixir-format
 msgid "Your calendar is synced — these slots are live"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:338
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:351
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex:102
 #, elixir-autogen, elixir-format
 msgid "Your name"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:287
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:300
 #, elixir-autogen, elixir-format
 msgid "Your page, your brand"
 msgstr ""
@@ -850,7 +850,7 @@ msgstr ""
 msgid "e.g. Jane Smith"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:346
+#: lib/tymeslot_web/live/onboarding_live/live_preview.ex:359
 #, elixir-autogen, elixir-format
 msgid "your-link"
 msgstr ""
@@ -878,4 +878,9 @@ msgstr ""
 #: lib/tymeslot_web/live/onboarding_live.ex:40
 #, elixir-autogen, elixir-format
 msgid "You have already completed onboarding."
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex:226
+#, elixir-autogen, elixir-format
+msgid "your-username"
 msgstr ""

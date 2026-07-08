@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ZimbraConfig do
         myself={@myself}
         suggested_name={dgettext("dashboard_calendar_providers", "My Zimbra")}
         name_placeholder={dgettext("dashboard_calendar_providers", "My Zimbra Calendar")}
-        url_placeholder="https://mail.example.com"
+        url_placeholder={dgettext("dashboard_calendar_providers", "https://mail.example.com")}
       />
     </div>
     """

@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   attr :myself, :any, required: true
   attr :suggested_name, :string, required: true
   attr :name_placeholder, :string, default: nil
-  attr :url_placeholder, :string, default: "https://example.com/remote.php/dav"
+  attr :url_placeholder, :string, default: nil
   attr :url_locked, :boolean, default: false
   attr :url_value, :string, default: ""
   attr :url_locked_tooltip, :string, default: nil
@@ -110,7 +110,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
                 name="integration[url]"
                 label={dgettext("dashboard_calendar_providers", "Server URL")}
                 value={Map.get(@form_values, "url", "")}
-                placeholder={@url_placeholder}
+                placeholder={
+                  @url_placeholder ||
+                    dgettext("dashboard_calendar_providers", "https://example.com/remote.php/dav")
+                }
                 errors={FormValidationHelpers.field_errors(@form_errors, :url)}
                 target={@target}
                 field="url"

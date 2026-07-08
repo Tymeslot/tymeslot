@@ -62,7 +62,7 @@ msgstr ""
 msgid "If you have two-factor authentication enabled, generate an application-specific password under"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:176
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:179
 #, elixir-autogen, elixir-format
 msgid "Integration Name"
 msgstr ""
@@ -172,7 +172,7 @@ msgid "No calendars found. Try refreshing the integration."
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:328
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:196
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:199
 #, elixir-autogen, elixir-format
 msgid "No calendars were discovered. Double-check your credentials or try again."
 msgstr ""
@@ -183,7 +183,7 @@ msgid "PHP-based CalDAV/CardDAV server"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:262
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:136
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:139
 #, elixir-autogen, elixir-format
 msgid "Password / App Password"
 msgstr ""
@@ -219,7 +219,7 @@ msgid "Saving..."
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:324
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:192
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:195
 #, elixir-autogen, elixir-format
 msgid "Select calendars to sync:"
 msgstr ""
@@ -236,7 +236,7 @@ msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:239
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:111
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:238
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:241
 #, elixir-autogen, elixir-format
 msgid "Server URL"
 msgstr ""
@@ -268,7 +268,7 @@ msgid "Sign-In and Security → App-Specific Passwords"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:434
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:355
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:358
 #, elixir-autogen, elixir-format
 msgid "Something went wrong. Please try again."
 msgstr ""
@@ -306,14 +306,14 @@ msgstr[2] ""
 msgid "Testing..."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:217
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:220
 #, elixir-autogen, elixir-format
 msgid "Unnamed Calendar"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:251
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:124
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:126
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:127
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:129
 #, elixir-autogen, elixir-format
 msgid "Username"
 msgstr ""
@@ -354,7 +354,7 @@ msgstr ""
 msgid "My Calendar"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:138
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:141
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr ""
@@ -375,12 +375,42 @@ msgstr ""
 msgid "%{first} + %{remaining} more"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:153
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:156
 #, elixir-autogen, elixir-format
 msgid "Discover calendars"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:154
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:157
 #, elixir-autogen, elixir-format
 msgid "Discovering..."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex:71
+#, elixir-autogen, elixir-format
+msgid "https://baikal.example.com/dav.php"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex:71
+#, elixir-autogen, elixir-format
+msgid "https://caldav.example.com"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex:71
+#, elixir-autogen, elixir-format
+msgid "https://cloud.example.com"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:115
+#, elixir-autogen, elixir-format
+msgid "https://example.com/remote.php/dav"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex:71
+#, elixir-autogen, elixir-format
+msgid "https://mail.example.com"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex:71
+#, elixir-autogen, elixir-format
+msgid "https://radicale.example.com:5232"
 msgstr ""

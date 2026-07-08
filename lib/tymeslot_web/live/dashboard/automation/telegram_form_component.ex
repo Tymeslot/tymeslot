@@ -145,7 +145,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                   label={dgettext("dashboard_automation_chat", "Chat ID")}
                   value={Map.get(@form_values, "chat_id", "")}
                   phx-blur={JS.push("validate_telegram_field", value: %{"field" => "chat_id"}, target: @parent_component)}
-                  placeholder="-1001234567890 or @channelname"
+                  placeholder={dgettext("dashboard_automation_chat", "-1001234567890 or @channelname")}
                   required
                   errors={FormValidationHelpers.field_errors(@form_errors, :chat_id)}
                   icon="hero-chat-bubble-left"

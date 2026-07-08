@@ -142,7 +142,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
                 name="username"
                 label={dgettext("dashboard_profile", "Your Custom URL")}
                 value={if @profile, do: @profile.username || "", else: ""}
-                placeholder="yourname"
+                placeholder={dgettext("dashboard_profile", "yourname")}
                 pattern="[a-z0-9][a-z0-9-]{2,29}"
                 minlength={Constraints.username_length_range().first}
                 maxlength={Constraints.username_length_range().last}

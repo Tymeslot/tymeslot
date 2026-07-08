@@ -859,3 +859,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:67
+#, elixir-autogen, elixir-format
+msgid "https://jitsi.example.org/{{meeting_id}}"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:61
+#, elixir-autogen, elixir-format
+msgid "https://mirotalk.yourdomain.com"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:78
+#, elixir-autogen, elixir-format
+msgid "your-api-key-here"
+msgstr ""

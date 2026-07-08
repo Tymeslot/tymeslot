@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
               name="integration[custom_meeting_url]"
               label={dgettext("dashboard_integrations", "Meeting URL")}
               value={Map.get(@form_values, "custom_meeting_url", "")}
-              placeholder="https://jitsi.example.org/{{meeting_id}}"
+              placeholder={dgettext("dashboard_integrations", "https://jitsi.example.org/{{meeting_id}}")}
               form_errors={@form_errors}
               error_key={:custom_meeting_url}
               target={@target}

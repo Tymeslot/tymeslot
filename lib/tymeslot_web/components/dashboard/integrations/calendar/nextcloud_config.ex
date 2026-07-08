@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.NextcloudConfig
         myself={@myself}
         suggested_name={dgettext("dashboard_calendar_providers", "My Nextcloud")}
         name_placeholder={dgettext("dashboard_calendar_providers", "My Nextcloud Calendar")}
-        url_placeholder="https://cloud.example.com"
+        url_placeholder={dgettext("dashboard_calendar_providers", "https://cloud.example.com")}
       />
     </div>
     """

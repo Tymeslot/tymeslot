@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
             name="integration[base_url]"
             label={dgettext("dashboard_integrations", "Server URL")}
             value={Map.get(@form_values, "base_url", "")}
-            placeholder="https://mirotalk.yourdomain.com"
+            placeholder={dgettext("dashboard_integrations", "https://mirotalk.yourdomain.com")}
             form_errors={@form_errors}
             error_key={:base_url}
             target={@target}
@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
               id="mirotalk_api_key"
               name="integration[api_key]"
               value={Map.get(@form_values, "api_key", "")}
-              placeholder="your-api-key-here"
+              placeholder={dgettext("dashboard_integrations", "your-api-key-here")}
               form_errors={@form_errors}
               target={@target}
               helper_text={

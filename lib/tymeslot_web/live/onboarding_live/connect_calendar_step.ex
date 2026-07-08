@@ -223,7 +223,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
               do: "input-error"
             )
           ]}
-          placeholder="your-username"
+          placeholder={dgettext("onboarding_wizard", "your-username")}
         />
         <%= for message <- FormValidationHelpers.field_errors(@caldav_form_errors, :username) do %>
           <p class="mt-2 text-token-sm text-red-600 font-bold">{message}</p>

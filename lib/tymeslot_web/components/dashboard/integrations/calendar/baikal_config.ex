@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.BaikalConfig do
         myself={@myself}
         suggested_name={dgettext("dashboard_calendar_providers", "My Baikal")}
         name_placeholder={dgettext("dashboard_calendar_providers", "My Baikal Calendar")}
-        url_placeholder="https://baikal.example.com/dav.php"
+        url_placeholder={dgettext("dashboard_calendar_providers", "https://baikal.example.com/dav.php")}
       />
     </div>
     """

@@ -700,3 +700,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "My Telegram Notifications"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:148
+#, elixir-autogen, elixir-format
+msgid "-1001234567890 or @channelname"
+msgstr ""

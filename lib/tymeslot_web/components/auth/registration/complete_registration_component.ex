@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
         name="auth[email]"
         type="email"
         label={dgettext("auth", "Email Address")}
-        placeholder="your.email@example.com"
+        placeholder={dgettext("auth", "your.email@example.com")}
         required
         icon="hero-envelope"
       />

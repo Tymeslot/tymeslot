@@ -655,3 +655,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "You must accept the terms to continue."
 msgstr ""
+
+#: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex:77
+#, elixir-autogen, elixir-format
+msgid "your.email@example.com"
+msgstr ""

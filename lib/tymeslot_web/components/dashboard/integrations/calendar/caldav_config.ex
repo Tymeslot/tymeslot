@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavConfig do
         myself={@myself}
         suggested_name={dgettext("dashboard_calendar_providers", "My CalDAV")}
         name_placeholder={dgettext("dashboard_calendar_providers", "My CalDAV Calendar")}
-        url_placeholder="https://caldav.example.com"
+        url_placeholder={dgettext("dashboard_calendar_providers", "https://caldav.example.com")}
       />
     </div>
     """
