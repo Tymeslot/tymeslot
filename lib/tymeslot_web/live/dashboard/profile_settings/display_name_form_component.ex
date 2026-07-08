@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
   Allows users to update their public display name.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Profiles
   alias Tymeslot.Security.InputProcessor
@@ -46,11 +47,11 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
       case Profiles.update_full_name(profile, sanitized_name) do
         {:ok, updated_profile} ->
           send(self(), {:profile_updated, updated_profile})
-          Flash.info("Display name updated")
+          Flash.info(dgettext("dashboard_profile", "Display name updated"))
           {:noreply, assign(socket, profile: updated_profile)}
 
         {:error, _reason} ->
-          Flash.error("Failed to update display name")
+          Flash.error(dgettext("dashboard_profile", "Failed to update display name"))
           {:noreply, socket}
       end
     else
@@ -62,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
   def render(assigns) do
     ~H"""
     <div id="display-name-form-container">
-      <.section_header level={3} title="Display Name" class="mb-4" />
+      <.section_header level={3} title={dgettext("dashboard_profile", "Display Name")} class="mb-4" />
       <.form_wrapper
         for={%{}}
         phx-change="validate_full_name"
@@ -72,13 +73,16 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
         <.input
           name="full_name"
           value={if @profile, do: @profile.full_name || "", else: ""}
-          label="Display Name"
-          placeholder="Enter your full name"
+          label={dgettext("dashboard_profile", "Display Name")}
+          placeholder={dgettext("dashboard_profile", "Enter your full name")}
           errors={FormValidationHelpers.field_errors(@form_errors, :full_name)}
           phx-debounce="500"
         />
         <p class="mt-2 text-sm text-tymeslot-500 font-bold">
-          This name will appear to visitors when they book meetings with you. Changes are saved automatically.
+          {dgettext(
+            "dashboard_profile",
+            "This name will appear to visitors when they book meetings with you. Changes are saved automatically."
+          )}
         </p>
       </.form_wrapper>
     </div>

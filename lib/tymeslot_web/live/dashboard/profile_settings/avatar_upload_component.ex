@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   Allows users to upload or delete their profile picture.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.Avatars
@@ -95,14 +96,14 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
         socket
 
       error_messages when is_list(error_messages) ->
-        Flash.error(List.first(error_messages) || "Upload failed")
+        Flash.error(List.first(error_messages) || dgettext("dashboard_profile", "Upload failed"))
         socket
     end
   end
 
   defp handle_successful_avatar_upload(updated_profile, socket) do
     send(self(), {:profile_updated, updated_profile})
-    Flash.info("Avatar updated successfully")
+    Flash.info(dgettext("dashboard_profile", "Avatar updated successfully"))
     socket = push_event(socket, "avatar-upload-complete", %{})
     assign(socket, profile: updated_profile)
   end
@@ -113,7 +114,10 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   end
 
   defp handle_avatar_upload_error({:error, reason}, socket) do
-    Flash.error("Upload failed: #{inspect(reason)}")
+    Flash.error(
+      dgettext("dashboard_profile", "Upload failed: %{reason}", reason: inspect(reason))
+    )
+
     socket
   end
 
@@ -121,7 +125,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   def render(assigns) do
     ~H"""
     <div id="avatar-upload-container" class="lg:col-span-1 space-y-8 text-center pt-4">
-      <.section_header level={3} title="Profile Picture" />
+      <.section_header level={3} title={dgettext("dashboard_profile", "Profile Picture")} />
 
       <div class="relative inline-block mb-8" phx-hook="AutoUpload" id="avatar-upload-section">
         <div class="w-40 h-40 rounded-[2.5rem] overflow-hidden bg-tymeslot-100 border-4 border-white shadow-2xl relative z-10 mx-auto">
@@ -154,12 +158,16 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
                   <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
-                  <span><%= if @uploads.avatar.entries != [], do: "Uploading...", else: "Upload New" %></span>
+                  <span>
+                    <%= if @uploads.avatar.entries != [],
+                      do: dgettext("dashboard_profile", "Uploading..."),
+                      else: dgettext("dashboard_profile", "Upload New") %>
+                  </span>
                 </div>
               </div>
             <% else %>
               <div class="btn-primary w-full opacity-50 cursor-not-allowed py-4">
-                Upload New
+                {dgettext("dashboard_profile", "Upload New")}
               </div>
             <% end %>
           </div>
@@ -174,15 +182,17 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
               <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
-              <span>Delete Photo</span>
+              <span>{dgettext("dashboard_profile", "Delete Photo")}</span>
             </button>
           <% end %>
 
-          <button type="submit" id="avatar-submit-btn" class="hidden">Upload</button>
+          <button type="submit" id="avatar-submit-btn" class="hidden">
+            {dgettext("dashboard_profile", "Upload")}
+          </button>
         </form>
 
         <p class="text-token-2xs text-tymeslot-400 font-bold uppercase tracking-widest pt-2">
-          JPG, PNG, GIF or WebP. Max 10MB.
+          {dgettext("dashboard_profile", "JPG, PNG, GIF or WebP. Max 10MB.")}
         </p>
 
         <%!-- Upload progress --%>
@@ -200,7 +210,9 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
             <div class="mt-6 p-4 bg-turquoise-50 rounded-token-2xl border-2 border-turquoise-100">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-turquoise-700 font-black text-xs uppercase tracking-wider">
-                  <%= if entry.progress == 100, do: "Processing...", else: "Uploading..." %>
+                  <%= if entry.progress == 100,
+                    do: dgettext("dashboard_profile", "Processing..."),
+                    else: dgettext("dashboard_profile", "Uploading...") %>
                 </span>
                 <span class="text-turquoise-600 font-black text-xs">{entry.progress}%</span>
               </div>

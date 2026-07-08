@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
   This component acts as a container for specialized profile settings forms.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Profile.DeleteAvatarModal
@@ -31,7 +32,11 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">
-      <CoreComponents.section_header icon="hero-user" title="Profile Settings" saving={@saving} />
+      <CoreComponents.section_header
+        icon="hero-user"
+        title={dgettext("dashboard_profile", "Profile Settings")}
+        saving={@saving}
+      />
 
       <div class="card-glass relative overflow-hidden">
         <div class="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
@@ -56,7 +61,9 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
                     />
                   </svg>
                 </div>
-                <h3 class="text-2xl font-black text-tymeslot-900 tracking-tight">Basic Information</h3>
+                <h3 class="text-2xl font-black text-tymeslot-900 tracking-tight">
+                  {dgettext("dashboard_profile", "Basic Information")}
+                </h3>
               </div>
 
               <div class="space-y-10">

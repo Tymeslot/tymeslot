@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
   Allows users to update their unique booking URL.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Profiles
@@ -89,10 +90,15 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
   defp handle_successful_username_update(socket, updated_profile, sanitized_username) do
     send(self(), {:profile_updated, updated_profile})
 
+    booking_page_url = "#{display_url()}/#{sanitized_username}"
+
     send(
       self(),
       {:flash,
-       {:info, "Username updated! Your booking page: #{display_url()}/#{sanitized_username}"}}
+       {:info,
+        dgettext("dashboard_profile", "Username updated! Your booking page: %{url}",
+          url: booking_page_url
+        )}}
     )
 
     {:noreply,
@@ -125,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
 
     ~H"""
     <div id="username-form-container">
-      <.section_header level={3} title="Custom URL" class="mb-4" />
+      <.section_header level={3} title={dgettext("dashboard_profile", "Custom URL")} class="mb-4" />
       <form id="username-form" phx-submit="update_username" phx-change="check_username_availability" phx-target={@myself} class="space-y-4">
         <div>
           <div class="flex flex-col sm:flex-row items-stretch gap-4">
@@ -134,7 +140,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
               <% input_padding = "--leading-icon-width: #{prefix_length}ch;" %>
               <.input
                 name="username"
-                label="Your Custom URL"
+                label={dgettext("dashboard_profile", "Your Custom URL")}
                 value={if @profile, do: @profile.username || "", else: ""}
                 placeholder="yourname"
                 pattern="[a-z0-9][a-z0-9-]{2,29}"
@@ -156,18 +162,18 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
                           <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                           </svg>
-                          Available
+                          {dgettext("dashboard_profile", "Available")}
                         </div>
                       <% false -> %>
                         <div class="inline-flex items-center px-2 py-0.5 rounded-token-lg bg-red-50 text-red-700 text-token-2xs font-black uppercase tracking-wider border border-red-100">
                           <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
                           </svg>
-                          Taken
+                          {dgettext("dashboard_profile", "Taken")}
                         </div>
                       <% {:error, _message} -> %>
                         <div class="inline-flex items-center px-2 py-0.5 rounded-token-lg bg-amber-50 text-amber-700 text-token-2xs font-black uppercase tracking-wider border border-amber-100">
-                          Invalid
+                          {dgettext("dashboard_profile", "Invalid")}
                         </div>
                       <% _ -> %>
                     <% end %>
@@ -176,8 +182,12 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
               </.input>
             </div>
             <div class="flex items-end">
-              <button type="submit" class="btn-primary px-8 whitespace-nowrap h-[52px]" phx-disable-with="Saving...">
-                Update URL
+              <button
+                type="submit"
+                class="btn-primary px-8 whitespace-nowrap h-[52px]"
+                phx-disable-with={dgettext("dashboard_profile", "Saving...")}
+              >
+                {dgettext("dashboard_profile", "Update URL")}
               </button>
             </div>
           </div>
@@ -188,7 +198,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
                 <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                 </svg>
-                Live at:
+                {dgettext("dashboard_profile", "Live at:")}
                 <a
                   href={"#{Policy.app_url()}/#{@profile.username}"}
                   target="_blank"
@@ -199,7 +209,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
               </div>
             <% else %>
               <p class="text-token-sm text-tymeslot-500 font-medium">
-                Choose a unique username for your personal booking page.
+                {dgettext("dashboard_profile", "Choose a unique username for your personal booking page.")}
               </p>
             <% end %>
           </div>

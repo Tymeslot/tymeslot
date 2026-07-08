@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimezoneFormComponent do
   Allows users to update their account timezone.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
@@ -49,7 +50,13 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimezoneFormComponent do
     if Timezones.valid?(timezone) do
       update_timezone(socket, timezone)
     else
-      errors = Map.put(socket.assigns.form_errors, :timezone, "Unknown timezone")
+      errors =
+        Map.put(
+          socket.assigns.form_errors,
+          :timezone,
+          dgettext("dashboard_profile", "Unknown timezone")
+        )
+
       {:noreply, assign(socket, :form_errors, errors)}
     end
   end
@@ -61,11 +68,15 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimezoneFormComponent do
       {:ok, updated_profile} ->
         label = label_for_timezone(socket, updated_profile.timezone)
         send(self(), {:profile_updated, updated_profile})
-        Flash.info("Timezone updated to #{label}")
+
+        Flash.info(
+          dgettext("dashboard_profile", "Timezone updated to %{timezone}", timezone: label)
+        )
+
         {:noreply, assign(socket, profile: updated_profile)}
 
       {:error, _changeset} ->
-        Flash.error("Failed to update timezone")
+        Flash.error(dgettext("dashboard_profile", "Failed to update timezone"))
         {:noreply, socket}
     end
   end
@@ -83,7 +94,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimezoneFormComponent do
   def render(assigns) do
     ~H"""
     <div id="timezone-form-container">
-      <.section_header level={3} title="Timezone" class="mb-4" />
+      <.section_header level={3} title={dgettext("dashboard_profile", "Timezone")} class="mb-4" />
       <TimezoneDropdown.timezone_dropdown
         profile={@profile}
         timezone_options={@timezone_options}

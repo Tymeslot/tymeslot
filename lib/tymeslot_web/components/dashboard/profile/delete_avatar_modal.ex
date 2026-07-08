@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Components.Dashboard.Profile.DeleteAvatarModal do
   """
 
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Profiles
@@ -40,12 +41,17 @@ defmodule TymeslotWeb.Components.Dashboard.Profile.DeleteAvatarModal do
         # Notify the parent LiveView to refresh the profile
         send(self(), {:profile_updated, updated_profile})
 
-        Flash.info("Avatar deleted successfully")
+        Flash.info(dgettext("dashboard_profile", "Avatar deleted successfully"))
 
         {:noreply, assign(socket, :show, false)}
 
       {:error, reason} ->
-        Flash.error("Failed to delete avatar: #{inspect(reason)}")
+        Flash.error(
+          dgettext("dashboard_profile", "Failed to delete avatar: %{reason}",
+            reason: inspect(reason)
+          )
+        )
+
         {:noreply, socket}
     end
   end
@@ -72,11 +78,16 @@ defmodule TymeslotWeb.Components.Dashboard.Profile.DeleteAvatarModal do
                 />
               </svg>
             </div>
-            <span class="text-2xl font-black text-tymeslot-900 tracking-tight">Delete Avatar</span>
+            <span class="text-2xl font-black text-tymeslot-900 tracking-tight">
+              {dgettext("dashboard_profile", "Delete Avatar")}
+            </span>
           </div>
         </:header>
         <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-          Are you sure you want to delete your profile picture? This action cannot be undone.
+          {dgettext(
+            "dashboard_profile",
+            "Are you sure you want to delete your profile picture? This action cannot be undone."
+          )}
         </p>
         <:footer>
           <div class="flex justify-end gap-3">
@@ -84,13 +95,13 @@ defmodule TymeslotWeb.Components.Dashboard.Profile.DeleteAvatarModal do
               variant={:secondary}
               phx-click={JS.push("hide", target: @myself)}
             >
-              Cancel
+              {dgettext("dashboard_profile", "Cancel")}
             </CoreComponents.action_button>
             <CoreComponents.action_button
               variant={:danger}
               phx-click={JS.push("confirm", target: @myself)}
             >
-              Delete Avatar
+              {dgettext("dashboard_profile", "Delete Avatar")}
             </CoreComponents.action_button>
           </div>
         </:footer>
