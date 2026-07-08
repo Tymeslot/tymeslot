@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Agenda.Entry
@@ -46,30 +47,38 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
         </div>
 
         <dl class="space-y-4">
-          <.info_line icon="hero-calendar-days" label="When">
+          <.info_line icon="hero-calendar-days" label={dgettext("dashboard_home", "When")}>
             {date_label(@entry, @timezone)}
           </.info_line>
-          <.info_line icon="hero-clock" label="Time">
+          <.info_line icon="hero-clock" label={dgettext("dashboard_home", "Time")}>
             {time_label(@entry, @timezone)}<span :if={duration_label(@entry)} class="text-tymeslot-400 font-semibold">
               · {duration_label(@entry)}</span>
           </.info_line>
-          <.info_line :if={@entry.join_url} icon="hero-video-camera" label="Video meeting">
+          <.info_line
+            :if={@entry.join_url}
+            icon="hero-video-camera"
+            label={dgettext("dashboard_home", "Video meeting")}
+          >
             {platform_label(@entry.join_url)}
           </.info_line>
-          <.info_line :if={location_place(@entry)} icon="hero-map-pin" label="Location">
+          <.info_line
+            :if={location_place(@entry)}
+            icon="hero-map-pin"
+            label={dgettext("dashboard_home", "Location")}
+          >
             {location_place(@entry)}
           </.info_line>
-          <.info_line :if={@entry.who} icon="hero-user" label="With">
+          <.info_line :if={@entry.who} icon="hero-user" label={dgettext("dashboard_home", "With")}>
             {@entry.who}
           </.info_line>
-          <.info_line icon="hero-calendar" label="Calendar">
+          <.info_line icon="hero-calendar" label={dgettext("dashboard_home", "Calendar")}>
             {calendar_label(@entry)}
           </.info_line>
         </dl>
 
         <div :if={@entry.target}>
           <p id="agenda-colour-picker-label" class="text-token-xs font-black uppercase tracking-widest text-tymeslot-400 mb-2">
-            Colour
+            {dgettext("dashboard_home", "Colour")}
           </p>
           <div
             role="radiogroup"
@@ -107,7 +116,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
                 @entry.colour != nil && "border-tymeslot-200 text-tymeslot-500 hover:bg-tymeslot-50"
               ]}
             >
-              Default
+              {dgettext("dashboard_home", "Default")}
             </button>
           </div>
         </div>
@@ -120,7 +129,10 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
             navigate={~p"/dashboard/meetings"}
             class="action-button action-button--secondary"
           >
-            <.icon name="hero-cog-6-tooth-mini" class="w-4 h-4" /> Manage booking
+            <.icon name="hero-cog-6-tooth-mini" class="w-4 h-4" /> {dgettext(
+              "dashboard_home",
+              "Manage booking"
+            )}
           </.link>
           <a
             :if={@entry.join_url}
@@ -129,7 +141,10 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
             rel="noopener noreferrer"
             class="action-button action-button--primary"
           >
-            <.icon name="hero-video-camera-mini" class="w-4 h-4" /> Join
+            <.icon name="hero-video-camera-mini" class="w-4 h-4" /> {dgettext(
+              "dashboard_home",
+              "Join"
+            )}
           </a>
         </div>
       </:footer>
@@ -168,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   defp source_badge(%{source: :tymeslot} = assigns) do
     ~H"""
     <span class="rounded-token-full bg-turquoise-100 px-2.5 py-0.5 text-token-xs font-black uppercase tracking-wider text-turquoise-700">
-      Booking
+      {dgettext("dashboard_home", "Booking")}
     </span>
     """
   end
@@ -176,7 +191,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   defp source_badge(assigns) do
     ~H"""
     <span class="rounded-token-full bg-tymeslot-100 px-2.5 py-0.5 text-token-xs font-black uppercase tracking-wider text-tymeslot-600">
-      Calendar
+      {dgettext("dashboard_home", "Calendar")}
     </span>
     """
   end
@@ -197,7 +212,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   defp platform_label(url) do
     host = URI.parse(url).host || ""
 
-    Enum.find_value(@video_platforms, "Video call", fn {needle, name} ->
+    Enum.find_value(@video_platforms, dgettext("dashboard_home", "Video call"), fn {needle, name} ->
       String.contains?(host, needle) && name
     end)
   end
@@ -211,7 +226,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
 
   # Where the appointment lives: a Tymeslot booking, or the named synced calendar.
   defp calendar_label(%Entry{source: :tymeslot}), do: "Tymeslot"
-  defp calendar_label(%Entry{calendar: nil}), do: "External calendar"
+  defp calendar_label(%Entry{calendar: nil}), do: dgettext("dashboard_home", "External calendar")
   defp calendar_label(%Entry{calendar: name}), do: name
 
   # --- Formatting ------------------------------------------------------------
@@ -230,7 +245,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
 
   defp date_label(%Entry{} = entry, tz), do: entry.start_at |> local(tz) |> long_date()
 
-  defp time_label(%Entry{all_day?: true}, _tz), do: "All day"
+  defp time_label(%Entry{all_day?: true}, _tz), do: dgettext("dashboard_home", "All day")
 
   defp time_label(%Entry{} = entry, tz) do
     "#{clock(entry.start_at, tz)} – #{clock(entry.end_at, tz)}"
@@ -245,12 +260,16 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
     end
   end
 
-  defp humanise_duration(minutes) when minutes < 60, do: "#{minutes} min"
+  defp humanise_duration(minutes) when minutes < 60,
+    do: dgettext("dashboard_home", "%{minutes} min", minutes: minutes)
 
   defp humanise_duration(minutes) do
     case {div(minutes, 60), rem(minutes, 60)} do
-      {hours, 0} -> "#{hours} hr"
-      {hours, mins} -> "#{hours} hr #{mins} min"
+      {hours, 0} ->
+        dgettext("dashboard_home", "%{hours} hr", hours: hours)
+
+      {hours, mins} ->
+        dgettext("dashboard_home", "%{hours} hr %{mins} min", hours: hours, mins: mins)
     end
   end
 
@@ -259,14 +278,19 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   defp relative_label(%Entry{start_at: start_at, end_at: end_at}, now) do
     cond do
       DateTime.compare(now, end_at) != :lt -> nil
-      DateTime.compare(now, start_at) != :lt -> "In progress"
+      DateTime.compare(now, start_at) != :lt -> dgettext("dashboard_home", "In progress")
       true -> countdown(DateTime.diff(start_at, now, :second))
     end
   end
 
-  defp countdown(seconds) when seconds < 3600, do: "in #{max(div(seconds, 60), 1)}m"
-  defp countdown(seconds) when seconds < 86_400, do: "in #{div(seconds, 3600)}h"
-  defp countdown(seconds), do: "in #{div(seconds, 86_400)}d"
+  defp countdown(seconds) when seconds < 3600,
+    do: dgettext("dashboard_home", "in %{minutes}m", minutes: max(div(seconds, 60), 1))
+
+  defp countdown(seconds) when seconds < 86_400,
+    do: dgettext("dashboard_home", "in %{hours}h", hours: div(seconds, 3600))
+
+  defp countdown(seconds),
+    do: dgettext("dashboard_home", "in %{days}d", days: div(seconds, 86_400))
 
   defp clock(datetime, tz), do: datetime |> local(tz) |> Calendar.strftime("%-I:%M %p")
 

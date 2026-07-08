@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   source-agnostic view upstream (`Tymeslot.Agenda`); here we only present it.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Agenda
@@ -22,6 +23,8 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   alias TymeslotWeb.Dashboard.AgendaDetailModal
   alias TymeslotWeb.Dashboard.AgendaTimeline
   alias TymeslotWeb.Dashboard.OnboardingChecklist
+
+  import TymeslotWeb.Dashboard.DashboardOverviewFormatters
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -58,7 +61,11 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
 
           {:error, _changeset} ->
             {:noreply,
-             Flash.put_flash(socket, :error, "Couldn't save that colour. Please try again.")}
+             Flash.put_flash(
+               socket,
+               :error,
+               dgettext("dashboard_home", "Couldn't save that colour. Please try again.")
+             )}
         end
     end
   end
@@ -148,7 +155,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">
-      <.section_header icon="hero-home" title="Overview" />
+      <.section_header icon="hero-home" title={dgettext("dashboard_home", "Overview")} />
 
       <%!-- Welcome Section --%>
       <div class="bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 rounded-token-3xl px-8 py-3 lg:px-12 lg:py-4 text-white shadow-2xl shadow-turquoise-500/20 relative overflow-hidden">
@@ -156,12 +163,17 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
         </div>
         <div class="relative z-10">
           <h1 class="text-3xl lg:text-4xl font-black mb-1 tracking-tight">
-            {if @first_dashboard_visit, do: "Welcome", else: "Welcome back"}{if @profile.full_name,
+            {if @first_dashboard_visit,
+              do: dgettext("dashboard_home", "Welcome"),
+              else: dgettext("dashboard_home", "Welcome back")}{if @profile.full_name,
               do: ", #{@profile.full_name}",
               else: ""}!
           </h1>
           <p class="text-lg text-white/90 font-medium max-w-4xl leading-snug">
-            Here's an overview of your scheduling setup and recent activity.
+            {dgettext(
+              "dashboard_home",
+              "Here's an overview of your scheduling setup and recent activity."
+            )}
           </p>
         </div>
       </div>
@@ -178,19 +190,19 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
       <div class="card-glass min-w-0">
         <div class="flex items-center justify-between gap-4 mb-8">
           <div class="flex items-center gap-3">
-            <.section_header level={2} title="Your day" />
+            <.section_header level={2} title={dgettext("dashboard_home", "Your day")} />
             <span
               :if={@today_count > 0}
               class="rounded-token-full bg-turquoise-100 px-2.5 py-0.5 text-token-xs font-black text-turquoise-700 tabular-nums"
             >
-              {@today_count} today
+              {@today_count} {dgettext("dashboard_home", "today")}
             </span>
           </div>
           <.link
             patch={~p"/dashboard/calendar"}
             class="text-turquoise-600 hover:text-turquoise-700 font-bold text-token-sm transition-colors flex items-center gap-1 group shrink-0"
           >
-            View calendar
+            {dgettext("dashboard_home", "View calendar")}
             <span class="group-hover:translate-x-1 transition-transform">→</span>
           </.link>
         </div>
@@ -208,7 +220,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
 
         <%!-- Today spine --%>
         <div :if={@spine != [] or @all_day_today != []} class="mb-8">
-          <.group_heading label="Today" />
+          <.group_heading label={dgettext("dashboard_home", "Today")} />
 
           <div :if={@all_day_today != []} class="mb-4 flex flex-wrap gap-2">
             <button
@@ -249,7 +261,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
 
         <%!-- Tomorrow peek --%>
         <div :if={@tomorrow_entries != []} class="mt-8 pt-6 border-t border-tymeslot-100">
-          <.group_heading label="Tomorrow" />
+          <.group_heading label={dgettext("dashboard_home", "Tomorrow")} />
           <div class="space-y-2">
             <.peek_row
               :for={entry <- @tomorrow_entries}
@@ -268,7 +280,9 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           <div class="w-16 h-16 bg-white rounded-token-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
             <.icon name="hero-check-circle" class="w-8 h-8 text-tymeslot-300" />
           </div>
-          <p class="text-tymeslot-500 font-bold">Nothing on your plate today or tomorrow.</p>
+          <p class="text-tymeslot-500 font-bold">
+            {dgettext("dashboard_home", "Nothing on your plate today or tomorrow.")}
+          </p>
         </div>
 
         <%!-- Connect-a-calendar nudge --%>
@@ -278,7 +292,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           class="mt-2 flex items-center justify-center gap-2 text-token-sm font-bold text-turquoise-600 hover:text-turquoise-700 transition-colors"
         >
           <.icon name="hero-calendar-days" class="w-4 h-4" />
-          Connect a calendar to see your whole schedule here
+          {dgettext("dashboard_home", "Connect a calendar to see your whole schedule here")}
         </.link>
       </div>
 
@@ -321,7 +335,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
     <div
       {open_attrs(@entry)}
       phx-target={@myself}
-      aria-label={"View details for #{@entry.title}"}
+      aria-label={dgettext("dashboard_home", "View details for %{title}", title: @entry.title)}
       class="relative overflow-hidden rounded-token-2xl bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 p-6 text-white shadow-xl shadow-turquoise-500/20 cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-white/60"
     >
       <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.15),transparent_55%)]">
@@ -329,7 +343,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
       <div class="relative z-10">
         <div class="flex items-center gap-2 text-token-xs font-black uppercase tracking-widest text-white/80">
           <.icon name="hero-bolt-mini" class="w-4 h-4" />
-          <span>Up next</span>
+          <span>{dgettext("dashboard_home", "Up next")}</span>
           <span aria-hidden="true">·</span>
           <span>{day_label(@entry, @timezone)}</span>
         </div>
@@ -371,7 +385,10 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
               phx-click={%JS{}}
               class="hidden shrink-0 items-center gap-1.5 rounded-token-xl bg-white px-4 py-2 text-token-sm font-black text-turquoise-700 shadow-lg hover:bg-turquoise-50 transition-colors"
             >
-              <.icon name="hero-video-camera-mini" class="w-4 h-4" /> Join
+              <.icon name="hero-video-camera-mini" class="w-4 h-4" /> {dgettext(
+                "dashboard_home",
+                "Join"
+              )}
             </a>
           </div>
         </div>
@@ -380,9 +397,18 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           :if={@then_entry}
           class="mt-4 pt-4 border-t border-white/20 text-white/80 text-token-xs font-semibold truncate"
         >
-          <span class="uppercase tracking-widest text-white/60">then</span>
+          <span class="uppercase tracking-widest text-white/60">{dgettext(
+              "dashboard_home",
+              "then"
+            )}</span>
           {@then_entry.title} · {time_label(@then_entry, @timezone)}<span :if={@more_count > 0}>
-            · +{@more_count} more</span>
+            ·
+            {dngettext(
+              "dashboard_home",
+              "+%{count} more",
+              "+%{count} more",
+              @more_count
+            )}</span>
         </p>
       </div>
     </div>
@@ -416,7 +442,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
       <div
         {open_attrs(@entry)}
         phx-target={@myself}
-        aria-label={"View details for #{@entry.title}"}
+        aria-label={dgettext("dashboard_home", "View details for %{title}", title: @entry.title)}
         class={[
           "flex-1 min-w-0 mb-3 flex items-center gap-3 p-4 rounded-token-2xl border-2 transition-all group cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-turquoise-400",
           (@next? or @in_progress?) && "bg-white border-turquoise-200 shadow-md shadow-turquoise-500/10",
@@ -438,7 +464,10 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
               :if={@in_progress?}
               class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-token-xs font-black bg-turquoise-100 text-turquoise-700 rounded-token-full uppercase tracking-wider"
             >
-              <span class="w-1.5 h-1.5 rounded-token-full bg-turquoise-500 animate-pulse"></span> Now
+              <span class="w-1.5 h-1.5 rounded-token-full bg-turquoise-500 animate-pulse"></span> {dgettext(
+                "dashboard_home",
+                "Now"
+              )}
             </span>
             <.source_badge source={@entry.source} />
           </div>
@@ -459,7 +488,10 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           phx-click={%JS{}}
           class="shrink-0 inline-flex items-center gap-1.5 rounded-token-xl bg-turquoise-50 px-3 py-1.5 text-token-xs font-black text-turquoise-700 hover:bg-turquoise-100 transition-colors"
         >
-          <.icon name="hero-video-camera-mini" class="w-4 h-4" /> Join
+          <.icon name="hero-video-camera-mini" class="w-4 h-4" /> {dgettext(
+            "dashboard_home",
+            "Join"
+          )}
         </a>
       </div>
     </div>
@@ -489,7 +521,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
       </div>
       <.rail node={:now} />
       <div class="flex-1 py-1 text-token-xs font-black uppercase tracking-widest text-turquoise-600">
-        Now
+        {dgettext("dashboard_home", "Now")}
       </div>
     </div>
     """
@@ -543,11 +575,11 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
     <div
       {open_attrs(@entry)}
       phx-target={@myself}
-      aria-label={"View details for #{@entry.title}"}
+      aria-label={dgettext("dashboard_home", "View details for %{title}", title: @entry.title)}
       class="flex items-center gap-3 py-1.5 px-2 -mx-2 rounded-token-xl cursor-pointer hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 transition-colors"
     >
       <div class="w-14 shrink-0 text-token-xs font-black tabular-nums text-tymeslot-400">
-        {if @entry.all_day?, do: "All day", else: time_label(@entry, @timezone)}
+        {if @entry.all_day?, do: dgettext("dashboard_home", "All day"), else: time_label(@entry, @timezone)}
       </div>
       <span
         :if={EventColour.tailwind_class(@entry.colour)}
@@ -582,7 +614,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   defp source_badge(%{source: :tymeslot} = assigns) do
     ~H"""
     <span class="shrink-0 px-2 py-0.5 text-token-xs font-black bg-turquoise-100 text-turquoise-700 rounded-token-full uppercase tracking-wider">
-      Booking
+      {dgettext("dashboard_home", "Booking")}
     </span>
     """
   end
@@ -590,44 +622,8 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   defp source_badge(assigns) do
     ~H"""
     <span class="shrink-0 px-2 py-0.5 text-token-xs font-black bg-tymeslot-100 text-tymeslot-600 rounded-token-full uppercase tracking-wider">
-      Calendar
+      {dgettext("dashboard_home", "Calendar")}
     </span>
     """
   end
-
-  # --- Formatting ------------------------------------------------------------
-
-  # Server-rendered starting text for the cockpit countdown; the AgendaCountdown
-  # JS hook replaces it live on mount and ticks it thereafter.
-  defp relative_hint(entry) do
-    diff = DateTime.diff(entry.start_at, DateTime.utc_now(), :second)
-
-    cond do
-      diff <= 0 -> "now"
-      diff < 3600 -> "in #{div(diff, 60)}m"
-      diff < 86_400 -> "in #{div(diff, 3600)}h"
-      true -> "in #{div(diff, 86_400)}d"
-    end
-  end
-
-  defp day_label(entry, timezone) do
-    today = local_date(DateTime.utc_now(), timezone)
-
-    cond do
-      Entry.covers?(entry, today, timezone) -> "Today"
-      Entry.covers?(entry, Date.add(today, 1), timezone) -> "Tomorrow"
-      true -> Calendar.strftime(entry.day, "%a %-d %b")
-    end
-  end
-
-  defp time_label(%{all_day?: true}, _timezone), do: "All day"
-
-  defp time_label(entry, timezone) do
-    entry.start_at
-    |> DateTimeUtils.convert_to_timezone(timezone)
-    |> Calendar.strftime("%-I:%M %p")
-  end
-
-  defp local_date(datetime, timezone),
-    do: datetime |> DateTimeUtils.convert_to_timezone(timezone) |> DateTime.to_date()
 end

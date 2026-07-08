@@ -20,6 +20,8 @@ defmodule TymeslotWeb.Dashboard.AgendaTimeline do
   clock itself.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Agenda.Entry
 
   # Free stretches shorter than this are noise, not breathing room — no connector.
@@ -57,12 +59,16 @@ defmodule TymeslotWeb.Dashboard.AgendaTimeline do
   Formats a gap of `minutes` as a human connector label, e.g. `"2h 15m free"`.
   """
   @spec format_gap(non_neg_integer()) :: String.t()
-  def format_gap(minutes) when minutes < 60, do: "#{minutes}m free"
+  def format_gap(minutes) when minutes < 60,
+    do: dgettext("dashboard_home", "%{minutes}m free", minutes: minutes)
 
   def format_gap(minutes) do
     case {div(minutes, 60), rem(minutes, 60)} do
-      {hours, 0} -> "#{hours}h free"
-      {hours, mins} -> "#{hours}h #{mins}m free"
+      {hours, 0} ->
+        dgettext("dashboard_home", "%{hours}h free", hours: hours)
+
+      {hours, mins} ->
+        dgettext("dashboard_home", "%{hours}h %{mins}m free", hours: hours, mins: mins)
     end
   end
 

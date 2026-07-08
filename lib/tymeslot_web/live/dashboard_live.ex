@@ -142,6 +142,7 @@ defmodule TymeslotWeb.DashboardLive do
   """
 
   use TymeslotWeb, :live_view
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Onboarding
@@ -203,7 +204,11 @@ defmodule TymeslotWeb.DashboardLive do
       {:ok, tab} ->
         socket =
           if socket.assigns.live_action == :payments && !socket.assigns.payments_allowed do
-            put_flash(socket, :error, "Meeting payments require an upgraded plan.")
+            put_flash(
+              socket,
+              :error,
+              dgettext("dashboard_home", "Meeting payments require an upgraded plan.")
+            )
           else
             socket
           end
@@ -433,7 +438,7 @@ defmodule TymeslotWeb.DashboardLive do
           user_id: socket.assigns[:current_user] && socket.assigns.current_user.id
         )
 
-        {:noreply, put_flash(socket, :error, "Invalid redirect URL")}
+        {:noreply, put_flash(socket, :error, dgettext("dashboard_home", "Invalid redirect URL"))}
     end
   end
 
