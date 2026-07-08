@@ -4,6 +4,7 @@ defmodule Tymeslot.Auth.UserSchemaTest do
   @moduletag :database
   @moduletag :schema
 
+  alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
 
   describe "security validations" do
@@ -82,21 +83,21 @@ defmodule Tymeslot.Auth.UserSchemaTest do
       changeset = UserSchema.locale_changeset(%UserSchema{}, %{locale: "de"})
 
       assert changeset.valid?
-      assert Ecto.Changeset.get_change(changeset, :locale) == "de"
+      assert Changeset.get_change(changeset, :locale) == "de"
     end
 
     test "clears the preference for an empty string" do
       changeset = UserSchema.locale_changeset(%UserSchema{}, %{locale: ""})
 
       assert changeset.valid?
-      assert Ecto.Changeset.get_change(changeset, :locale) == nil
+      assert Changeset.get_change(changeset, :locale) == nil
     end
 
     test "clears the preference for nil" do
       changeset = UserSchema.locale_changeset(%UserSchema{}, %{locale: nil})
 
       assert changeset.valid?
-      assert Ecto.Changeset.get_change(changeset, :locale) == nil
+      assert Changeset.get_change(changeset, :locale) == nil
     end
 
     test "rejects an unsupported locale code" do
