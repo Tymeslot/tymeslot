@@ -606,3 +606,9 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "header."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:46
+#: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:121
+#, elixir-autogen, elixir-format
+msgid "My n8n Automation"
+msgstr ""

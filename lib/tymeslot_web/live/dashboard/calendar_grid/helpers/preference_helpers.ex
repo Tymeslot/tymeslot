@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
       |> DateTime.to_date()
 
     if Date.compare(date, today) == :eq do
-      "Next 30 days"
+      dgettext("dashboard_calendar", "Next 30 days")
     else
       range_label(date, Date.add(date, 30))
     end

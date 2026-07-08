@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                 label={dgettext("dashboard_automation_chat", "Integration Name")}
                 value={Map.get(@form_values, "name", "")}
                 phx-blur={JS.push("validate_telegram_field", value: %{"field" => "name"}, target: @parent_component)}
-                placeholder="My Telegram Notifications"
+                placeholder={dgettext("dashboard_automation_chat", "My Telegram Notifications")}
                 maxlength={Constraints.webhook_name_length_opts()[:max]}
                 required
                 errors={FormValidationHelpers.field_errors(@form_errors, :name)}

@@ -86,7 +86,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
     * `:variant` - Button variant (passed to action_button)
   """
   attr :loading, :boolean, default: false
-  attr :loading_text, :string, default: "Processing..."
+  attr :loading_text, :string, default: nil
   attr :variant, :atom, default: :primary
   attr :type, :string, default: "button"
   attr :form, :string, default: nil

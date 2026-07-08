@@ -10,7 +10,7 @@
       <meta name="description" content={@meta_description} />
     <% end %>
     <.live_title suffix=" · Tymeslot">
-      {assigns[:page_title] || "Schedule a Meeting"}
+      {assigns[:page_title] || dgettext("common", "Schedule a Meeting")}
     </.live_title>
     <link rel="icon" type="image/svg+xml" href={~p"/images/brand/favicon.svg"} />
     <link rel="alternate icon" href={~p"/images/brand/favicon.ico"} />
@@ -47,7 +47,12 @@
     <.analytics_scripts />
   </head>
   <body>
-    <.noscript_warning message="This app requires JavaScript to function. Please enable it in your browser settings." />
+    <.noscript_warning message={
+      dgettext(
+        "common",
+        "This app requires JavaScript to function. Please enable it in your browser settings."
+      )
+    } />
     {@inner_content}
   </body>
 </html>

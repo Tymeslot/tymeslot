@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Components.CoreComponents.Layout do
   @moduledoc "Layout-related components extracted from CoreComponents."
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   # Application modules
   alias TymeslotWeb.StepNavigation
@@ -57,8 +58,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Layout do
     ~H"""
     <footer class="footer-gradient text-center">
       <p style="color: rgba(255,255,255,0.8);">
-        Made with <span style="color: #ef4444;">❤</span>
-        by the
+        {dgettext("common", "Made with")} <span style="color: #ef4444;">❤</span>
+        {dgettext("common", "by the")}
         <a
           href="https://github.com/tymeslot/tymeslot"
           target="_blank"
@@ -68,7 +69,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Layout do
           class="underline hover:text-white transition-colors"
           style="color: rgba(255,255,255,0.9);"
         >
-          Tymeslot team
+          {dgettext("common", "Tymeslot team")}
         </a>
       </p>
     </footer>

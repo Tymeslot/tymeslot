@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                 label={dgettext("dashboard_automation_chat", "Integration Name")}
                 value={Map.get(@form_values, "name", "")}
                 phx-blur={JS.push("slack_validate_field", value: %{"field" => "name"}, target: @parent_component)}
-                placeholder="Acme Slack Notifications"
+                placeholder={dgettext("dashboard_automation_chat", "Acme Slack Notifications")}
                 required
                 errors={FormValidationHelpers.field_errors(@form_errors, :name)}
                 icon="hero-tag"

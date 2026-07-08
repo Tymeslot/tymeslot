@@ -8,6 +8,8 @@ defmodule TymeslotWeb.AuthLive.PageMetaHelper do
   since they are not indexed.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   @doc """
@@ -29,21 +31,32 @@ defmodule TymeslotWeb.AuthLive.PageMetaHelper do
 
   defp page_meta_for_state(:login),
     do:
-      {"Log In",
-       "Sign in to your Tymeslot account to manage scheduling links, availability, and bookings."}
+      {dgettext("auth", "Log In"),
+       dgettext(
+         "auth",
+         "Sign in to your Tymeslot account to manage scheduling links, availability, and bookings."
+       )}
 
   defp page_meta_for_state(:signup),
     do:
-      {"Create an Account",
-       "Create a Tymeslot account and start sharing your availability in minutes. No credit card required."}
+      {dgettext("auth", "Create an Account"),
+       dgettext(
+         "auth",
+         "Create a Tymeslot account and start sharing your availability in minutes. No credit card required."
+       )}
 
   defp page_meta_for_state(:reset_password),
     do:
-      {"Reset Password",
-       "Enter your email to receive a password reset link for your Tymeslot account."}
+      {dgettext("auth", "Reset Password"),
+       dgettext(
+         "auth",
+         "Enter your email to receive a password reset link for your Tymeslot account."
+       )}
 
   defp page_meta_for_state(:reset_password_form),
-    do: {"Choose a New Password", "Choose a strong new password for your Tymeslot account."}
+    do:
+      {dgettext("auth", "Choose a New Password"),
+       dgettext("auth", "Choose a strong new password for your Tymeslot account.")}
 
   defp page_meta_for_state(_state), do: nil
 end

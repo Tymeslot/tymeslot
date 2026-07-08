@@ -1,5 +1,6 @@
 defmodule TymeslotWeb.OnboardingLive do
   use TymeslotWeb, :live_view
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Profiles
@@ -34,7 +35,10 @@ defmodule TymeslotWeb.OnboardingLive do
     if user.onboarding_completed_at && !is_debug do
       {:ok,
        socket
-       |> put_flash(:info, "You have already completed onboarding.")
+       |> put_flash(
+         :info,
+         dgettext("onboarding_wizard", "You have already completed onboarding.")
+       )
        |> redirect(to: ~p"/dashboard")}
     else
       {:ok, Initializer.initialize(socket, user)}

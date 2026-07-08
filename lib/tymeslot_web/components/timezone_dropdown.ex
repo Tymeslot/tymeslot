@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.CoreComponents
 
@@ -37,7 +38,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
               d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          Your Timezone
+          {dgettext("common", "Your Timezone")}
         </div>
       </label>
 
@@ -49,10 +50,10 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         target={@target}
         position={:top_start}
         role="dialog"
-        panel_label="Select timezone"
+        panel_label={dgettext("common", "Select timezone")}
         trigger_class="group relative cursor-pointer z-50 w-full text-left"
         class="right-0 max-h-64 brand-card rounded-xl shadow-lg border border-white/30 overflow-hidden"
-        aria-label="Select timezone"
+        aria-label={dgettext("common", "Select timezone")}
       >
         <:trigger>
           <div class="input p-4 hover:bg-white transition-all duration-200">
@@ -70,7 +71,10 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                     {Timezones.format((@profile && @profile.timezone) || "UTC")}
                   </div>
                   <div class="text-xs mt-1 text-tymeslot-600">
-                    {TimezoneHelpers.format_local_time((@profile && @profile.timezone) || "UTC")} local time
+                    {TimezoneHelpers.format_local_time((@profile && @profile.timezone) || "UTC")} {dgettext(
+                      "common",
+                      "local time"
+                    )}
                   </div>
                 </div>
               </div>
@@ -105,7 +109,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                 phx-target={@target}
                 name="value"
                 value={@timezone_search || ""}
-                placeholder="Search cities, countries, or timezones..."
+                placeholder={dgettext("common", "Search cities, countries, or timezones...")}
                 class="w-full px-4 py-2 rounded-lg text-sm border-0 pr-10 focus:outline-hidden focus:ring-2 focus:ring-teal-400/30 bg-white/90 text-tymeslot-800"
                 autocomplete="off"
                 phx-hook="AutoFocus"
@@ -147,7 +151,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                     <div class="flex-1 min-w-0">
                       <div class="font-medium truncate text-tymeslot-800">{label}</div>
                       <div class="text-xs mt-0.5 text-tymeslot-600">
-                        {TimezoneHelpers.format_local_time(value)} local time • {offset}
+                        {TimezoneHelpers.format_local_time(value)} {dgettext("common", "local time")} • {offset}
                       </div>
                     </div>
                   </div>
@@ -159,7 +163,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
       </.dropdown>
 
       <p class="mt-2 text-sm text-tymeslot-600">
-        This timezone will be used for your availability and scheduling.
+        {dgettext("common", "This timezone will be used for your availability and scheduling.")}
       </p>
     </div>
     """

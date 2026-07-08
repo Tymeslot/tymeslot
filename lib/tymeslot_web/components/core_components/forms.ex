@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   behaviour.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   # ========== UNIFIED INPUT ==========
 
@@ -337,7 +338,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
     ~H"""
     <div id="password-requirements" class="mt-2 text-xs sm:text-sm space-y-1.5">
       <p class="text-tymeslot-500 font-bold uppercase tracking-wider text-token-2xs">
-        Password must contain:
+        {dgettext("common", "Password must contain:")}
       </p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-x-4">
         <ul class="space-y-1">
@@ -350,7 +351,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
             >
               <circle cx="12" cy="12" r="10" stroke-width="2.5" />
             </svg>
-            <span class="text-xs">At least 8 characters</span>
+            <span class="text-xs">{dgettext("common", "At least 8 characters")}</span>
           </li>
           <li id="req-lowercase" class="flex items-center text-tymeslot-600 font-medium">
             <svg
@@ -361,7 +362,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
             >
               <circle cx="12" cy="12" r="10" stroke-width="2.5" />
             </svg>
-            <span class="text-xs">One lowercase letter</span>
+            <span class="text-xs">{dgettext("common", "One lowercase letter")}</span>
           </li>
         </ul>
         <ul class="space-y-1">
@@ -374,7 +375,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
             >
               <circle cx="12" cy="12" r="10" stroke-width="2.5" />
             </svg>
-            <span class="text-xs">One uppercase letter</span>
+            <span class="text-xs">{dgettext("common", "One uppercase letter")}</span>
           </li>
           <li id="req-number" class="flex items-center text-tymeslot-600 font-medium">
             <svg
@@ -385,7 +386,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
             >
               <circle cx="12" cy="12" r="10" stroke-width="2.5" />
             </svg>
-            <span class="text-xs">One number</span>
+            <span class="text-xs">{dgettext("common", "One number")}</span>
           </li>
         </ul>
       </div>

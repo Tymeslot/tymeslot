@@ -4,6 +4,8 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
   Extracted from AuthLive to separate concerns and improve maintainability.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.LiveView
   alias Tymeslot.Auth.{AuthActions, PasswordReset}
   alias Tymeslot.Infrastructure.Config
@@ -89,7 +91,10 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
         case socket.assigns[:pending_oauth_registration] do
           nil ->
             socket
-            |> LiveView.put_flash(:error, "No pending registration found. Please sign in again.")
+            |> LiveView.put_flash(
+              :error,
+              dgettext("auth", "No pending registration found. Please sign in again.")
+            )
             |> LiveView.redirect(to: "/auth/login")
 
           reg_data ->

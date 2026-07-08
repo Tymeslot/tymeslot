@@ -4,6 +4,8 @@ defmodule TymeslotWeb.AccountLive.Helpers do
   Provides state management and formatting utilities.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   # Provider constants
@@ -70,7 +72,7 @@ defmodule TymeslotWeb.AccountLive.Helpers do
     if user.updated_at do
       Calendar.strftime(user.updated_at, "%B %d, %Y")
     else
-      "Never"
+      dgettext("account", "Never")
     end
   end
 

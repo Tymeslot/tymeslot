@@ -133,3 +133,28 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Scheduling link copied to clipboard!"
 msgstr ""
+
+#: lib/tymeslot_web/components/user_dropdown_component.ex:53
+#, elixir-autogen, elixir-format
+msgid "Account Settings"
+msgstr ""
+
+#: lib/tymeslot_web/components/user_dropdown_component.ex:61
+#, elixir-autogen, elixir-format
+msgid "Admin Settings"
+msgstr ""
+
+#: lib/tymeslot_web/components/user_dropdown_component.ex:69
+#, elixir-autogen, elixir-format
+msgid "Sign Out"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/component_dispatch.ex:121
+#, elixir-autogen, elixir-format
+msgid "This feature (%{feature_name}) is not available on your current plan."
+msgstr ""
+
+#: lib/tymeslot_web/components/user_dropdown_component.ex:117
+#, elixir-autogen, elixir-format
+msgid "User"
+msgstr ""

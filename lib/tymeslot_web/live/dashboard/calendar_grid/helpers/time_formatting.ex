@@ -1,12 +1,14 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
   @moduledoc "Date/time formatting utilities for the calendar grid: time ranges, timezone abbreviations, and local date parts."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.HTML
 
   @spec format_time_range(map(), String.t()) :: String.t()
   def format_time_range(event, fmt \\ "12h") do
     if event.all_day do
-      "All day"
+      dgettext("dashboard_calendar", "All day")
     else
       start_str = format_datetime(event.start_at, fmt)
       end_str = format_datetime(event.end_at, fmt)
@@ -25,7 +27,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
     end_at = Map.get(event, :display_end_at, event.end_at)
 
     if event.all_day do
-      "All day"
+      dgettext("dashboard_calendar", "All day")
     else
       start_local = DateTime.shift_zone!(start_at, timezone)
       end_local = DateTime.shift_zone!(end_at, timezone)
@@ -47,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
   @spec format_time_range_in_tz(map(), String.t(), String.t()) :: String.t()
   def format_time_range_in_tz(event, timezone, fmt \\ "12h") do
     if event.all_day do
-      "All day"
+      dgettext("dashboard_calendar", "All day")
     else
       start_local = DateTime.shift_zone!(event.start_at, timezone)
       end_local = DateTime.shift_zone!(event.end_at, timezone)

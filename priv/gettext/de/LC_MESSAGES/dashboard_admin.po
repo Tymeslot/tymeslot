@@ -36,6 +36,7 @@ msgstr "(Sie)"
 msgid "Actions"
 msgstr "Aktionen"
 
+#: lib/tymeslot_web/live/admin_live.ex:34
 #: lib/tymeslot_web/live/admin_live/components/layout.ex:50
 #: lib/tymeslot_web/live/admin_live/components/users.ex:64
 #, elixir-autogen, elixir-format

@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
           label={dgettext("dashboard_automation", "Webhook Name")}
           value={Map.get(@form_values, "name", "")}
           phx-blur={@on_validate_field.("name", "")}
-          placeholder="My n8n Automation"
+          placeholder={dgettext("dashboard_automation", "My n8n Automation")}
           required
           errors={FormValidationHelpers.field_errors(@form_errors, :name)}
           icon="hero-tag"

@@ -193,6 +193,7 @@ msgid "Link Expired or Invalid"
 msgstr ""
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex:255
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex:34
 #, elixir-autogen, elixir-format
 msgid "Log In"
 msgstr ""
@@ -300,6 +301,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex:35
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex:50
 #, elixir-autogen, elixir-format
 msgid "Reset Password"
 msgstr ""
@@ -553,4 +555,102 @@ msgstr ""
 #: lib/tymeslot_web/components/auth/shared/auth_form_components.ex:71
 #, elixir-autogen, elixir-format
 msgid "terms"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:234
+#, elixir-autogen, elixir-format
+msgid "Authentication failed. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex:58
+#, elixir-autogen, elixir-format
+msgid "Choose a New Password"
+msgstr ""
+
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex:59
+#, elixir-autogen, elixir-format
+msgid "Choose a strong new password for your Tymeslot account."
+msgstr ""
+
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex:43
+#, elixir-autogen, elixir-format
+msgid "Create a Tymeslot account and start sharing your availability in minutes. No credit card required."
+msgstr ""
+
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex:42
+#, elixir-autogen, elixir-format
+msgid "Create an Account"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:153
+#, elixir-autogen, elixir-format
+msgid "Email %{message}. Please provide a valid email address."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:150
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:166
+#, elixir-autogen, elixir-format
+msgid "Email address is required to complete registration."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:213
+#, elixir-autogen, elixir-format
+msgid "Email address is required to complete registration. Please provide your email address."
+msgstr ""
+
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex:51
+#, elixir-autogen, elixir-format
+msgid "Enter your email to receive a password reset link for your Tymeslot account."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:207
+#, elixir-autogen, elixir-format
+msgid "Failed to create user account. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:210
+#, elixir-autogen, elixir-format
+msgid "Invalid OAuth data received. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/auth_live/state_helper.ex:96
+#, elixir-autogen, elixir-format
+msgid "No pending registration found. Please sign in again."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:51
+#, elixir-autogen, elixir-format
+msgid "Please correct the errors in the form."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:169
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:219
+#, elixir-autogen, elixir-format
+msgid "Please provide a valid email address."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:158
+#, elixir-autogen, elixir-format
+msgid "Registration failed due to validation errors. Please check your information and try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/auth_live/page_meta_helper.ex:35
+#, elixir-autogen, elixir-format
+msgid "Sign in to your Tymeslot account to manage scheduling links, availability, and bookings."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:225
+#, elixir-autogen, elixir-format
+msgid "This email address is already associated with another account. Please use a different email or sign in to your existing account."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:30
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Please try again later."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:172
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:222
+#, elixir-autogen, elixir-format
+msgid "You must accept the terms to continue."
 msgstr ""

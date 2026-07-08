@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
   with flags and language names displayed for each option.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Components.FlagHelpers
@@ -25,7 +26,7 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
         on_close="close_language_dropdown"
         trigger_class={switcher_button_class(@theme)}
         class={dropdown_panel_class(@theme)}
-        aria-label="Change language"
+        aria-label={dgettext("common", "Change language")}
       >
         <:trigger>
           <.locale_flag locale={@locale} class="w-5 h-4" />

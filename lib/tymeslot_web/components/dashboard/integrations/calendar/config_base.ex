@@ -233,7 +233,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
           true ->
             first_three = calendar_names |> Enum.take(3) |> Enum.join(", ")
             remaining = length(calendar_names) - 3
-            "#{first_three} + #{remaining} more"
+
+            dgettext("dashboard_calendar_providers", "%{first} + %{remaining} more",
+              first: first_three,
+              remaining: remaining
+            )
         end
       end
     end

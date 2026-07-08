@@ -150,8 +150,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
             <UIComponents.secondary_button target={@target} />
             <UIComponents.form_submit_button
               saving={@saving}
-              text="Discover calendars"
-              saving_text="Discovering..."
+              text={dgettext("dashboard_calendar_providers", "Discover calendars")}
+              saving_text={dgettext("dashboard_calendar_providers", "Discovering...")}
             />
           </div>
         </form>

@@ -31,7 +31,7 @@ defmodule TymeslotWeb.AdminLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "Admin")
+     |> assign(:page_title, dgettext("dashboard_admin", "Admin"))
      |> assign(:profile, nil)
      |> assign(:pending_action, nil)
      |> assign(:role_change_submitting, false)}

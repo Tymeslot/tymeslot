@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   @moduledoc "Navigation components extracted from CoreComponents."
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   # ========== NAVIGATION ==========
 
@@ -74,7 +75,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
       <div class="bg-white rounded-token-2xl border-2 border-tymeslot-100 p-2 shadow-sm">
         <nav
           role="tablist"
-          aria-label="Tabs"
+          aria-label={dgettext("common", "Tabs")}
           class="flex flex-wrap gap-2"
         >
           <%= for tab <- @tab do %>

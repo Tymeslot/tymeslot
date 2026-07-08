@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Components.CoreComponents.Buttons do
   @moduledoc "Button components extracted from CoreComponents."
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   # Application modules
   alias TymeslotWeb.Components.CoreComponents.Feedback, as: Feedback
@@ -54,7 +55,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
     * `:variant` - Button variant (passed to action_button)
   """
   attr :loading, :boolean, default: false
-  attr :loading_text, :string, default: "Processing..."
+  attr :loading_text, :string, default: nil
   attr :variant, :atom, default: :primary
   attr :type, :string, default: "button"
   attr :form, :string, default: nil
@@ -77,7 +78,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
     >
       <%= if @loading do %>
         <Feedback.spinner />
-        <span>{@loading_text}</span>
+        <span>{@loading_text || dgettext("common", "Processing...")}</span>
       <% else %>
         {render_slot(@inner_block)}
       <% end %>

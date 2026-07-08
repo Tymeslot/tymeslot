@@ -8,6 +8,8 @@ defmodule TymeslotWeb.Components.ConfirmationModal do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.CoreComponents
 
@@ -17,9 +19,9 @@ defmodule TymeslotWeb.Components.ConfirmationModal do
   attr :message, :string, required: true
   attr :on_cancel, JS, default: %JS{}
   attr :on_confirm, :any, required: true
-  attr :confirm_text, :string, default: "Confirm"
+  attr :confirm_text, :string, default: nil
   attr :confirm_variant, :atom, default: :danger
-  attr :confirm_disable_with, :string, default: "Processing..."
+  attr :confirm_disable_with, :string, default: nil
 
   @spec confirmation_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def confirmation_modal(assigns) do
@@ -49,18 +51,18 @@ defmodule TymeslotWeb.Components.ConfirmationModal do
             phx-click={@on_cancel}
             class="btn-secondary flex-1 py-4"
           >
-            Cancel
+            {dgettext("common", "Cancel")}
           </button>
           <button
             type="button"
             phx-click={@on_confirm}
-            phx-disable-with={@confirm_disable_with}
+            phx-disable-with={@confirm_disable_with || dgettext("common", "Processing...")}
             class={[
               "flex-1 py-4",
               if(@confirm_variant == :danger, do: "btn-danger", else: "btn-primary")
             ]}
           >
-            {@confirm_text}
+            {@confirm_text || dgettext("common", "Confirm")}
           </button>
         </div>
       </:footer>

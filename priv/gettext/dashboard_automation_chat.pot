@@ -690,3 +690,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "webhook URL was revoked in Slack"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:179
+#, elixir-autogen, elixir-format
+msgid "Acme Slack Notifications"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:123
+#, elixir-autogen, elixir-format
+msgid "My Telegram Notifications"
+msgstr ""

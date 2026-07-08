@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
   Handles user display name, avatar, and dropdown menu with LiveView state.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Profiles
 
@@ -49,7 +50,7 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
       <:panel>
         <div class="py-2" role="none">
           <.dropdown_item
-            label="Account Settings"
+            label={dgettext("dashboard_common", "Account Settings")}
             icon="hero-cog-6-tooth"
             phx-click="navigate_and_close"
             phx-value-path="/dashboard/account"
@@ -57,7 +58,7 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
           />
           <.dropdown_item
             :if={@current_user.is_admin}
-            label="Admin Settings"
+            label={dgettext("dashboard_common", "Admin Settings")}
             icon="hero-shield-check"
             navigate={~p"/admin"}
             phx-click="hide_user_dropdown"
@@ -65,7 +66,7 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
           />
           <.dropdown_divider />
           <.dropdown_item
-            label="Sign Out"
+            label={dgettext("dashboard_common", "Sign Out")}
             icon="hero-arrow-right-on-rectangle"
             danger={true}
             href={~p"/auth/logout"}
@@ -113,7 +114,7 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
         current_user.email
 
       true ->
-        "User"
+        dgettext("dashboard_common", "User")
     end
   end
 

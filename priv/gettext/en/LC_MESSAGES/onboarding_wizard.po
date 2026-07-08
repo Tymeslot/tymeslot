@@ -874,3 +874,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Minimum advance hours"
 msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live.ex:40
+#, elixir-autogen, elixir-format
+msgid "You have already completed onboarding."
+msgstr ""

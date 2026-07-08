@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Components.CoreComponents.Flash do
   @moduledoc "Flash components extracted from CoreComponents."
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   # Phoenix modules
   alias Phoenix.LiveView.JS
@@ -81,7 +82,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
           :if={@close}
           type="button"
           class="shrink-0 text-current opacity-40 hover:opacity-100 transition-opacity"
-          aria-label="Close"
+          aria-label={dgettext("common", "Close")}
         >
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
@@ -151,7 +152,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
         <.flash
           id={"#{@id}-disconnected"}
           kind={:error}
-          title="Connection Lost"
+          title={dgettext("common", "Connection Lost")}
           close={false}
           autoshow={false}
           hook="ConnectionStatus"
@@ -159,7 +160,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
           phx-connected={JS.dispatch("tymeslot:lv-connected", to: "##{@id}-disconnected")}
           style="display: none;"
         >
-          Attempting to reconnect
+          {dgettext("common", "Attempting to reconnect")}
           <svg class="ml-1 w-3 h-3 animate-spin inline-block" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
             </circle>

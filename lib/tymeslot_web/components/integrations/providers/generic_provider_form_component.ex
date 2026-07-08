@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
   expose their own setup component; otherwise this generic component is used.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
@@ -18,7 +19,7 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
           </div>
         <% end %>
         <div class="mt-6">
-          <.action_button type="submit">Save</.action_button>
+          <.action_button type="submit">{dgettext("dashboard_integrations", "Save")}</.action_button>
         </div>
       </.form>
     </div>

@@ -363,3 +363,24 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This server address is fixed for this provider"
 msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:5
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex:5
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex:5
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:5
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex:5
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex:5
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex:5
+#, elixir-autogen, elixir-format
+msgid "%{first} + %{remaining} more"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:153
+#, elixir-autogen, elixir-format
+msgid "Discover calendars"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:154
+#, elixir-autogen, elixir-format
+msgid "Discovering..."
+msgstr ""

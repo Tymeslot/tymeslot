@@ -111,6 +111,9 @@ msgid "Agenda"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header/search_box.ex:116
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/time_formatting.ex:11
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/time_formatting.ex:30
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/time_formatting.ex:52
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex:114
 #, elixir-autogen, elixir-format
 msgid "All day"
@@ -299,4 +302,9 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex:56
 #, elixir-autogen, elixir-format
 msgid "just now"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:60
+#, elixir-autogen, elixir-format
+msgid "Next 30 days"
 msgstr ""

@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.Naming
   alias Tymeslot.Agenda.Day
@@ -117,7 +118,7 @@ defmodule TymeslotWeb.Dashboard.ComponentDispatch do
     <% else %>
       <%!-- Core fallback: just show a simple message --%>
       <div class="p-8 text-center text-tymeslot-500">
-        <p>This feature ({@feature_name}) is not available on your current plan.</p>
+        <p>{dgettext("dashboard_common", "This feature (%{feature_name}) is not available on your current plan.", feature_name: @feature_name)}</p>
       </div>
     <% end %>
     """

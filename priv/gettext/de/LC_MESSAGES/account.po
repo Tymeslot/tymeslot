@@ -219,3 +219,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "your.new@email.com"
 msgstr ""
+
+#: lib/tymeslot_web/live/account_live/helpers.ex:75
+#, elixir-autogen, elixir-format
+msgid "Never"
+msgstr ""

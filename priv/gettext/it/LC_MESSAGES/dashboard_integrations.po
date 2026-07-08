@@ -853,3 +853,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "rooms created automatically"
 msgstr ""
+
+#: lib/tymeslot_web/components/integrations/providers/generic_provider_form_component.ex:22
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr ""

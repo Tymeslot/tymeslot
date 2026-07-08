@@ -9,6 +9,8 @@ defmodule TymeslotWeb.AuthControllerHelpers do
   - Validation error formatting
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Plug.Conn
   import Phoenix.Controller
 
@@ -25,7 +27,7 @@ defmodule TymeslotWeb.AuthControllerHelpers do
   @spec handle_rate_limited(Plug.Conn.t(), String.t(), String.t()) :: Plug.Conn.t()
   def handle_rate_limited(
         conn,
-        message \\ "Too many attempts. Please try again later.",
+        message \\ dgettext("auth", "Too many attempts. Please try again later."),
         redirect_path \\ "/"
       ) do
     conn
@@ -46,7 +48,7 @@ defmodule TymeslotWeb.AuthControllerHelpers do
   def handle_validation_error(
         conn,
         errors,
-        message \\ "Please correct the errors in the form.",
+        message \\ dgettext("auth", "Please correct the errors in the form."),
         render_function
       ) do
     conn
@@ -145,23 +147,29 @@ defmodule TymeslotWeb.AuthControllerHelpers do
   def format_oauth_error_for_flash(%Ecto.Changeset{} = changeset) do
     case changeset.errors do
       [email: {"can't be blank", _opts}] ->
-        "Email address is required to complete registration."
+        dgettext("auth", "Email address is required to complete registration.")
 
       [email: {message, _opts}] when is_binary(message) ->
-        "Email #{message}. Please provide a valid email address."
+        dgettext("auth", "Email %{message}. Please provide a valid email address.",
+          message: message
+        )
 
       _other_errors ->
-        "Registration failed due to validation errors. Please check your information and try again."
+        dgettext(
+          "auth",
+          "Registration failed due to validation errors. Please check your information and try again."
+        )
     end
   end
 
   def format_oauth_error_for_flash(:email_required),
-    do: "Email address is required to complete registration."
+    do: dgettext("auth", "Email address is required to complete registration.")
 
-  def format_oauth_error_for_flash(:invalid_email), do: "Please provide a valid email address."
+  def format_oauth_error_for_flash(:invalid_email),
+    do: dgettext("auth", "Please provide a valid email address.")
 
   def format_oauth_error_for_flash(:terms_not_accepted),
-    do: "You must accept the terms to continue."
+    do: dgettext("auth", "You must accept the terms to continue.")
 
   def format_oauth_error_for_flash(error_message) when is_binary(error_message), do: error_message
 
@@ -196,28 +204,34 @@ defmodule TymeslotWeb.AuthControllerHelpers do
           format_oauth_error_for_flash(changeset)
 
         :user_creation_failed ->
-          "Failed to create user account. Please try again."
+          dgettext("auth", "Failed to create user account. Please try again.")
 
         :invalid_oauth_data ->
-          "Invalid OAuth data received. Please try again."
+          dgettext("auth", "Invalid OAuth data received. Please try again.")
 
         :email_required ->
-          "Email address is required to complete registration. Please provide your email address."
+          dgettext(
+            "auth",
+            "Email address is required to complete registration. Please provide your email address."
+          )
 
         :invalid_email ->
-          "Please provide a valid email address."
+          dgettext("auth", "Please provide a valid email address.")
 
         :terms_not_accepted ->
-          "You must accept the terms to continue."
+          dgettext("auth", "You must accept the terms to continue.")
 
         :email_already_taken ->
-          "This email address is already associated with another account. Please use a different email or sign in to your existing account."
+          dgettext(
+            "auth",
+            "This email address is already associated with another account. Please use a different email or sign in to your existing account."
+          )
 
         :registration_disabled ->
           AuthActions.registration_disabled_message()
 
         _unknown_error ->
-          "Authentication failed. Please try again."
+          dgettext("auth", "Authentication failed. Please try again.")
       end
 
     conn

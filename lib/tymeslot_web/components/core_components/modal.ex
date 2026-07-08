@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Components.CoreComponents.Modal do
   @moduledoc "Modal components extracted from CoreComponents."
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   # Phoenix modules
   alias Phoenix.LiveView.JS
@@ -101,7 +102,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
               <button
                 type="button"
                 class="w-10 h-10 rounded-xl bg-tymeslot-50 text-tymeslot-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
-                aria-label="Close modal"
+                aria-label={dgettext("common", "Close modal")}
                 phx-click={@on_cancel}
               >
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

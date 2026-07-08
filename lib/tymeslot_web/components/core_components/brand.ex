@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Components.CoreComponents.Brand do
   @moduledoc "Brand-related components (logos, marks) extracted from CoreComponents."
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
   Renders the Tymeslot logo.
@@ -29,7 +30,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Brand do
       <% else %>
         <img
           src="/images/brand/logo.svg"
-          alt="Tymeslot logo"
+          alt={dgettext("common", "Tymeslot logo")}
           width="200"
           height="200"
           class={[@img_class, "w-auto"]}

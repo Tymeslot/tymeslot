@@ -143,7 +143,7 @@ defmodule TymeslotWeb.Layouts do
         </svg>
         <span style="font-weight: 500; font-size: 14px; line-height: 1.4;">
           <strong style="text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em; margin-right: 8px; color: #fecdd3;">
-            JavaScript Disabled
+            {dgettext("common", "JavaScript Disabled")}
           </strong>
           {@message}
         </span>
@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Layouts do
           href="."
           style="background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; white-space: nowrap; transition: background 0.2s;"
         >
-          Refresh Page
+          {dgettext("common", "Refresh Page")}
         </a>
       </div>
     </noscript>
@@ -181,17 +181,17 @@ defmodule TymeslotWeb.Layouts do
     <script nomodule nonce={@nonce}>
       document.body.innerHTML = '<div style="padding: 2rem; text-align: center; font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 4rem auto;">' +
         '<svg style="width: 64px; height: 64px; margin: 0 auto 1.5rem; color: #dc2626;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>' +
-        '<h1 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 0.75rem;">Browser Not Supported</h1>' +
-        '<p style="color: #6b7280; line-height: 1.6; margin-bottom: 1.5rem;">This <%= @context_str %> requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge.</p>' +
-        '<a href="https://browsehappy.com/" style="display: inline-block; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 0.5rem; font-weight: 500;">Learn About Modern Browsers</a>' +
+        '<h1 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 0.75rem;"><%= dgettext("common", "Browser Not Supported") %></h1>' +
+        '<p style="color: #6b7280; line-height: 1.6; margin-bottom: 1.5rem;"><%= dgettext("common", "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge.", context: @context_str) %></p>' +
+        '<a href="https://browsehappy.com/" style="display: inline-block; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 0.5rem; font-weight: 500;"><%= dgettext("common", "Learn About Modern Browsers") %></a>' +
         '</div>';
     </script>
     """
   end
 
   # Convert context atom to safe display string
-  defp context_to_string(:application), do: "application"
-  defp context_to_string(:scheduling_page), do: "scheduling page"
+  defp context_to_string(:application), do: dgettext("common", "application")
+  defp context_to_string(:scheduling_page), do: dgettext("common", "scheduling page")
 
   @doc """
   Returns the theme-specific class name based on theme ID.
