@@ -23,13 +23,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
   end
 
   defp build_config_base_quote(%{provider: provider, default_name: default_name}) do
-    module_setup = module_setup_quote(provider, default_name)
+    module_setup = module_setup_quote(provider)
     track_form_change = track_form_change_handler_quote()
     validate_field = validate_field_handler_quote()
     discover_calendars = discover_calendars_handler_quote()
     validation_helpers = validation_helpers_quote()
     discovery_helpers = discovery_helpers_quote()
-    name_suggestion = name_suggestion_quote()
+    name_suggestion = name_suggestion_quote(default_name)
     calendar_formatting = calendar_formatting_quote()
     config_defaults = config_defaults_quote()
 
@@ -46,12 +46,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
     end
   end
 
-  defp module_setup_quote(provider, default_name) do
-    quote bind_quoted: [provider: provider, default_name: default_name] do
+  defp module_setup_quote(provider) do
+    quote bind_quoted: [provider: provider] do
       use TymeslotWeb, :live_component
+      use Gettext, backend: TymeslotWeb.Gettext
 
       @config_base_provider provider
-      @config_base_default_name default_name
 
       alias Phoenix.Component
       alias Tymeslot.Integrations.Calendar.Discovery
@@ -184,7 +184,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
     end
   end
 
-  defp name_suggestion_quote do
+  defp name_suggestion_quote(default_name) do
     quote do
       defp get_suggested_integration_name(assigns) do
         user_name = extract_user_name(assigns)
@@ -197,7 +197,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
             format_calendar_names(Map.get(assigns, :discovered_calendars))
 
           true ->
-            @config_base_default_name
+            dgettext("dashboard_calendar_providers", unquote(default_name))
         end
       end
 

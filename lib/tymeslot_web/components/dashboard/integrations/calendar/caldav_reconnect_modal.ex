@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
     Previously selected calendars are pre-ticked.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
@@ -52,11 +53,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
       {:noreply, open_with_integration(socket, integration)}
     else
       :error ->
-        Flash.error("Invalid calendar ID")
+        Flash.error(dgettext("dashboard_calendar_providers", "Invalid calendar ID"))
         {:noreply, socket}
 
       {:error, :not_found} ->
-        Flash.error("Integration not found")
+        Flash.error(dgettext("dashboard_calendar_providers", "Integration not found"))
         {:noreply, socket}
     end
   end
@@ -85,12 +86,16 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
       {:error, :invalid_credentials} ->
         {:noreply,
          socket
-         |> assign(:form_errors, %{generic: ["Could not sign in with those credentials"]})
+         |> assign(:form_errors, %{
+           generic: [
+             dgettext("dashboard_calendar_providers", "Could not sign in with those credentials")
+           ]
+         })
          |> assign(:form_values, params)
          |> assign(:is_submitting, false)}
 
       {:error, :not_found} ->
-        Flash.error("Integration not found")
+        Flash.error(dgettext("dashboard_calendar_providers", "Integration not found"))
         {:noreply, reset_state(socket)}
 
       {:error, reason} when is_binary(reason) ->
@@ -111,7 +116,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
 
   def handle_event("reconnect_caldav_submit", _params, socket)
       when is_nil(socket.assigns.discovery_payload) do
-    Flash.error("Session expired. Please start the reconnect process again.")
+    Flash.error(
+      dgettext(
+        "dashboard_calendar_providers",
+        "Session expired. Please start the reconnect process again."
+      )
+    )
+
     {:noreply, reset_state(socket)}
   end
 
@@ -129,21 +140,33 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
       {:ok, _updated} ->
         send(self(), {:integration_updated, :calendar})
         send_update(CalendarSettingsComponent, id: @parent_component_id)
-        Flash.info("Calendar reconnected")
+        Flash.info(dgettext("dashboard_calendar_providers", "Calendar reconnected"))
         {:noreply, reset_state(socket)}
 
       {:error, :no_calendars_selected} ->
         {:noreply,
          socket
-         |> assign(:form_errors, %{generic: ["Please select at least one calendar to sync."]})
+         |> assign(:form_errors, %{
+           generic: [
+             dgettext(
+               "dashboard_calendar_providers",
+               "Please select at least one calendar to sync."
+             )
+           ]
+         })
          |> assign(:is_submitting, false)}
 
       {:error, :not_found} ->
-        Flash.error("Integration not found")
+        Flash.error(dgettext("dashboard_calendar_providers", "Integration not found"))
         {:noreply, reset_state(socket)}
 
       {:error, {:changeset, cs}} ->
-        Flash.error("Could not save: #{ChangesetUtils.get_first_error(cs)}")
+        Flash.error(
+          dgettext("dashboard_calendar_providers", "Could not save: %{reason}",
+            reason: ChangesetUtils.get_first_error(cs)
+          )
+        )
+
         {:noreply, assign(socket, :is_submitting, false)}
     end
   end
@@ -159,7 +182,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
         on_cancel={JS.push("close_reconnect_modal", target: @myself)}
         size={:medium}
       >
-        <:header>Reconnect {@integration.name}</:header>
+        <:header>
+          {dgettext("dashboard_calendar_providers", "Reconnect %{name}", name: @integration.name)}
+        </:header>
 
         <%= case @phase do %>
           <% :credentials -> %>
@@ -194,8 +219,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
     ~H"""
     <form id="caldav-reconnect-credentials-form" phx-submit="reconnect_caldav_discover" phx-target={@target} class="space-y-5">
       <p class="text-sm text-tymeslot-500">
-        Confirm or update the server URL and credentials for this integration.
-        You'll be able to review and adjust the synced calendars on the next step.
+        {dgettext(
+          "dashboard_calendar_providers",
+          "Confirm or update the server URL and credentials for this integration. You'll be able to review and adjust the synced calendars on the next step."
+        )}
       </p>
 
       <%= if @locked_url do %>
@@ -209,7 +236,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
           id="reconnect_url"
           name="reconnect[url]"
           type="url"
-          label="Server URL"
+          label={dgettext("dashboard_calendar_providers", "Server URL")}
           value={@form_values["url"]}
           required
           icon="hero-globe-alt"
@@ -221,7 +248,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
         id="reconnect_username"
         name="reconnect[username]"
         type="text"
-        label="Username"
+        label={dgettext("dashboard_calendar_providers", "Username")}
         value={@form_values["username"]}
         required
         icon="hero-user"
@@ -232,7 +259,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
         id="reconnect_password"
         name="reconnect[password]"
         type="password"
-        label="Password / App Password"
+        label={dgettext("dashboard_calendar_providers", "Password / App Password")}
         value={@form_values["password"]}
         required
         icon="hero-lock-closed"
@@ -253,15 +280,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
           variant={:secondary}
           phx-click={JS.push("close_reconnect_modal", target: @target)}
         >
-          Cancel
+          {dgettext("dashboard_calendar_providers", "Cancel")}
         </CoreComponents.action_button>
         <CoreComponents.loading_button
           variant={:primary}
           type="submit"
           loading={@is_submitting}
-          loading_text="Testing..."
+          loading_text={dgettext("dashboard_calendar_providers", "Testing...")}
         >
-          Reconnect
+          {dgettext("dashboard_calendar_providers", "Reconnect")}
         </CoreComponents.loading_button>
       </div>
     </form>
@@ -278,9 +305,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
     ~H"""
     <form id="caldav-reconnect-calendars-form" phx-submit="reconnect_caldav_submit" phx-target={@target} class="space-y-5">
       <p class="text-sm text-tymeslot-500">
-        Select the calendars you want to sync for availability checks.
-        Calendars you previously synced are already ticked — untick to stop
-        syncing them, or tick new calendars to add them.
+        {dgettext(
+          "dashboard_calendar_providers",
+          "Select the calendars you want to sync for availability checks. Calendars you previously synced are already ticked — untick to stop syncing them, or tick new calendars to add them."
+        )}
       </p>
 
       <%= if error = form_level_error(@form_errors) do %>
@@ -293,11 +321,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
       <% end %>
 
       <div class="space-y-3">
-        <h4 class="label">Select calendars to sync:</h4>
+        <h4 class="label">{dgettext("dashboard_calendar_providers", "Select calendars to sync:")}</h4>
         <div class="brand-card p-4">
           <%= if @payload.calendars == [] do %>
             <p class="text-sm text-tymeslot-500">
-              No calendars were discovered. Double-check your credentials or try again.
+              {dgettext(
+                "dashboard_calendar_providers",
+                "No calendars were discovered. Double-check your credentials or try again."
+              )}
             </p>
           <% else %>
             <%= for calendar <- @payload.calendars do %>
@@ -329,15 +360,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
           variant={:secondary}
           phx-click={JS.push("close_reconnect_modal", target: @target)}
         >
-          Cancel
+          {dgettext("dashboard_calendar_providers", "Cancel")}
         </CoreComponents.action_button>
         <CoreComponents.loading_button
           variant={:primary}
           type="submit"
           loading={@is_submitting}
-          loading_text="Saving..."
+          loading_text={dgettext("dashboard_calendar_providers", "Saving...")}
         >
-          Save selection
+          {dgettext("dashboard_calendar_providers", "Save selection")}
         </CoreComponents.loading_button>
       </div>
     </form>
@@ -398,5 +429,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
   defp normalize_error_message(nil), do: nil
   defp normalize_error_message([message | _rest]) when is_binary(message), do: message
   defp normalize_error_message(message) when is_binary(message), do: message
-  defp normalize_error_message(_other), do: "Something went wrong. Please try again."
+
+  defp normalize_error_message(_other),
+    do: dgettext("dashboard_calendar_providers", "Something went wrong. Please try again.")
 end

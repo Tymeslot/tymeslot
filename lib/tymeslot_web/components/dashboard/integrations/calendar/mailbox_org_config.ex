@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.MailboxOrgConfi
           <div>
             <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">mailbox.org</h3>
             <p class="text-sm text-tymeslot-500 font-medium">
-              Sync calendars from your mailbox.org account
+              {dgettext("dashboard_calendar_providers", "Sync calendars from your mailbox.org account")}
             </p>
           </div>
         </div>
@@ -56,14 +56,20 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.MailboxOrgConfi
               d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          Setup guide
+          {dgettext("dashboard_calendar_providers", "Setup guide")}
         </a>
       </div>
 
       <p class="text-sm text-tymeslot-600 leading-relaxed">
-        If you have two-factor authentication enabled, generate an application-specific password under
-        <span class="font-semibold">Settings → Security</span>
-        on mailbox.org and use that here instead of your regular password.
+        {dgettext(
+          "dashboard_calendar_providers",
+          "If you have two-factor authentication enabled, generate an application-specific password under"
+        )}
+        <span class="font-semibold">{dgettext("dashboard_calendar_providers", "Settings → Security")}</span>
+        {dgettext(
+          "dashboard_calendar_providers",
+          "on mailbox.org and use that here instead of your regular password."
+        )}
       </p>
 
       <SharedForm.config_form
@@ -76,8 +82,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.MailboxOrgConfi
         saving={@saving}
         target={@target}
         myself={@myself}
-        suggested_name="My mailbox.org"
-        name_placeholder="My mailbox.org Calendar"
+        suggested_name={dgettext("dashboard_calendar_providers", "My mailbox.org")}
+        name_placeholder={dgettext("dashboard_calendar_providers", "My mailbox.org Calendar")}
         url_locked={true}
         url_value={locked_url().url}
         url_locked_tooltip={locked_url().tooltip}

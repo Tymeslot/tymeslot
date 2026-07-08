@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.AppleConfig do
           <div>
             <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">Apple iCloud</h3>
             <p class="text-sm text-tymeslot-500 font-medium">
-              Sync calendars from your Apple iCloud account
+              {dgettext("dashboard_calendar_providers", "Sync calendars from your Apple iCloud account")}
             </p>
           </div>
         </div>
@@ -56,22 +56,28 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.AppleConfig do
               d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          Setup guide
+          {dgettext("dashboard_calendar_providers", "Setup guide")}
         </a>
       </div>
 
       <p class="text-sm text-tymeslot-600 leading-relaxed">
-        iCloud will not accept your Apple ID password here. Generate an
-        <span class="font-semibold">app-specific password</span>
-        at
+        {dgettext(
+          "dashboard_calendar_providers",
+          "iCloud will not accept your Apple ID password here. Generate an"
+        )}
+        <span class="font-semibold">{dgettext("dashboard_calendar_providers", "app-specific password")}</span>
+        {dgettext("dashboard_calendar_providers", "at")}
         <a
           href="https://appleid.apple.com"
           target="_blank"
           rel="noopener noreferrer"
           class="font-semibold text-turquoise-600 hover:text-turquoise-700 underline"
         >appleid.apple.com</a>
-        under <span class="font-semibold">Sign-In and Security → App-Specific Passwords</span>,
-        then enter it below with your Apple ID email.
+        {dgettext("dashboard_calendar_providers", "under")}
+        <span class="font-semibold">
+          {dgettext("dashboard_calendar_providers", "Sign-In and Security → App-Specific Passwords")}
+        </span>,
+        {dgettext("dashboard_calendar_providers", "then enter it below with your Apple ID email.")}
       </p>
 
       <SharedForm.config_form
@@ -84,8 +90,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.AppleConfig do
         saving={@saving}
         target={@target}
         myself={@myself}
-        suggested_name="My Apple iCloud"
-        name_placeholder="My Apple iCloud Calendar"
+        suggested_name={dgettext("dashboard_calendar_providers", "My Apple iCloud")}
+        name_placeholder={dgettext("dashboard_calendar_providers", "My Apple iCloud Calendar")}
         url_locked={true}
         url_value={locked_url().url}
         url_locked_tooltip={locked_url().tooltip}

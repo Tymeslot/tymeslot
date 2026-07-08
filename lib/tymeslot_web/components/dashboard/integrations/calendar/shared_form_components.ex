@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
@@ -50,7 +51,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
           <input type="hidden" name="integration[provider]" value={@provider} />
 
           <p class="text-sm text-tymeslot-500">
-            Select the calendars you want to sync for availability checks.
+            {dgettext("dashboard_calendar_providers", "Select the calendars you want to sync for availability checks.")}
           </p>
 
           <.calendar_selection discovered_calendars={@discovered_calendars} />
@@ -79,7 +80,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
           <input type="hidden" name="integration[provider]" value={@provider} />
 
           <p class="text-sm text-tymeslot-500">
-            Enter your server URL and credentials to discover calendars.
+            {dgettext("dashboard_calendar_providers", "Enter your server URL and credentials to discover calendars.")}
           </p>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -101,7 +102,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
               <.text_field
                 id="discovery_url"
                 name="integration[url]"
-                label="Server URL"
+                label={dgettext("dashboard_calendar_providers", "Server URL")}
                 value={Map.get(@form_values, "url", "")}
                 placeholder={@url_placeholder}
                 errors={FormValidationHelpers.field_errors(@form_errors, :url)}
@@ -114,7 +115,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
             <.text_field
               id="discovery_username"
               name="integration[username]"
-              label="Username"
+              label={dgettext("dashboard_calendar_providers", "Username")}
               value={Map.get(@form_values, "username", "")}
               placeholder={@username_placeholder}
               errors={FormValidationHelpers.field_errors(@form_errors, :username)}
@@ -126,7 +127,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
             <.password_field
               id="discovery_password"
               name="integration[password]"
-              label="Password / App Password"
+              label={dgettext("dashboard_calendar_providers", "Password / App Password")}
               value={Map.get(@form_values, "password", "")}
               placeholder={@password_placeholder}
               errors={FormValidationHelpers.field_errors(@form_errors, :password)}
@@ -166,7 +167,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
       id="integration_name"
       name={@field_name}
       type="text"
-      label="Integration Name"
+      label={dgettext("dashboard_calendar_providers", "Integration Name")}
       value={@suggested_name}
       required
       phx-blur={JS.push("validate_field", value: %{"field" => "name"}, target: @target)}
@@ -182,11 +183,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   def calendar_selection(assigns) do
     ~H"""
     <div class="space-y-3">
-      <h4 class="label">Select calendars to sync:</h4>
+      <h4 class="label">{dgettext("dashboard_calendar_providers", "Select calendars to sync:")}</h4>
       <div class="brand-card p-4">
         <%= if @discovered_calendars == [] do %>
           <p class="text-sm text-tymeslot-500">
-            No calendars were discovered. Double-check your credentials or try again.
+            {dgettext(
+              "dashboard_calendar_providers",
+              "No calendars were discovered. Double-check your credentials or try again."
+            )}
           </p>
         <% else %>
           <%= for calendar <- @discovered_calendars do %>
@@ -204,7 +208,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
                 class="flex-1 cursor-pointer"
               >
                 <div class="font-semibold text-tymeslot-800">
-                  {calendar.name || "Unnamed Calendar"}
+                  {calendar.name || dgettext("dashboard_calendar_providers", "Unnamed Calendar")}
                 </div>
                 <div class="text-sm text-tymeslot-600">{calendar_path}</div>
               </label>
@@ -225,7 +229,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
     ~H"""
     <div class="form-field-wrapper">
       <div class="flex items-center gap-1.5 mb-2">
-        <span class="label mb-0!">Server URL</span>
+        <span class="label mb-0!">{dgettext("dashboard_calendar_providers", "Server URL")}</span>
         <span class="text-tymeslot-400 shrink-0">
           <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
             <path
@@ -340,5 +344,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   defp normalize_error_message(nil), do: nil
   defp normalize_error_message([message | _rest]) when is_binary(message), do: message
   defp normalize_error_message(message) when is_binary(message), do: message
-  defp normalize_error_message(_other), do: "Something went wrong. Please try again."
+
+  defp normalize_error_message(_other),
+    do: dgettext("dashboard_calendar_providers", "Something went wrong. Please try again.")
 end
