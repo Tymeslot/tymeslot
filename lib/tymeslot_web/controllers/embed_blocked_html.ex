@@ -25,7 +25,7 @@ defmodule TymeslotWeb.EmbedBlockedHTML do
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="noindex, nofollow" />
-        <title>{gettext("Booking unavailable")}</title>
+        <title>{dgettext("embed", "Booking unavailable")}</title>
         <style nonce={@csp_nonce}>
           html, body { margin: 0; height: 100%; }
           body {
@@ -47,8 +47,8 @@ defmodule TymeslotWeb.EmbedBlockedHTML do
       </head>
       <body data-parent-origin={@parent_origin}>
         <main class="ts-card">
-          <h1>{gettext("This booking page can’t be embedded here")}</h1>
-          <p>{gettext("The organiser hasn’t authorised this website to show their booking page.")}</p>
+          <h1>{dgettext("embed", "This booking page can’t be embedded here")}</h1>
+          <p>{dgettext("embed", "The organiser hasn’t authorised this website to show their booking page.")}</p>
         </main>
         <script :if={@parent_origin} nonce={@csp_nonce}>
           (function () {

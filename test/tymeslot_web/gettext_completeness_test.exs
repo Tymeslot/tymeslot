@@ -3,19 +3,27 @@ defmodule TymeslotWeb.GettextCompletenessTest do
   Tests to ensure translation completeness across all supported languages.
 
   Strings are organised into per-area gettext domains (see
-  `CredoChecks.GettextDomainBoundary`). Two levels of guarantee are enforced:
+  `CredoChecks.GettextDomainBoundary`). Two independent levels of guarantee are
+  enforced, so a domain can be wrapped for translation long before it is actually
+  translated:
 
-  - **Structure & consistency** (`@content_domains`): every locale must carry
-    the same `.po` files with the same msgid set and proper headers. This holds
-    even for domains that are not fully translated yet — a missing translation
-    falls back to English, but a missing *msgid* is a real inconsistency.
-  - **No empty translations & size** (`@translated_domains`): domains that are
-    fully translated must stay that way in every locale.
+  - **Structure & consistency** (`@content_domains`, derived automatically from
+    the `.pot` templates present): every locale must carry the same `.po` files
+    with the same msgid set and proper headers. This holds even for domains that
+    are not translated yet — a missing translation falls back to English, but a
+    missing *msgid* is a real inconsistency. Newly-wrapped domains join this set
+    the moment their `.pot` is extracted; no edit here is needed.
+  - **No empty translations & size** (`@translated_domains` × `@launched_locales`):
+    domains declared complete must stay complete, in every launched locale.
 
-  `dashboard` and `emails` are intentionally absent from `@translated_domains`:
-  both still have untranslated strings (the `dashboard` link/visibility strings
-  and a number of email-body strings). Move a domain into `@translated_domains`
-  once it is fully translated across every locale.
+  A domain graduates into `@translated_domains` only once it is fully translated;
+  a locale graduates into `@launched_locales` only once every `@translated_domains`
+  catalog is complete for it. This is the "never ship on the fallback" gate.
+
+  Deliberately absent from `@translated_domains`: `dashboard`/`emails` (existing
+  untranslated strings) and every newly-wrapped authenticated-app domain
+  (`dashboard_*`, `auth`, `account`, `onboarding_wizard`, `dashboard_common`) —
+  those are wrapped English-only for now and translated in a later phase.
   """
   use ExUnit.Case, async: true
   @moduletag :utils
@@ -25,12 +33,25 @@ defmodule TymeslotWeb.GettextCompletenessTest do
   @gettext_path Path.expand("../../priv/gettext", __DIR__)
 
   # Domains with content in every locale — checked for file presence, header
-  # correctness, and msgid-set consistency across locales.
-  @content_domains ~w(booking dashboard onboarding common emails errors)
+  # correctness, and msgid-set consistency across locales. Derived from the
+  # `.pot` templates so every extracted domain is covered automatically.
+  @content_domains @gettext_path
+                   |> Path.join("*.pot")
+                   |> Path.wildcard()
+                   |> Enum.map(&Path.basename(&1, ".pot"))
+                   |> Enum.sort()
 
-  # Domains that are fully translated in every locale — additionally checked for
-  # empty translations and reasonable file size.
-  @translated_domains ~w(booking onboarding common errors)
+  # Domains that are fully translated in every launched locale — additionally
+  # checked for empty translations and reasonable file size. Graduate a domain
+  # in here only when it reaches zero untranslated entries across all locales.
+  @translated_domains ~w(booking onboarding common errors embed)
+
+  # Locales that have been launched — every `@translated_domains` catalog is
+  # complete for these. The empty-translation and size gates run over this set,
+  # so a locale can be launched independently once its in-scope domains are done.
+  # Currently equal to the supported set (all translated domains are complete in
+  # all locales); trim/extend as new domains are translated locale-by-locale.
+  @launched_locales ~w(en de fr uk it)
 
   @content_files Enum.map(@content_domains, &"#{&1}.po")
   @translated_files Enum.map(@translated_domains, &"#{&1}.po")
@@ -67,7 +88,9 @@ defmodule TymeslotWeb.GettextCompletenessTest do
 
   describe "translation completeness" do
     test "no empty translations (msgstr) in fully-translated domains" do
-      for_each_locale_and_file(@translated_files, &assert_no_empty_translations/2)
+      for locale <- @launched_locales, po_file <- @translated_files do
+        assert_no_empty_translations(locale, po_file)
+      end
     end
 
     test "translation file sizes are reasonable" do
@@ -75,9 +98,9 @@ defmodule TymeslotWeb.GettextCompletenessTest do
       # (which might indicate missing content)
       reference_sizes = get_file_sizes("en")
 
-      supported_locales = LocaleHandler.supported_locales() -- ["en"]
+      launched_locales = @launched_locales -- ["en"]
 
-      for locale <- supported_locales, po_file <- @translated_files do
+      for locale <- launched_locales, po_file <- @translated_files do
         po_path = Path.join([@gettext_path, locale, "LC_MESSAGES", po_file])
         file_size = File.stat!(po_path).size
         reference_size = reference_sizes[po_file]

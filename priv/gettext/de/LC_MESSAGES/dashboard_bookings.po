@@ -1,0 +1,42 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:500
+#, elixir-autogen, elixir-format
+msgid "%{going} of %{total} going"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:241
+#, elixir-autogen, elixir-format
+msgid "Custom answers"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:483
+#, elixir-autogen, elixir-format
+msgid "Declined"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:482
+#, elixir-autogen, elixir-format
+msgid "Going"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:189
+#, elixir-autogen, elixir-format
+msgid "Guests"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:484
+#, elixir-autogen, elixir-format
+msgid "Pending"
+msgstr ""

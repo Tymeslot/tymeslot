@@ -216,7 +216,7 @@ msgstr "Orari disponibili"
 msgid "Booking confirmed"
 msgstr "Prenotazione confermata"
 
-#: lib/tymeslot_web/themes/shared/booking_flow.ex:58
+#: lib/tymeslot_web/themes/shared/booking_flow.ex:61
 #, elixir-autogen, elixir-format
 msgid "Booking submitted successfully! You'll receive a confirmation email shortly."
 msgstr "Prenotazione inviata con successo! Riceverai a breve un'e-mail di conferma."
@@ -575,13 +575,13 @@ msgstr "Scegli la durata dell'incontro qui sotto."
 msgid "Please contact the organizer"
 msgstr "Contatta l'organizzatore"
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:444
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:457
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below before submitting."
 msgstr "Correggi gli errori riportati di seguito prima di inviare."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:102
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:319
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:113
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:314
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below."
 msgstr "Correggi gli errori riportati di seguito."
@@ -1191,7 +1191,7 @@ msgstr "Prenota una riunione con %{name}. Scegli un orario che ti è comodo."
 msgid "Pick a time that works for you and book a meeting in seconds."
 msgstr "Scegli un orario che ti è comodo e prenota una riunione in pochi secondi."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:420
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:442
 #, elixir-autogen, elixir-format
 msgid "Preview session expired. Reload the page to continue."
 msgstr "Sessione di anteprima scaduta. Ricarica la pagina per continuare."
@@ -1206,3 +1206,64 @@ msgstr "%{weekday}, %{date}"
 #, elixir-autogen, elixir-format
 msgid "Add to calendar"
 msgstr "Aggiungi al calendario"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:68
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:71
+#, elixir-autogen, elixir-format
+msgid "Failed to create appointment. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:56
+#, elixir-autogen, elixir-format
+msgid "Failed to process booking. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:38
+#, elixir-autogen, elixir-format
+msgid "Failed to save meeting to database"
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:47
+#, elixir-autogen, elixir-format
+msgid "Host could not be found. Please refresh and try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:35
+#, elixir-autogen, elixir-format
+msgid "Organizer is required for booking"
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:41
+#, elixir-autogen, elixir-format
+msgid "Payments are not available for this booking. Please contact the host."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:50
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Please fill in all required fields before submitting."
+msgstr "Compila tutti i campi obbligatori"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:59
+#, elixir-autogen, elixir-format
+msgid "This meeting could not be found. Please refresh and try again."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:29
+#, elixir-autogen, elixir-format
+msgid "This meeting type is no longer available. Please go back and select another."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:26
+#, elixir-autogen, elixir-format
+msgid "This meeting type is no longer available. Please refresh the page."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:20
+#, elixir-autogen, elixir-format
+msgid "This time slot is no longer available. Please select a different time."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:53
+#, elixir-autogen, elixir-format
+msgid "We couldn't start the payment process. Please try again."
+msgstr ""

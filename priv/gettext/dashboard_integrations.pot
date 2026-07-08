@@ -1,0 +1,83 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:522
+#, elixir-autogen, elixir-format
+msgid "Anyone with this link can book this meeting type directly, without seeing your other meeting types."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:487
+#, elixir-autogen, elixir-format
+msgid "Booking link & visibility"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:507
+#, elixir-autogen, elixir-format
+msgid "Booking link copied!"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:340
+#, elixir-autogen, elixir-format
+msgid "Booking link updated"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:518
+#, elixir-autogen, elixir-format
+msgid "Change link"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:510
+#, elixir-autogen, elixir-format
+msgid "Copy"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:493
+#, elixir-autogen, elixir-format
+msgid "Direct booking link"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:328
+#, elixir-autogen, elixir-format
+msgid "Failed to update visibility"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:531
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:544
+#, elixir-autogen, elixir-format
+msgid "Hide from public booking page"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:317
+#, elixir-autogen, elixir-format
+msgid "Meeting type not found"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:349
+#, elixir-autogen, elixir-format
+msgid "That link is already taken. Please choose another."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:324
+#, elixir-autogen, elixir-format
+msgid "Visibility updated"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:534
+#, elixir-autogen, elixir-format
+msgid "When on, this meeting type is reachable only through its direct link."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/service_settings_component.ex:356
+#, elixir-autogen, elixir-format
+msgid "That link isn't valid. Use lowercase letters, numbers and hyphens."
+msgstr ""

@@ -27,35 +27,35 @@ defmodule TymeslotWeb.AdminLive.Components.ConfirmRoleChangeModal do
       <:header>{header_label(@action, @self?)}</:header>
 
       <p :if={@action == :promote} class="text-base text-tymeslot-700 font-medium leading-relaxed">
-        {dgettext("dashboard", "Promote")}
+        {dgettext("dashboard_admin", "Promote")}
         <span class="font-black text-tymeslot-900">{@user.email}</span>
-        {dgettext("dashboard", "to admin?")}
+        {dgettext("dashboard_admin", "to admin?")}
       </p>
       <p
         :if={@action == :demote and @self?}
         class="text-base text-tymeslot-700 font-medium leading-relaxed"
       >
-        {dgettext("dashboard", "Demote yourself from admin?")}
+        {dgettext("dashboard_admin", "Demote yourself from admin?")}
       </p>
       <p
         :if={@action == :demote and not @self?}
         class="text-base text-tymeslot-700 font-medium leading-relaxed"
       >
-        {dgettext("dashboard", "Demote")}
+        {dgettext("dashboard_admin", "Demote")}
         <span class="font-black text-tymeslot-900">{@user.email}</span>
-        {dgettext("dashboard", "from admin?")}
+        {dgettext("dashboard_admin", "from admin?")}
       </p>
 
       <p :if={@action == :promote} class="mt-3 text-sm text-tymeslot-500">
-        {dgettext("dashboard", "They will gain access to admin settings and user management.")}
+        {dgettext("dashboard_admin", "They will gain access to admin settings and user management.")}
       </p>
       <p :if={@action == :demote and @self?} class="mt-3 text-sm text-amber-600 font-medium">
-        {dgettext("dashboard", 
+        {dgettext("dashboard_admin", 
           "You will lose access to admin settings and user management, and be returned to your dashboard."
         )}
       </p>
       <p :if={@action == :demote and not @self?} class="mt-3 text-sm text-amber-600 font-medium">
-        {dgettext("dashboard", "They will lose access to admin settings and user management.")}
+        {dgettext("dashboard_admin", "They will lose access to admin settings and user management.")}
       </p>
 
       <:footer>
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.AdminLive.Components.ConfirmRoleChangeModal do
             disabled={@submitting}
             phx-click={JS.push("cancel_pending_action")}
           >
-            {dgettext("dashboard", "Cancel")}
+            {dgettext("dashboard_admin", "Cancel")}
           </.action_button>
           <.loading_button
             variant={confirm_variant(@action)}
@@ -82,9 +82,9 @@ defmodule TymeslotWeb.AdminLive.Components.ConfirmRoleChangeModal do
     """
   end
 
-  defp header_label(:promote, _self?), do: dgettext("dashboard", "Promote user to admin")
-  defp header_label(:demote, true), do: dgettext("dashboard", "Demote yourself")
-  defp header_label(:demote, false), do: dgettext("dashboard", "Demote admin")
+  defp header_label(:promote, _self?), do: dgettext("dashboard_admin", "Promote user to admin")
+  defp header_label(:demote, true), do: dgettext("dashboard_admin", "Demote yourself")
+  defp header_label(:demote, false), do: dgettext("dashboard_admin", "Demote admin")
 
   defp confirm_variant(:promote), do: :primary
   defp confirm_variant(:demote), do: :danger
@@ -92,10 +92,10 @@ defmodule TymeslotWeb.AdminLive.Components.ConfirmRoleChangeModal do
   defp confirm_event(:promote), do: "promote_user"
   defp confirm_event(:demote), do: "demote_user"
 
-  defp confirm_label(:promote, _self?), do: dgettext("dashboard", "Promote")
-  defp confirm_label(:demote, true), do: dgettext("dashboard", "Demote me")
-  defp confirm_label(:demote, false), do: dgettext("dashboard", "Demote")
+  defp confirm_label(:promote, _self?), do: dgettext("dashboard_admin", "Promote")
+  defp confirm_label(:demote, true), do: dgettext("dashboard_admin", "Demote me")
+  defp confirm_label(:demote, false), do: dgettext("dashboard_admin", "Demote")
 
-  defp loading_label(:promote), do: dgettext("dashboard", "Promoting...")
-  defp loading_label(:demote), do: dgettext("dashboard", "Demoting...")
+  defp loading_label(:promote), do: dgettext("dashboard_admin", "Promoting...")
+  defp loading_label(:demote), do: dgettext("dashboard_admin", "Demoting...")
 end

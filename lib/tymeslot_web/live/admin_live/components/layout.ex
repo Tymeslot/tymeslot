@@ -29,7 +29,7 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
               class="inline-flex items-center space-x-2 btn-secondary text-sm px-4 py-2"
             >
               <.icon name="hero-arrow-left" class="w-4 h-4" />
-              <span>{dgettext("dashboard", "Back to Dashboard")}</span>
+              <span>{dgettext("dashboard_admin", "Back to Dashboard")}</span>
             </.link>
 
             <div class="relative">
@@ -47,21 +47,21 @@ defmodule TymeslotWeb.AdminLive.Components.Layout do
       <div class="container mx-auto px-4 py-8">
         <main>
           <div class="max-w-6xl mx-auto">
-            <.section_header icon="hero-cog-6-tooth" title={dgettext("dashboard", "Admin")} />
+            <.section_header icon="hero-cog-6-tooth" title={dgettext("dashboard_admin", "Admin")} />
             <p class="mb-8 -mt-2 text-base text-tymeslot-600 font-medium">
-              {dgettext("dashboard", "Manage this self-hosted Tymeslot install.")}
+              {dgettext("dashboard_admin", "Manage this self-hosted Tymeslot install.")}
             </p>
 
             <%!-- Pill-style tab bar --%>
             <nav
               class="mb-8 inline-flex p-1 bg-white border-2 border-tymeslot-100 rounded-token-2xl shadow-sm gap-1"
-              aria-label={dgettext("dashboard", "Admin sections")}
+              aria-label={dgettext("dashboard_admin", "Admin sections")}
             >
               <.tab_link to={~p"/admin/settings"} active={@live_action == :settings}>
-                {dgettext("dashboard", "Settings")}
+                {dgettext("dashboard_admin", "Settings")}
               </.tab_link>
               <.tab_link to={~p"/admin/users"} active={@live_action == :users}>
-                {dgettext("dashboard", "Users")}
+                {dgettext("dashboard_admin", "Users")}
               </.tab_link>
             </nav>
 

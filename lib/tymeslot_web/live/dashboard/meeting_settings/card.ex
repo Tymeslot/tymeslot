@@ -51,9 +51,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             <span
               :if={@type.is_private}
               class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-token-full bg-tymeslot-100 text-tymeslot-600 text-token-xs font-medium"
-              title={dgettext("dashboard", "Hidden from your public booking page; reachable only by its direct link")}
+              title={dgettext("dashboard_meeting_types", "Hidden from your public booking page; reachable only by its direct link")}
             >
-              <Icons.icon name="hero-eye-slash-mini" class="w-3 h-3" />{dgettext("dashboard", "Unlisted")}
+              <Icons.icon name="hero-eye-slash-mini" class="w-3 h-3" />{dgettext("dashboard_meeting_types", "Unlisted")}
             </span>
           </div>
           <p

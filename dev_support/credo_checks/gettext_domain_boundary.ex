@@ -12,14 +12,34 @@ defmodule CredoChecks.GettextDomainBoundary do
 
   ## Known domains
 
+  Catalogs are split small and per-context. The authoritative table lives in the
+  `tymeslot-translations` skill; the `:domains` param below is the enforced copy.
+
+  Public / attendee-facing:
+
   - `booking` — public booking/scheduling flow (themes)
-  - `dashboard` — authenticated management UI
-  - `account` — profile, security, billing
-  - `onboarding` — setup wizard, tours, announcements
-  - `auth` — login, register, password reset, email verification
-  - `common` — genuinely cross-cutting atoms reused across areas
+  - `embed` — the embed-unavailable notice page
   - `emails` — email subjects and bodies
   - `errors` — validation and system error messages
+  - `common` — genuinely cross-cutting atoms reused across areas
+
+  Authenticated app — one small domain per feature area:
+
+  - `auth` — login, register, password reset, email verification
+  - `account` — account security page (email, password)
+  - `onboarding` — post-setup dashboard tour + announcement chrome (frozen)
+  - `onboarding_wizard` — the first-run setup wizard
+  - `dashboard_common` — sidebar/nav labels and reused button atoms
+  - `dashboard_home`, `dashboard_meeting_types`, `dashboard_meeting_form`,
+    `dashboard_availability`, `dashboard_calendar_settings`, `dashboard_calendar`,
+    `dashboard_calendar_events`, `dashboard_integrations`,
+    `dashboard_calendar_providers`, `dashboard_automation`,
+    `dashboard_automation_chat`, `dashboard_appearance`, `dashboard_embed`,
+    `dashboard_payments`, `dashboard_bookings`, `dashboard_profile`,
+    `dashboard_analytics`, `dashboard_admin` — dashboard feature areas
+
+  The former monolithic `dashboard` domain has been resharded into
+  `dashboard_admin` (the bulk) and the per-feature domains above.
 
   Configure the allowlist with the `:domains` param.
 
@@ -47,7 +67,17 @@ defmodule CredoChecks.GettextDomainBoundary do
     base_priority: :high,
     category: :design,
     param_defaults: [
-      domains: ~w(booking dashboard account onboarding auth common emails errors)
+      domains: ~w(
+        booking embed emails errors common
+        auth account onboarding onboarding_wizard
+        dashboard_common
+        dashboard_home dashboard_meeting_types dashboard_meeting_form
+        dashboard_availability dashboard_calendar_settings dashboard_calendar
+        dashboard_calendar_events dashboard_integrations dashboard_calendar_providers
+        dashboard_automation dashboard_automation_chat dashboard_appearance
+        dashboard_embed dashboard_payments dashboard_bookings dashboard_profile
+        dashboard_analytics dashboard_admin
+      )
     ],
     explanations: [
       check: """

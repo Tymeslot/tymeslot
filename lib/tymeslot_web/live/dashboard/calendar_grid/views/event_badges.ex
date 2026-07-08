@@ -52,14 +52,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges do
   @spec guest_badge_title(map()) :: String.t()
   def guest_badge_title(%{accepted: accepted, total: total, declined: declined}) do
     base =
-      dgettext("dashboard", "%{accepted} of %{total} guests going",
+      dgettext("dashboard_calendar", "%{accepted} of %{total} guests going",
         accepted: accepted,
         total: total
       )
 
     if declined > 0 do
       declined_fragment =
-        dngettext("dashboard", ", %{count} declined", ", %{count} declined", declined,
+        dngettext("dashboard_calendar", ", %{count} declined", ", %{count} declined", declined,
           count: declined
         )
 

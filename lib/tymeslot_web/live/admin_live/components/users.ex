@@ -22,19 +22,19 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
   def users_tab(assigns) do
     ~H"""
     <div class="grid gap-6 sm:grid-cols-2 mb-8">
-      <.stat_card label={dgettext("dashboard", "Total users")} value={@user_count} />
-      <.stat_card label={dgettext("dashboard", "Admins")} value={@admin_count} />
+      <.stat_card label={dgettext("dashboard_admin", "Total users")} value={@user_count} />
+      <.stat_card label={dgettext("dashboard_admin", "Admins")} value={@admin_count} />
     </div>
 
     <div class="card-glass p-0! overflow-hidden">
       <table class="min-w-full divide-y divide-tymeslot-100">
         <thead class="bg-tymeslot-50/60">
           <tr>
-            <Shared.th>{dgettext("dashboard", "Email")}</Shared.th>
-            <Shared.th>{dgettext("dashboard", "Display name")}</Shared.th>
-            <Shared.th>{dgettext("dashboard", "Booking slug")}</Shared.th>
-            <Shared.th>{dgettext("dashboard", "Role")}</Shared.th>
-            <Shared.th class="text-right">{dgettext("dashboard", "Actions")}</Shared.th>
+            <Shared.th>{dgettext("dashboard_admin", "Email")}</Shared.th>
+            <Shared.th>{dgettext("dashboard_admin", "Display name")}</Shared.th>
+            <Shared.th>{dgettext("dashboard_admin", "Booking slug")}</Shared.th>
+            <Shared.th>{dgettext("dashboard_admin", "Role")}</Shared.th>
+            <Shared.th class="text-right">{dgettext("dashboard_admin", "Actions")}</Shared.th>
           </tr>
         </thead>
         <tbody class="divide-y divide-tymeslot-50">
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
                 :if={user.id == @current_user.id}
                 class="ml-2 text-xs font-bold text-tymeslot-500 uppercase tracking-wider"
               >
-                {dgettext("dashboard", "(you)")}
+                {dgettext("dashboard_admin", "(you)")}
               </span>
             </td>
             <td class="px-6 py-4 text-sm text-tymeslot-900">
@@ -61,9 +61,9 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
                 :if={user.is_admin}
                 class="inline-flex items-center rounded-full bg-turquoise-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-turquoise-700"
               >
-                {dgettext("dashboard", "Admin")}
+                {dgettext("dashboard_admin", "Admin")}
               </span>
-              <span :if={!user.is_admin} class="text-sm text-tymeslot-500">{dgettext("dashboard", "User")}</span>
+              <span :if={!user.is_admin} class="text-sm text-tymeslot-500">{dgettext("dashboard_admin", "User")}</span>
             </td>
             <td class="px-6 py-4 text-right">
               <.user_row_action
@@ -124,10 +124,10 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       data-testid="last-admin-self-note"
     >
       <span class="inline-flex items-center text-sm font-bold text-tymeslot-300 cursor-not-allowed select-none">
-        {dgettext("dashboard", "Demote")}
+        {dgettext("dashboard_admin", "Demote")}
       </span>
       <span class="text-xs text-tymeslot-500 font-medium max-w-xs text-right">
-        {dgettext("dashboard", "You're the only admin. Promote someone else before demoting yourself.")}
+        {dgettext("dashboard_admin", "You're the only admin. Promote someone else before demoting yourself.")}
       </span>
     </div>
 
@@ -140,10 +140,10 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       phx-click="request_demote"
       phx-value-id={@user.id}
       phx-value-email={@user.email}
-      aria-label={dgettext("dashboard", "Demote %{email} from admin", email: @user.email)}
+      aria-label={dgettext("dashboard_admin", "Demote %{email} from admin", email: @user.email)}
       class="inline-flex items-center text-sm font-bold text-red-600 hover:text-red-800 transition-colors"
     >
-      {dgettext("dashboard", "Demote")}
+      {dgettext("dashboard_admin", "Demote")}
     </button>
 
     <button
@@ -152,10 +152,10 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
       phx-click="request_promote"
       phx-value-id={@user.id}
       phx-value-email={@user.email}
-      aria-label={dgettext("dashboard", "Promote %{email} to admin", email: @user.email)}
+      aria-label={dgettext("dashboard_admin", "Promote %{email} to admin", email: @user.email)}
       class="inline-flex items-center text-sm font-bold text-turquoise-600 hover:text-turquoise-800 transition-colors"
     >
-      {dgettext("dashboard", "Promote")}
+      {dgettext("dashboard_admin", "Promote")}
     </button>
     """
   end

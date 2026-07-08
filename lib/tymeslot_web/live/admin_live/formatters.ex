@@ -10,19 +10,22 @@ defmodule TymeslotWeb.AdminLive.Formatters do
 
   @doc "Human-readable label for an `AppSettings` key."
   @spec humanise(atom()) :: String.t()
-  def humanise(:registration_enabled), do: dgettext("dashboard", "Registration enabled")
-  def humanise(:password_auth_enabled), do: dgettext("dashboard", "Password authentication")
-  def humanise(:google_auth_enabled), do: dgettext("dashboard", "Google login")
-  def humanise(:github_auth_enabled), do: dgettext("dashboard", "GitHub login")
-  def humanise(:oauth_auth_enabled), do: dgettext("dashboard", "Generic OIDC login")
-  def humanise(:recaptcha_signup_enabled), do: dgettext("dashboard", "reCAPTCHA on signup")
-  def humanise(:recaptcha_booking_enabled), do: dgettext("dashboard", "reCAPTCHA on booking")
-  def humanise(:recaptcha_signup_min_score), do: dgettext("dashboard", "Signup min score")
-  def humanise(:recaptcha_booking_min_score), do: dgettext("dashboard", "Booking min score")
-  def humanise(:admin_alerts_enabled), do: dgettext("dashboard", "Admin alerts")
-  def humanise(:admin_alert_email), do: dgettext("dashboard", "Admin alert recipient")
-  def humanise(:meeting_payments_enabled), do: dgettext("dashboard", "Meeting payments")
-  def humanise(:booking_analytics_enabled), do: dgettext("dashboard", "Booking analytics")
+  def humanise(:registration_enabled), do: dgettext("dashboard_admin", "Registration enabled")
+  def humanise(:password_auth_enabled), do: dgettext("dashboard_admin", "Password authentication")
+  def humanise(:google_auth_enabled), do: dgettext("dashboard_admin", "Google login")
+  def humanise(:github_auth_enabled), do: dgettext("dashboard_admin", "GitHub login")
+  def humanise(:oauth_auth_enabled), do: dgettext("dashboard_admin", "Generic OIDC login")
+  def humanise(:recaptcha_signup_enabled), do: dgettext("dashboard_admin", "reCAPTCHA on signup")
+
+  def humanise(:recaptcha_booking_enabled),
+    do: dgettext("dashboard_admin", "reCAPTCHA on booking")
+
+  def humanise(:recaptcha_signup_min_score), do: dgettext("dashboard_admin", "Signup min score")
+  def humanise(:recaptcha_booking_min_score), do: dgettext("dashboard_admin", "Booking min score")
+  def humanise(:admin_alerts_enabled), do: dgettext("dashboard_admin", "Admin alerts")
+  def humanise(:admin_alert_email), do: dgettext("dashboard_admin", "Admin alert recipient")
+  def humanise(:meeting_payments_enabled), do: dgettext("dashboard_admin", "Meeting payments")
+  def humanise(:booking_analytics_enabled), do: dgettext("dashboard_admin", "Booking analytics")
 
   def humanise(key),
     do: key |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
@@ -37,91 +40,91 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   @spec describe(atom()) :: String.t()
   def describe(:registration_enabled) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Allow new users to sign up via the public registration page. Disable for a private install where admins create accounts manually."
     )
   end
 
   def describe(:password_auth_enabled) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Allow log-in with email and password. When disabled, users can only authenticate through configured OAuth providers."
     )
   end
 
   def describe(:google_auth_enabled) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Show the \"Continue with Google\" button on login and signup. Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to be set in the environment."
     )
   end
 
   def describe(:github_auth_enabled) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Show the \"Continue with GitHub\" button on login and signup. Requires GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to be set in the environment."
     )
   end
 
   def describe(:oauth_auth_enabled) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Enable generic OAuth 2.0 / OIDC single sign-on (Keycloak, Authentik, Lemonldap, etc.). Requires the OAUTH_* environment variables to be set."
     )
   end
 
   def describe(:recaptcha_signup_enabled) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
     )
   end
 
   def describe(:recaptcha_booking_enabled) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
     )
   end
 
   def describe(:recaptcha_signup_min_score) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a signup. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
     )
   end
 
   def describe(:recaptcha_booking_min_score) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a booking. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
     )
   end
 
   def describe(:admin_alerts_enabled) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Email operational alerts (webhook failures, integration health issues, background job errors) to the admin alert recipient. Requires a recipient address to be set below."
     )
   end
 
   def describe(:admin_alert_email) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Email address that receives admin alerts when the toggle above is enabled. Leave blank to fall back to the ADMIN_ALERT_EMAIL environment variable."
     )
   end
 
   def describe(:meeting_payments_enabled) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment - without them the toggle stays locked."
     )
   end
 
   def describe(:booking_analytics_enabled) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint - no raw IP is stored. Off by default; review your privacy policy before enabling."
     )
   end
@@ -139,8 +142,8 @@ defmodule TymeslotWeb.AdminLive.Formatters do
 
   @doc "Human-readable label for a recommended boolean value."
   @spec recommended_label(boolean()) :: String.t()
-  def recommended_label(true), do: dgettext("dashboard", "Enabled")
-  def recommended_label(false), do: dgettext("dashboard", "Disabled")
+  def recommended_label(true), do: dgettext("dashboard_admin", "Enabled")
+  def recommended_label(false), do: dgettext("dashboard_admin", "Disabled")
 
   @doc """
   Categorises a setting key so the UI knows which control to render.
@@ -176,11 +179,11 @@ defmodule TymeslotWeb.AdminLive.Formatters do
 
   @doc "Human-readable label for a section."
   @spec section_label(atom()) :: String.t()
-  def section_label(:authentication), do: dgettext("dashboard", "Authentication")
-  def section_label(:recaptcha), do: dgettext("dashboard", "reCAPTCHA")
-  def section_label(:payments), do: dgettext("dashboard", "Payments")
-  def section_label(:analytics), do: dgettext("dashboard", "Analytics")
-  def section_label(:admin_alerts), do: dgettext("dashboard", "Admin alerts")
+  def section_label(:authentication), do: dgettext("dashboard_admin", "Authentication")
+  def section_label(:recaptcha), do: dgettext("dashboard_admin", "reCAPTCHA")
+  def section_label(:payments), do: dgettext("dashboard_admin", "Payments")
+  def section_label(:analytics), do: dgettext("dashboard_admin", "Analytics")
+  def section_label(:admin_alerts), do: dgettext("dashboard_admin", "Admin alerts")
 
   @doc """
   When a setting is only meaningful while another setting is enabled, this
@@ -203,7 +206,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   @spec lock_reason(atom(), term()) :: String.t() | nil
   def lock_reason(:password_auth_enabled, false) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Cannot disable password authentication while at least one admin signs in with email and password - doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
     )
   end
@@ -214,7 +217,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
 
   def lock_reason(:meeting_payments_enabled, true) do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
     )
   end
@@ -223,7 +226,7 @@ defmodule TymeslotWeb.AdminLive.Formatters do
 
   defp sso_lock_reason do
     dgettext(
-      "dashboard",
+      "dashboard_admin",
       "Cannot disable this login provider while it is the only working sign-in path for admins. Enable password authentication or another credentialed SSO provider first."
     )
   end

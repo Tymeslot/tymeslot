@@ -1,0 +1,57 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: it\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:94
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:45
+#, elixir-autogen, elixir-format
+msgid "Change booking link"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:51
+#, elixir-autogen, elixir-format
+msgid "Changing this link will stop any links you have already shared for this meeting type from working."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:54
+#, elixir-autogen, elixir-format
+msgid "Hidden from your public booking page; reachable only by its direct link"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:58
+#, elixir-autogen, elixir-format
+msgid "Link address"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:77
+#, elixir-autogen, elixir-format
+msgid "Randomise"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:100
+#, elixir-autogen, elixir-format
+msgid "Save link"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:56
+#, elixir-autogen, elixir-format
+msgid "Unlisted"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:81
+#, elixir-autogen, elixir-format
+msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessable link."
+msgstr ""
