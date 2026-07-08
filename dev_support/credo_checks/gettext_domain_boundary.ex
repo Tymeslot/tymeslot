@@ -41,6 +41,16 @@ defmodule CredoChecks.GettextDomainBoundary do
   The former monolithic `dashboard` domain has been resharded into
   `dashboard_admin` (the bulk) and the per-feature domains above.
 
+  Public marketing site — one small domain per page area:
+
+  - `marketing_common` — shared marketing chrome (nav, footer, reused CTAs)
+  - `marketing_home`, `marketing_features`, `marketing_pricing`, `marketing_for`,
+    `marketing_compare`, `marketing_blog`, `marketing_enterprise`,
+    `marketing_about`, `marketing_contact` — marketing page areas
+
+  A bare `marketing` domain is intentionally not allowed — always pick the
+  specific page area.
+
   Configure the allowlist with the `:domains` param.
 
   ## Excluded files
@@ -77,6 +87,10 @@ defmodule CredoChecks.GettextDomainBoundary do
         dashboard_automation dashboard_automation_chat dashboard_appearance
         dashboard_embed dashboard_payments dashboard_bookings dashboard_profile
         dashboard_analytics dashboard_admin
+        marketing_common
+        marketing_home marketing_features marketing_pricing marketing_for
+        marketing_compare marketing_blog marketing_enterprise marketing_about
+        marketing_contact
       )
     ],
     explanations: [

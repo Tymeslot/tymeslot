@@ -1,0 +1,162 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n>1);\n"
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:163
+#, elixir-autogen, elixir-format
+msgid "An error occurred. Please try again later."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:393
+#, elixir-autogen, elixir-format
+msgid "Back to Homepage"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:206
+#, elixir-autogen, elixir-format
+msgid "Company Info"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:17
+#, elixir-autogen, elixir-format
+msgid "Contact Us"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:250
+#, elixir-autogen, elixir-format
+msgid "Custom deployments"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:294
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:193
+#, elixir-autogen, elixir-format
+msgid "Get in"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:20
+#, elixir-autogen, elixir-format
+msgid "Get in touch with Tymeslot - Professional meeting scheduling platform"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:197
+#, elixir-autogen, elixir-format
+msgid "Have questions about Tymeslot? Our team is here to help you stop the back-and-forth and start booking."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:322
+#, elixir-autogen, elixir-format
+msgid "Message"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:383
+#, elixir-autogen, elixir-format
+msgid "Message Sent!"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:280
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:253
+#, elixir-autogen, elixir-format
+msgid "Need a custom deployment or dedicated support? Mention it in your message and we'll get back to you with our enterprise options."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:233
+#, elixir-autogen, elixir-format
+msgid "Office"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:147
+#, elixir-autogen, elixir-format
+msgid "Please fix the errors in the form before sending."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:351
+#, elixir-autogen, elixir-format
+msgid "Privacy Policy"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:136
+#, elixir-autogen, elixir-format
+msgid "Security verification failed. Please try again."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:340
+#, elixir-autogen, elixir-format
+msgid "Send Message"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:308
+#, elixir-autogen, elixir-format
+msgid "Subject"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:326
+#, elixir-autogen, elixir-format
+msgid "Tell us more about your inquiry..."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:359
+#, elixir-autogen, elixir-format
+msgid "Terms of Service"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:386
+#, elixir-autogen, elixir-format
+msgid "Thank you for reaching out. Our team has received your message and will get back to you shortly."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:123
+#, elixir-autogen, elixir-format
+msgid "Thank you for your message! We'll get back to you soon."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:102
+#, elixir-autogen, elixir-format
+msgid "The security check could not be completed. Please ensure JavaScript is enabled, or try disabling any browser extensions that may block Google reCAPTCHA."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:345
+#, elixir-autogen, elixir-format
+msgid "This site is protected by reCAPTCHA and the Google"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:194
+#, elixir-autogen, elixir-format
+msgid "Touch"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:309
+#, elixir-autogen, elixir-format
+msgid "What's this about?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:281
+#, elixir-autogen, elixir-format
+msgid "Your full name"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:353
+#, elixir-autogen, elixir-format
+msgid "and"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/contact_live.ex:361
+#, elixir-autogen, elixir-format
+msgid "apply."
+msgstr ""

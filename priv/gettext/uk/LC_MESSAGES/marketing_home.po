@@ -1,0 +1,478 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: uk\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_saas_web/live/homepage_live/hero_section.ex:88
+#, elixir-autogen, elixir-format
+msgid "5 minute setup"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/hero_section.ex:181
+#, elixir-autogen, elixir-format
+msgid "Booking a meeting with Tymeslot"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/hero_section.ex:57
+#, elixir-autogen, elixir-format
+msgid "Core scheduling is always free. Go Pro for advanced features and to support independent development."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/hero_section.ex:212
+#, elixir-autogen, elixir-format
+msgid "Create your free booking page"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/hero_section.ex:209
+#, elixir-autogen, elixir-format
+msgid "Create your own booking page — sign up free"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/hero_section.ex:76
+#, elixir-autogen, elixir-format
+msgid "No double-bookings"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/hero_section.ex:52
+#, elixir-autogen, elixir-format
+msgid "Share one link and let clients book the right slot in seconds - your calendar stays in sync and double-bookings disappear. Spend your time on the work, not on chasing a time that suits everyone."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/hero_section.ex:46
+#, elixir-autogen, elixir-format
+msgid "Start booking."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/hero_section.ex:44
+#, elixir-autogen, elixir-format
+msgid "Stop the back-and-forth."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/hero_section.ex:127
+#, elixir-autogen, elixir-format
+msgid "View on GitHub"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/hero_section.ex:201
+#, elixir-autogen, elixir-format
+msgid "Want a booking page like this?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/hero_section.ex:100
+#, elixir-autogen, elixir-format
+msgid "Your data, your rules"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:163
+#, elixir-autogen, elixir-format
+msgid "%{name} Theme"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:70
+#, elixir-autogen, elixir-format
+msgid "+%{count} more"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:43
+#, elixir-autogen, elixir-format
+msgid "5 minutes"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:37
+#, elixir-autogen, elixir-format
+msgid "A complete booking toolkit, in an interface that stays out of your way."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/screenshots_section.ex:79
+#, elixir-autogen, elixir-format
+msgid "A look at the dashboard, availability editor, and embed flow."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:96
+#, elixir-autogen, elixir-format
+msgid "Automatic video room creation with Zoom, Google Meet, MiroTalk P2P, Teams, and more."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:44
+#, elixir-autogen, elixir-format
+msgid "Background Images"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:131
+#, elixir-autogen, elixir-format
+msgid "Bank-level security"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:115
+#, elixir-autogen, elixir-format
+msgid "Beautiful emails"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/why_tymeslot_section.ex:35
+#, elixir-autogen, elixir-format
+msgid "Booking pages carry no advertising pixels or tracking scripts. We use cookieless analytics on our own site to understand what to build next — it never runs on your clients' pages."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:150
+#, elixir-autogen, elixir-format
+msgid "Booking pages in English, German, Ukrainian, French, and Italian. Auto-detects browser language."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/why_tymeslot_section.ex:54
+#, elixir-autogen, elixir-format
+msgid "Built different."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:166
+#, elixir-autogen, elixir-format
+msgid "Built to stay up"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/screenshots_section.ex:20
+#, elixir-autogen, elixir-format
+msgid "Business hours, breaks, and overrides made simple"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/why_tymeslot_section.ex:22
+#, elixir-autogen, elixir-format
+msgid "Cloud or Self-Hosted"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:35
+#, elixir-autogen, elixir-format
+msgid "Connection-aware video loading"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:43
+#, elixir-autogen, elixir-format
+msgid "Custom Colors"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:19
+#, elixir-autogen, elixir-format
+msgid "Custom backgrounds: images, gradients, colors"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/screenshots_section.ex:15
+#, elixir-autogen, elixir-format
+msgid "Dashboard"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:17
+#, elixir-autogen, elixir-format
+msgid "Elegant glass morphism with blur effects"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live.ex:30
+#, elixir-autogen, elixir-format
+msgid "Eliminate scheduling back-and-forth with Tymeslot. Share your availability, let others book instantly, and sync with your calendar and video tools."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/screenshots_section.ex:26
+#, elixir-autogen, elixir-format
+msgid "Embed & Share"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/why_tymeslot_section.ex:13
+#, elixir-autogen, elixir-format
+msgid "Every line is public under the GNU AGPLv3. Read it, audit it, modify it, self-host it, or fork it — the one obligation is share-alike: if you run a modified version, your changes stay open too."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:31
+#, elixir-autogen, elixir-format
+msgid "Everything you need."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:177
+#, elixir-autogen, elixir-format
+msgid "Fault-tolerant"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:47
+#, elixir-autogen, elixir-format
+msgid "Four steps from sign-up to your first booking."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:25
+#, elixir-autogen, elixir-format
+msgid "Get booked"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:46
+#, elixir-autogen, elixir-format
+msgid "Gradient Options"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:27
+#, elixir-autogen, elixir-format
+msgid "Immersive Experience"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/screenshots_section.ex:33
+#, elixir-autogen, elixir-format
+msgid "Integration"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/why_tymeslot_section.ex:60
+#, elixir-autogen, elixir-format
+msgid "It's your scheduling tool, so we built it to work the way you want. Run it on our cloud or your own server, read exactly how it works, and keep your data yours."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:18
+#, elixir-autogen, elixir-format
+msgid "Multi-page booking flow with progress indicators"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:51
+#, elixir-autogen, elixir-format
+msgid "Never double-book again"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:33
+#, elixir-autogen, elixir-format
+msgid "Nothing you don't."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:134
+#, elixir-autogen, elixir-format
+msgid "OAuth 2.0, AES encryption, rate limiting, and full audit logging."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/why_tymeslot_section.ex:56
+#, elixir-autogen, elixir-format
+msgid "On purpose."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/why_tymeslot_section.ex:11
+#, elixir-autogen, elixir-format
+msgid "Open Source"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/why_tymeslot_section.ex:17
+#, elixir-autogen, elixir-format
+msgid "Open source, top to bottom."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live.ex:27
+#, elixir-autogen, elixir-format
+msgid "Open-Source Meeting Scheduling Software"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:36
+#, elixir-autogen, elixir-format
+msgid "Perfect for creative professionals"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:20
+#, elixir-autogen, elixir-format
+msgid "Perfect for professional services"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/screenshots_section.ex:13
+#, elixir-autogen, elixir-format
+msgid "Pick a theme that matches your brand"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:169
+#, elixir-autogen, elixir-format
+msgid "Powered by Elixir's fault-tolerant runtime. Circuit breakers, connection pooling, and graceful degradation keep it at 99.9% uptime."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/why_tymeslot_section.ex:33
+#, elixir-autogen, elixir-format
+msgid "Privacy by Design"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:11
+#, elixir-autogen, elixir-format
+msgid "Professional Glassmorphism"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:10
+#, elixir-autogen, elixir-format
+msgid "Quill - Professional Glassmorphism"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:13
+#, elixir-autogen, elixir-format
+msgid "Quill Theme Preview - Glass morphism booking flow"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/cta_section.ex:25
+#, elixir-autogen, elixir-format
+msgid "Ready to reclaim your time?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:181
+#, elixir-autogen, elixir-format
+msgid "Real-time"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:54
+#, elixir-autogen, elixir-format
+msgid "Real-time calendar sync across all your accounts. Our system checks availability instantly and prevents conflicts automatically."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:185
+#, elixir-autogen, elixir-format
+msgid "Reliable"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:118
+#, elixir-autogen, elixir-format
+msgid "Responsive MJML templates with calendar (.ics) attachments."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:26
+#, elixir-autogen, elixir-format
+msgid "Rhythm - Immersive Experience"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:29
+#, elixir-autogen, elixir-format
+msgid "Rhythm Theme Preview - Video background sliding flow"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/why_tymeslot_section.ex:24
+#, elixir-autogen, elixir-format
+msgid "Run on our managed cloud and we handle updates, backups, and scaling for you — or deploy with Docker on your own server and keep everything in-house. Move between the two whenever it suits you."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/screenshots_section.ex:22
+#, elixir-autogen, elixir-format
+msgid "Scheduling"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/screenshots_section.ex:28
+#, elixir-autogen, elixir-format
+msgid "Secure iframe embedding with webhook notifications for your website"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:198
+#, elixir-autogen, elixir-format
+msgid "See all features in detail"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/screenshots_section.ex:76
+#, elixir-autogen, elixir-format
+msgid "See it in action"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:105
+#, elixir-autogen, elixir-format
+msgid "Self-hosting? You can use your own custom domain."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:15
+#, elixir-autogen, elixir-format
+msgid "Set availability"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:41
+#, elixir-autogen, elixir-format
+msgid "Setup in"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/cta_section.ex:16
+#, elixir-autogen, elixir-format
+msgid "Setup takes 5 minutes. After that, people book a time that works, with no email back-and-forth."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:20
+#, elixir-autogen, elixir-format
+msgid "Share link"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:10
+#, elixir-autogen, elixir-format
+msgid "Sign up"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:34
+#, elixir-autogen, elixir-format
+msgid "Sliding interface with smooth transitions"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/screenshots_section.ex:19
+#, elixir-autogen, elixir-format
+msgid "Smart Availability"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:147
+#, elixir-autogen, elixir-format
+msgid "Speak their language"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:62
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:69
+#, elixir-autogen, elixir-format
+msgid "Step %{number}"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:93
+#, elixir-autogen, elixir-format
+msgid "Test all features without creating real bookings or sending emails"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/screenshots_section.ex:12
+#, elixir-autogen, elixir-format
+msgid "Theme Selection"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:210
+#, elixir-autogen, elixir-format
+msgid "Try Live Demo"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:74
+#, elixir-autogen, elixir-format
+msgid "Two themes, both fully customizable. Set a video, image, gradient, or solid color as the background."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:45
+#, elixir-autogen, elixir-format
+msgid "Video Backgrounds"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:33
+#, elixir-autogen, elixir-format
+msgid "Video backgrounds with crossfade technology"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:93
+#, elixir-autogen, elixir-format
+msgid "Video rooms, instantly"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/why_tymeslot_section.ex:39
+#, elixir-autogen, elixir-format
+msgid "What happens in Tymeslot stays in Tymeslot."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:68
+#, elixir-autogen, elixir-format
+msgid "Your brand."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/why_tymeslot_section.ex:28
+#, elixir-autogen, elixir-format
+msgid "Your choice. Your control."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:101
+#, elixir-autogen, elixir-format
+msgid "Your link:"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:70
+#, elixir-autogen, elixir-format
+msgid "Your style."
+msgstr ""

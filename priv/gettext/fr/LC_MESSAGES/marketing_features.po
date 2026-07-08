@@ -1,0 +1,1970 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n>1);\n"
+
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:31
+#, elixir-autogen, elixir-format
+msgid "%{count} Calendar Providers"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:16
+#, elixir-autogen, elixir-format
+msgid ", or "
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:209
+#, elixir-autogen, elixir-format
+msgid ".ics Calendar Invites"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:28
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:136
+#, elixir-autogen, elixir-format
+msgid "13 currencies"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:140
+#, elixir-autogen, elixir-format
+msgid "13 currencies — EUR, USD, GBP, CHF, and more."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:73
+#, elixir-autogen, elixir-format
+msgid "1‑click"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:34
+#, elixir-autogen, elixir-format
+msgid "4 Video Providers"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:187
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:37
+#, elixir-autogen, elixir-format
+msgid "5 Languages"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:198
+#, elixir-autogen, elixir-format
+msgid "A Linux server (or Cloudron/Railway), a PostgreSQL database, and a domain name. For calendar sync you supply your own Google and Microsoft OAuth credentials, or connect any CalDAV server. The documentation walks through each deployment target end to end."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:24
+#, elixir-autogen, elixir-format
+msgid "A complete look at every feature — from calendar sync to Slack and Telegram notifications. No surprises. No lock-in."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:89
+#, elixir-autogen, elixir-format
+msgid "A flat 0.5% on the cloud"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:123
+#, elixir-autogen, elixir-format
+msgid "A persistent booking button fixed to the corner of every page — like a chat widget, but for meetings. Drops onto any site with a single script tag."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:147
+#, elixir-autogen, elixir-format
+msgid "A persistent booking button fixed to the corner of every page, like a chat widget."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:53
+#, elixir-autogen, elixir-format
+msgid "A video room is generated on every confirmed booking and included in the confirmation email and calendar invite."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:242
+#, elixir-autogen, elixir-format
+msgid "AES Encryption at Rest"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/scheduling_section.ex:62
+#, elixir-autogen, elixir-format
+msgid "Accounts per user"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:14
+#, elixir-autogen, elixir-format
+msgid "Add a booking widget to any website with a single script tag. Inline calendar, popup modal, or floating button — match your brand with theme, colour, and locale attributes. Works on any site: WordPress, Webflow, Squarespace, plain HTML."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:55
+#, elixir-autogen, elixir-format
+msgid "Add your domain and TLS"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:65
+#, elixir-autogen, elixir-format
+msgid "Add your own Google and Microsoft OAuth credentials, or connect any CalDAV server. Bookings flow straight into your calendars from day one."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:49
+#, elixir-autogen, elixir-format
+msgid "Advance Booking Window"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:73
+#, elixir-autogen, elixir-format
+msgid "An embed that behaves on your site"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:28
+#, elixir-autogen, elixir-format
+msgid "Any CalDAV server"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:302
+#, elixir-autogen, elixir-format
+msgid "App store"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:148
+#, elixir-autogen, elixir-format
+msgid "Apple iCloud & any CalDAV server"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:150
+#, elixir-autogen, elixir-format
+msgid "Apple iCloud, Nextcloud, Radicale, Baïkal, Zimbra, and mailbox.org — one-click presets, plus generic CalDAV for everything else."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:57
+#, elixir-autogen, elixir-format
+msgid "At booking, guests pay through Stripe Checkout — cards, Apple Pay, and Google Pay. The slot is held until the payment clears."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:105
+#, elixir-autogen, elixir-format
+msgid "Auditable and forkable"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:189
+#, elixir-autogen, elixir-format
+msgid "Auto-detected — English, German, Ukrainian, French, or Italian."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:89
+#, elixir-autogen, elixir-format
+msgid "Auto-resize, no scrollbars"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:172
+#, elixir-autogen, elixir-format
+msgid "Auto-resizing iframe"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:32
+#, elixir-autogen, elixir-format
+msgid "Automated."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:217
+#, elixir-autogen, elixir-format
+msgid "Automatic Reminders"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:29
+#, elixir-autogen, elixir-format
+msgid "Automation"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:43
+#, elixir-autogen, elixir-format
+msgid "Availability Windows"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:55
+#, elixir-autogen, elixir-format
+msgid "Availability is computed live"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/scheduling_section.ex:71
+#, elixir-autogen, elixir-format
+msgid "Availability sync"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:182
+#, elixir-autogen, elixir-format
+msgid "Background Options"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/booking_experience_section.ex:17
+#, elixir-autogen, elixir-format
+msgid "Booking Experience"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:33
+#, elixir-autogen, elixir-format
+msgid "Booking and billing usually live in two different places. You schedule the session, then send an invoice afterwards and hope it gets paid — and when someone no-shows a paid slot, that is revenue you simply lose. Collecting payment at the point of booking fixes both: it filters out non-committal enquiries and guarantees the session is paid for before it ever lands on your calendar.\n\nTymeslot connects your own Stripe account directly. Funds settle straight to your Stripe balance — we never hold or touch the money, and there is no platform cut on top of Stripe's own fees. Charge a small deposit to deter no-shows, take the full fee for a session, or collect a package payment up front, all on a per-meeting-type basis."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:91
+#, elixir-autogen, elixir-format
+msgid "Booking pages load no advertising pixels or third-party trackers. Self-hosted, nothing is sent to us at all — ideal for healthcare, legal, and other sensitive practices."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:20
+#, elixir-autogen, elixir-format
+msgid "Booking, right where your visitors are"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:63
+#, elixir-autogen, elixir-format
+msgid "Bookings flow straight in"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:63
+#, elixir-autogen, elixir-format
+msgid "Bookings sync both ways"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:168
+#, elixir-autogen, elixir-format
+msgid "Bring your own PostgreSQL. Back it up, replicate it, and audit it on your own schedule."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:49
+#, elixir-autogen, elixir-format
+msgid "Bring your own PostgreSQL. Set a handful of environment variables for the database URL, secret key, and base URL — the env reference documents every option."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:27
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:127
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:133
+#, elixir-autogen, elixir-format
+msgid "Bring your own Stripe"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:250
+#, elixir-autogen, elixir-format
+msgid "Brute-force protection on by default, not opt-in."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:34
+#, elixir-autogen, elixir-format
+msgid "Buffer Time"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/security_section.ex:15
+#, elixir-autogen, elixir-format
+msgid "Built secure."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:284
+#, elixir-autogen, elixir-format
+msgid "Built the same way as the rest of Tymeslot: open-source, private, self-hostable."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/security_section.ex:16
+#, elixir-autogen, elixir-format
+msgid "By default."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:271
+#, elixir-autogen, elixir-format
+msgid "CSRF protection applied globally — nothing to configure."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:81
+#, elixir-autogen, elixir-format
+msgid "CalDAV is first-class"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:28
+#, elixir-autogen, elixir-format
+msgid "Calendar Providers"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:19
+#, elixir-autogen, elixir-format
+msgid "Calendar Sync"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:12
+#, elixir-autogen, elixir-format
+msgid "Calendar Sync for Google, Outlook & CalDAV"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:73
+#, elixir-autogen, elixir-format
+msgid "Calendar View"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/scheduling_section.ex:56
+#, elixir-autogen, elixir-format
+msgid "Calendar providers"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:83
+#, elixir-autogen, elixir-format
+msgid "Calendar sync, payments, themes, embeds, and integrations all work self-hosted. There is no hosted-only feature wall."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:75
+#, elixir-autogen, elixir-format
+msgid "Calendly and Acuity sync Google and Outlook and stop there. Tymeslot treats open calendar standards as equal citizens and keeps your data where it belongs."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:204
+#, elixir-autogen, elixir-format
+msgid "Can I connect more than one calendar?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:213
+#, elixir-autogen, elixir-format
+msgid "Can I match the widget to my brand?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:221
+#, elixir-autogen, elixir-format
+msgid "Can I move from the managed cloud to self-hosting later (or back)?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:195
+#, elixir-autogen, elixir-format
+msgid "Can I take a deposit instead of the full amount?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:162
+#, elixir-autogen, elixir-format
+msgid "Cancel a paid booking and refund it in a single step."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:156
+#, elixir-autogen, elixir-format
+msgid "Cancel a paid booking and refund it in one step."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:160
+#, elixir-autogen, elixir-format
+msgid "Cancel with refund"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:154
+#, elixir-autogen, elixir-format
+msgid "Cancel-with-refund"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:50
+#, elixir-autogen, elixir-format
+msgid "Cards · Apple Pay · Google Pay"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:19
+#, elixir-autogen, elixir-format
+msgid "Charge attendees at booking time — the money lands directly in your Stripe account."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:14
+#, elixir-autogen, elixir-format
+msgid "Charge for appointments at the moment of booking with Stripe. Bring your own Stripe account — funds go straight to your balance, we never touch the money. Deposits, full payment, 13 currencies, one-click refunds, free reschedules."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:138
+#, elixir-autogen, elixir-format
+msgid "Charge in EUR, USD, GBP, CHF, and more — set per host."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:187
+#, elixir-autogen, elixir-format
+msgid "Choose an embed style in your dashboard and copy the generated snippet — a single script tag (plus a div for the inline calendar). Paste it into your site's HTML and the widget appears. No build step or framework is required."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:89
+#, elixir-autogen, elixir-format
+msgid "Choose what's exposed"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:47
+#, elixir-autogen, elixir-format
+msgid "Choose which calendars count"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:296
+#, elixir-autogen, elixir-format
+msgid "Cloudron"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:139
+#, elixir-autogen, elixir-format
+msgid "Cloudron app"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:159
+#, elixir-autogen, elixir-format
+msgid "Combine several calendars into one availability picture so nothing slips through."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:309
+#, elixir-autogen, elixir-format
+msgid "Community template"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:219
+#, elixir-autogen, elixir-format
+msgid "Configurable reminder window per event type."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:203
+#, elixir-autogen, elixir-format
+msgid "Confirmation, cancellation, and reschedule emails that render everywhere."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:65
+#, elixir-autogen, elixir-format
+msgid "Confirmed bookings are written to your calendar instantly; external changes flow back and update your availability automatically."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:119
+#, elixir-autogen, elixir-format
+msgid "Connect Apple iCloud"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:117
+#, elixir-autogen, elixir-format
+msgid "Connect Google Calendar"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/scheduling_section.ex:43
+#, elixir-autogen, elixir-format
+msgid "Connect Google, Outlook, CalDAV, and Nextcloud — simultaneously. The moment a new event lands on any of them, that time window is blocked across all your booking types."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:118
+#, elixir-autogen, elixir-format
+msgid "Connect Outlook"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:120
+#, elixir-autogen, elixir-format
+msgid "Connect any CalDAV server"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:34
+#, elixir-autogen, elixir-format
+msgid "Connect as many accounts as you like — free/busy is read across all of them at once."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:63
+#, elixir-autogen, elixir-format
+msgid "Connect calendars and go live"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:39
+#, elixir-autogen, elixir-format
+msgid "Connect your Stripe account"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:39
+#, elixir-autogen, elixir-format
+msgid "Connect your calendars"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:20
+#, elixir-autogen, elixir-format
+msgid "Connect your calendars, pick a video tool, and you're done."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:22
+#, elixir-autogen, elixir-format
+msgid "Connect your own Stripe account and turn any meeting type into a paid booking. Take a deposit or the full fee up front — the slot is confirmed only once payment clears."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:91
+#, elixir-autogen, elixir-format
+msgid "Connected calendars block your time without leaking event details. Guests see open or busy, never what you are busy with."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:16
+#, elixir-autogen, elixir-format
+msgid "Connects to the tools"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:47
+#, elixir-autogen, elixir-format
+msgid "Copy one script tag"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/cta_section.ex:16
+#, elixir-autogen, elixir-format
+msgid "Core scheduling is always free. Go Pro to unlock white-label branding and support independent development."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:426
+#, elixir-autogen, elixir-format
+msgid "Create your free account"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:244
+#, elixir-autogen, elixir-format
+msgid "Credentials and tokens never sit in plaintext."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:69
+#, elixir-autogen, elixir-format
+msgid "Currencies"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:177
+#, elixir-autogen, elixir-format
+msgid "Custom Accent Color"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:75
+#, elixir-autogen, elixir-format
+msgid "Day, week, or month — with drag-and-drop rescheduling."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:150
+#, elixir-autogen, elixir-format
+msgid "Deploy from the community template in minutes, no server administration required."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:308
+#, elixir-autogen, elixir-format
+msgid "Deploy from the community template in minutes."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:119
+#, elixir-autogen, elixir-format
+msgid "Deploy on Railway"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:117
+#, elixir-autogen, elixir-format
+msgid "Deploy with Docker"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/deployment_section.ex:13
+#, elixir-autogen, elixir-format
+msgid "Deployment"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:142
+#, elixir-autogen, elixir-format
+msgid "Deposits or full payment"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:45
+#, elixir-autogen, elixir-format
+msgid "Different working hours for every day of the week."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:109
+#, elixir-autogen, elixir-format
+msgid "Direct Link"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:154
+#, elixir-autogen, elixir-format
+msgid "Direct link"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:229
+#, elixir-autogen, elixir-format
+msgid "Do bookings made through the embed sync to my calendar?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:289
+#, elixir-autogen, elixir-format
+msgid "Docker"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:41
+#, elixir-autogen, elixir-format
+msgid "Docker for any Linux box, Cloudron for one-click installs with automatic backups and SSL, or Railway from a community template. Same image, same features."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:130
+#, elixir-autogen, elixir-format
+msgid "Docker image"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:28
+#, elixir-autogen, elixir-format
+msgid "Docker · Cloudron · Railway"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:229
+#, elixir-autogen, elixir-format
+msgid "Does CalDAV get the same features as Google and Outlook?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:188
+#, elixir-autogen, elixir-format
+msgid "Does Tymeslot sync both ways?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:187
+#, elixir-autogen, elixir-format
+msgid "Does Tymeslot take a cut of my payments?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:219
+#, elixir-autogen, elixir-format
+msgid "Does payment work when I self-host?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:202
+#, elixir-autogen, elixir-format
+msgid "Does the embed work with WordPress, Webflow, or Squarespace?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/embed_section.ex:100
+#, elixir-autogen, elixir-format
+msgid "Domain Whitelist"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:31
+#, elixir-autogen, elixir-format
+msgid "Don't send visitors away to book"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:22
+#, elixir-autogen, elixir-format
+msgid "Drop a Tymeslot booking widget onto any page with one script tag. Inline, popup, or floating button — styled to match your brand, no iframe wrangling."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:110
+#, elixir-autogen, elixir-format
+msgid "Easiest"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:145
+#, elixir-autogen, elixir-format
+msgid "Emailed to every paid attendee."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/embed_section.ex:29
+#, elixir-autogen, elixir-format
+msgid "Embed & Share"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:12
+#, elixir-autogen, elixir-format
+msgid "Embed a Scheduling Widget on Your Website"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:117
+#, elixir-autogen, elixir-format
+msgid "Embed setup guide"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:129
+#, elixir-autogen, elixir-format
+msgid "Embed the booking calendar directly in your page with a single script tag and div."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:90
+#, elixir-autogen, elixir-format
+msgid "Embed the booking calendar directly into your page with a single script tag and div. Supports data-theme, data-primary-color, and data-locale attributes for per-embed customization."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:75
+#, elixir-autogen, elixir-format
+msgid "Embeds are easy to ship and easy to get wrong. Tymeslot's is built to drop in cleanly and stay private."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:175
+#, elixir-autogen, elixir-format
+msgid "Encrypted credentials"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:120
+#, elixir-autogen, elixir-format
+msgid "Environment reference"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live.ex:32
+#, elixir-autogen, elixir-format
+msgid "Every Tymeslot feature: booking pages, paid appointments via your own Stripe, calendar sync incl. CalDAV, automation, embeds and one-click self-hosting."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:35
+#, elixir-autogen, elixir-format
+msgid "Every booking event can fire a webhook or message you directly — the moment it happens."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:211
+#, elixir-autogen, elixir-format
+msgid "Every confirmation includes a standards-compliant invite."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:46
+#, elixir-autogen, elixir-format
+msgid "Every event"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:107
+#, elixir-autogen, elixir-format
+msgid "Every line is public on GitHub under the GNU AGPLv3. Read it, audit it, fork it, or contribute back."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live.ex:154
+#, elixir-autogen, elixir-format
+msgid "Every line is public on GitHub. Audit it, fork it, or run it yourself."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:265
+#, elixir-autogen, elixir-format
+msgid "Every line public on GitHub under the GNU AGPLv3."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:168
+#, elixir-autogen, elixir-format
+msgid "Every paid attendee gets a Stripe receipt emailed automatically."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:33
+#, elixir-autogen, elixir-format
+msgid "Every time a potential client has to leave your website to reach a separate booking link, you lose some of them. A new tab, an unfamiliar page, a moment of hesitation — and the booking never happens. The booking flow should live where the intent is: on your own site, in your own brand."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/booking_experience_section.ex:20
+#, elixir-autogen, elixir-format
+msgid "Every touchpoint."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:178
+#, elixir-autogen, elixir-format
+msgid "Everything %{feature} should do"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:20
+#, elixir-autogen, elixir-format
+msgid "Everything Tymeslot"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/embed_section.ex:32
+#, elixir-autogen, elixir-format
+msgid "Everywhere."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:65
+#, elixir-autogen, elixir-format
+msgid "Explore calendar sync"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:277
+#, elixir-autogen, elixir-format
+msgid "Explore more"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:105
+#, elixir-autogen, elixir-format
+msgid "Explore payments"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/deployment_section.ex:55
+#, elixir-autogen, elixir-format
+msgid "Explore self-hosting"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/embed_section.ex:114
+#, elixir-autogen, elixir-format
+msgid "Explore the website embed"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:358
+#, elixir-autogen, elixir-format
+msgid "FAQ"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:298
+#, elixir-autogen, elixir-format
+msgid "Feature"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live.ex:23
+#, elixir-autogen, elixir-format
+msgid "Features"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live.ex:28
+#, elixir-autogen, elixir-format
+msgid "Features — Payments, Calendar Sync & Self-Hosting"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:120
+#, elixir-autogen, elixir-format
+msgid "Floating Button"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:145
+#, elixir-autogen, elixir-format
+msgid "Floating button"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:195
+#, elixir-autogen, elixir-format
+msgid "Four: an inline calendar embedded in the page, a popup modal triggered from any button, a persistent floating button, and a plain direct link for when you don't want an embed at all."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:417
+#, elixir-autogen, elixir-format
+msgid "Free plan available. No credit card required. Setup in 5 minutes."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:105
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:160
+#, elixir-autogen, elixir-format
+msgid "Free reschedules"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:362
+#, elixir-autogen, elixir-format
+msgid "Frequently Asked Questions"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:14
+#, elixir-autogen, elixir-format
+msgid "Full Feature Reference"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:153
+#, elixir-autogen, elixir-format
+msgid "Full or partial refunds straight from the dashboard, no Stripe dashboard detour."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:150
+#, elixir-autogen, elixir-format
+msgid "Full or partial, straight from the dashboard."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:92
+#, elixir-autogen, elixir-format
+msgid "Full webhook reference →"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:129
+#, elixir-autogen, elixir-format
+msgid "Funds go straight to your bank via your own Stripe account — we never touch the money."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:135
+#, elixir-autogen, elixir-format
+msgid "Funds go straight to your bank. We never touch the money."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:81
+#, elixir-autogen, elixir-format
+msgid "Funds settle to you directly"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:15
+#, elixir-autogen, elixir-format
+msgid "Get paid the moment"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:20
+#, elixir-autogen, elixir-format
+msgid "Get paid the moment they book"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:64
+#, elixir-autogen, elixir-format
+msgid "Global Timezone Support"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:27
+#, elixir-autogen, elixir-format
+msgid "Google & Outlook"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:130
+#, elixir-autogen, elixir-format
+msgid "Google Calendar"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:198
+#, elixir-autogen, elixir-format
+msgid "Google Calendar (Google Calendar API), Outlook and Microsoft 365 (Microsoft Graph API), Apple iCloud, and any CalDAV server — including Nextcloud, Radicale, Baïkal, Zimbra, and mailbox.org."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:238
+#, elixir-autogen, elixir-format
+msgid "Google, GitHub, and any OIDC provider. SSO from day one."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:184
+#, elixir-autogen, elixir-format
+msgid "Gradient, image, or video, configurable per theme."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:66
+#, elixir-autogen, elixir-format
+msgid "Guests book in their timezone, you see yours — DST included."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:65
+#, elixir-autogen, elixir-format
+msgid "Guests book without leaving your page. Confirmations, calendar sync, and reminders all work exactly as they do on your hosted booking page."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:224
+#, elixir-autogen, elixir-format
+msgid "Guests cancel or reschedule via a secure link. No login needed."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:55
+#, elixir-autogen, elixir-format
+msgid "Guests pay at checkout"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:220
+#, elixir-autogen, elixir-format
+msgid "How are my calendar credentials stored?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:185
+#, elixir-autogen, elixir-format
+msgid "How do I add Tymeslot to my website?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:212
+#, elixir-autogen, elixir-format
+msgid "How do upgrades work?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:179
+#, elixir-autogen, elixir-format
+msgid "How does Tymeslot handle payments?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:127
+#, elixir-autogen, elixir-format
+msgid "How it works"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:33
+#, elixir-autogen, elixir-format
+msgid "If your real availability lives across a work calendar, a personal calendar, and whatever your booking tool thinks is free, double-bookings are only a matter of time. The usual fix, manually blocking time in two places, is exactly the busywork a scheduling tool is supposed to remove.\n\nTymeslot reads your connected calendars to compute genuine free/busy in real time, and writes every new booking straight back. Block a dentist appointment in your personal calendar and that slot vanishes from your booking page; accept a meeting and it lands in the right calendar with the video link attached. And unlike the mainstream tools, Tymeslot speaks plain CalDAV — so Apple iCloud, Nextcloud, Radicale, Baïkal, Zimbra, and mailbox.org are first-class, not second-class."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:197
+#, elixir-autogen, elixir-format
+msgid "In their inbox"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:87
+#, elixir-autogen, elixir-format
+msgid "Inline Embed"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:41
+#, elixir-autogen, elixir-format
+msgid "Inline calendar built into the page, a popup modal triggered by any button, or a persistent floating button in the corner."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:127
+#, elixir-autogen, elixir-format
+msgid "Inline embed"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:28
+#, elixir-autogen, elixir-format
+msgid "Inline · popup · floating"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:118
+#, elixir-autogen, elixir-format
+msgid "Install on Cloudron"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:108
+#, elixir-autogen, elixir-format
+msgid "Instant messages to your account or a group chat — just a bot token, no server required."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:14
+#, elixir-autogen, elixir-format
+msgid "Integrations"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:188
+#, elixir-autogen, elixir-format
+msgid "Is Tymeslot really free to self-host?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:204
+#, elixir-autogen, elixir-format
+msgid "Is the self-hosted version missing any features?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:307
+#, elixir-autogen, elixir-format
+msgid "Learn more"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:51
+#, elixir-autogen, elixir-format
+msgid "Limit how far ahead guests can book, from 7 days to 6 months."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:41
+#, elixir-autogen, elixir-format
+msgid "Link Google Calendar or Outlook with OAuth, or point Tymeslot at any CalDAV server with a URL and credentials."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/scheduling_section.ex:66
+#, elixir-autogen, elixir-format
+msgid "Live"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/embed_section.ex:105
+#, elixir-autogen, elixir-format
+msgid "Lock your embed to specific domains. Only whitelisted origins can render your booking widget — prevents unauthorized embedding of your scheduling page on third-party sites."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:63
+#, elixir-autogen, elixir-format
+msgid "Manage refunds in a click"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:278
+#, elixir-autogen, elixir-format
+msgid "Managed Cloud"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:55
+#, elixir-autogen, elixir-format
+msgid "Match your brand"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:179
+#, elixir-autogen, elixir-format
+msgid "Match your brand across the whole booking flow."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:133
+#, elixir-autogen, elixir-format
+msgid "Messages to any channel, private channel, or DM — one-click OAuth or a webhook URL."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:58
+#, elixir-autogen, elixir-format
+msgid "Minimum Notice"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:281
+#, elixir-autogen, elixir-format
+msgid "More of what Tymeslot does"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:33
+#, elixir-autogen, elixir-format
+msgid "Most scheduling tools are closed SaaS: your availability, your clients' names and emails, and your connected calendar tokens all live on someone else's servers, priced per seat and subject to terms that change without you. For a solo professional that is an annoyance. For a clinic, a law firm, or anyone handling regulated or sensitive data, it is a compliance problem you cannot wave away.\n\nTymeslot takes the opposite stance. The core product is open source and self-hostable end to end — there is no crippled community edition and no feature held back behind a hosted-only wall. Point it at your own PostgreSQL database, put it behind your own domain, and it behaves exactly like the managed version, because it is the same code. The server is yours, your clients' data stays on it, and you decide when to upgrade."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:107
+#, elixir-autogen, elixir-format
+msgid "Moving a booking never charges the guest twice. Rescheduling stays friction-free for paid sessions."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:157
+#, elixir-autogen, elixir-format
+msgid "Multi-calendar free/busy"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:172
+#, elixir-autogen, elixir-format
+msgid "Multiple Themes"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:20
+#, elixir-autogen, elixir-format
+msgid "Never get double-booked again"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/security_section.ex:19
+#, elixir-autogen, elixir-format
+msgid "No advertising pixels, no behavioural profiling, no data sold — booking pages are always tracker-free."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:81
+#, elixir-autogen, elixir-format
+msgid "No crippled community edition"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:81
+#, elixir-autogen, elixir-format
+msgid "No framework required"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:29
+#, elixir-autogen, elixir-format
+msgid "No per-seat fees"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:97
+#, elixir-autogen, elixir-format
+msgid "No per-seat pricing"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:256
+#, elixir-autogen, elixir-format
+msgid "No pixels, no trackers, no third-party scripts on booking pages."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:105
+#, elixir-autogen, elixir-format
+msgid "No tracking on booking pages"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:214
+#, elixir-autogen, elixir-format
+msgid "No. Connected calendars are used only to compute free/busy. The details of your existing events are never shown on your booking page — a slot is simply available or it isn't."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:206
+#, elixir-autogen, elixir-format
+msgid "No. Self-hosting ships the complete product — calendar sync, video integrations, payments, embeds, themes, automation, and i18n. The managed cloud runs the same code; it simply handles uptime, backups, and updates for you."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:223
+#, elixir-autogen, elixir-format
+msgid "No. The inline embed auto-resizes: the iframe measures its own height and reports it to the host page, so the widget grows and shrinks with the booking flow instead of sitting in a fixed scrolling box."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:236
+#, elixir-autogen, elixir-format
+msgid "OAuth 2.0 / OIDC"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:177
+#, elixir-autogen, elixir-format
+msgid "OAuth tokens and CalDAV passwords are AES-encrypted at rest, never stored in plaintext."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:222
+#, elixir-autogen, elixir-format
+msgid "OAuth tokens and CalDAV passwords are AES-encrypted at rest. If you self-host, you supply your own OAuth credentials and the data never leaves your server."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:291
+#, elixir-autogen, elixir-format
+msgid "Official image"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:91
+#, elixir-autogen, elixir-format
+msgid "On the managed cloud the only Tymeslot charge is a 0.5% platform fee on top of Stripe's standard processing fees. No monthly fees, no per-transaction add-ons."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:189
+#, elixir-autogen, elixir-format
+msgid "On the managed cloud, Tymeslot adds a flat 0.5% platform fee on top of Stripe's standard processing fees — no monthly fees and no per-transaction add-ons beyond that. Because you connect your own Stripe account, payments settle directly to your balance and we never hold the money. Self-host Tymeslot and the platform fee is zero; you pay only Stripe's fees."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:168
+#, elixir-autogen, elixir-format
+msgid "On your booking page"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:31
+#, elixir-autogen, elixir-format
+msgid "One availability, every calendar"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:41
+#, elixir-autogen, elixir-format
+msgid "One click from the dashboard links your own Stripe account. Payouts go straight to your balance — we never sit between you and your money."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:290
+#, elixir-autogen, elixir-format
+msgid "One docker-compose file on any Linux server."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:132
+#, elixir-autogen, elixir-format
+msgid "One docker-compose file on any Linux server. The official image is the same build that powers the managed cloud."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:27
+#, elixir-autogen, elixir-format
+msgid "One script tag"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:83
+#, elixir-autogen, elixir-format
+msgid "One script tag works on WordPress, Webflow, Squarespace, or a plain HTML file. Nothing to build or bundle."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:298
+#, elixir-autogen, elixir-format
+msgid "One-click install with automatic updates, backups, and SSL."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:141
+#, elixir-autogen, elixir-format
+msgid "One-click install with automatic updates, scheduled backups, and SSL handled for you."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:29
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:151
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:149
+#, elixir-autogen, elixir-format
+msgid "One-click refunds"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:40
+#, elixir-autogen, elixir-format
+msgid "Open source"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:27
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:263
+#, elixir-autogen, elixir-format
+msgid "Open-source core"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/security_section.ex:42
+#, elixir-autogen, elixir-format
+msgid "Our own marketing pages use self-hosted, cookieless Umami analytics — never booking pages."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:139
+#, elixir-autogen, elixir-format
+msgid "Outlook / Microsoft 365"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:36
+#, elixir-autogen, elixir-format
+msgid "Padding before and after meetings, configurable per event type."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:19
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:13
+#, elixir-autogen, elixir-format
+msgid "Payments"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:83
+#, elixir-autogen, elixir-format
+msgid "Payments land in your own Stripe balance and pay out to your bank on your Stripe schedule — not ours. We never hold the money."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:75
+#, elixir-autogen, elixir-format
+msgid "Payments settle straight into your own Stripe balance — we never hold your funds. The only charge on top of Stripe's own is a flat 0.5% on the managed cloud, and even that disappears when you self-host."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:163
+#, elixir-autogen, elixir-format
+msgid "Per-embed branding"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:139
+#, elixir-autogen, elixir-format
+msgid "Per-host currency"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:39
+#, elixir-autogen, elixir-format
+msgid "Pick a deployment target"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:39
+#, elixir-autogen, elixir-format
+msgid "Pick an embed style"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:177
+#, elixir-autogen, elixir-format
+msgid "Pin a version, test in staging, and upgrade when you are ready. No forced migrations, no surprise UI changes."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:63
+#, elixir-autogen, elixir-format
+msgid "Platform fee"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:75
+#, elixir-autogen, elixir-format
+msgid "Plenty of tools say \"open source\" and ship a hollow community edition. Tymeslot self-hosts the complete product — and the managed cloud runs the very same code."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:47
+#, elixir-autogen, elixir-format
+msgid "Point it at your database"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:99
+#, elixir-autogen, elixir-format
+msgid "Popular"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:98
+#, elixir-autogen, elixir-format
+msgid "Popup Modal"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:136
+#, elixir-autogen, elixir-format
+msgid "Popup modal"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:156
+#, elixir-autogen, elixir-format
+msgid "Prefer no embed? Share your booking URL in an email signature or social bio."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:105
+#, elixir-autogen, elixir-format
+msgid "Privacy intact"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:121
+#, elixir-autogen, elixir-format
+msgid "Pro"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:119
+#, elixir-autogen, elixir-format
+msgid "Put booking on your own website"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/embed_section.ex:35
+#, elixir-autogen, elixir-format
+msgid "Put your booking calendar wherever your audience is. One script tag, four embed modes, zero configuration required."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:122
+#, elixir-autogen, elixir-format
+msgid "Put your calendars to work"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:174
+#, elixir-autogen, elixir-format
+msgid "Quill and Rhythm — each with a dark mode variant."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:307
+#, elixir-autogen, elixir-format
+msgid "Railway"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:148
+#, elixir-autogen, elixir-format
+msgid "Railway template"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:248
+#, elixir-autogen, elixir-format
+msgid "Rate Limiting"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/security_section.ex:50
+#, elixir-autogen, elixir-format
+msgid "Read our privacy policy →"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/cta_section.ex:25
+#, elixir-autogen, elixir-format
+msgid "Ready to stop the back-and-forth?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/scheduling_section.ex:38
+#, elixir-autogen, elixir-format
+msgid "Real-time calendar sync"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:166
+#, elixir-autogen, elixir-format
+msgid "Real-time conflict detection"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:29
+#, elixir-autogen, elixir-format
+msgid "Real-time two-way sync"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:88
+#, elixir-autogen, elixir-format
+msgid "Recommended"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:65
+#, elixir-autogen, elixir-format
+msgid "Refund in full or part straight from the dashboard, and cancel-with-refund in one step. Reschedules never trigger a second charge."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:78
+#, elixir-autogen, elixir-format
+msgid "Refunds"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:162
+#, elixir-autogen, elixir-format
+msgid "Rescheduling never triggers a second charge."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:201
+#, elixir-autogen, elixir-format
+msgid "Responsive Email Templates"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:99
+#, elixir-autogen, elixir-format
+msgid "Run Tymeslot on your own server and the platform fee is nil — you pay only Stripe's standard fees, end to end."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:122
+#, elixir-autogen, elixir-format
+msgid "Run Tymeslot on your own terms"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/deployment_section.ex:19
+#, elixir-autogen, elixir-format
+msgid "Run Tymeslot wherever suits you — the managed cloud is just one option."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:57
+#, elixir-autogen, elixir-format
+msgid "Run behind your own reverse proxy or let Cloudron handle certificates automatically. Your booking pages live on your domain, not a shared subdomain."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:99
+#, elixir-autogen, elixir-format
+msgid "Run it for one person or a whole team on the same instance. Your costs are your server, not a head-count multiplier."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:14
+#, elixir-autogen, elixir-format
+msgid "Run your own scheduling platform on your own server. Tymeslot is open source — deploy with Docker, Cloudron, or Railway, keep every booking on infrastructure you control. No per-seat fees, no data leaving your servers."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/scheduling_section.ex:17
+#, elixir-autogen, elixir-format
+msgid "Scheduling"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:20
+#, elixir-autogen, elixir-format
+msgid "Scheduling you actually own"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/security_section.ex:13
+#, elixir-autogen, elixir-format
+msgid "Security & Privacy"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:49
+#, elixir-autogen, elixir-format
+msgid "Select which connected calendars block your availability and which one new bookings are written to. Keep personal and work cleanly separated."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:12
+#, elixir-autogen, elixir-format
+msgid "Self-Hosted Scheduling Software"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:19
+#, elixir-autogen, elixir-format
+msgid "Self-Hosting"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:222
+#, elixir-autogen, elixir-format
+msgid "Self-Serve Cancellations"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:99
+#, elixir-autogen, elixir-format
+msgid "Self-host and you connect Google and Microsoft with your own app credentials — your calendar data never passes through us."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:83
+#, elixir-autogen, elixir-format
+msgid "Self-hosted Nextcloud or Radicale users get the same two-way sync as Google users — no plugins, no workarounds."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:73
+#, elixir-autogen, elixir-format
+msgid "Self-hosting that isn't an afterthought"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:47
+#, elixir-autogen, elixir-format
+msgid "Set a price per meeting type"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:57
+#, elixir-autogen, elixir-format
+msgid "Set data-theme, data-primary-color, and data-locale on the embed so it blends into your site and speaks your visitor's language."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:117
+#, elixir-autogen, elixir-format
+msgid "Set up payments with Stripe"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:117
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:142
+#: lib/tymeslot_saas_web/live/features_live/deployment_section.ex:48
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:109
+#, elixir-autogen, elixir-format
+msgid "Setup guide →"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:112
+#, elixir-autogen, elixir-format
+msgid "Share your personal booking URL directly — in email signatures, social media bios, or anywhere you can paste a link. No website required."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:82
+#, elixir-autogen, elixir-format
+msgid "Signed HTTP POST with the full meeting object — works with %{platforms}."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:128
+#, elixir-autogen, elixir-format
+msgid "Slack Notifications"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:60
+#, elixir-autogen, elixir-format
+msgid "Slots inside your lead time are hidden automatically."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:168
+#, elixir-autogen, elixir-format
+msgid "Slots that clash with existing events are hidden before a guest can pick them."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:60
+#, elixir-autogen, elixir-format
+msgid "Start free — no credit card required"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:31
+#, elixir-autogen, elixir-format
+msgid "Stop chasing invoices and absorbing no-shows"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:205
+#, elixir-autogen, elixir-format
+msgid "Stripe Checkout accepts cards, Apple Pay, and Google Pay. You can charge in 13 currencies including EUR, USD, GBP, and CHF, set per host."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:34
+#, elixir-autogen, elixir-format
+msgid "Stripe Checkout, built in"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:166
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:144
+#, elixir-autogen, elixir-format
+msgid "Stripe-hosted receipts"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:159
+#, elixir-autogen, elixir-format
+msgid "Supply your own Google, Microsoft, and OIDC credentials. API keys and tokens are AES-encrypted at rest."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:73
+#, elixir-autogen, elixir-format
+msgid "Sync that respects your stack — and your privacy"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:12
+#, elixir-autogen, elixir-format
+msgid "Take Payment When Clients Book"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:144
+#, elixir-autogen, elixir-format
+msgid "Take a deposit to deter no-shows or the full fee up front — per meeting type."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:269
+#, elixir-autogen, elixir-format
+msgid "Tamper-Proof Forms"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:103
+#, elixir-autogen, elixir-format
+msgid "Telegram Notifications"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:234
+#, elixir-autogen, elixir-format
+msgid "The core is published on GitHub under the GNU AGPLv3 — you can read, run, modify, self-host, and redistribute it freely. The one obligation is the AGPL's copyleft: if you run a modified version as a network service, you make your source changes available under the same licence."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:174
+#, elixir-autogen, elixir-format
+msgid "The embed reports its height back to the host page, so there are no awkward scrollbars."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:107
+#, elixir-autogen, elixir-format
+msgid "The embedded booking flow loads no advertising pixels or trackers, so adding it never compromises your visitors' privacy."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:91
+#, elixir-autogen, elixir-format
+msgid "The iframe measures itself and tells the host page how tall to be, so the widget never ends up in a tiny scrolling box."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:107
+#, elixir-autogen, elixir-format
+msgid "The page where someone picks a slot carries no advertising pixels or third-party scripts. Just scheduling."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:99
+#, elixir-autogen, elixir-format
+msgid "The same account can power a dark widget on one site and a branded light one on another — set by attributes, not global settings."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:97
+#, elixir-autogen, elixir-format
+msgid "Themed per embed"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/booking_experience_section.ex:23
+#, elixir-autogen, elixir-format
+msgid "Themes, colours, and languages on the booking page — professional emails in the inbox."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:284
+#, elixir-autogen, elixir-format
+msgid "This site"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:138
+#, elixir-autogen, elixir-format
+msgid "Trigger a fullscreen booking modal from any button or link, well suited to hero CTAs."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:101
+#, elixir-autogen, elixir-format
+msgid "Trigger a fullscreen booking modal from any button or link. Ideal for hero sections, landing pages, and CTAs."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:49
+#, elixir-autogen, elixir-format
+msgid "Turn any meeting type into a paid booking. Choose a deposit or full payment, set the amount, and pick from 13 supported currencies."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:119
+#, elixir-autogen, elixir-format
+msgid "Turn bookings into paid bookings"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:39
+#, elixir-autogen, elixir-format
+msgid "Turn on payments for any event type and set a price. Attendees pay through Stripe before the slot is confirmed — no payment, no booking."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:14
+#, elixir-autogen, elixir-format
+msgid "Two-way calendar sync that prevents double-bookings. Connect Google Calendar, Outlook, Apple iCloud, or any CalDAV server — Nextcloud, Radicale, Baïkal, mailbox.org. Real-time availability, automatic conflict detection, your tokens encrypted at rest."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:132
+#, elixir-autogen, elixir-format
+msgid "Two-way sync over the Google Calendar API, with Google Meet rooms on request."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:141
+#, elixir-autogen, elixir-format
+msgid "Two-way sync over the Microsoft Graph API, with Teams links generated automatically."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live.ex:149
+#, elixir-autogen, elixir-format
+msgid "Tymeslot Core is open source"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:57
+#, elixir-autogen, elixir-format
+msgid "Tymeslot checks free/busy across every connected calendar the moment a guest opens your booking page — no stale snapshots."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:49
+#, elixir-autogen, elixir-format
+msgid "Tymeslot generates the snippet for you. Paste it into your site — no build step, no framework, no npm."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:22
+#, elixir-autogen, elixir-format
+msgid "Tymeslot is open source. Run the whole platform on your own server with Docker, Cloudron, or Railway — every booking, calendar token, and client detail stays on infrastructure you control."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/scheduling_section.ex:23
+#, elixir-autogen, elixir-format
+msgid "Tymeslot reads availability across all your connected calendars simultaneously — a conflict anywhere blocks the slot everywhere."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:22
+#, elixir-autogen, elixir-format
+msgid "Tymeslot syncs two-way with the calendars you already use. New bookings appear instantly; busy time you block elsewhere disappears from your availability automatically."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/scheduling_section.ex:20
+#, elixir-autogen, elixir-format
+msgid "Under control."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:131
+#, elixir-autogen, elixir-format
+msgid "Up and running in minutes"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:175
+#, elixir-autogen, elixir-format
+msgid "Upgrade on your terms"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:47
+#, elixir-autogen, elixir-format
+msgid "Video Conferencing"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live.ex:169
+#, elixir-autogen, elixir-format
+msgid "View on GitHub"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:77
+#, elixir-autogen, elixir-format
+msgid "Webhooks"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:19
+#, elixir-autogen, elixir-format
+msgid "Website Embed"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:196
+#, elixir-autogen, elixir-format
+msgid "What do I need to run Tymeslot myself?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:193
+#, elixir-autogen, elixir-format
+msgid "What embed types are available?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:211
+#, elixir-autogen, elixir-format
+msgid "What happens with refunds and cancellations?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:232
+#, elixir-autogen, elixir-format
+msgid "What licence is Tymeslot released under?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:174
+#, elixir-autogen, elixir-format
+msgid "What you get"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:196
+#, elixir-autogen, elixir-format
+msgid "Which calendars does Tymeslot support?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:203
+#, elixir-autogen, elixir-format
+msgid "Which payment methods and currencies are supported?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/sections.ex:218
+#, elixir-autogen, elixir-format
+msgid "Why Tymeslot"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:31
+#, elixir-autogen, elixir-format
+msgid "Why host your own scheduling tool?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:212
+#, elixir-autogen, elixir-format
+msgid "Will my guests see what I'm busy with?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:221
+#, elixir-autogen, elixir-format
+msgid "Will the embed break my page layout?"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:29
+#, elixir-autogen, elixir-format
+msgid "Works on any site"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:234
+#, elixir-autogen, elixir-format
+msgid "Yes — two-way sync and real-time conflict detection work the same over CalDAV. Automatic video-room creation depends on the meeting provider you choose rather than the calendar."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:231
+#, elixir-autogen, elixir-format
+msgid "Yes. An embedded booking behaves exactly like one made on your hosted booking page — calendar sync, video links, confirmations, and reminders all apply."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:226
+#, elixir-autogen, elixir-format
+msgid "Yes. Because both run the same code against a standard PostgreSQL database, your data is portable. There is no proprietary lock-in keeping you on one or the other."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:207
+#, elixir-autogen, elixir-format
+msgid "Yes. Because it is a standard script tag, it works on any site builder that lets you paste HTML or an embed/code block — including WordPress, Webflow, Squarespace, and hand-written HTML."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:221
+#, elixir-autogen, elixir-format
+msgid "Yes. Connect your Stripe account on your own instance and collect payments end to end. As with everything self-hosted, the data stays on your server."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:190
+#, elixir-autogen, elixir-format
+msgid "Yes. New bookings are written to your connected calendar immediately, and events you create or block elsewhere are read back and removed from your available slots. Your booking page always reflects your true availability."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:197
+#, elixir-autogen, elixir-format
+msgid "Yes. Per meeting type you can require a deposit or the full fee. A small deposit is an effective way to deter no-shows for discovery calls, while full payment up front suits paid sessions and packages."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:215
+#, elixir-autogen, elixir-format
+msgid "Yes. Set data-theme, data-primary-color, and data-locale on the embed to control the booking theme, accent colour, and language per page — so a single account can serve differently styled widgets on different sites."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:190
+#, elixir-autogen, elixir-format
+msgid "Yes. The core scheduling product is open source and free to run on your own infrastructure. Your only costs are the server and database you provide. The managed cloud at tymeslot.app exists for people who would rather not run it themselves."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:206
+#, elixir-autogen, elixir-format
+msgid "Yes. You can connect multiple calendars, choose which ones block your availability, and pick which calendar new bookings are written to. This keeps personal and work commitments cleanly separated while still preventing conflicts."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:213
+#, elixir-autogen, elixir-format
+msgid "You can issue full or partial refunds directly from the dashboard, and cancel a paid booking with a refund in a single step. Rescheduling an existing paid booking never triggers a second charge."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:181
+#, elixir-autogen, elixir-format
+msgid "You connect your own Stripe account, then enable payment on any meeting type. Guests pay through Stripe Checkout at the moment they book, and the slot is confirmed once the payment clears. Funds settle straight to your Stripe balance."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:214
+#, elixir-autogen, elixir-format
+msgid "You control them. Pin a specific image version, test upgrades in staging, and roll forward when you are ready. Cloudron can apply updates automatically if you prefer hands-off operation."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/embed_section.ex:31
+#, elixir-autogen, elixir-format
+msgid "Your booking page."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/booking_experience_section.ex:19
+#, elixir-autogen, elixir-format
+msgid "Your brand."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/scheduling_section.ex:19
+#, elixir-autogen, elixir-format
+msgid "Your calendar."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/deployment_section.ex:16
+#, elixir-autogen, elixir-format
+msgid "Your choice."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:89
+#, elixir-autogen, elixir-format
+msgid "Your data never leaves"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/deployment_section.ex:15
+#, elixir-autogen, elixir-format
+msgid "Your infrastructure."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:73
+#, elixir-autogen, elixir-format
+msgid "Your money, your Stripe account"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:157
+#, elixir-autogen, elixir-format
+msgid "Your own OAuth & secrets"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:97
+#, elixir-autogen, elixir-format
+msgid "Your own OAuth credentials"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/self_hosting.ex:166
+#, elixir-autogen, elixir-format
+msgid "Your own database"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:31
+#, elixir-autogen, elixir-format
+msgid "Your workflow."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:254
+#, elixir-autogen, elixir-format
+msgid "Zero Tracking"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:97
+#, elixir-autogen, elixir-format
+msgid "Zero platform fee self-hosted"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:21
+#, elixir-autogen, elixir-format
+msgid "can do."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:165
+#, elixir-autogen, elixir-format
+msgid "data-theme, data-primary-color, and data-locale let each embed match its host page."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:16
+#, elixir-autogen, elixir-format
+msgid "someone books."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:280
+#, elixir-autogen, elixir-format
+msgid "tymeslot.app — we handle uptime, backups, and updates. Core is always free."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:17
+#, elixir-autogen, elixir-format
+msgid "you already use."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/feature_data.ex:81
+#, elixir-autogen, elixir-format
+msgid "your own backend"
+msgstr ""
