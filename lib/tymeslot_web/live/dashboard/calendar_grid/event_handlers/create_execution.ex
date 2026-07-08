@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   @moduledoc "Event creation save/result handlers for the calendar grid (presentation layer)."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
@@ -31,7 +33,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   defp handle_save_event_with(creating, socket) do
     case EditWorkflow.assert_owns_integration(socket, creating.integration_id) do
       {:error, :unauthorized} ->
-        send(self(), {:flash, {:error, "Invalid calendar selected"}})
+        send(
+          self(),
+          {:flash, {:error, dgettext("dashboard_calendar_events", "Invalid calendar selected")}}
+        )
+
         {:noreply, socket}
 
       :ok ->
@@ -40,7 +46,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
           save_resolved(creating, start_date, end_date, socket)
         else
           {:error, _reason} ->
-            send(self(), {:flash, {:error, "Invalid date"}})
+            send(
+              self(),
+              {:flash, {:error, dgettext("dashboard_calendar_events", "Invalid date")}}
+            )
+
             {:noreply, socket}
         end
     end
@@ -56,7 +66,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   # written as `end_date = start_date + 1`.
   defp save_resolved(%{all_day: true} = creating, start_date, end_date, socket) do
     if Date.compare(end_date, start_date) == :lt do
-      send(self(), {:flash, {:error, "End date must not be before start date"}})
+      send(
+        self(),
+        {:flash,
+         {:error, dgettext("dashboard_calendar_events", "End date must not be before start date")}}
+      )
+
       {:noreply, socket}
     else
       send(
@@ -83,7 +98,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
          {:ok, end_at} <-
            Shared.to_utc(end_date, creating.end_hour, creating.end_minute, tz) do
       if DateTime.compare(end_at, start_at) != :gt do
-        send(self(), {:flash, {:error, "End time must be after start time"}})
+        send(
+          self(),
+          {:flash,
+           {:error, dgettext("dashboard_calendar_events", "End time must be after start time")}}
+        )
+
         {:noreply, socket}
       else
         send(
@@ -102,7 +122,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       end
     else
       {:error, _reason} ->
-        send(self(), {:flash, {:error, "Invalid time"}})
+        send(self(), {:flash, {:error, dgettext("dashboard_calendar_events", "Invalid time")}})
         {:noreply, socket}
     end
   end
@@ -179,8 +199,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
     flash_message =
       case queue_result do
-        :ok -> "Create failed — queued to retry on next sync"
-        :ignored -> "Failed to create event"
+        :ok ->
+          dgettext("dashboard_calendar_events", "Create failed — queued to retry on next sync")
+
+        :ignored ->
+          dgettext("dashboard_calendar_events", "Failed to create event")
       end
 
     {:noreply, put_flash(socket, :error, flash_message)}
@@ -193,7 +216,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       action: :event_create_failed
     )
 
-    {:noreply, put_flash(socket, :error, "Failed to create event")}
+    {:noreply,
+     put_flash(socket, :error, dgettext("dashboard_calendar_events", "Failed to create event"))}
   end
 
   # All-day events store `start_date`/`end_date` (the cache row leaves
@@ -216,6 +240,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
   defp maybe_flash_reauth(socket, _other), do: socket
 
-  defp flash_for_create([]), do: "Event created."
-  defp flash_for_create(_attendees), do: "Event created. Attendees have been invited."
+  defp flash_for_create([]), do: dgettext("dashboard_calendar_events", "Event created.")
+
+  defp flash_for_create(_attendees),
+    do: dgettext("dashboard_calendar_events", "Event created. Attendees have been invited.")
 end

@@ -6,6 +6,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   `{:noreply, socket}` so the caller can delegate directly.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
@@ -59,7 +61,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @spec handle_calendar_sync_flash(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_calendar_sync_flash(socket) do
-    {:noreply, put_flash(socket, :info, "Calendars refreshed")}
+    {:noreply,
+     put_flash(socket, :info, dgettext("dashboard_calendar_events", "Calendars refreshed"))}
   end
 
   @doc "Tells the calendar grid to refresh its event data."
@@ -88,7 +91,12 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       original_event: payload[:original_event]
     )
 
-    {:noreply, put_flash(socket, :error, "Failed to update event — changes reverted")}
+    {:noreply,
+     put_flash(
+       socket,
+       :error,
+       dgettext("dashboard_calendar_events", "Failed to update event — changes reverted")
+     )}
   end
 
   @doc "Handles the result of an event move — updates the grid or reverts on failure."
@@ -114,7 +122,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       original_event: payload[:original_event]
     )
 
-    {:noreply, put_flash(socket, :error, "Failed to move event")}
+    {:noreply,
+     put_flash(socket, :error, dgettext("dashboard_calendar_events", "Failed to move event"))}
   end
 
   @doc "Spawns a supervised task to create a calendar event."
@@ -161,7 +170,12 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       action: :ad_hoc_meeting_created
     )
 
-    {:noreply, put_flash(socket, :info, "Meeting created and invitation sent")}
+    {:noreply,
+     put_flash(
+       socket,
+       :info,
+       dgettext("dashboard_calendar_events", "Meeting created and invitation sent")
+     )}
   end
 
   def handle_create_ad_hoc_meeting_result({:error, reason}, socket) do
@@ -180,7 +194,12 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_video_sync_result(_event_id, {:error, _reason}, socket) do
-    {:noreply, put_flash(socket, :error, "Failed to provision video room — link not updated")}
+    {:noreply,
+     put_flash(
+       socket,
+       :error,
+       dgettext("dashboard_calendar_events", "Failed to provision video room — link not updated")
+     )}
   end
 
   def handle_video_sync_result(event_id, {:ok, video_link}, socket) do

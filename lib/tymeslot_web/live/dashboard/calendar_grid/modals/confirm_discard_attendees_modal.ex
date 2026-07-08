@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDiscardAttendeesModal
   @moduledoc "Confirmation modal for discarding unsent attendee invitations."
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
 
@@ -17,14 +18,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDiscardAttendeesModal
       on_cancel={JS.push("cancel_discard_attendees", target: @myself)}
       size={:small}
     >
-      <:header>Unsent invitations</:header>
+      <:header>{dgettext("dashboard_calendar_events", "Unsent invitations")}</:header>
 
       <p class="text-token-sm text-tymeslot-500">
-        <%= if @count == 1 do %>
-          1 attendee hasn't been invited yet. Discard?
-        <% else %>
-          {@count} attendees haven't been invited yet. Discard?
-        <% end %>
+        {dngettext(
+          "dashboard_calendar_events",
+          "%{count} attendee hasn't been invited yet. Discard?",
+          "%{count} attendees haven't been invited yet. Discard?",
+          @count
+        )}
       </p>
 
       <:footer>
@@ -34,13 +36,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDiscardAttendeesModal
             phx-click="discard_pending_attendees"
             phx-target={@myself}
           >
-            Discard
+            {dgettext("dashboard_calendar_events", "Discard")}
           </.action_button>
           <.action_button
             variant={:secondary}
             phx-click={JS.push("cancel_discard_attendees", target: @myself)}
           >
-            Go back
+            {dgettext("dashboard_calendar_events", "Go back")}
           </.action_button>
         </div>
       </:footer>

@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal do
   @moduledoc "Confirmation modal for deleting a calendar event."
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
 
@@ -19,15 +20,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal do
       on_cancel={JS.push("cancel_delete_event", target: @myself)}
       size={:small}
     >
-      <:header>Delete event</:header>
+      <:header>{dgettext("dashboard_calendar_events", "Delete event")}</:header>
 
       <p class="text-token-sm text-tymeslot-500">
-        Are you sure you want to delete
-        <span class="font-medium text-tymeslot-700"><%= @event.summary || "(No title)" %></span>?
-        This will also remove it from your calendar provider.
+        {dgettext("dashboard_calendar_events", "Are you sure you want to delete")}
+        <span class="font-medium text-tymeslot-700"><%= @event.summary || dgettext("dashboard_calendar_events", "(No title)") %></span>?
+        {dgettext("dashboard_calendar_events", "This will also remove it from your calendar provider.")}
       </p>
       <p :if={@linked_to_booking} class="mt-2 text-token-sm text-amber-600">
-        This event is linked to a booking. The attendee will be notified of the cancellation.
+        {dgettext("dashboard_calendar_events", "This event is linked to a booking. The attendee will be notified of the cancellation.")}
       </p>
 
       <:footer>
@@ -35,18 +36,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal do
           <.loading_button
             variant={:danger}
             loading={@deleting}
-            loading_text="Deleting..."
+            loading_text={dgettext("dashboard_calendar_events", "Deleting...")}
             phx-click="confirm_delete_event"
             phx-target={@myself}
           >
-            Delete
+            {dgettext("dashboard_calendar_events", "Delete")}
           </.loading_button>
           <.action_button
             variant={:secondary}
             disabled={@deleting}
             phx-click={JS.push("cancel_delete_event", target: @myself)}
           >
-            Cancel
+            {dgettext("dashboard_calendar_events", "Cancel")}
           </.action_button>
         </div>
       </:footer>

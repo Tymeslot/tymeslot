@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   @moduledoc "Inline edit event handlers for CalendarGridComponent."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Meetings.AttendeeNotifications
@@ -324,11 +326,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
           {:noreply, socket}
         else
           {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to move this event"}})
+            send(
+              self(),
+              {:flash,
+               {:error,
+                dgettext(
+                  "dashboard_calendar_events",
+                  "You don't have permission to move this event"
+                )}}
+            )
+
             {:noreply, socket}
 
           {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many moves. Please wait a moment."}})
+            send(
+              self(),
+              {:flash,
+               {:warning,
+                dgettext("dashboard_calendar_events", "Too many moves. Please wait a moment.")}}
+            )
+
             {:noreply, socket}
         end
 
@@ -376,8 +393,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
           {:error, reason} when is_binary(reason) ->
             message =
               if String.starts_with?(reason, "Input exceeds"),
-                do: "Input too long",
-                else: "Input contains invalid characters"
+                do: dgettext("dashboard_calendar_events", "Input too long"),
+                else: dgettext("dashboard_calendar_events", "Input contains invalid characters")
 
             send(self(), {:flash, {:error, message}})
             {:noreply, socket}
@@ -443,7 +460,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         Updates.update_colour_async(s, original_event, new_colour)
       end)
 
-    send(self(), {:flash, {:info, "Changes saved."}})
+    send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
     result
   end
 
@@ -455,7 +472,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         Updates.update_reminders_async(s, original_event, new_reminders)
       end)
 
-    send(self(), {:flash, {:info, "Changes saved."}})
+    send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
     result
   end
 
@@ -491,7 +508,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       {:noreply, assign(socket, :recurrence_prompt, prompt)}
     else
       socket = Updates.update_recurrence_async(socket, original_event, new_rule)
-      send(self(), {:flash, {:info, "Changes saved."}})
+      send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
       {:noreply, socket}
     end
   end
@@ -502,7 +519,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         Updates.toggle_all_day_async(s, original_event, optimistic_event)
       end)
 
-    send(self(), {:flash, {:info, "Changes saved."}})
+    send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
     result
   end
 
@@ -521,7 +538,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   end
 
   defp apply_time_change(socket, event, _new_start, _raw_end) when event.all_day == true do
-    send(self(), {:flash, {:info, "Time editing is not available for all-day events."}})
+    send(
+      self(),
+      {:flash,
+       {:info,
+        dgettext("dashboard_calendar_events", "Time editing is not available for all-day events.")}}
+    )
+
     {:noreply, socket}
   end
 
@@ -557,11 +580,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
     case EditWorkflow.notify_event_updated(original_event, updated_event, attendees) do
       {:ok, :no_changes} ->
-        send(self(), {:flash, {:info, "Changes saved."}})
+        send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
         socket
 
       {:ok, :already_pending} ->
-        send(self(), {:flash, {:info, "Changes saved. Attendees will be notified shortly."}})
+        send(
+          self(),
+          {:flash,
+           {:info,
+            dgettext(
+              "dashboard_calendar_events",
+              "Changes saved. Attendees will be notified shortly."
+            )}}
+        )
+
         assign(socket, :pending_notification, true)
 
       {:needs_confirmation, summary} ->

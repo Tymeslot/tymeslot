@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
   @moduledoc "Recurrence scope confirmation handlers for the calendar grid."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
@@ -31,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
         recurrence_scope: scope
       )
 
-    send(self(), {:flash, {:info, "Changes saved."}})
+    send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
     socket
   end
 

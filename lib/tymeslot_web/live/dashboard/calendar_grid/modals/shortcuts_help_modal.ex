@@ -2,37 +2,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ShortcutsHelpModal do
   @moduledoc "Keyboard shortcuts help overlay for the calendar grid."
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
 
   attr :myself, :any, required: true
 
-  @shortcut_groups [
-    {"Navigation",
-     [
-       {["→", "n"], "Next period"},
-       {["←", "p"], "Previous period"},
-       {["t"], "Jump to today"}
-     ]},
-    {"Views",
-     [
-       {["1", "d"], "Day view"},
-       {["2", "w"], "Week view"},
-       {["3", "m"], "Month view"},
-       {["4"], "Agenda view"}
-     ]},
-    {"Actions",
-     [
-       {["c"], "Create event"},
-       {["/"], "Focus search"},
-       {["?"], "Toggle this help"},
-       {["Esc"], "Close dialogs"}
-     ]}
-  ]
-
   @spec shortcuts_help_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def shortcuts_help_modal(assigns) do
-    assigns = assign(assigns, :groups, @shortcut_groups)
+    assigns = assign(assigns, :groups, shortcut_groups())
 
     ~H"""
     <.modal
@@ -41,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ShortcutsHelpModal do
       on_cancel={JS.push("toggle_shortcuts_help", target: @myself)}
       size={:medium}
     >
-      <:header>Keyboard shortcuts</:header>
+      <:header>{dgettext("dashboard_calendar_events", "Keyboard shortcuts")}</:header>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
         <div :for={{title, shortcuts} <- @groups}>
@@ -63,5 +41,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ShortcutsHelpModal do
       </div>
     </.modal>
     """
+  end
+
+  defp shortcut_groups do
+    [
+      {dgettext("dashboard_calendar_events", "Navigation"),
+       [
+         {["→", "n"], dgettext("dashboard_calendar_events", "Next period")},
+         {["←", "p"], dgettext("dashboard_calendar_events", "Previous period")},
+         {["t"], dgettext("dashboard_calendar_events", "Jump to today")}
+       ]},
+      {dgettext("dashboard_calendar_events", "Views"),
+       [
+         {["1", "d"], dgettext("dashboard_calendar_events", "Day view")},
+         {["2", "w"], dgettext("dashboard_calendar_events", "Week view")},
+         {["3", "m"], dgettext("dashboard_calendar_events", "Month view")},
+         {["4"], dgettext("dashboard_calendar_events", "Agenda view")}
+       ]},
+      {dgettext("dashboard_calendar_events", "Actions"),
+       [
+         {["c"], dgettext("dashboard_calendar_events", "Create event")},
+         {["/"], dgettext("dashboard_calendar_events", "Focus search")},
+         {["?"], dgettext("dashboard_calendar_events", "Toggle this help")},
+         {["Esc"], dgettext("dashboard_calendar_events", "Close dialogs")}
+       ]}
+    ]
   end
 end

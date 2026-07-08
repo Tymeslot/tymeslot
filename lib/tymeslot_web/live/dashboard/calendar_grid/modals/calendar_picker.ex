@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
   @moduledoc "Shared calendar picker component used by calendar grid modals."
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias TymeslotWeb.Components.Icons.ProviderIcon
@@ -49,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
           >
             <div :if={cal["color"] || cal[:color]} class="w-2 h-2 rounded-full shrink-0" style={"background-color: #{cal["color"] || cal[:color]}"}></div>
             <span class="truncate max-w-[10rem]"><%= cal_name.(cal) %></span>
-            <span :if={cal["primary"] || cal[:primary]} class="text-token-xs font-bold bg-tymeslot-200 px-1 py-0.5 rounded text-tymeslot-500 uppercase">Primary</span>
+            <span :if={cal["primary"] || cal[:primary]} class="text-token-xs font-bold bg-tymeslot-200 px-1 py-0.5 rounded text-tymeslot-500 uppercase">{dgettext("dashboard_calendar_events", "Primary")}</span>
           </button>
         </div>
         <%!-- Fallback: integration with no calendar list (single calendar) --%>
@@ -61,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
             phx-target={@myself}
             class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_active_integration, do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
           >
-            <span>Default calendar</span>
+            <span>{dgettext("dashboard_calendar_events", "Default calendar")}</span>
           </button>
         </div>
       </div>

@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -48,10 +49,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
       target={@myself}
       position={:bottom_start}
       role="dialog"
-      panel_label="Pick a date"
+      panel_label={dgettext("dashboard_calendar_events", "Pick a date")}
       trigger_class="flex items-center gap-1 ml-1 md:ml-2 min-w-0 rounded px-1.5 py-1 hover:bg-tymeslot-100 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
       class="bg-white border border-tymeslot-200 rounded-xl shadow-lg p-3 w-72"
-      aria-label="Pick a date"
+      aria-label={dgettext("dashboard_calendar_events", "Pick a date")}
     >
       <:trigger>
         <span
@@ -63,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
         <span
           :if={@show_week_numbers and @view in [:week, :three_day, :day]}
           class="ml-1 text-token-xs font-normal text-tymeslot-400"
-        >W{Helpers.week_number(@date)}</span>
+        >{dgettext("dashboard_calendar_events", "W%{week}", week: Helpers.week_number(@date))}</span>
         <.icon name="hero-chevron-down" class="w-3 h-3 text-tymeslot-400 shrink-0" />
       </:trigger>
       <:panel>
@@ -74,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
             phx-click="mini_month_prev"
             phx-target={@myself}
             class="min-w-[32px] min-h-[32px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label="Previous month"
+            aria-label={dgettext("dashboard_calendar_events", "Previous month")}
           >
             <.icon name="hero-chevron-left" class="w-4 h-4" />
           </button>
@@ -86,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
             phx-click="mini_month_next"
             phx-target={@myself}
             class="min-w-[32px] min-h-[32px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label="Next month"
+            aria-label={dgettext("dashboard_calendar_events", "Next month")}
           >
             <.icon name="hero-chevron-right" class="w-4 h-4" />
           </button>
@@ -98,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
           style={grid_style(@show_week_numbers)}
         >
           <div :if={@show_week_numbers} class="text-center text-token-2xs font-medium text-tymeslot-400">
-            Wk
+            {dgettext("dashboard_calendar_events", "Wk")}
           </div>
           <div
             :for={day_name <- Helpers.day_name_headers(assigns)}

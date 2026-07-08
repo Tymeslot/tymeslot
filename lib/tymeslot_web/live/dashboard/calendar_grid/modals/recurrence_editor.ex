@@ -20,26 +20,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
-
-  @weekdays [
-    {:mo, "Mon"},
-    {:tu, "Tue"},
-    {:we, "Wed"},
-    {:th, "Thu"},
-    {:fr, "Fri"},
-    {:sa, "Sat"},
-    {:su, "Sun"}
-  ]
-
-  @freq_options [
-    {"", "Does not repeat"},
-    {"daily", "Daily"},
-    {"weekly", "Weekly"},
-    {"monthly", "Monthly"},
-    {"yearly", "Yearly"}
-  ]
 
   attr :recurrence_rule, :string, default: nil
   attr :myself, :any, required: true
@@ -58,15 +41,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
       |> assign(:end_type, end_type(parsed))
       |> assign(:count, parsed[:count] || 10)
       |> assign(:until, until_value(parsed[:until]))
-      |> assign(:weekdays, @weekdays)
-      |> assign(:freq_options, @freq_options)
+      |> assign(:weekdays, weekdays())
+      |> assign(:freq_options, freq_options())
       |> assign(:summary, summary(parsed))
 
     ~H"""
     <div class="flex items-start gap-3">
       <.icon name="hero-arrow-path" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
       <div class="flex-1">
-        <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">Repeat</p>
+        <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">{dgettext("dashboard_calendar_events", "Repeat")}</p>
 
         <form id={"recurrence-editor-form-#{@change_event}"} phx-change={@change_event} phx-target={@myself} class="space-y-2">
           <select
@@ -80,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
 
           <div :if={@freq != nil} class="space-y-2 pl-0.5">
             <div class="flex items-center gap-2">
-              <label class="text-token-xs text-tymeslot-600">Every</label>
+              <label class="text-token-xs text-tymeslot-600">{dgettext("dashboard_calendar_events", "Every")}</label>
               <input
                 type="number"
                 name="interval"
@@ -119,9 +102,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
                 name="end_type"
                 class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
               >
-                <option value="never" selected={@end_type == "never"}>Never ends</option>
-                <option value="count" selected={@end_type == "count"}>After</option>
-                <option value="until" selected={@end_type == "until"}>On date</option>
+                <option value="never" selected={@end_type == "never"}>{dgettext("dashboard_calendar_events", "Never ends")}</option>
+                <option value="count" selected={@end_type == "count"}>{dgettext("dashboard_calendar_events", "After")}</option>
+                <option value="until" selected={@end_type == "until"}>{dgettext("dashboard_calendar_events", "On date")}</option>
               </select>
 
               <div :if={@end_type == "count"} class="flex items-center gap-1.5">
@@ -133,7 +116,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
                   value={@count}
                   class="w-16 rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
                 />
-                <span class="text-token-xs text-tymeslot-600">occurrences</span>
+                <span class="text-token-xs text-tymeslot-600">{dngettext("dashboard_calendar_events", "occurrence", "occurrences", @count)}</span>
               </div>
 
               <input
@@ -172,36 +155,76 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
     interval = Map.get(parsed, :interval, 1)
 
     if interval > 1 do
-      "Repeats every #{interval} #{plural_unit(freq, interval)}"
+      interval_phrase(freq, interval)
     else
-      "Repeats #{freq_adverb(freq)}"
+      freq_adverb_phrase(freq)
     end
   end
 
-  defp freq_adverb(:daily), do: "daily"
-  defp freq_adverb(:weekly), do: "weekly"
-  defp freq_adverb(:monthly), do: "monthly"
-  defp freq_adverb(:yearly), do: "yearly"
+  defp interval_phrase(:daily, interval),
+    do:
+      dngettext(
+        "dashboard_calendar_events",
+        "Repeats every %{count} day",
+        "Repeats every %{count} days",
+        interval
+      )
 
-  defp plural_unit(:daily, _n), do: "days"
-  defp plural_unit(:weekly, _n), do: "weeks"
-  defp plural_unit(:monthly, _n), do: "months"
-  defp plural_unit(:yearly, _n), do: "years"
+  defp interval_phrase(:weekly, interval),
+    do:
+      dngettext(
+        "dashboard_calendar_events",
+        "Repeats every %{count} week",
+        "Repeats every %{count} weeks",
+        interval
+      )
+
+  defp interval_phrase(:monthly, interval),
+    do:
+      dngettext(
+        "dashboard_calendar_events",
+        "Repeats every %{count} month",
+        "Repeats every %{count} months",
+        interval
+      )
+
+  defp interval_phrase(:yearly, interval),
+    do:
+      dngettext(
+        "dashboard_calendar_events",
+        "Repeats every %{count} year",
+        "Repeats every %{count} years",
+        interval
+      )
+
+  defp freq_adverb_phrase(:daily), do: dgettext("dashboard_calendar_events", "Repeats daily")
+  defp freq_adverb_phrase(:weekly), do: dgettext("dashboard_calendar_events", "Repeats weekly")
+  defp freq_adverb_phrase(:monthly), do: dgettext("dashboard_calendar_events", "Repeats monthly")
+  defp freq_adverb_phrase(:yearly), do: dgettext("dashboard_calendar_events", "Repeats yearly")
 
   defp by_day_phrase(%{freq: :weekly, by_day: [_first | _rest] = days}) do
-    "on " <> Enum.map_join(days, ", ", &weekday_label/1)
+    days_label = Enum.map_join(days, ", ", &weekday_label/1)
+    dgettext("dashboard_calendar_events", "on %{days}", days: days_label)
   end
 
   defp by_day_phrase(_parsed), do: nil
 
-  defp end_phrase(%{count: count}) when is_integer(count), do: "for #{count} occurrences"
+  defp end_phrase(%{count: count}) when is_integer(count),
+    do:
+      dngettext(
+        "dashboard_calendar_events",
+        "for %{count} occurrence",
+        "for %{count} occurrences",
+        count
+      )
 
-  defp end_phrase(%{until: %Date{} = until}), do: "until #{Date.to_iso8601(until)}"
+  defp end_phrase(%{until: %Date{} = until}),
+    do: dgettext("dashboard_calendar_events", "until %{date}", date: Date.to_iso8601(until))
 
   defp end_phrase(_parsed), do: nil
 
   defp weekday_label(day) do
-    {_atom, label} = Enum.find(@weekdays, fn {atom, _label} -> atom == day end)
+    {_atom, label} = Enum.find(weekdays(), fn {atom, _label} -> atom == day end)
     label
   end
 
@@ -212,9 +235,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
   defp until_value(%Date{} = date), do: Date.to_iso8601(date)
   defp until_value(_other), do: ""
 
-  defp interval_unit(:daily), do: "day(s)"
-  defp interval_unit(:weekly), do: "week(s)"
-  defp interval_unit(:monthly), do: "month(s)"
-  defp interval_unit(:yearly), do: "year(s)"
+  defp interval_unit(:daily), do: dgettext("dashboard_calendar_events", "day(s)")
+  defp interval_unit(:weekly), do: dgettext("dashboard_calendar_events", "week(s)")
+  defp interval_unit(:monthly), do: dgettext("dashboard_calendar_events", "month(s)")
+  defp interval_unit(:yearly), do: dgettext("dashboard_calendar_events", "year(s)")
   defp interval_unit(_other), do: ""
+
+  defp weekdays do
+    [
+      {:mo, dgettext("dashboard_calendar_events", "Mon")},
+      {:tu, dgettext("dashboard_calendar_events", "Tue")},
+      {:we, dgettext("dashboard_calendar_events", "Wed")},
+      {:th, dgettext("dashboard_calendar_events", "Thu")},
+      {:fr, dgettext("dashboard_calendar_events", "Fri")},
+      {:sa, dgettext("dashboard_calendar_events", "Sat")},
+      {:su, dgettext("dashboard_calendar_events", "Sun")}
+    ]
+  end
+
+  defp freq_options do
+    [
+      {"", dgettext("dashboard_calendar_events", "Does not repeat")},
+      {"daily", dgettext("dashboard_calendar_events", "Daily")},
+      {"weekly", dgettext("dashboard_calendar_events", "Weekly")},
+      {"monthly", dgettext("dashboard_calendar_events", "Monthly")},
+      {"yearly", dgettext("dashboard_calendar_events", "Yearly")}
+    ]
+  end
 end

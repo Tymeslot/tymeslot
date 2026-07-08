@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   @moduledoc "Create event modal for the calendar grid."
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.Icons.ProviderIcon
@@ -29,15 +30,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       on_cancel={JS.push("close_create_form", target: @myself)}
       size={:medium}
     >
-      <:header>New Event</:header>
+      <:header>{dgettext("dashboard_calendar_events", "New Event")}</:header>
 
       <div class="mb-3">
         <.input
           type="text"
           name="title"
           value={@creating_event.title}
-          label="Title"
-          placeholder="Add title"
+          label={dgettext("dashboard_calendar_events", "Title")}
+          placeholder={dgettext("dashboard_calendar_events", "Add title")}
           id="create-event-title"
           phx-mounted={JS.focus()}
           phx-blur="update_create_title"
@@ -46,7 +47,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <div class="mb-3 flex items-center justify-between">
-        <p class="text-token-sm font-medium text-tymeslot-700">All day</p>
+        <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "All day")}</p>
         <StatusSwitch.status_switch
           id="create-event-all-day"
           checked={@creating_event[:all_day] || false}
@@ -124,7 +125,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       <%!-- Attendee section --%>
       <div class="space-y-3 border-t border-tymeslot-200 pt-3 mt-3">
         <p class="text-token-xs font-medium text-tymeslot-400">
-          Invite attendees (optional)
+          {dgettext("dashboard_calendar_events", "Invite attendees (optional)")}
         </p>
         <div>
           <div
@@ -142,7 +143,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
                 phx-value-email={email}
                 phx-target={@myself}
                 class="w-4 h-4 rounded-full hover:bg-amber-200 flex items-center justify-center transition-colors"
-                aria-label={"Remove #{email}"}
+                aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
               >
                 <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
@@ -165,16 +166,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               type="submit"
               class="px-3 py-1.5 rounded-md border border-tymeslot-300 text-token-xs text-tymeslot-600 hover:bg-tymeslot-50 transition-colors"
             >
-              Add
+              {dgettext("dashboard_calendar_events", "Add")}
             </button>
           </form>
           <p class="text-token-xs text-tymeslot-400 mt-1">
-            Invitations will be sent when you create the event.
+            {dgettext("dashboard_calendar_events", "Invitations will be sent when you create the event.")}
           </p>
         </div>
         <div :if={(@creating_event[:attendees] || []) != [] and @video_integrations != []}>
           <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
-            Video
+            {dgettext("dashboard_calendar_events", "Video")}
           </p>
           <div class="flex flex-wrap gap-1.5">
             <button
@@ -184,7 +185,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               phx-target={@myself}
               class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_nil(@creating_event[:video_integration_id]), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
             >
-              None
+              {dgettext("dashboard_calendar_events", "None")}
             </button>
             <button
               :for={vi <- @video_integrations}
@@ -206,18 +207,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           <.loading_button
             variant={:primary}
             loading={@saving}
-            loading_text="Creating..."
+            loading_text={dgettext("dashboard_calendar_events", "Creating...")}
             phx-click="save_event"
             phx-target={@myself}
           >
-            Create
+            {dgettext("dashboard_calendar_events", "Create")}
           </.loading_button>
           <.action_button
             variant={:secondary}
             disabled={@saving}
             phx-click={JS.push("close_create_form", target: @myself)}
           >
-            Cancel
+            {dgettext("dashboard_calendar_events", "Cancel")}
           </.action_button>
         </div>
       </:footer>

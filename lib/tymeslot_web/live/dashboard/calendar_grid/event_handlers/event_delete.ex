@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   @moduledoc "Event deletion handlers for the calendar grid."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
@@ -38,7 +40,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
             {:noreply, socket}
 
           {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to delete this event"}})
+            send(
+              self(),
+              {:flash,
+               {:error,
+                dgettext(
+                  "dashboard_calendar_events",
+                  "You don't have permission to delete this event"
+                )}}
+            )
+
             {:noreply, socket}
         end
     end
@@ -57,7 +68,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
             proceed_with_delete(socket, event)
 
           {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+            send(
+              self(),
+              {:flash,
+               {:warning,
+                dgettext("dashboard_calendar_events", "Too many edits. Please wait a moment.")}}
+            )
+
             {:noreply, assign(socket, :confirm_delete_event, nil)}
         end
     end
@@ -147,13 +164,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
     socket =
       case result do
         %{reconcile_result: :ok, meeting_attendee_email: _email_ok} ->
-          put_flash(socket, :info, "Event and linked meeting cancelled.")
+          put_flash(
+            socket,
+            :info,
+            dgettext("dashboard_calendar_events", "Event and linked meeting cancelled.")
+          )
 
         %{reconcile_result: {:error, _reason}, meeting_attendee_email: _email_err} ->
           put_flash(
             socket,
             :error,
-            "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+            dgettext(
+              "dashboard_calendar_events",
+              "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+            )
           )
 
         _no_meeting ->
@@ -176,8 +200,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
 
     flash_message =
       case queue_result do
-        :ok -> "Delete failed — queued to retry on next sync"
-        :ignored -> "Failed to delete event"
+        :ok ->
+          dgettext("dashboard_calendar_events", "Delete failed — queued to retry on next sync")
+
+        :ignored ->
+          dgettext("dashboard_calendar_events", "Failed to delete event")
       end
 
     {:noreply, put_flash(socket, :error, flash_message)}
@@ -190,11 +217,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
       action: :event_delete_failed
     )
 
-    {:noreply, put_flash(socket, :error, "Failed to delete event")}
+    {:noreply,
+     put_flash(socket, :error, dgettext("dashboard_calendar_events", "Failed to delete event"))}
   end
 
-  defp delete_success_flash(true), do: "Event deleted. Attendees have been notified."
-  defp delete_success_flash(false), do: "Event deleted."
+  defp delete_success_flash(true),
+    do: dgettext("dashboard_calendar_events", "Event deleted. Attendees have been notified.")
+
+  defp delete_success_flash(false), do: dgettext("dashboard_calendar_events", "Event deleted.")
 
   @spec handle_cancel_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

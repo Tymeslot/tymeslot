@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
   @moduledoc "Calendar visibility and refresh event handlers for CalendarGridComponent."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
@@ -58,7 +60,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
         {:noreply, do_refresh(socket, user_id)}
 
       {:error, :rate_limited, _message} ->
-        {:noreply, Flash.put_flash(socket, :warning, "Too many refreshes. Please wait a moment.")}
+        {:noreply,
+         Flash.put_flash(
+           socket,
+           :warning,
+           dgettext("dashboard_calendar_events", "Too many refreshes. Please wait a moment.")
+         )}
     end
   end
 
@@ -81,7 +88,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
           |> Helpers.precompute_derived()
 
         {:error, _changeset} ->
-          Flash.put_flash(socket, :error, "Failed to save preference")
+          Flash.put_flash(
+            socket,
+            :error,
+            dgettext("dashboard_calendar_events", "Failed to save preference")
+          )
       end
 
     {:noreply, socket}
@@ -94,17 +105,33 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
 
         cond do
           result.errors != [] ->
+            error_count = length(result.errors)
+
             Flash.put_flash(
               socket,
               :warning,
-              "Refresh failed for #{length(result.errors)} integration(s)"
+              dngettext(
+                "dashboard_calendar_events",
+                "Refresh failed for %{count} integration",
+                "Refresh failed for %{count} integrations",
+                error_count,
+                count: error_count
+              )
             )
 
           result.enqueued == 0 and result.skipped == 0 ->
-            Flash.put_flash(socket, :info, "No calendars to sync")
+            Flash.put_flash(
+              socket,
+              :info,
+              dgettext("dashboard_calendar_events", "No calendars to sync")
+            )
 
           result.enqueued == 0 ->
-            Flash.put_flash(socket, :info, "Calendars refreshed")
+            Flash.put_flash(
+              socket,
+              :info,
+              dgettext("dashboard_calendar_events", "Calendars refreshed")
+            )
 
           true ->
             # Schedule fallback reset in case workers complete without broadcasting

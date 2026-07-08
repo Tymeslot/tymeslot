@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   @moduledoc "Drag, resize, create, and inline-edit workflow orchestration for CalendarGridComponent."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Meetings.AttendeeNotifications
@@ -65,7 +67,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
             {:noreply, socket}
 
           assert_owns_event(socket, event) == {:error, :unauthorized} ->
-            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+            send(
+              self(),
+              {:flash,
+               {:error,
+                dgettext(
+                  "dashboard_calendar_events",
+                  "You don't have permission to modify this event"
+                )}}
+            )
+
             {:noreply, socket}
 
           true ->

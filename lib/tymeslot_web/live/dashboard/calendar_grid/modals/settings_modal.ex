@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
   @moduledoc "Calendar settings modal for preferences like week start day, time format, and default view."
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.UI.StatusSwitch
@@ -19,21 +20,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
       on_cancel={JS.push("close_settings", target: @myself)}
       size={:small}
     >
-      <:header>Calendar Settings</:header>
+      <:header>{dgettext("dashboard_calendar_events", "Calendar Settings")}</:header>
 
       <div class="space-y-5">
         <%!-- First day of week --%>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">First day of week</p>
-            <p class="text-token-xs text-tymeslot-400">Start weeks on Monday or Sunday</p>
+            <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "First day of week")}</p>
+            <p class="text-token-xs text-tymeslot-400">{dgettext("dashboard_calendar_events", "Start weeks on Monday or Sunday")}</p>
           </div>
           <Toggle.toggle
             id="week-start-toggle"
             active_option={safe_to_atom(@preferences.week_start_day, :monday)}
             phx_click="update_week_start"
             phx_target={@myself}
-            options={[%{value: :monday, label: "Mon"}, %{value: :sunday, label: "Sun"}]}
+            options={[
+              %{value: :monday, label: dgettext("dashboard_calendar_events", "Mon")},
+              %{value: :sunday, label: dgettext("dashboard_calendar_events", "Sun")}
+            ]}
             size={:small}
           />
         </div>
@@ -41,15 +45,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <%!-- Time format --%>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">Time format</p>
-            <p class="text-token-xs text-tymeslot-400">12-hour or 24-hour clock</p>
+            <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "Time format")}</p>
+            <p class="text-token-xs text-tymeslot-400">{dgettext("dashboard_calendar_events", "12-hour or 24-hour clock")}</p>
           </div>
           <Toggle.toggle
             id="time-format-toggle"
             active_option={safe_to_atom(@preferences.time_format, :"12h")}
             phx_click="update_time_format"
             phx_target={@myself}
-            options={[%{value: :"12h", label: "12h"}, %{value: :"24h", label: "24h"}]}
+            options={[
+              %{value: :"12h", label: dgettext("dashboard_calendar_events", "12h")},
+              %{value: :"24h", label: dgettext("dashboard_calendar_events", "24h")}
+            ]}
             size={:small}
           />
         </div>
@@ -57,8 +64,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <%!-- Default view --%>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">Default view</p>
-            <p class="text-token-xs text-tymeslot-400">Also switches the current view</p>
+            <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "Default view")}</p>
+            <p class="text-token-xs text-tymeslot-400">{dgettext("dashboard_calendar_events", "Also switches the current view")}</p>
           </div>
           <Toggle.toggle
             id="default-view-toggle"
@@ -66,9 +73,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
             phx_click="update_default_view"
             phx_target={@myself}
             options={[
-              %{value: :day, label: "Day"},
-              %{value: :week, label: "Week"},
-              %{value: :month, label: "Month"}
+              %{value: :day, label: dgettext("dashboard_calendar_events", "Day")},
+              %{value: :week, label: dgettext("dashboard_calendar_events", "Week")},
+              %{value: :month, label: dgettext("dashboard_calendar_events", "Month")}
             ]}
             size={:small}
           />
@@ -77,8 +84,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <%!-- Show week numbers --%>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">Week numbers</p>
-            <p class="text-token-xs text-tymeslot-400">Show ISO week numbers in month view</p>
+            <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "Week numbers")}</p>
+            <p class="text-token-xs text-tymeslot-400">{dgettext("dashboard_calendar_events", "Show ISO week numbers in month view")}</p>
           </div>
           <StatusSwitch.status_switch
             id="week-numbers-switch"
@@ -92,8 +99,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <%!-- Show weekends --%>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">Show weekends</p>
-            <p class="text-token-xs text-tymeslot-400">Display Saturday and Sunday in week view</p>
+            <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "Show weekends")}</p>
+            <p class="text-token-xs text-tymeslot-400">{dgettext("dashboard_calendar_events", "Display Saturday and Sunday in week view")}</p>
           </div>
           <StatusSwitch.status_switch
             id="weekends-switch"
@@ -107,9 +114,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal do
         <%!-- Desktop reminders --%>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-token-sm font-medium text-tymeslot-700">Desktop reminders</p>
+            <p class="text-token-sm font-medium text-tymeslot-700">{dgettext("dashboard_calendar_events", "Desktop reminders")}</p>
             <p class="text-token-xs text-tymeslot-400">
-              Show browser notifications before events while Tymeslot is open
+              {dgettext("dashboard_calendar_events", "Show browser notifications before events while Tymeslot is open")}
             </p>
           </div>
           <StatusSwitch.status_switch

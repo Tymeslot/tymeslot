@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmRemoveAttendeeModal d
   @moduledoc "Confirmation modal for removing an attendee from a calendar event."
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
 
@@ -17,14 +18,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmRemoveAttendeeModal d
       on_cancel={JS.push("cancel_remove_attendee", target: @myself)}
       size={:small}
     >
-      <:header>Remove attendee</:header>
+      <:header>{dgettext("dashboard_calendar_events", "Remove attendee")}</:header>
 
       <p class="text-token-sm text-tymeslot-500">
-        Remove
+        {dgettext("dashboard_calendar_events", "Remove")}
         <span class="font-medium text-tymeslot-700"><%= @confirm_remove_attendee.email %></span>?
       </p>
       <p class="mt-2 text-token-sm text-amber-600">
-        This person will receive a cancellation from your calendar provider.
+        {dgettext("dashboard_calendar_events", "This person will receive a cancellation from your calendar provider.")}
       </p>
 
       <:footer>
@@ -34,13 +35,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmRemoveAttendeeModal d
             phx-click="confirm_remove_attendee"
             phx-target={@myself}
           >
-            Remove
+            {dgettext("dashboard_calendar_events", "Remove")}
           </.action_button>
           <.action_button
             variant={:secondary}
             phx-click={JS.push("cancel_remove_attendee", target: @myself)}
           >
-            Cancel
+            {dgettext("dashboard_calendar_events", "Cancel")}
           </.action_button>
         </div>
       </:footer>

@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop do
   @moduledoc "Drag-drop and resize event handlers for CalendarGridComponent."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
 
@@ -23,7 +25,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop do
           end
 
         {:error, :rate_limited, _message} ->
-          send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+          send(
+            self(),
+            {:flash,
+             {:warning,
+              dgettext("dashboard_calendar_events", "Too many edits. Please wait a moment.")}}
+          )
+
           socket
       end
     end)
@@ -57,7 +65,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop do
           end
 
         {:error, :rate_limited, _message} ->
-          send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+          send(
+            self(),
+            {:flash,
+             {:warning,
+              dgettext("dashboard_calendar_events", "Too many edits. Please wait a moment.")}}
+          )
+
           socket
       end
     end)

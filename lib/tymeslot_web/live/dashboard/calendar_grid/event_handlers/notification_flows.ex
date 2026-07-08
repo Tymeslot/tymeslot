@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
   @moduledoc "Attendee-notification flow handlers for CalendarGridComponent."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Meetings.AttendeeNotifications
@@ -15,7 +17,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
       %{kind: :update, summary: summary, event: event, attendees: attendees} ->
         case AttendeeNotifications.event_updated_confirm(event, summary, attendees) do
           {:ok, :sent} ->
-            send(self(), {:flash, {:info, "Changes saved. Attendees will be notified shortly."}})
+            send(
+              self(),
+              {:flash,
+               {:info,
+                dgettext(
+                  "dashboard_calendar_events",
+                  "Changes saved. Attendees will be notified shortly."
+                )}}
+            )
 
             {:noreply,
              socket
@@ -25,7 +35,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
           {:error, _reason} ->
             send(
               self(),
-              {:flash, {:warning, "Could not schedule notification. Changes were saved."}}
+              {:flash,
+               {:warning,
+                dgettext(
+                  "dashboard_calendar_events",
+                  "Could not schedule notification. Changes were saved."
+                )}}
             )
 
             {:noreply, assign(socket, :notify_prompt, nil)}
@@ -49,7 +64,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
           {:error, _reason} ->
             send(
               self(),
-              {:flash, {:warning, "Could not schedule notification. Please try again."}}
+              {:flash,
+               {:warning,
+                dgettext(
+                  "dashboard_calendar_events",
+                  "Could not schedule notification. Please try again."
+                )}}
             )
 
             {:noreply, assign(socket, :notify_prompt, nil)}
@@ -65,7 +85,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
         {:noreply, socket}
 
       %{kind: :update} ->
-        send(self(), {:flash, {:info, "Changes saved."}})
+        send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
         {:noreply, assign(socket, :notify_prompt, nil)}
 
       %{kind: :delete, event: event} ->
@@ -92,7 +112,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
 
       event ->
         :ok = AttendeeNotifications.cancel_pending(event)
-        send(self(), {:flash, {:info, "Pending notification cancelled."}})
+
+        send(
+          self(),
+          {:flash,
+           {:info, dgettext("dashboard_calendar_events", "Pending notification cancelled.")}}
+        )
+
         {:noreply, assign(socket, :pending_notification, false)}
     end
   end

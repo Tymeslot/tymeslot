@@ -14,14 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
   """
 
   use TymeslotWeb, :html
-
-  @presets [
-    {5, "5 minutes before"},
-    {10, "10 minutes before"},
-    {30, "30 minutes before"},
-    {60, "1 hour before"},
-    {1440, "1 day before"}
-  ]
+  use Gettext, backend: TymeslotWeb.Gettext
 
   attr :reminders, :list, default: []
   attr :myself, :any, required: true
@@ -30,13 +23,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
 
   @spec reminders_editor(map()) :: Phoenix.LiveView.Rendered.t()
   def reminders_editor(assigns) do
-    assigns = assign(assigns, :presets, @presets)
+    assigns = assign(assigns, :presets, presets())
 
     ~H"""
     <div class="flex items-start gap-3 mb-3">
       <.icon name="hero-bell" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
       <div class="flex-1">
-        <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">Reminders</p>
+        <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">{dgettext("dashboard_calendar_events", "Reminders")}</p>
 
         <div :if={@reminders != []} class="flex flex-wrap gap-1.5 mb-2">
           <span
@@ -50,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
               phx-value-index={index}
               phx-target={@myself}
               class="w-4 h-4 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors"
-              aria-label={"Remove reminder #{reminder_label(reminder)}"}
+              aria-label={dgettext("dashboard_calendar_events", "Remove reminder %{label}", label: reminder_label(reminder))}
             >
               <.icon name="hero-x-mark-micro" class="w-2.5 h-2.5" />
             </button>
@@ -73,18 +66,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
             name="method"
             class="rounded-md border-tymeslot-300 text-token-xs text-tymeslot-700 focus:border-turquoise-500 focus:ring-turquoise-500 py-1"
           >
-            <option value="popup">Notification</option>
-            <option value="email">Email</option>
+            <option value="popup">{dgettext("dashboard_calendar_events", "Notification")}</option>
+            <option value="email">{dgettext("dashboard_calendar_events", "Email")}</option>
           </select>
           <button
             type="submit"
             class="px-2.5 py-1 rounded-md border border-tymeslot-300 text-token-xs text-tymeslot-600 hover:bg-tymeslot-50 transition-colors"
           >
-            Add reminder
+            {dgettext("dashboard_calendar_events", "Add reminder")}
           </button>
         </form>
         <p class="text-token-xs text-tymeslot-400 mt-1">
-          Reminders are synced to your calendar so it can alert you on your own devices.
+          {dgettext("dashboard_calendar_events", "Reminders are synced to your calendar so it can alert you on your own devices.")}
         </p>
       </div>
     </div>
@@ -96,17 +89,43 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor do
   """
   @spec reminder_label(map()) :: String.t()
   def reminder_label(%{method: method, minutes_before: minutes}) do
-    "#{method_label(method)} #{minutes_label(minutes)}"
+    dgettext("dashboard_calendar_events", "%{method} %{minutes}",
+      method: method_label(method),
+      minutes: minutes_label(minutes)
+    )
   end
 
-  defp method_label(:email), do: "Email"
-  defp method_label(_popup_or_other), do: "Notification"
+  defp method_label(:email), do: dgettext("dashboard_calendar_events", "Email")
+  defp method_label(_popup_or_other), do: dgettext("dashboard_calendar_events", "Notification")
 
-  defp minutes_label(1440), do: "1 day before"
-  defp minutes_label(60), do: "1 hour before"
+  defp minutes_label(1440), do: dgettext("dashboard_calendar_events", "1 day before")
+  defp minutes_label(60), do: dgettext("dashboard_calendar_events", "1 hour before")
 
   defp minutes_label(minutes) when minutes >= 60 and rem(minutes, 60) == 0,
-    do: "#{div(minutes, 60)} hours before"
+    do:
+      dngettext(
+        "dashboard_calendar_events",
+        "%{count} hour before",
+        "%{count} hours before",
+        div(minutes, 60)
+      )
 
-  defp minutes_label(minutes), do: "#{minutes} minutes before"
+  defp minutes_label(minutes),
+    do:
+      dngettext(
+        "dashboard_calendar_events",
+        "%{count} minute before",
+        "%{count} minutes before",
+        minutes
+      )
+
+  defp presets do
+    [
+      {5, dgettext("dashboard_calendar_events", "5 minutes before")},
+      {10, dgettext("dashboard_calendar_events", "10 minutes before")},
+      {30, dgettext("dashboard_calendar_events", "30 minutes before")},
+      {60, dgettext("dashboard_calendar_events", "1 hour before")},
+      {1440, dgettext("dashboard_calendar_events", "1 day before")}
+    ]
+  end
 end

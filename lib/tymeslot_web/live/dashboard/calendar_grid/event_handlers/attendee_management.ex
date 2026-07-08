@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
   @moduledoc "Attendee management event handlers for CalendarGridComponent."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Meetings.AttendeeNotifications
@@ -33,7 +35,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
           {:ok, _result} =
             AttendeeNotifications.attendees_added(event, [%{email: email, name: nil}])
 
-          send(self(), {:flash, {:info, "Attendee added and invited."}})
+          send(
+            self(),
+            {:flash,
+             {:info, dgettext("dashboard_calendar_events", "Attendee added and invited.")}}
+          )
 
           socket =
             socket
@@ -73,7 +79,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
 
     if normalised_removed != [] do
       {:ok, _result} = AttendeeNotifications.attendees_removed(event, normalised_removed)
-      send(self(), {:flash, {:info, "Attendee removed and notified."}})
+
+      send(
+        self(),
+        {:flash, {:info, dgettext("dashboard_calendar_events", "Attendee removed and notified.")}}
+      )
     end
 
     socket

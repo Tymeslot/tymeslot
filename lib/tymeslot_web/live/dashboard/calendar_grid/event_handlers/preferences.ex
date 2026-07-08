@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
   @moduledoc "Settings and preference event handlers for CalendarGridComponent."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Phoenix.LiveView
@@ -44,7 +46,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
         {:noreply, socket}
 
       {:error, _changeset} ->
-        send(self(), {:flash, {:error, "Failed to save preference"}})
+        send(
+          self(),
+          {:flash, {:error, dgettext("dashboard_calendar_events", "Failed to save preference")}}
+        )
+
         {:noreply, socket}
     end
   end
@@ -63,7 +69,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
         :ok
 
       {:error, _changeset} ->
-        send(self(), {:flash, {:error, "Failed to save preference"}})
+        send(
+          self(),
+          {:flash, {:error, dgettext("dashboard_calendar_events", "Failed to save preference")}}
+        )
     end
 
     prefs = %{socket.assigns.preferences | default_view: value}
@@ -104,7 +113,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
         {:noreply, socket}
 
       {:error, _changeset} ->
-        send(self(), {:flash, {:error, "Failed to save preference"}})
+        send(
+          self(),
+          {:flash, {:error, dgettext("dashboard_calendar_events", "Failed to save preference")}}
+        )
+
         {:noreply, socket}
     end
   end

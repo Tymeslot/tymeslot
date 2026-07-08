@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   @moduledoc "Shared helpers used across EventHandlers submodules."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Integrations.Calendar.EventColour
@@ -299,19 +301,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   @spec flash_guard_error(Phoenix.LiveView.Socket.t(), term()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def flash_guard_error(socket, {:error, :unauthorized}) do
-    send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+    send(
+      self(),
+      {:flash,
+       {:error,
+        dgettext("dashboard_calendar_events", "You don't have permission to modify this event")}}
+    )
+
     {:noreply, socket}
   end
 
   def flash_guard_error(socket, {:error, :rate_limited, _message}) do
-    send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+    send(
+      self(),
+      {:flash,
+       {:warning, dgettext("dashboard_calendar_events", "Too many edits. Please wait a moment.")}}
+    )
+
     {:noreply, socket}
   end
 
   def flash_guard_error(socket, {:error, :until_before_start}) do
     send(
       self(),
-      {:flash, {:error, "The recurrence end date must be on or after the event start."}}
+      {:flash,
+       {:error,
+        dgettext(
+          "dashboard_calendar_events",
+          "The recurrence end date must be on or after the event start."
+        )}}
     )
 
     {:noreply, socket}

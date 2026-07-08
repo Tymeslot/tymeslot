@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.NotifyPromptModal do
   @moduledoc "Confirmation modal asking whether attendees should be notified of a change or cancellation."
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
 
@@ -37,7 +38,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.NotifyPromptModal do
             variant={:secondary}
             phx-click={JS.push("notify_prompt_cancel", target: @myself)}
           >
-            No
+            {dgettext("dashboard_calendar_events", "No")}
           </.action_button>
         </div>
       </:footer>
@@ -45,20 +46,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.NotifyPromptModal do
     """
   end
 
-  defp header_text(:delete), do: "Send cancellation?"
-  defp header_text(_update), do: "Notify attendees?"
+  defp header_text(:delete), do: dgettext("dashboard_calendar_events", "Send cancellation?")
+  defp header_text(_update), do: dgettext("dashboard_calendar_events", "Notify attendees?")
 
   defp body_text(:delete, attendees) do
-    "Send cancellation to #{length(attendees)} #{attendee_label(attendees)}?"
+    dngettext(
+      "dashboard_calendar_events",
+      "Send cancellation to %{count} attendee?",
+      "Send cancellation to %{count} attendees?",
+      length(attendees)
+    )
   end
 
   defp body_text(_update, attendees) do
-    "Notify #{length(attendees)} #{attendee_label(attendees)} of this change?"
+    dngettext(
+      "dashboard_calendar_events",
+      "Notify %{count} attendee of this change?",
+      "Notify %{count} attendees of this change?",
+      length(attendees)
+    )
   end
 
-  defp confirm_label(:delete), do: "Yes, send"
-  defp confirm_label(_update), do: "Yes, notify"
-
-  defp attendee_label([_one]), do: "attendee"
-  defp attendee_label(_other), do: "attendees"
+  defp confirm_label(:delete), do: dgettext("dashboard_calendar_events", "Yes, send")
+  defp confirm_label(_update), do: dgettext("dashboard_calendar_events", "Yes, notify")
 end
