@@ -7,6 +7,8 @@ defmodule TymeslotWeb.OnboardingLive.AvatarHandlers do
   LiveView.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Profiles
@@ -36,7 +38,10 @@ defmodule TymeslotWeb.OnboardingLive.AvatarHandlers do
           {:noreply,
            socket
            |> LiveView.cancel_upload(:avatar, entry.ref)
-           |> LiveView.put_flash(:error, "Upload failed. Please refresh and try again.")}
+           |> LiveView.put_flash(
+             :error,
+             dgettext("onboarding_wizard", "Upload failed. Please refresh and try again.")
+           )}
       end
     else
       {:noreply, socket}
@@ -62,7 +67,10 @@ defmodule TymeslotWeb.OnboardingLive.AvatarHandlers do
         LiveView.put_flash(
           socket,
           :error,
-          "Could not update your photo. Please try a different image."
+          dgettext(
+            "onboarding_wizard",
+            "Could not update your photo. Please try a different image."
+          )
         )
 
       _other ->

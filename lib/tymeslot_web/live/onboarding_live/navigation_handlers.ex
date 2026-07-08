@@ -7,6 +7,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   """
 
   use TymeslotWeb, :verified_routes
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.Component
   alias Phoenix.LiveView
@@ -209,7 +210,11 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
 
     case Profiles.get_profile_by_user_id(user.id) do
       {:error, :not_found} ->
-        LiveView.put_flash(socket, :error, "Profile not found. Please try again.")
+        LiveView.put_flash(
+          socket,
+          :error,
+          dgettext("onboarding_wizard", "Profile not found. Please try again.")
+        )
 
       {:ok, profile} ->
         case ensure_username(profile, user.id) do
@@ -222,21 +227,38 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
                   socket
                   |> LiveView.put_flash(
                     :info,
-                    "Debug: Onboarding would be completed. Redirecting to debug start."
+                    dgettext(
+                      "onboarding_wizard",
+                      "Debug: Onboarding would be completed. Redirecting to debug start."
+                    )
                   )
                   |> LiveView.redirect(to: ~p"/debug/onboarding")
                 else
                   socket
-                  |> LiveView.put_flash(:info, "Welcome to Tymeslot! Your account is now set up.")
+                  |> LiveView.put_flash(
+                    :info,
+                    dgettext(
+                      "onboarding_wizard",
+                      "Welcome to Tymeslot! Your account is now set up."
+                    )
+                  )
                   |> LiveView.redirect(to: redirect_to)
                 end
 
               {:error, _reason} ->
-                LiveView.put_flash(socket, :error, "Something went wrong. Please try again.")
+                LiveView.put_flash(
+                  socket,
+                  :error,
+                  dgettext("onboarding_wizard", "Something went wrong. Please try again.")
+                )
             end
 
           {:error, _reason} ->
-            LiveView.put_flash(socket, :error, "Could not set up your profile. Please try again.")
+            LiveView.put_flash(
+              socket,
+              :error,
+              dgettext("onboarding_wizard", "Could not set up your profile. Please try again.")
+            )
         end
     end
   end
@@ -274,7 +296,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
          LiveView.put_flash(
            socket,
            :error,
-           "Please check your input and try again."
+           dgettext("onboarding_wizard", "Please check your input and try again.")
          )}
     end
   end
@@ -298,7 +320,10 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
         update_and_proceed(socket, sanitized_params)
 
       username == "" ->
-        {:noreply, Component.assign(socket, :form_errors, %{username: "Username is required"})}
+        {:noreply,
+         Component.assign(socket, :form_errors, %{
+           username: dgettext("onboarding_wizard", "Username is required")
+         })}
 
       Profiles.username_available?(username) ->
         update_and_proceed(socket, sanitized_params)
@@ -306,7 +331,8 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       true ->
         {:noreply,
          Component.assign(socket, :form_errors, %{
-           username: "Username is already taken. Please choose another."
+           username:
+             dgettext("onboarding_wizard", "Username is already taken. Please choose another.")
          })}
     end
   end

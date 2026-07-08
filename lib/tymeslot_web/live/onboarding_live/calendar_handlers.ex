@@ -7,6 +7,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   """
 
   use TymeslotWeb, :verified_routes
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.Component
   alias Phoenix.LiveView
@@ -140,9 +141,24 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
 
   defp validate_caldav_fields(form_data) do
     []
-    |> maybe_add_error(form_data, "url", :url, "Server URL is required")
-    |> maybe_add_error(form_data, "username", :username, "Username is required")
-    |> maybe_add_error(form_data, "password", :password, "Password is required")
+    |> maybe_add_error(
+      form_data,
+      "url",
+      :url,
+      dgettext("onboarding_wizard", "Server URL is required")
+    )
+    |> maybe_add_error(
+      form_data,
+      "username",
+      :username,
+      dgettext("onboarding_wizard", "Username is required")
+    )
+    |> maybe_add_error(
+      form_data,
+      "password",
+      :password,
+      dgettext("onboarding_wizard", "Password is required")
+    )
     |> Map.new()
   end
 
@@ -189,7 +205,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
       {:ok, %{discovery_credentials: credentials}} ->
         params = %{
           "provider" => "caldav",
-          "name" => "CalDAV Calendar",
+          "name" => dgettext("onboarding_wizard", "CalDAV Calendar"),
           "url" => credentials[:url] || url,
           "username" => credentials[:username] || username,
           "password" => credentials[:password] || password
@@ -237,7 +253,8 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
     {:noreply,
      socket
      |> Component.assign(:caldav_form_errors, %{
-       discovery: "Could not create calendar integration. Please try again."
+       discovery:
+         dgettext("onboarding_wizard", "Could not create calendar integration. Please try again.")
      })
      |> Component.assign(:caldav_discovering, false)}
   end
@@ -260,7 +277,11 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
     {:noreply,
      socket
      |> Component.assign(:caldav_form_errors, %{
-       discovery: "Something went wrong while contacting the calendar server. Please try again."
+       discovery:
+         dgettext(
+           "onboarding_wizard",
+           "Something went wrong while contacting the calendar server. Please try again."
+         )
      })
      |> Component.assign(:caldav_discovering, false)}
   end

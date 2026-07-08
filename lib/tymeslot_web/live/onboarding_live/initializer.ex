@@ -8,6 +8,8 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   `mount/3` a one-liner that delegates here.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.LiveView, only: [connected?: 1, get_connect_params: 1, allow_upload: 3]
 
   alias Phoenix.Component
@@ -55,7 +57,7 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
     |> Component.assign(:timezone_options, Timezones.all_options())
     |> Component.assign(:timezone_dropdown_open, false)
     |> Component.assign(:timezone_search, "")
-    |> Component.assign(:page_title, "Welcome")
+    |> Component.assign(:page_title, dgettext("onboarding_wizard", "Welcome"))
     |> Component.assign(:form_errors, %{})
     |> Component.assign(:custom_input_mode, CustomInputModeHelper.default_custom_mode())
     |> Component.assign(:calendar_state, :selecting)

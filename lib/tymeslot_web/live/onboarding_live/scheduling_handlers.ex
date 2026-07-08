@@ -6,6 +6,8 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
   buffer time, advance booking window, and minimum advance notice.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Profiles.Settings
@@ -53,7 +55,11 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
 
           {:error, _changeset} ->
             {:noreply,
-             LiveView.put_flash(socket, :error, "Please check your input and try again.")}
+             LiveView.put_flash(
+               socket,
+               :error,
+               dgettext("onboarding_wizard", "Please check your input and try again.")
+             )}
         end
 
       {:error, errors} ->
@@ -161,16 +167,28 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
 
   defp validate_field(value, constraints, label) when is_binary(value) do
     case Integer.parse(value) do
-      {int, ""} -> validate_field(int, constraints, label)
-      _other -> {:error, "#{label} must be a valid number"}
+      {int, ""} ->
+        validate_field(int, constraints, label)
+
+      _other ->
+        {:error, dgettext("onboarding_wizard", "%{field} must be a valid number", field: label)}
     end
   end
 
   defp validate_field(value, %{min: min, max: max}, label) when is_integer(value) do
     if value >= min and value <= max,
       do: :ok,
-      else: {:error, "#{label} must be between #{min} and #{max}"}
+      else:
+        {:error,
+         dgettext(
+           "onboarding_wizard",
+           "%{field} must be between %{min} and %{max}",
+           field: label,
+           min: min,
+           max: max
+         )}
   end
 
-  defp validate_field(_value, _constraints, label), do: {:error, "#{label} must be a number"}
+  defp validate_field(_value, _constraints, label),
+    do: {:error, dgettext("onboarding_wizard", "%{field} must be a number", field: label)}
 end

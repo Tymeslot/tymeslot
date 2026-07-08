@@ -27,6 +27,8 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   @typedoc "A label/value tuple used for select options."
   @type option :: {String.t(), non_neg_integer()}
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Validation.Constraints
 
   @steps_without_theme [
@@ -53,15 +55,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   # Superset of every step that can appear — used only for membership checks.
   @all_steps @steps_with_theme
 
-  @buffer_time_options [
-    {"No buffer", 0},
-    {"15 min", 15},
-    {"30 min", 30},
-    {"45 min", 45},
-    {"60 min", 60}
-  ]
-
-  @buffer_time_values Enum.map(@buffer_time_options, &elem(&1, 1))
+  @buffer_time_values [0, 15, 30, 45, 60]
 
   @buffer_minutes_constraints %{
     min: Constraints.buffer_minutes_range().first,
@@ -72,16 +66,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
     color: "turquoise"
   }
 
-  @advance_booking_options [
-    {"1 week", 7},
-    {"2 weeks", 14},
-    {"1 month", 30},
-    {"3 months", 90},
-    {"6 months", 180},
-    {"1 year", 365}
-  ]
-
-  @advance_booking_values Enum.map(@advance_booking_options, &elem(&1, 1))
+  @advance_booking_values [7, 14, 30, 90, 180, 365]
 
   @advance_booking_constraints %{
     min: Constraints.advance_booking_days_range().first,
@@ -92,17 +77,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
     color: "cyan"
   }
 
-  @min_advance_options [
-    {"No minimum", 0},
-    {"1 hour", 1},
-    {"3 hours", 3},
-    {"6 hours", 6},
-    {"12 hours", 12},
-    {"24 hours", 24},
-    {"48 hours", 48}
-  ]
-
-  @min_advance_values Enum.map(@min_advance_options, &elem(&1, 1))
+  @min_advance_values [0, 1, 3, 6, 12, 24, 48]
 
   @min_advance_constraints %{
     min: Constraints.min_advance_hours_range().first,
@@ -223,49 +198,74 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   Returns the step title for display purposes.
   """
   @spec step_title(step()) :: String.t()
-  def step_title(:welcome), do: "Welcome to Tymeslot"
-  def step_title(:profile), do: "Set up your profile"
-  def step_title(:connect_calendar), do: "Connect your calendar"
-  def step_title(:choose_theme), do: "Choose your theme"
-  def step_title(:buffer_time), do: "Buffer between meetings"
-  def step_title(:booking_window), do: "Booking window"
-  def step_title(:minimum_notice), do: "Minimum notice"
-  def step_title(:ready), do: "You're all set!"
+  def step_title(:welcome), do: dgettext("onboarding_wizard", "Welcome to Tymeslot")
+  def step_title(:profile), do: dgettext("onboarding_wizard", "Set up your profile")
+  def step_title(:connect_calendar), do: dgettext("onboarding_wizard", "Connect your calendar")
+  def step_title(:choose_theme), do: dgettext("onboarding_wizard", "Choose your theme")
+  def step_title(:buffer_time), do: dgettext("onboarding_wizard", "Buffer between meetings")
+  def step_title(:booking_window), do: dgettext("onboarding_wizard", "Booking window")
+  def step_title(:minimum_notice), do: dgettext("onboarding_wizard", "Minimum notice")
+  def step_title(:ready), do: dgettext("onboarding_wizard", "You're all set!")
 
   @doc """
   Returns the step description for display purposes.
   """
   @spec step_description(step()) :: String.t()
-  def step_description(:welcome), do: "Let's get you up and running in just a few steps."
+  def step_description(:welcome),
+    do: dgettext("onboarding_wizard", "Let's get you up and running in just a few steps.")
 
   def step_description(:profile),
-    do: "Add your name, photo, and a short bio so invitees know who they're booking with."
+    do:
+      dgettext(
+        "onboarding_wizard",
+        "Add your name, photo, and a short bio so invitees know who they're booking with."
+      )
 
   def step_description(:connect_calendar),
-    do: "Sync your calendar to avoid double-bookings and keep everything in one place."
+    do:
+      dgettext(
+        "onboarding_wizard",
+        "Sync your calendar to avoid double-bookings and keep everything in one place."
+      )
 
   def step_description(:choose_theme),
-    do: "Pick the look and feel of your booking page — then preview the real thing."
+    do:
+      dgettext(
+        "onboarding_wizard",
+        "Pick the look and feel of your booking page — then preview the real thing."
+      )
 
   def step_description(:buffer_time),
-    do: "Breathing room between appointments so you never feel rushed."
+    do:
+      dgettext(
+        "onboarding_wizard",
+        "Breathing room between appointments so you never feel rushed."
+      )
 
   def step_description(:booking_window),
-    do: "How far into the future clients can schedule with you."
+    do: dgettext("onboarding_wizard", "How far into the future clients can schedule with you.")
 
   def step_description(:minimum_notice),
-    do: "Prevents last-minute surprise bookings so you always have time to prepare."
+    do:
+      dgettext(
+        "onboarding_wizard",
+        "Prevents last-minute surprise bookings so you always have time to prepare."
+      )
 
   def step_description(:ready),
-    do: "Your account is ready. Head to your dashboard to start scheduling."
+    do:
+      dgettext(
+        "onboarding_wizard",
+        "Your account is ready. Head to your dashboard to start scheduling."
+      )
 
   @doc """
   Returns the button text for the next step.
   """
   @spec next_button_text(step()) :: String.t()
-  def next_button_text(:welcome), do: "Let's go"
-  def next_button_text(:ready), do: "Go to dashboard"
-  def next_button_text(_step), do: "Continue"
+  def next_button_text(:welcome), do: dgettext("onboarding_wizard", "Let's go")
+  def next_button_text(:ready), do: dgettext("onboarding_wizard", "Go to dashboard")
+  def next_button_text(_step), do: dgettext("onboarding_wizard", "Continue")
 
   @doc """
   Returns whether the back button should be shown for a given step.
@@ -289,7 +289,15 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   # -------------------------------------------------------------------
 
   @spec buffer_time_options() :: [option()]
-  def buffer_time_options, do: @buffer_time_options
+  def buffer_time_options do
+    [
+      {dgettext("onboarding_wizard", "No buffer"), 0},
+      {dgettext("onboarding_wizard", "15 min"), 15},
+      {dgettext("onboarding_wizard", "30 min"), 30},
+      {dgettext("onboarding_wizard", "45 min"), 45},
+      {dgettext("onboarding_wizard", "60 min"), 60}
+    ]
+  end
 
   @spec buffer_time_values() :: [integer()]
   def buffer_time_values, do: @buffer_time_values
@@ -298,7 +306,16 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   def buffer_minutes_constraints, do: @buffer_minutes_constraints
 
   @spec advance_booking_options() :: [option()]
-  def advance_booking_options, do: @advance_booking_options
+  def advance_booking_options do
+    [
+      {dgettext("onboarding_wizard", "1 week"), 7},
+      {dgettext("onboarding_wizard", "2 weeks"), 14},
+      {dgettext("onboarding_wizard", "1 month"), 30},
+      {dgettext("onboarding_wizard", "3 months"), 90},
+      {dgettext("onboarding_wizard", "6 months"), 180},
+      {dgettext("onboarding_wizard", "1 year"), 365}
+    ]
+  end
 
   @spec advance_booking_values() :: [integer()]
   def advance_booking_values, do: @advance_booking_values
@@ -307,7 +324,17 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   def advance_booking_constraints, do: @advance_booking_constraints
 
   @spec min_advance_options() :: [option()]
-  def min_advance_options, do: @min_advance_options
+  def min_advance_options do
+    [
+      {dgettext("onboarding_wizard", "No minimum"), 0},
+      {dgettext("onboarding_wizard", "1 hour"), 1},
+      {dgettext("onboarding_wizard", "3 hours"), 3},
+      {dgettext("onboarding_wizard", "6 hours"), 6},
+      {dgettext("onboarding_wizard", "12 hours"), 12},
+      {dgettext("onboarding_wizard", "24 hours"), 24},
+      {dgettext("onboarding_wizard", "48 hours"), 48}
+    ]
+  end
 
   @spec min_advance_values() :: [integer()]
   def min_advance_values, do: @min_advance_values

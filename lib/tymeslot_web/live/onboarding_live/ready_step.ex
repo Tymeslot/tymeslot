@@ -7,6 +7,7 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
@@ -32,9 +33,9 @@ defmodule TymeslotWeb.OnboardingLive.ReadyStep do
           id="onboarding-copy-booking-url"
           phx-hook="CopyOnClick"
           data-copy-text={@booking_url}
-          data-copy-feedback="Booking link copied!"
+          data-copy-feedback={dgettext("onboarding_wizard", "Booking link copied!")}
           class="onboarding-url-copy-btn"
-          title="Copy booking link"
+          title={dgettext("onboarding_wizard", "Copy booking link")}
         >
           <.icon name="hero-clipboard-document" class="w-5 h-5" />
         </button>

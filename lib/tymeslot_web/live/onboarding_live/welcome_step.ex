@@ -7,6 +7,7 @@ defmodule TymeslotWeb.OnboardingLive.WelcomeStep do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
@@ -22,9 +23,14 @@ defmodule TymeslotWeb.OnboardingLive.WelcomeStep do
           <.icon name="hero-user-circle" class="w-5 h-5" />
         </div>
         <div>
-          <h3 class="onboarding-feature-title">Your professional profile</h3>
+          <h3 class="onboarding-feature-title">
+            {dgettext("onboarding_wizard", "Your professional profile")}
+          </h3>
           <p class="onboarding-feature-description">
-            Set up your name, booking link, and timezone so clients know who they're meeting.
+            {dgettext(
+              "onboarding_wizard",
+              "Set up your name, booking link, and timezone so clients know who they're meeting."
+            )}
           </p>
         </div>
       </div>
@@ -34,9 +40,12 @@ defmodule TymeslotWeb.OnboardingLive.WelcomeStep do
           <.icon name="hero-calendar-days" class="w-5 h-5" />
         </div>
         <div>
-          <h3 class="onboarding-feature-title">Calendar sync</h3>
+          <h3 class="onboarding-feature-title">{dgettext("onboarding_wizard", "Calendar sync")}</h3>
           <p class="onboarding-feature-description">
-            Connect Google, Outlook, or CalDAV calendars to prevent double-bookings automatically.
+            {dgettext(
+              "onboarding_wizard",
+              "Connect Google, Outlook, or CalDAV calendars to prevent double-bookings automatically."
+            )}
           </p>
         </div>
       </div>
@@ -46,9 +55,14 @@ defmodule TymeslotWeb.OnboardingLive.WelcomeStep do
           <.icon name="hero-adjustments-horizontal" class="w-5 h-5" />
         </div>
         <div>
-          <h3 class="onboarding-feature-title">Scheduling rules</h3>
+          <h3 class="onboarding-feature-title">
+            {dgettext("onboarding_wizard", "Scheduling rules")}
+          </h3>
           <p class="onboarding-feature-description">
-            Define buffer times, booking windows, and minimum notice to stay in control.
+            {dgettext(
+              "onboarding_wizard",
+              "Define buffer times, booking windows, and minimum notice to stay in control."
+            )}
           </p>
         </div>
       </div>

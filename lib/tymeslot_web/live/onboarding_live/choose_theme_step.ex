@@ -9,6 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
@@ -50,9 +51,9 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
     <div class="onboarding-form">
       <%!-- Booking theme --%>
       <div class="onboarding-form-group">
-        <label class="label">Your booking theme</label>
+        <label class="label">{dgettext("onboarding_wizard", "Your booking theme")}</label>
         <p class="onboarding-form-helper">
-          Pick the look and feel invitees see on your booking page.
+          {dgettext("onboarding_wizard", "Pick the look and feel invitees see on your booking page.")}
         </p>
         <div class="grid grid-cols-2 gap-3">
           <button
@@ -82,9 +83,9 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
 
       <%!-- Colour scheme --%>
       <div class="onboarding-form-group">
-        <label class="label">Colour scheme</label>
+        <label class="label">{dgettext("onboarding_wizard", "Colour scheme")}</label>
         <p class="onboarding-form-helper">
-          Set the accent colour that ties your page together.
+          {dgettext("onboarding_wizard", "Set the accent colour that ties your page together.")}
         </p>
         <div class="flex flex-wrap gap-3">
           <button
@@ -114,10 +115,13 @@ defmodule TymeslotWeb.OnboardingLive.ChooseThemeStep do
           class="btn-secondary px-5 py-2.5 inline-flex items-center gap-2 whitespace-nowrap"
         >
           <.icon name="hero-eye-mini" class="w-4 h-4 shrink-0" />
-          Preview booking page
+          {dgettext("onboarding_wizard", "Preview booking page")}
         </button>
         <p class="onboarding-form-helper mt-2">
-          Opens your real booking page exactly as invitees will see it.
+          {dgettext(
+            "onboarding_wizard",
+            "Opens your real booking page exactly as invitees will see it."
+          )}
         </p>
       </div>
     </div>

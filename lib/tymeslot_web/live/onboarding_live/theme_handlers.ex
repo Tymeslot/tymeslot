@@ -9,6 +9,8 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
   theme concern lives in one place rather than leaking into the LiveView.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Bookings.Policy
@@ -33,7 +35,11 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
 
         {:error, _reason} ->
           {:noreply,
-           LiveView.put_flash(socket, :error, "Could not update theme. Please try again.")}
+           LiveView.put_flash(
+             socket,
+             :error,
+             dgettext("onboarding_wizard", "Could not update theme. Please try again.")
+           )}
       end
     else
       {:noreply, socket}
@@ -67,7 +73,10 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
            LiveView.put_flash(
              socket,
              :error,
-             "Could not update the colour scheme. Please try again."
+             dgettext(
+               "onboarding_wizard",
+               "Could not update the colour scheme. Please try again."
+             )
            )}
       end
     else
@@ -93,7 +102,11 @@ defmodule TymeslotWeb.OnboardingLive.ThemeHandlers do
 
       {:error, socket} ->
         {:noreply,
-         LiveView.put_flash(socket, :error, "Could not open the preview. Please try again.")}
+         LiveView.put_flash(
+           socket,
+           :error,
+           dgettext("onboarding_wizard", "Could not open the preview. Please try again.")
+         )}
     end
   end
 

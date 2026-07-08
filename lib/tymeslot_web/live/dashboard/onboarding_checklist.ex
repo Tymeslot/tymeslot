@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
   are rejected there, since they can only complete from a real connection.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Onboarding
   alias Tymeslot.Scheduling.LinkAccessPolicy
@@ -65,16 +66,16 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       class="card-glass onboarding-checklist"
       data-testid="onboarding-checklist"
       data-tour="quick-actions"
-      aria-label="Setup checklist"
+      aria-label={dgettext("onboarding_wizard", "Setup checklist")}
       phx-remove={JS.transition("onboarding-checklist--leaving", time: 500)}
     >
       <div class="flex items-start justify-between gap-4 mb-6">
         <div class="min-w-0">
           <h2 class="text-token-xl font-black tracking-tight text-tymeslot-900">
-            Finish setting up
+            {dgettext("onboarding_wizard", "Finish setting up")}
           </h2>
           <p class="text-token-sm font-bold text-tymeslot-500 mt-1">
-            A few recommended steps — tick off the ones you don't need.
+            {dgettext("onboarding_wizard", "A few recommended steps — tick off the ones you don't need.")}
           </p>
         </div>
         <div class="flex items-center gap-3 shrink-0">
@@ -84,7 +85,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
           <button
             type="button"
             phx-click="onboarding:dismiss"
-            aria-label="Dismiss setup checklist"
+            aria-label={dgettext("onboarding_wizard", "Dismiss setup checklist")}
             class="w-8 h-8 flex items-center justify-center rounded-token-lg text-tymeslot-400 hover:text-tymeslot-600 hover:bg-tymeslot-100 transition-colors"
           >
             <.icon name="hero-x-mark" class="w-5 h-5" />
@@ -130,7 +131,9 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         on_change="onboarding:toggle"
         phx_value_id={@item.key}
         label={
-          if @item.done, do: "Mark #{@item.title} as not done", else: "Mark #{@item.title} as done"
+          if @item.done,
+            do: dgettext("onboarding_wizard", "Mark %{title} as not done", title: @item.title),
+            else: dgettext("onboarding_wizard", "Mark %{title} as done", title: @item.title)
         }
       />
       <span :if={not @item.manual} class="shrink-0 w-6" aria-hidden="true"></span>
@@ -171,7 +174,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
   defp item_cta(%{item: %{done: true}} = assigns) do
     ~H"""
     <span class="shrink-0 w-32 text-center text-token-xs font-black uppercase tracking-wider text-emerald-600">
-      Done
+      {dgettext("onboarding_wizard", "Done")}
     </span>
     """
   end
@@ -183,7 +186,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       id={"setup-copy-#{@item.key}"}
       phx-hook="CopyOnClick"
       data-copy-text={@item.copy_url}
-      data-copy-feedback="Booking link copied to clipboard!"
+      data-copy-feedback={dgettext("onboarding_wizard", "Booking link copied to clipboard!")}
       class="shrink-0 inline-flex items-center justify-center gap-1.5 w-32 px-4 py-2 rounded-token-xl bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-sm font-black transition-colors"
     >
       <.icon name="hero-clipboard" class="w-4 h-4" /> {@item.cta}
@@ -259,36 +262,36 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         key: "calendar",
         auto: :has_calendar,
         icon: "hero-calendar-days",
-        title: "Connect a calendar",
-        description: "Sync to avoid double-bookings",
-        cta: "Connect",
+        title: dgettext("onboarding_wizard", "Connect a calendar"),
+        description: dgettext("onboarding_wizard", "Sync to avoid double-bookings"),
+        cta: dgettext("onboarding_wizard", "Connect"),
         path: ~p"/dashboard/integrations?tab=calendars"
       },
       %{
         key: "video",
         auto: :has_video,
         icon: "hero-video-camera",
-        title: "Add a video provider",
-        description: "Auto-add links to online meetings",
-        cta: "Connect",
+        title: dgettext("onboarding_wizard", "Add a video provider"),
+        description: dgettext("onboarding_wizard", "Auto-add links to online meetings"),
+        cta: dgettext("onboarding_wizard", "Connect"),
         path: ~p"/dashboard/integrations?tab=video"
       },
       %{
         key: "theme",
         auto: nil,
         icon: "hero-paint-brush",
-        title: "Customise your theme",
-        description: "Make your booking page yours",
-        cta: "Customise",
+        title: dgettext("onboarding_wizard", "Customise your theme"),
+        description: dgettext("onboarding_wizard", "Make your booking page yours"),
+        cta: dgettext("onboarding_wizard", "Customise"),
         path: ~p"/dashboard/theme"
       },
       %{
         key: "meeting_types",
         auto: nil,
         icon: "hero-squares-2x2",
-        title: "Review your meeting types",
-        description: "Tune durations and questions",
-        cta: "Review",
+        title: dgettext("onboarding_wizard", "Review your meeting types"),
+        description: dgettext("onboarding_wizard", "Tune durations and questions"),
+        cta: dgettext("onboarding_wizard", "Review"),
         path: ~p"/dashboard/meeting-settings"
       },
       %{
@@ -296,9 +299,9 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         auto: nil,
         action: :copy,
         icon: "hero-arrow-top-right-on-square",
-        title: "Share your booking page",
-        description: "Send guests your booking link",
-        cta: "Copy link"
+        title: dgettext("onboarding_wizard", "Share your booking page"),
+        description: dgettext("onboarding_wizard", "Send guests your booking link"),
+        cta: dgettext("onboarding_wizard", "Copy link")
       }
     ]
   end

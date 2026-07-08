@@ -6,6 +6,8 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
   and timezone selection updates.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Profiles.Settings
@@ -70,7 +72,10 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
              LiveView.put_flash(
                socket,
                :error,
-               "Please check your timezone selection and try again."
+               dgettext(
+                 "onboarding_wizard",
+                 "Please check your timezone selection and try again."
+               )
              )}
         end
 
@@ -85,9 +90,10 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
     if Timezones.valid?(timezone) do
       {:ok, timezone}
     else
-      {:error, %{timezone: "Invalid timezone"}}
+      {:error, %{timezone: dgettext("onboarding_wizard", "Invalid timezone")}}
     end
   end
 
-  defp validate_timezone(_invalid), do: {:error, %{timezone: "Timezone must be a string"}}
+  defp validate_timezone(_invalid),
+    do: {:error, %{timezone: dgettext("onboarding_wizard", "Timezone must be a string")}}
 end

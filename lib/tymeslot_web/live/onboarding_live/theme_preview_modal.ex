@@ -12,6 +12,7 @@ defmodule TymeslotWeb.OnboardingLive.ThemePreviewModal do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.CoreComponents, only: [modal: 1]
 
@@ -37,13 +38,13 @@ defmodule TymeslotWeb.OnboardingLive.ThemePreviewModal do
       size={:full}
       on_cancel={JS.push("close_theme_preview")}
     >
-      <:header>Your booking page</:header>
+      <:header>{dgettext("onboarding_wizard", "Your booking page")}</:header>
       <%!-- The standalone page fills the frame (100vh), so the iframe maxes out
            the modal body; the dark backdrop only shows briefly while it loads. --%>
       <iframe
         :if={@url}
         src={@url}
-        title="Booking page preview"
+        title={dgettext("onboarding_wizard", "Booking page preview")}
         class="w-full h-full rounded-token-xl border border-tymeslot-100"
         style="background-color: #1a1f2e;"
       >

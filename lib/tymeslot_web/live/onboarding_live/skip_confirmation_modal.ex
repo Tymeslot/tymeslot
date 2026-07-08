@@ -6,6 +6,7 @@ defmodule TymeslotWeb.OnboardingLive.SkipConfirmationModal do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.CoreComponents
@@ -36,25 +37,28 @@ defmodule TymeslotWeb.OnboardingLive.SkipConfirmationModal do
               />
             </svg>
           </div>
-          Skip setup?
+          {dgettext("onboarding_wizard", "Skip setup?")}
         </div>
       </:header>
 
       <p class="text-tymeslot-600 font-medium text-token-lg leading-relaxed">
-        Are you sure you want to skip the quick start? You can always configure these settings later in your dashboard.
+        {dgettext(
+          "onboarding_wizard",
+          "Are you sure you want to skip the quick start? You can always configure these settings later in your dashboard."
+        )}
       </p>
 
       <:footer>
         <div class="flex flex-row gap-3">
           <CoreComponents.action_button variant={:danger} phx-click="skip_onboarding" class="flex-1 py-3">
-            Skip anyway
+            {dgettext("onboarding_wizard", "Skip anyway")}
           </CoreComponents.action_button>
           <CoreComponents.action_button
             variant={:secondary}
             phx-click="hide_skip_modal"
             class="flex-1 py-3"
           >
-            Continue setup
+            {dgettext("onboarding_wizard", "Continue setup")}
           </CoreComponents.action_button>
         </div>
       </:footer>

@@ -12,6 +12,8 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -71,7 +73,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
             selected={@calendar_choice == "google"}
             icon="hero-calendar-days"
             icon_class="bg-blue-50 text-blue-600"
-            name="Google Calendar"
+            name={dgettext("onboarding_wizard", "Google Calendar")}
             label={google_label(@google_signup_email)}
             recommended={@google_signup_email != nil}
           />
@@ -82,8 +84,8 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
             selected={@calendar_choice == "outlook"}
             icon="hero-calendar"
             icon_class="bg-cyan-50 text-cyan-600"
-            name="Outlook Calendar"
-            label="Connect via Microsoft"
+            name={dgettext("onboarding_wizard", "Outlook Calendar")}
+            label={dgettext("onboarding_wizard", "Connect via Microsoft")}
           />
 
           <.choice_card
@@ -93,7 +95,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
             icon="hero-server"
             icon_class="bg-tymeslot-100 text-tymeslot-600"
             name="CalDAV"
-            label="Nextcloud, Radicale, or any CalDAV server"
+            label={dgettext("onboarding_wizard", "Nextcloud, Radicale, or any CalDAV server")}
           />
 
           <.choice_card
@@ -102,8 +104,8 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
             selected={@calendar_choice == "skip"}
             icon="hero-clock"
             icon_class="bg-tymeslot-50 text-tymeslot-500"
-            name="Not right now"
-            label="I'll connect a calendar later"
+            name={dgettext("onboarding_wizard", "Not right now")}
+            label={dgettext("onboarding_wizard", "I'll connect a calendar later")}
           />
         </div>
       <% end %>
@@ -137,7 +139,9 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2">
           <div class="onboarding-provider-name">{@name}</div>
-          <span :if={@recommended} class="onboarding-provider-badge">Recommended</span>
+          <span :if={@recommended} class="onboarding-provider-badge">
+            {dgettext("onboarding_wizard", "Recommended")}
+          </span>
         </div>
         <div class="onboarding-provider-label truncate">{@label}</div>
       </div>
@@ -162,15 +166,19 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
           {@calendar.provider_account_email || @calendar.name}
         </div>
         <div class="text-token-sm text-tymeslot-400">
-          {String.capitalize(@calendar.provider)} · Connected
+          {dgettext("onboarding_wizard", "%{provider} · Connected",
+            provider: String.capitalize(@calendar.provider)
+          )}
         </div>
       </div>
     </div>
     """
   end
 
-  defp google_label(nil), do: "Connect via Google"
-  defp google_label(email), do: "One click — connect #{email}"
+  defp google_label(nil), do: dgettext("onboarding_wizard", "Connect via Google")
+
+  defp google_label(email),
+    do: dgettext("onboarding_wizard", "One click — connect %{email}", email: email)
 
   defp caldav_form(assigns) do
     ~H"""
@@ -183,7 +191,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
       id="caldav-form"
     >
       <div class="onboarding-form-group">
-        <label for="caldav_url" class="label">Server URL</label>
+        <label for="caldav_url" class="label">{dgettext("onboarding_wizard", "Server URL")}</label>
         <input
           type="text"
           id="caldav_url"
@@ -203,7 +211,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
       </div>
 
       <div class="onboarding-form-group">
-        <label for="caldav_username" class="label">Username</label>
+        <label for="caldav_username" class="label">{dgettext("onboarding_wizard", "Username")}</label>
         <input
           type="text"
           id="caldav_username"
@@ -223,7 +231,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
       </div>
 
       <div class="onboarding-form-group">
-        <label for="caldav_password" class="label">Password</label>
+        <label for="caldav_password" class="label">{dgettext("onboarding_wizard", "Password")}</label>
         <input
           type="password"
           id="caldav_password"
@@ -235,7 +243,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
               do: "input-error"
             )
           ]}
-          placeholder="App password or token"
+          placeholder={dgettext("onboarding_wizard", "App password or token")}
         />
         <%= for message <- FormValidationHelpers.field_errors(@caldav_form_errors, :password) do %>
           <p class="mt-2 text-token-sm text-red-600 font-bold">{message}</p>
@@ -253,7 +261,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
           class="btn-secondary px-5 py-2.5"
           disabled={@caldav_discovering}
         >
-          Cancel
+          {dgettext("onboarding_wizard", "Cancel")}
         </button>
         <button
           type="submit"
@@ -261,7 +269,9 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
           disabled={@caldav_discovering}
         >
           <.icon :if={@caldav_discovering} name="hero-arrow-path" class="w-5 h-5 animate-spin" />
-          {if @caldav_discovering, do: "Discovering…", else: "Discover calendars"}
+          {if @caldav_discovering,
+            do: dgettext("onboarding_wizard", "Discovering…"),
+            else: dgettext("onboarding_wizard", "Discover calendars")}
         </button>
       </div>
     </.form>

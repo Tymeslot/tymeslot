@@ -7,6 +7,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
@@ -47,7 +48,10 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
               <% end %>
             </div>
             <span class="onboarding-progress-label">
-              Step {StepConfig.step_number(@current_step, @steps)} of {StepConfig.step_count(@steps)}
+              {dgettext("onboarding_wizard", "Step %{current} of %{total}",
+                current: StepConfig.step_number(@current_step, @steps),
+                total: StepConfig.step_count(@steps)
+              )}
             </span>
           </div>
 
@@ -71,7 +75,7 @@ defmodule TymeslotWeb.OnboardingLive.OnboardingLayout do
                 class="btn-secondary px-5 py-2.5 inline-flex items-center justify-center whitespace-nowrap"
               >
                 <.icon name="hero-arrow-left-mini" class="w-4 h-4 mr-1 shrink-0" />
-                Back
+                {dgettext("onboarding_wizard", "Back")}
               </button>
             <% end %>
 

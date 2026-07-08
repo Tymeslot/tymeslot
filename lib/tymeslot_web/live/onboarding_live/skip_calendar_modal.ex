@@ -9,6 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.SkipCalendarModal do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.CoreComponents
@@ -32,18 +33,21 @@ defmodule TymeslotWeb.OnboardingLive.SkipCalendarModal do
           <div class="w-12 h-12 bg-turquoise-50 rounded-2xl flex items-center justify-center border border-turquoise-100">
             <CoreComponents.icon name="hero-calendar-days" class="w-6 h-6 text-turquoise-600" />
           </div>
-          Continue without a calendar?
+          {dgettext("onboarding_wizard", "Continue without a calendar?")}
         </div>
       </:header>
 
       <p class="text-tymeslot-600 font-medium text-token-lg leading-relaxed">
-        Tymeslot is built around your calendar. Once it's connected, we read your real
-        availability so you're never double-booked and write every new booking back
-        automatically — that's what makes Tymeslot worthwhile.
+        {dgettext(
+          "onboarding_wizard",
+          "Tymeslot is built around your calendar. Once it's connected, we read your real availability so you're never double-booked and write every new booking back automatically — that's what makes Tymeslot worthwhile."
+        )}
       </p>
       <p class="mt-3 text-tymeslot-500 text-token-base leading-relaxed">
-        Without a connected calendar you'll have to manage clashes yourself. You can
-        still carry on and connect one later from your dashboard.
+        {dgettext(
+          "onboarding_wizard",
+          "Without a connected calendar you'll have to manage clashes yourself. You can still carry on and connect one later from your dashboard."
+        )}
       </p>
 
       <:footer>
@@ -53,14 +57,14 @@ defmodule TymeslotWeb.OnboardingLive.SkipCalendarModal do
             phx-click="confirm_skip_calendar"
             class="flex-1 py-3"
           >
-            Continue without one
+            {dgettext("onboarding_wizard", "Continue without one")}
           </CoreComponents.action_button>
           <CoreComponents.action_button
             variant={:primary}
             phx-click="hide_skip_calendar_modal"
             class="flex-1 py-3"
           >
-            Connect a calendar
+            {dgettext("onboarding_wizard", "Connect a calendar")}
           </CoreComponents.action_button>
         </div>
       </:footer>

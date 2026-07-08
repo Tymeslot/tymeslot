@@ -7,6 +7,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.OnboardingLive.StepConfig
@@ -203,7 +204,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
         phx-value-setting={@field_name}
         class={"btn-tag-selector btn-tag-selector-#{@style_variant}"}
       >
-        Custom
+        {dgettext("onboarding_wizard", "Custom")}
       </button>
     <% end %>
     """
@@ -219,36 +220,66 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   defp buffer_example(nil), do: buffer_example(15)
 
   defp buffer_example(0),
-    do: "With no buffer, the next available slot starts as soon as a meeting ends."
+    do:
+      dgettext(
+        "onboarding_wizard",
+        "With no buffer, the next available slot starts as soon as a meeting ends."
+      )
 
   defp buffer_example(minutes) do
     next_start = Time.add(@example_meeting_end, minutes * 60)
 
-    "If someone books a meeting that ends at #{format_12h(@example_meeting_end)} and your buffer is " <>
-      "#{minutes} min, the next available slot starts at #{format_12h(next_start)}."
+    dgettext(
+      "onboarding_wizard",
+      "If someone books a meeting that ends at %{end_time} and your buffer is %{minutes} min, the next available slot starts at %{next_start}.",
+      end_time: format_12h(@example_meeting_end),
+      minutes: minutes,
+      next_start: format_12h(next_start)
+    )
   end
 
   defp window_example(nil), do: window_example(14)
 
   defp window_example(days) do
     phrase = TextHelpers.humanize_days(days)
-    "Someone visiting your page today can only book up to #{phrase} ahead — no further."
+
+    dgettext(
+      "onboarding_wizard",
+      "Someone visiting your page today can only book up to %{period} ahead — no further.",
+      period: phrase
+    )
   end
 
   defp notice_example(nil), do: notice_example(3)
 
   defp notice_example(0),
-    do: "With no minimum notice, someone can book a slot that starts any time from now."
+    do:
+      dgettext(
+        "onboarding_wizard",
+        "With no minimum notice, someone can book a slot that starts any time from now."
+      )
 
   defp notice_example(hours) do
     phrase = humanize_hours(hours)
-    "With #{phrase} of notice, nobody can book a slot that starts sooner than #{phrase} from now."
+
+    dgettext(
+      "onboarding_wizard",
+      "With %{notice} of notice, nobody can book a slot that starts sooner than %{notice} from now.",
+      notice: phrase
+    )
   end
 
-  defp humanize_hours(1), do: "1 hour"
-  defp humanize_hours(24), do: "1 day"
-  defp humanize_hours(48), do: "2 days"
-  defp humanize_hours(hours), do: "#{hours} hours"
+  defp humanize_hours(1),
+    do: dngettext("onboarding_wizard", "%{count} hour", "%{count} hours", 1, count: 1)
+
+  defp humanize_hours(24),
+    do: dngettext("onboarding_wizard", "%{count} day", "%{count} days", 1, count: 1)
+
+  defp humanize_hours(48),
+    do: dngettext("onboarding_wizard", "%{count} day", "%{count} days", 2, count: 2)
+
+  defp humanize_hours(hours),
+    do: dngettext("onboarding_wizard", "%{count} hour", "%{count} hours", hours, count: hours)
 
   defp format_12h(%Time{minute: minute} = time) do
     {hour12, meridiem} = to_12h(time.hour)

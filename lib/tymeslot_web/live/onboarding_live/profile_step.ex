@@ -8,6 +8,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
@@ -44,9 +45,12 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
     <div class="onboarding-form">
       <%!-- Avatar upload --%>
       <div class="onboarding-form-group">
-        <label class="label">Your photo</label>
+        <label class="label">{dgettext("onboarding_wizard", "Your photo")}</label>
         <p class="onboarding-form-helper">
-          A friendly face helps invitees recognise who they're booking with.
+          {dgettext(
+            "onboarding_wizard",
+            "A friendly face helps invitees recognise who they're booking with."
+          )}
         </p>
         <form
           id="onboarding-avatar-form"
@@ -62,13 +66,20 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
             class="btn-secondary px-4 py-2 inline-flex items-center gap-2 cursor-pointer whitespace-nowrap"
           >
             <.icon name="hero-arrow-up-tray-mini" class="w-4 h-4 shrink-0" />
-            <span>{if @profile && @profile.avatar, do: "Change photo", else: "Upload photo"}</span>
+            <span>
+              {if @profile && @profile.avatar,
+                do: dgettext("onboarding_wizard", "Change photo"),
+                else: dgettext("onboarding_wizard", "Upload photo")}
+            </span>
             <.live_file_input upload={@uploads.avatar} class="sr-only" />
           </label>
         </form>
         <%= for entry <- @uploads.avatar.entries do %>
           <p class="mt-2 text-token-sm text-tymeslot-500 font-medium">
-            {if entry.progress == 100, do: "Processing…", else: "Uploading… #{entry.progress}%"}
+            {if entry.progress == 100,
+              do: dgettext("onboarding_wizard", "Processing…"),
+              else:
+                dgettext("onboarding_wizard", "Uploading… %{percent}%", percent: entry.progress)}
           </p>
         <% end %>
         <%= for err <- upload_errors(@uploads.avatar) do %>
@@ -88,9 +99,12 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
       >
         <%!-- Full name --%>
         <div class="onboarding-form-group">
-          <label for="full_name" class="label">Your name</label>
+          <label for="full_name" class="label">{dgettext("onboarding_wizard", "Your name")}</label>
           <p class="onboarding-form-helper">
-            Shown on your booking page and in confirmations sent to clients.
+            {dgettext(
+              "onboarding_wizard",
+              "Shown on your booking page and in confirmations sent to clients."
+            )}
           </p>
           <input
             type="text"
@@ -103,7 +117,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
                 do: "input-error"
               )
             ]}
-            placeholder="e.g. Jane Smith"
+            placeholder={dgettext("onboarding_wizard", "e.g. Jane Smith")}
             autocomplete="name"
           />
           <%= for message <- FormValidationHelpers.field_errors(@form_errors, :full_name) do %>
@@ -113,9 +127,12 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
 
         <%!-- Username / booking link --%>
         <div class="onboarding-form-group">
-          <label for="username" class="label">Your booking link</label>
+          <label for="username" class="label">{dgettext("onboarding_wizard", "Your booking link")}</label>
           <p class="onboarding-form-helper">
-            Share this link so people can book time with you. Choose something short and memorable.
+            {dgettext(
+              "onboarding_wizard",
+              "Share this link so people can book time with you. Choose something short and memorable."
+            )}
           </p>
           <div class="relative group">
             <% base_url = Policy.app_url() %>
@@ -137,7 +154,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
                 )
               ]}
               style={"padding-left: #{String.length(display_url) + 2}ch;"}
-              placeholder="yourname"
+              placeholder={dgettext("onboarding_wizard", "yourname")}
               autocomplete="username"
             />
           </div>
@@ -148,9 +165,12 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
 
         <%!-- Timezone --%>
         <div class="onboarding-form-group">
-          <label class="label">Your timezone</label>
+          <label class="label">{dgettext("onboarding_wizard", "Your timezone")}</label>
           <p class="onboarding-form-helper">
-            All your availability and bookings will be shown in this timezone.
+            {dgettext(
+              "onboarding_wizard",
+              "All your availability and bookings will be shown in this timezone."
+            )}
           </p>
           <TimezoneDropdown.timezone_dropdown
             profile={@profile}

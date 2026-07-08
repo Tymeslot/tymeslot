@@ -6,6 +6,8 @@ defmodule TymeslotWeb.OnboardingLive.ProfileHandlers do
   including full name and username.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Profiles
@@ -93,10 +95,14 @@ defmodule TymeslotWeb.OnboardingLive.ProfileHandlers do
         errors
 
       username in Profiles.reserved_paths() ->
-        Map.put(errors, :username, "This username is reserved")
+        Map.put(errors, :username, dgettext("onboarding_wizard", "This username is reserved"))
 
       not Profiles.username_available?(username) ->
-        Map.put(errors, :username, "This username is already taken")
+        Map.put(
+          errors,
+          :username,
+          dgettext("onboarding_wizard", "This username is already taken")
+        )
 
       true ->
         errors

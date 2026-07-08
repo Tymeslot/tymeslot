@@ -7,6 +7,8 @@ defmodule TymeslotWeb.OnboardingLive.TextHelpers do
   render identical, grammatical copy for the same value.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @doc """
   Returns a human-readable string for a number of days.
 
@@ -16,13 +18,31 @@ defmodule TymeslotWeb.OnboardingLive.TextHelpers do
   """
   @spec humanize_days(non_neg_integer() | nil) :: String.t()
   def humanize_days(nil), do: humanize_days(90)
-  def humanize_days(1), do: "1 day"
-  def humanize_days(7), do: "1 week"
-  def humanize_days(14), do: "2 weeks"
-  def humanize_days(30), do: "1 month"
-  def humanize_days(60), do: "2 months"
-  def humanize_days(90), do: "3 months"
-  def humanize_days(180), do: "6 months"
-  def humanize_days(365), do: "1 year"
-  def humanize_days(days), do: "#{days} days"
+
+  def humanize_days(1),
+    do: dngettext("onboarding_wizard", "%{count} day", "%{count} days", 1, count: 1)
+
+  def humanize_days(7),
+    do: dngettext("onboarding_wizard", "%{count} week", "%{count} weeks", 1, count: 1)
+
+  def humanize_days(14),
+    do: dngettext("onboarding_wizard", "%{count} week", "%{count} weeks", 2, count: 2)
+
+  def humanize_days(30),
+    do: dngettext("onboarding_wizard", "%{count} month", "%{count} months", 1, count: 1)
+
+  def humanize_days(60),
+    do: dngettext("onboarding_wizard", "%{count} month", "%{count} months", 2, count: 2)
+
+  def humanize_days(90),
+    do: dngettext("onboarding_wizard", "%{count} month", "%{count} months", 3, count: 3)
+
+  def humanize_days(180),
+    do: dngettext("onboarding_wizard", "%{count} month", "%{count} months", 6, count: 6)
+
+  def humanize_days(365),
+    do: dngettext("onboarding_wizard", "%{count} year", "%{count} years", 1, count: 1)
+
+  def humanize_days(days),
+    do: dngettext("onboarding_wizard", "%{count} day", "%{count} days", days, count: days)
 end

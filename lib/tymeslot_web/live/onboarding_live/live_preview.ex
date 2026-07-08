@@ -18,6 +18,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
@@ -96,7 +97,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
             style={book_style(@colors, @theme)}
             disabled
           >
-            Book
+            {dgettext("onboarding_wizard", "Book")}
           </button>
         </div>
 
@@ -239,7 +240,9 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
       style={buffer_style(@colors)}
     >
       <.icon name="hero-arrows-up-down-mini" class="w-3 h-3" />
-      {@minutes} min buffer between meetings
+      {dgettext("onboarding_wizard", "%{minutes} min buffer between meetings",
+        minutes: @minutes
+      )}
     </div>
     """
   end
@@ -277,28 +280,43 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   # Captions
   # -------------------------------------------------------------------
 
-  defp caption(%{current_step: :welcome}), do: "This is your live booking page"
-  defp caption(%{current_step: :profile}), do: "Your page, your brand"
+  defp caption(%{current_step: :welcome}),
+    do: dgettext("onboarding_wizard", "This is your live booking page")
+
+  defp caption(%{current_step: :profile}),
+    do: dgettext("onboarding_wizard", "Your page, your brand")
 
   defp caption(%{current_step: :connect_calendar, calendar_connected: true}),
-    do: "Your calendar is synced — these slots are live"
+    do: dgettext("onboarding_wizard", "Your calendar is synced — these slots are live")
 
   defp caption(%{current_step: :connect_calendar}),
-    do: "Connect your calendar to fill these slots"
+    do: dgettext("onboarding_wizard", "Connect your calendar to fill these slots")
 
-  defp caption(%{current_step: :buffer_time} = assigns),
-    do: "A breather between meetings (#{assigns.buffer_minutes || 15} min)"
+  defp caption(%{current_step: :buffer_time} = assigns) do
+    dgettext("onboarding_wizard", "A breather between meetings (%{minutes} min)",
+      minutes: assigns.buffer_minutes || 15
+    )
+  end
 
-  defp caption(%{current_step: :booking_window} = assigns),
-    do: "Bookable up to #{TextHelpers.humanize_days(assigns.advance_booking_days)}"
+  defp caption(%{current_step: :booking_window} = assigns) do
+    dgettext("onboarding_wizard", "Bookable up to %{days}",
+      days: TextHelpers.humanize_days(assigns.advance_booking_days)
+    )
+  end
 
-  defp caption(%{current_step: :minimum_notice} = assigns),
-    do: "Earliest booking: #{assigns.min_advance_hours || 0}h from now"
+  defp caption(%{current_step: :minimum_notice} = assigns) do
+    dgettext("onboarding_wizard", "Earliest booking: %{hours}h from now",
+      hours: assigns.min_advance_hours || 0
+    )
+  end
 
-  defp caption(%{current_step: :ready} = assigns),
-    do: "You're all set — #{link_text(assigns.booking_host, assigns.username)} is live"
+  defp caption(%{current_step: :ready} = assigns) do
+    dgettext("onboarding_wizard", "You're all set — %{link} is live",
+      link: link_text(assigns.booking_host, assigns.username)
+    )
+  end
 
-  defp caption(_assigns), do: "This is your live booking page"
+  defp caption(_assigns), do: dgettext("onboarding_wizard", "This is your live booking page")
 
   # -------------------------------------------------------------------
   # Highlight regions
@@ -317,7 +335,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
   defp display_name(name) do
     case String.trim(name || "") do
-      "" -> "Your name"
+      "" -> dgettext("onboarding_wizard", "Your name")
       trimmed -> trimmed
     end
   end
@@ -325,7 +343,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   defp link_text(host, username) do
     slug =
       case String.trim(username || "") do
-        "" -> "your-link"
+        "" -> dgettext("onboarding_wizard", "your-link")
         trimmed -> trimmed
       end
 
