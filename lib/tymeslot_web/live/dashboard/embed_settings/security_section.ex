@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
   Renders the security settings section for the embed settings dashboard.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
   Renders the security settings section.
@@ -20,10 +21,12 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
             <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
             </svg>
-            <h3 class="text-token-2xl font-bold text-tymeslot-900">Security & Domain Control</h3>
+            <h3 class="text-token-2xl font-bold text-tymeslot-900">
+              {dgettext("dashboard_embed", "Security & Domain Control")}
+            </h3>
           </div>
           <p class="text-tymeslot-600">
-            Control which websites can embed your booking page
+            {dgettext("dashboard_embed", "Control which websites can embed your booking page")}
           </p>
         </div>
       </div>
@@ -36,24 +39,46 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
             <div class="space-y-2 text-token-sm">
-              <p class="font-semibold text-blue-900">How Domain Whitelisting Works</p>
-              <p class="text-blue-800">
-                By default, embedding is disabled to prevent unauthorized use of your booking page.
-                To enable embedding, you must specify the domains you trust.
+              <p class="font-semibold text-blue-900">
+                {dgettext("dashboard_embed", "How Domain Whitelisting Works")}
               </p>
               <p class="text-blue-800">
-                For security, <strong>you must restrict embedding</strong> to only specific domains you trust. 
-                This prevents your booking page from appearing on unauthorized websites.
+                {dgettext(
+                  "dashboard_embed",
+                  "By default, embedding is disabled to prevent unauthorized use of your booking page. To enable embedding, you must specify the domains you trust."
+                )}
+              </p>
+              <p class="text-blue-800">
+                {dgettext("dashboard_embed", "For security,")}
+                <strong>{dgettext("dashboard_embed", "you must restrict embedding")}</strong>
+                {dgettext(
+                  "dashboard_embed",
+                  "to only specific domains you trust. This prevents your booking page from appearing on unauthorized websites."
+                )}
               </p>
               <ul class="list-disc list-inside text-blue-800 space-y-1 mt-2">
-                <li><strong>Add domains</strong> to enable and restrict embedding to only those sites</li>
-                <li><strong>Use Disable Embedding</strong> to block all embedding (default)</li>
                 <li>
-                  Adding <code class="bg-blue-100 px-2 py-0.5 rounded">example.com</code>
-                  automatically allows <code class="bg-blue-100 px-2 py-0.5 rounded">www.example.com</code> too (and vice versa)
+                  <strong>{dgettext("dashboard_embed", "Add domains")}</strong>
+                  {dgettext(
+                    "dashboard_embed",
+                    "to enable and restrict embedding to only those sites"
+                  )}
                 </li>
                 <li>
-                  Use <code class="bg-blue-100 px-2 py-0.5 rounded">*.example.com</code> to allow all subdomains
+                  <strong>{dgettext("dashboard_embed", "Use Disable Embedding")}</strong>
+                  {dgettext("dashboard_embed", "to block all embedding (default)")}
+                </li>
+                <li>
+                  {dgettext("dashboard_embed", "Adding")}
+                  <code class="bg-blue-100 px-2 py-0.5 rounded">example.com</code>
+                  {dgettext("dashboard_embed", "automatically allows")}
+                  <code class="bg-blue-100 px-2 py-0.5 rounded">www.example.com</code>
+                  {dgettext("dashboard_embed", "too (and vice versa)")}
+                </li>
+                <li>
+                  {dgettext("dashboard_embed", "Use")}
+                  <code class="bg-blue-100 px-2 py-0.5 rounded">*.example.com</code>
+                  {dgettext("dashboard_embed", "to allow all subdomains")}
                 </li>
               </ul>
             </div>
@@ -73,12 +98,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
             id="allowed_domains"
             name="allowed_domains"
             value=""
-            label="Add Allowed Domain"
+            label={dgettext("dashboard_embed", "Add Allowed Domain")}
             placeholder="example.com"
             icon="hero-globe-alt"
           />
           <p class="mt-2 text-token-xs text-tymeslot-600">
-            Enter a domain and press enter to add it. Don't include <code class="bg-tymeslot-100 px-1 py-0.5 rounded">https://</code> or paths.
+            {dgettext("dashboard_embed", "Enter a domain and press enter to add it. Don't include")}
+            <code class="bg-tymeslot-100 px-1 py-0.5 rounded">https://</code>
+            {dgettext("dashboard_embed", "or paths.")}
           </p>
 
           <%!-- Current Domains Tags --%>
@@ -109,21 +136,25 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
 
           <%!-- Current Status --%>
           <div class="bg-tymeslot-50 rounded-token-lg p-4 border-2 border-tymeslot-200">
-            <p class="text-token-sm font-semibold text-tymeslot-700 mb-2">Current Status:</p>
+            <p class="text-token-sm font-semibold text-tymeslot-700 mb-2">
+              {dgettext("dashboard_embed", "Current Status:")}
+            </p>
             <div class="flex items-center space-x-2">
             <%= if @allowed_domains == [] or @allowed_domains == ["none"] do %>
                 <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-12.728 12.728M6.343 6.343l12.728 12.728"></path>
                 </svg>
                 <span class="text-token-sm text-tymeslot-700">
-                  <strong>Disabled:</strong> Embedding is blocked everywhere (default)
+                  <strong>{dgettext("dashboard_embed", "Disabled:")}</strong>
+                  {dgettext("dashboard_embed", "Embedding is blocked everywhere (default)")}
                 </span>
             <% else %>
                 <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                 </svg>
                 <span class="text-token-sm text-tymeslot-700">
-                  <strong>Restricted:</strong> Only your whitelisted domains can embed
+                  <strong>{dgettext("dashboard_embed", "Restricted:")}</strong>
+                  {dgettext("dashboard_embed", "Only your whitelisted domains can embed")}
                 </span>
             <% end %>
             </div>
@@ -132,7 +163,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
           <%!-- Action Buttons --%>
           <div class="flex space-x-3">
             <.action_button type="submit">
-              Add Domain
+              {dgettext("dashboard_embed", "Add Domain")}
             </.action_button>
             <%= if @allowed_domains != ["none"] and @allowed_domains != [] do %>
               <.action_button
@@ -140,7 +171,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
                 phx-click="clear_embed_domains"
                 phx-target={@myself}
               >
-                Disable All Embedding
+                {dgettext("dashboard_embed", "Disable All Embedding")}
               </.action_button>
             <% end %>
           </div>

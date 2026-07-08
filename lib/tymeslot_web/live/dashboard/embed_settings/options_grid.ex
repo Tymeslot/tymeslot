@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
   Renders the embed options grid for the dashboard.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers
 
@@ -34,9 +35,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
       <.embed_option_card
         type="inline"
         selected={@selected_embed_type == "inline"}
-        title="Inline Embed"
-        description="Embed directly into your webpage"
-        badge="Recommended"
+        title={dgettext("dashboard_embed", "Inline Embed")}
+        description={dgettext("dashboard_embed", "Embed directly into your webpage")}
+        badge={dgettext("dashboard_embed", "Recommended")}
         badge_class="bg-turquoise-100 text-turquoise-700"
         myself={@myself}
       >
@@ -55,7 +56,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
                   <svg class="w-4 h-4 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                   </svg>
-                  <div class="text-token-xs font-semibold text-turquoise-700">Your booking widget here</div>
+                  <div class="text-token-xs font-semibold text-turquoise-700">
+                    {dgettext("dashboard_embed", "Your booking widget here")}
+                  </div>
                 </div>
               </div>
               <div class="h-2 bg-tymeslot-200 rounded w-2/3"></div>
@@ -66,7 +69,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           {Helpers.embed_code("inline", @snippet_options)}
         </:code>
         <:footer_info>
-          Shows the booking calendar right on your page. Copy the code and paste it into your website's HTML.
+          {dgettext(
+            "dashboard_embed",
+            "Shows the booking calendar right on your page. Copy the code and paste it into your website's HTML."
+          )}
         </:footer_info>
       </.embed_option_card>
 
@@ -74,9 +80,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
       <.embed_option_card
         type="popup"
         selected={@selected_embed_type == "popup"}
-        title="Popup Modal"
-        description="Trigger a modal overlay with a button"
-        badge="Popular"
+        title={dgettext("dashboard_embed", "Popup Modal")}
+        description={dgettext("dashboard_embed", "Trigger a modal overlay with a button")}
+        badge={dgettext("dashboard_embed", "Popular")}
         badge_class="bg-blue-100 text-blue-700"
         myself={@myself}
       >
@@ -92,7 +98,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
               <div class="h-2 bg-tymeslot-200 rounded w-1/2"></div>
               <div class="mt-4 flex justify-center">
                 <div class="px-4 py-2 text-white text-token-xs font-bold rounded-token-lg shadow-lg bg-turquoise-600">
-                  Book a Meeting →
+                  {dgettext("dashboard_embed", "Book a Meeting →")}
                 </div>
               </div>
               <div class="h-2 bg-tymeslot-200 rounded w-2/3"></div>
@@ -103,16 +109,19 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           {Helpers.embed_code("popup", @snippet_options)}
         </:code>
         <:footer_info>
-          Visitors click a button on your page and the booking calendar opens in an overlay.
+          {dgettext(
+            "dashboard_embed",
+            "Visitors click a button on your page and the booking calendar opens in an overlay."
+          )}
         </:footer_info>
       </.embed_option_card>
 
       <.embed_option_card
         type="link"
         selected={@selected_embed_type == "link"}
-        title="Direct Link"
-        description="Simple link to your booking page"
-        badge="Easiest"
+        title={dgettext("dashboard_embed", "Direct Link")}
+        description={dgettext("dashboard_embed", "Simple link to your booking page")}
+        badge={dgettext("dashboard_embed", "Easiest")}
         badge_class="bg-tymeslot-100 text-tymeslot-700"
         myself={@myself}
       >
@@ -128,7 +137,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
               <div class="h-2 bg-tymeslot-200 rounded w-1/2"></div>
               <div class="mt-4">
                 <div class="text-token-xs text-turquoise-600 underline font-medium">
-                  Schedule a meeting with me →
+                  {dgettext("dashboard_embed", "Schedule a meeting with me →")}
                 </div>
               </div>
               <div class="h-2 bg-tymeslot-200 rounded w-2/3"></div>
@@ -139,16 +148,19 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           {Helpers.embed_code("link", @snippet_options)}
         </:code>
         <:footer_info>
-          Share this link in emails, social media bios, or messages. No code needed.
+          {dgettext(
+            "dashboard_embed",
+            "Share this link in emails, social media bios, or messages. No code needed."
+          )}
         </:footer_info>
       </.embed_option_card>
 
       <.embed_option_card
         type="floating"
         selected={@selected_embed_type == "floating"}
-        title="Floating Button"
-        description="Fixed button in corner of page"
-        badge="Pro"
+        title={dgettext("dashboard_embed", "Floating Button")}
+        description={dgettext("dashboard_embed", "Fixed button in corner of page")}
+        badge={dgettext("dashboard_embed", "Pro")}
         badge_class="bg-purple-100 text-purple-700"
         myself={@myself}
       >
@@ -180,7 +192,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           {Helpers.embed_code("floating", @snippet_options)}
         </:code>
         <:footer_info>
-          A floating button stays visible as visitors scroll — like a chat widget, but for booking.
+          {dgettext(
+            "dashboard_embed",
+            "A floating button stays visible as visitors scroll — like a chat widget, but for booking."
+          )}
         </:footer_info>
       </.embed_option_card>
     </div>
@@ -204,9 +219,12 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         />
       </svg>
       <div class="space-y-1">
-        <p class="font-semibold text-indigo-900">Using WordPress?</p>
+        <p class="font-semibold text-indigo-900">{dgettext("dashboard_embed", "Using WordPress?")}</p>
         <p class="text-token-sm text-indigo-800">
-          Install the official Tymeslot plugin to embed your booking page with a block or shortcode — no code.
+          {dgettext(
+            "dashboard_embed",
+            "Install the official Tymeslot plugin to embed your booking page with a block or shortcode — no code."
+          )}
           <a
             href="https://wordpress.org/plugins/tymeslot/"
             target="_blank"
@@ -215,7 +233,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             data-analytics-props={Jason.encode!(%{source_page: "embed_settings"})}
             class="font-bold text-indigo-700 underline hover:text-indigo-900"
           >
-            Get it on WordPress.org
+            {dgettext("dashboard_embed", "Get it on WordPress.org")}
           </a>
           <span class="text-indigo-400" aria-hidden="true">·</span>
           <a
@@ -226,7 +244,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             data-analytics-props={Jason.encode!(%{source_page: "embed_settings"})}
             class="font-semibold text-indigo-600 underline hover:text-indigo-900"
           >
-            source
+            {dgettext("dashboard_embed", "source")}
           </a>
         </p>
       </div>
@@ -234,16 +252,19 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
 
     <%!-- Hardcoded link to the cloud docs hub (slash-docs is not available in standalone Core) --%>
     <p class="mt-6 text-center text-token-sm text-tymeslot-500">
-      Need help? See the
+      {dgettext("dashboard_embed", "Need help? See the")}
       <a
         href="https://tymeslot.app/docs/embed"
         target="_blank"
         rel="noopener noreferrer"
         class="text-turquoise-600 hover:text-turquoise-700 font-medium underline"
       >
-        embedding guide
+        {dgettext("dashboard_embed", "embedding guide")}
       </a>
-      for step-by-step instructions, platform tips, and customization options.
+      {dgettext(
+        "dashboard_embed",
+        "for step-by-step instructions, platform tips, and customization options."
+      )}
     </p>
     """
   end
@@ -264,9 +285,12 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
     <div class="mb-6 bg-white border-2 border-tymeslot-200 rounded-token-lg p-6">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h3 class="text-token-lg font-bold text-tymeslot-900">Customise</h3>
+          <h3 class="text-token-lg font-bold text-tymeslot-900">{dgettext("dashboard_embed", "Customise")}</h3>
           <p class="text-token-sm text-tymeslot-600 mt-1">
-            Updates every snippet below. Defaults work for most embeds — adjust when your site needs them.
+            {dgettext(
+              "dashboard_embed",
+              "Updates every snippet below. Defaults work for most embeds — adjust when your site needs them."
+            )}
           </p>
         </div>
       </div>
@@ -284,14 +308,21 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           type="select"
           id="embed-layout"
           name="customise[layout]"
-          label="Layout"
+          label={dgettext("dashboard_embed", "Layout")}
           options={[
-            {"Column — wide canvas, fills the container (recommended)", "column"},
-            {"Default — centred with a ~640px cap (standalone-style)", "default"}
+            {dgettext("dashboard_embed", "Column — wide canvas, fills the container (recommended)"),
+             "column"},
+            {dgettext("dashboard_embed", "Default — centred with a ~640px cap (standalone-style)"),
+             "default"}
           ]}
           value={@embed_layout}
         >
-          <:description>Column adapts to any container width. Default centres the booker — useful when you want a self-contained card inside a wide page.</:description>
+          <:description>
+            {dgettext(
+              "dashboard_embed",
+              "Column adapts to any container width. Default centres the booker — useful when you want a self-contained card inside a wide page."
+            )}
+          </:description>
         </.input>
 
         <%!-- Initial height --%>
@@ -299,7 +330,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           type="number"
           id="embed-initial-height"
           name="customise[initial_height]"
-          label="Initial height (px)"
+          label={dgettext("dashboard_embed", "Initial height (px)")}
           min="200"
           max="2000"
           step="50"
@@ -307,7 +338,12 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           value={@initial_height}
           phx-debounce="blur"
         >
-          <:description>Placeholder shown before the iframe auto-resizes. Inline only.</:description>
+          <:description>
+            {dgettext(
+              "dashboard_embed",
+              "Placeholder shown before the iframe auto-resizes. Inline only."
+            )}
+          </:description>
         </.input>
 
         <%!-- Max width --%>
@@ -315,7 +351,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           type="number"
           id="embed-max-width"
           name="customise[max_width]"
-          label="Max width (px)"
+          label={dgettext("dashboard_embed", "Max width (px)")}
           min="200"
           max="2000"
           step="50"
@@ -323,7 +359,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           value={@max_width}
           phx-debounce="blur"
         >
-          <:description>Container max-width. Modal popup defaults to 1000px.</:description>
+          <:description>
+            {dgettext("dashboard_embed", "Container max-width. Modal popup defaults to 1000px.")}
+          </:description>
         </.input>
       </.form>
     </div>
@@ -382,7 +420,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             phx-target={@myself}
             class="absolute top-2 right-2 px-3 py-1 bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-xs font-semibold rounded transition-colors"
           >
-            Copy
+            {dgettext("dashboard_embed", "Copy")}
           </button>
         </div>
 

@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   Shows users different ways to embed their booking page with live previews.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
   alias Tymeslot.Profiles
@@ -76,17 +77,20 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       <%!-- Header --%>
       <.section_header
         icon="hero-code-bracket"
-        title="Embed & Share"
+        title={dgettext("dashboard_embed", "Embed & Share")}
         class="mb-4"
       />
 
       <p class="text-tymeslot-600 mb-6">
-        Add your booking page to any website. Choose the option that works best for you.
+        {dgettext(
+          "dashboard_embed",
+          "Add your booking page to any website. Choose the option that works best for you."
+        )}
       </p>
 
       <%!-- Tabbed Interface --%>
       <.tabs active_tab={@active_tab} target={@myself}>
-        <:tab id="options" label="Embed Options" icon="hero-code-bracket">
+        <:tab id="options" label={dgettext("dashboard_embed", "Embed Options")} icon="hero-code-bracket">
           <OptionsGrid.options_grid
             selected_embed_type={@selected_embed_type}
             username={@username}
@@ -99,14 +103,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
           />
         </:tab>
 
-        <:tab id="security" label="Security" icon="hero-lock-closed">
+        <:tab id="security" label={dgettext("dashboard_embed", "Security")} icon="hero-lock-closed">
           <SecuritySection.security_section
             allowed_domains={@allowed_domains}
             myself={@myself}
           />
         </:tab>
 
-        <:tab id="preview" label="Live Preview" icon="hero-video-camera">
+        <:tab id="preview" label={dgettext("dashboard_embed", "Live Preview")} icon="hero-video-camera">
           <LivePreview.live_preview
             selected_embed_type={@selected_embed_type}
             username={@username}
@@ -137,7 +141,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     code = Helpers.embed_code(type, Helpers.snippet_options(socket.assigns))
 
     socket = push_event(socket, "copy-to-clipboard", %{text: code})
-    Flash.info("Code copied to clipboard!")
+    Flash.info(dgettext("dashboard_embed", "Code copied to clipboard!"))
 
     {:noreply, socket}
   end
@@ -178,14 +182,23 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   def handle_event("save_embed_domains", %{"allowed_domains" => domains_str}, socket) do
     case Profiles.add_embed_domains(socket.assigns.profile, domains_str) do
       {:ok, merged_domains} ->
-        perform_domain_update(socket, merged_domains, "Security settings saved successfully!")
+        perform_domain_update(
+          socket,
+          merged_domains,
+          dgettext("dashboard_embed", "Security settings saved successfully!")
+        )
 
       {:error, :empty_input} ->
-        Flash.error("Please enter at least one domain.")
+        Flash.error(dgettext("dashboard_embed", "Please enter at least one domain."))
         {:noreply, socket}
 
       {:error, {:duplicates, duplicates}} ->
-        Flash.error("Already whitelisted: #{Enum.join(duplicates, ", ")}")
+        Flash.error(
+          dgettext("dashboard_embed", "Already whitelisted: %{domains}",
+            domains: Enum.join(duplicates, ", ")
+          )
+        )
+
         {:noreply, socket}
     end
   end
@@ -198,7 +211,11 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       updated_domains = Enum.reject(socket.assigns.allowed_domains, &(&1 == domain))
       updated_domains = if updated_domains == [], do: ["none"], else: updated_domains
 
-      perform_domain_update(socket, updated_domains, "Domain removed successfully")
+      perform_domain_update(
+        socket,
+        updated_domains,
+        dgettext("dashboard_embed", "Domain removed successfully")
+      )
     else
       {:noreply, socket}
     end
@@ -208,7 +225,11 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     do: reject_invalid_event("remove_domain", socket)
 
   def handle_event("clear_embed_domains", _params, socket) do
-    perform_domain_update(socket, ["none"], "Embedding is now disabled")
+    perform_domain_update(
+      socket,
+      ["none"],
+      dgettext("dashboard_embed", "Embedding is now disabled")
+    )
   end
 
   defp reject_invalid_event(event_name, socket) do
@@ -259,14 +280,20 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
                 end
               )
 
-            Flash.error("Failed to save: #{errors}")
+            Flash.error(dgettext("dashboard_embed", "Failed to save: %{errors}", errors: errors))
             {:noreply, socket}
         end
 
       {:deny, _retry_after} ->
         Logger.warning("Embed domain update rate limit exceeded", user_id: user_id)
 
-        Flash.error("Too many updates. Please wait a moment before trying again.")
+        Flash.error(
+          dgettext(
+            "dashboard_embed",
+            "Too many updates. Please wait a moment before trying again."
+          )
+        )
+
         {:noreply, socket}
     end
   end

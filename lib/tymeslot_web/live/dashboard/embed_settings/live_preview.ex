@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview do
   Renders the live preview section for the embed settings dashboard.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Scheduling.LinkAccessPolicy
 
@@ -26,15 +27,24 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview do
     <div class="bg-linear-to-br from-tymeslot-50 to-tymeslot-100 rounded-token-2xl border-2 border-tymeslot-200 p-8">
       <div class="flex items-center mb-6">
         <div>
-          <h3 class="text-token-2xl font-bold text-tymeslot-900">Test It Live</h3>
-          <p class="text-tymeslot-600 mt-1">Try your booking widget in action</p>
+          <h3 class="text-token-2xl font-bold text-tymeslot-900">{dgettext("dashboard_embed", "Test It Live")}</h3>
+          <p class="text-tymeslot-600 mt-1">{dgettext("dashboard_embed", "Try your booking widget in action")}</p>
         </div>
       </div>
 
       <div class="bg-white rounded-token-xl p-6 border-2 border-tymeslot-300 shadow-xl">
         <div class="text-center text-tymeslot-600 mb-4">
-          <p class="font-semibold text-turquoise-700">Previewing: <%= String.capitalize(@selected_embed_type) %> Mode</p>
-          <p class="text-token-sm">This is how your booking widget will appear on external sites</p>
+          <p class="font-semibold text-turquoise-700">
+            {dgettext("dashboard_embed", "Previewing: %{type} Mode",
+              type: String.capitalize(@selected_embed_type)
+            )}
+          </p>
+          <p class="text-token-sm">
+            {dgettext(
+              "dashboard_embed",
+              "This is how your booking widget will appear on external sites"
+            )}
+          </p>
         </div>
 
         <%!-- Readiness Warning --%>
@@ -43,7 +53,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview do
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
           </svg>
           <div>
-            <p class="text-token-sm font-bold text-amber-900">Link Deactivated</p>
+            <p class="text-token-sm font-bold text-amber-900">{dgettext("dashboard_embed", "Link Deactivated")}</p>
             <p class="text-token-xs text-amber-800">
               <%= LinkAccessPolicy.reason_to_message(@error_reason) %>
             </p>
