@@ -288,39 +288,40 @@ defmodule TymeslotWeb.AccountLiveTest do
   end
 
   describe "Language Preference" do
-    test "renders the language select with Automatic and Deutsch options", %{conn: conn} do
+    test "renders a language button per locale with Automatic active by default",
+         %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/account")
 
-      assert html =~ ~s(name="language_form[locale]")
+      assert html =~ ~s(phx-value-locale="de")
       assert html =~ "Automatic"
       assert html =~ "Deutsch"
+      # No saved locale → the Automatic button is the active selection.
+      assert html =~ ~r/phx-value-locale=""[^>]*btn-tag-selector-primary--active/s
     end
 
-    test "saving a language shows a flash and persists the locale", %{conn: conn, user: user} do
+    test "clicking a language button auto-saves and immediately marks it active",
+         %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
       html =
         view
-        |> element("#language-form")
-        |> render_change(%{"language_form" => %{"locale" => "de"}})
+        |> element(~s(button[phx-value-locale="de"]))
+        |> render_click()
 
-      assert html =~ "Language preference saved"
+      # Persisted immediately, no separate save step.
       assert Repo.get(UserSchema, user.id).locale == "de"
+      # Immediate feedback: confirmation flash + the German button now active.
+      assert html =~ "Language preference saved"
+      assert html =~ ~r/phx-value-locale="de"[^>]*btn-tag-selector-primary--active/s
     end
 
-    test "choosing Automatic clears the persisted locale", %{conn: conn, user: user} do
+    test "clicking Automatic clears the persisted locale", %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
-      view
-      |> element("#language-form")
-      |> render_change(%{"language_form" => %{"locale" => "de"}})
-
+      view |> element(~s(button[phx-value-locale="de"])) |> render_click()
       assert Repo.get(UserSchema, user.id).locale == "de"
 
-      view
-      |> element("#language-form")
-      |> render_change(%{"language_form" => %{"locale" => ""}})
-
+      view |> element(~s(button[phx-value-locale=""])) |> render_click()
       assert Repo.get(UserSchema, user.id).locale == nil
     end
   end

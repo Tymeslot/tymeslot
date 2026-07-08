@@ -7,6 +7,8 @@ defmodule TymeslotWeb.AccountLive.Components do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.AccountLive.Forms
+  import TymeslotWeb.Components.CoreComponents.Icons
+  import TymeslotWeb.Components.FlagHelpers
   alias TymeslotWeb.AccountLive.Helpers
 
   @doc """
@@ -126,9 +128,10 @@ defmodule TymeslotWeb.AccountLive.Components do
   end
 
   @doc """
-  Renders the interface-language preference card. A select posts the chosen
-  locale immediately (`phx-change`); the empty option clears the preference so
-  the dashboard follows the browser/session locale.
+  Renders the interface-language preference card as a row of flag buttons. Each
+  button auto-saves the chosen locale on click (`phx-click="change_language"`)
+  and immediately highlights as active; the Automatic button clears the
+  preference so the dashboard follows the browser/session locale.
   """
   attr :current_user, :map, required: true
   attr :supported_locales, :list, required: true
@@ -146,24 +149,39 @@ defmodule TymeslotWeb.AccountLive.Components do
           )}
         </p>
       </div>
-      <.form for={%{}} as={:language_form} id="language-form" phx-change="change_language">
-        <select
-          name="language_form[locale]"
-          class="input w-full max-w-xs"
-          aria-label={dgettext("account", "Interface language")}
+      <div
+        class="flex flex-wrap items-center gap-3"
+        role="group"
+        aria-label={dgettext("account", "Interface language")}
+      >
+        <button
+          type="button"
+          phx-click="change_language"
+          phx-value-locale=""
+          aria-pressed={is_nil(@current_user.locale)}
+          class={[
+            "btn-tag-selector btn-tag-selector-primary inline-flex items-center gap-2",
+            is_nil(@current_user.locale) && "btn-tag-selector-primary--active"
+          ]}
         >
-          <option value="" selected={is_nil(@current_user.locale)}>
-            {dgettext("account", "Automatic (browser default)")}
-          </option>
-          <option
-            :for={locale <- @supported_locales}
-            value={locale.code}
-            selected={@current_user.locale == locale.code}
-          >
-            {locale.name}
-          </option>
-        </select>
-      </.form>
+          <.icon name="hero-globe-alt" class="w-4 h-4" />
+          {dgettext("account", "Automatic")}
+        </button>
+        <button
+          :for={locale <- @supported_locales}
+          type="button"
+          phx-click="change_language"
+          phx-value-locale={locale.code}
+          aria-pressed={@current_user.locale == locale.code}
+          class={[
+            "btn-tag-selector btn-tag-selector-primary inline-flex items-center gap-2",
+            @current_user.locale == locale.code && "btn-tag-selector-primary--active"
+          ]}
+        >
+          <.locale_flag locale={locale.code} class="w-5 h-4" />
+          {locale.name}
+        </button>
+      </div>
     </div>
     """
   end

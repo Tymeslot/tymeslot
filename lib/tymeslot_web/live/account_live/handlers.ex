@@ -66,7 +66,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     end
   end
 
-  def handle_event("change_language", %{"language_form" => %{"locale" => locale}}, socket) do
+  def handle_event("change_language", %{"locale" => locale}, socket) do
     case Auth.update_user_locale(socket.assigns.current_user, locale) do
       {:ok, updated_user} ->
         new_locale = updated_user.locale || LocaleHandler.default_locale()

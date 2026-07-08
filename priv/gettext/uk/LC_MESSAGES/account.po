@@ -11,7 +11,7 @@ msgstr ""
 "Language: uk\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/live/account_live/components.ex:327
+#: lib/tymeslot_web/live/account_live/components.ex:345
 #, elixir-autogen, elixir-format
 msgid "%{count} day ago"
 msgid_plural "%{count} days ago"
@@ -19,7 +19,7 @@ msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:323
+#: lib/tymeslot_web/live/account_live/components.ex:341
 #, elixir-autogen, elixir-format
 msgid "%{count} hour ago"
 msgid_plural "%{count} hours ago"
@@ -27,7 +27,7 @@ msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:319
+#: lib/tymeslot_web/live/account_live/components.ex:337
 #, elixir-autogen, elixir-format
 msgid "%{count} minute ago"
 msgid_plural "%{count} minutes ago"
@@ -35,12 +35,12 @@ msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:284
+#: lib/tymeslot_web/live/account_live/components.ex:302
 #, elixir-autogen, elixir-format
 msgid "A verification email has been sent to"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:30
+#: lib/tymeslot_web/live/account_live/components.ex:32
 #, elixir-autogen, elixir-format
 msgid "Account Security"
 msgstr ""
@@ -60,7 +60,7 @@ msgstr ""
 msgid "At least 8 characters"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:103
+#: lib/tymeslot_web/live/account_live/components.ex:105
 #, elixir-autogen, elixir-format
 msgid "Authentication is managed through %{provider}"
 msgstr ""
@@ -70,23 +70,23 @@ msgstr ""
 msgid "Back to Dashboard"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:58
-#: lib/tymeslot_web/live/account_live/components.ex:98
+#: lib/tymeslot_web/live/account_live/components.ex:60
+#: lib/tymeslot_web/live/account_live/components.ex:100
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:297
+#: lib/tymeslot_web/live/account_live/components.ex:315
 #, elixir-autogen, elixir-format
 msgid "Cancel email change"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:59
+#: lib/tymeslot_web/live/account_live/components.ex:61
 #, elixir-autogen, elixir-format
 msgid "Change Email"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:99
+#: lib/tymeslot_web/live/account_live/components.ex:101
 #, elixir-autogen, elixir-format
 msgid "Change Password"
 msgstr ""
@@ -107,17 +107,17 @@ msgstr ""
 msgid "Current Password"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:193
+#: lib/tymeslot_web/live/account_live/components.ex:211
 #, elixir-autogen, elixir-format
 msgid "Current email:"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:49
+#: lib/tymeslot_web/live/account_live/components.ex:51
 #, elixir-autogen, elixir-format
 msgid "Email Address"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:280
+#: lib/tymeslot_web/live/account_live/components.ex:298
 #, elixir-autogen, elixir-format
 msgid "Email Change Pending"
 msgstr ""
@@ -133,12 +133,12 @@ msgstr ""
 msgid "Enter your current password"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:107
+#: lib/tymeslot_web/live/account_live/components.ex:109
 #, elixir-autogen, elixir-format
 msgid "Last changed: %{last_changed}"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:250
+#: lib/tymeslot_web/live/account_live/components.ex:268
 #, elixir-autogen, elixir-format
 msgid "Managed by %{provider}"
 msgstr ""
@@ -158,7 +158,7 @@ msgstr ""
 msgid "New password must be different from current password"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:91
+#: lib/tymeslot_web/live/account_live/components.ex:93
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr ""
@@ -168,17 +168,17 @@ msgstr ""
 msgid "Password authentication is not available for %{provider} login"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:114
+#: lib/tymeslot_web/live/account_live/components.ex:116
 #, elixir-autogen, elixir-format
 msgid "Password authentication is not available for social login accounts"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:198
+#: lib/tymeslot_web/live/account_live/components.ex:216
 #, elixir-autogen, elixir-format
 msgid "Pending change to:"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:288
+#: lib/tymeslot_web/live/account_live/components.ex:306
 #, elixir-autogen, elixir-format
 msgid "Sent %{time}"
 msgstr ""
@@ -213,7 +213,7 @@ msgstr ""
 msgid "Your password has been changed. Please sign in again with your new password."
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:311
+#: lib/tymeslot_web/live/account_live/components.ex:329
 #, elixir-autogen, elixir-format
 msgid "just now"
 msgstr ""
@@ -228,12 +228,7 @@ msgstr ""
 msgid "Never"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:156
-#, elixir-autogen, elixir-format
-msgid "Automatic (browser default)"
-msgstr ""
-
-#: lib/tymeslot_web/live/account_live/components.ex:143
+#: lib/tymeslot_web/live/account_live/components.ex:146
 #, elixir-autogen, elixir-format
 msgid "Choose the language for your dashboard. Automatic follows your browser's preference."
 msgstr ""
@@ -243,12 +238,12 @@ msgstr ""
 msgid "Could not save language preference."
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:153
+#: lib/tymeslot_web/live/account_live/components.ex:155
 #, elixir-autogen, elixir-format
 msgid "Interface language"
 msgstr ""
 
-#: lib/tymeslot_web/live/account_live/components.ex:141
+#: lib/tymeslot_web/live/account_live/components.ex:144
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
@@ -256,4 +251,9 @@ msgstr ""
 #: lib/tymeslot_web/live/account_live/handlers.ex:79
 #, elixir-autogen, elixir-format
 msgid "Language preference saved."
+msgstr ""
+
+#: lib/tymeslot_web/live/account_live/components.ex:168
+#, elixir-autogen, elixir-format
+msgid "Automatic"
 msgstr ""
