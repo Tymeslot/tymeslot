@@ -49,6 +49,7 @@ defmodule TymeslotWeb do
         plug TymeslotWeb.Plugs.SecurityHeadersPlug
         plug TymeslotWeb.Plugs.FetchCurrentUser
         plug TymeslotWeb.Plugs.SetLoggerMetadata
+        plug TymeslotWeb.Plugs.LocalePlug, prefer_user_locale: true
         plug TymeslotWeb.Plugs.ThemePlug
       end
 

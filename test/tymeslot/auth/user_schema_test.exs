@@ -76,4 +76,34 @@ defmodule Tymeslot.Auth.UserSchemaTest do
       assert "has already been taken" in errors_on(changeset).provider
     end
   end
+
+  describe "locale_changeset/2" do
+    test "accepts a supported locale code" do
+      changeset = UserSchema.locale_changeset(%UserSchema{}, %{locale: "de"})
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :locale) == "de"
+    end
+
+    test "clears the preference for an empty string" do
+      changeset = UserSchema.locale_changeset(%UserSchema{}, %{locale: ""})
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :locale) == nil
+    end
+
+    test "clears the preference for nil" do
+      changeset = UserSchema.locale_changeset(%UserSchema{}, %{locale: nil})
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :locale) == nil
+    end
+
+    test "rejects an unsupported locale code" do
+      changeset = UserSchema.locale_changeset(%UserSchema{}, %{locale: "zz"})
+
+      refute changeset.valid?
+      assert errors_on(changeset).locale != []
+    end
+  end
 end

@@ -173,6 +173,18 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
+  Updates the user's interface language preference. Pass `nil` (or an empty
+  string) to clear it and fall back to browser/session locale detection.
+  """
+  @spec update_user_locale(UserSchema.t(), String.t() | nil, module()) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def update_user_locale(%UserSchema{} = user, locale, repo \\ Repo) do
+    user
+    |> UserSchema.locale_changeset(%{locale: locale})
+    |> repo.update()
+  end
+
+  @doc """
   Returns `true` if `user` is the only row in the `users` table.
 
   Accepts an optional `repo` argument for use within transactions — the call

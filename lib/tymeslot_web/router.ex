@@ -188,6 +188,7 @@ defmodule TymeslotWeb.Router do
 
     @dashboard_hooks [
       {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
+      TymeslotWeb.Hooks.AppLocaleHook,
       TymeslotWeb.Hooks.ClientInfoHook,
       TymeslotWeb.Hooks.DashboardInitHook,
       {TymeslotWeb.Hooks.FeatureAssignsHook, :set_feature_assigns},
@@ -285,6 +286,7 @@ defmodule TymeslotWeb.Router do
     live_session :admin,
       on_mount: [
         {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
+        TymeslotWeb.Hooks.AppLocaleHook,
         TymeslotWeb.Hooks.EnsureAdminHook
       ] do
       live "/", AdminLive, :settings
@@ -300,6 +302,7 @@ defmodule TymeslotWeb.Router do
     live_session :onboarding,
       on_mount: [
         {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
+        TymeslotWeb.Hooks.AppLocaleHook,
         TymeslotWeb.Hooks.ClientInfoHook
       ] do
       live "/onboarding", OnboardingLive, :welcome

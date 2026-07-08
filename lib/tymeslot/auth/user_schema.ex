@@ -7,6 +7,7 @@ defmodule Tymeslot.Auth.UserSchema do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Locales
   alias Tymeslot.Profiles.ProfileSchema
 
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
@@ -82,6 +83,7 @@ defmodule Tymeslot.Auth.UserSchema do
     field(:dashboard_setup_dismissed_at, :utc_datetime)
     field(:last_active_at, :utc_datetime)
     field(:is_admin, :boolean, default: false)
+    field(:locale, :string)
 
     has_one(:profile, Tymeslot.Profiles.ProfileSchema, foreign_key: :user_id)
 
@@ -118,6 +120,21 @@ defmodule Tymeslot.Auth.UserSchema do
     |> validate_password()
     |> unique_constraint(:email)
     |> unique_constraint([:provider, :provider_uid])
+  end
+
+  @doc """
+  Changeset for the user's interface language preference. An empty string or
+  `nil` clears the preference (fall back to browser/session detection); any
+  other value must be a supported locale code.
+  """
+  @spec locale_changeset(t(), map()) :: Ecto.Changeset.t()
+  def locale_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:locale])
+    |> update_change(:locale, fn locale -> if locale in ["", nil], do: nil, else: locale end)
+    |> validate_inclusion(:locale, Locales.supported_codes(),
+      message: "is not a supported locale"
+    )
   end
 
   @spec registration_changeset(t(), map()) :: Ecto.Changeset.t()

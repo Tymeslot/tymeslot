@@ -126,6 +126,49 @@ defmodule TymeslotWeb.AccountLive.Components do
   end
 
   @doc """
+  Renders the interface-language preference card. A select posts the chosen
+  locale immediately (`phx-change`); the empty option clears the preference so
+  the dashboard follows the browser/session locale.
+  """
+  attr :current_user, :map, required: true
+  attr :supported_locales, :list, required: true
+
+  @spec language_card(map) :: Phoenix.LiveView.Rendered.t()
+  def language_card(assigns) do
+    ~H"""
+    <div class={card_classes(false)}>
+      <div class="mb-4">
+        <h3 class="text-lg font-medium text-tymeslot-800">{dgettext("account", "Language")}</h3>
+        <p class="text-sm text-tymeslot-600 mt-1">
+          {dgettext(
+            "account",
+            "Choose the language for your dashboard. Automatic follows your browser's preference."
+          )}
+        </p>
+      </div>
+      <.form for={%{}} as={:language_form} id="language-form" phx-change="change_language">
+        <select
+          name="language_form[locale]"
+          class="input w-full max-w-xs"
+          aria-label={dgettext("account", "Interface language")}
+        >
+          <option value="" selected={is_nil(@current_user.locale)}>
+            {dgettext("account", "Automatic (browser default)")}
+          </option>
+          <option
+            :for={locale <- @supported_locales}
+            value={locale.code}
+            selected={@current_user.locale == locale.code}
+          >
+            {locale.name}
+          </option>
+        </select>
+      </.form>
+    </div>
+    """
+  end
+
+  @doc """
   Renders a card header with title, current value, and action button.
   """
   attr :title, :string, required: true

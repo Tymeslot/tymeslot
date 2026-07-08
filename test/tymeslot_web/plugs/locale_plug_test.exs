@@ -358,6 +358,50 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
     end
   end
 
+  describe "user locale preference (prefer_user_locale)" do
+    test "honours the current user's saved locale over the Accept-Language header", %{conn: _conn} do
+      conn =
+        build_conn()
+        |> init_test_session(%{})
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> assign(:current_user, %{locale: "de"})
+        |> put_req_header("accept-language", "uk")
+        |> LocalePlug.call(prefer_user_locale: true)
+
+      assert conn.assigns.locale == "de"
+      assert get_session(conn, :locale) == "de"
+      assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
+    end
+
+    test "ignores the user locale when the option is not set", %{conn: _conn} do
+      conn =
+        build_conn()
+        |> init_test_session(%{})
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> assign(:current_user, %{locale: "de"})
+        |> put_req_header("accept-language", "uk")
+        |> LocalePlug.call([])
+
+      # Without prefer_user_locale, the chain falls through to the header.
+      assert conn.assigns.locale == "uk"
+    end
+
+    test "falls through the normal chain when the user locale is nil", %{conn: _conn} do
+      conn =
+        build_conn()
+        |> init_test_session(%{})
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> assign(:current_user, %{locale: nil})
+        |> put_req_header("accept-language", "uk")
+        |> LocalePlug.call(prefer_user_locale: true)
+
+      assert conn.assigns.locale == "uk"
+    end
+  end
+
   describe "locale persistence" do
     test "persists selected locale to session", %{conn: _conn} do
       conn =

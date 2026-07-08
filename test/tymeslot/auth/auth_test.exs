@@ -4,6 +4,7 @@ defmodule Tymeslot.AuthTest do
   @moduletag :auth
 
   alias Tymeslot.Auth
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
@@ -155,6 +156,28 @@ defmodule Tymeslot.AuthTest do
 
     test "returns nil for users without a Google account" do
       assert Auth.google_signup_login_hint(build(:user, google_user_id: nil)) == nil
+    end
+  end
+
+  describe "update_user_locale/2" do
+    test "persists a supported locale preference" do
+      user = insert(:user)
+
+      assert {:ok, %{locale: "fr"}} = Auth.update_user_locale(user, "fr")
+      assert {:ok, %{locale: "fr"}} = UserQueries.get_user(user.id)
+    end
+
+    test "clears the preference for an empty string" do
+      user = insert(:user, locale: "de")
+
+      assert {:ok, %{locale: nil}} = Auth.update_user_locale(user, "")
+      assert {:ok, %{locale: nil}} = UserQueries.get_user(user.id)
+    end
+
+    test "rejects an unsupported locale" do
+      user = insert(:user)
+
+      assert {:error, %Ecto.Changeset{}} = Auth.update_user_locale(user, "zz")
     end
   end
 end

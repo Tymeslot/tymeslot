@@ -15,6 +15,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.AccountLive.{ErrorFormatter, Helpers}
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Themes.Shared.LocaleHandler
 
   # Provider constants
   @social_provider_default "social"
@@ -62,6 +63,28 @@ defmodule TymeslotWeb.AccountLive.Handlers do
       {:noreply, LiveView.put_flash(socket, :error, social_user_message(socket, :password))}
     else
       update_password(socket, params)
+    end
+  end
+
+  def handle_event("change_language", %{"language_form" => %{"locale" => locale}}, socket) do
+    case Auth.update_user_locale(socket.assigns.current_user, locale) do
+      {:ok, updated_user} ->
+        new_locale = updated_user.locale || LocaleHandler.default_locale()
+        Gettext.put_locale(TymeslotWeb.Gettext, new_locale)
+
+        {:noreply,
+         socket
+         |> assign(:current_user, updated_user)
+         |> assign(:locale, new_locale)
+         |> LiveView.put_flash(:info, dgettext("account", "Language preference saved."))}
+
+      {:error, _changeset} ->
+        {:noreply,
+         LiveView.put_flash(
+           socket,
+           :error,
+           dgettext("account", "Could not save language preference.")
+         )}
     end
   end
 

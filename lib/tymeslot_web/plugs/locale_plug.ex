@@ -27,9 +27,13 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
   def init(opts), do: opts
 
   @spec call(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
-  def call(conn, _opts) do
+  def call(conn, opts) do
+    user_locale =
+      if Keyword.get(opts, :prefer_user_locale, false), do: get_locale_from_user(conn), else: nil
+
     locale =
-      get_locale_from_params(conn) ||
+      user_locale ||
+        get_locale_from_params(conn) ||
         get_locale_from_session(conn) ||
         get_locale_from_header(conn) ||
         LocaleHandler.default_locale()
@@ -48,6 +52,17 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
 
     # Store in assigns for LiveView access
     assign(conn, :locale, locale)
+  end
+
+  # The authenticated user's saved interface-language preference, when set.
+  # Only consulted on pipelines that pass `prefer_user_locale: true` (the
+  # authenticated app), never on public booking pages. Requires
+  # `FetchCurrentUser` to have run earlier in the pipeline.
+  defp get_locale_from_user(conn) do
+    case conn.assigns[:current_user] do
+      %{locale: locale} when is_binary(locale) -> sanitize_locale_input(locale)
+      _other -> nil
+    end
   end
 
   defp get_locale_from_params(conn) do

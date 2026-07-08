@@ -90,6 +90,16 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
+  Updates the user's interface language preference. Pass `nil` or an empty
+  string to clear it and fall back to browser/session locale detection.
+  """
+  @spec update_user_locale(term(), String.t() | nil) ::
+          {:ok, term()} | {:error, Ecto.Changeset.t()}
+  def update_user_locale(user, locale) do
+    UserQueries.update_user_locale(user, locale)
+  end
+
+  @doc """
   Registers a new user account.
 
   Handles the complete registration flow including:

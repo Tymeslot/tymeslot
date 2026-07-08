@@ -15,14 +15,23 @@ defmodule Tymeslot.Locales do
   end
 
   @doc """
+  Returns the full list of supported locales from application configuration,
+  each a `%{code:, name:, country_code:}` map. Returns an empty list if the
+  configuration key is absent.
+  """
+  @spec supported() :: [%{code: String.t(), name: String.t(), country_code: atom()}]
+  def supported do
+    :tymeslot
+    |> Application.get_env(:locales, [])
+    |> Keyword.get(:supported, [])
+  end
+
+  @doc """
   Returns the list of supported locale codes from application configuration.
   Returns an empty list if the configuration key is absent.
   """
   @spec supported_codes() :: [String.t()]
   def supported_codes do
-    :tymeslot
-    |> Application.get_env(:locales, [])
-    |> Keyword.get(:supported, [])
-    |> Enum.map(& &1.code)
+    Enum.map(supported(), & &1.code)
   end
 end

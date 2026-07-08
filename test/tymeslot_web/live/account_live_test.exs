@@ -287,6 +287,44 @@ defmodule TymeslotWeb.AccountLiveTest do
     end
   end
 
+  describe "Language Preference" do
+    test "renders the language select with Automatic and Deutsch options", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/account")
+
+      assert html =~ ~s(name="language_form[locale]")
+      assert html =~ "Automatic"
+      assert html =~ "Deutsch"
+    end
+
+    test "saving a language shows a flash and persists the locale", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      html =
+        view
+        |> element("#language-form")
+        |> render_change(%{"language_form" => %{"locale" => "de"}})
+
+      assert html =~ "Language preference saved"
+      assert Repo.get(UserSchema, user.id).locale == "de"
+    end
+
+    test "choosing Automatic clears the persisted locale", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      view
+      |> element("#language-form")
+      |> render_change(%{"language_form" => %{"locale" => "de"}})
+
+      assert Repo.get(UserSchema, user.id).locale == "de"
+
+      view
+      |> element("#language-form")
+      |> render_change(%{"language_form" => %{"locale" => ""}})
+
+      assert Repo.get(UserSchema, user.id).locale == nil
+    end
+  end
+
   describe "Miscellaneous Events" do
     test "ignores validation events", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")

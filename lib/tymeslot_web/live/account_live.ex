@@ -6,6 +6,7 @@ defmodule TymeslotWeb.AccountLive do
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Locales
   alias TymeslotWeb.AccountLive.{Handlers, Helpers}
 
   import TymeslotWeb.AccountLive.Components
@@ -15,6 +16,7 @@ defmodule TymeslotWeb.AccountLive do
     {:ok,
      socket
      |> assign(:page_title, dgettext("account", "Account Settings"))
+     |> assign(:supported_locales, Locales.supported())
      |> Helpers.init_form_state()}
   end
 
@@ -62,6 +64,7 @@ defmodule TymeslotWeb.AccountLive do
             <div class="space-y-6">
               <.email_card {assigns} />
               <.password_card {assigns} />
+              <.language_card current_user={@current_user} supported_locales={@supported_locales} />
             </div>
           </div>
         </main>
