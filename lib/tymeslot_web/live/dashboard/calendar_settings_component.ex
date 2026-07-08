@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   LiveComponent for managing calendar integrations in the dashboard.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.FreeBusy
   alias Tymeslot.Integrations.Calendar
@@ -137,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     with :ok <- RateLimiter.check_integration_write_rate_limit(user_id),
          {:ok, int_id} <- parse_int(id),
          {:ok, _result} <- Calendar.toggle_integration(int_id, user_id) do
-      Flash.info("Calendar status updated")
+      Flash.info(dgettext("dashboard_calendar_settings", "Calendar status updated"))
       send(self(), {:integration_updated, :calendar})
       {:noreply, load_integrations(socket)}
     else
@@ -146,15 +147,26 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         {:noreply, socket}
 
       {:error, :duplicate_account} ->
-        Flash.error("Cannot reactivate — another active integration already uses this account")
+        Flash.error(
+          dgettext(
+            "dashboard_calendar_settings",
+            "Cannot reactivate — another active integration already uses this account"
+          )
+        )
+
         {:noreply, socket}
 
       {:error, reason} ->
-        Flash.error("Failed to update status: #{inspect(reason)}")
+        Flash.error(
+          dgettext("dashboard_calendar_settings", "Failed to update status: %{reason}",
+            reason: inspect(reason)
+          )
+        )
+
         {:noreply, socket}
 
       :error ->
-        Flash.error("Invalid calendar ID")
+        Flash.error(dgettext("dashboard_calendar_settings", "Invalid calendar ID"))
         {:noreply, socket}
     end
   end
@@ -184,7 +196,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   def handle_event("connect_provider", _params, socket) do
-    Flash.error("Unsupported provider")
+    Flash.error(dgettext("dashboard_calendar_settings", "Unsupported provider"))
     {:noreply, socket}
   end
 
@@ -248,11 +260,17 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         {:noreply, socket}
 
       {:error, :not_found} ->
-        Flash.error("This calendar integration is no longer available.")
+        Flash.error(
+          dgettext(
+            "dashboard_calendar_settings",
+            "This calendar integration is no longer available."
+          )
+        )
+
         {:noreply, load_integrations(socket)}
 
       _other ->
-        Flash.error("Failed to update selection")
+        Flash.error(dgettext("dashboard_calendar_settings", "Failed to update selection"))
         {:noreply, socket}
     end
   end
@@ -274,15 +292,20 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
           {:noreply, socket}
         else
           {:error, :not_found} ->
-            Flash.error("Integration not found")
+            Flash.error(dgettext("dashboard_calendar_settings", "Integration not found"))
             {:noreply, socket}
 
           {:error, reason} ->
-            Flash.error("Connection test failed: #{inspect(reason)}")
+            Flash.error(
+              dgettext("dashboard_calendar_settings", "Connection test failed: %{reason}",
+                reason: inspect(reason)
+              )
+            )
+
             {:noreply, socket}
 
           :error ->
-            Flash.error("Invalid calendar ID")
+            Flash.error(dgettext("dashboard_calendar_settings", "Invalid calendar ID"))
             {:noreply, socket}
         end
     end
@@ -296,11 +319,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
       {:noreply, socket}
     else
       {:error, :invalid_provider} ->
-        Flash.error("Not a Google Calendar")
+        Flash.error(dgettext("dashboard_calendar_settings", "Not a Google Calendar"))
         {:noreply, socket}
 
       {:error, :not_found} ->
-        Flash.error("Integration not found")
+        Flash.error(dgettext("dashboard_calendar_settings", "Integration not found"))
         {:noreply, socket}
 
       {:error, msg} when is_binary(msg) ->
@@ -308,7 +331,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         {:noreply, socket}
 
       _other ->
-        Flash.error("Invalid request")
+        Flash.error(dgettext("dashboard_calendar_settings", "Invalid request"))
         {:noreply, socket}
     end
   end
@@ -328,21 +351,32 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
     cond do
       failures == 0 ->
-        Flash.info("All calendars refreshed successfully")
+        Flash.info(
+          dgettext("dashboard_calendar_settings", "All calendars refreshed successfully")
+        )
 
       successes > 0 ->
         detail = format_refresh_failures(Enum.reverse(failed_names))
-        Flash.error("#{successes} refreshed, #{failures} failed: #{detail}")
+
+        Flash.error(
+          dgettext(
+            "dashboard_calendar_settings",
+            "%{successes} refreshed, %{failures} failed: %{detail}",
+            successes: successes,
+            failures: failures,
+            detail: detail
+          )
+        )
 
       true ->
-        Flash.error("All calendar refreshes failed.")
+        Flash.error(dgettext("dashboard_calendar_settings", "All calendar refreshes failed."))
     end
 
     {:noreply, socket |> assign(:is_refreshing, false) |> load_integrations()}
   end
 
   def handle_async(:refresh_calendars, {:error, _reason}, socket) do
-    Flash.error("Refresh process failed unexpectedly.")
+    Flash.error(dgettext("dashboard_calendar_settings", "Refresh process failed unexpectedly."))
     {:noreply, assign(socket, :is_refreshing, false)}
   end
 
@@ -371,7 +405,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
     [
       %{label: nil, providers: oauth},
-      %{label: "CalDAV servers", providers: caldav}
+      %{label: dgettext("dashboard_calendar_settings", "CalDAV servers"), providers: caldav}
     ]
   end
 
@@ -394,7 +428,16 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   defp format_refresh_failures(names) do
     shown = names |> Enum.take(3) |> Enum.join(", ")
-    "#{shown} and #{length(names) - 3} more"
+    remaining = length(names) - 3
+
+    dngettext(
+      "dashboard_calendar_settings",
+      "%{shown} and %{count} more",
+      "%{shown} and %{count} more",
+      remaining,
+      shown: shown,
+      count: remaining
+    )
   end
 
   defp parse_int(id) when is_integer(id), do: {:ok, id}
@@ -413,13 +456,19 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     ~H"""
     <div class="space-y-12 pb-24">
       <div class="flex items-center justify-between gap-4 flex-wrap">
-        <.section_header icon="hero-calendar-days" title="Calendar Settings" />
+        <.section_header
+          icon="hero-calendar-days"
+          title={dgettext("dashboard_calendar_settings", "Calendar Settings")}
+        />
         <button
           phx-click="show_picker"
           phx-target={@myself}
           class="inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600 shrink-0"
         >
-          <.icon name="hero-plus" class="w-4 h-4" /> Connect a calendar
+          <.icon name="hero-plus" class="w-4 h-4" /> {dgettext(
+            "dashboard_calendar_settings",
+            "Connect a calendar"
+          )}
         </button>
       </div>
 
@@ -431,18 +480,23 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
                 <.icon name="hero-calendar-days" class="h-7 w-7" />
               </div>
               <h3 class="text-token-lg font-semibold text-tymeslot-800">
-                No calendars connected yet
+                {dgettext("dashboard_calendar_settings", "No calendars connected yet")}
               </h3>
               <p class="mx-auto mt-1 max-w-md text-token-sm text-tymeslot-500">
-                Connect a calendar so Tymeslot can read your availability and stop meetings
-                being booked when you're already busy.
+                {dgettext(
+                  "dashboard_calendar_settings",
+                  "Connect a calendar so Tymeslot can read your availability and stop meetings being booked when you're already busy."
+                )}
               </p>
               <button
                 phx-click="show_picker"
                 phx-target={@myself}
                 class="mt-5 inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600"
               >
-                <.icon name="hero-plus" class="w-4 h-4" /> Connect a calendar
+                <.icon name="hero-plus" class="w-4 h-4" /> {dgettext(
+                  "dashboard_calendar_settings",
+                  "Connect a calendar"
+                )}
               </button>
             </div>
           <% else %>
@@ -458,14 +512,17 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         <section class="space-y-4">
           <div class="flex items-center gap-2">
             <.icon name="hero-link" class="w-5 h-5 text-turquoise-500" />
-            <h3 class="text-token-base font-semibold text-tymeslot-800">Free/busy feed</h3>
+            <h3 class="text-token-base font-semibold text-tymeslot-800">
+              {dgettext("dashboard_calendar_settings", "Free/busy feed")}
+            </h3>
           </div>
 
           <div class="card-glass p-4 space-y-3">
             <p class="text-token-sm text-tymeslot-500">
-              Share a read-only link that publishes when you're busy (not the event
-              details) as a standard iCalendar feed, so other calendar systems can
-              overlay your availability.
+              {dgettext(
+                "dashboard_calendar_settings",
+                "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
+              )}
             </p>
 
             <%= if @freebusy_enabled do %>
@@ -479,7 +536,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
                   phx-click="regenerate_freebusy"
                   phx-target={@myself}
                 >
-                  Regenerate link
+                  {dgettext("dashboard_calendar_settings", "Regenerate link")}
                 </button>
                 <button
                   type="button"
@@ -487,7 +544,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
                   phx-click="disable_freebusy"
                   phx-target={@myself}
                 >
-                  Disable feed
+                  {dgettext("dashboard_calendar_settings", "Disable feed")}
                 </button>
               </div>
             <% else %>
@@ -497,7 +554,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
                 phx-click="enable_freebusy"
                 phx-target={@myself}
               >
-                Enable free/busy feed
+                {dgettext("dashboard_calendar_settings", "Enable free/busy feed")}
               </button>
             <% end %>
           </div>
@@ -507,8 +564,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
       <ProviderPickerModal.provider_picker_modal
         id="calendar-provider-picker"
         show={@show_picker}
-        title="Connect a calendar"
-        subtitle="Sync your availability to prevent double bookings."
+        title={dgettext("dashboard_calendar_settings", "Connect a calendar")}
+        subtitle={
+          dgettext("dashboard_calendar_settings", "Sync your availability to prevent double bookings.")
+        }
         target={@myself}
         on_cancel={JS.push("hide_picker", target: @myself)}
         groups={picker_groups(@available_calendar_providers, @integrations)}

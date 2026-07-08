@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
   back to the providers list via `send_update/2`.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
@@ -162,7 +163,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
              ) do
           {:ok, _integration} ->
             send(self(), {:integration_added, :calendar})
-            Flash.info("Calendar integration added successfully")
+
+            Flash.info(
+              dgettext("dashboard_calendar_settings", "Calendar integration added successfully")
+            )
+
             close_modal()
             {:noreply, reset_form_state(socket)}
 
@@ -170,7 +175,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
             {:noreply,
              assign(socket,
                form_errors: %{
-                 generic: ["A calendar integration with this configuration already exists"]
+                 generic: [
+                   dgettext(
+                     "dashboard_calendar_settings",
+                     "A calendar integration with this configuration already exists"
+                   )
+                 ]
                },
                is_saving: false
              )}
