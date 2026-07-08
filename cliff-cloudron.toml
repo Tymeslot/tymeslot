@@ -22,7 +22,9 @@ topo_order = false
 sort_commits = "newest"
 
 commit_parsers = [
-  { footer = "^Changelog: skip", skip = true },
+  # git-cliff drops the space after the separator when reconstructing a footer,
+  # so "^Changelog: skip" (spaced) never matches; use the spaceless form.
+  { footer = "^Changelog:\\s*skip", skip = true },
   { field = "scope", pattern = "saas", skip = true },
   # Match the resolved `breaking` field, not the `breaking = true` parser key —
   # git-cliff finalises the flag after key matching, so the key form never fires.
