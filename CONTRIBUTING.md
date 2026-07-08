@@ -20,7 +20,7 @@ Thank you for your interest in contributing to Tymeslot! We welcome contribution
 
 ## 📜 Code of Conduct
 
-By participating in this project, you agree to abide by our Code of Conduct. Please be respectful, inclusive, and professional in all interactions.
+This project is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to uphold it — please be respectful, inclusive, and professional in all interactions. Report unacceptable behaviour via [tymeslot.app/contact](https://tymeslot.app/contact).
 
 ## 💳 Support Tymeslot's Future
 
@@ -542,7 +542,7 @@ Security-related contributions should:
 
 - **Issues**: Use GitHub issues for bug reports and feature requests
 - **Discussions**: Use GitHub Discussions for questions and ideas
-- **Email**: security@tymeslot.app for security-related issues
+- **Security**: Never use a public issue — follow the [Security Policy](SECURITY.md) to report vulnerabilities privately
 
 ### Development Resources
 
