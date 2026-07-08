@@ -12,6 +12,7 @@ msgid ""
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:94
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:75
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
@@ -54,4 +55,231 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:81
 #, elixir-autogen, elixir-format
 msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessable link."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:69
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:47
+#, elixir-autogen, elixir-format
+msgid "%{minutes} min"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:198
+#, elixir-autogen, elixir-format
+msgid "+%{count} custom question"
+msgid_plural "+%{count} custom questions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:211
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:209
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:121
+#, elixir-autogen, elixir-format
+msgid "1 month"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:119
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:213
+#, elixir-autogen, elixir-format
+msgid "1 week"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:212
+#, elixir-autogen, elixir-format
+msgid "2 days"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:122
+#, elixir-autogen, elixir-format
+msgid "2 months"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:120
+#, elixir-autogen, elixir-format
+msgid "2 weeks"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:123
+#, elixir-autogen, elixir-format
+msgid "3 months"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:210
+#, elixir-autogen, elixir-format
+msgid "4 hours"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:124
+#, elixir-autogen, elixir-format
+msgid "6 months"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex:37
+#, elixir-autogen, elixir-format
+msgid "Add Meeting Type"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:234
+#, elixir-autogen, elixir-format
+msgid "Advance booking set to custom value"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:127
+#, elixir-autogen, elixir-format
+msgid "Advance booking window updated to %{days} days"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:59
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to delete the meeting type"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:25
+#, elixir-autogen, elixir-format
+msgid "Buffer Between Appointments"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:209
+#, elixir-autogen, elixir-format
+msgid "Buffer time set to custom value"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:82
+#, elixir-autogen, elixir-format
+msgid "Buffer time updated to %{minutes} minutes"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:217
+#, elixir-autogen, elixir-format
+msgid "Calendar"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex:59
+#, elixir-autogen, elixir-format
+msgid "Create meeting types to offer different appointment options"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:77
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:166
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:255
+#, elixir-autogen, elixir-format
+msgid "Custom"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:161
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:52
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:81
+#, elixir-autogen, elixir-format
+msgid "Delete Meeting Type"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:144
+#, elixir-autogen, elixir-format
+msgid "Edit"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:111
+#, elixir-autogen, elixir-format
+msgid "How Far in Advance Can People Book"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:109
+#, elixir-autogen, elixir-format
+msgid "In-person"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:173
+#, elixir-autogen, elixir-format
+msgid "Maximum number of days into the future that appointments can be booked."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex:22
+#, elixir-autogen, elixir-format
+msgid "Meeting Types"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:200
+#, elixir-autogen, elixir-format
+msgid "Minimum Booking Notice"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:172
+#, elixir-autogen, elixir-format
+msgid "Minimum booking notice updated to %{hours} hours"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:262
+#, elixir-autogen, elixir-format
+msgid "Minimum hours of notice required before an appointment can be booked."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:259
+#, elixir-autogen, elixir-format
+msgid "Minimum notice set to custom value"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:45
+#, elixir-autogen, elixir-format
+msgid "No buffer"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex:57
+#, elixir-autogen, elixir-format
+msgid "No meeting types configured yet"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:34
+#, elixir-autogen, elixir-format
+msgid "Scheduling Preferences"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:62
+#, elixir-autogen, elixir-format
+msgid "This action cannot be undone and will permanently remove this meeting type from your account."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:84
+#, elixir-autogen, elixir-format
+msgid "Time to block after each appointment for preparation, travel, or breaks."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:180
+#, elixir-autogen, elixir-format
+msgid "Toggle %{name} availability"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:103
+#, elixir-autogen, elixir-format
+msgid "Video"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:155
+#, elixir-autogen, elixir-format
+msgid "days"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:244
+#, elixir-autogen, elixir-format
+msgid "hours"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:208
+#, elixir-autogen, elixir-format
+msgid "instant"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:66
+#, elixir-autogen, elixir-format
+msgid "min"
 msgstr ""

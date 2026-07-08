@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.CoreComponents
 
@@ -47,17 +49,19 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
             />
           </svg>
-          <span>Delete Meeting Type</span>
+          <span>{dgettext("dashboard_meeting_types", "Delete Meeting Type")}</span>
         </div>
       </:header>
 
       <%= if @meeting_type do %>
         <div class="space-y-4">
           <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-            Are you sure you want to delete the meeting type <strong>"{@meeting_type.name}"</strong>?
+            {dgettext("dashboard_meeting_types", "Are you sure you want to delete the meeting type")} <strong>"{@meeting_type.name}"</strong>?
           </p>
           <p class="text-tymeslot-500 font-medium">
-            This action cannot be undone and will permanently remove this meeting type from your account.
+            {dgettext("dashboard_meeting_types",
+              "This action cannot be undone and will permanently remove this meeting type from your account."
+            )}
           </p>
         </div>
       <% end %>
@@ -68,13 +72,13 @@ defmodule TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal d
             variant={:secondary}
             phx-click={JS.push("hide_delete_modal", target: @myself)}
           >
-            Cancel
+            {dgettext("dashboard_meeting_types", "Cancel")}
           </CoreComponents.action_button>
           <CoreComponents.action_button
             variant={:danger}
             phx-click={JS.push("confirm_delete_meeting_type", target: @myself)}
           >
-            Delete Meeting Type
+            {dgettext("dashboard_meeting_types", "Delete Meeting Type")}
           </CoreComponents.action_button>
         </div>
       </:footer>

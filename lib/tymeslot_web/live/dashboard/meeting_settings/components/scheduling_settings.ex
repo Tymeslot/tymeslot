@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
   @moduledoc "Scheduling constraint components for meeting type forms."
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
   Component for configuring buffer time between appointments.
@@ -21,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
     ~H"""
     <div>
       <label class="label">
-        Buffer Between Appointments
+        {dgettext("dashboard_meeting_types", "Buffer Between Appointments")}
       </label>
 
     <%!-- Tag-based Selection --%>
@@ -41,9 +42,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
             ]}
           >
             <%= if minutes == 0 do %>
-              No buffer
+              {dgettext("dashboard_meeting_types", "No buffer")}
             <% else %>
-              {minutes} min
+              {dgettext("dashboard_meeting_types", "%{minutes} min", minutes: minutes)}
             <% end %>
           </button>
         <% end %>
@@ -62,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
               placeholder="0"
             />
             <span class="pr-3 py-2 text-token-sm font-black text-turquoise-700">
-              min
+              {dgettext("dashboard_meeting_types", "min")}
             </span>
           </div>
         <% else %>
@@ -73,14 +74,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
             phx-target={@myself}
             class="btn-tag-selector btn-tag-selector-primary"
           >
-            Custom
+            {dgettext("dashboard_meeting_types", "Custom")}
           </button>
         <% end %>
       </div>
       </form>
 
       <p class="mt-4 text-token-sm text-tymeslot-500 font-bold">
-        Time to block after each appointment for preparation, travel, or breaks.
+        {dgettext("dashboard_meeting_types",
+          "Time to block after each appointment for preparation, travel, or breaks."
+        )}
       </p>
     </div>
     """
@@ -105,7 +108,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
     ~H"""
     <div>
       <label class="label">
-        How Far in Advance Can People Book
+        {dgettext("dashboard_meeting_types", "How Far in Advance Can People Book")}
       </label>
 
     <%!-- Tag-based Selection --%>
@@ -113,12 +116,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
       <div class="flex flex-wrap items-center gap-3">
         <%!-- Quick preset tags --%>
         <%= for {days, label} <- [
-          {7, "1 week"},
-          {14, "2 weeks"},
-          {30, "1 month"},
-          {60, "2 months"},
-          {90, "3 months"},
-          {180, "6 months"}
+          {7, dgettext("dashboard_meeting_types", "1 week")},
+          {14, dgettext("dashboard_meeting_types", "2 weeks")},
+          {30, dgettext("dashboard_meeting_types", "1 month")},
+          {60, dgettext("dashboard_meeting_types", "2 months")},
+          {90, dgettext("dashboard_meeting_types", "3 months")},
+          {180, dgettext("dashboard_meeting_types", "6 months")}
         ] do %>
           <button
             type="button"
@@ -149,7 +152,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
               placeholder="90"
             />
             <span class="pr-3 py-2 text-token-sm font-black text-cyan-700">
-              days
+              {dgettext("dashboard_meeting_types", "days")}
             </span>
           </div>
         <% else %>
@@ -160,14 +163,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
             phx-target={@myself}
             class="btn-tag-selector btn-tag-selector-secondary"
           >
-            Custom
+            {dgettext("dashboard_meeting_types", "Custom")}
           </button>
         <% end %>
       </div>
       </form>
 
       <p class="mt-4 text-token-sm text-tymeslot-500 font-bold">
-        Maximum number of days into the future that appointments can be booked.
+        {dgettext("dashboard_meeting_types",
+          "Maximum number of days into the future that appointments can be booked."
+        )}
       </p>
     </div>
     """
@@ -192,7 +197,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
     ~H"""
     <div>
       <label class="label">
-        Minimum Booking Notice
+        {dgettext("dashboard_meeting_types", "Minimum Booking Notice")}
       </label>
 
     <%!-- Tag-based Selection --%>
@@ -200,12 +205,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
       <div class="flex flex-wrap items-center gap-3">
         <%!-- Quick preset tags --%>
         <%= for {hours, label} <- [
-          {0, "instant"},
-          {1, "1 hour"},
-          {4, "4 hours"},
-          {24, "1 day"},
-          {48, "2 days"},
-          {168, "1 week"}
+          {0, dgettext("dashboard_meeting_types", "instant")},
+          {1, dgettext("dashboard_meeting_types", "1 hour")},
+          {4, dgettext("dashboard_meeting_types", "4 hours")},
+          {24, dgettext("dashboard_meeting_types", "1 day")},
+          {48, dgettext("dashboard_meeting_types", "2 days")},
+          {168, dgettext("dashboard_meeting_types", "1 week")}
         ] do %>
           <button
             type="button"
@@ -236,7 +241,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
               placeholder="24"
             />
             <span class="pr-3 py-2 text-token-sm font-black text-blue-700">
-              hours
+              {dgettext("dashboard_meeting_types", "hours")}
             </span>
           </div>
         <% else %>
@@ -247,14 +252,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings do
             phx-target={@myself}
             class="btn-tag-selector btn-tag-selector-tertiary"
           >
-            Custom
+            {dgettext("dashboard_meeting_types", "Custom")}
           </button>
         <% end %>
       </div>
       </form>
 
       <p class="mt-4 text-token-sm text-tymeslot-500 font-bold">
-        Minimum hours of notice required before an appointment can be booked.
+        {dgettext("dashboard_meeting_types",
+          "Minimum hours of notice required before an appointment can be booked."
+        )}
       </p>
     </div>
     """

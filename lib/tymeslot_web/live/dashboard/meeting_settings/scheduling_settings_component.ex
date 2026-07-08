@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
   Handles UI events and profile updates locally using Helpers.handle_profile_update/3.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
   alias Tymeslot.Profiles
@@ -30,7 +31,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
       <.section_header
         level={3}
         icon="hero-clock"
-        title="Scheduling Preferences"
+        title={dgettext("dashboard_meeting_types", "Scheduling Preferences")}
         class="mb-10"
       />
 
@@ -77,7 +78,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
               )
               |> assign(:profile, updated_profile)
 
-            Flash.info("Buffer time updated to #{updated_profile.buffer_minutes} minutes")
+            Flash.info(
+              dgettext("dashboard_meeting_types", "Buffer time updated to %{minutes} minutes",
+                minutes: updated_profile.buffer_minutes
+              )
+            )
+
             send(self(), {:profile_updated, updated_profile})
             {:noreply, socket}
 
@@ -118,7 +124,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
               |> assign(:profile, updated_profile)
 
             Flash.info(
-              "Advance booking window updated to #{updated_profile.advance_booking_days} days"
+              dgettext(
+                "dashboard_meeting_types",
+                "Advance booking window updated to %{days} days",
+                days: updated_profile.advance_booking_days
+              )
             )
 
             send(self(), {:profile_updated, updated_profile})
@@ -159,7 +169,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
               |> assign(:profile, updated_profile)
 
             Flash.info(
-              "Minimum booking notice updated to #{updated_profile.min_advance_hours} hours"
+              dgettext(
+                "dashboard_meeting_types",
+                "Minimum booking notice updated to %{hours} hours",
+                hours: updated_profile.min_advance_hours
+              )
             )
 
             send(self(), {:profile_updated, updated_profile})
@@ -192,7 +206,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
           |> CustomInputModeHelper.enable_custom_mode(:buffer_minutes)
           |> assign(:profile, updated_profile)
 
-        Flash.info("Buffer time set to custom value")
+        Flash.info(dgettext("dashboard_meeting_types", "Buffer time set to custom value"))
         send(self(), {:profile_updated, updated_profile})
         {:noreply, socket}
 
@@ -217,7 +231,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
           |> CustomInputModeHelper.enable_custom_mode(:advance_booking_days)
           |> assign(:profile, updated_profile)
 
-        Flash.info("Advance booking set to custom value")
+        Flash.info(dgettext("dashboard_meeting_types", "Advance booking set to custom value"))
         send(self(), {:profile_updated, updated_profile})
         {:noreply, socket}
 
@@ -242,7 +256,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
           |> CustomInputModeHelper.enable_custom_mode(:min_advance_hours)
           |> assign(:profile, updated_profile)
 
-        Flash.info("Minimum notice set to custom value")
+        Flash.info(dgettext("dashboard_meeting_types", "Minimum notice set to custom value"))
         send(self(), {:profile_updated, updated_profile})
         {:noreply, socket}
 

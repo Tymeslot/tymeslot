@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              {@type.duration_minutes} min
+              {dgettext("dashboard_meeting_types", "%{minutes} min", minutes: @type.duration_minutes)}
             </span>
             <%= if paid?(@type) do %>
               <span class="flex items-center shrink-0 font-medium text-emerald-600">
@@ -106,13 +106,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
                       d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                     />
                   </svg>
-                  <span>Video</span>
+                  <span>{dgettext("dashboard_meeting_types", "Video")}</span>
                 <% end %>
               </span>
             <% else %>
               <span class="flex items-center">
                 <ProviderIcon.provider_icon provider="in_person" size={@icon_size} class="mr-1" />
-                <span>In-person</span>
+                <span>{dgettext("dashboard_meeting_types", "In-person")}</span>
               </span>
             <% end %>
             <%= if @type.calendar_integration do %>
@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             phx-value-id={@type.id}
             phx-target={@myself}
             class="p-1.5 text-tymeslot-500 hover:text-tymeslot-700 hover:bg-tymeslot-100 rounded-lg transition-colors"
-            title="Edit"
+            title={dgettext("dashboard_meeting_types", "Edit")}
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -164,7 +164,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             phx-value-id={@type.id}
             phx-target={@myself}
             class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            title="Delete"
+            title={dgettext("dashboard_meeting_types", "Delete")}
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -183,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
             on_change="toggle_type"
             target={@myself}
             phx_value_id={to_string(@type.id)}
-            aria_label={"Toggle #{@type.name} availability"}
+            aria_label={dgettext("dashboard_meeting_types", "Toggle %{name} availability", name: @type.name)}
             class="shrink-0"
           />
         </div>
@@ -202,10 +202,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   defp custom_question_count(_type), do: 0
 
   defp custom_questions_label(type) do
-    case custom_question_count(type) do
-      1 -> "+1 custom question"
-      count -> "+#{count} custom questions"
-    end
+    count = custom_question_count(type)
+
+    dngettext(
+      "dashboard_meeting_types",
+      "+%{count} custom question",
+      "+%{count} custom questions",
+      count,
+      count: count
+    )
   end
 
   defp calendar_display_name(%{calendar_integration: integration} = type) do
@@ -218,7 +223,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
       if calendar do
         DisplayHelpers.extract_calendar_display_name(calendar)
       else
-        "Calendar"
+        dgettext("dashboard_meeting_types", "Calendar")
       end
 
     truncate_calendar_name(name)
