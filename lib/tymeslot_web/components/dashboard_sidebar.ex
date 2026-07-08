@@ -214,7 +214,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 action={ext.action}
               >
                 <.icon name={ext.icon} class="w-5 h-5" />
-                <span>{ext.label}</span>
+                <span>{extension_label(ext.label)}</span>
               </.nav_link>
             </div>
           </div>
@@ -222,6 +222,14 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
       </div>
     </aside>
     """
+  end
+
+  # Sidebar extensions supply their labels as English strings via config.
+  # Localise them through the shared nav domain; an extension registers the
+  # msgid where it displays the label, and an unknown label falls back to the
+  # English text unchanged.
+  defp extension_label(label) do
+    Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_common", label)
   end
 
   # Collapses the hub action and every legacy action that redirects into it to
