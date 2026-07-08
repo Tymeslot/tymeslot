@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
   @moduledoc "Field-level and reminder validation helpers for MeetingTypeForm."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
   alias Tymeslot.Utils.ReminderUtils
 
@@ -41,19 +43,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
   def validate_new_reminder(reminders, value, unit) do
     cond do
       is_nil(value) or value == "" ->
-        {:error, "Reminder value is required"}
+        {:error, dgettext("dashboard_meeting_form", "Reminder value is required")}
 
       length(reminders) >= 3 ->
-        {:error, "You can configure up to 3 reminders"}
+        {:error, dgettext("dashboard_meeting_form", "You can configure up to 3 reminders")}
 
       match?({:error, _reason}, ReminderUtils.validate_reminder_value(value)) ->
-        {:error, "Reminder value must be a positive number"}
+        {:error, dgettext("dashboard_meeting_form", "Reminder value must be a positive number")}
 
       unit not in ["minutes", "hours", "days"] ->
-        {:error, "Select a valid reminder unit"}
+        {:error, dgettext("dashboard_meeting_form", "Select a valid reminder unit")}
 
       reminder_exists?(reminders, value, unit) ->
-        {:error, "This reminder already exists"}
+        {:error, dgettext("dashboard_meeting_form", "This reminder already exists")}
 
       true ->
         {:ok, %{value: ReminderUtils.parse_reminder_value(value), unit: unit}}

@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ShowAsFreeSectio
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   attr :show_as_free, :boolean, required: true
   attr :myself, :any, required: true
@@ -22,7 +23,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ShowAsFreeSectio
     <section class="space-y-4">
       <div class="flex items-center gap-2">
         <.icon name="hero-calendar-days" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">Calendar availability</h3>
+        <h3 class="text-token-base font-semibold text-tymeslot-800">
+          {dgettext("dashboard_meeting_form", "Calendar availability")}
+        </h3>
       </div>
 
       <label class="card-glass flex items-start gap-3 p-4 cursor-pointer">
@@ -35,11 +38,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ShowAsFreeSectio
         />
         <div class="space-y-1">
           <p class="text-token-sm font-medium text-tymeslot-700">
-            Show these bookings as free on my calendar
+            {dgettext("dashboard_meeting_form", "Show these bookings as free on my calendar")}
           </p>
           <p class="text-token-sm text-tymeslot-500">
-            The event is still created, but marked as free time so it doesn't block
-            other bookings or appear busy to people who can see your availability.
+            {dgettext(
+              "dashboard_meeting_form",
+              "The event is still created, but marked as free time so it doesn't block other bookings or appear busy to people who can see your availability."
+            )}
           </p>
         </div>
       </label>

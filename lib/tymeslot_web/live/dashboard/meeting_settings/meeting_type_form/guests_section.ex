@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GuestsSection do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   attr :allow_guests, :boolean, required: true
   attr :max_guests, :integer, required: true
@@ -21,7 +22,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GuestsSection do
     <section class="space-y-4">
       <div class="flex items-center gap-2">
         <.icon name="hero-user-group" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-800">Guests</h3>
+        <h3 class="text-token-base font-semibold text-tymeslot-800">
+          {dgettext("dashboard_meeting_form", "Guests")}
+        </h3>
       </div>
 
       <label class="card-glass flex items-start gap-3 p-4 cursor-pointer">
@@ -34,11 +37,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.GuestsSection do
         />
         <div class="space-y-1">
           <p class="text-token-sm font-medium text-tymeslot-700">
-            Let invitees add up to {@max_guests} guests to this meeting
+            {dgettext("dashboard_meeting_form", "Let invitees add up to %{max_guests} guests to this meeting",
+              max_guests: @max_guests
+            )}
           </p>
           <p class="text-token-sm text-tymeslot-500">
-            Each guest is emailed a confirmation with their own link to accept or decline.
-            You'll see every guest's response on your dashboard.
+            {dgettext(
+              "dashboard_meeting_form",
+              "Each guest is emailed a confirmation with their own link to accept or decline. You'll see every guest's response on your dashboard."
+            )}
           </p>
         </div>
       </label>

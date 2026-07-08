@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
   Contains business logic, state management, and utility functions.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.Component
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.ChangesetUtils
@@ -90,15 +92,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
           {:flash,
            {:info,
             if(socket.assigns.editing_type,
-              do: "Meeting type updated",
-              else: "Meeting type created"
+              do: dgettext("dashboard_meeting_form", "Meeting type updated"),
+              else: dgettext("dashboard_meeting_form", "Meeting type created")
             )}}
         )
 
         {:noreply, reset_form_state(socket)}
 
       {:error, :video_integration_required} ->
-        Flash.error("Please select a video provider for video meetings")
+        Flash.error(
+          dgettext("dashboard_meeting_form", "Please select a video provider for video meetings")
+        )
 
         {:noreply,
          socket
@@ -109,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
          |> Component.assign(:saving, false)}
 
       {:error, :invalid_duration} ->
-        Flash.error("Duration must be a valid number")
+        Flash.error(dgettext("dashboard_meeting_form", "Duration must be a valid number"))
 
         {:noreply,
          socket
@@ -117,7 +121,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
          |> Component.assign(:saving, false)}
 
       {:error, :invalid_price} ->
-        Flash.error("Enter a valid price for this meeting type")
+        Flash.error(
+          dgettext("dashboard_meeting_form", "Enter a valid price for this meeting type")
+        )
 
         {:noreply,
          socket
@@ -125,11 +131,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
          |> Component.assign(:saving, false)}
 
       {:error, :insufficient_plan} ->
-        Flash.error("Custom booking questions are available on Pro plans.")
+        Flash.error(
+          dgettext(
+            "dashboard_meeting_form",
+            "Custom booking questions are available on Pro plans."
+          )
+        )
+
         {:noreply, Component.assign(socket, :saving, false)}
 
       {:error, :feature_access_checker_failed} ->
-        Flash.error("Unable to verify subscription status. Please try again.")
+        Flash.error(
+          dgettext(
+            "dashboard_meeting_form",
+            "Unable to verify subscription status. Please try again."
+          )
+        )
+
         {:noreply, Component.assign(socket, :saving, false)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -141,7 +159,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
          |> Component.assign(:saving, false)}
 
       {:error, error} ->
-        Flash.error("Failed to save meeting type")
+        Flash.error(dgettext("dashboard_meeting_form", "Failed to save meeting type"))
 
         {:noreply,
          socket
@@ -156,5 +174,5 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
   @spec format_errors(list() | String.t() | any()) :: String.t()
   def format_errors(errors) when is_list(errors), do: Enum.join(errors, ", ")
   def format_errors(error) when is_binary(error), do: error
-  def format_errors(_other), do: "An error occurred"
+  def format_errors(_other), do: dgettext("dashboard_meeting_form", "An error occurred")
 end

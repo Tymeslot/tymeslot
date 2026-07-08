@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   require Logger
 
@@ -156,19 +157,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
       <%= case @status do %>
         <% :saved -> %>
           <.icon name="hero-check-circle-mini" class="w-4 h-4 text-green-500" />
-          <span class="text-tymeslot-500">All changes saved</span>
+          <span class="text-tymeslot-500">{dgettext("dashboard_meeting_form", "All changes saved")}</span>
         <% :error -> %>
           <.icon name="hero-exclamation-triangle-mini" class="w-4 h-4 text-red-500" />
-          <span class="text-red-500">Couldn't save changes</span>
+          <span class="text-red-500">{dgettext("dashboard_meeting_form", "Couldn't save changes")}</span>
         <% :throttled -> %>
           <.icon name="hero-arrow-path-mini" class="w-4 h-4 text-amber-500 animate-spin" />
-          <span class="text-amber-500">Too many changes — saving shortly…</span>
+          <span class="text-amber-500">
+            {dgettext("dashboard_meeting_form", "Too many changes — saving shortly…")}
+          </span>
         <% :incomplete -> %>
           <.icon name="hero-information-circle-mini" class="w-4 h-4 text-tymeslot-400" />
-          <span class="text-tymeslot-500">Complete the form to save</span>
+          <span class="text-tymeslot-500">{dgettext("dashboard_meeting_form", "Complete the form to save")}</span>
         <% _other -> %>
           <.icon name="hero-arrow-path-mini" class="w-4 h-4 text-amber-500" />
-          <span class="text-amber-500">Unsaved changes</span>
+          <span class="text-amber-500">{dgettext("dashboard_meeting_form", "Unsaved changes")}</span>
       <% end %>
     </div>
     """

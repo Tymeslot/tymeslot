@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
   the very next `render(view)` call.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.UUID
   alias Phoenix.LiveView
@@ -34,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
     ~H"""
     <section class="card-glass py-6 text-center">
       <p class="text-token-sm text-tymeslot-500">
-        Custom booking questions are not available on your current plan.
+        {dgettext("dashboard_meeting_form", "Custom booking questions are not available on your current plan.")}
       </p>
     </section>
     """
@@ -59,10 +60,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
       <div class="flex items-center justify-between">
         <div>
           <h3 class="text-token-base font-semibold text-tymeslot-800">
-            Custom questions
+            {dgettext("dashboard_meeting_form", "Custom questions")}
           </h3>
           <p class="text-token-sm text-tymeslot-500 mt-0.5">
-            Ask bookers extra questions during the booking flow.
+            {dgettext("dashboard_meeting_form", "Ask bookers extra questions during the booking flow.")}
           </p>
         </div>
         <CoreComponents.action_button
@@ -71,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
           phx-click="add_question"
           phx-target={@myself}
         >
-          Add question
+          {dgettext("dashboard_meeting_form", "Add question")}
         </CoreComponents.action_button>
       </div>
 
@@ -82,10 +83,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
             class="w-8 h-8 mx-auto mb-2 text-tymeslot-400"
           />
           <p class="text-token-sm font-medium text-tymeslot-700">
-            No custom questions yet
+            {dgettext("dashboard_meeting_form", "No custom questions yet")}
           </p>
           <p class="text-token-xs text-tymeslot-500 mt-1">
-            Add a question and bookers will be asked it when they book this meeting type.
+            {dgettext(
+              "dashboard_meeting_form",
+              "Add a question and bookers will be asked it when they book this meeting type."
+            )}
           </p>
         </div>
       <% else %>
@@ -124,7 +128,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
                   {human_type(q.type)}
                   <%= if q.required do %>
                     <span class="ml-1 text-token-xs text-turquoise-600 font-medium">
-                      · required
+                      · {dgettext("dashboard_meeting_form", "required")}
                     </span>
                   <% end %>
                 </span>
@@ -140,7 +144,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
                   phx-target={@myself}
                   class="py-1! px-2! text-token-xs"
                 >
-                  Edit
+                  {dgettext("dashboard_meeting_form", "Edit")}
                 </CoreComponents.action_button>
                 <CoreComponents.action_button
                   type="button"
@@ -150,7 +154,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
                   phx-target={@myself}
                   class="py-1! px-2! text-token-xs"
                 >
-                  Delete
+                  {dgettext("dashboard_meeting_form", "Delete")}
                 </CoreComponents.action_button>
               </div>
             </li>
@@ -233,16 +237,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
 
   def handle_event("reorder", _params, socket), do: {:noreply, socket}
 
-  defp human_type("short_text"), do: "Short text"
-  defp human_type("number"), do: "Number"
-  defp human_type("single_select"), do: "Single choice"
-  defp human_type("multi_select"), do: "Multiple choice"
-  defp human_type("yes_no"), do: "Yes / No"
-  defp human_type("phone"), do: "Phone"
-  defp human_type("url"), do: "URL"
-  defp human_type("date"), do: "Date"
-  defp human_type("time"), do: "Time"
-  defp human_type("note"), do: "Note"
+  defp human_type("short_text"), do: dgettext("dashboard_meeting_form", "Short text")
+  defp human_type("number"), do: dgettext("dashboard_meeting_form", "Number")
+  defp human_type("single_select"), do: dgettext("dashboard_meeting_form", "Single choice")
+  defp human_type("multi_select"), do: dgettext("dashboard_meeting_form", "Multiple choice")
+  defp human_type("yes_no"), do: dgettext("dashboard_meeting_form", "Yes / No")
+  defp human_type("phone"), do: dgettext("dashboard_meeting_form", "Phone")
+  defp human_type("url"), do: dgettext("dashboard_meeting_form", "URL")
+  defp human_type("date"), do: dgettext("dashboard_meeting_form", "Date")
+  defp human_type("time"), do: dgettext("dashboard_meeting_form", "Time")
+  defp human_type("note"), do: dgettext("dashboard_meeting_form", "Note")
   defp human_type(other), do: other
 
   defp placeholder_component do

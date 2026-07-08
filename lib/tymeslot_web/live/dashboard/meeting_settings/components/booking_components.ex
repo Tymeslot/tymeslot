@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   @moduledoc "Booking destination and mode components for meeting type forms."
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   use Phoenix.VerifiedRoutes,
     endpoint: TymeslotWeb.Endpoint,
@@ -27,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
     ~H"""
     <div>
       <label class="label">
-        Icon
+        {dgettext("dashboard_meeting_form", "Icon")}
       </label>
       <div class="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-14 lg:grid-cols-16 gap-1">
         <%= for {icon_value, icon_name} <- MeetingTypeSchema.valid_icons_with_names() do %>
@@ -75,7 +76,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
         <% end %>
       </div>
       <p class="mt-2 text-token-sm text-tymeslot-600">
-        Choose an icon to represent this meeting type, or select "No Icon" for no visual indicator.
+        {dgettext(
+          "dashboard_meeting_form",
+          "Choose an icon to represent this meeting type, or select \"No Icon\" for no visual indicator."
+        )}
       </p>
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :icon) do %>
         <p class="form-error">{Helpers.format_errors(error)}</p>
@@ -99,7 +103,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
     ~H"""
     <div>
       <label class="label">
-        Meeting Type
+        {dgettext("dashboard_meeting_form", "Meeting Type")}
       </label>
       <div class="flex items-center space-x-4">
         <button
@@ -112,7 +116,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
         >
           <div class="flex items-center justify-center">
             <Icons.icon name="hero-user" class="selector-icon" />
-            <span class="font-medium">In-Person</span>
+            <span class="font-medium">{dgettext("dashboard_meeting_form", "In-Person")}</span>
           </div>
         </button>
 
@@ -126,7 +130,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
         >
           <div class="flex items-center justify-center">
             <Icons.icon name="hero-video-camera" class="selector-icon" />
-            <span class="font-medium">Video Meeting</span>
+            <span class="font-medium">{dgettext("dashboard_meeting_form", "Video Meeting")}</span>
           </div>
         </button>
       </div>
@@ -134,14 +138,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
       <%= if @meeting_mode == "video" do %>
         <div class="mt-4">
           <label class="label text-token-sm">
-            Select Video Provider
+            {dgettext("dashboard_meeting_form", "Select Video Provider")}
           </label>
           <%= if @video_integrations == [] do %>
             <div class="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-token-lg">
               <p class="text-token-sm text-yellow-700">
-                No video integrations configured.
+                {dgettext("dashboard_meeting_form", "No video integrations configured.")}
                 <a href={~p"/dashboard/integrations?tab=video"} class="underline hover:text-yellow-800">
-                  Set up video integration
+                  {dgettext("dashboard_meeting_form", "Set up video integration")}
                 </a>
               </p>
             </div>
@@ -199,23 +203,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
     ~H"""
     <div class="pt-4 border-t border-tymeslot-100">
       <label class="label">
-        Booking Destination
+        {dgettext("dashboard_meeting_form", "Booking Destination")}
       </label>
       <p class="text-token-sm text-tymeslot-600 mb-4">
-        Choose where new bookings for this meeting type should be created.
+        {dgettext("dashboard_meeting_form", "Choose where new bookings for this meeting type should be created.")}
       </p>
 
       <div class="space-y-4">
         <div>
           <label class="label text-token-sm">
-            1. Select Calendar Account
+            {dgettext("dashboard_meeting_form", "1. Select Calendar Account")}
           </label>
           <%= if @calendar_integrations == [] do %>
             <div class="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-token-lg">
               <p class="text-token-sm text-yellow-700">
-                No calendar integrations configured.
+                {dgettext("dashboard_meeting_form", "No calendar integrations configured.")}
                 <a href={~p"/dashboard/integrations?tab=calendars"} class="underline hover:text-yellow-800">
-                  Connect a calendar
+                  {dgettext("dashboard_meeting_form", "Connect a calendar")}
                 </a>
               </p>
             </div>
@@ -246,7 +250,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                     </span>
                     <%= if not integration.is_active do %>
                       <span class="text-token-2xs font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full leading-tight">
-                        Reconnect
+                        {dgettext("dashboard_meeting_form", "Reconnect")}
                       </span>
                     <% end %>
                   </div>
@@ -262,7 +266,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
         <%= if @selected_calendar_integration_id do %>
           <div class="animate-in fade-in slide-in-from-top-2 duration-300">
             <label class="label text-token-sm">
-              2. Select Specific Calendar
+              {dgettext("dashboard_meeting_form", "2. Select Specific Calendar")}
             </label>
             <%= if @refreshing_calendars do %>
               <div class="flex items-center space-x-2 p-4 bg-tymeslot-50 rounded-token-lg">
@@ -270,12 +274,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span class="text-token-sm text-tymeslot-600 font-medium italic">Refreshing calendars...</span>
+                <span class="text-token-sm text-tymeslot-600 font-medium italic">
+                  {dgettext("dashboard_meeting_form", "Refreshing calendars...")}
+                </span>
               </div>
             <% else %>
               <%= if @available_calendars == [] do %>
                 <p class="text-token-sm text-tymeslot-500 italic">
-                  No calendars found for this account.
+                  {dgettext("dashboard_meeting_form", "No calendars found for this account.")}
                 </p>
               <% else %>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">

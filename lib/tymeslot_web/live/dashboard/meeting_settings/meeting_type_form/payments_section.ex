@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -34,15 +35,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
     <div class="space-y-3">
       <div class="flex items-center gap-2">
         <.icon name="hero-banknotes" class="w-5 h-5 text-turquoise-500" />
-        <h3 class="text-token-base font-semibold text-tymeslot-700">Payments</h3>
+        <h3 class="text-token-base font-semibold text-tymeslot-700">
+          {dgettext("dashboard_meeting_form", "Payments")}
+        </h3>
       </div>
 
       <.info_box :if={not @charges_enabled} variant={:info}>
-        Connect Stripe on the
+        {dgettext("dashboard_meeting_form", "Connect Stripe on the")}
         <.link navigate={~p"/dashboard/integrations?tab=payments"} class="underline text-turquoise-600">
-          Payments
+          {dgettext("dashboard_meeting_form", "Payments")}
         </.link>
-        page to charge for this meeting type.
+        {dgettext("dashboard_meeting_form", "page to charge for this meeting type.")}
       </.info_box>
 
       <label class={[
@@ -58,7 +61,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
           phx-target={@myself}
         />
         <span class="text-token-sm text-tymeslot-700">
-          Require payment for this meeting type
+          {dgettext("dashboard_meeting_form", "Require payment for this meeting type")}
         </span>
       </label>
 
@@ -66,7 +69,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
         <.input
           type="number"
           name="meeting_type[price_input]"
-          label={"Price (#{String.upcase(@currency)})"}
+          label={
+            dgettext("dashboard_meeting_form", "Price (%{currency})", currency: String.upcase(@currency))
+          }
           value={@payment_price}
           min="0"
           step="0.01"
@@ -86,7 +91,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
           </:leading_icon>
         </.input>
         <p class="mt-1 text-token-sm text-tymeslot-600">
-          Minimum {format_minimum(@currency_minimum_cents, @currency)}.
+          {dgettext("dashboard_meeting_form", "Minimum %{amount}.",
+            amount: format_minimum(@currency_minimum_cents, @currency)
+          )}
         </p>
       </div>
 

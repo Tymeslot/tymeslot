@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   parent component handles the final "Create" submit/persist event.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   # Follow project rule: ALWAYS alias nested modules and organize alphabetically within groups
   alias Tymeslot.Meetings.Guests
@@ -113,11 +114,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <.input
           name="meeting_type[name]"
-          label="Name"
+          label={dgettext("dashboard_meeting_form", "Name")}
           value={Map.get(@form_data, "name", if(@type, do: @type.name, else: ""))}
           required
           maxlength={Constraints.name_length_opts()[:max]}
-          placeholder="e.g., Quick Chat"
+          placeholder={dgettext("dashboard_meeting_form", "e.g., Quick Chat")}
           phx-change="validate_meeting_type"
           phx-debounce="500"
           phx-target={@myself}
@@ -132,7 +133,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
           <.input
             type="number"
             name="meeting_type[duration]"
-            label="Duration (minutes)"
+            label={dgettext("dashboard_meeting_form", "Duration (minutes)")}
             value={Map.get(@form_data, "duration", if(@type, do: @type.duration_minutes, else: "30"))}
             min={Constraints.duration_minutes_form_min()}
             max={Constraints.duration_minutes_opts()[:less_than_or_equal_to]}
@@ -149,17 +150,22 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
             icon="hero-clock"
           />
           <p class="mt-1 text-token-sm text-tymeslot-600">
-            Enter a duration between {Constraints.duration_minutes_form_min()} and {Constraints.duration_minutes_opts()[:less_than_or_equal_to]} minutes
+            {dgettext(
+              "dashboard_meeting_form",
+              "Enter a duration between %{min} and %{max} minutes",
+              min: Constraints.duration_minutes_form_min(),
+              max: Constraints.duration_minutes_opts()[:less_than_or_equal_to]
+            )}
           </p>
         </div>
       </div>
 
       <.input
         name="meeting_type[description]"
-        label="Description (optional)"
+        label={dgettext("dashboard_meeting_form", "Description (optional)")}
         value={Map.get(@form_data, "description", if(@type, do: @type.description, else: ""))}
         maxlength={Constraints.description_max_length()}
-        placeholder="Brief description of this meeting type"
+        placeholder={dgettext("dashboard_meeting_form", "Brief description of this meeting type")}
         phx-change="validate_meeting_type"
         phx-debounce="500"
         phx-target={@myself}
@@ -269,7 +275,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
             phx-target={@parent_myself}
             class="btn btn-primary"
           >
-            Done
+            {dgettext("dashboard_meeting_form", "Done")}
           </button>
         <% else %>
           <span></span>
@@ -280,7 +286,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
               phx-target={@parent_myself}
               class="btn btn-secondary"
             >
-              Cancel
+              {dgettext("dashboard_meeting_form", "Cancel")}
             </button>
             <button
               type="submit"
@@ -306,10 +312,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
                     >
                     </path>
                   </svg>
-                  Saving...
+                  {dgettext("dashboard_meeting_form", "Saving...")}
                 </span>
               <% else %>
-                Create Meeting Type
+                {dgettext("dashboard_meeting_form", "Create Meeting Type")}
               <% end %>
             </button>
           </div>
@@ -529,7 +535,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
          |> assign(:reminders, reminders)
          |> assign(
            :reminder_confirmation,
-           "Added #{ReminderUtils.format_reminder_label(reminder.value, reminder.unit)} before"
+           dgettext("dashboard_meeting_form", "Added %{label} before",
+             label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
+           )
          )
          |> assign(:reminder_error, nil)
          |> Autosave.maybe_run()}
@@ -558,7 +566,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
            reminder_error: nil,
            show_custom_reminder: false,
            reminder_confirmation:
-             "Added #{ReminderUtils.format_reminder_label(reminder.value, reminder.unit)} before"
+             dgettext("dashboard_meeting_form", "Added %{label} before",
+               label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
+             )
          )
          |> Autosave.maybe_run()}
 

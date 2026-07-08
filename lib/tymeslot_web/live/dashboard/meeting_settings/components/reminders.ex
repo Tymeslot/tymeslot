@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
   @moduledoc "Reminder configuration component for meeting type forms."
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Utils.ReminderUtils
@@ -24,19 +25,26 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
     ~H"""
     <div>
       <label class="label">
-        Reminders
+        {dgettext("dashboard_meeting_form", "Reminders")}
       </label>
       <p class="text-token-sm text-tymeslot-600">
-        Add up to three reminder emails for this meeting type. We recommend using only one.
+        {dgettext(
+          "dashboard_meeting_form",
+          "Add up to three reminder emails for this meeting type. We recommend using only one."
+        )}
       </p>
 
       <div class="mt-3 flex flex-wrap items-center gap-3">
         <%= if @reminders == [] do %>
-          <span class="text-token-sm text-tymeslot-500 italic">No reminders configured.</span>
+          <span class="text-token-sm text-tymeslot-500 italic">
+            {dgettext("dashboard_meeting_form", "No reminders configured.")}
+          </span>
         <% else %>
           <%= for reminder <- @reminders do %>
             <span class="tag-semantic tag-semantic-teal">
-              {ReminderUtils.format_reminder_label(reminder.value, reminder.unit)} before
+              {dgettext("dashboard_meeting_form", "%{label} before",
+                label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
+              )}
               <button
                 type="button"
                 phx-click={JS.push("remove_reminder",
@@ -44,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
                   target: @myself
                 )}
                 class="inline-flex items-center justify-center rounded-full border border-teal-200 bg-white text-teal-600 hover:text-teal-700 hover:border-teal-300"
-                aria-label="Remove reminder"
+                aria-label={dgettext("dashboard_meeting_form", "Remove reminder")}
               >
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -63,10 +71,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
               type="button"
               phx-click={JS.push("add_quick_reminder", value: %{amount: 30, unit: "minutes"}, target: @myself)}
               disabled={length(@reminders) >= 3}
-              title={if length(@reminders) >= 3, do: "Maximum of 3 reminders allowed", else: nil}
+              title={
+                if length(@reminders) >= 3,
+                  do: dgettext("dashboard_meeting_form", "Maximum of 3 reminders allowed"),
+                  else: nil
+              }
               class="btn-tag-selector btn-tag-selector-teal"
             >
-              + 30 min. before
+              + {dgettext("dashboard_meeting_form", "30 min. before")}
             </button>
           <% end %>
 
@@ -75,10 +87,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
               type="button"
               phx-click={JS.push("add_quick_reminder", value: %{amount: 60, unit: "minutes"}, target: @myself)}
               disabled={length(@reminders) >= 3}
-              title={if length(@reminders) >= 3, do: "Maximum of 3 reminders allowed", else: nil}
+              title={
+                if length(@reminders) >= 3,
+                  do: dgettext("dashboard_meeting_form", "Maximum of 3 reminders allowed"),
+                  else: nil
+              }
               class="btn-tag-selector btn-tag-selector-teal"
             >
-              + 1 hour before
+              + {dgettext("dashboard_meeting_form", "1 hour before")}
             </button>
           <% end %>
 
@@ -87,13 +103,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
             phx-click="toggle_custom_reminder"
             phx-target={@myself}
             disabled={length(@reminders) >= 3}
-            title={if length(@reminders) >= 3, do: "Maximum of 3 reminders allowed", else: nil}
+            title={
+              if length(@reminders) >= 3,
+                do: dgettext("dashboard_meeting_form", "Maximum of 3 reminders allowed"),
+                else: nil
+            }
             class={[
               "btn-tag-selector btn-tag-selector-teal",
               if(@show_custom_reminder, do: "btn-tag-selector-teal--active")
             ]}
           >
-            {if @show_custom_reminder, do: "Cancel Custom", else: "Add Custom"}
+            {if @show_custom_reminder,
+              do: dgettext("dashboard_meeting_form", "Cancel Custom"),
+              else: dgettext("dashboard_meeting_form", "Add Custom")}
           </button>
 
           <%= if @reminder_confirmation do %>
@@ -124,9 +146,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
                 phx-change="update_reminder_input"
                 phx-target={@myself}
               >
-                <option value="minutes">Minutes</option>
-                <option value="hours">Hours</option>
-                <option value="days">Days</option>
+                <option value="minutes">{dgettext("dashboard_meeting_form", "Minutes")}</option>
+                <option value="hours">{dgettext("dashboard_meeting_form", "Hours")}</option>
+                <option value="days">{dgettext("dashboard_meeting_form", "Days")}</option>
               </select>
             </div>
             <button
@@ -135,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
               phx-target={@myself}
               class="btn btn-primary btn-sm rounded-token-lg!"
             >
-              Add
+              {dgettext("dashboard_meeting_form", "Add")}
             </button>
           </div>
         <% end %>
