@@ -3,6 +3,7 @@ defmodule TymeslotWeb.EmailChangeController do
   Controller for handling email change verification links.
   """
   use TymeslotWeb, :controller
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Auth
   alias Tymeslot.Security.RateLimiter
@@ -24,7 +25,7 @@ defmodule TymeslotWeb.EmailChangeController do
         Logger.warning("Rate limit exceeded for email change verify", ip: ip)
 
         conn
-        |> put_flash(:error, "Too many attempts. Try again in a minute.")
+        |> put_flash(:error, dgettext("auth", "Too many attempts. Try again in a minute."))
         |> redirect(to: ~p"/auth/login")
         |> halt()
     end
@@ -34,7 +35,7 @@ defmodule TymeslotWeb.EmailChangeController do
     Logger.warning("Email change verification attempted without token")
 
     conn
-    |> put_flash(:error, "Invalid verification link")
+    |> put_flash(:error, dgettext("auth", "Invalid verification link"))
     |> redirect(to: ~p"/auth/login")
   end
 

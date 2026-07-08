@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
   import TymeslotWeb.Shared.SocialAuthButtons
   import TymeslotWeb.Shared.PasswordToggleButtonComponent
   import TymeslotWeb.Shared.Auth.LayoutComponents
@@ -35,10 +36,10 @@ defmodule TymeslotWeb.Session.LoginComponent do
 
     ~H"""
     <%= if @password_auth_enabled do %>
-      <.auth_card_layout title="Welcome Back!">
+      <.auth_card_layout title={dgettext("auth", "Welcome Back!")}>
         <:heading>
           <h2 class="text-xl font-bold text-tymeslot-900 mb-6 tracking-tight text-center">
-            Log in to Tymeslot
+            {dgettext("auth", "Log in to Tymeslot")}
           </h2>
         </:heading>
 
@@ -54,7 +55,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
               <.input
                 name="email"
                 type="email"
-                label="Email Address"
+                label={dgettext("auth", "Email Address")}
                 value={Map.get(@form_data, :email, "")}
                 errors={FormValidationHelpers.field_errors(@errors, :email)}
                 phx-blur="validate_login_email"
@@ -67,8 +68,8 @@ defmodule TymeslotWeb.Session.LoginComponent do
                   id="password-input"
                   name="password"
                   type="password"
-                  label="Password"
-                  placeholder="Enter your password"
+                  label={dgettext("auth", "Password")}
+                  placeholder={dgettext("auth", "Enter your password")}
                   required
                   value={Map.get(@form_data, :password, "")}
                   errors={FormValidationHelpers.field_errors(@errors, :password)}
@@ -86,7 +87,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
                   phx-value-state="reset_password"
                   class="btn-link bg-transparent"
                 >
-                  Forgot password?
+                  {dgettext("auth", "Forgot password?")}
                 </button>
               </div>
             </div>
@@ -126,9 +127,9 @@ defmodule TymeslotWeb.Session.LoginComponent do
                   >
                   </path>
                 </svg>
-                Logging in...
+                {dgettext("auth", "Logging in...")}
               <% else %>
-                Log in
+                {dgettext("auth", "Log in")}
               <% end %>
             </.auth_button>
           </.auth_form>
@@ -139,19 +140,19 @@ defmodule TymeslotWeb.Session.LoginComponent do
         <:footer>
           <%= if @registration_enabled do %>
             <.auth_footer
-              prompt="Don't have an account?"
+              prompt={dgettext("auth", "Don't have an account?")}
               phx-click="navigate_to"
               phx-value-state="signup"
-              link_text="Sign up"
+              link_text={dgettext("auth", "Sign up")}
             />
           <% end %>
         </:footer>
       </.auth_card_layout>
     <% else %>
-      <.auth_card_layout title="Welcome Back!">
+      <.auth_card_layout title={dgettext("auth", "Welcome Back!")}>
         <:heading>
           <h2 class="text-xl font-bold text-tymeslot-900 mb-6 tracking-tight text-center">
-            Log in to Tymeslot
+            {dgettext("auth", "Log in to Tymeslot")}
           </h2>
         </:heading>
 

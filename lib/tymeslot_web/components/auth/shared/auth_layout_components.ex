@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.Config
   alias TymeslotWeb.Components.Auth.AuthVideoConfig
@@ -52,7 +53,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
             clip-rule="evenodd"
           />
         </svg>
-        Back to Website
+        {dgettext("auth", "Back to Website")}
       </a>
     <% end %>
     """
@@ -138,7 +139,9 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
                   <div class="w-full border-t border-tymeslot-100"></div>
                 </div>
                 <div class="relative flex justify-center text-token-2xs font-black uppercase tracking-[0.2em]">
-                  <span class="bg-white px-4 text-tymeslot-400">Or continue with</span>
+                  <span class="bg-white px-4 text-tymeslot-400">
+                    {dgettext("auth", "Or continue with")}
+                  </span>
                 </div>
               </div>
               {render_slot(@social)}

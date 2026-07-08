@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
   import TymeslotWeb.Shared.Auth.LayoutComponents
   import TymeslotWeb.Shared.Auth.FormComponents
   import TymeslotWeb.Shared.Auth.ButtonComponents
@@ -31,8 +32,10 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
 
     ~H"""
     <.auth_card_layout
-      title="Reset Password"
-      subtitle="Enter your email and we'll send you instructions to reset your password"
+      title={dgettext("auth", "Reset Password")}
+      subtitle={
+        dgettext("auth", "Enter your email and we'll send you instructions to reset your password")
+      }
       flash={assigns[:flash] || %{}}
     >
       <:form>
@@ -46,7 +49,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
           <.input
             name="email"
             type="email"
-            label="Email Address"
+            label={dgettext("auth", "Email Address")}
             errors={FormValidationHelpers.field_errors(@errors, :email)}
             value={Map.get(@form_data, :email, "")}
             phx-change="validate_reset_request"
@@ -91,19 +94,19 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
                 >
                 </path>
               </svg>
-              Sending...
+              {dgettext("auth", "Sending...")}
             <% else %>
-              Send Reset Instructions
+              {dgettext("auth", "Send Reset Instructions")}
             <% end %>
           </.auth_button>
         </.auth_form>
       </:form>
       <:footer>
         <.auth_footer
-          prompt="Remember your password?"
+          prompt={dgettext("auth", "Remember your password?")}
           phx-click="navigate_to"
           phx-value-state="login"
-          link_text="Log in"
+          link_text={dgettext("auth", "Log in")}
         />
       </:footer>
     </.auth_card_layout>
@@ -116,7 +119,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
   @spec forgot_password_confirm_page(map()) :: Phoenix.LiveView.Rendered.t()
   def forgot_password_confirm_page(assigns) do
     ~H"""
-    <.auth_card_layout title="Check Your Email">
+    <.auth_card_layout title={dgettext("auth", "Check Your Email")}>
       <:form>
         <div class="text-center mb-8">
           <div class="mx-auto w-20 h-20 flex items-center justify-center rounded-2xl bg-turquoise-50 border-2 border-turquoise-100 shadow-xl shadow-turquoise-500/10 mb-6 transform hover:scale-105 transition-all duration-300">
@@ -125,20 +128,23 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
             </svg>
           </div>
           <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
-            We've sent password reset instructions to your email address. Please check your inbox and follow the link to reset your password.
+            {dgettext(
+              "auth",
+              "We've sent password reset instructions to your email address. Please check your inbox and follow the link to reset your password."
+            )}
           </p>
         </div>
         <div class="mt-8 text-center">
           <.auth_link_button href={~p"/auth/login"} class="inline-block">
-            Back to Login
+            {dgettext("auth", "Back to Login")}
           </.auth_link_button>
         </div>
       </:form>
       <:footer>
         <.auth_footer
-          prompt="Didn't receive the email?"
+          prompt={dgettext("auth", "Didn't receive the email?")}
           href={~p"/auth/reset-password"}
-          link_text="Try again"
+          link_text={dgettext("auth", "Try again")}
         />
       </:footer>
     </.auth_card_layout>
@@ -155,8 +161,8 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
 
     ~H"""
     <.auth_card_layout
-      title="Reset Your Password"
-      subtitle="Create a strong password for your account"
+      title={dgettext("auth", "Reset Your Password")}
+      subtitle={dgettext("auth", "Create a strong password for your account")}
     >
       <:form>
         <%= if error_message = Map.get(@flash, :error) || Map.get(@flash, "error") do %>
@@ -178,8 +184,8 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
               id="password-input"
               name="password"
               type="password"
-              label="New Password"
-              placeholder="Enter your new password"
+              label={dgettext("auth", "New Password")}
+              placeholder={dgettext("auth", "Enter your new password")}
               required
               autofocus
               class="text-sm sm:text-base"
@@ -197,8 +203,8 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
               id="confirm-password-input"
               name="password_confirmation"
               type="password"
-              label="Confirm New Password"
-              placeholder="Confirm your new password"
+              label={dgettext("auth", "Confirm New Password")}
+              placeholder={dgettext("auth", "Confirm your new password")}
               required
               class="text-sm sm:text-base"
               icon="hero-lock-closed"
@@ -210,7 +216,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
           </div>
           <div class="pt-2">
             <.auth_button type="submit">
-              Set New Password
+              {dgettext("auth", "Set New Password")}
             </.auth_button>
           </div>
         </.auth_form>
@@ -229,14 +235,16 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
   def password_reset_success(assigns) do
     ~H"""
     <.auth_card_layout
-      title="Success!"
+      title={dgettext("auth", "Success!")}
       flash={assigns[:flash] || %{}}
     >
       <:form>
         <div class="text-center mb-8">
-          <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">Password Reset Successfully</h2>
+          <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">
+            {dgettext("auth", "Password Reset Successfully")}
+          </h2>
           <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
-            Your password has been reset. You can now log in with your new credentials.
+            {dgettext("auth", "Your password has been reset. You can now log in with your new credentials.")}
           </p>
         </div>
         <div class="mt-6">
@@ -244,7 +252,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
             phx-click="navigate_to"
             phx-value-state="login"
           >
-            Log In
+            {dgettext("auth", "Log In")}
           </.auth_button>
         </div>
       </:form>
@@ -262,7 +270,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
   def invalid_token(assigns) do
     ~H"""
     <.auth_card_layout
-      title="Invalid Link"
+      title={dgettext("auth", "Invalid Link")}
       flash={assigns[:flash] || %{}}
     >
       <:form>
@@ -272,9 +280,14 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">Link Expired or Invalid</h2>
+          <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">
+            {dgettext("auth", "Link Expired or Invalid")}
+          </h2>
           <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
-            The security link you followed is no longer valid. Please request a new one to continue.
+            {dgettext(
+              "auth",
+              "The security link you followed is no longer valid. Please request a new one to continue."
+            )}
           </p>
         </div>
         <div class="space-y-4">
@@ -282,7 +295,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
             phx-click="navigate_to"
             phx-value-state="reset_password"
           >
-            Request New Link
+            {dgettext("auth", "Request New Link")}
           </.auth_button>
           <button
             type="button"
@@ -290,7 +303,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
             phx-value-state="login"
             class="btn-secondary w-full py-3.5"
           >
-            Back to Login
+            {dgettext("auth", "Back to Login")}
           </button>
         </div>
       </:form>
@@ -306,7 +319,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
     assigns = assign(assigns, :contact_url, Application.get_env(:tymeslot, :contact_url))
 
     ~H"""
-    <.auth_card_layout title="Success!">
+    <.auth_card_layout title={dgettext("auth", "Success!")}>
       <:form>
         <div class="text-center mb-8">
           <div class="mx-auto w-20 h-20 flex items-center justify-center rounded-2xl bg-emerald-50 border-2 border-emerald-100 shadow-xl shadow-emerald-500/10 mb-6 transform hover:scale-105 transition-all duration-300">
@@ -315,20 +328,27 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
             </svg>
           </div>
           <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">
-            Password Changed
+            {dgettext("auth", "Password Changed")}
           </h2>
           <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
-            Your password has been successfully updated. You can now log in with your new credentials.
+            {dgettext(
+              "auth",
+              "Your password has been successfully updated. You can now log in with your new credentials."
+            )}
           </p>
         </div>
         <div class="mt-8">
           <.auth_link_button href={~p"/auth/login"}>
-            Go to Login
+            {dgettext("auth", "Go to Login")}
           </.auth_link_button>
         </div>
       </:form>
       <:footer :if={@contact_url}>
-        <.auth_footer prompt="Need help?" href={@contact_url} link_text="Contact Support" />
+        <.auth_footer
+          prompt={dgettext("auth", "Need help?")}
+          href={@contact_url}
+          link_text={dgettext("auth", "Contact Support")}
+        />
       </:footer>
     </.auth_card_layout>
     """

@@ -5,6 +5,7 @@ defmodule TymeslotWeb.OAuthController do
   """
 
   use TymeslotWeb, :controller
+  use Gettext, backend: TymeslotWeb.Gettext
   require Logger
 
   alias Tymeslot.Auth.{AuthActions, Session, Verification}
@@ -32,13 +33,16 @@ defmodule TymeslotWeb.OAuthController do
 
   def request(conn, %{"provider" => provider}) do
     conn
-    |> put_flash(:error, "Unsupported OAuth provider: #{provider}")
+    |> put_flash(
+      :error,
+      dgettext("auth", "Unsupported OAuth provider: %{provider}", provider: provider)
+    )
     |> redirect(to: ~p"/auth/login")
   end
 
   def request(conn, _params) do
     conn
-    |> put_flash(:error, "OAuth authentication failed - missing provider.")
+    |> put_flash(:error, dgettext("auth", "OAuth authentication failed - missing provider."))
     |> redirect(to: ~p"/auth/login")
   end
 
@@ -73,7 +77,7 @@ defmodule TymeslotWeb.OAuthController do
       {:error, :rate_limited, _message} ->
         AuthControllerHelpers.handle_rate_limited(
           conn,
-          "Too many OAuth attempts. Please try again later.",
+          dgettext("auth", "Too many OAuth attempts. Please try again later."),
           ~p"/auth/login"
         )
     end
@@ -88,7 +92,12 @@ defmodule TymeslotWeb.OAuthController do
 
   defp disabled_redirect(conn, provider_atom) do
     conn
-    |> put_flash(:error, "#{provider_name(provider_atom)} authentication is not available")
+    |> put_flash(
+      :error,
+      dgettext("auth", "%{provider} authentication is not available",
+        provider: provider_name(provider_atom)
+      )
+    )
     |> redirect(to: ~p"/auth/login")
   end
 
@@ -104,7 +113,10 @@ defmodule TymeslotWeb.OAuthController do
 
       {:error, :unsupported_oauth_provider} ->
         conn
-        |> put_flash(:error, "Unsupported OAuth provider: #{provider}")
+        |> put_flash(
+          :error,
+          dgettext("auth", "Unsupported OAuth provider: %{provider}", provider: provider)
+        )
         |> redirect(to: get_login_path(conn))
     end
   end
@@ -115,20 +127,27 @@ defmodule TymeslotWeb.OAuthController do
         conn
         |> put_flash(
           :error,
-          "#{provider_name(provider_atom)} authentication failed - missing authorization code or security token."
+          dgettext(
+            "auth",
+            "%{provider} authentication failed - missing authorization code or security token.",
+            provider: provider_name(provider_atom)
+          )
         )
         |> redirect(to: ~p"/?auth=login")
 
       {:error, :unsupported_oauth_provider} ->
         conn
-        |> put_flash(:error, "Unsupported OAuth provider: #{provider}")
+        |> put_flash(
+          :error,
+          dgettext("auth", "Unsupported OAuth provider: %{provider}", provider: provider)
+        )
         |> redirect(to: get_login_path(conn))
     end
   end
 
   def callback(conn, _params) do
     conn
-    |> put_flash(:error, "OAuth authentication failed - missing provider.")
+    |> put_flash(:error, dgettext("auth", "OAuth authentication failed - missing provider."))
     |> redirect(to: get_login_path(conn))
   end
 
@@ -144,7 +163,7 @@ defmodule TymeslotWeb.OAuthController do
       {:error, :rate_limited, _message} ->
         AuthControllerHelpers.handle_rate_limited(
           conn,
-          "Too many registration attempts. Please try again later.",
+          dgettext("auth", "Too many registration attempts. Please try again later."),
           ~p"/auth/login"
         )
     end
@@ -169,7 +188,7 @@ defmodule TymeslotWeb.OAuthController do
       {:error, :rate_limited, _message} ->
         AuthControllerHelpers.handle_rate_limited(
           conn,
-          "Too many authentication attempts. Please try again later.",
+          dgettext("auth", "Too many authentication attempts. Please try again later."),
           get_login_path(conn)
         )
     end
@@ -189,7 +208,10 @@ defmodule TymeslotWeb.OAuthController do
     case get_session(conn, :pending_oauth_registration) do
       nil ->
         conn
-        |> put_flash(:error, "Missing OAuth provider information. Please try again.")
+        |> put_flash(
+          :error,
+          dgettext("auth", "Missing OAuth provider information. Please try again.")
+        )
         |> redirect(to: ~p"/auth/login")
 
       session_data ->
@@ -228,7 +250,7 @@ defmodule TymeslotWeb.OAuthController do
       {:error, :unsupported_oauth_provider} ->
         conn
         |> delete_session(:pending_oauth_registration)
-        |> put_flash(:error, "Unsupported OAuth provider.")
+        |> put_flash(:error, dgettext("auth", "Unsupported OAuth provider."))
         |> redirect(to: ~p"/auth/login")
     end
   end
@@ -281,7 +303,11 @@ defmodule TymeslotWeb.OAuthController do
     case Verification.verify_user_email(conn, user, %{}) do
       {:ok, _updated_user} ->
         message =
-          "Welcome! You've successfully signed up with #{String.capitalize(oauth_data.provider)}. Please check your email to verify your account."
+          dgettext(
+            "auth",
+            "Welcome! You've successfully signed up with %{provider}. Please check your email to verify your account.",
+            provider: String.capitalize(oauth_data.provider)
+          )
 
         create_session_and_redirect(conn, user, message)
 
@@ -290,7 +316,11 @@ defmodule TymeslotWeb.OAuthController do
 
       {:error, _error_reason} ->
         message =
-          "Welcome! You've successfully signed up with #{String.capitalize(oauth_data.provider)}. Verification email could not be sent - please contact support if needed."
+          dgettext(
+            "auth",
+            "Welcome! You've successfully signed up with %{provider}. Verification email could not be sent - please contact support if needed.",
+            provider: String.capitalize(oauth_data.provider)
+          )
 
         create_session_and_redirect(conn, user, message)
     end
@@ -306,7 +336,7 @@ defmodule TymeslotWeb.OAuthController do
 
       {:error, _error_reason, _error_details} ->
         conn
-        |> put_flash(:error, "Failed to create session. Please try again.")
+        |> put_flash(:error, dgettext("auth", "Failed to create session. Please try again."))
         |> redirect(to: ~p"/auth/login")
     end
   end
@@ -343,14 +373,16 @@ defmodule TymeslotWeb.OAuthController do
   defp handle_rate_limited_error(conn) do
     AuthControllerHelpers.handle_rate_limited(
       conn,
-      "Too many verification attempts. Please try again later.",
+      dgettext("auth", "Too many verification attempts. Please try again later."),
       ~p"/auth/login"
     )
   end
 
   @spec get_welcome_message(String.t()) :: String.t()
   defp get_welcome_message(provider) do
-    "Welcome! You've successfully signed up with #{String.capitalize(provider)}."
+    dgettext("auth", "Welcome! You've successfully signed up with %{provider}.",
+      provider: String.capitalize(provider)
+    )
   end
 
   @spec respond_to_oauth_result(
@@ -359,7 +391,12 @@ defmodule TymeslotWeb.OAuthController do
         ) :: Plug.Conn.t()
   defp respond_to_oauth_result({:ok, authed_conn, provider}, paths) do
     authed_conn
-    |> put_flash(:info, "Successfully signed in with #{provider_name(provider)}.")
+    |> put_flash(
+      :info,
+      dgettext("auth", "Successfully signed in with %{provider}.",
+        provider: provider_name(provider)
+      )
+    )
     |> redirect(to: paths[:success_path])
   end
 
@@ -371,19 +408,29 @@ defmodule TymeslotWeb.OAuthController do
 
   defp respond_to_oauth_result({:error, :invalid_state, flow_conn}, paths) do
     flow_conn
-    |> put_flash(:error, "Security validation failed. Please try again.")
+    |> put_flash(:error, dgettext("auth", "Security validation failed. Please try again."))
     |> redirect(to: paths[:login_path])
   end
 
   defp respond_to_oauth_result({:error, :oauth_error, provider, flow_conn}, paths) do
     flow_conn
-    |> put_flash(:error, "Failed to authenticate with #{provider_name(provider)}.")
+    |> put_flash(
+      :error,
+      dgettext("auth", "Failed to authenticate with %{provider}.",
+        provider: provider_name(provider)
+      )
+    )
     |> redirect(to: paths[:login_path])
   end
 
   defp respond_to_oauth_result({:error, :general_error, provider, flow_conn}, paths) do
     flow_conn
-    |> put_flash(:error, "An error occurred during #{provider_name(provider)} authentication.")
+    |> put_flash(
+      :error,
+      dgettext("auth", "An error occurred during %{provider} authentication.",
+        provider: provider_name(provider)
+      )
+    )
     |> redirect(to: paths[:login_path])
   end
 
@@ -391,7 +438,11 @@ defmodule TymeslotWeb.OAuthController do
     flow_conn
     |> put_flash(
       :error,
-      "#{provider_name(provider)} authentication succeeded but session creation failed."
+      dgettext(
+        "auth",
+        "%{provider} authentication succeeded but session creation failed.",
+        provider: provider_name(provider)
+      )
     )
     |> redirect(to: paths[:login_path])
   end

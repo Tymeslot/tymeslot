@@ -7,6 +7,7 @@ defmodule TymeslotWeb.AuthLive do
   """
 
   use TymeslotWeb, :live_view
+  use Gettext, backend: TymeslotWeb.Gettext
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
   alias Phoenix.Controller
@@ -182,7 +183,7 @@ defmodule TymeslotWeb.AuthLive do
       {:error, :invalid_csrf} ->
         {:noreply,
          SecurityHelper.set_errors(socket, %{
-           general: "Security validation failed. Please refresh the page."
+           general: dgettext("auth", "Security validation failed. Please refresh the page.")
          })}
     end
   end
@@ -237,7 +238,7 @@ defmodule TymeslotWeb.AuthLive do
       {:error, :invalid_csrf} ->
         {:noreply,
          SecurityHelper.set_errors(socket, %{
-           general: "Security validation failed. Please refresh the page."
+           general: dgettext("auth", "Security validation failed. Please refresh the page.")
          })}
 
       {:error, :rate_limited, message} ->
@@ -315,11 +316,12 @@ defmodule TymeslotWeb.AuthLive do
       {:error, :invalid_csrf} ->
         {:noreply,
          SecurityHelper.set_errors(socket, %{
-           general: "Security validation failed. Please refresh the page."
+           general: dgettext("auth", "Security validation failed. Please refresh the page.")
          })}
 
       false ->
-        {:noreply, SecurityHelper.set_errors(socket, %{general: "Invalid reset token"})}
+        {:noreply,
+         SecurityHelper.set_errors(socket, %{general: dgettext("auth", "Invalid reset token")})}
     end
   end
 
@@ -348,7 +350,10 @@ defmodule TymeslotWeb.AuthLive do
           socket =
             socket
             |> assign(:loading, false)
-            |> put_flash(:info, "Verification email sent! Please check your inbox.")
+            |> put_flash(
+              :info,
+              dgettext("auth", "Verification email sent! Please check your inbox.")
+            )
 
           {:noreply, socket}
 
@@ -369,7 +374,10 @@ defmodule TymeslotWeb.AuthLive do
             socket =
               socket
               |> assign(:loading, false)
-              |> put_flash(:info, "Verification email sent! Please check your inbox.")
+              |> put_flash(
+                :info,
+                dgettext("auth", "Verification email sent! Please check your inbox.")
+              )
 
             {:noreply, socket}
 
@@ -385,7 +393,10 @@ defmodule TymeslotWeb.AuthLive do
             socket =
               socket
               |> assign(:loading, false)
-              |> put_flash(:error, "Failed to send verification email. Please try again later.")
+              |> put_flash(
+                :error,
+                dgettext("auth", "Failed to send verification email. Please try again later.")
+              )
 
             {:noreply, socket}
         end
@@ -395,7 +406,7 @@ defmodule TymeslotWeb.AuthLive do
           |> assign(:loading, false)
           |> put_flash(
             :error,
-            "Unable to resend verification email. Please try signing up again."
+            dgettext("auth", "Unable to resend verification email. Please try signing up again.")
           )
 
         {:noreply, socket}
@@ -410,7 +421,10 @@ defmodule TymeslotWeb.AuthLive do
 
   defp handle_honeypot_signup(socket, user_params) do
     message =
-      "Account created successfully. Please check your email for verification instructions."
+      dgettext(
+        "auth",
+        "Account created successfully. Please check your email for verification instructions."
+      )
 
     socket =
       socket
@@ -450,7 +464,7 @@ defmodule TymeslotWeb.AuthLive do
 
     errors =
       if is_nil(params["password"]) or params["password"] == "" do
-        Map.put(errors, :password, "Password is required")
+        Map.put(errors, :password, dgettext("auth", "Password is required"))
       else
         errors
       end

@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
   import TymeslotWeb.Shared.Auth.LayoutComponents
 
   @doc """
@@ -15,10 +16,10 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
   @spec verify_email_page(map()) :: Phoenix.LiveView.Rendered.t()
   def verify_email_page(assigns) do
     ~H"""
-    <.auth_card_layout title="Verify Your Email">
+    <.auth_card_layout title={dgettext("auth", "Verify Your Email")}>
       <:heading>
         <h2 class="text-xl font-bold text-tymeslot-900 mb-6 tracking-tight text-center">
-          Almost There!
+          {dgettext("auth", "Almost There!")}
         </h2>
       </:heading>
 
@@ -34,7 +35,7 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
               <div class="w-full border-t border-tymeslot-100"></div>
             </div>
             <div class="relative flex justify-center text-token-2xs font-black uppercase tracking-[0.2em]">
-              <span class="bg-transparent px-4 text-tymeslot-400">or</span>
+              <span class="bg-transparent px-4 text-tymeslot-400">{dgettext("auth", "or")}</span>
             </div>
           </div>
           <button
@@ -43,7 +44,7 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
             phx-value-state="login"
             class="btn-secondary w-full py-3.5 text-base"
           >
-            Back to Login
+            {dgettext("auth", "Back to Login")}
           </button>
         </div>
       </:form>
@@ -55,11 +56,16 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
     ~H"""
     <div class="text-center mb-8">
       <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
-        We've just sent you a verification email! Please click the link in the email to confirm your address and finish setting up your account.
+        {dgettext(
+          "auth",
+          "We've just sent you a verification email! Please click the link in the email to confirm your address and finish setting up your account."
+        )}
       </p>
       <%= if email = get_in(assigns, [:form_data, :email]) || get_in(assigns, [:unverified_user, :email]) do %>
         <div class="mt-6 p-4 bg-tymeslot-50/50 border-2 border-tymeslot-100/50 rounded-2xl inline-block">
-          <p class="text-token-2xs font-black text-tymeslot-400 uppercase tracking-widest mb-1">Sent to</p>
+          <p class="text-token-2xs font-black text-tymeslot-400 uppercase tracking-widest mb-1">
+            {dgettext("auth", "Sent to")}
+          </p>
           <p class="text-tymeslot-900 font-bold text-base">{email}</p>
         </div>
       <% end %>
@@ -81,14 +87,19 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          Sending...
+          {dgettext("auth", "Sending...")}
         <% @cooldown > 0 -> %>
-          Resend available in {@cooldown}s
+          {dngettext(
+            "auth",
+            "Resend available in %{count}s",
+            "Resend available in %{count}s",
+            @cooldown
+          )}
         <% true -> %>
           <svg class="w-5 h-5 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          Resend Verification Email
+          {dgettext("auth", "Resend Verification Email")}
       <% end %>
     </button>
     """

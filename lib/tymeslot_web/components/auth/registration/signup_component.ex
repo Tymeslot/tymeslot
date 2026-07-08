@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Registration.SignupComponent do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
   import TymeslotWeb.Shared.Auth.LayoutComponents
   import TymeslotWeb.Shared.Auth.FormComponents
   import TymeslotWeb.Shared.Auth.ButtonComponents
@@ -28,7 +29,10 @@ defmodule TymeslotWeb.Registration.SignupComponent do
       |> Map.put_new(:loading, false)
 
     ~H"""
-    <.auth_card_layout title="Join Tymeslot" subtitle="Start scheduling your meetings with ease. Zero friction, total control.">
+    <.auth_card_layout
+      title={dgettext("auth", "Join Tymeslot")}
+      subtitle={dgettext("auth", "Start scheduling your meetings with ease. Zero friction, total control.")}
+    >
       <:form>
         <.auth_form
           id="signup-form"
@@ -65,7 +69,7 @@ defmodule TymeslotWeb.Registration.SignupComponent do
             <.input
               name="user[email]"
               type="email"
-              label="Email Address"
+              label={dgettext("auth", "Email Address")}
               errors={FormValidationHelpers.field_errors(@errors, :email)}
               value={Map.get(@form_data, :email, "")}
               phx-change="validate_signup"
@@ -79,8 +83,8 @@ defmodule TymeslotWeb.Registration.SignupComponent do
                 id="password-input"
                 name="user[password]"
                 type="password"
-                label="Password"
-                placeholder="Create a password"
+                label={dgettext("auth", "Password")}
+                placeholder={dgettext("auth", "Create a password")}
                 required
                 aria-describedby="password-requirements"
                 errors={FormValidationHelpers.field_errors(@errors, :password)}
@@ -105,25 +109,25 @@ defmodule TymeslotWeb.Registration.SignupComponent do
               value=""
             />
             <div class="text-xs text-tymeslot-500 text-center mt-3">
-              This site is protected by reCAPTCHA and the Google
+              {dgettext("auth", "This site is protected by reCAPTCHA and the Google")}
               <a
                 href="https://policies.google.com/privacy"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="text-turquoise-600 underline hover:text-turquoise-700"
               >
-                Privacy Policy
+                {dgettext("auth", "Privacy Policy")}
               </a>
-              and
+              {dgettext("auth", "and")}
               <a
                 href="https://policies.google.com/terms"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="text-turquoise-600 underline hover:text-turquoise-700"
               >
-                Terms of Service
+                {dgettext("auth", "Terms of Service")}
               </a>
-              apply.
+              {dgettext("auth", "apply.")}
             </div>
           <% end %>
 
@@ -160,9 +164,9 @@ defmodule TymeslotWeb.Registration.SignupComponent do
                 >
                 </path>
               </svg>
-              Signing up...
+              {dgettext("auth", "Signing up...")}
             <% else %>
-              Sign up
+              {dgettext("auth", "Sign up")}
             <% end %>
           </.auth_button>
         </.auth_form>
@@ -172,10 +176,10 @@ defmodule TymeslotWeb.Registration.SignupComponent do
       </:social>
       <:footer>
         <.auth_footer
-          prompt="Already have an account?"
+          prompt={dgettext("auth", "Already have an account?")}
           phx-click="navigate_to"
           phx-value-state="login"
-          link_text="Log in"
+          link_text={dgettext("auth", "Log in")}
         />
       </:footer>
     </.auth_card_layout>

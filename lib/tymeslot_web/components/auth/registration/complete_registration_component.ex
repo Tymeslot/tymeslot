@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
   import TymeslotWeb.Shared.Auth.LayoutComponents
   import TymeslotWeb.Shared.Auth.FormComponents
   import TymeslotWeb.Shared.Auth.ButtonComponents
@@ -19,8 +20,8 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
   def complete_registration_form(assigns) do
     ~H"""
     <.auth_card_layout
-      title="Complete Your Registration"
-      subtitle="Thank you for signing up! Let's finish setting up your account."
+      title={dgettext("auth", "Complete Your Registration")}
+      subtitle={dgettext("auth", "Thank you for signing up! Let's finish setting up your account.")}
     >
       <:form>
         <.auth_form
@@ -34,12 +35,16 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
             <.terms_checkbox name="auth[terms_accepted]" style={:complex} />
           <% end %>
           <.auth_button type="submit" class="mt-4 sm:mt-6">
-            Complete Registration
+            {dgettext("auth", "Complete Registration")}
           </.auth_button>
         </.auth_form>
       </:form>
       <:footer>
-        <.auth_footer prompt="Want to start over?" href={~p"/auth/login"} link_text="Return to login" />
+        <.auth_footer
+          prompt={dgettext("auth", "Want to start over?")}
+          href={~p"/auth/login"}
+          link_text={dgettext("auth", "Return to login")}
+        />
       </:footer>
     </.auth_card_layout>
     """
@@ -52,8 +57,8 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
       id="full-name"
       name="profile[full_name]"
       type="text"
-      label="Display Name"
-      placeholder="e.g. John Doe"
+      label={dgettext("auth", "Display Name")}
+      placeholder={dgettext("auth", "e.g. John Doe")}
       required
       autofocus
       icon="hero-user"
@@ -68,7 +73,7 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
         id="email"
         name="auth[email]"
         type="email"
-        label="Email Address"
+        label={dgettext("auth", "Email Address")}
         placeholder="your.email@example.com"
         required
         icon="hero-envelope"

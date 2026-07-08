@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.Controller
 
@@ -61,21 +62,21 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
         required
       />
       <label for="terms" class="text-sm text-tymeslot-500 font-medium leading-relaxed">
-        I accept the
+        {dgettext("auth", "I accept the")}
         <a
           href={@terms_url}
           target="_blank"
           class="text-turquoise-600 hover:text-turquoise-700 font-bold underline decoration-turquoise-100 underline-offset-4"
         >
-          terms
+          {dgettext("auth", "terms")}
         </a>
-        and
+        {dgettext("auth", "and")}
         <a
           href={@privacy_url}
           target="_blank"
           class="text-turquoise-600 hover:text-turquoise-700 font-bold underline decoration-turquoise-100 underline-offset-4"
         >
-          privacy policy
+          {dgettext("auth", "privacy policy")}
         </a>
       </label>
     </div>

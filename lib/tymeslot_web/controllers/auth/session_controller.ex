@@ -4,6 +4,7 @@ defmodule TymeslotWeb.SessionController do
   """
 
   use TymeslotWeb, :controller
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Auth
   alias Tymeslot.Auth.{AuthActions, Authentication, Session, Verification}
@@ -11,14 +12,6 @@ defmodule TymeslotWeb.SessionController do
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
 
   require Logger
-
-  # Shown when a verification link's token is no longer in the database — most
-  # commonly because a newer verification email was requested (each request
-  # rotates the token), but also for already-used or malformed links.
-  @link_superseded_message "This verification link is no longer valid. If you've requested a newer verification email, please open the link in the most recent one."
-
-  # Shown when the token is still on record but its 24-hour validity window lapsed.
-  @link_expired_message "This verification link has expired. Please request a new verification email to continue."
 
   @doc """
   Creates a new session for the user after authentication.
@@ -57,7 +50,7 @@ defmodule TymeslotWeb.SessionController do
 
       {:error, :invalid_input, _errors} ->
         conn
-        |> put_flash(:error, "Please enter your email and password.")
+        |> put_flash(:error, dgettext("auth", "Please enter your email and password."))
         |> redirect(to: ~p"/auth/login")
 
       {:error, _reason, message} ->
@@ -81,7 +74,7 @@ defmodule TymeslotWeb.SessionController do
         Logger.error("Failed to create session", details: details)
 
         conn
-        |> put_flash(:error, "Failed to create session. Please try again.")
+        |> put_flash(:error, dgettext("auth", "Failed to create session. Please try again."))
         |> redirect(to: ~p"/auth/login")
     end
   end
@@ -94,7 +87,7 @@ defmodule TymeslotWeb.SessionController do
     conn
     |> Auth.delete_session()
     |> clear_unverified_session()
-    |> put_flash(:info, "Logged out successfully.")
+    |> put_flash(:info, dgettext("auth", "Logged out successfully."))
     |> redirect(to: ~p"/")
   end
 
@@ -109,7 +102,7 @@ defmodule TymeslotWeb.SessionController do
     case Config.user_token_queries_module().get_user_by_verification_token(token) do
       {:error, :not_found} ->
         conn
-        |> put_flash(:error, @link_superseded_message)
+        |> put_flash(:error, link_superseded_message())
         |> redirect(to: ~p"/auth/login")
 
       {:ok, user_before_verification} ->
@@ -131,20 +124,38 @@ defmodule TymeslotWeb.SessionController do
             Logger.warning("Email verification token expired")
 
             conn
-            |> put_flash(:error, @link_expired_message)
+            |> put_flash(:error, link_expired_message())
             |> redirect(to: ~p"/auth/login")
 
           {:error, reason} ->
             Logger.error("Invalid email verification token", reason: inspect(reason))
 
             conn
-            |> put_flash(:error, @link_superseded_message)
+            |> put_flash(:error, link_superseded_message())
             |> redirect(to: ~p"/auth/login")
         end
     end
   end
 
   # Private functions
+
+  # Shown when a verification link's token is no longer in the database — most
+  # commonly because a newer verification email was requested (each request
+  # rotates the token), but also for already-used or malformed links.
+  defp link_superseded_message do
+    dgettext(
+      "auth",
+      "This verification link is no longer valid. If you've requested a newer verification email, please open the link in the most recent one."
+    )
+  end
+
+  # Shown when the token is still on record but its 24-hour validity window lapsed.
+  defp link_expired_message do
+    dgettext(
+      "auth",
+      "This verification link has expired. Please request a new verification email to continue."
+    )
+  end
 
   defp verification_module,
     do: Application.get_env(:tymeslot, :verification_module, Verification)
@@ -216,7 +227,7 @@ defmodule TymeslotWeb.SessionController do
           |> clear_unverified_session()
           |> put_flash(
             :success,
-            "Your email has been successfully verified! You're now logged in."
+            dgettext("auth", "Your email has been successfully verified! You're now logged in.")
           )
           |> redirect(to: get_success_redirect_path())
 
@@ -226,7 +237,10 @@ defmodule TymeslotWeb.SessionController do
           conn
           |> put_flash(
             :info,
-            "Your email has been successfully verified! Please log in to continue."
+            dgettext(
+              "auth",
+              "Your email has been successfully verified! Please log in to continue."
+            )
           )
           |> redirect(to: ~p"/auth/login")
       end
@@ -234,7 +248,10 @@ defmodule TymeslotWeb.SessionController do
       Logger.info("Auto-login denied - IP mismatch", user_id: verified_user.id)
 
       conn
-      |> put_flash(:info, "Your email has been successfully verified! Please log in to continue.")
+      |> put_flash(
+        :info,
+        dgettext("auth", "Your email has been successfully verified! Please log in to continue.")
+      )
       |> redirect(to: ~p"/auth/login")
     end
   end
