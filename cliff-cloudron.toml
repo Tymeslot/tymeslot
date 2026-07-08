@@ -24,7 +24,9 @@ sort_commits = "newest"
 commit_parsers = [
   { footer = "^Changelog: skip", skip = true },
   { field = "scope", pattern = "saas", skip = true },
-  { breaking = true, group = "Breaking Changes" },
+  # Match the resolved `breaking` field, not the `breaking = true` parser key —
+  # git-cliff finalises the flag after key matching, so the key form never fires.
+  { field = "breaking", pattern = "true", group = "Breaking Changes" },
   { message = "^test", skip = true },
   { message = "^refactor", skip = true },
   { message = "^style", skip = true },
