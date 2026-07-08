@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -47,8 +48,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
           name="term"
           value={@search_term}
           autocomplete="off"
-          placeholder="Search events"
-          aria-label="Search events"
+          placeholder={dgettext("dashboard_calendar", "Search events")}
+          aria-label={dgettext("dashboard_calendar", "Search events")}
           phx-debounce="300"
           class="w-40 lg:w-52 pl-8 pr-2 py-1.5 text-token-sm text-tymeslot-700 placeholder:text-tymeslot-400 border border-tymeslot-200 rounded-md focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:border-turquoise-400"
         />
@@ -78,7 +79,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
           </span>
           <span class="min-w-0">
             <span class="block text-token-sm text-tymeslot-800 truncate">
-              {event.summary || "Untitled event"}
+              {event.summary || dgettext("dashboard_calendar", "Untitled event")}
             </span>
             <span class="block text-token-xs text-tymeslot-500">
               {result_time_label(event, @user_timezone, @preferences)}
@@ -89,7 +90,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
           :if={@search_results == []}
           class="px-3 py-2 text-token-sm text-tymeslot-400"
         >
-          No matching events
+          {dgettext("dashboard_calendar", "No matching events")}
         </p>
       </div>
     </div>
@@ -112,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
 
   # Short "date · time-range" label for a search result row.
   defp result_time_label(%{all_day: true, start_date: %Date{} = date}, _tz, _prefs),
-    do: Calendar.strftime(date, "%a %b %-d") <> " · All day"
+    do: Calendar.strftime(date, "%a %b %-d") <> " · " <> dgettext("dashboard_calendar", "All day")
 
   defp result_time_label(%{start_at: %DateTime{} = start_at} = event, tz, prefs) do
     fmt = Helpers.time_format(prefs)

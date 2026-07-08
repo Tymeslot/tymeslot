@@ -18,6 +18,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
   ones would never fire anyway and only bloat the payload.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.Reminder
 
   # Reminders whose fire time is older than this are pruned from the feed.
@@ -56,7 +58,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
          timezone,
          time_format
        ) do
-    title = "Reminder: #{event.summary || "(No title)"}"
+    title =
+      dgettext("dashboard_calendar", "Reminder: %{title}",
+        title: event.summary || dgettext("dashboard_calendar", "(No title)")
+      )
+
     body = build_body(event, start_at, today, timezone, time_format)
 
     event.reminders
@@ -82,18 +88,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
     local = DateTime.shift_zone!(start_at, timezone)
 
     when_label =
-      "#{day_label(DateTime.to_date(local), today)} at #{time_label(local, time_format)}"
+      dgettext("dashboard_calendar", "%{day} at %{time}",
+        day: day_label(DateTime.to_date(local), today),
+        time: time_label(local, time_format)
+      )
 
     case event.location do
-      location when is_binary(location) and location != "" -> "#{when_label} · #{location}"
-      _no_location -> when_label
+      location when is_binary(location) and location != "" ->
+        dgettext("dashboard_calendar", "%{when_text} · %{location}",
+          when_text: when_label,
+          location: location
+        )
+
+      _no_location ->
+        when_label
     end
   end
 
   defp day_label(date, today) do
     cond do
-      Date.compare(date, today) == :eq -> "Today"
-      Date.compare(date, Date.add(today, 1)) == :eq -> "Tomorrow"
+      Date.compare(date, today) == :eq -> dgettext("dashboard_calendar", "Today")
+      Date.compare(date, Date.add(today, 1)) == :eq -> dgettext("dashboard_calendar", "Tomorrow")
       true -> Calendar.strftime(date, "%a %-d %b")
     end
   end

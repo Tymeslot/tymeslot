@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow
@@ -70,7 +71,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
         class="grid border-b border-tymeslot-200 bg-white"
         style={"grid-template-columns: var(--time-axis) repeat(#{@col_count}, 1fr)"}
       >
-        <div class="text-token-xs text-tymeslot-400 flex items-end justify-end pr-2 pb-1">all-day</div>
+        <div class="text-token-xs text-tymeslot-400 flex items-end justify-end pr-2 pb-1">{dgettext("dashboard_calendar", "all-day")}</div>
         <AllDayRow.all_day_cell
           :for={day <- @visible_days}
           assigns_ref={assigns}
@@ -140,7 +141,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
               phx-target={@myself}
               role="button"
               tabindex="0"
-              aria-label={"#{event.summary || "Untitled event"}, #{Helpers.format_display_time_range(event, Helpers.time_format(assigns), @user_timezone)}"}
+              aria-label={
+                dgettext("dashboard_calendar", "%{event}, %{time}",
+                  event: event.summary || dgettext("dashboard_calendar", "Untitled event"),
+                  time: Helpers.format_display_time_range(event, Helpers.time_format(assigns), @user_timezone)
+                )
+              }
               data-draggable="true"
               data-event-id={event.id}
               data-event-date={Date.to_iso8601(day)}
@@ -152,7 +158,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                   :if={(Map.get(event, :reminders) || []) != []}
                   name="hero-bell-micro"
                   class="inline-block w-3 h-3 opacity-70 mr-0.5 align-text-bottom"
-                />{event.summary || "(No title)"}
+                />{event.summary || dgettext("dashboard_calendar", "(No title)")}
               </div>
               <div class="opacity-80"><%= Helpers.format_display_time_range(event, Helpers.time_format(assigns), @user_timezone) %></div>
               <img
@@ -202,7 +208,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
           class="hidden fixed bottom-6 right-6 z-30 flex items-center gap-1.5 px-3 py-2 rounded-token-full bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-sm font-medium shadow-lg shadow-turquoise-500/30 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 focus:ring-offset-2"
         >
           <.icon name="hero-calendar-days" class="w-4 h-4" />
-          Now
+          {dgettext("dashboard_calendar", "Now")}
         </button>
       </div>
     </div>
@@ -233,7 +239,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
       phx-target={@myself}
       class="absolute right-0.5 z-10 px-1.5 py-0.5 rounded-full bg-tymeslot-900/80 hover:bg-tymeslot-900 text-white text-token-xs font-semibold shadow-sm focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
       style={"top: #{Helpers.top_rem(@cluster.start_at, @user_timezone)}rem;"}
-      aria-label={"#{length(@cluster.events)} more events"}
+      aria-label={
+        dngettext(
+          "dashboard_calendar",
+          "%{count} more event",
+          "%{count} more events",
+          length(@cluster.events),
+          count: length(@cluster.events)
+        )
+      }
     >
       +<%= length(@cluster.events) %>
     </button>

@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EmptyState do
   @moduledoc "Empty-state banner shown when no calendars are connected."
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @spec no_calendars_banner(map()) :: Phoenix.LiveView.Rendered.t()
   def no_calendars_banner(assigns) do
@@ -39,16 +40,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.EmptyState do
         <div class="w-20 h-20 bg-white/90 backdrop-blur rounded-token-2xl flex items-center justify-center mb-6 shadow-sm border-2 border-dashed border-tymeslot-100">
           <.icon name="hero-calendar-days" class="w-10 h-10 text-tymeslot-300" />
         </div>
-        <h2 class="text-token-xl font-bold text-tymeslot-800 mb-2">Nothing to see here</h2>
+        <h2 class="text-token-xl font-bold text-tymeslot-800 mb-2">{dgettext("dashboard_calendar", "Nothing to see here")}</h2>
         <p class="text-token-base text-tymeslot-500 text-center max-w-md mb-8">
-          Connect at least one calendar to see your events here.
+          {dgettext("dashboard_calendar", "Connect at least one calendar to see your events here.")}
         </p>
         <.link
           patch={~p"/dashboard/integrations?tab=calendars"}
           class="inline-flex items-center gap-2 px-6 py-3 bg-turquoise-600 hover:bg-turquoise-700 text-white font-bold rounded-token-xl transition-colors shadow-lg shadow-turquoise-500/20"
         >
           <.icon name="hero-plus" class="w-5 h-5" />
-          Connect a calendar
+          {dgettext("dashboard_calendar", "Connect a calendar")}
         </.link>
       </div>
     </div>

@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
       <%!-- Day-of-week headers --%>
       <div class="grid border-b border-tymeslot-200 bg-white sticky top-0 z-10"
         style={if Helpers.show_week_numbers?(assigns), do: "grid-template-columns: 2rem repeat(7, 1fr)", else: "grid-template-columns: repeat(7, 1fr)"}>
-        <div :if={Helpers.show_week_numbers?(assigns)} class="text-center text-token-xs font-semibold text-tymeslot-500 py-1 sm:py-2">Wk</div>
+        <div :if={Helpers.show_week_numbers?(assigns)} class="text-center text-token-xs font-semibold text-tymeslot-500 py-1 sm:py-2">{dgettext("dashboard_calendar", "Wk")}</div>
         <div :for={day_name <- Helpers.day_name_headers(assigns)} class="text-center text-token-xs font-semibold text-tymeslot-600 py-1 sm:py-2 uppercase tracking-wide">
           <span class="hidden sm:inline"><%= day_name %></span>
           <span class="sm:hidden"><%= String.first(day_name) %></span>
@@ -100,14 +100,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
             phx-click="show_event"
             phx-value-event-id={seg.event.id}
             phx-target={@myself}
-            title={seg.event.summary || "(No title)"}
+            title={seg.event.summary || dgettext("dashboard_calendar", "(No title)")}
           >
             <img
               :if={Map.get(seg.event, :created_by_tymeslot)}
               src="/images/brand/logo.svg"
               alt=""
               class="inline-block w-3 h-3 opacity-70 mr-0.5 shrink-0"
-            /><span class="truncate"><%= seg.event.summary || "(No title)" %></span>
+            /><span class="truncate"><%= seg.event.summary || dgettext("dashboard_calendar", "(No title)") %></span>
           </div>
         </div>
       </div>
@@ -145,7 +145,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
       phx-target={@myself}
       role="button"
       tabindex="0"
-      aria-label={Calendar.strftime(@day, "%A, %B %-d") <> ", #{length(@chips)} events"}
+      aria-label={
+        Calendar.strftime(@day, "%A, %B %-d") <>
+          ", " <>
+          dngettext(
+            "dashboard_calendar",
+            "%{count} event",
+            "%{count} events",
+            length(@chips),
+            count: length(@chips)
+          )
+      }
     >
       <div class={"absolute top-1 left-1 text-token-sm font-semibold #{day_number_class(@is_today, @is_current_month)}"}>
         <%= @day.day %>
@@ -165,14 +175,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
             src="/images/brand/logo.svg"
             alt=""
             class="inline-block w-3 h-3 opacity-60 mr-0.5 align-text-bottom"
-          /><%= event.summary || "(No title)" %><span
+          /><%= event.summary || dgettext("dashboard_calendar", "(No title)") %><span
             :if={EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event)}
             class={["inline-block w-1.5 h-1.5 rounded-full ml-0.5 align-middle", EventBadges.guest_dot_tone(EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event))]}
             title={EventBadges.guest_badge_title(EventBadges.guest_summary_for_event(@assigns_ref.guest_rsvp_summaries, event))}
           ></span>
         </div>
         <div :if={length(@chips) > 3} class="text-token-xs font-medium text-tymeslot-500 mt-0.5">
-          +<%= length(@chips) - 3 %> more
+          {dngettext("dashboard_calendar", "+%{count} more", "+%{count} more", length(@chips) - 3, count: length(@chips) - 3)}
         </div>
       </div>
 
@@ -181,7 +191,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
         <div
           :if={List.first(@chips)}
           class={"rounded px-1 text-token-xs font-medium text-white truncate #{Helpers.color_for_event(@assigns_ref, List.first(@chips))}"}
-        ><%= List.first(@chips).summary || "(No title)" %></div>
+        ><%= List.first(@chips).summary || dgettext("dashboard_calendar", "(No title)") %></div>
         <div
           :if={length(@chips) > 1}
           class="inline-flex items-center gap-0.5 text-token-2xs text-tymeslot-500 leading-none"

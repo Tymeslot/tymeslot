@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -32,9 +33,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
         <div class="w-16 h-16 bg-tymeslot-50 rounded-token-2xl flex items-center justify-center mb-4 border-2 border-dashed border-tymeslot-100">
           <.icon name="hero-calendar-days" class="w-8 h-8 text-tymeslot-300" />
         </div>
-        <h2 class="text-token-lg font-bold text-tymeslot-800 mb-1">No upcoming events</h2>
+        <h2 class="text-token-lg font-bold text-tymeslot-800 mb-1">{dgettext("dashboard_calendar", "No upcoming events")}</h2>
         <p class="text-token-sm text-tymeslot-500 max-w-sm">
-          Nothing scheduled in the next 30 days. Events you add or sync will appear here.
+          {dgettext(
+            "dashboard_calendar",
+            "Nothing scheduled in the next 30 days. Events you add or sync will appear here."
+          )}
         </p>
       </div>
 
@@ -53,7 +57,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
               phx-target={@myself}
               role="button"
               tabindex="0"
-              aria-label={"#{event.summary || "Untitled event"}, #{time_label(event, @user_timezone, @preferences)}"}
+              aria-label={
+                dgettext("dashboard_calendar", "%{event}, %{time}",
+                  event: event.summary || dgettext("dashboard_calendar", "Untitled event"),
+                  time: time_label(event, @user_timezone, @preferences)
+                )
+              }
             >
               <span
                 class={"mt-0.5 w-2.5 h-2.5 rounded-full shrink-0 #{Helpers.color_for_event(assigns, event)}"}
@@ -65,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
               </span>
               <span class="min-w-0 flex-1">
                 <span class="block text-token-sm font-medium text-tymeslot-800 truncate">
-                  <%= event.summary || "(No title)" %>
+                  <%= event.summary || dgettext("dashboard_calendar", "(No title)") %>
                 </span>
                 <span
                   :if={event.location not in [nil, ""]}
@@ -102,7 +111,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
     all_day ++ timed
   end
 
-  defp time_label(%{all_day: true}, _tz, _prefs), do: "All day"
+  defp time_label(%{all_day: true}, _tz, _prefs), do: dgettext("dashboard_calendar", "All day")
 
   defp time_label(event, tz, prefs) do
     Helpers.format_time_range_in_tz(event, tz, Helpers.time_format(prefs))

@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
   @moduledoc "Header toolbar function component for the calendar grid."
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.Availability.Helpers, as: AvailabilityHelpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox
@@ -47,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             phx-click="prev_period"
             phx-target={@myself}
             class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label="Previous period"
+            aria-label={dgettext("dashboard_calendar", "Previous period")}
           >
             <.icon name="hero-chevron-left" class="w-4 h-4" />
           </button>
@@ -55,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             phx-click="next_period"
             phx-target={@myself}
             class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded hover:bg-tymeslot-100 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label="Next period"
+            aria-label={dgettext("dashboard_calendar", "Next period")}
           >
             <.icon name="hero-chevron-right" class="w-4 h-4" />
           </button>
@@ -65,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
               |> JS.dispatch("calendar:scroll-to-current", to: "#calendar-drag-zone")
             }
             class="px-2.5 py-1.5 md:px-3 text-token-sm border border-tymeslot-200 rounded hover:bg-tymeslot-50 text-tymeslot-600 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-          >Today</button>
+          >{dgettext("dashboard_calendar", "Today")}</button>
           <MiniMonthPopover.mini_month_popover
             open={@mini_month_open}
             view={@view}
@@ -123,8 +124,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             phx-click="toggle_shortcuts_help"
             phx-target={@myself}
             class="hidden md:flex min-w-[40px] min-h-[40px] items-center justify-center text-token-sm font-semibold text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label="Keyboard shortcuts"
-            title="Keyboard shortcuts (?)"
+            aria-label={dgettext("dashboard_calendar", "Keyboard shortcuts")}
+            title={dgettext("dashboard_calendar", "Keyboard shortcuts (?)")}
           >
             ?
           </button>
@@ -132,7 +133,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
             phx-click="toggle_settings"
             phx-target={@myself}
             class="min-w-[40px] min-h-[40px] flex items-center justify-center text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-            aria-label="Calendar settings"
+            aria-label={dgettext("dashboard_calendar", "Calendar settings")}
           >
             <.icon name="hero-cog-6-tooth" class="w-4 h-4" />
           </button>
@@ -157,18 +158,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
       on_close="close_calendar_list"
       target={@myself}
       role="dialog"
-      panel_label="My Calendars"
+      panel_label={dgettext("dashboard_calendar", "My Calendars")}
       trigger_class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1.5 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
       class="bg-white border border-tymeslot-200 rounded-xl shadow-lg p-3 w-60"
-      aria-label="Toggle calendars"
+      aria-label={dgettext("dashboard_calendar", "Toggle calendars")}
     >
       <:trigger>
         <.icon name="hero-bars-3" class="w-4 h-4" />
-        <span class="hidden md:inline">Calendars</span>
+        <span class="hidden md:inline">{dgettext("dashboard_calendar", "Calendars")}</span>
       </:trigger>
       <:panel>
         <h4 class="text-token-xs font-semibold text-tymeslot-500 uppercase tracking-wide mb-2">
-          My Calendars
+          {dgettext("dashboard_calendar", "My Calendars")}
         </h4>
         <label
           :for={integration <- @integrations}
@@ -190,7 +191,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
           <span class="text-token-sm text-tymeslot-700 truncate">{integration.name}</span>
         </label>
         <p :if={@integrations == []} class="text-token-sm text-tymeslot-400">
-          No calendars connected
+          {dgettext("dashboard_calendar", "No calendars connected")}
         </p>
       </:panel>
     </.dropdown>
@@ -214,7 +215,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
         target={@myself}
         trigger_class="min-w-[40px] min-h-[40px] px-2 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 flex items-center gap-1 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
         class="bg-white border border-tymeslot-200 rounded-xl shadow-lg py-1 w-36"
-        aria-label="Switch view"
+        aria-label={dgettext("dashboard_calendar", "Switch view")}
       >
         <:trigger>
           <.icon name="hero-calendar-days" class="w-4 h-4" />
@@ -256,11 +257,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
 
   defp view_options do
     [
-      {:day, "Day"},
-      {:three_day, "3 Days"},
-      {:week, "Week"},
-      {:month, "Month"},
-      {:agenda, "Agenda"}
+      {:day, dgettext("dashboard_calendar", "Day")},
+      {:three_day, dgettext("dashboard_calendar", "3 Days")},
+      {:week, dgettext("dashboard_calendar", "Week")},
+      {:month, dgettext("dashboard_calendar", "Month")},
+      {:agenda, dgettext("dashboard_calendar", "Agenda")}
     ]
   end
 
@@ -275,10 +276,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
       phx-click="show_create_form"
       phx-target={@myself}
       class="hidden sm:flex min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 items-center gap-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-      aria-label="Add event"
+      aria-label={dgettext("dashboard_calendar", "Add event")}
     >
       <.icon name="hero-plus-circle-mini" class="w-4 h-4" />
-      <span>Quick add</span>
+      <span>{dgettext("dashboard_calendar", "Quick add")}</span>
     </button>
     """
   end
@@ -295,10 +296,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header do
       }
       disabled={@syncing}
       class="min-w-[40px] min-h-[40px] px-2 md:px-3 md:py-1.5 flex items-center justify-center gap-1.5 text-token-sm text-tymeslot-600 border border-tymeslot-200 rounded-md hover:bg-tymeslot-50 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
-      aria-label="Refresh"
+      aria-label={dgettext("dashboard_calendar", "Refresh")}
     >
       <.icon name="hero-arrow-path" class={if @syncing, do: "w-4 h-4 animate-spin", else: "w-4 h-4"} />
-      <span class="hidden md:inline">Refresh</span>
+      <span class="hidden md:inline">{dgettext("dashboard_calendar", "Refresh")}</span>
     </button>
     """
   end
