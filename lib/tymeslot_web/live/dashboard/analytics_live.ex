@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
   this module.
   """
   use TymeslotWeb, :live_view
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Analytics
   alias Tymeslot.Analytics.MetricsCache
@@ -29,7 +30,13 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
       not Analytics.enabled?() ->
         {:ok,
          socket
-         |> put_flash(:info, "Booking analytics is not enabled on this installation.")
+         |> put_flash(
+           :info,
+           dgettext(
+             "dashboard_analytics",
+             "Booking analytics is not enabled on this installation."
+           )
+         )
          |> push_navigate(to: ~p"/dashboard")}
 
       # Data is still collected for this organizer (collection is ungated); the
@@ -113,19 +120,19 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
       <div :if={@analytics_allowed} class="space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h1 class="text-2xl font-black tracking-tight text-tymeslot-900">
-            Analytics
+            {dgettext("dashboard_analytics", "Analytics")}
           </h1>
           <div class="flex items-center gap-2">
-            <div class="flex gap-2" role="group" aria-label="Date range">
-              <.range_button label="7 days" value="7d" current={@range} />
-              <.range_button label="30 days" value="30d" current={@range} />
-              <.range_button label="90 days" value="90d" current={@range} />
+            <div class="flex gap-2" role="group" aria-label={dgettext("dashboard_analytics", "Date range")}>
+              <.range_button label={dgettext("dashboard_analytics", "7 days")} value="7d" current={@range} />
+              <.range_button label={dgettext("dashboard_analytics", "30 days")} value="30d" current={@range} />
+              <.range_button label={dgettext("dashboard_analytics", "90 days")} value="90d" current={@range} />
             </div>
             <button
               type="button"
               phx-click="refresh"
-              title="Refresh"
-              aria-label="Refresh analytics"
+              title={dgettext("dashboard_analytics", "Refresh")}
+              aria-label={dgettext("dashboard_analytics", "Refresh analytics")}
               class="rounded-md bg-tymeslot-50 p-2 text-tymeslot-700 transition-colors hover:bg-tymeslot-100"
             >
               <.icon name="hero-arrow-path" class={"h-4 w-4 #{if @refreshing?, do: "animate-spin"}"} />
@@ -138,7 +145,9 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
           class="text-token-xs tabular-nums text-tymeslot-400"
           aria-live="polite"
         >
-          Updated {format_refreshed_at(@refreshed_at, @time_zone)}
+          {dgettext("dashboard_analytics", "Updated %{time}",
+            time: format_refreshed_at(@refreshed_at, @time_zone)
+          )}
         </p>
 
         <div
@@ -147,8 +156,11 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
         >
           <.icon name="hero-information-circle" class="mt-0.5 h-5 w-5 shrink-0 text-turquoise-500" />
           <span>
-            Booking analytics started collecting on {format_launch_date(@launch_date)}. Dates before
-            then show no data, so longer ranges will look sparse until more history builds up.
+            {dgettext(
+              "dashboard_analytics",
+              "Booking analytics started collecting on %{date}. Dates before then show no data, so longer ranges will look sparse until more history builds up.",
+              date: format_launch_date(@launch_date)
+            )}
           </span>
         </div>
 
@@ -168,10 +180,10 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
             people, and conversion compares two such counts. Labelled as an
             estimate so the numbers aren't read as exact.
           --%>
-          Unique visitors and conversion are cookieless estimates: each visitor is
-          counted once per day, so totals over a longer range approximate the number
-          of distinct people. Conversion is the share of visitors who went on to book
-          and is indicative, not exact.
+          {dgettext(
+            "dashboard_analytics",
+            "Unique visitors and conversion are cookieless estimates: each visitor is counted once per day, so totals over a longer range approximate the number of distinct people. Conversion is the share of visitors who went on to book and is indicative, not exact."
+          )}
         </p>
 
         <VisitsChart.chart

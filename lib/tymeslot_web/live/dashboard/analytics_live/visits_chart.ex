@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
   distort). While `loading?` is true a skeleton is shown instead.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @width 800
   @height 200
@@ -55,11 +56,11 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
     <div class="card-glass">
       <div class="flex items-center justify-between gap-2">
         <div class="text-token-xs font-black uppercase tracking-widest text-tymeslot-400">
-          Visits over time
+          {dgettext("dashboard_analytics", "Visits over time")}
         </div>
         <div class="flex items-center gap-1.5 text-token-xs text-tymeslot-500">
           <span class="inline-block h-2.5 w-2.5 rounded-sm bg-turquoise-500" aria-hidden="true"></span>
-          Daily visits
+          {dgettext("dashboard_analytics", "Daily visits")}
         </div>
       </div>
 
@@ -74,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
         :if={!@loading? and @series == []}
         class="mt-4 py-8 text-center text-token-sm text-tymeslot-400"
       >
-        No traffic in this period yet.
+        {dgettext("dashboard_analytics", "No traffic in this period yet.")}
       </div>
 
       <div :if={!@loading? and @series != []} class="mt-3 flex gap-2">
@@ -93,10 +94,15 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
             preserveAspectRatio="none"
             class="h-48 w-full"
             role="img"
-            aria-label="Daily visits over the selected date range"
+            aria-label={dgettext("dashboard_analytics", "Daily visits over the selected date range")}
           >
-            <title>Visits over time</title>
-            <desc>Bar chart showing daily visit counts for the selected date range.</desc>
+            <title>{dgettext("dashboard_analytics", "Visits over time")}</title>
+            <desc>
+              {dgettext(
+                "dashboard_analytics",
+                "Bar chart showing daily visit counts for the selected date range."
+              )}
+            </desc>
             <g :for={{point, idx} <- Enum.with_index(@series)}>
               <rect
                 x={bar_x(@width, @padding, length(@series), idx)}
@@ -105,7 +111,15 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
                 height={bar_height(@height, @padding, point.visits, @max)}
                 class="fill-turquoise-500"
               >
-                <title>{Date.to_string(point.day)}: {point.visits} {if point.visits == 1, do: "visit", else: "visits"}</title>
+                <title>
+                  {Date.to_string(point.day)}: {dngettext(
+                    "dashboard_analytics",
+                    "%{count} visit",
+                    "%{count} visits",
+                    point.visits,
+                    count: point.visits
+                  )}
+                </title>
               </rect>
             </g>
           </svg>

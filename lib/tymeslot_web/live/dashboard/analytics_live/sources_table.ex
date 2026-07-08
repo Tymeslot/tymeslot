@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
   a narrow phone screen. While `loading?` is true a skeleton stands in for both.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Analytics
 
@@ -20,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
     rows =
       Enum.map(assigns.sources, fn row ->
         %{
-          label: row.utm_source || "(direct / unknown)",
+          label: row.utm_source || dgettext("dashboard_analytics", "(direct / unknown)"),
           visits: row.visits,
           bookings: row.bookings,
           conversion: Analytics.conversion_rate(row.converting_visitors, row.unique_visitors)
@@ -40,10 +41,10 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
       <table :if={!@loading?} class="hidden w-full text-token-sm sm:table">
         <thead class="bg-tymeslot-50">
           <tr class="text-token-xs font-black uppercase tracking-widest text-tymeslot-400">
-            <th class="px-4 py-3 text-left">Source</th>
-            <th class="px-4 py-3 text-right">Visits</th>
-            <th class="px-4 py-3 text-right">Bookings</th>
-            <th class="px-4 py-3 text-right">Conversion</th>
+            <th class="px-4 py-3 text-left">{dgettext("dashboard_analytics", "Source")}</th>
+            <th class="px-4 py-3 text-right">{dgettext("dashboard_analytics", "Visits")}</th>
+            <th class="px-4 py-3 text-right">{dgettext("dashboard_analytics", "Bookings")}</th>
+            <th class="px-4 py-3 text-right">{dgettext("dashboard_analytics", "Conversion")}</th>
           </tr>
         </thead>
         <tbody>
@@ -55,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
           </tr>
           <tr :if={@rows == []}>
             <td colspan="4" class="px-4 py-8 text-center text-tymeslot-400">
-              No traffic in this period yet.
+              {dgettext("dashboard_analytics", "No traffic in this period yet.")}
             </td>
           </tr>
         </tbody>
@@ -67,21 +68,21 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SourcesTable do
           <div class="font-semibold text-tymeslot-900">{row.label}</div>
           <dl class="mt-2 grid grid-cols-3 gap-2 text-token-xs">
             <div>
-              <dt class="text-tymeslot-400">Visits</dt>
+              <dt class="text-tymeslot-400">{dgettext("dashboard_analytics", "Visits")}</dt>
               <dd class="tabular-nums font-semibold text-tymeslot-900">{row.visits}</dd>
             </div>
             <div>
-              <dt class="text-tymeslot-400">Bookings</dt>
+              <dt class="text-tymeslot-400">{dgettext("dashboard_analytics", "Bookings")}</dt>
               <dd class="tabular-nums font-semibold text-tymeslot-900">{row.bookings}</dd>
             </div>
             <div>
-              <dt class="text-tymeslot-400">Conversion</dt>
+              <dt class="text-tymeslot-400">{dgettext("dashboard_analytics", "Conversion")}</dt>
               <dd class="tabular-nums font-semibold text-tymeslot-900">{row.conversion}%</dd>
             </div>
           </dl>
         </div>
         <div :if={@rows == []} class="px-4 py-8 text-center text-tymeslot-400">
-          No traffic in this period yet.
+          {dgettext("dashboard_analytics", "No traffic in this period yet.")}
         </div>
       </div>
     </div>

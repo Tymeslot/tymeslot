@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
   a misleading `0` that then jumps to the real figure.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Analytics
 
@@ -30,10 +31,18 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.SummaryCards do
 
     ~H"""
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <.stat_card label="Visits" value={@visits} loading?={@loading?} />
-      <.stat_card label="Unique visitors" value={@unique_visitors} loading?={@loading?} />
-      <.stat_card label="Bookings" value={@bookings} loading?={@loading?} />
-      <.stat_card label="Conversion (est.)" value={"#{@conversion_rate}%"} loading?={@loading?} />
+      <.stat_card label={dgettext("dashboard_analytics", "Visits")} value={@visits} loading?={@loading?} />
+      <.stat_card
+        label={dgettext("dashboard_analytics", "Unique visitors")}
+        value={@unique_visitors}
+        loading?={@loading?}
+      />
+      <.stat_card label={dgettext("dashboard_analytics", "Bookings")} value={@bookings} loading?={@loading?} />
+      <.stat_card
+        label={dgettext("dashboard_analytics", "Conversion (est.)")}
+        value={"#{@conversion_rate}%"}
+        loading?={@loading?}
+      />
     </div>
     """
   end
