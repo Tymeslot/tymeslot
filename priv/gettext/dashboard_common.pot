@@ -12,6 +12,7 @@ msgid ""
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:193
+#: lib/tymeslot_web/helpers/page_titles.ex:15
 #, elixir-autogen, elixir-format
 msgid "Account"
 msgstr ""
@@ -27,16 +28,19 @@ msgid "Analytics"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:206
+#: lib/tymeslot_web/helpers/page_titles.ex:28
 #, elixir-autogen, elixir-format
 msgid "Automation"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:151
+#: lib/tymeslot_web/helpers/page_titles.ex:14
 #, elixir-autogen, elixir-format
 msgid "Availability"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard_layout.ex:179
+#: lib/tymeslot_web/helpers/page_titles.ex:20
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr ""
@@ -62,6 +66,7 @@ msgid "Distribution"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:187
+#: lib/tymeslot_web/helpers/page_titles.ex:31
 #, elixir-autogen, elixir-format
 msgid "Embed & Share"
 msgstr ""
@@ -83,6 +88,7 @@ msgid "Meeting Types"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:112
+#: lib/tymeslot_web/helpers/page_titles.ex:30
 #, elixir-autogen, elixir-format
 msgid "Meetings"
 msgstr ""
@@ -157,4 +163,65 @@ msgstr ""
 #: lib/tymeslot_web/components/user_dropdown_component.ex:117
 #, elixir-autogen, elixir-format
 msgid "User"
+msgstr ""
+
+#: lib/tymeslot_web/components/icons/provider_icon.ex:50
+#, elixir-autogen, elixir-format
+msgid "%{provider} icon"
+msgstr ""
+
+#: lib/tymeslot_web/helpers/page_titles.ex:47
+#, elixir-autogen, elixir-format
+msgid "%{section} - Dashboard"
+msgstr ""
+
+#: lib/tymeslot_web/helpers/page_titles.ex:23
+#, elixir-autogen, elixir-format
+msgid "Calendar Integration"
+msgstr ""
+
+#: lib/tymeslot/scheduling/link_access_policy.ex:75
+#, elixir-autogen, elixir-format
+msgid "Complete setup to enable this feature"
+msgstr ""
+
+#: lib/tymeslot/scheduling/link_access_policy.ex:72
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar in Calendar settings to enable this feature"
+msgstr ""
+
+#: lib/tymeslot_web/helpers/page_titles.ex:12
+#: lib/tymeslot_web/helpers/page_titles.ex:40
+#, elixir-autogen, elixir-format
+msgid "Dashboard"
+msgstr ""
+
+#: lib/tymeslot_web/helpers/page_titles.ex:18
+#, elixir-autogen, elixir-format
+msgid "Meeting Settings"
+msgstr ""
+
+#: lib/tymeslot_web/helpers/page_titles.ex:32
+#, elixir-autogen, elixir-format
+msgid "Payments"
+msgstr ""
+
+#: lib/tymeslot/scheduling/link_access_policy.ex:69
+#, elixir-autogen, elixir-format
+msgid "Set a username in Settings to enable this feature"
+msgstr ""
+
+#: lib/tymeslot_web/helpers/page_titles.ex:13
+#, elixir-autogen, elixir-format
+msgid "Settings"
+msgstr ""
+
+#: lib/tymeslot_web/helpers/page_titles.ex:29
+#, elixir-autogen, elixir-format
+msgid "Theme Selection"
+msgstr ""
+
+#: lib/tymeslot_web/helpers/page_titles.ex:26
+#, elixir-autogen, elixir-format
+msgid "Video Integration"
 msgstr ""

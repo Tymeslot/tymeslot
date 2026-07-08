@@ -251,3 +251,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "You have a custom video. Selecting a preset will remove it."
 msgstr ""
+
+#: lib/tymeslot_web/themes/quill/theme.ex:52
+#, elixir-autogen, elixir-format
+msgid "Glass morphism design with elegant transparency effects and a 4-step booking flow."
+msgstr ""
+
+#: lib/tymeslot_web/themes/rhythm/theme.ex:52
+#, elixir-autogen, elixir-format
+msgid "Modern sliding design with video background and a 4-slide booking flow."
+msgstr ""

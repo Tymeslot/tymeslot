@@ -22,6 +22,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   any further internal-only provider.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Shared.{ProviderConfigHelper, ProviderToggle}
 
@@ -68,70 +70,91 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @provider_metadata %{
     caldav: %{
       icon: "caldav",
-      description: "Universal CalDAV server support",
+      description:
+        dgettext_noop("dashboard_calendar_providers", "Universal CalDAV server support"),
       button_text: "Connect CalDAV",
       click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     radicale: %{
       icon: "radicale",
-      description: "Lightweight self-hosted calendar server",
+      description:
+        dgettext_noop("dashboard_calendar_providers", "Lightweight self-hosted calendar server"),
       button_text: "Connect Radicale",
       click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     nextcloud: %{
       icon: "nextcloud",
-      description: "Self-hosted Nextcloud calendar sync",
+      description:
+        dgettext_noop("dashboard_calendar_providers", "Self-hosted Nextcloud calendar sync"),
       button_text: "Connect Nextcloud",
       click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     zimbra: %{
       icon: "zimbra",
-      description: "Enterprise Zimbra calendar integration",
+      description:
+        dgettext_noop("dashboard_calendar_providers", "Enterprise Zimbra calendar integration"),
       button_text: "Connect Zimbra",
       click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     mailbox_org: %{
       icon: "mailbox_org",
-      description: "Sync calendars from your mailbox.org account",
+      description:
+        dgettext_noop(
+          "dashboard_calendar_providers",
+          "Sync calendars from your mailbox.org account"
+        ),
       button_text: "Connect mailbox.org",
       click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     apple: %{
       icon: "apple",
-      description: "Sync calendars from your Apple iCloud account",
+      description:
+        dgettext_noop(
+          "dashboard_calendar_providers",
+          "Sync calendars from your Apple iCloud account"
+        ),
       button_text: "Connect Apple iCloud",
       click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     baikal: %{
       icon: "baikal",
-      description: "PHP-based CalDAV/CardDAV server integration",
+      description:
+        dgettext_noop(
+          "dashboard_calendar_providers",
+          "PHP-based CalDAV/CardDAV server integration"
+        ),
       button_text: "Connect Baikal",
       click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     google: %{
       icon: "google",
-      description: "Full OAuth integration with Google Meet support",
+      description:
+        dgettext_noop(
+          "dashboard_calendar_providers",
+          "Full OAuth integration with Google Meet support"
+        ),
       button_text: "Connect Google",
       click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     outlook: %{
       icon: "outlook",
-      description: "Microsoft 365 and Outlook.com integration",
+      description:
+        dgettext_noop("dashboard_calendar_providers", "Microsoft 365 and Outlook.com integration"),
       button_text: "Connect Outlook",
       click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     demo: %{
       icon: "demo",
-      description: "Homepage demo provider",
+      description: dgettext_noop("dashboard_calendar_providers", "Homepage demo provider"),
       button_text: "Demo Enabled",
       click_event: nil,
       circuit_breaker_enabled: false
@@ -297,7 +320,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   Gets description for a provider.
   """
   @spec description(atom()) :: String.t()
-  def description(provider), do: metadata(provider).description
+  def description(provider) do
+    Gettext.dgettext(
+      TymeslotWeb.Gettext,
+      "dashboard_calendar_providers",
+      metadata(provider).description
+    )
+  end
 
   @doc """
   Gets button text for a provider.

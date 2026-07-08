@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   Used across dashboard components for consistent branding.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
 
@@ -43,7 +44,11 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
     assigns = assign(assigns, :icon_path, icon_path)
 
     ~H"""
-    <img src={@icon_path} class={build_icon_classes(@size, @class)} alt={"#{@provider} icon"} />
+    <img
+      src={@icon_path}
+      class={build_icon_classes(@size, @class)}
+      alt={dgettext("dashboard_common", "%{provider} icon", provider: @provider)}
+    />
     """
   end
 

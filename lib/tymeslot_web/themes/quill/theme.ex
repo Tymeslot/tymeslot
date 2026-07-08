@@ -3,6 +3,8 @@ defmodule TymeslotWeb.Themes.Quill.Theme do
   Quill theme implementation with glassmorphism design and 4-step flow.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @behaviour TymeslotWeb.Themes.Core.Behaviour
 
   alias TymeslotWeb.Themes.Quill.Scheduling.Components.{
@@ -47,7 +49,10 @@ defmodule TymeslotWeb.Themes.Quill.Theme do
     %{
       name: "Quill",
       description:
-        "Glass morphism design with elegant transparency effects and a 4-step booking flow.",
+        dgettext(
+          "dashboard_appearance",
+          "Glass morphism design with elegant transparency effects and a 4-step booking flow."
+        ),
       preview_image: "/images/ui/theme-previews/quill-theme-preview.webp",
       flow_steps: 4,
       design_system: :glassmorphism,

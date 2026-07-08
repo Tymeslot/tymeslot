@@ -273,6 +273,7 @@ msgstr ""
 msgid "Something went wrong. Please try again."
 msgstr ""
 
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:108
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:41
 #, elixir-autogen, elixir-format
 msgid "Sync calendars from your Apple iCloud account"
@@ -288,6 +289,7 @@ msgstr ""
 msgid "Sync calendars from your Zimbra server"
 msgstr ""
 
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:101
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:41
 #, elixir-autogen, elixir-format
 msgid "Sync calendars from your mailbox.org account"
@@ -413,4 +415,44 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex:71
 #, elixir-autogen, elixir-format
 msgid "https://radicale.example.com:5232"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:94
+#, elixir-autogen, elixir-format
+msgid "Enterprise Zimbra calendar integration"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:122
+#, elixir-autogen, elixir-format
+msgid "Full OAuth integration with Google Meet support"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:136
+#, elixir-autogen, elixir-format
+msgid "Homepage demo provider"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:80
+#, elixir-autogen, elixir-format
+msgid "Lightweight self-hosted calendar server"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:129
+#, elixir-autogen, elixir-format
+msgid "Microsoft 365 and Outlook.com integration"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:115
+#, elixir-autogen, elixir-format
+msgid "PHP-based CalDAV/CardDAV server integration"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:87
+#, elixir-autogen, elixir-format
+msgid "Self-hosted Nextcloud calendar sync"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:73
+#, elixir-autogen, elixir-format
+msgid "Universal CalDAV server support"
 msgstr ""

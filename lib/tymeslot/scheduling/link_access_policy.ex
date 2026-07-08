@@ -5,6 +5,8 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
   dispatcher to ensure consistent behavior and early error reporting.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Demo
   alias Tymeslot.Integrations.CalendarManagement
 
@@ -64,13 +66,16 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
   def disabled_tooltip(profile, integration_status) do
     case check_dashboard_allowed(profile, integration_status) do
       {:error, :no_username} ->
-        "Set a username in Settings to enable this feature"
+        dgettext("dashboard_common", "Set a username in Settings to enable this feature")
 
       {:error, :no_calendar} ->
-        "Connect a calendar in Calendar settings to enable this feature"
+        dgettext(
+          "dashboard_common",
+          "Connect a calendar in Calendar settings to enable this feature"
+        )
 
       _other_reason ->
-        "Complete setup to enable this feature"
+        dgettext("dashboard_common", "Complete setup to enable this feature")
     end
   end
 

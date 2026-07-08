@@ -7,6 +7,8 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   It supports enabling/disabling providers via config (config.exs).
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Shared.{ProviderConfigHelper, ProviderToggle}
 
@@ -18,35 +20,49 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   @provider_metadata %{
     mirotalk: %{
       icon: "mirotalk",
-      description: "Self-hosted peer-to-peer video meetings",
+      description:
+        dgettext_noop("dashboard_integrations", "Self-hosted peer-to-peer video meetings"),
       button_text: "Connect MiroTalk",
       click_event: "connect_mirotalk",
       circuit_breaker_enabled: true
     },
     google_meet: %{
       icon: "google_meet",
-      description: "Full OAuth integration with automatic room creation",
+      description:
+        dgettext_noop(
+          "dashboard_integrations",
+          "Full OAuth integration with automatic room creation"
+        ),
       button_text: "Connect Google Meet",
       click_event: "connect_google_meet",
       circuit_breaker_enabled: true
     },
     teams: %{
       icon: "teams",
-      description: "Enterprise OAuth integration with organizational accounts",
+      description:
+        dgettext_noop(
+          "dashboard_integrations",
+          "Enterprise OAuth integration with organizational accounts"
+        ),
       button_text: "Connect Teams",
       click_event: "connect_teams",
       circuit_breaker_enabled: true
     },
     zoom: %{
       icon: "zoom",
-      description: "OAuth integration with automatic Zoom meeting creation",
+      description:
+        dgettext_noop(
+          "dashboard_integrations",
+          "OAuth integration with automatic Zoom meeting creation"
+        ),
       button_text: "Connect Zoom",
       click_event: "connect_zoom",
       circuit_breaker_enabled: true
     },
     custom: %{
       icon: "custom",
-      description: "Any video platform with static meeting URLs",
+      description:
+        dgettext_noop("dashboard_integrations", "Any video platform with static meeting URLs"),
       button_text: "Add Custom Link",
       click_event: "connect_custom",
       circuit_breaker_enabled: false
@@ -135,7 +151,13 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   Gets description for a provider.
   """
   @spec description(atom()) :: String.t()
-  def description(provider), do: metadata(provider).description
+  def description(provider) do
+    Gettext.dgettext(
+      TymeslotWeb.Gettext,
+      "dashboard_integrations",
+      metadata(provider).description
+    )
+  end
 
   @doc """
   Gets button text for a provider.

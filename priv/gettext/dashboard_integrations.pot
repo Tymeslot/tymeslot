@@ -873,3 +873,28 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "your-api-key-here"
 msgstr ""
+
+#: lib/tymeslot/integrations/video/provider_config.ex:54
+#, elixir-autogen, elixir-format
+msgid "Any video platform with static meeting URLs"
+msgstr ""
+
+#: lib/tymeslot/integrations/video/provider_config.ex:39
+#, elixir-autogen, elixir-format
+msgid "Enterprise OAuth integration with organizational accounts"
+msgstr ""
+
+#: lib/tymeslot/integrations/video/provider_config.ex:31
+#, elixir-autogen, elixir-format
+msgid "Full OAuth integration with automatic room creation"
+msgstr ""
+
+#: lib/tymeslot/integrations/video/provider_config.ex:47
+#, elixir-autogen, elixir-format
+msgid "OAuth integration with automatic Zoom meeting creation"
+msgstr ""
+
+#: lib/tymeslot/integrations/video/provider_config.ex:23
+#, elixir-autogen, elixir-format
+msgid "Self-hosted peer-to-peer video meetings"
+msgstr ""

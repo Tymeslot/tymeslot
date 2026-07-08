@@ -3,6 +3,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
   Rhythm theme implementation with video background and 4-slide compact flow.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @behaviour TymeslotWeb.Themes.Core.Behaviour
 
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Components.{
@@ -46,7 +48,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
   def theme_config do
     %{
       name: "Rhythm",
-      description: "Modern sliding design with video background and a 4-slide booking flow.",
+      description:
+        dgettext(
+          "dashboard_appearance",
+          "Modern sliding design with video background and a 4-slide booking flow."
+        ),
       preview_image: "/images/ui/theme-previews/rhythm-theme-preview.webp",
       flow_steps: 4,
       design_system: :video_background,
