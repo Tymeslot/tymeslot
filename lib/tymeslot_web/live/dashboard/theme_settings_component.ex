@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
   Allows users to select their booking page theme.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
@@ -57,11 +58,17 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
           />
         </div>
       <% else %>
-        <.section_header icon="hero-paint-brush" title="Choose Your Style" />
+        <.section_header
+          icon="hero-paint-brush"
+          title={dgettext("dashboard_appearance", "Choose Your Style")}
+        />
 
         <div class="mb-16 max-w-2xl">
           <p class="text-xl text-tymeslot-500 font-medium leading-relaxed">
-            Select the interface that best represents your personal brand and creates the best experience for your clients.
+            {dgettext(
+              "dashboard_appearance",
+              "Select the interface that best represents your personal brand and creates the best experience for your clients."
+            )}
           </p>
         </div>
 
@@ -102,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                             d="M5 13l4 4L19 7"
                           />
                         </svg>
-                        Current Style
+                        {dgettext("dashboard_appearance", "Current Style")}
                       </div>
                     <% end %>
                   </div>
@@ -122,7 +129,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                       </svg>
                     </div>
                     <span class="text-white font-black text-token-xs uppercase tracking-widest">
-                      Connect Calendar to Preview
+                      {dgettext("dashboard_appearance", "Connect Calendar to Preview")}
                     </span>
                   </div>
                 </div>
@@ -156,14 +163,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                         d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                       />
                     </svg>
-                    Live Preview
+                    {dgettext("dashboard_appearance", "Live Preview")}
                   </a>
                 <% else %>
                   <button
                     type="button"
                     class="btn btn-secondary flex-1 py-3 px-4 text-token-sm opacity-50 cursor-not-allowed"
                     disabled
-                    title="Connect Calendar to Preview"
+                    title={dgettext("dashboard_appearance", "Connect Calendar to Preview")}
                   >
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
@@ -173,7 +180,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                       />
                     </svg>
-                    Live Preview
+                    {dgettext("dashboard_appearance", "Live Preview")}
                   </button>
                 <% end %>
                 <button
@@ -191,7 +198,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                       d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
                     />
                   </svg>
-                  Customize Style
+                  {dgettext("dashboard_appearance", "Customize Style")}
                 </button>
               </div>
             </div>
@@ -206,10 +213,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
           </div>
           <div class="relative z-10">
             <h4 class="text-token-2xl font-black text-tymeslot-900 tracking-tight mb-2">
-              More Styles Coming Soon
+              {dgettext("dashboard_appearance", "More Styles Coming Soon")}
             </h4>
             <p class="text-tymeslot-500 font-medium text-token-lg mb-6">
-              Our design team is busy crafting new themes to help you express your unique professional style.
+              {dgettext(
+                "dashboard_appearance",
+                "Our design team is busy crafting new themes to help you express your unique professional style."
+              )}
             </p>
             <div class="flex gap-2">
               <div class="w-2 h-2 bg-turquoise-400 rounded-full animate-bounce"></div>
@@ -244,13 +254,28 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
           {:noreply,
            socket
            |> assign(profile: updated_profile)
-           |> Flash.put_flash(:info, "Theme updated to #{theme_name}")}
+           |> Flash.put_flash(
+             :info,
+             dgettext("dashboard_appearance", "Theme updated to %{theme_name}",
+               theme_name: theme_name
+             )
+           )}
 
         {:error, _changeset} ->
-          {:noreply, Flash.put_flash(socket, :error, "Failed to update theme")}
+          {:noreply,
+           Flash.put_flash(
+             socket,
+             :error,
+             dgettext("dashboard_appearance", "Failed to update theme")
+           )}
       end
     else
-      {:noreply, Flash.put_flash(socket, :error, "Invalid theme selection")}
+      {:noreply,
+       Flash.put_flash(
+         socket,
+         :error,
+         dgettext("dashboard_appearance", "Invalid theme selection")
+       )}
     end
   end
 end

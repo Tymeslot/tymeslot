@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColorPi
   via `theme:select_background`, the picker via `theme:set_custom_background`.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.ThemeCustomizations
 
@@ -38,13 +39,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColorPi
     <div class="space-y-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <p class="text-token-sm font-black text-tymeslot-400 uppercase tracking-widest">
-          Select a solid color
+          {dgettext("dashboard_appearance", "Select a solid color")}
         </p>
         <div class="flex flex-wrap items-center gap-3">
           <%= if @customization.background_type == "color" and @customization.background_value do %>
             <.current_indicator
               swatches={[@customization.background_value]}
-              label="Solid Color"
+              label={dgettext("dashboard_appearance", "Solid Color")}
               code={String.upcase(@customization.background_value)}
               highlighted={not preset_swatch?(@customization.background_value)}
             />
@@ -66,7 +67,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColorPi
             ]}
           >
             <.icon name="hero-swatch-mini" class="w-4 h-4" />
-            <span>Custom</span>
+            <span>{dgettext("dashboard_appearance", "Custom")}</span>
             <.icon
               name="hero-chevron-down-mini"
               class={"w-4 h-4 transition-transform duration-300 #{if @custom_picker_open, do: "rotate-180"}"}

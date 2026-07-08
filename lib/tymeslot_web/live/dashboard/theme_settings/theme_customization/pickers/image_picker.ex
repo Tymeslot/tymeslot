@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
   Function component for selecting or uploading image backgrounds in theme customization.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
   Renders the image picker.
@@ -13,7 +14,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
     ~H"""
     <div class="space-y-10">
       <div>
-        <p class="text-token-sm font-black text-tymeslot-400 uppercase tracking-widest mb-6">Choose from our collection</p>
+        <p class="text-token-sm font-black text-tymeslot-400 uppercase tracking-widest mb-6">
+          {dgettext("dashboard_appearance", "Choose from our collection")}
+        </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <%= for {image_id, image} <- @presets.images do %>
             <button
@@ -70,7 +73,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
           <div class="w-full border-t-2 border-tymeslot-100"></div>
         </div>
         <div class="relative flex justify-center text-token-sm font-black uppercase tracking-[0.2em]">
-          <span class="px-6 bg-white text-tymeslot-400">Or upload your own</span>
+          <span class="px-6 bg-white text-tymeslot-400">
+            {dgettext("dashboard_appearance", "Or upload your own")}
+          </span>
         </div>
       </div>
 
@@ -94,11 +99,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
                   <svg class="w-5 h-5 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
-                  <span>Select Image</span>
+                  <span>{dgettext("dashboard_appearance", "Select Image")}</span>
                 </div>
               </div>
             <% else %>
-              <div class="btn-secondary w-full opacity-50 cursor-not-allowed py-4">Upload not available</div>
+              <div class="btn-secondary w-full opacity-50 cursor-not-allowed py-4">
+                {dgettext("dashboard_appearance", "Upload not available")}
+              </div>
             <% end %>
 
             <%= if @uploads && @uploads[:background_image] do %>
@@ -138,11 +145,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
               <% end %>
             <% end %>
             <button type="submit" id="theme-image-submit-btn" class="hidden">
-              Upload Image
+              {dgettext("dashboard_appearance", "Upload Image")}
             </button>
           </div>
-          
-          <p class="text-token-2xs font-black text-tymeslot-400 uppercase tracking-[0.2em]">JPG, PNG or WebP. Max 5MB.</p>
+
+          <p class="text-token-2xs font-black text-tymeslot-400 uppercase tracking-[0.2em]">
+            {dgettext("dashboard_appearance", "JPG, PNG or WebP. Max 5MB.")}
+          </p>
         </form>
 
         <%= if @customization.background_image_path && @customization.background_value == "custom" do %>
@@ -151,7 +160,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
             <p class="text-token-sm font-bold text-amber-800">
-              You have a custom image. Selecting a preset will remove it.
+              {dgettext(
+                "dashboard_appearance",
+                "You have a custom image. Selecting a preset will remove it."
+              )}
             </p>
           </div>
         <% end %>

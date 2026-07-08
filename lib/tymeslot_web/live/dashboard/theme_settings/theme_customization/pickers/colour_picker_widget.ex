@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
   pointer / commits the hex / picks via eyedropper.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   attr :id, :string, required: true, doc: "Unique DOM id for the picker root."
   attr :target, :any, required: true, doc: "Phx target for pushEventTo (LiveComponent CID)."
@@ -59,7 +60,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
             maxlength="7"
             autocomplete="off"
             spellcheck="false"
-            aria-label="Hex colour value"
+            aria-label={dgettext("dashboard_appearance", "Hex colour value")}
             value={String.upcase(@initial_hex)}
             class="w-28 rounded-token-lg border-2 border-tymeslot-200 bg-white px-2 py-1 font-mono text-token-2xs font-bold uppercase text-tymeslot-700 transition-all focus:border-turquoise-400 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400/20 sm:w-24"
           />
@@ -73,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourP
         max="360"
         step="1"
         value="0"
-        aria-label="Hue"
+        aria-label={dgettext("dashboard_appearance", "Hue")}
         class="custom-colour-picker-hue mt-3 w-full"
       />
     </div>

@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemePreview do
   UI component for rendering theme previews.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
@@ -21,7 +22,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemePreview do
       <div class="w-full h-full bg-tymeslot-100 rounded-token-lg overflow-hidden">
         <img
           src={@theme.preview_image}
-          alt={"#{@theme.name} Theme Preview"}
+          alt={
+            dgettext("dashboard_appearance", "%{theme_name} Theme Preview", theme_name: @theme.name)
+          }
           class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
           data-img-fallback
         />
@@ -41,7 +44,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemePreview do
                 />
               </svg>
             </div>
-            <p class="text-token-sm font-semibold text-tymeslot-700">{@theme.name} Theme</p>
+            <p class="text-token-sm font-semibold text-tymeslot-700">
+              {dgettext("dashboard_appearance", "%{theme_name} Theme", theme_name: @theme.name)}
+            </p>
             <p class="text-token-xs text-tymeslot-600">{@theme.description}</p>
           </div>
         </div>
@@ -57,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemePreview do
               d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          <div class="text-token-sm">Theme Preview</div>
+          <div class="text-token-sm">{dgettext("dashboard_appearance", "Theme Preview")}</div>
         </div>
       </div>
     <% end %>

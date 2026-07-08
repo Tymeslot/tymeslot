@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
     - parent_component: term() – reference to parent component for close actions (optional)
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   require Logger
 
@@ -130,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   def render(assigns) do
     ~H"""
     <div class="space-y-8" phx-hook="AutoUpload" id="theme-customization-uploads">
-      <.section_header level={3} title="Theme Customization" />
+      <.section_header level={3} title={dgettext("dashboard_appearance", "Theme Customization")} />
       <Components.toolbar
         profile={@profile}
         theme_id={@theme_id}
@@ -343,7 +344,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
         end
 
       {:error, :rate_limited} ->
-        Flash.error("Too many upload attempts. Please wait a few minutes and try again.")
+        Flash.error(
+          dgettext(
+            "dashboard_appearance",
+            "Too many upload attempts. Please wait a few minutes and try again."
+          )
+        )
+
         socket
     end
   end
@@ -460,7 +467,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
         profile_id: profile_id
       )
 
-      Flash.error("An error occurred. Please refresh the page and try again.")
+      Flash.error(
+        dgettext(
+          "dashboard_appearance",
+          "An error occurred. Please refresh the page and try again."
+        )
+      )
+
       {:noreply, socket}
     else
       case RateLimiter.check_theme_customization_rate_limit(user_id) do
@@ -478,7 +491,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
             profile_id: profile_id
           )
 
-          Flash.error("An error occurred. Please refresh the page and try again.")
+          Flash.error(
+            dgettext(
+              "dashboard_appearance",
+              "An error occurred. Please refresh the page and try again."
+            )
+          )
+
           {:noreply, socket}
       end
     end

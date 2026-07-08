@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ThemePreviewInl
   current customization. CSS variables are scoped to this component only.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.ThemeCustomizations
 
@@ -47,17 +48,20 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ThemePreviewInl
             <div class="p-4">
               <div class="flex items-center justify-between mb-3">
                 <h4 class="font-semibold" style="color: var(--theme-text, #0f172a);">
-                  Theme Preview
+                  {dgettext("dashboard_appearance", "Theme Preview")}
                 </h4>
                 <span
                   class="px-2 py-1 rounded text-xs"
                   style="background: var(--theme-primary, #06b6d4); color: white;"
                 >
-                  Primary
+                  {dgettext("dashboard_appearance", "Primary")}
                 </span>
               </div>
               <p class="text-sm mb-4" style="color: var(--theme-text-secondary, #475569);">
-                This preview reflects your current color scheme and background.
+                {dgettext(
+                  "dashboard_appearance",
+                  "This preview reflects your current color scheme and background."
+                )}
               </p>
               <div class="flex gap-2">
                 <button
@@ -69,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ThemePreviewInl
                     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
                   "
                 >
-                  Confirm
+                  {dgettext("dashboard_appearance", "Confirm")}
                 </button>
                 <button
                   type="button"
@@ -80,7 +84,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ThemePreviewInl
                     border-color: rgba(0,0,0,0.08);
                   "
                 >
-                  Secondary
+                  {dgettext("dashboard_appearance", "Secondary")}
                 </button>
               </div>
             </div>

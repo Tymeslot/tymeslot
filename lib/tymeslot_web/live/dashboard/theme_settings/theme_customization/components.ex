@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
   UI components for theme customization.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.ThemeCustomizations
@@ -29,7 +30,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
   def toolbar(assigns) do
     ~H"""
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
-      <.section_header icon="hero-paint-brush" title="Customize Style" class="mb-0" />
+      <.section_header
+        icon="hero-paint-brush"
+        title={dgettext("dashboard_appearance", "Customize Style")}
+        class="mb-0"
+      />
 
       <div class="flex items-center justify-between gap-3 md:justify-start">
         <%= if @profile && @profile.username do %>
@@ -53,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
               />
             </svg>
-            Live Preview
+            {dgettext("dashboard_appearance", "Live Preview")}
           </a>
         <% end %>
         <button
@@ -64,7 +69,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
           </svg>
-          Close
+          {dgettext("dashboard_appearance", "Close")}
         </button>
       </div>
     </div>
@@ -77,9 +82,14 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
     <div class="card-glass">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
-          <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">Color Palette</h3>
+          <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
+            {dgettext("dashboard_appearance", "Color Palette")}
+          </h3>
           <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-            Select the primary colors for your booking page interface.
+            {dgettext(
+              "dashboard_appearance",
+              "Select the primary colors for your booking page interface."
+            )}
           </p>
         </div>
 
@@ -118,7 +128,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
             ]}
           >
             <.icon name="hero-swatch-mini" class="w-4 h-4" />
-            <span>Custom</span>
+            <span>{dgettext("dashboard_appearance", "Custom")}</span>
             <.icon
               name="hero-chevron-down-mini"
               class={"w-4 h-4 transition-transform duration-300 #{if @palette_picker_open, do: "rotate-180"}"}
@@ -198,9 +208,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
     ~H"""
     <div class="card-glass">
       <div class="mb-8">
-        <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">Background Design</h3>
+        <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
+          {dgettext("dashboard_appearance", "Background Design")}
+        </h3>
         <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-          Choose a visual style that matches your professional identity.
+          {dgettext("dashboard_appearance", "Choose a visual style that matches your professional identity.")}
         </p>
       </div>
 
@@ -261,16 +273,17 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
 
   defp background_tabs do
     [
-      {"gradient", "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4", "Gradient"},
+      {"gradient", "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",
+       dgettext("dashboard_appearance", "Gradient")},
       {"color",
        "M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a6 6 0 00-3-5.197M11 3h8a2 2 0 012 2v4a6 6 0 01-3 5.197",
-       "Solid Color"},
+       dgettext("dashboard_appearance", "Solid Color")},
       {"image",
        "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",
-       "Image"},
+       dgettext("dashboard_appearance", "Image")},
       {"video",
        "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z",
-       "Video"}
+       dgettext("dashboard_appearance", "Video")}
     ]
   end
 end

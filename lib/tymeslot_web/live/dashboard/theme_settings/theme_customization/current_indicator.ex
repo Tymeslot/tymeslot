@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CurrentIndicato
   signals "selected" elsewhere in the customisation UI.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   attr :swatches, :list,
     required: true,
@@ -37,7 +38,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CurrentIndicato
         "text-token-2xs font-black uppercase tracking-widest",
         if(@highlighted, do: "text-turquoise-500", else: "text-tymeslot-400")
       ]}>
-        Current
+        {dgettext("dashboard_appearance", "Current")}
       </span>
       <div class={[
         "flex items-center gap-1.5 bg-white p-1 rounded-token-lg border",
