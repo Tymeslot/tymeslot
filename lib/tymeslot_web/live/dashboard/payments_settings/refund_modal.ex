@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingPayments
@@ -30,40 +31,45 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
       size={:medium}
     >
       <:header>
-        <span class="text-xl font-black tracking-tight">Refund payment</span>
+        <span class="text-xl font-black tracking-tight">
+          {dgettext("dashboard_payments", "Refund payment")}
+        </span>
       </:header>
 
       <div class="space-y-4">
         <p class="text-tymeslot-700">
-          Refund <strong>{@payment.attendee_name || @payment.attendee_email}</strong>
-          for <strong>{@payment.meeting_type_name}</strong>.
+          {dgettext("dashboard_payments", "Refund")} <strong>{@payment.attendee_name || @payment.attendee_email}</strong>
+          {dgettext("dashboard_payments", "for")} <strong>{@payment.meeting_type_name}</strong>.
         </p>
 
         <div class="rounded-token-md border border-tymeslot-100 bg-tymeslot-50 p-4 text-token-sm space-y-1">
           <p>
-            Original charge: <strong>{format_amount(@payment.amount_cents, @payment.currency)}</strong>
+            {dgettext("dashboard_payments", "Original charge:")} <strong>{format_amount(@payment.amount_cents, @payment.currency)}</strong>
           </p>
           <p>
-            Already refunded:
+            {dgettext("dashboard_payments", "Already refunded:")}
             <strong>{format_amount(@payment.refunded_amount_cents, @payment.currency)}</strong>
           </p>
           <p>
-            Remaining refundable:
+            {dgettext("dashboard_payments", "Remaining refundable:")}
             <strong>{format_amount(MeetingPayments.refundable_remaining_cents(@payment), @payment.currency)}</strong>
           </p>
         </div>
 
         <p class="text-token-sm text-tymeslot-700">
-          The attendee receives the full amount you refund. Tymeslot's platform fee is
-          reversed proportionally; Stripe processing fees on the original charge stay
-          with you.
+          {dgettext(
+            "dashboard_payments",
+            "The attendee receives the full amount you refund. Tymeslot's platform fee is reversed proportionally; Stripe processing fees on the original charge stay with you."
+          )}
         </p>
 
         <form id="refund-form" phx-submit="submit_refund" phx-target={@myself} class="space-y-4">
           <input type="hidden" name="payment_id" value={@payment.id} />
 
           <fieldset class="space-y-2">
-            <legend class="text-token-sm font-semibold text-tymeslot-700">Refund type</legend>
+            <legend class="text-token-sm font-semibold text-tymeslot-700">
+              {dgettext("dashboard_payments", "Refund type")}
+            </legend>
             <label class="flex items-center gap-2 text-token-sm">
               <input
                 type="radio"
@@ -71,7 +77,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
                 value="full"
                 checked
                 phx-click={JS.set_attribute({"data-refund-type", "full"}, to: "#refund-form")}
-              /> Full refund ({format_amount(
+              /> {dgettext("dashboard_payments", "Full refund")} ({format_amount(
                 MeetingPayments.refundable_remaining_cents(@payment),
                 @payment.currency
               )})
@@ -82,14 +88,14 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
                 name="refund_type"
                 value="partial"
                 phx-click={JS.set_attribute({"data-refund-type", "partial"}, to: "#refund-form")}
-              /> Partial refund
+              /> {dgettext("dashboard_payments", "Partial refund")}
             </label>
           </fieldset>
 
           <.input
             type="number"
             name="amount"
-            label="Partial amount"
+            label={dgettext("dashboard_payments", "Partial amount")}
             min="0.01"
             max={MeetingPayments.refundable_remaining_cents(@payment) / 100}
             step="0.01"
@@ -107,16 +113,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
       <:footer>
         <div class="flex justify-end gap-3">
           <.action_button variant={:secondary} phx-click="close_refund_modal" phx-target={@myself}>
-            Cancel
+            {dgettext("dashboard_payments", "Cancel")}
           </.action_button>
           <.loading_button
             type="submit"
             form="refund-form"
             variant={:danger}
             loading={@submitting}
-            loading_text="Refunding..."
+            loading_text={dgettext("dashboard_payments", "Refunding...")}
           >
-            Issue refund
+            {dgettext("dashboard_payments", "Issue refund")}
           </.loading_button>
         </div>
       </:footer>

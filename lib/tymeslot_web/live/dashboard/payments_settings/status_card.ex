@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingPayments
 
@@ -53,9 +54,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
         <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
         <.action_button type="submit" variant={:primary}>
           <span data-submit-spinner class="hidden items-center gap-2">
-            <.spinner /> Connecting…
+            <.spinner /> {dgettext("dashboard_payments", "Connecting…")}
           </span>
-          <span data-submit-label>Continue onboarding</span>
+          <span data-submit-label>{dgettext("dashboard_payments", "Continue onboarding")}</span>
         </.action_button>
       </form>
     </div>
@@ -79,27 +80,40 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.StatusCard do
   defp status_variant(:restricted), do: :error
   defp status_variant(_state), do: :info
 
-  defp state_title(:ready), do: "Connected and ready"
-  defp state_title(:pending_review), do: "Pending Stripe review"
-  defp state_title(:restricted), do: "Restricted"
-  defp state_title(:deleted), do: "Disconnected"
-  defp state_title(:incomplete), do: "Finish connecting Stripe"
-  defp state_title(:not_connected), do: "Not connected"
+  defp state_title(:ready), do: dgettext("dashboard_payments", "Connected and ready")
+  defp state_title(:pending_review), do: dgettext("dashboard_payments", "Pending Stripe review")
+  defp state_title(:restricted), do: dgettext("dashboard_payments", "Restricted")
+  defp state_title(:deleted), do: dgettext("dashboard_payments", "Disconnected")
+  defp state_title(:incomplete), do: dgettext("dashboard_payments", "Finish connecting Stripe")
+  defp state_title(:not_connected), do: dgettext("dashboard_payments", "Not connected")
 
-  defp state_message(%{disabled_reason: r}, :restricted), do: "Reason: #{r}"
-  defp state_message(_account, :ready), do: "Charges and payouts are enabled."
+  defp state_message(%{disabled_reason: r}, :restricted),
+    do: dgettext("dashboard_payments", "Reason: %{reason}", reason: r)
+
+  defp state_message(_account, :ready),
+    do: dgettext("dashboard_payments", "Charges and payouts are enabled.")
 
   defp state_message(_account, :pending_review),
-    do: "Stripe is reviewing your account. Charges switch on automatically once approved."
+    do:
+      dgettext(
+        "dashboard_payments",
+        "Stripe is reviewing your account. Charges switch on automatically once approved."
+      )
 
   defp state_message(_account, :incomplete),
     do:
-      "You started connecting Stripe but haven't finished onboarding yet. " <>
-        "Continue to start accepting payments."
+      dgettext(
+        "dashboard_payments",
+        "You started connecting Stripe but haven't finished onboarding yet. Continue to start accepting payments."
+      )
 
   defp state_message(_account, :deleted),
-    do: "Your Stripe account is disconnected. Reconnect to accept payments again."
+    do:
+      dgettext(
+        "dashboard_payments",
+        "Your Stripe account is disconnected. Reconnect to accept payments again."
+      )
 
   defp state_message(_account, :not_connected),
-    do: "Connect Stripe to start charging for meetings."
+    do: dgettext("dashboard_payments", "Connect Stripe to start charging for meetings.")
 end

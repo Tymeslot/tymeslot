@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.DisconnectModal do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
 
@@ -27,21 +28,26 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.DisconnectModal do
       size={:medium}
     >
       <:header>
-        <span class="text-token-xl font-black tracking-tight">Disconnect Stripe</span>
+        <span class="text-token-xl font-black tracking-tight">
+          {dgettext("dashboard_payments", "Disconnect Stripe")}
+        </span>
       </:header>
 
       <div class="space-y-4">
         <p class="text-tymeslot-700">
-          Disconnect your Stripe account from Tymeslot? Existing payments remain
-          visible, but new paid bookings will fail until you reconnect.
+          {dgettext(
+            "dashboard_payments",
+            "Disconnect your Stripe account from Tymeslot? Existing payments remain visible, but new paid bookings will fail until you reconnect."
+          )}
         </p>
 
         <.info_box :if={@pending_count > 0} variant={:warning}>
-          You have {@pending_count} pending {if @pending_count == 1,
-            do: "booking",
-            else: "bookings"} awaiting payment. Disconnecting will cancel {if @pending_count == 1,
-            do: "it",
-            else: "them"}.
+          {dngettext(
+            "dashboard_payments",
+            "You have %{count} pending booking awaiting payment. Disconnecting will cancel it.",
+            "You have %{count} pending bookings awaiting payment. Disconnecting will cancel them.",
+            @pending_count
+          )}
         </.info_box>
       </div>
 
@@ -52,10 +58,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.DisconnectModal do
             phx-click="close_disconnect_modal"
             phx-target={@myself}
           >
-            Cancel
+            {dgettext("dashboard_payments", "Cancel")}
           </.action_button>
           <.action_button variant={:danger} phx-click="disconnect" phx-target={@myself}>
-            Disconnect Stripe
+            {dgettext("dashboard_payments", "Disconnect Stripe")}
           </.action_button>
         </div>
       </:footer>

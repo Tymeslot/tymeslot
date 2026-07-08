@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
   """
 
   use TymeslotWeb, :controller
+  use Gettext, backend: TymeslotWeb.Gettext
 
   require Logger
 
@@ -51,21 +52,24 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
   end
 
   defp connect_error_message(:feature_disabled),
-    do: "Meeting payments are not enabled for this account."
+    do: dgettext("dashboard_payments", "Meeting payments are not enabled for this account.")
 
   defp connect_error_message(plan_error) when plan_error in [:pro_required, :insufficient_plan],
-    do: "Meeting payments require an upgraded plan."
+    do: dgettext("dashboard_payments", "Meeting payments require an upgraded plan.")
 
   defp connect_error_message(%Stripe.Error{} = error) do
     if account_creation_restricted?(error) do
-      "Payment setup is temporarily unavailable. Please try again later."
+      dgettext(
+        "dashboard_payments",
+        "Payment setup is temporarily unavailable. Please try again later."
+      )
     else
-      "Could not start Stripe connection. Please try again."
+      dgettext("dashboard_payments", "Could not start Stripe connection. Please try again.")
     end
   end
 
   defp connect_error_message(_reason),
-    do: "Could not start Stripe connection. Please try again."
+    do: dgettext("dashboard_payments", "Could not start Stripe connection. Please try again.")
 
   # Stripe's risk system can place a temporary hold on the platform account's
   # ability to create new connected accounts ("…temporarily restricted your

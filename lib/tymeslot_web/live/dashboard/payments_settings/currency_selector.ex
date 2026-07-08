@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.CurrencySelector do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingPayments
 
@@ -22,11 +23,12 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.CurrencySelector do
     assigns = assign(assigns, :currencies, MeetingPayments.currency_allowlist())
 
     ~H"""
-    <.detail_card title="Default currency">
+    <.detail_card title={dgettext("dashboard_payments", "Default currency")}>
       <p class="text-token-sm text-tymeslot-700 mb-4">
-        Changing the currency will reset every paid event type to free —
-        existing prices are recorded in the previous currency and would
-        otherwise be charged at the new one.
+        {dgettext(
+          "dashboard_payments",
+          "Changing the currency will reset every paid event type to free — existing prices are recorded in the previous currency and would otherwise be charged at the new one."
+        )}
       </p>
       <div class="flex flex-wrap items-center gap-3">
         <button

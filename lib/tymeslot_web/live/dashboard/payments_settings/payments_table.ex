@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
   """
 
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingPayments
 
@@ -23,17 +24,19 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
   @spec payments_table(map()) :: Phoenix.LiveView.Rendered.t()
   def payments_table(assigns) do
     ~H"""
-    <.detail_card title="Recent payments">
-      <p :if={@payments == []} class="text-tymeslot-500">No payments yet.</p>
+    <.detail_card title={dgettext("dashboard_payments", "Recent payments")}>
+      <p :if={@payments == []} class="text-tymeslot-500">
+        {dgettext("dashboard_payments", "No payments yet.")}
+      </p>
       <div :if={@payments != []} class="overflow-x-auto">
         <table class="w-full">
         <thead class="text-left text-token-sm text-tymeslot-500 border-b border-tymeslot-100">
           <tr>
-            <th class="p-2">Date</th>
-            <th class="p-2">Attendee</th>
-            <th class="p-2">Meeting type</th>
-            <th class="p-2 text-right">Amount</th>
-            <th class="p-2">Status</th>
+            <th class="p-2">{dgettext("dashboard_payments", "Date")}</th>
+            <th class="p-2">{dgettext("dashboard_payments", "Attendee")}</th>
+            <th class="p-2">{dgettext("dashboard_payments", "Meeting type")}</th>
+            <th class="p-2 text-right">{dgettext("dashboard_payments", "Amount")}</th>
+            <th class="p-2">{dgettext("dashboard_payments", "Status")}</th>
             <th class="p-2"></th>
           </tr>
         </thead>
@@ -55,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
                 phx-value-id={p.id}
                 phx-target={@myself}
               >
-                Refund
+                {dgettext("dashboard_payments", "Refund")}
               </button>
             </td>
           </tr>
@@ -69,11 +72,14 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
   defp connect_account_deleted?(%{deleted_at: %DateTime{}}), do: true
   defp connect_account_deleted?(_account), do: false
 
-  defp format_status("paid"), do: "Paid"
-  defp format_status("partially_refunded"), do: "Partially refunded"
-  defp format_status("refunded"), do: "Refunded"
-  defp format_status("disputed"), do: "Disputed"
-  defp format_status("pending"), do: "Pending"
-  defp format_status("failed"), do: "Failed"
+  defp format_status("paid"), do: dgettext("dashboard_payments", "Paid")
+
+  defp format_status("partially_refunded"),
+    do: dgettext("dashboard_payments", "Partially refunded")
+
+  defp format_status("refunded"), do: dgettext("dashboard_payments", "Refunded")
+  defp format_status("disputed"), do: dgettext("dashboard_payments", "Disputed")
+  defp format_status("pending"), do: dgettext("dashboard_payments", "Pending")
+  defp format_status("failed"), do: dgettext("dashboard_payments", "Failed")
   defp format_status(other), do: other
 end

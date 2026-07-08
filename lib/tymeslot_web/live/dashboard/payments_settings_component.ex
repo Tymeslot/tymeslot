@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   flash group).
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingPayments
 
@@ -58,7 +59,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   def render(assigns) do
     ~H"""
     <div id="payments-settings" class="space-y-10 pb-20">
-      <.section_header icon="hero-credit-card" title="Payments" />
+      <.section_header icon="hero-credit-card" title={dgettext("dashboard_payments", "Payments")} />
 
       <div :if={is_nil(@connect_account)}>
         <.connect_cta />
@@ -98,17 +99,19 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
 
   defp disconnect_zone(assigns) do
     ~H"""
-    <.detail_card title="Disconnect Stripe">
+    <.detail_card title={dgettext("dashboard_payments", "Disconnect Stripe")}>
       <p class="text-token-sm text-tymeslot-700 mb-3">
-        Disconnect your Stripe account from Tymeslot. Existing payments
-        remain visible. New paid bookings will fail until you reconnect.
+        {dgettext(
+          "dashboard_payments",
+          "Disconnect your Stripe account from Tymeslot. Existing payments remain visible. New paid bookings will fail until you reconnect."
+        )}
       </p>
       <.action_button
         variant={:danger}
         phx-click="open_disconnect_modal"
         phx-target={@myself}
       >
-        Disconnect Stripe
+        {dgettext("dashboard_payments", "Disconnect Stripe")}
       </.action_button>
     </.detail_card>
     """
@@ -131,16 +134,26 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
 
     case MeetingPayments.disconnect(user) do
       {:ok, %{cancelled_count: 0}} ->
-        Flash.info("Stripe account disconnected.")
+        Flash.info(dgettext("dashboard_payments", "Stripe account disconnected."))
         {:noreply, assign_payments_state(socket, user)}
 
       {:ok, %{cancelled_count: n}} ->
-        noun = if n == 1, do: "booking", else: "bookings"
-        Flash.info("Stripe account disconnected. #{n} pending #{noun} cancelled.")
+        Flash.info(
+          dngettext(
+            "dashboard_payments",
+            "Stripe account disconnected. %{count} pending booking cancelled.",
+            "Stripe account disconnected. %{count} pending bookings cancelled.",
+            n
+          )
+        )
+
         {:noreply, assign_payments_state(socket, user)}
 
       {:error, _reason} ->
-        Flash.error("Could not disconnect Stripe. Please try again.")
+        Flash.error(
+          dgettext("dashboard_payments", "Could not disconnect Stripe. Please try again.")
+        )
+
         {:noreply, socket}
     end
   end
@@ -153,7 +166,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
         {:noreply, socket}
 
       not MeetingPayments.currency_allowed?(currency) ->
-        Flash.error("Currency not supported.")
+        Flash.error(dgettext("dashboard_payments", "Currency not supported."))
         {:noreply, socket}
 
       currency == socket.assigns.connect_account.default_currency ->
@@ -177,8 +190,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
 
       not MeetingPayments.refundable?(payment) ->
         Flash.error(
-          "This payment can no longer be refunded from Tymeslot. " <>
-            "Refunds older than 60 days must be processed in your Stripe dashboard."
+          dgettext(
+            "dashboard_payments",
+            "This payment can no longer be refunded from Tymeslot. Refunds older than 60 days must be processed in your Stripe dashboard."
+          )
         )
 
         {:noreply, socket}
@@ -223,15 +238,24 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   defp change_currency(socket, user, currency) do
     case MeetingPayments.change_default_currency(socket.assigns.connect_account, currency) do
       {:ok, :reset} ->
-        Flash.info("Currency updated. Paid event-type prices have been reset.")
+        Flash.info(
+          dgettext(
+            "dashboard_payments",
+            "Currency updated. Paid event-type prices have been reset."
+          )
+        )
+
         {:noreply, assign_payments_state(socket, user)}
 
       {:ok, :no_reset} ->
-        Flash.info("Currency updated.")
+        Flash.info(dgettext("dashboard_payments", "Currency updated."))
         {:noreply, assign_payments_state(socket, user)}
 
       {:error, _reason} ->
-        Flash.error("Could not update currency. Please try again.")
+        Flash.error(
+          dgettext("dashboard_payments", "Could not update currency. Please try again.")
+        )
+
         {:noreply, socket}
     end
   end
@@ -275,7 +299,12 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
 
   @impl Phoenix.LiveComponent
   def handle_async(:issue_refund, {:ok, {:ok, _payment}}, socket) do
-    Flash.info("Refund issued. The attendee will receive a confirmation email.")
+    Flash.info(
+      dgettext(
+        "dashboard_payments",
+        "Refund issued. The attendee will receive a confirmation email."
+      )
+    )
 
     {:noreply,
      socket
@@ -320,30 +349,57 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     |> assign(:pending_payments_count, MeetingPayments.count_pending_payments_for_host(user.id))
   end
 
-  defp parse_refund_error_message(:choose_type), do: "Choose a refund type."
-  defp parse_refund_error_message(:invalid_amount), do: "Enter a valid refund amount."
+  defp parse_refund_error_message(:choose_type),
+    do: dgettext("dashboard_payments", "Choose a refund type.")
+
+  defp parse_refund_error_message(:invalid_amount),
+    do: dgettext("dashboard_payments", "Enter a valid refund amount.")
 
   defp parse_refund_error_message(:exceeds_remaining),
-    do: "Amount exceeds the remaining refundable balance."
+    do: dgettext("dashboard_payments", "Amount exceeds the remaining refundable balance.")
 
   defp refund_error_message(:outside_refund_window),
-    do: "Refunds older than 60 days must be processed in your Stripe dashboard."
+    do:
+      dgettext(
+        "dashboard_payments",
+        "Refunds older than 60 days must be processed in your Stripe dashboard."
+      )
 
   defp refund_error_message(:already_refunded),
-    do: "This payment has already been fully refunded."
+    do: dgettext("dashboard_payments", "This payment has already been fully refunded.")
 
   defp refund_error_message(:under_dispute),
-    do: "This payment is under dispute and must be handled in your Stripe dashboard."
+    do:
+      dgettext(
+        "dashboard_payments",
+        "This payment is under dispute and must be handled in your Stripe dashboard."
+      )
 
   defp refund_error_message(:invalid_amount),
-    do: "Refund amount must be greater than zero and within the remaining balance."
+    do:
+      dgettext(
+        "dashboard_payments",
+        "Refund amount must be greater than zero and within the remaining balance."
+      )
 
   defp refund_error_message(:not_paid),
-    do: "This booking has not been paid yet, so it cannot be refunded."
+    do:
+      dgettext(
+        "dashboard_payments",
+        "This booking has not been paid yet, so it cannot be refunded."
+      )
 
   defp refund_error_message(:missing_charge),
-    do: "Stripe has not yet captured a charge for this booking. Try again in a moment."
+    do:
+      dgettext(
+        "dashboard_payments",
+        "Stripe has not yet captured a charge for this booking. Try again in a moment."
+      )
 
   defp refund_error_message(_other),
-    do: "Something went wrong while issuing the refund. Please try again."
+    do:
+      dgettext(
+        "dashboard_payments",
+        "Something went wrong while issuing the refund. Please try again."
+      )
 end
