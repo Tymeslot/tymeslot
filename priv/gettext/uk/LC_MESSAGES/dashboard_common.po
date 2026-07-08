@@ -1,0 +1,130 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: uk\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:193
+#, elixir-autogen, elixir-format
+msgid "Account"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:139
+#, elixir-autogen, elixir-format
+msgid "Add a meeting type so guests have something to book"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:123
+#, elixir-autogen, elixir-format
+msgid "Analytics"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:206
+#, elixir-autogen, elixir-format
+msgid "Automation"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:151
+#, elixir-autogen, elixir-format
+msgid "Availability"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_layout.ex:179
+#, elixir-autogen, elixir-format
+msgid "Calendar"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:51
+#, elixir-autogen, elixir-format
+msgid "Close sidebar"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:174
+#, elixir-autogen, elixir-format
+msgid "Connect a calendar or video provider to finish setup"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:85
+#, elixir-autogen, elixir-format
+msgid "Copy link to clipboard"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:183
+#, elixir-autogen, elixir-format
+msgid "Distribution"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:187
+#, elixir-autogen, elixir-format
+msgid "Embed & Share"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:103
+#, elixir-autogen, elixir-format
+msgid "General"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:166
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:177
+#, elixir-autogen, elixir-format
+msgid "Integrations"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:142
+#, elixir-autogen, elixir-format
+msgid "Meeting Types"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:112
+#, elixir-autogen, elixir-format
+msgid "Meetings"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:107
+#, elixir-autogen, elixir-format
+msgid "Overview"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:312
+#, elixir-autogen, elixir-format
+msgid "Pro"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:197
+#, elixir-autogen, elixir-format
+msgid "Profile"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_layout.ex:170
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:131
+#, elixir-autogen, elixir-format
+msgid "Scheduling"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:291
+#, elixir-autogen, elixir-format
+msgid "Setup recommended"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:160
+#, elixir-autogen, elixir-format
+msgid "Theme"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_layout.ex:113
+#, elixir-autogen, elixir-format
+msgid "Toggle sidebar"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:66
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:74
+#, elixir-autogen, elixir-format
+msgid "View Page"
+msgstr ""

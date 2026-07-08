@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   Provides consistent navigation, styling, and user interface elements.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.DashboardSidebar
@@ -109,7 +110,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
                     JS.toggle_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
                     |> JS.toggle_class("hidden", to: "#dashboard-sidebar-overlay")
                   }
-                  aria-label="Toggle sidebar"
+                  aria-label={dgettext("dashboard_common", "Toggle sidebar")}
                 >
                   <svg
                     class="w-6 h-6 text-tymeslot-700"
@@ -166,7 +167,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
           data-testid="mode-tab-scheduling"
         >
           <.icon name="hero-squares-2x2" class="w-4 h-4" />
-          Scheduling
+          {dgettext("dashboard_common", "Scheduling")}
         </.link>
 
         <.link
@@ -175,7 +176,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
           data-testid="mode-tab-calendar"
         >
           <.icon name="hero-calendar-days" class="w-4 h-4" />
-          Calendar
+          {dgettext("dashboard_common", "Calendar")}
         </.link>
       </div>
     </div>
