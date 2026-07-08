@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
+  alias Tymeslot.Locales
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Security.RateLimiter
@@ -64,6 +65,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
       |> assign_new(:embed_script_url, fn -> ~p"/embed.js" end)
       |> assign_new(:active_tab, fn -> "options" end)
       |> assign_new(:embed_layout, fn -> "column" end)
+      |> assign_new(:embed_locale, fn -> "" end)
       |> assign_new(:initial_height, fn -> nil end)
       |> assign_new(:max_width, fn -> nil end)
 
@@ -97,6 +99,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
             base_url={@base_url}
             booking_url={@booking_url}
             embed_layout={@embed_layout}
+            embed_locale={@embed_locale}
             initial_height={@initial_height}
             max_width={@max_width}
             myself={@myself}
@@ -117,6 +120,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
             base_url={@base_url}
             embed_script_url={@embed_script_url}
             embed_layout={@embed_layout}
+            embed_locale={@embed_locale}
             initial_height={@initial_height}
             max_width={@max_width}
             is_ready={@is_ready}
@@ -169,9 +173,22 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
         _other -> socket.assigns.embed_layout
       end
 
+    locale =
+      case params["locale"] do
+        "" ->
+          ""
+
+        v when is_binary(v) ->
+          if v in Locales.supported_codes(), do: v, else: socket.assigns.embed_locale
+
+        _other ->
+          socket.assigns.embed_locale
+      end
+
     {:noreply,
      socket
      |> assign(:embed_layout, layout)
+     |> assign(:embed_locale, locale)
      |> assign(:initial_height, blank_to_nil(params["initial_height"]))
      |> assign(:max_width, blank_to_nil(params["max_width"]))}
   end

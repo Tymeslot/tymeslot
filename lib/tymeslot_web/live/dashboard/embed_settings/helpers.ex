@@ -3,7 +3,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   Helper functions for the embed settings dashboard.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.HTML
+  alias Tymeslot.Locales
   alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Themes.Core.Context, as: ThemeContext
@@ -21,6 +24,16 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   def valid_layouts, do: ThemeContext.valid_layouts()
 
   @doc """
+  Returns `{name, code}` tuples for the supported booking languages, for the
+  embed language picker. The empty-value "Auto" option is added at the call
+  site so its label can be translated.
+  """
+  @spec language_options() :: [{String.t(), String.t()}]
+  def language_options do
+    Enum.map(Locales.supported(), fn %{code: code, name: name} -> {name, code} end)
+  end
+
+  @doc """
   Builds the options map expected by `embed_code/2` from socket assigns.
 
   Remaps `:embed_layout` → `:layout` and collects `:initial_height`,
@@ -34,6 +47,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
       base_url: assigns[:base_url],
       booking_url: assigns[:booking_url],
       layout: assigns[:embed_layout],
+      locale: assigns[:embed_locale],
       initial_height: assigns[:initial_height],
       max_width: assigns[:max_width]
     }
@@ -70,9 +84,19 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
     base_url = escape(base_url)
     js_options = build_js_options(options)
 
+    label =
+      escape(localized_label(options, fn -> dgettext("dashboard_embed", "Book a Meeting") end))
+
+    unavailable =
+      js_escape(
+        localized_label(options, fn ->
+          dgettext("dashboard_embed", "Booking system is currently unavailable.")
+        end)
+      )
+
     String.trim("""
     <!-- Tymeslot Popup -->
-    <button onclick="if(window.TymeslotBooking){TymeslotBooking.open('#{username}'#{js_options})}else{alert('Booking system is currently unavailable.')}">Book a Meeting</button>
+    <button onclick="if(window.TymeslotBooking){TymeslotBooking.open('#{username}'#{js_options})}else{alert('#{unavailable}')}">#{label}</button>
     <script src="#{base_url}/embed.js" async></script>
     """)
   end
@@ -80,10 +104,15 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   @spec embed_code(String.t(), map()) :: String.t()
   def embed_code("link", %{booking_url: booking_url} = options) do
     booking_url = escape(booking_url)
-    query = layout_query(options)
+    query = link_query(options)
+
+    label =
+      escape(
+        localized_label(options, fn -> dgettext("dashboard_embed", "Schedule a meeting") end)
+      )
 
     String.trim("""
-    <a href="#{booking_url}#{query}">Schedule a meeting</a>
+    <a href="#{booking_url}#{query}">#{label}</a>
     """)
   end
 
@@ -137,16 +166,54 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
     end
   end
 
-  # Appends ?layout=column to the standalone-link snippet. Links open the
-  # booking page in a new tab/window where the standalone default is :default
-  # (centred). A user who picked "Column" in the dashboard wants the link to
-  # also render wide, so emit the override; "Default" matches the standalone
-  # default and produces no query string.
-  defp layout_query(options) do
-    case sanitize_layout(options[:layout]) do
-      "column" -> "?layout=column"
-      _other -> ""
+  # Builds the query string for the standalone-link snippet from the layout
+  # and locale knobs. Links open the booking page directly (no embed.js), so
+  # both the wide-canvas override and the forced language must ride on the URL.
+  # A user who picked "Column" wants the link to render wide (standalone
+  # defaults to the centred :default); a chosen language forces that locale on
+  # the booking page (otherwise it auto-detects from the visitor's browser).
+  # "Default" layout matches the standalone default and is omitted.
+  defp link_query(options) do
+    params =
+      Enum.reject(
+        [{"layout", layout_query_value(options)}, {"locale", sanitize_locale(options[:locale])}],
+        fn {_key, value} -> value in [nil, ""] end
+      )
+
+    case params do
+      [] -> ""
+      list -> "?" <> Enum.map_join(list, "&", fn {key, value} -> "#{key}=#{value}" end)
     end
+  end
+
+  defp layout_query_value(options) do
+    case sanitize_layout(options[:layout]) do
+      "column" -> "column"
+      _other -> nil
+    end
+  end
+
+  # Renders a snippet label in the embed's chosen language. When "Auto" is
+  # selected (no forced locale) the label falls back to the configured default
+  # locale — the booking page it links to will still auto-detect per visitor,
+  # but the static button text has to commit to one language.
+  defp localized_label(options, fun) do
+    Gettext.with_locale(TymeslotWeb.Gettext, button_locale(options), fun)
+  end
+
+  defp button_locale(options) do
+    case sanitize_locale(options[:locale]) do
+      "" -> Locales.default_locale()
+      locale -> locale
+    end
+  end
+
+  # Escapes a translated string for safe interpolation inside a single-quoted
+  # JS string literal (the popup snippet's alert fallback).
+  defp js_escape(value) do
+    value
+    |> String.replace("\\", "\\\\")
+    |> String.replace("'", "\\'")
   end
 
   # For embed snippets (inline + popup + floating), the server defaults every

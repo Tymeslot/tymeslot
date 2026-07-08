@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
   attr :base_url, :string, required: true
   attr :booking_url, :string, required: true
   attr :embed_layout, :string, default: "column"
+  attr :embed_locale, :string, default: ""
   attr :initial_height, :any, default: nil
   attr :max_width, :any, default: nil
   attr :myself, :any, required: true
@@ -26,6 +27,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
     ~H"""
     <.customise_panel
       embed_layout={@embed_layout}
+      embed_locale={@embed_locale}
       initial_height={@initial_height}
       max_width={@max_width}
       myself={@myself}
@@ -276,6 +278,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
   #   - initial-height: placeholder height (px) shown before the iframe auto-resizes
   #   - max-width: container max-width (px) for inline + popup + floating
   attr :embed_layout, :string, required: true
+  attr :embed_locale, :string, required: true
   attr :initial_height, :any, required: true
   attr :max_width, :any, required: true
   attr :myself, :any, required: true
@@ -301,7 +304,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         id="embed-customisation-form"
         phx-change="update_customisation"
         phx-target={@myself}
-        class="grid grid-cols-1 md:grid-cols-3 gap-4"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
       >
         <%!-- Layout --%>
         <.input
@@ -321,6 +324,26 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
             {dgettext(
               "dashboard_embed",
               "Column adapts to any container width. Default centres the booker — useful when you want a self-contained card inside a wide page."
+            )}
+          </:description>
+        </.input>
+
+        <%!-- Language --%>
+        <.input
+          type="select"
+          id="embed-language"
+          name="customise[locale]"
+          label={dgettext("dashboard_embed", "Language")}
+          options={[
+            {dgettext("dashboard_embed", "Auto — visitor's browser"), ""}
+            | Helpers.language_options()
+          ]}
+          value={@embed_locale}
+        >
+          <:description>
+            {dgettext(
+              "dashboard_embed",
+              "Language for the booking page. Auto follows each visitor's browser preference."
             )}
           </:description>
         </.input>

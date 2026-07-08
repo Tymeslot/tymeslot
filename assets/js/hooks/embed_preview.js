@@ -5,7 +5,7 @@ export const EmbedPreview = {
     this.initEmbed();
   },
   updated() {
-    const { username, baseUrl, embedType, isReady, layout, initialHeight, maxWidth } = this.el.dataset;
+    const { username, baseUrl, embedType, isReady, layout, locale, initialHeight, maxWidth } = this.el.dataset;
     const prev = this._cachedDataset;
 
     if (
@@ -14,6 +14,7 @@ export const EmbedPreview = {
       embedType === prev.embedType &&
       isReady === prev.isReady &&
       layout === prev.layout &&
+      locale === prev.locale &&
       initialHeight === prev.initialHeight &&
       maxWidth === prev.maxWidth
     ) {
@@ -45,12 +46,12 @@ export const EmbedPreview = {
     }
   },
   initEmbed() {
-    const { username, baseUrl, embedType, isReady, layout, initialHeight, maxWidth } = this.el.dataset;
-    this._cachedDataset = { username, baseUrl, embedType, isReady, layout, initialHeight, maxWidth };
+    const { username, baseUrl, embedType, isReady, layout, locale, initialHeight, maxWidth } = this.el.dataset;
+    this._cachedDataset = { username, baseUrl, embedType, isReady, layout, locale, initialHeight, maxWidth };
     const effectiveBaseUrl = baseUrl || window.location.origin;
     const ready = isReady === 'true';
 
-    const options = { layout, initialHeight, maxWidth };
+    const options = { layout, locale, initialHeight, maxWidth };
 
     // Clear container
     this.el.innerHTML = '';
@@ -172,6 +173,9 @@ export const EmbedPreview = {
     if (options.layout && options.layout !== 'default') {
       linkUrl.searchParams.set('layout', options.layout);
     }
+    if (options.locale) {
+      linkUrl.searchParams.set('locale', options.locale);
+    }
     link.href = linkUrl.toString();
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
@@ -243,6 +247,11 @@ export const EmbedPreview = {
     if (options.layout) {
       url.searchParams.set('layout', options.layout);
     }
+    // Forced language for the preview; omitted for "Auto" so the booking page
+    // falls back to the visitor's browser preference.
+    if (options.locale) {
+      url.searchParams.set('locale', options.locale);
+    }
 
     iframe.src = url.toString();
     iframe.setAttribute('title', 'Booking Preview');
@@ -263,6 +272,9 @@ export const EmbedPreview = {
     const out = {};
     if (options.layout && options.layout !== 'default') {
       out.layout = options.layout;
+    }
+    if (options.locale) {
+      out.locale = options.locale;
     }
     if (options.maxWidth) {
       const n = parseInt(options.maxWidth, 10);

@@ -286,4 +286,86 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
       refute code =~ "data-layout"
     end
   end
+
+  describe "embed_code/2 — language parameter" do
+    test "inline snippet emits data-locale when a language is chosen" do
+      assigns = %{username: "alice", base_url: "https://x.test", locale: "de"}
+
+      code = Helpers.embed_code("inline", assigns)
+
+      assert code =~ ~s(data-locale="de")
+    end
+
+    test "inline snippet omits data-locale for the empty (Automatic) value" do
+      assigns = %{username: "alice", base_url: "https://x.test", locale: ""}
+
+      code = Helpers.embed_code("inline", assigns)
+
+      refute code =~ "data-locale"
+    end
+
+    test "inline snippet omits data-locale when the locale key is absent" do
+      assigns = %{username: "alice", base_url: "https://x.test"}
+
+      code = Helpers.embed_code("inline", assigns)
+
+      refute code =~ "data-locale"
+    end
+
+    test "popup snippet emits locale in the JS options" do
+      assigns = %{username: "alice", base_url: "https://x.test", locale: "de"}
+
+      code = Helpers.embed_code("popup", assigns)
+
+      assert code =~ "locale: 'de'"
+    end
+
+    test "link snippet threads both layout and locale into the query string" do
+      assigns = %{
+        booking_url: "https://x.test/alice",
+        locale: "de",
+        layout: "column"
+      }
+
+      code = Helpers.embed_code("link", assigns)
+
+      assert code =~ ~s(href="https://x.test/alice?layout=column&locale=de")
+    end
+
+    test "link snippet adds no query string when locale and layout are defaults" do
+      assigns = %{
+        booking_url: "https://x.test/alice",
+        locale: "",
+        layout: "default"
+      }
+
+      code = Helpers.embed_code("link", assigns)
+
+      assert code =~ ~s(href="https://x.test/alice")
+      refute code =~ "?"
+    end
+
+    test "inline snippet drops a malformed locale value" do
+      # The embed locale sanitiser is a format allowlist (two-letter code with an
+      # optional region suffix), so a malformed value is stripped and no
+      # data-locale attribute is emitted. Supported-code enforcement lives in the
+      # user-preference layer (UserSchema.locale_changeset/2), not here.
+      assigns = %{username: "alice", base_url: "https://x.test", locale: "not-a-locale"}
+
+      code = Helpers.embed_code("inline", assigns)
+
+      refute code =~ "data-locale"
+    end
+  end
+
+  describe "language_options/0" do
+    test "returns a non-empty list of {name, code} tuples including German" do
+      options = Helpers.language_options()
+
+      assert is_list(options)
+      assert options != []
+      assert Enum.all?(options, fn {name, code} -> is_binary(name) and is_binary(code) end)
+      assert {"Deutsch", "de"} in options
+    end
+  end
 end
