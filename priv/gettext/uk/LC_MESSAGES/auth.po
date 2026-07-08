@@ -660,3 +660,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "your.email@example.com"
 msgstr ""
+
+#: lib/tymeslot_web/hooks/auth_live_session_hook.ex:117
+#, elixir-autogen, elixir-format
+msgid "You are already logged in."
+msgstr ""
+
+#: lib/tymeslot_web/hooks/auth_live_session_hook.ex:51
+#, elixir-autogen, elixir-format
+msgid "You must be logged in to access this page."
+msgstr ""
+
+#: lib/tymeslot_web/hooks/auth_live_session_hook.ex:76
+#, elixir-autogen, elixir-format
+msgid "Your session has expired. Please log in again."
+msgstr ""

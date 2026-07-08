@@ -8,6 +8,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     router: TymeslotWeb.Router,
     statics: TymeslotWeb.static_paths()
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [connected?: 1, put_flash: 3, redirect: 2]
 
@@ -260,7 +262,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
            {:meeting_type,
             ThemeFlow.resolve_meeting_type_for_slug(socket.assigns[:organizer_user_id], slug)} do
       socket
-      |> put_flash(:error, "Invalid meeting type")
+      |> put_flash(:error, dgettext("booking", "Invalid meeting type"))
       |> redirect(to: ~p"/#{socket.assigns[:username_context]}")
     else
       {:meeting_type, meeting_type} ->

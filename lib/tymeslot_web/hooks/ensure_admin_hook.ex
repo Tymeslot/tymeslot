@@ -16,6 +16,8 @@ defmodule TymeslotWeb.Hooks.EnsureAdminHook do
   via a `live_patch` between tabs — on the already-connected socket.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView
 
@@ -53,7 +55,7 @@ defmodule TymeslotWeb.Hooks.EnsureAdminHook do
       _other ->
         socket =
           socket
-          |> put_flash(:error, "Your admin access has been revoked.")
+          |> put_flash(:error, dgettext("dashboard_admin", "Your admin access has been revoked."))
           |> push_navigate(to: "/dashboard")
 
         {:halt, socket}

@@ -1267,3 +1267,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "We couldn't start the payment process. Please try again."
 msgstr ""
+
+#: lib/tymeslot_web/themes/shared/live_helpers.ex:265
+#, elixir-autogen, elixir-format
+msgid "Invalid meeting type"
+msgstr ""

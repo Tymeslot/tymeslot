@@ -9,6 +9,7 @@ defmodule TymeslotWeb.SlackOAuthController do
   """
 
   use TymeslotWeb, :controller
+  use Gettext, backend: TymeslotWeb.Gettext
 
   require Logger
 
@@ -83,22 +84,37 @@ defmodule TymeslotWeb.SlackOAuthController do
          {:ok, install} <- OAuth.exchange_code(code, redirect_uri),
          {:ok, integration} <- Slack.complete_oauth(current_user_id, install_to_attrs(install)) do
       conn
-      |> put_flash(:info, "Slack connected — pick a channel to finish setup.")
+      |> put_flash(
+        :info,
+        dgettext("dashboard_automation_chat", "Slack connected — pick a channel to finish setup.")
+      )
       |> redirect(to: ~p"/dashboard/automation?slack_pending=#{integration.id}")
     else
       {:error, :expired_state} ->
         conn
-        |> put_flash(:error, "Slack connection expired. Please try again.")
+        |> put_flash(
+          :error,
+          dgettext("dashboard_automation_chat", "Slack connection expired. Please try again.")
+        )
         |> redirect(to: ~p"/dashboard/automation")
 
       {:error, :invalid_state} ->
         conn
-        |> put_flash(:error, "Invalid Slack callback. Please try again.")
+        |> put_flash(
+          :error,
+          dgettext("dashboard_automation_chat", "Invalid Slack callback. Please try again.")
+        )
         |> redirect(to: ~p"/dashboard/automation")
 
       {:error, :user_mismatch} ->
         conn
-        |> put_flash(:error, "Slack callback did not match your session. Please retry.")
+        |> put_flash(
+          :error,
+          dgettext(
+            "dashboard_automation_chat",
+            "Slack callback did not match your session. Please retry."
+          )
+        )
         |> redirect(to: ~p"/dashboard/automation")
 
       {:error, reason} ->
@@ -112,7 +128,10 @@ defmodule TymeslotWeb.SlackOAuthController do
 
   def callback(conn, _params) do
     conn
-    |> put_flash(:error, "Invalid Slack callback. Please try again.")
+    |> put_flash(
+      :error,
+      dgettext("dashboard_automation_chat", "Invalid Slack callback. Please try again.")
+    )
     |> redirect(to: ~p"/dashboard/automation")
   end
 

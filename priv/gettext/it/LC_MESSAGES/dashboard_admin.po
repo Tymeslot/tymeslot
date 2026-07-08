@@ -484,3 +484,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Show the \"Continue with Google\" button on login and signup. Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to be set in the environment."
 msgstr ""
+
+#: lib/tymeslot_web/hooks/ensure_admin_hook.ex:58
+#, elixir-autogen, elixir-format
+msgid "Your admin access has been revoked."
+msgstr ""

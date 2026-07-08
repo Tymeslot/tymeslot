@@ -22,6 +22,8 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
   ```
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.LiveView
   import Phoenix.Component
 
@@ -46,7 +48,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
 
         socket =
           socket
-          |> put_flash(:error, "You must be logged in to access this page.")
+          |> put_flash(:error, dgettext("auth", "You must be logged in to access this page."))
           |> redirect(to: redirect_path)
 
         {:halt, socket}
@@ -69,7 +71,10 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
 
           socket =
             socket
-            |> put_flash(:error, "Your session has expired. Please log in again.")
+            |> put_flash(
+              :error,
+              dgettext("auth", "Your session has expired. Please log in again.")
+            )
             |> redirect(to: redirect_path)
 
           {:halt, socket}
@@ -109,7 +114,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
 
           socket =
             socket
-            |> put_flash(:info, "You are already logged in.")
+            |> put_flash(:info, dgettext("auth", "You are already logged in."))
             |> redirect(to: redirect_path)
 
           {:halt, socket}

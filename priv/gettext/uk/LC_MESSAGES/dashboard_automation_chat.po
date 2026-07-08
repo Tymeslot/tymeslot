@@ -705,3 +705,24 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "-1001234567890 or @channelname"
 msgstr ""
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex:105
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex:133
+#, elixir-autogen, elixir-format
+msgid "Invalid Slack callback. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex:113
+#, elixir-autogen, elixir-format
+msgid "Slack callback did not match your session. Please retry."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex:89
+#, elixir-autogen, elixir-format
+msgid "Slack connected — pick a channel to finish setup."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex:97
+#, elixir-autogen, elixir-format
+msgid "Slack connection expired. Please try again."
+msgstr ""
