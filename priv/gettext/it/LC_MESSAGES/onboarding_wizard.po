@@ -54,17 +54,17 @@ msgid_plural "%{count} years"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:193
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:197
 #, elixir-autogen, elixir-format
 msgid "%{field} must be a number"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:174
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:178
 #, elixir-autogen, elixir-format
 msgid "%{field} must be a valid number"
 msgstr ""
 
-#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:183
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:187
 #, elixir-autogen, elixir-format
 msgid "%{field} must be between %{min} and %{max}"
 msgstr ""
@@ -858,4 +858,19 @@ msgstr ""
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex:157
 #, elixir-autogen, elixir-format
 msgid "yourname"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:147
+#, elixir-autogen, elixir-format
+msgid "Advance booking days"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:145
+#, elixir-autogen, elixir-format
+msgid "Buffer minutes"
+msgstr ""
+
+#: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:149
+#, elixir-autogen, elixir-format
+msgid "Minimum advance hours"
 msgstr ""

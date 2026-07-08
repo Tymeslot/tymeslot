@@ -128,3 +128,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "View Page"
 msgstr ""
+
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:83
+#, elixir-autogen, elixir-format
+msgid "Scheduling link copied to clipboard!"
+msgstr ""

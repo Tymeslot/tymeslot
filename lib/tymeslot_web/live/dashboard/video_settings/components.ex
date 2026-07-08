@@ -132,15 +132,19 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   end
 
   defp summary_segments(%{provider: provider} = integration) when provider in @oauth_providers do
-    [integration.provider_account_email, "OAuth", "rooms created automatically"]
+    [
+      integration.provider_account_email,
+      dgettext("dashboard_integrations", "OAuth"),
+      dgettext("dashboard_integrations", "rooms created automatically")
+    ]
   end
 
   defp summary_segments(%{provider: "mirotalk"} = integration) do
-    [host(integration.base_url), "self-hosted"]
+    [host(integration.base_url), dgettext("dashboard_integrations", "self-hosted")]
   end
 
   defp summary_segments(%{provider: "custom"} = integration) do
-    [Map.get(integration, :custom_meeting_url), "custom link"]
+    [Map.get(integration, :custom_meeting_url), dgettext("dashboard_integrations", "custom link")]
   end
 
   defp summary_segments(integration) do

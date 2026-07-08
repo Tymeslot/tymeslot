@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <SharedForm.integration_name_field
             form_errors={@form_errors}
-            value={Map.get(@form_values, "name", "My Custom Video")}
+            value={Map.get(@form_values, "name", dgettext("dashboard_integrations", "My Custom Video"))}
             target={@target}
           />
 

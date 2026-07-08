@@ -78,8 +78,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
       <.form_submit_button saving={@saving} text="Save Integration" />
   """
   attr :saving, :boolean, required: true
-  attr :text, :string, default: "Add Integration"
-  attr :saving_text, :string, default: "Adding..."
+  attr :text, :string, default: nil
+  attr :saving_text, :string, default: nil
   attr :class, :string, default: "btn btn-primary"
 
   @spec form_submit_button(map()) :: Phoenix.LiveView.Rendered.t()
@@ -89,10 +89,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
       <%= if @saving do %>
         <span class="flex items-center">
           <.loading_spinner class="h-4 w-4 mr-2" />
-          {@saving_text}
+          {@saving_text || dgettext("dashboard_integrations", "Adding...")}
         </span>
       <% else %>
-        {@text}
+        {@text || dgettext("dashboard_integrations", "Add Integration")}
       <% end %>
     </button>
     """
@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   Renders a secondary button for cancel/back actions.
   """
   attr :target, :any, required: true
-  attr :label, :string, default: "Cancel"
+  attr :label, :string, default: nil
   attr :icon, :string, default: nil
   attr :phx_click, :string, default: "back_to_providers"
   attr :class, :string, default: "btn btn-secondary"
@@ -119,7 +119,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
       <%= if @icon do %>
         <.icon name={@icon} class="w-4 h-4 mr-2" />
       <% end %>
-      {@label}
+      {@label || dgettext("dashboard_integrations", "Cancel")}
     </button>
     """
   end

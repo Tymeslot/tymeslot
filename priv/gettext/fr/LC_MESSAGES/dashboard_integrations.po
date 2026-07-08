@@ -118,6 +118,7 @@ msgid "Active Video Integrations"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex:84
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:95
 #, elixir-autogen, elixir-format
 msgid "Add Integration"
 msgstr ""
@@ -133,6 +134,7 @@ msgid "Add a video link to online meetings automatically when they're booked."
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex:81
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:92
 #, elixir-autogen, elixir-format
 msgid "Adding..."
 msgstr ""
@@ -196,6 +198,7 @@ msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex:59
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:170
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:122
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:124
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:288
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:93
@@ -238,7 +241,7 @@ msgid "Connected"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:151
-#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:157
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:161
 #, elixir-autogen, elixir-format
 msgid "Connection issues"
 msgstr ""
@@ -392,7 +395,7 @@ msgstr ""
 msgid "Google Meet connected successfully!"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:158
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:162
 #, elixir-autogen, elixir-format
 msgid "Healthy"
 msgstr ""
@@ -554,7 +557,8 @@ msgstr ""
 msgid "No video providers connected yet"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:163
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:137
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:167
 #, elixir-autogen, elixir-format
 msgid "OAuth"
 msgstr ""
@@ -564,7 +568,7 @@ msgstr ""
 msgid "Outlook Calendar connected successfully!"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:155
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:159
 #, elixir-autogen, elixir-format
 msgid "Paused"
 msgstr ""
@@ -585,7 +589,7 @@ msgid "Provider:"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:94
-#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:156
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:160
 #, elixir-autogen, elixir-format
 msgid "Reconnect"
 msgstr ""
@@ -767,12 +771,13 @@ msgstr ""
 msgid "calendar data"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:166
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:170
 #, elixir-autogen, elixir-format
 msgid "custom"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:165
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:143
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:169
 #, elixir-autogen, elixir-format
 msgid "self-hosted"
 msgstr ""
@@ -792,4 +797,59 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:244
 #, elixir-autogen, elixir-format
 msgid "✓ Valid Template"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:139
+#, elixir-autogen, elixir-format
+msgid "%{service} connected successfully!"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:171
+#, elixir-autogen, elixir-format
+msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" — Tymeslot needs this to create meetings and Google Meet links."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex:137
+#, elixir-autogen, elixir-format
+msgid "API Key"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:185
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Failed to connect %{service}. Please try again."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:110
+#, elixir-autogen, elixir-format
+msgid "Failed to initiate %{service} authentication."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:57
+#, elixir-autogen, elixir-format
+msgid "My Custom Video"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:52
+#, elixir-autogen, elixir-format
+msgid "My MiroTalk"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex:51
+#, elixir-autogen, elixir-format, fuzzy
+msgid "My Video Integration"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex:161
+#, elixir-autogen, elixir-format
+msgid "Your API key"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:147
+#, elixir-autogen, elixir-format, fuzzy
+msgid "custom link"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex:138
+#, elixir-autogen, elixir-format
+msgid "rooms created automatically"
 msgstr ""

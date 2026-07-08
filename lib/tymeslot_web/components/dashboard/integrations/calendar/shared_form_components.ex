@@ -21,13 +21,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   attr :target, :any, required: true
   attr :myself, :any, required: true
   attr :suggested_name, :string, required: true
-  attr :name_placeholder, :string, default: "My Calendar"
+  attr :name_placeholder, :string, default: nil
   attr :url_placeholder, :string, default: "https://example.com/remote.php/dav"
   attr :url_locked, :boolean, default: false
   attr :url_value, :string, default: ""
-  attr :url_locked_tooltip, :string, default: "This server address is fixed for this provider"
-  attr :username_placeholder, :string, default: "Username"
-  attr :password_placeholder, :string, default: "Password"
+  attr :url_locked_tooltip, :string, default: nil
+  attr :username_placeholder, :string, default: nil
+  attr :password_placeholder, :string, default: nil
 
   @spec config_form(map()) :: Phoenix.LiveView.Rendered.t()
   def config_form(assigns) do
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
           <.integration_name_field
             form_errors={@form_errors}
             suggested_name={Map.get(@form_values, "name", @suggested_name)}
-            placeholder={@name_placeholder}
+            placeholder={@name_placeholder || dgettext("dashboard_calendar_providers", "My Calendar")}
             target={@target}
           />
 
@@ -87,7 +87,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
             <.integration_name_field
               form_errors={@form_errors}
               suggested_name={Map.get(@form_values, "name", @suggested_name)}
-              placeholder={@name_placeholder}
+              placeholder={@name_placeholder || dgettext("dashboard_calendar_providers", "My Calendar")}
               field_name="integration[name]"
               target={@target}
             />
@@ -95,7 +95,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
             <%= if @url_locked do %>
               <.locked_url_field
                 value={@url_value}
-                tooltip={@url_locked_tooltip}
+                tooltip={
+                  @url_locked_tooltip ||
+                    dgettext(
+                      "dashboard_calendar_providers",
+                      "This server address is fixed for this provider"
+                    )
+                }
                 name="integration[url]"
               />
             <% else %>
@@ -117,7 +123,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
               name="integration[username]"
               label={dgettext("dashboard_calendar_providers", "Username")}
               value={Map.get(@form_values, "username", "")}
-              placeholder={@username_placeholder}
+              placeholder={@username_placeholder || dgettext("dashboard_calendar_providers", "Username")}
               errors={FormValidationHelpers.field_errors(@form_errors, :username)}
               target={@target}
               field="username"
@@ -129,7 +135,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
               name="integration[password]"
               label={dgettext("dashboard_calendar_providers", "Password / App Password")}
               value={Map.get(@form_values, "password", "")}
-              placeholder={@password_placeholder}
+              placeholder={@password_placeholder || dgettext("dashboard_calendar_providers", "Password")}
               errors={FormValidationHelpers.field_errors(@form_errors, :password)}
               target={@target}
               field="password"

@@ -140,17 +140,21 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
 
   defp try_update_mode(socket, _field, _value, _params), do: socket
 
-  @fields [
-    {"buffer_minutes", :buffer_minutes, "Buffer minutes"},
-    {"advance_booking_days", :advance_booking_days, "Advance booking days"},
-    {"min_advance_hours", :min_advance_hours, "Minimum advance hours"}
-  ]
+  defp fields do
+    [
+      {"buffer_minutes", :buffer_minutes, dgettext("onboarding_wizard", "Buffer minutes")},
+      {"advance_booking_days", :advance_booking_days,
+       dgettext("onboarding_wizard", "Advance booking days")},
+      {"min_advance_hours", :min_advance_hours,
+       dgettext("onboarding_wizard", "Minimum advance hours")}
+    ]
+  end
 
   defp validate_scheduling_preferences(params) do
     config = StepConfig.custom_input_config()
 
     errors =
-      @fields
+      fields()
       |> Enum.flat_map(fn {key, error_key, label} ->
         with {:ok, value} <- Map.fetch(params, key),
              {:error, error} <- validate_field(value, config[key].constraints, label) do

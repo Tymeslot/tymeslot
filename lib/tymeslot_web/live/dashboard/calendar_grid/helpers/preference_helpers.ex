@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   @moduledoc "Helpers that read user preferences and produce display-related values for the calendar grid."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   @spec week_start(Date.t(), map()) :: Date.t()
@@ -75,11 +77,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   end
 
   @spec view_label(atom()) :: String.t()
-  def view_label(:day), do: "Day"
-  def view_label(:three_day), do: "3 Days"
-  def view_label(:week), do: "Week"
-  def view_label(:month), do: "Month"
-  def view_label(:agenda), do: "Agenda"
+  def view_label(:day), do: dgettext("dashboard_calendar", "Day")
+  def view_label(:three_day), do: dgettext("dashboard_calendar", "3 Days")
+  def view_label(:week), do: dgettext("dashboard_calendar", "Week")
+  def view_label(:month), do: dgettext("dashboard_calendar", "Month")
+  def view_label(:agenda), do: dgettext("dashboard_calendar", "Agenda")
 
   @spec navigate_month(Date.t(), integer()) :: Date.t()
   def navigate_month(date, delta) do

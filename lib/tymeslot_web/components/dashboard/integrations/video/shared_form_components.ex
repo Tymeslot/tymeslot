@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   """
   attr :form_errors, :map, required: true
   attr :value, :string, default: ""
-  attr :placeholder, :string, default: "My Video Integration"
+  attr :placeholder, :string, default: nil
   attr :target, :any, required: true
 
   @spec integration_name_field(map()) :: Phoenix.LiveView.Rendered.t()
@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
             "input input-with-icon w-full",
             if(FormValidationHelpers.field_errors(@form_errors, :name) != [], do: "input-error", else: "")
           ]}
-          placeholder={@placeholder}
+          placeholder={@placeholder || dgettext("dashboard_integrations", "My Video Integration")}
         />
       </div>
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :name) do %>
@@ -121,9 +121,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   """
   attr :id, :string, required: true
   attr :name, :string, required: true
-  attr :label, :string, default: "API Key"
+  attr :label, :string, default: nil
   attr :value, :string, default: ""
-  attr :placeholder, :string, default: "Your API key"
+  attr :placeholder, :string, default: nil
   attr :form_errors, :map, required: true
   attr :error_key, :atom, default: :api_key
   attr :target, :any, required: true
@@ -134,7 +134,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
     ~H"""
     <div>
       <label for={@id} class="label">
-        {@label}
+        {@label || dgettext("dashboard_integrations", "API Key")}
       </label>
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -158,7 +158,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
             "input input-with-icon w-full",
             if(FormValidationHelpers.field_errors(@form_errors, @error_key) != [], do: "input-error", else: "")
           ]}
-          placeholder={@placeholder}
+          placeholder={@placeholder || dgettext("dashboard_integrations", "Your API key")}
         />
       </div>
       <%= if FormValidationHelpers.field_errors(@form_errors, @error_key) != [] do %>

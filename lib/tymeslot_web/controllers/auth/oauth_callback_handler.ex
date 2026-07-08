@@ -7,6 +7,8 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
   """
 
   require Logger
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.Controller
   alias Tymeslot.Auth.ErrorFormatter
   alias Tymeslot.Dashboard.DashboardContext
@@ -105,7 +107,9 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
             conn
             |> Controller.put_flash(
               :error,
-              "Failed to initiate #{service_name} authentication."
+              dgettext("dashboard_integrations", "Failed to initiate %{service} authentication.",
+                service: service_name
+              )
             )
             |> Controller.redirect(to: error_redirect)
         end
@@ -130,7 +134,12 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
       if user_id, do: DashboardContext.invalidate_integration_status(user_id)
 
       conn
-      |> Controller.put_flash(:info, "#{service_name} connected successfully!")
+      |> Controller.put_flash(
+        :info,
+        dgettext("dashboard_integrations", "%{service} connected successfully!",
+          service: service_name
+        )
+      )
       |> Controller.redirect(to: redirect_path)
     else
       {:error, "access_denied"} ->
@@ -159,7 +168,11 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
         conn
         |> Controller.put_flash(
           :error,
-          "#{service_name} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" — Tymeslot needs this to create meetings and Google Meet links."
+          dgettext(
+            "dashboard_integrations",
+            "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" — Tymeslot needs this to create meetings and Google Meet links.",
+            service: service_name
+          )
         )
         |> Controller.redirect(to: redirect_path)
 
@@ -169,7 +182,9 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
         conn
         |> Controller.put_flash(
           :error,
-          "Failed to connect #{service_name}. Please try again."
+          dgettext("dashboard_integrations", "Failed to connect %{service}. Please try again.",
+            service: service_name
+          )
         )
         |> Controller.redirect(to: redirect_path)
     end

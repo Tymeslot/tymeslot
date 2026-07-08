@@ -90,6 +90,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:261
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:81
 #, elixir-autogen, elixir-format
 msgid "3 Days"
 msgstr ""
@@ -100,6 +101,7 @@ msgid "Add event"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:264
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:84
 #, elixir-autogen, elixir-format
 msgid "Agenda"
 msgstr ""
@@ -141,6 +143,7 @@ msgid "Connect at least one calendar to see your events here."
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:260
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:80
 #, elixir-autogen, elixir-format
 msgid "Day"
 msgstr ""
@@ -156,6 +159,7 @@ msgid "Keyboard shortcuts (?)"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:263
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:83
 #, elixir-autogen, elixir-format
 msgid "Month"
 msgstr ""
@@ -273,6 +277,7 @@ msgid "Untitled event"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:262
+#: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:82
 #, elixir-autogen, elixir-format
 msgid "Week"
 msgstr ""
