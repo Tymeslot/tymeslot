@@ -3,6 +3,11 @@ import Config
 # Configure environment
 config :tymeslot, environment: :dev
 
+# Enable the pseudo-localisation locale in dev. Visit any page with
+# `?locale=pseudo` to render every translated string as an accented, bracketed
+# look-alike — un-wrapped literals show up plain. Never enabled outside dev.
+config :tymeslot, :pseudo_locale_enabled, true
+
 # Configure upload directory for development
 config :tymeslot, :upload_directory, Path.expand("../uploads", __DIR__)
 

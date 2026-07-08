@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
   - Header injection attacks
   - DoS via extremely long inputs
   """
+  alias Tymeslot.Locales
   alias TymeslotWeb.Themes.Shared.LocaleHandler
   import Plug.Conn
   require Logger
@@ -38,9 +39,9 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
         get_locale_from_header(conn) ||
         LocaleHandler.default_locale()
 
-    # Validate locale is supported
+    # Validate locale is supported (or the dev-only pseudo locale)
     locale =
-      if locale in LocaleHandler.supported_locales(),
+      if Locales.acceptable?(locale),
         do: locale,
         else: LocaleHandler.default_locale()
 

@@ -6,12 +6,19 @@ defmodule Tymeslot.LocalesTest do
 
   setup do
     existing = Application.get_env(:tymeslot, :locales)
+    existing_pseudo = Application.get_env(:tymeslot, :pseudo_locale_enabled)
 
     on_exit(fn ->
       if existing do
         Application.put_env(:tymeslot, :locales, existing)
       else
         Application.delete_env(:tymeslot, :locales)
+      end
+
+      if is_nil(existing_pseudo) do
+        Application.delete_env(:tymeslot, :pseudo_locale_enabled)
+      else
+        Application.put_env(:tymeslot, :pseudo_locale_enabled, existing_pseudo)
       end
     end)
 
@@ -52,6 +59,56 @@ defmodule Tymeslot.LocalesTest do
     test "returns empty list when supported key is missing from locales config" do
       Application.put_env(:tymeslot, :locales, default: "en")
       assert Locales.supported_codes() == []
+    end
+  end
+
+  describe "acceptable?/1" do
+    setup do
+      Application.put_env(:tymeslot, :locales, supported: [%{code: "en"}, %{code: "de"}])
+
+      :ok
+    end
+
+    test "accepts supported locale codes" do
+      assert Locales.acceptable?("en")
+      assert Locales.acceptable?("de")
+    end
+
+    test "rejects unknown locale codes" do
+      refute Locales.acceptable?("zz")
+    end
+
+    test "rejects non-string input" do
+      refute Locales.acceptable?(nil)
+      refute Locales.acceptable?(:de)
+    end
+
+    test "accepts the pseudo locale only when pseudo-localisation is enabled" do
+      Application.put_env(:tymeslot, :pseudo_locale_enabled, false)
+      refute Locales.acceptable?("pseudo")
+
+      Application.put_env(:tymeslot, :pseudo_locale_enabled, true)
+      assert Locales.acceptable?("pseudo")
+    end
+
+    test "the pseudo locale is never a supported locale" do
+      Application.put_env(:tymeslot, :pseudo_locale_enabled, true)
+      refute Locales.pseudo_locale() in Locales.supported_codes()
+    end
+  end
+
+  describe "pseudo_enabled?/0" do
+    test "reflects the configuration flag" do
+      Application.put_env(:tymeslot, :pseudo_locale_enabled, true)
+      assert Locales.pseudo_enabled?()
+
+      Application.put_env(:tymeslot, :pseudo_locale_enabled, false)
+      refute Locales.pseudo_enabled?()
+    end
+
+    test "defaults to false when the flag is absent" do
+      Application.delete_env(:tymeslot, :pseudo_locale_enabled)
+      refute Locales.pseudo_enabled?()
     end
   end
 end

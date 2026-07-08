@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Hooks.AppLocaleHook do
   """
 
   import Phoenix.Component
+  alias Tymeslot.Locales
   alias TymeslotWeb.Themes.Shared.LocaleHandler
 
   @spec on_mount(atom(), map(), map(), Phoenix.LiveView.Socket.t()) ::
@@ -25,7 +26,7 @@ defmodule TymeslotWeb.Hooks.AppLocaleHook do
         LocaleHandler.default_locale()
 
     locale =
-      if locale in LocaleHandler.supported_locales(),
+      if Locales.acceptable?(locale),
         do: locale,
         else: LocaleHandler.default_locale()
 

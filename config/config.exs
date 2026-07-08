@@ -229,6 +229,11 @@ config :tymeslot, :locales,
   ],
   default: "en"
 
+# Pseudo-localisation ("pseudo" locale) is a dev coverage tool that rewrites
+# every translated string into an accented, bracketed look-alike so un-wrapped
+# literals stand out. Disabled by default; enabled in config/dev.exs only.
+config :tymeslot, :pseudo_locale_enabled, false
+
 # =============================================================================
 # SHARED INFRASTRUCTURE CONFIGURATION
 # =============================================================================
