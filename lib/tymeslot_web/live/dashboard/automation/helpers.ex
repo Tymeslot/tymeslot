@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   Contains business logic, state management, and utility functions.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   require Logger
@@ -164,7 +166,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   Formats a DateTime for display in the automation UI, or "Never" for nil.
   """
   @spec format_datetime(DateTime.t() | nil) :: String.t()
-  def format_datetime(nil), do: "Never"
+  def format_datetime(nil), do: dgettext("dashboard_automation", "Never")
 
   def format_datetime(%DateTime{} = dt) do
     Calendar.strftime(dt, "%B %d, %Y at %I:%M %p")
@@ -198,29 +200,42 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   @spec handle_feature_access_error(Phoenix.LiveView.Socket.t(), atom()) ::
           Phoenix.LiveView.Socket.t()
   def handle_feature_access_error(socket, :insufficient_plan) do
-    Flash.error("Automation is available on Pro plans.")
+    Flash.error(dgettext("dashboard_automation", "Automation is available on Pro plans."))
     socket
   end
 
   def handle_feature_access_error(socket, reason)
       when reason in [:pro_required, :feature_disabled] do
-    Flash.error("This automation feature is available on the Pro plan.")
+    Flash.error(
+      dgettext("dashboard_automation", "This automation feature is available on the Pro plan.")
+    )
+
     socket
   end
 
   def handle_feature_access_error(socket, :stripe_required) do
-    Flash.error("Connect a Stripe account to use this automation.")
+    Flash.error(
+      dgettext("dashboard_automation", "Connect a Stripe account to use this automation.")
+    )
+
     socket
   end
 
   def handle_feature_access_error(socket, :feature_access_checker_failed) do
-    Flash.error("Unable to verify subscription status. Please try again.")
+    Flash.error(
+      dgettext("dashboard_automation", "Unable to verify subscription status. Please try again.")
+    )
+
     socket
   end
 
   def handle_feature_access_error(socket, other) do
     Logger.warning("handle_feature_access_error: unhandled reason", reason: inspect(other))
-    Flash.error("Unable to perform this action. Please try again.")
+
+    Flash.error(
+      dgettext("dashboard_automation", "Unable to perform this action. Please try again.")
+    )
+
     socket
   end
 
@@ -274,7 +289,10 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
                 {:noreply, assign(socket, testing_key, nil)}
 
               {:error, reason} ->
-                Flash.error("Test failed: #{reason}")
+                Flash.error(
+                  dgettext("dashboard_automation", "Test failed: %{reason}", reason: reason)
+                )
+
                 {:noreply, assign(socket, testing_key, nil)}
             end
 

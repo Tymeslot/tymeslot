@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
   UI component for the webhook integration documentation section.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @spec webhook_documentation(map()) :: Phoenix.LiveView.Rendered.t()
   def webhook_documentation(assigns) do
@@ -21,10 +22,13 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
         </div>
         <div class="flex-1">
           <h3 class="text-token-2xl font-black text-tymeslot-900 tracking-tight">
-            Webhook Integration Guide
+            {dgettext("dashboard_automation", "Webhook Integration Guide")}
           </h3>
           <p class="text-token-sm text-tymeslot-600 font-medium mt-1">
-            Connect Tymeslot to n8n, Zapier, Make, or your custom automation workflows
+            {dgettext(
+              "dashboard_automation",
+              "Connect Tymeslot to n8n, Zapier, Make, or your custom automation workflows"
+            )}
           </p>
         </div>
       </div>
@@ -34,11 +38,15 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
         <div class="p-5 bg-linear-to-br from-turquoise-50 to-cyan-50 rounded-token-2xl border-2 border-turquoise-100">
           <div class="flex items-start gap-3 mb-3">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
-            <h4 class="text-token-lg font-black text-tymeslot-900">What are webhooks?</h4>
+            <h4 class="text-token-lg font-black text-tymeslot-900">
+              {dgettext("dashboard_automation", "What are webhooks?")}
+            </h4>
           </div>
           <p class="text-tymeslot-700 font-medium ml-5">
-            Webhooks send real-time HTTP POST notifications to your automation tools whenever booking events occur.
-            Perfect for triggering automated workflows, sending custom emails, syncing data, or building integrations.
+            {dgettext(
+              "dashboard_automation",
+              "Webhooks send real-time HTTP POST notifications to your automation tools whenever booking events occur. Perfect for triggering automated workflows, sending custom emails, syncing data, or building integrations."
+            )}
           </p>
         </div>
 
@@ -46,16 +54,24 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
         <div>
           <div class="flex items-start gap-3 mb-4">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
-            <h4 class="text-token-lg font-black text-tymeslot-900">Quick Setup with n8n</h4>
+            <h4 class="text-token-lg font-black text-tymeslot-900">
+              {dgettext("dashboard_automation", "Quick Setup with n8n")}
+            </h4>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 ml-5">
             <%= for {step, step_index} <- Enum.with_index([
-              {"Create a workflow", "Start a new workflow in your n8n instance"},
-              {"Add webhook trigger", "Insert a Webhook node and copy its URL"},
-              {"Configure in Tymeslot", "Create a webhook above and paste the URL"},
-              {"Select events", "Choose which booking events to monitor"},
-              {"Test connection", "Verify the webhook is working correctly"},
-              {"Build automation", "Add actions to process the webhook data"}
+              {dgettext("dashboard_automation", "Create a workflow"),
+               dgettext("dashboard_automation", "Start a new workflow in your n8n instance")},
+              {dgettext("dashboard_automation", "Add webhook trigger"),
+               dgettext("dashboard_automation", "Insert a Webhook node and copy its URL")},
+              {dgettext("dashboard_automation", "Configure in Tymeslot"),
+               dgettext("dashboard_automation", "Create a webhook above and paste the URL")},
+              {dgettext("dashboard_automation", "Select events"),
+               dgettext("dashboard_automation", "Choose which booking events to monitor")},
+              {dgettext("dashboard_automation", "Test connection"),
+               dgettext("dashboard_automation", "Verify the webhook is working correctly")},
+              {dgettext("dashboard_automation", "Build automation"),
+               dgettext("dashboard_automation", "Add actions to process the webhook data")}
             ], 1) do %>
               <div class="flex items-start gap-3 p-3 bg-white rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 transition-all">
                 <div class="shrink-0 w-6 h-6 rounded-full bg-linear-to-br from-turquoise-500 to-cyan-500 text-white flex items-center justify-center text-xs font-black">
@@ -74,7 +90,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
         <div>
           <div class="flex items-start gap-3 mb-4">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
-            <h4 class="text-token-lg font-black text-tymeslot-900">Available Events</h4>
+            <h4 class="text-token-lg font-black text-tymeslot-900">
+              {dgettext("dashboard_automation", "Available Events")}
+            </h4>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 ml-5">
             <%= for {event, icon_path} <- [
@@ -94,11 +112,11 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
                 <p class="text-token-xs text-tymeslot-600 font-medium">
                   <%= case event do %>
                     <% "meeting.created" -> %>
-                      Triggers when a new booking is successfully created
+                      {dgettext("dashboard_automation", "Triggers when a new booking is successfully created")}
                     <% "meeting.cancelled" -> %>
-                      Triggers when an existing booking is cancelled
+                      {dgettext("dashboard_automation", "Triggers when an existing booking is cancelled")}
                     <% "meeting.rescheduled" -> %>
-                      Triggers when a booking time is changed
+                      {dgettext("dashboard_automation", "Triggers when a booking time is changed")}
                   <% end %>
                 </p>
               </div>
@@ -110,7 +128,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
         <div>
           <div class="flex items-start gap-3 mb-4">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
-            <h4 class="text-token-lg font-black text-tymeslot-900">Security & Authentication</h4>
+            <h4 class="text-token-lg font-black text-tymeslot-900">
+              {dgettext("dashboard_automation", "Security & Authentication")}
+            </h4>
           </div>
           <div class="ml-5 space-y-3">
             <div class="p-4 bg-tymeslot-50 rounded-token-xl border-2 border-tymeslot-100">
@@ -127,24 +147,34 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
                 </div>
                 <div class="flex-1">
                   <p class="text-tymeslot-700 font-medium mb-2">
-                    All webhook requests include a unique security token in the HTTP headers for verification:
+                    {dgettext(
+                      "dashboard_automation",
+                      "All webhook requests include a unique security token in the HTTP headers for verification:"
+                    )}
                   </p>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <div class="flex items-center gap-2 p-2 bg-white rounded-lg">
                       <code class="text-token-xs font-black text-turquoise-700 bg-turquoise-50 px-2 py-1 rounded">
                         X-Tymeslot-Token
                       </code>
-                      <span class="text-token-xs text-tymeslot-600 font-medium">Security token</span>
+                      <span class="text-token-xs text-tymeslot-600 font-medium">
+                        {dgettext("dashboard_automation", "Security token")}
+                      </span>
                     </div>
                     <div class="flex items-center gap-2 p-2 bg-white rounded-lg">
                       <code class="text-token-xs font-black text-turquoise-700 bg-turquoise-50 px-2 py-1 rounded">
                         X-Tymeslot-Timestamp
                       </code>
-                      <span class="text-token-xs text-tymeslot-600 font-medium">Request timestamp</span>
+                      <span class="text-token-xs text-tymeslot-600 font-medium">
+                        {dgettext("dashboard_automation", "Request timestamp")}
+                      </span>
                     </div>
                   </div>
                   <p class="text-tymeslot-600 text-token-xs font-medium mt-2">
-                    Verify the token in your automation tool to ensure requests are from Tymeslot.
+                    {dgettext(
+                      "dashboard_automation",
+                      "Verify the token in your automation tool to ensure requests are from Tymeslot."
+                    )}
                   </p>
                 </div>
               </div>

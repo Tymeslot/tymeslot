@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
   Each function takes event params and a socket, returning `{:noreply, socket}`.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Security.RateLimiter
@@ -100,7 +102,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
         {:noreply, open_webhook_form(socket, :edit, webhook)}
 
       {:error, _reason} ->
-        Flash.error("Webhook not found")
+        Flash.error(dgettext("dashboard_automation", "Webhook not found"))
         {:noreply, socket}
     end
   end
@@ -155,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
           {:ok, webhook} ->
             case Webhooks.delete_webhook(webhook) do
               {:ok, _result} ->
-                Flash.info("Webhook deleted successfully")
+                Flash.info(dgettext("dashboard_automation", "Webhook deleted successfully"))
 
                 {:noreply,
                  socket
@@ -164,12 +166,12 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
                  |> AutomationHelpers.load_webhooks()}
 
               {:error, _reason} ->
-                Flash.error("Failed to delete webhook")
+                Flash.error(dgettext("dashboard_automation", "Failed to delete webhook"))
                 {:noreply, socket}
             end
 
           {:error, _reason} ->
-            Flash.error("Webhook not found")
+            Flash.error(dgettext("dashboard_automation", "Webhook not found"))
             {:noreply, socket}
         end
     end
@@ -182,7 +184,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
       {:ok, webhook} ->
         case Webhooks.toggle_webhook(webhook) do
           {:ok, _result} ->
-            Flash.info("Webhook status updated")
+            Flash.info(dgettext("dashboard_automation", "Webhook status updated"))
             {:noreply, AutomationHelpers.load_webhooks(socket)}
 
           {:error, reason}
@@ -196,12 +198,12 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
             {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
 
           {:error, _reason} ->
-            Flash.error("Failed to update webhook status")
+            Flash.error(dgettext("dashboard_automation", "Failed to update webhook status"))
             {:noreply, socket}
         end
 
       {:error, _reason} ->
-        Flash.error("Webhook not found")
+        Flash.error(dgettext("dashboard_automation", "Webhook not found"))
         {:noreply, socket}
     end
   end
@@ -215,7 +217,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
       :testing_connection,
       &AutomationHelpers.get_webhook_for_user(&1, id),
       &Webhooks.test_webhook_connection(&1.url, &1.webhook_token),
-      {"Webhook test successful! Check your endpoint.", "Webhook not found"}
+      {dgettext("dashboard_automation", "Webhook test successful! Check your endpoint."),
+       dgettext("dashboard_automation", "Webhook not found")}
     )
   end
 
@@ -235,7 +238,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
          |> assign(:delivery_stats, stats)}
 
       {:error, _reason} ->
-        Flash.error("Webhook not found")
+        Flash.error(dgettext("dashboard_automation", "Webhook not found"))
         {:noreply, socket}
     end
   end
@@ -251,7 +254,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
          |> assign(:selected_webhook, webhook)}
 
       {:error, _reason} ->
-        Flash.error("Webhook not found")
+        Flash.error(dgettext("dashboard_automation", "Webhook not found"))
         {:noreply, socket}
     end
   end
@@ -302,12 +305,12 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
       {:ok, sanitized} ->
         case save_fn.(sanitized) do
           {:ok, _webhook} ->
-            Flash.info("Webhook #{verb} successfully")
+            Flash.info(webhook_write_success_message(verb))
             {:noreply, socket |> close_webhook_form() |> AutomationHelpers.load_webhooks()}
 
           {:error, %Ecto.Changeset{} = changeset} ->
             errors = AutomationHelpers.format_changeset_errors(changeset)
-            Flash.error("Failed to #{verb} webhook")
+            Flash.error(webhook_write_failure_message(verb))
             {:noreply, assign(socket, :form_errors, errors)}
 
           {:error, reason}
@@ -326,6 +329,18 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
     end
   end
 
+  defp webhook_write_success_message("created"),
+    do: dgettext("dashboard_automation", "Webhook created successfully")
+
+  defp webhook_write_success_message("updated"),
+    do: dgettext("dashboard_automation", "Webhook updated successfully")
+
+  defp webhook_write_failure_message("created"),
+    do: dgettext("dashboard_automation", "Failed to create webhook")
+
+  defp webhook_write_failure_message("updated"),
+    do: dgettext("dashboard_automation", "Failed to update webhook")
+
   defp do_regenerate_token(socket) do
     case socket.assigns.selected_webhook do
       nil ->
@@ -334,7 +349,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
       webhook ->
         case Webhooks.regenerate_token(webhook) do
           {:ok, updated_webhook} ->
-            Flash.info("Security token regenerated")
+            Flash.info(dgettext("dashboard_automation", "Security token regenerated"))
 
             {:noreply,
              socket
@@ -354,7 +369,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
             {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
 
           {:error, _reason} ->
-            Flash.error("Failed to regenerate token")
+            Flash.error(dgettext("dashboard_automation", "Failed to regenerate token"))
             {:noreply, socket}
         end
     end

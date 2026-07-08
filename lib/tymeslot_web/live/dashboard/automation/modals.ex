@@ -3,6 +3,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
   Modal components for automation settings.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -29,14 +31,16 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
       size={:medium}
     >
       <:header>
-        <%= if @mode == :create, do: "Create Webhook", else: "Edit Webhook" %>
+        <%= if @mode == :create,
+          do: dgettext("dashboard_automation", "Create Webhook"),
+          else: dgettext("dashboard_automation", "Edit Webhook") %>
       </:header>
 
       <form id="webhook-form-modal-form" phx-submit={@on_submit} phx-target={@myself} class="space-y-6">
         <%!-- Name Field --%>
         <.input
           name="webhook[name]"
-          label="Webhook Name"
+          label={dgettext("dashboard_automation", "Webhook Name")}
           value={Map.get(@form_values, "name", "")}
           phx-blur={@on_validate_field.("name", "")}
           placeholder="My n8n Automation"
@@ -49,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
         <.input
           name="webhook[url]"
           type="url"
-          label="Webhook URL"
+          label={dgettext("dashboard_automation", "Webhook URL")}
           value={Map.get(@form_values, "url", "")}
           phx-blur={@on_validate_field.("url", "")}
           placeholder="https://your-n8n-instance.com/webhook/..."
@@ -60,7 +64,9 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
 
         <%!-- Events Selection --%>
         <div class="space-y-3 mt-6">
-          <label class="block text-token-sm font-black text-tymeslot-900">Events to Subscribe *</label>
+          <label class="block text-token-sm font-black text-tymeslot-900">
+            {dgettext("dashboard_automation", "Events to Subscribe *")}
+          </label>
           <div class="space-y-2">
             <%= for event <- @available_events do %>
               <label class="flex items-start gap-3 p-4 rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 cursor-pointer transition-colors">
@@ -89,7 +95,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
       <:footer>
         <div class="flex justify-end gap-3">
           <CoreComponents.action_button variant={:secondary} phx-click={@on_cancel}>
-            Cancel
+            {dgettext("dashboard_automation", "Cancel")}
           </CoreComponents.action_button>
           <CoreComponents.loading_button
             type="submit"
@@ -97,9 +103,11 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
             phx-click={JS.dispatch("click", to: "#webhook-form-submit")}
             variant={:primary}
             loading={@saving}
-            loading_text="Saving..."
+            loading_text={dgettext("dashboard_automation", "Saving...")}
           >
-            <%= if @mode == :create, do: "Create Webhook", else: "Update Webhook" %>
+            <%= if @mode == :create,
+              do: dgettext("dashboard_automation", "Create Webhook"),
+              else: dgettext("dashboard_automation", "Update Webhook") %>
           </CoreComponents.loading_button>
         </div>
       </:footer>
@@ -131,13 +139,16 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
             />
           </svg>
-          Delete Webhook?
+          {dgettext("dashboard_automation", "Delete Webhook?")}
         </div>
       </:header>
 
       <div class="text-center sm:text-left">
         <p class="text-tymeslot-600 font-medium">
-          This action cannot be undone. All delivery logs for this webhook will also be deleted.
+          {dgettext(
+            "dashboard_automation",
+            "This action cannot be undone. All delivery logs for this webhook will also be deleted."
+          )}
         </p>
       </div>
 
@@ -147,13 +158,13 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
             variant={:secondary}
             phx-click={@on_cancel}
           >
-            Cancel
+            {dgettext("dashboard_automation", "Cancel")}
           </CoreComponents.action_button>
           <CoreComponents.action_button
             variant={:danger}
             phx-click={@on_confirm}
           >
-            Delete Webhook
+            {dgettext("dashboard_automation", "Delete Webhook")}
           </CoreComponents.action_button>
         </div>
       </:footer>
@@ -184,13 +195,16 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
             />
           </svg>
-          Regenerate Token?
+          {dgettext("dashboard_automation", "Regenerate Token?")}
         </div>
       </:header>
 
       <div class="text-center sm:text-left">
         <p class="text-tymeslot-600 font-medium">
-          Are you sure? The current security token will be immediately invalidated and any existing integrations using it will stop working.
+          {dgettext(
+            "dashboard_automation",
+            "Are you sure? The current security token will be immediately invalidated and any existing integrations using it will stop working."
+          )}
         </p>
       </div>
 
@@ -200,13 +214,13 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
             variant={:secondary}
             phx-click={@on_cancel}
           >
-            Cancel
+            {dgettext("dashboard_automation", "Cancel")}
           </CoreComponents.action_button>
           <CoreComponents.action_button
             variant={:danger}
             phx-click={@on_confirm}
           >
-            Regenerate
+            {dgettext("dashboard_automation", "Regenerate")}
           </CoreComponents.action_button>
         </div>
       </:footer>
@@ -237,13 +251,16 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
             />
           </svg>
-          Delete Telegram Integration?
+          {dgettext("dashboard_automation", "Delete Telegram Integration?")}
         </div>
       </:header>
 
       <div class="text-center sm:text-left">
         <p class="text-tymeslot-600 font-medium">
-          This action cannot be undone. All delivery logs for this integration will also be deleted.
+          {dgettext(
+            "dashboard_automation",
+            "This action cannot be undone. All delivery logs for this integration will also be deleted."
+          )}
         </p>
       </div>
 
@@ -253,13 +270,13 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
             variant={:secondary}
             phx-click={@on_cancel}
           >
-            Cancel
+            {dgettext("dashboard_automation", "Cancel")}
           </CoreComponents.action_button>
           <CoreComponents.action_button
             variant={:danger}
             phx-click={@on_confirm}
           >
-            Delete Integration
+            {dgettext("dashboard_automation", "Delete Integration")}
           </CoreComponents.action_button>
         </div>
       </:footer>
@@ -296,11 +313,11 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-black text-tymeslot-900 flex items-center gap-2">
               <CoreComponents.icon name="hero-list-bullet" class="w-5 h-5" />
-              Recent Deliveries
+              {dgettext("dashboard_automation", "Recent Deliveries")}
             </h3>
             <div class="flex items-center gap-1.5 text-token-xs text-tymeslot-500 font-medium bg-tymeslot-50 px-2 py-1 rounded-token-lg border border-tymeslot-100">
               <CoreComponents.icon name="hero-information-circle" class="w-3.5 h-3.5" />
-              Test calls are not logged
+              {dgettext("dashboard_automation", "Test calls are not logged")}
             </div>
           </div>
           <.delivery_list deliveries={@deliveries} />
@@ -310,7 +327,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
       <:footer>
         <div class="flex justify-end">
           <CoreComponents.action_button variant={:primary} phx-click={@on_close}>
-            Close
+            {dgettext("dashboard_automation", "Close")}
           </CoreComponents.action_button>
         </div>
       </:footer>
@@ -330,7 +347,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
     ~H"""
     <CoreComponents.modal id={@id} show={@show} on_cancel={@on_close} size={:large}>
       <:header>
-        Delivery History — <%= @integration.name %>
+        {dgettext("dashboard_automation", "Delivery History — %{name}", name: @integration.name)}
       </:header>
 
       <div class="space-y-8">
@@ -341,7 +358,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
       <:footer>
         <div class="flex justify-end">
           <CoreComponents.action_button variant={:primary} phx-click={@on_close}>
-            Close
+            {dgettext("dashboard_automation", "Close")}
           </CoreComponents.action_button>
         </div>
       </:footer>
@@ -372,13 +389,16 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
             />
           </svg>
-          Delete Slack Integration?
+          {dgettext("dashboard_automation", "Delete Slack Integration?")}
         </div>
       </:header>
 
       <div class="text-center sm:text-left">
         <p class="text-tymeslot-600 font-medium">
-          This action cannot be undone. All delivery logs for this integration will also be deleted.
+          {dgettext(
+            "dashboard_automation",
+            "This action cannot be undone. All delivery logs for this integration will also be deleted."
+          )}
         </p>
       </div>
 
@@ -388,13 +408,13 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
             variant={:secondary}
             phx-click={@on_cancel}
           >
-            Cancel
+            {dgettext("dashboard_automation", "Cancel")}
           </CoreComponents.action_button>
           <CoreComponents.action_button
             variant={:danger}
             phx-click={@on_confirm}
           >
-            Delete Integration
+            {dgettext("dashboard_automation", "Delete Integration")}
           </CoreComponents.action_button>
         </div>
       </:footer>
@@ -414,7 +434,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
     ~H"""
     <CoreComponents.modal id={@id} show={@show} on_cancel={@on_close} size={:large}>
       <:header>
-        Delivery History — <%= @integration.name %>
+        {dgettext("dashboard_automation", "Delivery History — %{name}", name: @integration.name)}
       </:header>
 
       <div class="space-y-8">
@@ -425,7 +445,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
       <:footer>
         <div class="flex justify-end">
           <CoreComponents.action_button variant={:primary} phx-click={@on_close}>
-            Close
+            {dgettext("dashboard_automation", "Close")}
           </CoreComponents.action_button>
         </div>
       </:footer>
@@ -444,19 +464,29 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
     <%= if @stats do %>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-tymeslot-50 rounded-token-2xl p-4 border border-tymeslot-100">
-          <div class="text-token-xs font-black text-tymeslot-600 uppercase tracking-wider">Total</div>
+          <div class="text-token-xs font-black text-tymeslot-600 uppercase tracking-wider">
+            {dgettext("dashboard_automation", "Total")}
+          </div>
           <div class="text-token-3xl font-black text-tymeslot-900 mt-1"><%= @stats.total %></div>
-          <div class="text-token-xs text-tymeslot-500 font-medium mt-1">Last <%= Map.get(@stats, :period_days, 7) %> days</div>
+          <div class="text-token-xs text-tymeslot-500 font-medium mt-1">
+            {dgettext("dashboard_automation", "Last %{days} days", days: Map.get(@stats, :period_days, 7))}
+          </div>
         </div>
         <div class="bg-green-50 rounded-token-2xl p-4 border border-green-100">
-          <div class="text-token-xs font-black text-green-600 uppercase tracking-wider">Success</div>
+          <div class="text-token-xs font-black text-green-600 uppercase tracking-wider">
+            {dgettext("dashboard_automation", "Success")}
+          </div>
           <div class="text-token-3xl font-black text-green-700 mt-1"><%= @stats.successful %></div>
           <%= if Map.get(@stats, :success_rate) do %>
-            <div class="text-token-xs text-green-600 font-medium mt-1"><%= @stats.success_rate %>% success rate</div>
+            <div class="text-token-xs text-green-600 font-medium mt-1">
+              {dgettext("dashboard_automation", "%{rate}% success rate", rate: @stats.success_rate)}
+            </div>
           <% end %>
         </div>
         <div class="bg-red-50 rounded-token-2xl p-4 border border-red-100">
-          <div class="text-token-xs font-black text-red-600 uppercase tracking-wider">Failed</div>
+          <div class="text-token-xs font-black text-red-600 uppercase tracking-wider">
+            {dgettext("dashboard_automation", "Failed")}
+          </div>
           <div class="text-token-3xl font-black text-red-700 mt-1"><%= @stats.failed %></div>
         </div>
       </div>
@@ -470,7 +500,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
     ~H"""
     <%= if @deliveries == [] do %>
       <div class="text-center py-12 bg-tymeslot-50 rounded-token-2xl border-2 border-dashed border-tymeslot-200">
-        <p class="text-tymeslot-600 font-medium">No deliveries yet</p>
+        <p class="text-tymeslot-600 font-medium">{dgettext("dashboard_automation", "No deliveries yet")}</p>
       </div>
     <% else %>
       <div class="space-y-3">
@@ -494,7 +524,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
                     </span>
                   <% end %>
                   <span class="text-token-xs text-tymeslot-500 font-medium">
-                    Attempt <%= delivery.attempt_count %>
+                    {dgettext("dashboard_automation", "Attempt %{count}", count: delivery.attempt_count)}
                   </span>
                 </div>
                 <div class="text-token-sm text-tymeslot-600 font-medium flex items-center gap-1.5">
@@ -503,7 +533,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
                 </div>
                 <%= if delivery.error_message do %>
                   <div class="text-token-sm text-red-600 font-medium mt-2 p-2 bg-red-50 rounded-token-lg border border-red-100">
-                    Error: <%= delivery.error_message %>
+                    {dgettext("dashboard_automation", "Error: %{message}", message: delivery.error_message)}
                   </div>
                 <% end %>
               </div>

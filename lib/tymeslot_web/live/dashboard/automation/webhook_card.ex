@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
   UI component for displaying a single webhook card.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Components.UI.StatusSwitch
@@ -67,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                       d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
                     />
                   </svg>
-                  Disabled
+                  {dgettext("dashboard_automation", "Disabled")}
                 </span>
               <% end %>
             </div>
@@ -108,7 +109,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                   />
                 </svg>
                 <span>
-                  Last triggered: <%= format_datetime(@webhook.last_triggered_at) %>
+                  {dgettext("dashboard_automation", "Last triggered: %{time}",
+                    time: format_datetime(@webhook.last_triggered_at)
+                  )}
                   <%= if @webhook.last_status do %>
                     <span class={["ml-1", status_color(@webhook.last_status)]}>
                       (<%= @webhook.last_status %>)
@@ -126,7 +129,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <span>Never triggered</span>
+                <span>{dgettext("dashboard_automation", "Never triggered")}</span>
               </div>
             <% end %>
           </div>
@@ -160,9 +163,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             ]}
             title={
               cond do
-                !@webhook.is_active -> "Enable webhook to test"
-                @testing -> "Testing..."
-                true -> "Test Connection"
+                !@webhook.is_active -> dgettext("dashboard_automation", "Enable webhook to test")
+                @testing -> dgettext("dashboard_automation", "Testing...")
+                true -> dgettext("dashboard_automation", "Test Connection")
               end
             }
           >
@@ -175,7 +178,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-              <span class="hidden sm:inline">Testing</span>
+              <span class="hidden sm:inline">{dgettext("dashboard_automation", "Testing")}</span>
             <% else %>
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -185,7 +188,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                   d="M13 10V3L4 14h7v7l9-11h-7z"
                 />
               </svg>
-              Test
+              {dgettext("dashboard_automation", "Test")}
             <% end %>
           </button>
 
@@ -193,7 +196,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
           <button
             phx-click={@on_view_deliveries}
             class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
-            title="View Delivery Logs"
+            title={dgettext("dashboard_automation", "View Delivery Logs")}
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -203,7 +206,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            Logs
+            {dgettext("dashboard_automation", "Logs")}
           </button>
 
           <div class="ml-auto flex items-center gap-1">
@@ -211,7 +214,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             <button
               phx-click={@on_edit}
               class="p-2.5 text-tymeslot-400 hover:text-turquoise-600 hover:bg-turquoise-50 rounded-token-xl transition-all"
-              title="Edit Webhook"
+              title={dgettext("dashboard_automation", "Edit Webhook")}
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -227,7 +230,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             <button
               phx-click={@on_delete}
               class="p-2.5 text-tymeslot-300 hover:text-red-500 hover:bg-red-50 rounded-token-xl transition-all"
-              title="Delete Webhook"
+              title={dgettext("dashboard_automation", "Delete Webhook")}
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path

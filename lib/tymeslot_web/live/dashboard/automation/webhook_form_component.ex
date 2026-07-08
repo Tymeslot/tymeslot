@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
   Displays a full-page form similar to theme customization.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Webhooks
@@ -67,7 +68,11 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
         <.section_header
           icon={:webhook}
-          title={if @mode == :create, do: "Create Webhook", else: "Edit Webhook"}
+          title={
+            if @mode == :create,
+              do: dgettext("dashboard_automation", "Create Webhook"),
+              else: dgettext("dashboard_automation", "Edit Webhook")
+          }
           class="mb-0"
         />
 
@@ -79,7 +84,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
           </svg>
-          Close
+          {dgettext("dashboard_automation", "Close")}
         </button>
       </div>
 
@@ -99,16 +104,18 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
         <%!-- Name Field --%>
         <div class="card-glass">
           <div class="mb-6">
-            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">Webhook Details</h3>
+            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
+              {dgettext("dashboard_automation", "Webhook Details")}
+            </h3>
             <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-              Configure the basic information for your webhook.
+              {dgettext("dashboard_automation", "Configure the basic information for your webhook.")}
             </p>
           </div>
 
           <div class="space-y-6">
             <.input
               name="webhook[name]"
-              label="Webhook Name"
+              label={dgettext("dashboard_automation", "Webhook Name")}
               value={Map.get(@form_values, "name", "")}
               phx-blur={JS.push("validate_field", value: %{"field" => "name"}, target: @parent_component)}
               placeholder="My n8n Automation"
@@ -120,7 +127,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
             <.input
               name="webhook[url]"
               type="url"
-              label="Webhook URL"
+              label={dgettext("dashboard_automation", "Webhook URL")}
               value={Map.get(@form_values, "url", "")}
               phx-blur={JS.push("validate_field", value: %{"field" => "url"}, target: @parent_component)}
               placeholder="https://your-n8n-instance.com/webhook/..."
@@ -137,9 +144,14 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
                   </svg>
                 </div>
                 <div>
-                  <p class="text-token-sm font-black text-turquoise-900">Security Token</p>
+                  <p class="text-token-sm font-black text-turquoise-900">
+                    {dgettext("dashboard_automation", "Security Token")}
+                  </p>
                   <p class="text-token-xs text-turquoise-700 font-medium mt-0.5">
-                    A unique security token will be automatically generated for this webhook once created. You'll use it to verify requests in your automation tool.
+                    {dgettext(
+                      "dashboard_automation",
+                      "A unique security token will be automatically generated for this webhook once created. You'll use it to verify requests in your automation tool."
+                    )}
                   </p>
                 </div>
               </div>
@@ -147,8 +159,10 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
 
             <div :if={@mode == :edit} class="space-y-2">
               <label class="block text-token-sm font-black text-tymeslot-900">
-                Security Token
-                <span class="text-tymeslot-500 font-medium">- Use this in your n8n/Zapier header verification</span>
+                {dgettext("dashboard_automation", "Security Token")}
+                <span class="text-tymeslot-500 font-medium">
+                  - {dgettext("dashboard_automation", "Use this in your n8n/Zapier header verification")}
+                </span>
               </label>
               <div class="flex gap-2">
                 <input
@@ -163,10 +177,10 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
                   id="copy-webhook-token"
                   phx-hook="CopyOnClick"
                   data-copy-text={@webhook.webhook_token}
-                  data-copy-feedback="Security token copied to clipboard!"
+                  data-copy-feedback={dgettext("dashboard_automation", "Security token copied to clipboard!")}
                   class="whitespace-nowrap px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
                 >
-                  Copy
+                  {dgettext("dashboard_automation", "Copy")}
                 </button>
                 <button
                   type="button"
@@ -175,11 +189,13 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
                   phx-target={@parent_component}
                   class="whitespace-nowrap px-5 py-2.5 rounded-token-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-all border-2 border-transparent hover:border-red-200"
                 >
-                  Regenerate
+                  {dgettext("dashboard_automation", "Regenerate")}
                 </button>
               </div>
               <p class="text-token-xs text-tymeslot-500 font-medium">
-                This token is automatically sent in the <code class="bg-tymeslot-100 px-1 rounded">X-Tymeslot-Token</code> header.
+                {dgettext("dashboard_automation", "This token is automatically sent in the")}
+                <code class="bg-tymeslot-100 px-1 rounded">X-Tymeslot-Token</code>
+                {dgettext("dashboard_automation", "header.")}
               </p>
             </div>
           </div>
@@ -188,9 +204,11 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
         <%!-- Events Selection --%>
         <div class="card-glass">
           <div class="mb-6">
-            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">Event Subscriptions</h3>
+            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
+              {dgettext("dashboard_automation", "Event Subscriptions")}
+            </h3>
             <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-              Select which events should trigger this webhook.
+              {dgettext("dashboard_automation", "Select which events should trigger this webhook.")}
             </p>
           </div>
 
@@ -223,18 +241,20 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
             phx-click="close_webhook_form"
             phx-target={@parent_component}
           >
-            Cancel
+            {dgettext("dashboard_automation", "Cancel")}
           </CoreComponents.action_button>
           <CoreComponents.loading_button
             type="submit"
             variant={:primary}
             loading={@saving}
-            loading_text="Saving..."
+            loading_text={dgettext("dashboard_automation", "Saving...")}
             disabled={!@can_submit}
             class={if !@can_submit, do: "opacity-50 cursor-not-allowed grayscale", else: ""}
             title={if !@can_submit, do: get_disabled_reason(assigns), else: ""}
           >
-            <%= if @mode == :create, do: "Create Webhook", else: "Update Webhook" %>
+            <%= if @mode == :create,
+              do: dgettext("dashboard_automation", "Create Webhook"),
+              else: dgettext("dashboard_automation", "Update Webhook") %>
           </CoreComponents.loading_button>
         </div>
       </form>
@@ -258,16 +278,16 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
 
     cond do
       !Enum.empty?(errors) ->
-        "Please fix the validation errors above."
+        dgettext("dashboard_automation", "Please fix the validation errors above.")
 
       String.trim(Map.get(values, "name", "")) == "" ->
-        "Webhook name is required."
+        dgettext("dashboard_automation", "Webhook name is required.")
 
       String.trim(Map.get(values, "url", "")) == "" ->
-        "Webhook URL is required."
+        dgettext("dashboard_automation", "Webhook URL is required.")
 
       !Enum.any?(Map.get(values, "events", [])) ->
-        "At least one event subscription is required."
+        dgettext("dashboard_automation", "At least one event subscription is required.")
 
       true ->
         ""

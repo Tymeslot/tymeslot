@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEmptyState do
   UI component for the webhook empty state.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.Icons.IconComponents
 
@@ -16,13 +17,18 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEmptyState do
         <IconComponents.icon name={:webhook} class="w-10 h-10 text-turquoise-600" />
       </div>
 
-      <h3 class="text-token-2xl font-black text-tymeslot-900 mb-3">No Webhooks Yet</h3>
+      <h3 class="text-token-2xl font-black text-tymeslot-900 mb-3">
+        {dgettext("dashboard_automation", "No Webhooks Yet")}
+      </h3>
       <p class="text-tymeslot-600 font-medium mb-8 max-w-md mx-auto">
-        Set up webhooks to automatically trigger actions in n8n, Zapier, or your custom tools when bookings are created, cancelled, or rescheduled.
+        {dgettext(
+          "dashboard_automation",
+          "Set up webhooks to automatically trigger actions in n8n, Zapier, or your custom tools when bookings are created, cancelled, or rescheduled."
+        )}
       </p>
 
       <button phx-click={@on_create} class="btn-primary">
-        Create Your First Webhook
+        {dgettext("dashboard_automation", "Create Your First Webhook")}
       </button>
     </div>
     """
