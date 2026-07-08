@@ -5,6 +5,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias TymeslotWeb.Helpers.LocaleFormat
+
   @spec week_start(Date.t(), map()) :: Date.t()
   def week_start(date, assigns), do: Date.beginning_of_week(date, week_start_atom(assigns))
 
@@ -41,11 +43,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   end
 
   def period_label(%{view: :day, date: date}) do
-    Calendar.strftime(date, "%A, %B %-d, %Y")
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
+    "#{LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :full)}, " <>
+      "#{LocaleFormat.format_month_name(date.month, locale)} #{date.day}, #{date.year}"
   end
 
   def period_label(%{view: :month, date: date}) do
-    Calendar.strftime(date, "%B %Y")
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    "#{LocaleFormat.format_month_name(date.month, locale)} #{date.year}"
   end
 
   def period_label(%{view: :agenda, date: date} = assigns) do
@@ -64,13 +70,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   end
 
   defp range_label(start_date, end_date) do
-    start_str = Calendar.strftime(start_date, "%B %-d")
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    start_str = "#{LocaleFormat.format_month_name(start_date.month, locale)} #{start_date.day}"
 
     end_str =
       if start_date.month == end_date.month do
-        Calendar.strftime(end_date, "%-d, %Y")
+        "#{end_date.day}, #{end_date.year}"
       else
-        Calendar.strftime(end_date, "%B %-d, %Y")
+        "#{LocaleFormat.format_month_name(end_date.month, locale)} #{end_date.day}, #{end_date.year}"
       end
 
     "#{start_str} \u2013 #{end_str}"
@@ -153,9 +160,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
 
   @spec day_name_headers(map()) :: [String.t()]
   def day_name_headers(assigns) do
-    monday_start = ~w(Mon Tue Wed Thu Fri Sat Sun)
-    sunday_start = ~w(Sun Mon Tue Wed Thu Fri Sat)
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
 
-    if week_start_atom(assigns) == :sunday, do: sunday_start, else: monday_start
+    iso_order =
+      if week_start_atom(assigns) == :sunday,
+        do: [7, 1, 2, 3, 4, 5, 6],
+        else: [1, 2, 3, 4, 5, 6, 7]
+
+    Enum.map(iso_order, &LocaleFormat.format_weekday_name(&1, locale, :short))
   end
 end

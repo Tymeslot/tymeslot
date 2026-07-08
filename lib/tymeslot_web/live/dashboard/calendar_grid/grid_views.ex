@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.StatusBanners
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   @timed_views [:week, :three_day, :day]
 
@@ -53,6 +54,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
       )
       |> assign(:current_top_rem, Helpers.top_rem(assigns.current_time, assigns.user_timezone))
       |> assign(:day_layouts, day_layouts)
+      |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
     <StatusBanners.status_banners
@@ -98,9 +100,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
             <span class="text-token-xs text-tymeslot-400"><%= Helpers.user_tz_abbr(assigns) %></span>
           </div>
           <div :for={day <- @visible_days} class={"text-center py-2 border-l border-tymeslot-100 #{Helpers.day_header_class(day, @user_timezone)}"}>
-            <span :if={@view == :day} class="text-token-sm font-medium hidden sm:inline"><%= Calendar.strftime(day, "%A, %B %-d, %Y") %></span>
-            <span :if={@view == :day} class="text-token-sm font-medium sm:hidden"><%= Calendar.strftime(day, "%a %-d") %></span>
-            <span :if={@view != :day} class="text-token-sm"><%= Calendar.strftime(day, "%a %-d") %></span>
+            <span :if={@view == :day} class="text-token-sm font-medium hidden sm:inline"><%= full_day_label(day, @locale) %></span>
+            <span :if={@view == :day} class="text-token-sm font-medium sm:hidden"><%= short_day_label(day, @locale) %></span>
+            <span :if={@view != :day} class="text-token-sm"><%= short_day_label(day, @locale) %></span>
           </div>
         </div>
 
@@ -283,6 +285,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   end
 
   defp max_datetime(a, b), do: if(DateTime.compare(a, b) == :gt, do: a, else: b)
+
+  # Localised day-column header labels (weekday/month rendered in the active locale).
+  defp full_day_label(day, locale) do
+    "#{LocaleFormat.format_weekday_name(Date.day_of_week(day), locale, :full)}, " <>
+      "#{LocaleFormat.format_month_name(day.month, locale)} #{day.day}, #{day.year}"
+  end
+
+  defp short_day_label(day, locale) do
+    "#{LocaleFormat.format_weekday_name(Date.day_of_week(day), locale, :short)} #{day.day}"
+  end
 
   defp today_in_visible?(visible_days, current_time, timezone) do
     today = current_time |> DateTime.shift_zone!(timezone) |> DateTime.to_date()

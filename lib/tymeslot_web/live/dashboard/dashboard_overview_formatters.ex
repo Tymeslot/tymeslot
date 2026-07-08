@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewFormatters do
 
   alias Tymeslot.Agenda.Entry
   alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   # Server-rendered starting text for the cockpit countdown; the AgendaCountdown
   # JS hook replaces it live on mount and ticks it thereafter.
@@ -30,15 +31,30 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewFormatters do
     cond do
       Entry.covers?(entry, today, timezone) -> dgettext("dashboard_home", "Today")
       Entry.covers?(entry, Date.add(today, 1), timezone) -> dgettext("dashboard_home", "Tomorrow")
-      true -> Calendar.strftime(entry.day, "%a %-d %b")
+      true -> short_date_label(entry.day)
     end
+  end
+
+  defp short_date_label(day) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    weekday = LocaleFormat.format_weekday_name(Date.day_of_week(day), locale, :short)
+    month = LocaleFormat.format_month_name(day.month, locale, :short)
+    "#{weekday} #{day.day} #{month}"
   end
 
   @spec time_label(Entry.t(), String.t()) :: String.t()
   def time_label(%{all_day?: true}, _timezone), do: dgettext("dashboard_home", "All day")
 
   def time_label(entry, timezone) do
-    entry.start_at
+    now_time_label(entry.start_at, timezone)
+  end
+
+  @doc """
+  Formats a UTC datetime as a locale-aware clock label in the given timezone.
+  """
+  @spec now_time_label(DateTime.t(), String.t()) :: String.t()
+  def now_time_label(datetime, timezone) do
+    datetime
     |> DateTimeUtils.convert_to_timezone(timezone)
     |> Calendar.strftime("%-I:%M %p")
   end

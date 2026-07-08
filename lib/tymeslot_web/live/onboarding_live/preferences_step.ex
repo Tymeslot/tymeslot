@@ -281,8 +281,8 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   defp humanize_hours(hours),
     do: dngettext("onboarding_wizard", "%{count} hour", "%{count} hours", hours, count: hours)
 
-  defp format_12h(%Time{minute: minute} = time) do
-    {hour12, meridiem} = to_12h(time.hour)
+  defp format_12h(%Time{hour: hour, minute: minute}) do
+    {hour12, meridiem} = to_12h(hour)
     "#{hour12}:#{String.pad_leading(Integer.to_string(minute), 2, "0")} #{meridiem}"
   end
 

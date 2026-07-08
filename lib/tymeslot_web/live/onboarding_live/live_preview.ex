@@ -23,6 +23,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   import TymeslotWeb.Components.CoreComponents, only: [icon: 1]
 
   alias Tymeslot.ThemeCustomizations.Presets
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.OnboardingLive.TextHelpers
   alias TymeslotWeb.Themes.Core.Registry
 
@@ -56,6 +57,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
       |> assign(:link_text, link_text(assigns.booking_host, assigns.username))
       |> assign(:caption, caption(assigns))
       |> assign(:slots, build_slots(assigns))
+      |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
     <div class="w-full max-w-sm mx-auto">
@@ -89,7 +91,13 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
 
           <%!-- Theme-specific body --%>
           <.quill_body :if={@theme == :quill} colors={@colors} slots={@slots} step={@current_step} />
-          <.rhythm_body :if={@theme == :rhythm} colors={@colors} slots={@slots} step={@current_step} />
+          <.rhythm_body
+            :if={@theme == :rhythm}
+            colors={@colors}
+            slots={@slots}
+            step={@current_step}
+            locale={@locale}
+          />
 
           <button
             type="button"
@@ -177,6 +185,11 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   end
 
   # Rhythm: compact week strip + vertical, scrollable slot list.
+  attr :colors, :map, required: true
+  attr :slots, :list, required: true
+  attr :step, :atom, required: true
+  attr :locale, :string, required: true
+
   defp rhythm_body(assigns) do
     ~H"""
     <div class="w-full flex flex-col gap-2">
@@ -187,7 +200,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
           class="grow h-6 rounded-token-md inline-flex items-center justify-center text-token-2xs font-semibold"
           style={week_cell_style(@colors, day == 2)}
         >
-          {Enum.at(~w(M T W T F S S), day)}
+          {LocaleFormat.format_weekday_name(day + 1, @locale, :narrow)}
         </span>
       </div>
 

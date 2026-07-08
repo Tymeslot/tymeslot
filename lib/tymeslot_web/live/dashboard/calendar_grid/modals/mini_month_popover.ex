@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :open, :boolean, required: true
   attr :view, :atom, required: true, doc: "The active grid view; drives the period label."
@@ -39,6 +40,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
       |> assign(:today, today)
       |> assign(:weeks, Enum.chunk_every(Helpers.month_matrix(cursor, week_start), 7))
       |> assign(:show_week_numbers, Helpers.show_week_numbers?(assigns))
+      |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
     <.dropdown
@@ -80,7 +82,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
             <.icon name="hero-chevron-left" class="w-4 h-4" />
           </button>
           <div class="text-token-sm font-semibold text-tymeslot-800">
-            {Calendar.strftime(@cursor, "%B %Y")}
+            {"#{LocaleFormat.format_month_name(@cursor.month, @locale)} #{@cursor.year}"}
           </div>
           <button
             type="button"
@@ -121,7 +123,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
               phx-value-date={Date.to_iso8601(day)}
               phx-target={@myself}
               class={day_class(day, @cursor, @date, @today)}
-              aria-label={Calendar.strftime(day, "%A, %B %-d, %Y")}
+              aria-label={"#{LocaleFormat.format_weekday_name(Date.day_of_week(day), @locale, :full)}, #{LocaleFormat.format_month_name(day.month, @locale)} #{day.day}, #{day.year}"}
               aria-current={Date.compare(day, @date) == :eq && "date"}
             >{day.day}</button>
           <% end %>

@@ -8,6 +8,8 @@ defmodule TymeslotWeb.AccountLive.Helpers do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias TymeslotWeb.Helpers.LocaleFormat
+
   # Provider constants
   @email_provider "email"
 
@@ -70,7 +72,10 @@ defmodule TymeslotWeb.AccountLive.Helpers do
   @spec format_last_password_change(Ecto.Schema.t()) :: String.t()
   def format_last_password_change(user) do
     if user.updated_at do
-      Calendar.strftime(user.updated_at, "%B %d, %Y")
+      locale = Gettext.get_locale(TymeslotWeb.Gettext)
+      date = user.updated_at
+      day_padded = String.pad_leading(Integer.to_string(date.day), 2, "0")
+      "#{LocaleFormat.format_month_name(date.month, locale)} #{day_padded}, #{date.year}"
     else
       dgettext("account", "Never")
     end

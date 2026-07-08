@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Views.EventBadges
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   # Vertical rhythm for the bar band, in rem. The day number occupies the top
   # `@band_top`; each multi-day/all-day bar lane is `@lane_h` tall with the bar
@@ -135,6 +136,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
       |> assign(:chips, chips)
       |> assign(:is_today, is_today)
       |> assign(:is_current_month, is_current_month)
+      |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
     <div
@@ -146,7 +148,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.MonthView do
       role="button"
       tabindex="0"
       aria-label={
-        Calendar.strftime(@day, "%A, %B %-d") <>
+        "#{LocaleFormat.format_weekday_name(Date.day_of_week(@day), @locale, :full)}, #{LocaleFormat.format_month_name(@day.month, @locale)} #{@day.day}" <>
           ", " <>
           dngettext(
             "dashboard_calendar",

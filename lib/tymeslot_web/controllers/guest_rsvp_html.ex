@@ -6,6 +6,8 @@ defmodule TymeslotWeb.GuestRsvpHTML do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Helpers.LocaleFormat
+
   @doc "Landing page shown before the guest submits their RSVP (GET step)."
   attr :guest, :map, required: true
   attr :meeting, :map, required: true
@@ -179,8 +181,16 @@ defmodule TymeslotWeb.GuestRsvpHTML do
     tz = meeting.attendee_timezone || "Etc/UTC"
 
     case DateTime.shift_zone(meeting.start_time, tz) do
-      {:ok, dt} -> Calendar.strftime(dt, "%A, %-d %B %Y · %H:%M") <> " (#{tz})"
-      _error -> Calendar.strftime(meeting.start_time, "%A, %-d %B %Y · %H:%M UTC")
+      {:ok, dt} -> format_datetime(dt) <> " (#{tz})"
+      _error -> format_datetime(meeting.start_time) <> " UTC"
     end
+  end
+
+  defp format_datetime(dt) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    weekday = LocaleFormat.format_weekday_name(Date.day_of_week(dt), locale, :full)
+    month = LocaleFormat.format_month_name(dt.month, locale, :full)
+
+    "#{weekday}, #{dt.day} #{month} #{dt.year} · #{Calendar.strftime(dt, "%H:%M")}"
   end
 end

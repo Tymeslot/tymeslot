@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.HTML
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   @spec format_time_range(map(), String.t()) :: String.t()
   def format_time_range(event, fmt \\ "12h") do
@@ -130,8 +131,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.TimeFormatting do
   defp format_datetime(dt, "24h"), do: Calendar.strftime(dt, "%H:%M")
   defp format_datetime(dt, _fmt), do: Calendar.strftime(dt, "%-I:%M %p")
 
-  defp format_datetime_with_date(dt, "24h"), do: Calendar.strftime(dt, "%H:%M %b %-d")
-  defp format_datetime_with_date(dt, _fmt), do: Calendar.strftime(dt, "%-I:%M %p %b %-d")
+  defp format_datetime_with_date(dt, "24h") do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
+    "#{Calendar.strftime(dt, "%H:%M")} #{LocaleFormat.format_month_name(dt.month, locale, :short)} #{dt.day}"
+  end
+
+  defp format_datetime_with_date(dt, _fmt) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
+    "#{Calendar.strftime(dt, "%-I:%M %p")} " <>
+      "#{LocaleFormat.format_month_name(dt.month, locale, :short)} #{dt.day}"
+  end
 
   defp time_format(%{preferences: %{time_format: fmt}}), do: fmt
   defp time_format(_assigns), do: "12h"

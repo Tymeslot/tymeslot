@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   alias Tymeslot.Agenda.Entry
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :entry, Entry, required: true
   attr :timezone, :string, required: true
@@ -294,7 +295,12 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
 
   defp clock(datetime, tz), do: datetime |> local(tz) |> Calendar.strftime("%-I:%M %p")
 
-  defp long_date(date), do: Calendar.strftime(date, "%A, %-d %B %Y")
+  defp long_date(date) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    weekday = LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :full)
+    month = LocaleFormat.format_month_name(date.month, locale, :full)
+    "#{weekday}, #{date.day} #{month} #{date.year}"
+  end
 
   defp local(datetime, tz), do: DateTimeUtils.convert_to_timezone(datetime, tz)
 

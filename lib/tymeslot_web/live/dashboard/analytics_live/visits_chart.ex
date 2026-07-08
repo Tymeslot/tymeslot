@@ -16,6 +16,8 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Helpers.LocaleFormat
+
   @width 800
   @height 200
   @padding 24
@@ -164,7 +166,12 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive.VisitsChart do
   defp mid_point(_series), do: nil
 
   defp axis_label(nil), do: nil
-  defp axis_label(%{day: day}), do: Calendar.strftime(day, "%d %b")
+
+  defp axis_label(%{day: day}) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    day_num = String.pad_leading(to_string(day.day), 2, "0")
+    "#{day_num} #{LocaleFormat.format_month_name(day.month, locale, :short)}"
+  end
 
   defp max_visits([]), do: 1
   defp max_visits(series), do: max(1, Enum.max_by(series, & &1.visits).visits)

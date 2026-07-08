@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar.Reminder
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   # Reminders whose fire time is older than this are pruned from the feed.
   @stale_grace_ms 120_000
@@ -107,9 +108,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed do
 
   defp day_label(date, today) do
     cond do
-      Date.compare(date, today) == :eq -> dgettext("dashboard_calendar", "Today")
-      Date.compare(date, Date.add(today, 1)) == :eq -> dgettext("dashboard_calendar", "Tomorrow")
-      true -> Calendar.strftime(date, "%a %-d %b")
+      Date.compare(date, today) == :eq ->
+        dgettext("dashboard_calendar", "Today")
+
+      Date.compare(date, Date.add(today, 1)) == :eq ->
+        dgettext("dashboard_calendar", "Tomorrow")
+
+      true ->
+        locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
+        "#{LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :short)} " <>
+          "#{date.day} #{LocaleFormat.format_month_name(date.month, locale, :short)}"
     end
   end
 

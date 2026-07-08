@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.MeetingPayments
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
 
@@ -42,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
         </thead>
         <tbody>
           <tr :for={p <- @payments} class="border-b border-tymeslot-50">
-            <td class="p-2 text-token-sm">{Calendar.strftime(p.inserted_at, "%-d %b %Y")}</td>
+            <td class="p-2 text-token-sm">{format_payment_date(p.inserted_at)}</td>
             <td class="p-2 text-token-sm">{p.attendee_email}</td>
             <td class="p-2 text-token-sm">{p.meeting_type_name}</td>
             <td class="p-2 text-token-sm text-right">
@@ -71,6 +72,12 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable do
 
   defp connect_account_deleted?(%{deleted_at: %DateTime{}}), do: true
   defp connect_account_deleted?(_account), do: false
+
+  defp format_payment_date(inserted_at) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    month = LocaleFormat.format_month_name(inserted_at.month, locale, :short)
+    "#{inserted_at.day} #{month} #{inserted_at.year}"
+  end
 
   defp format_status("paid"), do: dgettext("dashboard_payments", "Paid")
 

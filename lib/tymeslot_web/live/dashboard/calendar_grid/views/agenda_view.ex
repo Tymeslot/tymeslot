@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :view, :atom, required: true
   attr :visible_days, :list, required: true
@@ -22,7 +23,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
 
   @spec agenda_view(map()) :: Phoenix.LiveView.Rendered.t()
   def agenda_view(assigns) do
-    assigns = assign(assigns, :groups, day_groups(assigns))
+    assigns =
+      assigns
+      |> assign(:groups, day_groups(assigns))
+      |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
     <div
@@ -45,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
       <ol :if={@groups != []} class="divide-y divide-tymeslot-100 animate-fade-in">
         <li :for={group <- @groups} class="px-3 md:px-4 py-3">
           <h3 class={"text-token-sm font-semibold mb-2 #{Helpers.day_header_class(group.date, @user_timezone)}"}>
-            <%= Calendar.strftime(group.date, "%a %-d %B") %>
+            <%= "#{LocaleFormat.format_weekday_name(Date.day_of_week(group.date), @locale, :short)} #{group.date.day} #{LocaleFormat.format_month_name(group.date.month, @locale)}" %>
           </h3>
           <ul class="flex flex-col gap-1">
             <li

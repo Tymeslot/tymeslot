@@ -16,7 +16,7 @@ msgstr ""
 msgid "Already refunded:"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:38
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:39
 #, elixir-autogen, elixir-format
 msgid "Amount"
 msgstr ""
@@ -26,7 +26,7 @@ msgstr ""
 msgid "Amount exceeds the remaining refundable balance."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:36
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:37
 #, elixir-autogen, elixir-format
 msgid "Attendee"
 msgstr ""
@@ -115,7 +115,7 @@ msgstr ""
 msgid "Currency updated. Paid event-type prices have been reset."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:35
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:36
 #, elixir-autogen, elixir-format
 msgid "Date"
 msgstr ""
@@ -148,7 +148,7 @@ msgstr ""
 msgid "Disconnected"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:81
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:88
 #, elixir-autogen, elixir-format
 msgid "Disputed"
 msgstr ""
@@ -158,7 +158,7 @@ msgstr ""
 msgid "Enter a valid refund amount."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:83
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:90
 #, elixir-autogen, elixir-format
 msgid "Failed"
 msgstr ""
@@ -188,12 +188,12 @@ msgstr ""
 msgid "Meeting payments require an upgraded plan."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:37
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:38
 #, elixir-autogen, elixir-format
 msgid "Meeting type"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:29
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:30
 #, elixir-autogen, elixir-format
 msgid "No payments yet."
 msgstr ""
@@ -208,7 +208,7 @@ msgstr ""
 msgid "Original charge:"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:75
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:82
 #, elixir-autogen, elixir-format
 msgid "Paid"
 msgstr ""
@@ -223,7 +223,7 @@ msgstr ""
 msgid "Partial refund"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:78
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:85
 #, elixir-autogen, elixir-format
 msgid "Partially refunded"
 msgstr ""
@@ -238,7 +238,7 @@ msgstr ""
 msgid "Payments"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:82
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:89
 #, elixir-autogen, elixir-format
 msgid "Pending"
 msgstr ""
@@ -258,12 +258,12 @@ msgstr ""
 msgid "Reason: %{reason}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:27
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:28
 #, elixir-autogen, elixir-format
 msgid "Recent payments"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:61
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:62
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:41
 #, elixir-autogen, elixir-format
 msgid "Refund"
@@ -290,7 +290,7 @@ msgid "Refund type"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex:27
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:80
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:87
 #, elixir-autogen, elixir-format
 msgid "Refunded"
 msgstr ""
@@ -320,7 +320,7 @@ msgstr ""
 msgid "Something went wrong while issuing the refund. Please try again."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:39
+#: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:40
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""

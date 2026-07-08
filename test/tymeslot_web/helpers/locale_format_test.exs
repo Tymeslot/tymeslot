@@ -130,6 +130,39 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     end
   end
 
+  describe "get_month_names/2 short format" do
+    test "returns 12 short English month names including Jan and Dec" do
+      months = LocaleFormat.get_month_names("en", :short)
+      assert length(months) == 12
+      assert "Jan" in months
+      assert "Dec" in months
+      assert Enum.at(months, 0) == "Jan"
+      assert Enum.at(months, 11) == "Dec"
+    end
+
+    test "returns 12 short German month names" do
+      months = LocaleFormat.get_month_names("de", :short)
+      assert length(months) == 12
+      assert Enum.at(months, 0) == "Jan"
+      assert Enum.at(months, 11) == "Dez"
+    end
+
+    test "short names differ from full names for a locale" do
+      assert LocaleFormat.get_month_names("de", :short) !=
+               LocaleFormat.get_month_names("de", :full)
+    end
+
+    test "defaults to full format when not specified" do
+      assert LocaleFormat.get_month_names("en") == LocaleFormat.get_month_names("en", :full)
+    end
+
+    test "falls back to English for unknown locale in short format" do
+      months = LocaleFormat.get_month_names("es", :short)
+      assert Enum.at(months, 0) == "Jan"
+      assert Enum.at(months, 11) == "Dec"
+    end
+  end
+
   describe "get_weekday_names/2" do
     test "returns English full weekday names" do
       weekdays = LocaleFormat.get_weekday_names("en", :full)
@@ -178,6 +211,39 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     test "handles edge case month numbers" do
       assert LocaleFormat.format_month_name(nil, "en") == ""
       assert LocaleFormat.format_month_name("invalid", "en") == ""
+    end
+  end
+
+  describe "format_month_name/3 with :short format" do
+    test "formats short month names in English" do
+      assert LocaleFormat.format_month_name(1, "en", :short) == "Jan"
+      assert LocaleFormat.format_month_name(12, "en", :short) == "Dec"
+    end
+
+    test "formats short month name in German" do
+      assert LocaleFormat.format_month_name(3, "de", :short) == "März"
+    end
+
+    test "formats full month name in German" do
+      assert LocaleFormat.format_month_name(1, "de", :full) == "Januar"
+    end
+
+    test "short differs from full for the same month and locale" do
+      short = LocaleFormat.format_month_name(1, "de", :short)
+      full = LocaleFormat.format_month_name(1, "de", :full)
+      assert short == "Jan"
+      assert full == "Januar"
+      assert short != full
+    end
+
+    test "returns empty string for invalid month numbers in short format" do
+      assert LocaleFormat.format_month_name(13, "en", :short) == ""
+      assert LocaleFormat.format_month_name(0, "de", :short) == ""
+    end
+
+    test "defaults to full format for back-compat when format omitted" do
+      assert LocaleFormat.format_month_name(1, "en") == "January"
+      assert LocaleFormat.format_month_name(1, "de") == "Januar"
     end
   end
 

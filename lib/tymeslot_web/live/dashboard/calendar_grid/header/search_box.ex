@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :search_term, :string, required: true
   attr :search_results, :list, required: true
@@ -112,16 +113,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Header.SearchBox do
   defp result_date_iso(_event, _tz), do: ""
 
   # Short "date · time-range" label for a search result row.
-  defp result_time_label(%{all_day: true, start_date: %Date{} = date}, _tz, _prefs),
-    do: Calendar.strftime(date, "%a %b %-d") <> " · " <> dgettext("dashboard_calendar", "All day")
+  defp result_time_label(%{all_day: true, start_date: %Date{} = date}, _tz, _prefs) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    short_date_label(date, locale) <> " · " <> dgettext("dashboard_calendar", "All day")
+  end
 
   defp result_time_label(%{start_at: %DateTime{} = start_at} = event, tz, prefs) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
     fmt = Helpers.time_format(prefs)
     local_date = start_at |> DateTime.shift_zone!(tz) |> DateTime.to_date()
 
-    Calendar.strftime(local_date, "%a %b %-d") <>
+    short_date_label(local_date, locale) <>
       " · " <> Helpers.format_time_range_in_tz(event, tz, fmt)
   end
 
   defp result_time_label(_event, _tz, _prefs), do: ""
+
+  # Localised "Wkd Mon D" short date label for a search result row.
+  defp short_date_label(date, locale) do
+    "#{LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :short)} " <>
+      "#{LocaleFormat.format_month_name(date.month, locale, :short)} #{date.day}"
+  end
 end

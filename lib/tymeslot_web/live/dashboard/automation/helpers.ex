@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   alias Tymeslot.Utils.FormHelpers
   alias Tymeslot.Webhooks
   alias Tymeslot.Webhooks.InputValidation, as: WebhookInputValidation
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -169,7 +170,10 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   def format_datetime(nil), do: dgettext("dashboard_automation", "Never")
 
   def format_datetime(%DateTime{} = dt) do
-    Calendar.strftime(dt, "%B %d, %Y at %I:%M %p")
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    month = LocaleFormat.format_month_name(dt.month, locale, :full)
+    day = String.pad_leading(to_string(dt.day), 2, "0")
+    "#{month} #{day}, #{dt.year} at #{Calendar.strftime(dt, "%I:%M %p")}"
   end
 
   @doc """

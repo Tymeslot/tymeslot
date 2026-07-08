@@ -16,10 +16,9 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   alias Tymeslot.Agenda
   alias Tymeslot.Agenda.Day
   alias Tymeslot.Agenda.Entry
-  # Aliased to avoid clashing with the stdlib `Calendar` used for strftime below.
+  # Aliased to disambiguate from the stdlib `Calendar` module.
   alias Tymeslot.Integrations.Calendar, as: CalendarContext
   alias Tymeslot.Integrations.Calendar.EventColour
-  alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Dashboard.AgendaDetailModal
   alias TymeslotWeb.Dashboard.AgendaTimeline
   alias TymeslotWeb.Dashboard.OnboardingChecklist
@@ -517,7 +516,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
     ~H"""
     <div class="flex gap-3">
       <div class="w-12 shrink-0 pt-1.5 text-right text-token-xs font-black tabular-nums text-turquoise-600">
-        {Calendar.strftime(DateTimeUtils.convert_to_timezone(@now, @timezone), "%-I:%M %p")}
+        {now_time_label(@now, @timezone)}
       </div>
       <.rail node={:now} />
       <div class="flex-1 py-1 text-token-xs font-black uppercase tracking-widest text-turquoise-600">

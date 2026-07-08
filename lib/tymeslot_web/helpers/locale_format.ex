@@ -43,92 +43,43 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
     end
   end
 
+  @month_names %{
+    "de" => %{
+      full:
+        ~w(Januar Februar März April Mai Juni Juli August September Oktober November Dezember),
+      short: ~w(Jan Feb März Apr Mai Jun Jul Aug Sep Okt Nov Dez)
+    },
+    "uk" => %{
+      full:
+        ~w(січня лютого березня квітня травня червня липня серпня вересня жовтня листопада грудня),
+      short: ~w(січ лют бер кві тра чер лип сер вер жов лис гру)
+    },
+    "fr" => %{
+      full:
+        ~w(janvier février mars avril mai juin juillet août septembre octobre novembre décembre),
+      short: ~w(janv. févr. mars avr. mai juin juil. août sept. oct. nov. déc.)
+    },
+    "it" => %{
+      full:
+        ~w(gennaio febbraio marzo aprile maggio giugno luglio agosto settembre ottobre novembre dicembre),
+      short: ~w(gen feb mar apr mag giu lug ago set ott nov dic)
+    }
+  }
+
+  @default_month_names %{
+    full:
+      ~w(January February March April May June July August September October November December),
+    short: ~w(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)
+  }
+
   @doc """
-  Returns localized month names (full).
+  Returns localized month names. Format can be `:full` (default) or `:short`.
   """
-  @spec get_month_names(String.t()) :: [String.t()]
-  def get_month_names(locale) do
-    case locale do
-      "de" ->
-        [
-          "Januar",
-          "Februar",
-          "März",
-          "April",
-          "Mai",
-          "Juni",
-          "Juli",
-          "August",
-          "September",
-          "Oktober",
-          "November",
-          "Dezember"
-        ]
-
-      "uk" ->
-        [
-          "січня",
-          "лютого",
-          "березня",
-          "квітня",
-          "травня",
-          "червня",
-          "липня",
-          "серпня",
-          "вересня",
-          "жовтня",
-          "листопада",
-          "грудня"
-        ]
-
-      "fr" ->
-        [
-          "janvier",
-          "février",
-          "mars",
-          "avril",
-          "mai",
-          "juin",
-          "juillet",
-          "août",
-          "septembre",
-          "octobre",
-          "novembre",
-          "décembre"
-        ]
-
-      "it" ->
-        [
-          "gennaio",
-          "febbraio",
-          "marzo",
-          "aprile",
-          "maggio",
-          "giugno",
-          "luglio",
-          "agosto",
-          "settembre",
-          "ottobre",
-          "novembre",
-          "dicembre"
-        ]
-
-      _other_locale ->
-        [
-          "January",
-          "February",
-          "March",
-          "April",
-          "May",
-          "June",
-          "July",
-          "August",
-          "September",
-          "October",
-          "November",
-          "December"
-        ]
-    end
+  @spec get_month_names(String.t(), :full | :short) :: [String.t()]
+  def get_month_names(locale, format \\ :full) do
+    @month_names
+    |> Map.get(locale, @default_month_names)
+    |> Map.fetch!(format)
   end
 
   @weekday_names %{
@@ -172,16 +123,19 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   end
 
   @doc """
-  Formats a month name based on month number (1-12) and locale.
+  Formats a month name based on month number (1-12), locale, and format.
+  Format can be `:full` (default) or `:short`.
   """
-  @spec format_month_name(1..12, String.t()) :: String.t()
-  def format_month_name(month_num, locale) when month_num in 1..12 do
-    month_names = get_month_names(locale)
+  @spec format_month_name(1..12, String.t(), :full | :short) :: String.t()
+  def format_month_name(month_num, locale, format \\ :full)
+
+  def format_month_name(month_num, locale, format) when month_num in 1..12 do
+    month_names = get_month_names(locale, format)
     Enum.at(month_names, month_num - 1)
   end
 
-  @spec format_month_name(integer(), String.t()) :: String.t()
-  def format_month_name(_invalid_month, _locale), do: ""
+  @spec format_month_name(integer(), String.t(), :full | :short) :: String.t()
+  def format_month_name(_invalid_month, _locale, _format), do: ""
 
   @doc """
   Formats a weekday name based on weekday number (1=Monday, 7=Sunday) and locale.

@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :selected_event, :map, required: true
   attr :integrations, :list, required: true
@@ -29,11 +30,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   @spec event_detail_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def event_detail_modal(assigns) do
     assigns =
-      assign(
-        assigns,
+      assigns
+      |> assign(
         :read_only_attendees,
         List.wrap(Map.get(assigns.selected_event, :attendees))
       )
+      |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
     <.modal
@@ -175,7 +177,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
               </span>
             </p>
             <p class="text-token-xs text-tymeslot-400 mt-0.5">
-              <%= Calendar.strftime(Helpers.event_display_date(@selected_event, @user_timezone), "%A, %B %-d") %>
+              <%= full_date_label(Helpers.event_display_date(@selected_event, @user_timezone), @locale) %>
             </p>
           </div>
         </div>
@@ -505,5 +507,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       </button>
     </div>
     """
+  end
+
+  # Localised "Weekday, Month Day" label for the event's display date.
+  defp full_date_label(date, locale) do
+    "#{LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :full)}, " <>
+      "#{LocaleFormat.format_month_name(date.month, locale)} #{date.day}"
   end
 end

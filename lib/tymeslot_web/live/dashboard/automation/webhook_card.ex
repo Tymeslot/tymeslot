@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
 
   alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Components.UI.StatusSwitch
+  alias TymeslotWeb.Dashboard.Automation.Helpers
 
   attr :webhook, :map, required: true
   attr :testing, :boolean, default: false
@@ -110,7 +111,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                 </svg>
                 <span>
                   {dgettext("dashboard_automation", "Last triggered: %{time}",
-                    time: format_datetime(@webhook.last_triggered_at)
+                    time: Helpers.format_datetime(@webhook.last_triggered_at)
                   )}
                   <%= if @webhook.last_status do %>
                     <span class={["ml-1", status_color(@webhook.last_status)]}>
@@ -246,10 +247,6 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
       </div>
     </div>
     """
-  end
-
-  defp format_datetime(%DateTime{} = dt) do
-    Calendar.strftime(dt, "%B %d, %Y at %I:%M %p")
   end
 
   defp status_color("success"), do: "text-green-600 font-bold"

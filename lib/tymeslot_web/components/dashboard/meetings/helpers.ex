@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   # Status helpers
   @spec past_meeting?(Ecto.Schema.t()) :: boolean()
@@ -58,8 +59,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
 
   @spec format_meeting_date(Ecto.Schema.t(), String.t()) :: String.t()
   def format_meeting_date(meeting, timezone) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
     local_time = DateTimeUtils.convert_to_timezone(meeting.start_time, timezone)
-    Calendar.strftime(local_time, "%B %d, %Y")
+    month = LocaleFormat.format_month_name(local_time.month, locale, :full)
+    day = String.pad_leading(to_string(local_time.day), 2, "0")
+    "#{month} #{day}, #{local_time.year}"
   end
 
   @spec format_meeting_time(Ecto.Schema.t(), String.t()) :: String.t()
