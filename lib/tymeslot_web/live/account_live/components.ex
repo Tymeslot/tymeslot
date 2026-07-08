@@ -4,6 +4,7 @@ defmodule TymeslotWeb.AccountLive.Components do
   Provides reusable components for email and password management.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.AccountLive.Forms
   alias TymeslotWeb.AccountLive.Helpers
@@ -26,7 +27,7 @@ defmodule TymeslotWeb.AccountLive.Components do
           />
         </svg>
       </div>
-      <h1 class="text-3xl font-bold text-tymeslot-800">Account Security</h1>
+      <h1 class="text-3xl font-bold text-tymeslot-800">{dgettext("account", "Account Security")}</h1>
     </div>
     """
   end
@@ -45,14 +46,18 @@ defmodule TymeslotWeb.AccountLive.Components do
     ~H"""
     <div class={card_classes(@is_social_user)}>
       <.card_header
-        title="Email Address"
+        title={dgettext("account", "Email Address")}
         current_value={@current_user.email}
         pending_email={@current_user.pending_email}
         is_social={@is_social_user}
         provider={@current_user.provider}
         show_form={@show_email_form}
         toggle_event="toggle_email_form"
-        button_text={if @show_email_form, do: "Cancel", else: "Change Email"}
+        button_text={
+          if @show_email_form,
+            do: dgettext("account", "Cancel"),
+            else: dgettext("account", "Change Email")
+        }
       />
 
       <%= if @current_user.pending_email do %>
@@ -83,22 +88,30 @@ defmodule TymeslotWeb.AccountLive.Components do
     ~H"""
     <div class={card_classes(@is_social_user)}>
       <.card_header
-        title="Password"
+        title={dgettext("account", "Password")}
         is_social={@is_social_user}
         provider={@current_user.provider}
         show_form={@show_password_form}
         toggle_event="toggle_password_form"
-        button_text={if @show_password_form, do: "Cancel", else: "Change Password"}
+        button_text={
+          if @show_password_form,
+            do: dgettext("account", "Cancel"),
+            else: dgettext("account", "Change Password")
+        }
         subtitle={
           if @is_social_user do
-            "Authentication is managed through #{String.capitalize(@current_user.provider)}"
+            dgettext("account", "Authentication is managed through %{provider}",
+              provider: String.capitalize(@current_user.provider)
+            )
           else
-            "Last changed: #{Helpers.format_last_password_change(@current_user)}"
+            dgettext("account", "Last changed: %{last_changed}",
+              last_changed: Helpers.format_last_password_change(@current_user)
+            )
           end
         }
         description={
           if @is_social_user do
-            "Password authentication is not available for social login accounts"
+            dgettext("account", "Password authentication is not available for social login accounts")
           else
             nil
           end
@@ -134,12 +147,12 @@ defmodule TymeslotWeb.AccountLive.Components do
         <h3 class="text-lg font-medium text-tymeslot-800">{@title}</h3>
         <%= if @current_value do %>
           <p class="text-sm text-tymeslot-600 mt-1">
-            Current email: <span class="font-medium text-tymeslot-800">{@current_value}</span>
+            {dgettext("account", "Current email:")} <span class="font-medium text-tymeslot-800">{@current_value}</span>
           </p>
         <% end %>
         <%= if @pending_email do %>
           <p class="text-sm text-amber-600 mt-1">
-            Pending change to: <span class="font-medium">{@pending_email}</span>
+            {dgettext("account", "Pending change to:")} <span class="font-medium">{@pending_email}</span>
           </p>
         <% end %>
         <%= if @subtitle do %>
@@ -191,7 +204,7 @@ defmodule TymeslotWeb.AccountLive.Components do
     ~H"""
     <div class="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10">
       <div class="bg-tymeslot-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap">
-        Managed by {String.capitalize(@provider)}
+        {dgettext("account", "Managed by %{provider}", provider: String.capitalize(@provider))}
         <div class="absolute top-full right-4 w-0 h-0 border-l-[6px] border-l-transparent border-t-[6px] border-t-tymeslot-900 border-r-[6px] border-r-transparent">
         </div>
       </div>
@@ -221,15 +234,15 @@ defmodule TymeslotWeb.AccountLive.Components do
         </div>
         <div class="ml-3 flex-1">
           <h3 class="text-sm font-medium text-amber-800">
-            Email Change Pending
+            {dgettext("account", "Email Change Pending")}
           </h3>
           <div class="mt-2 text-sm text-amber-700">
             <p>
-              A verification email has been sent to <strong>{@pending_email}</strong>
+              {dgettext("account", "A verification email has been sent to")} <strong>{@pending_email}</strong>
             </p>
             <%= if @email_change_sent_at do %>
               <p class="mt-1 text-xs text-amber-600">
-                Sent {format_relative_time(@email_change_sent_at)}
+                {dgettext("account", "Sent %{time}", time: format_relative_time(@email_change_sent_at))}
               </p>
             <% end %>
           </div>
@@ -238,7 +251,7 @@ defmodule TymeslotWeb.AccountLive.Components do
               phx-click="cancel_email_change"
               class="text-sm font-medium text-amber-600 hover:text-amber-500"
             >
-              Cancel email change
+              {dgettext("account", "Cancel email change")}
             </button>
           </div>
         </div>
@@ -252,15 +265,24 @@ defmodule TymeslotWeb.AccountLive.Components do
     diff = DateTime.diff(DateTime.utc_now(), datetime)
 
     cond do
-      diff < 60 -> "just now"
-      diff < 3600 -> unit_ago(div(diff, 60), "minute")
-      diff < 86_400 -> unit_ago(div(diff, 3600), "hour")
-      true -> unit_ago(div(diff, 86_400), "day")
+      diff < 60 -> dgettext("account", "just now")
+      diff < 3600 -> minutes_ago(div(diff, 60))
+      diff < 86_400 -> hours_ago(div(diff, 3600))
+      true -> days_ago(div(diff, 86_400))
     end
   end
 
-  defp unit_ago(1, unit), do: "1 #{unit} ago"
-  defp unit_ago(n, unit), do: "#{n} #{unit}s ago"
+  defp minutes_ago(count) do
+    dngettext("account", "%{count} minute ago", "%{count} minutes ago", count, count: count)
+  end
+
+  defp hours_ago(count) do
+    dngettext("account", "%{count} hour ago", "%{count} hours ago", count, count: count)
+  end
+
+  defp days_ago(count) do
+    dngettext("account", "%{count} day ago", "%{count} days ago", count, count: count)
+  end
 
   defp card_classes(is_social) do
     if is_social do

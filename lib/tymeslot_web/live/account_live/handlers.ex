@@ -5,6 +5,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   """
 
   use TymeslotWeb, :verified_routes
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
 
@@ -136,7 +137,10 @@ defmodule TymeslotWeb.AccountLive.Handlers do
        socket
        |> LiveView.put_flash(
          :info,
-         "Your password has been changed. Please sign in again with your new password."
+         dgettext(
+           "account",
+           "Your password has been changed. Please sign in again with your new password."
+         )
        )
        |> LiveView.redirect(to: ~p"/auth/login")}
     else
@@ -176,8 +180,15 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     provider = String.capitalize(socket.assigns.current_user.provider || @social_provider_default)
 
     case field do
-      :email -> "Email changes are managed through your #{provider} account"
-      :password -> "Password authentication is not available for #{provider} login"
+      :email ->
+        dgettext("account", "Email changes are managed through your %{provider} account",
+          provider: provider
+        )
+
+      :password ->
+        dgettext("account", "Password authentication is not available for %{provider} login",
+          provider: provider
+        )
     end
   end
 
@@ -208,7 +219,11 @@ defmodule TymeslotWeb.AccountLive.Handlers do
         {:error, %{new_password_confirmation: confirmation_msg}}
 
       {:error, :same_password} ->
-        {:error, %{new_password: "New password must be different from current password"}}
+        {:error,
+         %{
+           new_password:
+             dgettext("account", "New password must be different from current password")
+         }}
     end
   end
 

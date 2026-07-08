@@ -4,6 +4,7 @@ defmodule TymeslotWeb.AccountLive do
   Handles email and password changes with modular component architecture.
   """
   use TymeslotWeb, :live_view
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.AccountLive.{Handlers, Helpers}
 
@@ -13,7 +14,7 @@ defmodule TymeslotWeb.AccountLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "Account Settings")
+     |> assign(:page_title, dgettext("account", "Account Settings"))
      |> Helpers.init_form_state()}
   end
 
@@ -36,7 +37,7 @@ defmodule TymeslotWeb.AccountLive do
               class="inline-flex items-center space-x-2 btn-secondary text-sm px-4 py-2"
             >
               <.icon name="hero-arrow-left" class="w-4 h-4" />
-              <span>Back to Dashboard</span>
+              <span>{dgettext("account", "Back to Dashboard")}</span>
             </.link>
             
     <%!-- User dropdown --%>

@@ -4,6 +4,7 @@ defmodule TymeslotWeb.AccountLive.Forms do
   Provides reusable form fields and submission buttons.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
   alias Tymeslot.Validation.Constraints
   import TymeslotWeb.Components.CoreComponents
 
@@ -20,8 +21,8 @@ defmodule TymeslotWeb.AccountLive.Forms do
       <.input
         name="email_form[new_email]"
         type="email"
-        label="New Email Address"
-        placeholder="your.new@email.com"
+        label={dgettext("account", "New Email Address")}
+        placeholder={dgettext("account", "your.new@email.com")}
         errors={Map.get(@errors, :new_email) || []}
         required
         icon="hero-envelope"
@@ -30,15 +31,19 @@ defmodule TymeslotWeb.AccountLive.Forms do
       <.input
         name="email_form[current_password]"
         type="password"
-        label="Current Password"
-        placeholder="Enter your current password"
+        label={dgettext("account", "Current Password")}
+        placeholder={dgettext("account", "Enter your current password")}
         errors={Map.get(@errors, :current_password) || []}
         required
         icon="hero-lock-closed"
       />
 
       <.form_errors errors={Map.get(@errors, :base)} />
-      <.submit_button text="Update Email" loading_text="Updating Email" saving={@saving} />
+      <.submit_button
+        text={dgettext("account", "Update Email")}
+        loading_text={dgettext("account", "Updating Email")}
+        saving={@saving}
+      />
     </form>
     """
   end
@@ -56,8 +61,8 @@ defmodule TymeslotWeb.AccountLive.Forms do
       <.input
         name="password_form[current_password]"
         type="password"
-        label="Current Password"
-        placeholder="Enter your current password"
+        label={dgettext("account", "Current Password")}
+        placeholder={dgettext("account", "Enter your current password")}
         errors={Map.get(@errors, :current_password) || []}
         required
         icon="hero-lock-closed"
@@ -66,8 +71,8 @@ defmodule TymeslotWeb.AccountLive.Forms do
       <.input
         name="password_form[new_password]"
         type="password"
-        label="New Password"
-        placeholder="At least 8 characters"
+        label={dgettext("account", "New Password")}
+        placeholder={dgettext("account", "At least 8 characters")}
         errors={Map.get(@errors, :new_password) || []}
         minlength={Constraints.password_length_range().first}
         required
@@ -77,8 +82,8 @@ defmodule TymeslotWeb.AccountLive.Forms do
       <.input
         name="password_form[new_password_confirmation]"
         type="password"
-        label="Confirm New Password"
-        placeholder="Confirm your new password"
+        label={dgettext("account", "Confirm New Password")}
+        placeholder={dgettext("account", "Confirm your new password")}
         errors={Map.get(@errors, :new_password_confirmation) || []}
         minlength={Constraints.password_length_range().first}
         required
@@ -86,7 +91,11 @@ defmodule TymeslotWeb.AccountLive.Forms do
       />
 
       <.form_errors errors={Map.get(@errors, :base)} />
-      <.submit_button text="Update Password" loading_text="Updating Password" saving={@saving} />
+      <.submit_button
+        text={dgettext("account", "Update Password")}
+        loading_text={dgettext("account", "Updating Password")}
+        saving={@saving}
+      />
     </form>
     """
   end

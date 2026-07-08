@@ -4,6 +4,8 @@ defmodule TymeslotWeb.AccountLive.ErrorFormatter do
   Converts various error formats into consistent UI-friendly format.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @doc """
   Formats errors from various sources into consistent format.
   """
@@ -20,7 +22,7 @@ defmodule TymeslotWeb.AccountLive.ErrorFormatter do
   end
 
   def format(:rate_limited) do
-    %{base: ["Too many attempts. Please try again later."]}
+    %{base: [dgettext("account", "Too many attempts. Please try again later.")]}
   end
 
   def format({:error, message}) when is_binary(message) do
@@ -35,7 +37,7 @@ defmodule TymeslotWeb.AccountLive.ErrorFormatter do
     format_validation_errors(errors)
   end
 
-  def format(_other), do: %{base: ["An unexpected error occurred"]}
+  def format(_other), do: %{base: [dgettext("account", "An unexpected error occurred")]}
 
   defp field_for("Current password is incorrect"), do: :current_password
 
