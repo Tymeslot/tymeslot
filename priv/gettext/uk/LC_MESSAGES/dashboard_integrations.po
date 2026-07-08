@@ -362,7 +362,7 @@ msgid "Failed to reorder meeting types"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:141
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Failed to update integration"
 msgstr ""
 
@@ -816,7 +816,7 @@ msgid "API Key"
 msgstr ""
 
 #: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:185
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Failed to connect %{service}. Please try again."
 msgstr ""
 
@@ -836,7 +836,7 @@ msgid "My MiroTalk"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex:51
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "My Video Integration"
 msgstr ""
 
@@ -846,7 +846,7 @@ msgid "Your API key"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:147
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "custom link"
 msgstr ""
 

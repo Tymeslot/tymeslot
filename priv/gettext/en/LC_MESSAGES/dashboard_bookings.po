@@ -317,7 +317,7 @@ msgid "Send a reschedule request to"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:132
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Sending..."
 msgstr ""
 

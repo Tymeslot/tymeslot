@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Helpers.LocaleCompletenessTest do
             "gettext",
             unquote(locale),
             "LC_MESSAGES",
-            "default.po"
+            "booking.po"
           ])
 
         assert File.exists?(po_path),

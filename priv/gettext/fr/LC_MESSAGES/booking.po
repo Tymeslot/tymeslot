@@ -1239,9 +1239,9 @@ msgid "Payments are not available for this booking. Please contact the host."
 msgstr ""
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:50
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Please fill in all required fields before submitting."
-msgstr "Veuillez remplir tous les champs obligatoires"
+msgstr ""
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:59
 #, elixir-autogen, elixir-format

@@ -1752,9 +1752,9 @@ msgid "You can change your response any time using the links above."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:167
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You're invited"
-msgstr "Hai ricevuto un invito"
+msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:180
 #, elixir-autogen, elixir-format
@@ -1762,9 +1762,9 @@ msgid "You're invited - %{date} with %{name}"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:295
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You're invited!"
-msgstr "Hai ricevuto un invito"
+msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:168
 #, elixir-autogen, elixir-format

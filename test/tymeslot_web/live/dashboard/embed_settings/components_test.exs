@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
       }
 
       html = render_component(&SecuritySection.security_section/1, assigns)
-      assert html =~ "Security & Domain Control"
+      assert html =~ "Security &amp; Domain Control"
       assert html =~ "Add Allowed Domain"
       assert html =~ "Disabled"
     end
@@ -82,7 +82,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
       }
 
       html = render_component(&SecuritySection.security_section/1, assigns)
-      assert html =~ "Security & Domain Control"
+      assert html =~ "Security &amp; Domain Control"
       assert html =~ "Add Allowed Domain"
       assert html =~ "example.com"
       assert html =~ "Restricted"
@@ -95,7 +95,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
       }
 
       html = render_component(&SecuritySection.security_section/1, assigns)
-      assert html =~ "Security & Domain Control"
+      assert html =~ "Security &amp; Domain Control"
       assert html =~ "Disabled"
     end
   end
