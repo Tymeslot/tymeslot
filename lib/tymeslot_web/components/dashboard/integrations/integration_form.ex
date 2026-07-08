@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.IntegrationForm do
   Provides consistent form handling and reduces code duplication.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -34,7 +35,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.IntegrationForm do
       <%= if @provider_info do %>
         <div class="mb-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
           <div class="text-sm text-blue-200">
-            <strong>Provider:</strong> {@provider_info}
+            <strong>{dgettext("dashboard_integrations", "Provider:")}</strong> {@provider_info}
           </div>
         </div>
       <% end %>
@@ -55,7 +56,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.IntegrationForm do
             phx-target={@target}
             class="btn btn-secondary"
           >
-            Cancel
+            {dgettext("dashboard_integrations", "Cancel")}
           </button>
           <.submit_button saving={@saving} submit_text={@submit_text} />
         </div>
@@ -77,10 +78,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.IntegrationForm do
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             />
           </svg>
-          Adding...
+          {dgettext("dashboard_integrations", "Adding...")}
         </span>
       <% else %>
-        {@submit_text || "Add Integration"}
+        {@submit_text || dgettext("dashboard_integrations", "Add Integration")}
       <% end %>
     </button>
     """

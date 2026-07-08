@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   LiveComponent for managing video integrations in the dashboard.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.Monitor
@@ -173,7 +174,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
           if is_nil(provider) do
             {:noreply,
              socket
-             |> assign(:form_errors, %{base: "Please select a provider"})
+             |> assign(:form_errors, %{
+               base: dgettext("dashboard_integrations", "Please select a provider")
+             })
              |> assign(:saving, false)}
           else
             handle_create_result(
@@ -208,7 +211,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
                   {:noreply, redirect(socket, external: url)}
 
                 {:error, _reason} ->
-                  notify_parent({:flash, {:error, "Failed to reconnect. Please try again."}})
+                  notify_parent(
+                    {:flash,
+                     {:error,
+                      dgettext("dashboard_integrations", "Failed to reconnect. Please try again.")}}
+                  )
+
                   {:noreply, socket}
               end
 
@@ -230,7 +238,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
         integration_id ->
           case Video.toggle_integration(user_id, integration_id) do
             {:ok, _result} ->
-              notify_parent({:flash, {:info, "Integration status updated"}})
+              notify_parent(
+                {:flash,
+                 {:info, dgettext("dashboard_integrations", "Integration status updated")}}
+              )
+
               notify_parent({:integration_updated, :video})
               {:noreply, load_integrations(socket)}
 
@@ -238,13 +250,21 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
               notify_parent(
                 {:flash,
                  {:error,
-                  "Cannot reactivate — another active integration already uses this account"}}
+                  dgettext(
+                    "dashboard_integrations",
+                    "Cannot reactivate — another active integration already uses this account"
+                  )}}
               )
 
               {:noreply, socket}
 
             {:error, _reason} ->
-              notify_parent({:flash, {:error, "Failed to update integration status"}})
+              notify_parent(
+                {:flash,
+                 {:error,
+                  dgettext("dashboard_integrations", "Failed to update integration status")}}
+              )
+
               {:noreply, socket}
           end
       end
@@ -286,14 +306,27 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
         notify_parent({:flash, {:error, reason}})
 
       {:error, reason} ->
-        notify_parent({:flash, {:error, "Connection test failed: #{inspect(reason)}"}})
+        notify_parent(
+          {:flash,
+           {:error,
+            dgettext("dashboard_integrations", "Connection test failed: %{reason}",
+              reason: inspect(reason)
+            )}}
+        )
     end
 
     {:noreply, assign(socket, :testing_connection, nil)}
   end
 
   def handle_async(:test_connection, {:exit, reason}, socket) do
-    notify_parent({:flash, {:error, "Connection test failed unexpectedly: #{inspect(reason)}"}})
+    notify_parent(
+      {:flash,
+       {:error,
+        dgettext("dashboard_integrations", "Connection test failed unexpectedly: %{reason}",
+          reason: inspect(reason)
+        )}}
+    )
+
     {:noreply, assign(socket, :testing_connection, nil)}
   end
 
@@ -302,13 +335,17 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     ~H"""
     <div class="space-y-10 pb-20">
       <div class="flex items-center justify-between gap-4 flex-wrap">
-        <.section_header icon="hero-video-camera" title="Video Integration" />
+        <.section_header
+          icon="hero-video-camera"
+          title={dgettext("dashboard_integrations", "Video Integration")}
+        />
         <button
           phx-click="show_picker"
           phx-target={@myself}
           class="inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600 shrink-0"
         >
-          <.icon name="hero-plus" class="w-4 h-4" /> Connect a video provider
+          <.icon name="hero-plus" class="w-4 h-4" />
+          {dgettext("dashboard_integrations", "Connect a video provider")}
         </button>
       </div>
 
@@ -320,18 +357,21 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
               <.icon name="hero-video-camera" class="h-7 w-7" />
             </div>
             <h3 class="text-token-lg font-semibold text-tymeslot-800">
-              No video providers connected yet
+              {dgettext("dashboard_integrations", "No video providers connected yet")}
             </h3>
             <p class="mx-auto mt-1 max-w-md text-token-sm text-tymeslot-500">
-              Connect one so online meetings get a video link added automatically when
-              they're booked.
+              {dgettext(
+                "dashboard_integrations",
+                "Connect one so online meetings get a video link added automatically when they're booked."
+              )}
             </p>
             <button
               phx-click="show_picker"
               phx-target={@myself}
               class="mt-5 inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600"
             >
-              <.icon name="hero-plus" class="w-4 h-4" /> Connect a video provider
+              <.icon name="hero-plus" class="w-4 h-4" />
+              {dgettext("dashboard_integrations", "Connect a video provider")}
             </button>
           </div>
         <% else %>
@@ -343,7 +383,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
             <%= if active_integrations != [] do %>
               <div class="space-y-3">
                 <%= if show_section_headers do %>
-                  <h3 class="text-lg font-bold text-turquoise-800">Active Video Integrations</h3>
+                  <h3 class="text-lg font-bold text-turquoise-800">
+                    {dgettext("dashboard_integrations", "Active Video Integrations")}
+                  </h3>
                 <% end %>
 
                 <%= for integration <- active_integrations do %>
@@ -361,7 +403,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
             <%= if inactive_integrations != [] do %>
               <div class="space-y-3">
                 <%= if show_section_headers do %>
-                  <h3 class="text-lg font-semibold text-tymeslot-600">Inactive Video Integrations</h3>
+                  <h3 class="text-lg font-semibold text-tymeslot-600">
+                    {dgettext("dashboard_integrations", "Inactive Video Integrations")}
+                  </h3>
                 <% end %>
 
                 <%= for integration <- inactive_integrations do %>
@@ -380,8 +424,13 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
         <ProviderPickerModal.provider_picker_modal
           id="video-provider-picker"
           show={@show_picker}
-          title="Connect a video provider"
-          subtitle="Add a video link to online meetings automatically when they're booked."
+          title={dgettext("dashboard_integrations", "Connect a video provider")}
+          subtitle={
+            dgettext(
+              "dashboard_integrations",
+              "Add a video link to online meetings automatically when they're booked."
+            )
+          }
           target={@myself}
           on_cancel={JS.push("hide_picker", target: @myself)}
           groups={picker_groups(@available_video_providers, @integrations)}
@@ -433,7 +482,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   # Private functions
 
   defp handle_create_result({:ok, _integration}, socket) do
-    notify_parent({:flash, {:info, "Video integration added successfully"}})
+    notify_parent(
+      {:flash,
+       {:info, dgettext("dashboard_integrations", "Video integration added successfully")}}
+    )
+
     notify_parent({:integration_added, :video})
 
     {:noreply,
@@ -455,7 +508,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:noreply,
      socket
      |> assign(:form_errors, %{
-       base: "A video integration with this configuration already exists"
+       base:
+         dgettext(
+           "dashboard_integrations",
+           "A video integration with this configuration already exists"
+         )
      })
      |> assign(:saving, false)}
   end

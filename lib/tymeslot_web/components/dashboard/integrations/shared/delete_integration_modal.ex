@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
   """
 
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Video
@@ -33,7 +34,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
          |> assign(:integration_id, integration_id)}
 
       {:error, _reason} ->
-        Flash.error("Invalid integration ID")
+        Flash.error(dgettext("dashboard_integrations", "Invalid integration ID"))
         {:noreply, socket}
     end
   end
@@ -51,7 +52,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
     # Guard against nil or invalid integration_id
     case socket.assigns.integration_id do
       nil ->
-        Flash.error("No integration selected for deletion")
+        Flash.error(dgettext("dashboard_integrations", "No integration selected for deletion"))
 
         {:noreply,
          socket
@@ -84,7 +85,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
 
             send_update(parent_component_module, id: parent_component_id)
 
-            Flash.info("Integration deleted successfully")
+            Flash.info(dgettext("dashboard_integrations", "Integration deleted successfully"))
 
             {:noreply,
              socket
@@ -92,7 +93,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
              |> assign(:integration_id, nil)}
 
           {:error, :not_found} ->
-            Flash.error("Integration not found. It may have already been deleted.")
+            Flash.error(
+              dgettext(
+                "dashboard_integrations",
+                "Integration not found. It may have already been deleted."
+              )
+            )
 
             {:noreply,
              socket
@@ -100,12 +106,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
              |> assign(:integration_id, nil)}
 
           {:error, _reason} ->
-            Flash.error("Failed to delete integration")
+            Flash.error(dgettext("dashboard_integrations", "Failed to delete integration"))
             {:noreply, socket}
         end
 
       _other ->
-        Flash.error("Invalid integration ID")
+        Flash.error(dgettext("dashboard_integrations", "Invalid integration ID"))
 
         {:noreply,
          socket
@@ -134,18 +140,25 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
               />
             </svg>
-            Delete {format_integration_type(@integration_type)} Integration
+            {dgettext("dashboard_integrations", "Delete %{type} Integration",
+              type: format_integration_type(@integration_type)
+            )}
           </div>
         </:header>
         <div class="space-y-4">
           <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-            Are you sure you want to delete this {format_integration_type(@integration_type)
-            |> String.downcase()} integration?
+            {dgettext(
+              "dashboard_integrations",
+              "Are you sure you want to delete this %{type} integration?",
+              type: format_integration_type(@integration_type) |> String.downcase()
+            )}
           </p>
           <p class="text-tymeslot-500 font-medium">
-            This action cannot be undone and will remove all associated {format_integration_data(
-              @integration_type
-            )}.
+            {dgettext(
+              "dashboard_integrations",
+              "This action cannot be undone and will remove all associated %{data}.",
+              data: format_integration_data(@integration_type)
+            )}
           </p>
         </div>
         <:footer>
@@ -154,13 +167,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
               variant={:secondary}
               phx-click={JS.push("hide", target: @myself)}
             >
-              Cancel
+              {dgettext("dashboard_integrations", "Cancel")}
             </TymeslotWeb.Components.CoreComponents.action_button>
             <TymeslotWeb.Components.CoreComponents.action_button
               variant={:danger}
               phx-click={JS.push("confirm", target: @myself)}
             >
-              Delete Integration
+              {dgettext("dashboard_integrations", "Delete Integration")}
             </TymeslotWeb.Components.CoreComponents.action_button>
           </div>
         </:footer>
@@ -177,11 +190,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
   defp get_parent_component_id(:calendar), do: "calendar-settings"
   defp get_parent_component_id(:video), do: "video-settings"
 
-  defp format_integration_type(:calendar), do: "Calendar"
-  defp format_integration_type(:video), do: "Video"
+  defp format_integration_type(:calendar), do: dgettext("dashboard_integrations", "Calendar")
+  defp format_integration_type(:video), do: dgettext("dashboard_integrations", "Video")
 
-  defp format_integration_data(:calendar), do: "calendar data"
-  defp format_integration_data(:video), do: "video conferencing configuration"
+  defp format_integration_data(:calendar), do: dgettext("dashboard_integrations", "calendar data")
+
+  defp format_integration_data(:video),
+    do: dgettext("dashboard_integrations", "video conferencing configuration")
 
   # Safe integer parsing that handles invalid input gracefully
   defp parse_integration_id(id) when is_integer(id), do: {:ok, id}

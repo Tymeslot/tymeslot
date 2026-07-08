@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav do
   """
   use Phoenix.Component
   use TymeslotWeb, :verified_routes
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
 
@@ -43,7 +44,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav do
             class={["h-1.5 w-1.5 rounded-token-full", UIComponents.dot_classes(tab.status)]}
             aria-hidden="true"
           />
-          <span class="sr-only">{tab.status} — needs attention</span>
+          <span class="sr-only">
+            {dgettext("dashboard_integrations", "%{status} — needs attention", status: tab.status)}
+          </span>
         </span>
       </.link>
     </div>

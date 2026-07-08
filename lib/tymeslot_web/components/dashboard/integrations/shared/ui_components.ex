@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   Reduces code duplication across calendar and video integration configs.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
   Renders a close button (red X) in the top-right corner.
@@ -28,7 +29,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
         "hover:bg-red-50 rounded-md transition-all duration-200",
         "focus:outline-hidden focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
       ]}
-      title="Close"
+      title={dgettext("dashboard_integrations", "Close")}
     >
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -39,7 +40,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
         />
       </svg>
       <span class="text-sm font-medium text-red-500 group-hover:text-red-700 transition-colors duration-200">
-        Close
+        {dgettext("dashboard_integrations", "Close")}
       </span>
     </button>
     """
@@ -147,7 +148,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
           d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
         />
       </svg>
-      Connection issues
+      {dgettext("dashboard_integrations", "Connection issues")}
     </span>
     """
   end
@@ -167,8 +168,17 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   @spec no_calendars_badge(map()) :: Phoenix.LiveView.Rendered.t()
   def no_calendars_badge(assigns) do
     ~H"""
-    <span class={@class} title="No calendars selected — nothing will sync until you pick at least one.">
-      <.icon name="hero-calendar-mini" class="w-3 h-3 shrink-0" /> No calendars selected
+    <span
+      class={@class}
+      title={
+        dgettext(
+          "dashboard_integrations",
+          "No calendars selected — nothing will sync until you pick at least one."
+        )
+      }
+    >
+      <.icon name="hero-calendar-mini" class="w-3 h-3 shrink-0" />
+      {dgettext("dashboard_integrations", "No calendars selected")}
     </span>
     """
   end

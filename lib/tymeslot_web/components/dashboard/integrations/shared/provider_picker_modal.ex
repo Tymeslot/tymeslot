@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerMod
   owned by the parent settings LiveComponent.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.Icons.ProviderIcon
 
@@ -72,7 +73,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerMod
               phx-click={@back_event}
               phx-target={@target}
               class="flex h-9 w-9 shrink-0 items-center justify-center rounded-token-lg bg-tymeslot-50 text-tymeslot-600 transition-colors hover:bg-tymeslot-100"
-              aria-label="Back to providers"
+              aria-label={dgettext("dashboard_integrations", "Back to providers")}
             >
               <.icon name="hero-arrow-left" class="h-5 w-5" />
             </button>
@@ -132,7 +133,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerMod
             :if={@provider.connected?}
             class="shrink-0 rounded-token-sm bg-turquoise-50 px-1.5 py-0.5 text-token-2xs font-semibold text-turquoise-700"
           >
-            Connected
+            {dgettext("dashboard_integrations", "Connected")}
           </span>
         </div>
         <p :if={@provider.description} class="truncate text-token-xs text-tymeslot-500">

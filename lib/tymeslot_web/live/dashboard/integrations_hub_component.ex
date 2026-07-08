@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   @moduledoc "Unified integrations dashboard: Calendars, Video, Payments tabs."
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav
 
@@ -77,13 +78,13 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
     [
       %{
         id: :calendars,
-        label: "Calendars",
+        label: dgettext("dashboard_integrations", "Calendars"),
         count: count_badge(calendars),
         status: worst_status(for i <- attention, i.tab == :calendars, do: i)
       },
       %{
         id: :video,
-        label: "Video",
+        label: dgettext("dashboard_integrations", "Video"),
         count: count_badge(videos),
         status: worst_status(for i <- attention, i.tab == :video, do: i)
       }
@@ -96,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
     do: [
       %{
         id: :payments,
-        label: "Payments",
+        label: dgettext("dashboard_integrations", "Payments"),
         count: nil,
         status: worst_status(for i <- attention, i.tab == :payments, do: i)
       }
@@ -128,10 +129,28 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
 
     case HealthCheck.attention_status(integration, health) do
       :needs_reauth ->
-        [%{tab: tab, severity: :warning, message: "#{integration.name} needs reconnecting."}]
+        [
+          %{
+            tab: tab,
+            severity: :warning,
+            message:
+              dgettext("dashboard_integrations", "%{name} needs reconnecting.",
+                name: integration.name
+              )
+          }
+        ]
 
       :unhealthy ->
-        [%{tab: tab, severity: :warning, message: "#{integration.name} stopped syncing."}]
+        [
+          %{
+            tab: tab,
+            severity: :warning,
+            message:
+              dgettext("dashboard_integrations", "%{name} stopped syncing.",
+                name: integration.name
+              )
+          }
+        ]
 
       _no_attention ->
         []
@@ -139,11 +158,21 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   end
 
   defp payment_attention(:restricted),
-    do: [%{tab: :payments, severity: :error, message: "Your Stripe account is restricted."}]
+    do: [
+      %{
+        tab: :payments,
+        severity: :error,
+        message: dgettext("dashboard_integrations", "Your Stripe account is restricted.")
+      }
+    ]
 
   defp payment_attention(:pending_review),
     do: [
-      %{tab: :payments, severity: :warning, message: "Stripe is still reviewing your account."}
+      %{
+        tab: :payments,
+        severity: :warning,
+        message: dgettext("dashboard_integrations", "Stripe is still reviewing your account.")
+      }
     ]
 
   defp payment_attention(:incomplete),
@@ -151,7 +180,8 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
       %{
         tab: :payments,
         severity: :warning,
-        message: "Finish connecting Stripe to accept payments."
+        message:
+          dgettext("dashboard_integrations", "Finish connecting Stripe to accept payments.")
       }
     ]
 
@@ -171,14 +201,16 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   # Items are sorted worst-first, so the head carries the target tab.
   defp attention_headline(attention) do
     count = length(attention)
-    "#{count} #{connection_word(count)} #{needs_word(count)} attention — #{hd(attention).message}"
+
+    dngettext(
+      "dashboard_integrations",
+      "%{count} connection needs attention — %{message}",
+      "%{count} connections need attention — %{message}",
+      count,
+      count: count,
+      message: hd(attention).message
+    )
   end
-
-  defp connection_word(1), do: "connection"
-  defp connection_word(_count), do: "connections"
-
-  defp needs_word(1), do: "needs"
-  defp needs_word(_count), do: "need"
 
   # `?tab=payments` is only honoured when the host may access payments;
   # otherwise it falls back to calendars rather than rendering a gated tab.
@@ -194,7 +226,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
   def render(assigns) do
     ~H"""
     <div id="integrations-hub" class="space-y-8 pb-20">
-      <.section_header title="Integrations" />
+      <.section_header title={dgettext("dashboard_integrations", "Integrations")} />
 
       <%!--
         Aggregated attention banner: one line summarising the worst issue
@@ -207,7 +239,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
           patch={~p"/dashboard/integrations?tab=#{hd(@attention).tab}"}
           class="font-semibold underline hover:no-underline"
         >
-          Review
+          {dgettext("dashboard_integrations", "Review")}
         </.link>
       </.info_box>
 

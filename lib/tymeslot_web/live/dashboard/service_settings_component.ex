@@ -91,7 +91,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     type = Enum.find(socket.assigns.meeting_types, &(&1.id == String.to_integer(id)))
 
     if is_nil(type) do
-      Flash.error("Meeting type not found")
+      Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
       {:noreply, socket}
     else
       form_data = %{
@@ -217,7 +217,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     if type do
       {:noreply, ModalHook.show_modal(socket, :delete_meeting_type, type)}
     else
-      Flash.error("Meeting type not found")
+      Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
       {:noreply, socket}
     end
   end
@@ -234,11 +234,11 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
         case MeetingTypes.delete_meeting_type(type) do
           {:ok, _result} ->
             send(self(), {:meeting_type_changed})
-            Flash.info("Meeting type deleted")
+            Flash.info(dgettext("dashboard_integrations", "Meeting type deleted"))
             {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
 
           {:error, _reason} ->
-            Flash.error("Failed to delete meeting type")
+            Flash.error(dgettext("dashboard_integrations", "Failed to delete meeting type"))
             {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
         end
       end)
@@ -270,12 +270,12 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       case MeetingTypes.reorder_meeting_types(user_id, meeting_type_ids) do
         {:ok, _result} ->
           send(self(), {:meeting_type_changed})
-          Flash.info("Meeting types reordered")
+          Flash.info(dgettext("dashboard_integrations", "Meeting types reordered"))
           {:noreply, socket}
 
         {:error, reason} ->
           Logger.error("Failed to reorder meeting types", reason: inspect(reason))
-          Flash.error("Failed to reorder meeting types")
+          Flash.error(dgettext("dashboard_integrations", "Failed to reorder meeting types"))
           {:noreply, socket}
       end
     end)
@@ -286,14 +286,14 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   defp do_toggle_type(socket, type_id, user_id) do
     case MeetingTypes.get_meeting_type(type_id, user_id) do
       nil ->
-        Flash.error("Meeting type not found")
+        Flash.error(dgettext("dashboard_integrations", "Meeting type not found"))
         {:noreply, assign(socket, :toggling_type_id, nil)}
 
       type ->
         case MeetingTypes.toggle_meeting_type_status(type, %{is_active: !type.is_active}) do
           {:ok, updated_type} ->
             send(self(), {:meeting_type_changed})
-            Flash.info("Meeting type status updated")
+            Flash.info(dgettext("dashboard_integrations", "Meeting type status updated"))
 
             updated_meeting_types =
               Enum.map(socket.assigns.meeting_types, fn
@@ -305,7 +305,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
              assign(socket, meeting_types: updated_meeting_types, toggling_type_id: nil)}
 
           {:error, _reason} ->
-            Flash.error("Failed to update meeting type")
+            Flash.error(dgettext("dashboard_integrations", "Failed to update meeting type"))
             {:noreply, assign(socket, :toggling_type_id, nil)}
         end
     end
@@ -428,7 +428,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     <div class="space-y-10 pb-20">
       <.section_header
         icon="hero-squares-2x2"
-        title="Meeting Settings"
+        title={dgettext("dashboard_integrations", "Meeting Settings")}
         saving={@saving}
       />
 
@@ -444,13 +444,17 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
             <.section_header
               level={2}
               icon="hero-squares-2x2"
-              title={if @editing_type, do: "Edit Meeting Type", else: "Add Meeting Type"}
+              title={
+                if @editing_type,
+                  do: dgettext("dashboard_integrations", "Edit Meeting Type"),
+                  else: dgettext("dashboard_integrations", "Add Meeting Type")
+              }
             />
             <button
               phx-click={if @editing_type, do: "close_edit_overlay", else: "toggle_add_form"}
               phx-target={@myself}
               class="shrink-0 p-2 rounded-lg text-tymeslot-500 hover:text-tymeslot-700 hover:bg-tymeslot-100 transition-colors"
-              title="Close"
+              title={dgettext("dashboard_integrations", "Close")}
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />

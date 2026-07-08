@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
@@ -23,7 +24,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
     ~H"""
     <div>
       <label for="integration_name" class="label">
-        Integration Name
+        {dgettext("dashboard_integrations", "Integration Name")}
       </label>
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

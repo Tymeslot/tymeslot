@@ -4,6 +4,7 @@ defmodule TymeslotWeb.VideoOAuthController do
   """
 
   use TymeslotWeb, :controller
+  use Gettext, backend: TymeslotWeb.Gettext
   require Logger
 
   alias Tymeslot.Dashboard.DashboardContext
@@ -32,7 +33,10 @@ defmodule TymeslotWeb.VideoOAuthController do
       DashboardContext.invalidate_integration_status(tokens.user_id)
 
       conn
-      |> put_flash(:info, "Google Meet connected successfully!")
+      |> put_flash(
+        :info,
+        dgettext("dashboard_integrations", "Google Meet connected successfully!")
+      )
       |> redirect(to: ~p"/dashboard/integrations?tab=video")
     else
       error -> handle_google_meet_error(conn, error)
@@ -44,8 +48,11 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     error_message =
       case error do
-        "access_denied" -> "Authorization was denied. Please try again."
-        _other -> "Authentication failed. Please try again."
+        "access_denied" ->
+          dgettext("dashboard_integrations", "Authorization was denied. Please try again.")
+
+        _other ->
+          dgettext("dashboard_integrations", "Authentication failed. Please try again.")
       end
 
     conn
@@ -59,7 +66,10 @@ defmodule TymeslotWeb.VideoOAuthController do
     )
 
     conn
-    |> put_flash(:error, "Invalid authentication response. Please try again.")
+    |> put_flash(
+      :error,
+      dgettext("dashboard_integrations", "Invalid authentication response. Please try again.")
+    )
     |> redirect(to: ~p"/dashboard/integrations?tab=video")
   end
 
@@ -79,7 +89,10 @@ defmodule TymeslotWeb.VideoOAuthController do
       DashboardContext.invalidate_integration_status(tokens.user_id)
 
       conn
-      |> put_flash(:info, "Microsoft Teams connected successfully!")
+      |> put_flash(
+        :info,
+        dgettext("dashboard_integrations", "Microsoft Teams connected successfully!")
+      )
       |> redirect(to: ~p"/dashboard/integrations?tab=video")
     else
       error -> handle_teams_oauth_error(conn, error)
@@ -93,13 +106,16 @@ defmodule TymeslotWeb.VideoOAuthController do
     error_message =
       cond do
         MicrosoftOAuth.microsoft_admin_consent_error?(error_description) ->
-          "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
+          dgettext(
+            "dashboard_integrations",
+            "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
+          )
 
         error == "access_denied" ->
-          "Authorization was denied. Please try again."
+          dgettext("dashboard_integrations", "Authorization was denied. Please try again.")
 
         true ->
-          "Authentication failed. Please try again."
+          dgettext("dashboard_integrations", "Authentication failed. Please try again.")
       end
 
     conn
@@ -113,7 +129,10 @@ defmodule TymeslotWeb.VideoOAuthController do
     )
 
     conn
-    |> put_flash(:error, "Invalid authentication response. Please try again.")
+    |> put_flash(
+      :error,
+      dgettext("dashboard_integrations", "Invalid authentication response. Please try again.")
+    )
     |> redirect(to: ~p"/dashboard/integrations?tab=video")
   end
 
@@ -133,7 +152,7 @@ defmodule TymeslotWeb.VideoOAuthController do
       DashboardContext.invalidate_integration_status(tokens.user_id)
 
       conn
-      |> put_flash(:info, "Zoom connected successfully!")
+      |> put_flash(:info, dgettext("dashboard_integrations", "Zoom connected successfully!"))
       |> redirect(to: ~p"/dashboard/integrations?tab=video")
     else
       error -> handle_zoom_oauth_error(conn, error)
@@ -146,8 +165,11 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     error_message =
       case error do
-        "access_denied" -> "Authorization was denied. Please try again."
-        _other -> "Authentication failed. Please try again."
+        "access_denied" ->
+          dgettext("dashboard_integrations", "Authorization was denied. Please try again.")
+
+        _other ->
+          dgettext("dashboard_integrations", "Authentication failed. Please try again.")
       end
 
     conn
@@ -161,7 +183,10 @@ defmodule TymeslotWeb.VideoOAuthController do
     )
 
     conn
-    |> put_flash(:error, "Invalid authentication response. Please try again.")
+    |> put_flash(
+      :error,
+      dgettext("dashboard_integrations", "Invalid authentication response. Please try again.")
+    )
     |> redirect(to: ~p"/dashboard/integrations?tab=video")
   end
 
@@ -182,7 +207,10 @@ defmodule TymeslotWeb.VideoOAuthController do
         Logger.error("Google Meet OAuth flow failed", reason: inspect(reason))
 
         conn
-        |> put_flash(:error, "Failed to connect Google Meet. Please try again.")
+        |> put_flash(
+          :error,
+          dgettext("dashboard_integrations", "Failed to connect Google Meet. Please try again.")
+        )
         |> redirect(to: ~p"/dashboard/integrations?tab=video")
     end
   end
@@ -203,11 +231,18 @@ defmodule TymeslotWeb.VideoOAuthController do
             "Teams OAuth callback missing required fields: tenant_id or teams_user_id"
           )
 
-          "Missing required Microsoft Teams information. Please try again."
+          dgettext(
+            "dashboard_integrations",
+            "Missing required Microsoft Teams information. Please try again."
+          )
 
         {:error, reason} ->
           Logger.error("Teams OAuth flow failed", reason: inspect(reason))
-          "Failed to connect Microsoft Teams. Please try again."
+
+          dgettext(
+            "dashboard_integrations",
+            "Failed to connect Microsoft Teams. Please try again."
+          )
       end
 
     conn
@@ -228,11 +263,15 @@ defmodule TymeslotWeb.VideoOAuthController do
 
         {:error, :missing_zoom_account_id} ->
           Logger.warning("Zoom OAuth callback missing provider_account_id")
-          "Could not identify your Zoom account. Please try again."
+
+          dgettext(
+            "dashboard_integrations",
+            "Could not identify your Zoom account. Please try again."
+          )
 
         {:error, reason} ->
           Logger.error("Zoom OAuth flow failed", reason: inspect(reason))
-          "Failed to connect Zoom. Please try again."
+          dgettext("dashboard_integrations", "Failed to connect Zoom. Please try again.")
       end
 
     conn
@@ -242,7 +281,13 @@ defmodule TymeslotWeb.VideoOAuthController do
 
   defp reject_callback(conn) do
     conn
-    |> put_flash(:error, "Authentication session mismatch. Please sign in and try again.")
+    |> put_flash(
+      :error,
+      dgettext(
+        "dashboard_integrations",
+        "Authentication session mismatch. Please sign in and try again."
+      )
+    )
     |> redirect(to: ~p"/dashboard/integrations?tab=video")
     |> halt()
   end
