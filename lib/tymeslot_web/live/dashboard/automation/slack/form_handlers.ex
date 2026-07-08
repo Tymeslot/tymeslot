@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.FormHandlers do
   form, closing the form, validating fields, and toggling events.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Slack
@@ -41,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.FormHandlers do
         {:noreply, open_oauth_form(socket, integration)}
 
       {:error, _reason} ->
-        Flash.error("Slack integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Slack integration not found"))
         {:noreply, socket}
     end
   end

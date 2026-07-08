@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
   disconnecting, reconnecting, and re-enabling.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Phoenix.LiveView
@@ -19,23 +21,23 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
       {:ok, integration} ->
         case Slack.toggle_integration(integration) do
           {:ok, _updated} ->
-            Flash.info("Integration status updated")
+            Flash.info(dgettext("dashboard_automation_chat", "Integration status updated"))
             {:noreply, AutomationHelpers.maybe_load_slack(socket)}
 
           {:error, :invalid_state} ->
-            Flash.error("Cannot toggle in current state")
+            Flash.error(dgettext("dashboard_automation_chat", "Cannot toggle in current state"))
             {:noreply, socket}
 
           {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
             {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
 
           {:error, _reason} ->
-            Flash.error("Failed to update status")
+            Flash.error(dgettext("dashboard_automation_chat", "Failed to update status"))
             {:noreply, socket}
         end
 
       {:error, _reason} ->
-        Flash.error("Slack integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Slack integration not found"))
         {:noreply, socket}
     end
   end
@@ -63,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
       {:ok, integration} ->
         case Slack.test_integration(integration) do
           :ok ->
-            Flash.info("Test message sent! Check Slack.")
+            Flash.info(dgettext("dashboard_automation_chat", "Test message sent! Check Slack."))
             {:noreply, assign(socket, :slack_testing, nil)}
 
           {:error, reason} ->
@@ -72,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
         end
 
       {:error, _reason} ->
-        Flash.error("Slack integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Slack integration not found"))
         {:noreply, assign(socket, :slack_testing, nil)}
     end
   end
@@ -89,23 +91,29 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
       {:ok, %{app_mode: "oauth"} = integration} ->
         case Slack.disconnect(integration) do
           {:ok, _updated} ->
-            Flash.info("Slack channel disconnected. Pick a new channel to reconnect.")
+            Flash.info(
+              dgettext(
+                "dashboard_automation_chat",
+                "Slack channel disconnected. Pick a new channel to reconnect."
+              )
+            )
+
             {:noreply, AutomationHelpers.maybe_load_slack(socket)}
 
           {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
             {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
 
           {:error, _reason} ->
-            Flash.error("Failed to disconnect Slack")
+            Flash.error(dgettext("dashboard_automation_chat", "Failed to disconnect Slack"))
             {:noreply, socket}
         end
 
       {:ok, _other} ->
-        Flash.error("Cannot disconnect this integration")
+        Flash.error(dgettext("dashboard_automation_chat", "Cannot disconnect this integration"))
         {:noreply, socket}
 
       {:error, _reason} ->
-        Flash.error("Slack integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Slack integration not found"))
         {:noreply, socket}
     end
   end
@@ -128,19 +136,19 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
       {:ok, integration} ->
         case Slack.reenable_integration(integration) do
           {:ok, _updated} ->
-            Flash.info("Slack integration re-enabled")
+            Flash.info(dgettext("dashboard_automation_chat", "Slack integration re-enabled"))
             {:noreply, AutomationHelpers.maybe_load_slack(socket)}
 
           {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
             {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
 
           {:error, _reason} ->
-            Flash.error("Failed to re-enable")
+            Flash.error(dgettext("dashboard_automation_chat", "Failed to re-enable"))
             {:noreply, socket}
         end
 
       {:error, _reason} ->
-        Flash.error("Slack integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Slack integration not found"))
         {:noreply, socket}
     end
   end

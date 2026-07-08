@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.ModalHandlers do
   delivery history, and PubSub-driven link/expiry callbacks.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Telegram
@@ -41,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.ModalHandlers do
           {:ok, integration} ->
             case Telegram.delete_integration(integration) do
               {:ok, _deleted} ->
-                Flash.info("Integration deleted")
+                Flash.info(dgettext("dashboard_automation_chat", "Integration deleted"))
 
                 {:noreply,
                  socket
@@ -50,12 +52,12 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.ModalHandlers do
                  |> AutomationHelpers.maybe_load_telegram()}
 
               {:error, _reason} ->
-                Flash.error("Failed to delete")
+                Flash.error(dgettext("dashboard_automation_chat", "Failed to delete"))
                 {:noreply, socket}
             end
 
           {:error, _reason} ->
-            Flash.error("Integration not found")
+            Flash.error(dgettext("dashboard_automation_chat", "Integration not found"))
             {:noreply, socket}
         end
     end
@@ -77,7 +79,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.ModalHandlers do
          |> assign(:telegram_delivery_stats, stats)}
 
       {:error, _reason} ->
-        Flash.error("Integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Integration not found"))
         {:noreply, socket}
     end
   end

@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.StateHandlers do
   re-enabling, disconnecting, and reconnecting.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Telegram
@@ -17,23 +19,23 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.StateHandlers do
       {:ok, integration} ->
         case Telegram.toggle_integration(integration) do
           {:ok, _updated} ->
-            Flash.info("Integration status updated")
+            Flash.info(dgettext("dashboard_automation_chat", "Integration status updated"))
             {:noreply, AutomationHelpers.maybe_load_telegram(socket)}
 
           {:error, :invalid_state} ->
-            Flash.error("Cannot toggle in current state")
+            Flash.error(dgettext("dashboard_automation_chat", "Cannot toggle in current state"))
             {:noreply, socket}
 
           {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
             {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
 
           {:error, _reason} ->
-            Flash.error("Failed to update status")
+            Flash.error(dgettext("dashboard_automation_chat", "Failed to update status"))
             {:noreply, socket}
         end
 
       {:error, _reason} ->
-        Flash.error("Integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Integration not found"))
         {:noreply, socket}
     end
   end
@@ -47,7 +49,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.StateHandlers do
       :telegram_testing,
       &AutomationHelpers.get_telegram_for_user(&1, id),
       &Telegram.test_integration/1,
-      {"Test message sent! Check Telegram.", "Integration not found"}
+      {dgettext("dashboard_automation_chat", "Test message sent! Check Telegram."),
+       dgettext("dashboard_automation_chat", "Integration not found")}
     )
   end
 
@@ -58,19 +61,19 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.StateHandlers do
       {:ok, integration} ->
         case Telegram.reenable_integration(integration) do
           {:ok, _updated} ->
-            Flash.info("Integration re-enabled")
+            Flash.info(dgettext("dashboard_automation_chat", "Integration re-enabled"))
             {:noreply, AutomationHelpers.maybe_load_telegram(socket)}
 
           {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
             {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
 
           {:error, _reason} ->
-            Flash.error("Failed to re-enable")
+            Flash.error(dgettext("dashboard_automation_chat", "Failed to re-enable"))
             {:noreply, socket}
         end
 
       {:error, _reason} ->
-        Flash.error("Integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Integration not found"))
         {:noreply, socket}
     end
   end
@@ -82,16 +85,19 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.StateHandlers do
       {:ok, integration} ->
         case Telegram.disconnect_integration(integration) do
           {:ok, _updated} ->
-            Flash.info("Telegram disconnected")
+            Flash.info(dgettext("dashboard_automation_chat", "Telegram disconnected"))
             {:noreply, AutomationHelpers.maybe_load_telegram(socket)}
 
           {:error, :own_bot_mode} ->
-            Flash.error("Cannot disconnect in own-bot mode")
+            Flash.error(
+              dgettext("dashboard_automation_chat", "Cannot disconnect in own-bot mode")
+            )
+
             {:noreply, socket}
         end
 
       {:error, _reason} ->
-        Flash.error("Integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Integration not found"))
         {:noreply, socket}
     end
   end
@@ -129,12 +135,12 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.StateHandlers do
              |> AutomationHelpers.maybe_load_telegram()}
 
           {:error, :own_bot_mode} ->
-            Flash.error("Cannot reconnect in own-bot mode")
+            Flash.error(dgettext("dashboard_automation_chat", "Cannot reconnect in own-bot mode"))
             {:noreply, socket}
         end
 
       {:error, _reason} ->
-        Flash.error("Integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Integration not found"))
         {:noreply, socket}
     end
   end

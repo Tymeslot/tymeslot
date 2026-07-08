@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
   @moduledoc false
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Slack.SlackIntegrationSchema
   alias TymeslotWeb.Components.UI.StatusSwitch
@@ -73,24 +74,24 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
             <%!-- Status-specific content --%>
             <%= if @status == :pending_oauth do %>
               <div class="text-token-sm text-amber-600 font-medium">
-                Pick a channel to finish setup.
+                {dgettext("dashboard_automation_chat", "Pick a channel to finish setup.")}
               </div>
             <% else %>
               <%= if @integration.last_triggered_at do %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
                   <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
-                  <span>Last triggered: <%= AutomationHelpers.format_datetime(@integration.last_triggered_at) %></span>
+                  <span>{dgettext("dashboard_automation_chat", "Last triggered: %{time}", time: AutomationHelpers.format_datetime(@integration.last_triggered_at))}</span>
                 </div>
               <% else %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-400 italic">
                   <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
-                  <span>Never triggered</span>
+                  <span>{dgettext("dashboard_automation_chat", "Never triggered")}</span>
                 </div>
               <% end %>
 
               <%= if @status == :auto_disabled do %>
                 <div class="mt-2 text-token-sm text-red-600 font-medium">
-                  Disabled: <%= disabled_reason_label(@integration.disabled_reason) %>
+                  {dgettext("dashboard_automation_chat", "Disabled: %{reason}", reason: disabled_reason_label(@integration.disabled_reason))}
                 </div>
               <% end %>
             <% end %>
@@ -120,7 +121,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
               phx-click={@on_pick_channel}
               class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-turquoise-50 border-turquoise-200 text-turquoise-700 hover:bg-turquoise-100 font-bold transition-all text-token-sm"
             >
-              Pick a channel
+              {dgettext("dashboard_automation_chat", "Pick a channel")}
             </button>
           <% end %>
 
@@ -130,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
               phx-click={@on_reconnect}
               class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-amber-200 text-amber-700 hover:bg-amber-50 font-bold transition-all text-token-sm"
             >
-              <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
+              <.icon name="hero-arrow-path" class="w-4 h-4" /> {dgettext("dashboard_automation_chat", "Reconnect")}
             </button>
           <% end %>
 
@@ -149,10 +150,10 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
             >
               <%= if @testing do %>
                 <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin" />
-                <span class="hidden sm:inline">Testing</span>
+                <span class="hidden sm:inline">{dgettext("dashboard_automation_chat", "Testing")}</span>
               <% else %>
                 <.icon name="hero-bolt" class="w-4 h-4" />
-                Test
+                {dgettext("dashboard_automation_chat", "Test")}
               <% end %>
             </button>
           <% end %>
@@ -163,7 +164,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
               phx-click={@on_reenable}
               class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-turquoise-200 text-turquoise-700 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
             >
-              Re-enable
+              {dgettext("dashboard_automation_chat", "Re-enable")}
             </button>
           <% end %>
 
@@ -176,7 +177,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Logs
+              {dgettext("dashboard_automation_chat", "Logs")}
             </button>
           <% end %>
 
@@ -186,7 +187,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
               <button
                 phx-click={@on_edit}
                 class="p-2.5 text-tymeslot-400 hover:text-turquoise-600 hover:bg-turquoise-50 rounded-token-xl transition-all"
-                title="Edit"
+                title={dgettext("dashboard_automation_chat", "Edit")}
               >
                 <.icon name="hero-pencil-square" class="w-5 h-5" />
               </button>
@@ -197,7 +198,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
               <button
                 phx-click={@on_disconnect}
                 class="p-2.5 text-tymeslot-400 hover:text-amber-600 hover:bg-amber-50 rounded-token-xl transition-all"
-                title="Disconnect Slack"
+                title={dgettext("dashboard_automation_chat", "Disconnect Slack")}
               >
                 <.icon name="hero-no-symbol" class="w-5 h-5" />
               </button>
@@ -207,7 +208,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
             <button
               phx-click={@on_delete}
               class="p-2.5 text-tymeslot-300 hover:text-red-500 hover:bg-red-50 rounded-token-xl transition-all"
-              title="Delete"
+              title={dgettext("dashboard_automation_chat", "Delete")}
             >
               <.icon name="hero-trash" class="w-5 h-5" />
             </button>
@@ -222,7 +223,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
     ~H"""
     <span class="inline-flex items-center gap-1 bg-amber-100 text-amber-700 text-xs font-black px-2.5 py-1 rounded-token-full uppercase tracking-wide">
       <div class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-      Channel needed
+      {dgettext("dashboard_automation_chat", "Channel needed")}
     </span>
     """
   end
@@ -231,7 +232,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
     ~H"""
     <span class="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-black px-2.5 py-1 rounded-token-full uppercase tracking-wide">
       <div class="w-1.5 h-1.5 rounded-full bg-green-500" />
-      Active
+      {dgettext("dashboard_automation_chat", "Active")}
     </span>
     """
   end
@@ -240,7 +241,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
     ~H"""
     <span class="inline-flex items-center gap-1 bg-tymeslot-200 text-tymeslot-600 text-xs font-black px-2.5 py-1 rounded-token-full uppercase tracking-wide">
       <div class="w-1.5 h-1.5 rounded-full bg-tymeslot-400" />
-      Paused
+      {dgettext("dashboard_automation_chat", "Paused")}
     </span>
     """
   end
@@ -249,7 +250,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
     ~H"""
     <span class="inline-flex items-center gap-1 bg-red-100 text-red-700 text-xs font-black px-2.5 py-1 rounded-token-full uppercase tracking-wide">
       <div class="w-1.5 h-1.5 rounded-full bg-red-500" />
-      Disabled
+      {dgettext("dashboard_automation_chat", "Disabled")}
     </span>
     """
   end
@@ -278,29 +279,42 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCard do
   # channel for OAuth installs, or "Custom webhook" with channel hint for
   # pasted Incoming Webhook URLs.
   defp location_label(%{app_mode: "oauth"} = integration) do
-    workspace = integration.team_name || "Slack workspace"
+    workspace = integration.team_name || dgettext("dashboard_automation_chat", "Slack workspace")
 
     case integration.channel_name do
-      nil -> workspace
-      channel -> "#{workspace} · ##{String.trim_leading(channel, "#")}"
+      nil ->
+        workspace
+
+      channel ->
+        dgettext("dashboard_automation_chat", "%{workspace} · #%{channel}",
+          workspace: workspace,
+          channel: String.trim_leading(channel, "#")
+        )
     end
   end
 
   defp location_label(%{app_mode: "webhook_url"} = integration) do
     case integration.webhook_channel_hint do
-      nil -> "Custom webhook"
-      "" -> "Custom webhook"
-      hint -> "Custom webhook · ##{String.trim_leading(hint, "#")}"
+      nil ->
+        dgettext("dashboard_automation_chat", "Custom webhook")
+
+      "" ->
+        dgettext("dashboard_automation_chat", "Custom webhook")
+
+      hint ->
+        dgettext("dashboard_automation_chat", "Custom webhook · #%{channel}",
+          channel: String.trim_leading(hint, "#")
+        )
     end
   end
 
   defp location_label(_integration), do: "Slack"
 
-  defp disabled_reason_label(nil), do: "auto-disabled"
-  defp disabled_reason_label(""), do: "auto-disabled"
+  defp disabled_reason_label(nil), do: dgettext("dashboard_automation_chat", "auto-disabled")
+  defp disabled_reason_label(""), do: dgettext("dashboard_automation_chat", "auto-disabled")
 
   defp disabled_reason_label("webhook_url_revoked"),
-    do: "webhook URL was revoked in Slack"
+    do: dgettext("dashboard_automation_chat", "webhook URL was revoked in Slack")
 
   defp disabled_reason_label(reason) when is_binary(reason), do: reason
 end

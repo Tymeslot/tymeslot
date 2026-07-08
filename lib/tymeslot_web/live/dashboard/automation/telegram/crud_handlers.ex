@@ -3,6 +3,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
   Handles create, update, and show-edit-form events for Telegram integrations.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Security.RateLimiter
@@ -35,7 +37,9 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
         with_telegram_write(params, :edit, socket, fn _bot_mode, sanitized ->
           case Telegram.update_integration(integration, sanitized) do
             {:ok, _updated} ->
-              Flash.info("Integration updated successfully")
+              Flash.info(
+                dgettext("dashboard_automation_chat", "Integration updated successfully")
+              )
 
               {:noreply,
                socket
@@ -47,7 +51,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
 
             {:error, %Ecto.Changeset{} = changeset} ->
               errors = AutomationHelpers.format_changeset_errors(changeset)
-              Flash.error("Failed to update integration")
+              Flash.error(dgettext("dashboard_automation_chat", "Failed to update integration"))
               {:noreply, assign(socket, :telegram_form_errors, errors)}
 
             {:error, reason}
@@ -77,7 +81,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
          })}
 
       {:error, _reason} ->
-        Flash.error("Integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Integration not found"))
         {:noreply, socket}
     end
   end
@@ -114,7 +118,10 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
         save_telegram(user_id, sanitized, socket)
 
       {:error, reason} ->
-        Flash.error("Test failed: #{reason}")
+        Flash.error(
+          dgettext("dashboard_automation_chat", "Test failed: %{reason}", reason: reason)
+        )
+
         {:noreply, socket}
     end
   end
@@ -122,7 +129,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
   defp save_telegram(user_id, sanitized, socket) do
     case Telegram.create_integration(user_id, sanitized) do
       {:ok, _integration} ->
-        Flash.info("Telegram integration created")
+        Flash.info(dgettext("dashboard_automation_chat", "Telegram integration created"))
 
         {:noreply,
          socket
@@ -134,7 +141,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         errors = AutomationHelpers.format_changeset_errors(changeset)
-        Flash.error("Failed to create integration")
+        Flash.error(dgettext("dashboard_automation_chat", "Failed to create integration"))
         {:noreply, assign(socket, :telegram_form_errors, errors)}
 
       {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
@@ -145,7 +152,10 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
   defp test_and_update_telegram(sanitized, socket) do
     case socket.assigns.telegram_form_data do
       nil ->
-        Flash.error("Integration not found. Please try again.")
+        Flash.error(
+          dgettext("dashboard_automation_chat", "Integration not found. Please try again.")
+        )
+
         {:noreply, socket}
 
       integration ->
@@ -155,7 +165,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
               Process.cancel_timer(socket.assigns.telegram_link_timer)
             end
 
-            Flash.info("Telegram integration saved")
+            Flash.info(dgettext("dashboard_automation_chat", "Telegram integration saved"))
 
             {:noreply,
              socket
@@ -171,7 +181,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.CrudHandlers do
 
           {:error, %Ecto.Changeset{} = changeset} ->
             errors = AutomationHelpers.format_changeset_errors(changeset)
-            Flash.error("Failed to save integration")
+            Flash.error(dgettext("dashboard_automation_chat", "Failed to save integration"))
             {:noreply, assign(socket, :telegram_form_errors, errors)}
 
           {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->

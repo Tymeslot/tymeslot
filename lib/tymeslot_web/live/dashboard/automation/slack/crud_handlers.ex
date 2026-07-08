@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
   Slack integrations.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Security.RateLimiter
@@ -43,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
   def handle_save_channel(%{"slack" => params}, socket) do
     case socket.assigns.slack_form_data do
       nil ->
-        Flash.error("Slack integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Slack integration not found"))
         {:noreply, socket}
 
       integration ->
@@ -51,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
           {:ok, sanitized} ->
             case Slack.set_channel(integration, sanitized) do
               {:ok, _updated} ->
-                Flash.info("Slack channel saved")
+                Flash.info(dgettext("dashboard_automation_chat", "Slack channel saved"))
 
                 {:noreply,
                  socket
@@ -60,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
 
               {:error, %Ecto.Changeset{} = changeset} ->
                 errors = AutomationHelpers.format_changeset_errors(changeset)
-                Flash.error("Failed to save channel")
+                Flash.error(dgettext("dashboard_automation_chat", "Failed to save channel"))
                 {:noreply, assign(socket, :slack_form_errors, errors)}
 
               {:error, reason}
@@ -79,7 +81,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
   def handle_update(%{"slack" => params}, socket) do
     case socket.assigns.slack_form_data do
       nil ->
-        Flash.error("Slack integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Slack integration not found"))
         {:noreply, socket}
 
       integration ->
@@ -89,7 +91,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
           {:ok, sanitized} ->
             case Slack.update_integration(integration, sanitized) do
               {:ok, _updated} ->
-                Flash.info("Slack integration updated")
+                Flash.info(dgettext("dashboard_automation_chat", "Slack integration updated"))
 
                 {:noreply,
                  socket
@@ -98,7 +100,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
 
               {:error, %Ecto.Changeset{} = changeset} ->
                 errors = AutomationHelpers.format_changeset_errors(changeset)
-                Flash.error("Failed to update integration")
+                Flash.error(dgettext("dashboard_automation_chat", "Failed to update integration"))
                 {:noreply, assign(socket, :slack_form_errors, errors)}
 
               {:error, reason}
@@ -129,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
          |> assign(:slack_form_values, edit_form_values(integration, mode))}
 
       {:error, _reason} ->
-        Flash.error("Slack integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Slack integration not found"))
         {:noreply, socket}
     end
   end
@@ -142,7 +144,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
         {:noreply, FormHandlers.open_oauth_form(socket, integration)}
 
       {:error, _reason} ->
-        Flash.error("Slack integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Slack integration not found"))
         {:noreply, socket}
     end
   end
@@ -154,7 +156,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
   defp persist_create(user_id, attrs, socket) do
     case Slack.create_integration(user_id, attrs) do
       {:ok, _integration} ->
-        Flash.info("Slack integration created")
+        Flash.info(dgettext("dashboard_automation_chat", "Slack integration created"))
 
         {:noreply,
          socket
@@ -163,14 +165,20 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         errors = AutomationHelpers.format_changeset_errors(changeset)
-        Flash.error("Failed to create integration")
+        Flash.error(dgettext("dashboard_automation_chat", "Failed to create integration"))
         {:noreply, assign(socket, :slack_form_errors, errors)}
 
       {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
         {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
 
       {:error, :feature_disabled} ->
-        Flash.error("Slack notifications are not enabled on this deployment.")
+        Flash.error(
+          dgettext(
+            "dashboard_automation_chat",
+            "Slack notifications are not enabled on this deployment."
+          )
+        )
+
         {:noreply, socket}
     end
   end

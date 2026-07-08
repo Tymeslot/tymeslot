@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
     * `:webhook_url` — name + Incoming Webhook URL + optional channel hint
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Slack
@@ -126,7 +127,10 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
     {:noreply,
      socket
      |> assign(:channels_loading?, false)
-     |> assign(:channels_error, "Could not load Slack channels. Try again.")}
+     |> assign(
+       :channels_error,
+       dgettext("dashboard_automation_chat", "Could not load Slack channels. Try again.")
+     )}
   end
 
   @impl Phoenix.LiveComponent
@@ -145,7 +149,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
           class="flex items-center gap-2 px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
         >
           <.icon name="hero-x-mark" class="w-5 h-5" />
-          Close
+          {dgettext("dashboard_automation_chat", "Close")}
         </button>
       </div>
 
@@ -159,7 +163,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
         <%!-- Details --%>
         <div class="card-glass">
           <div class="mb-6">
-            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">Integration Details</h3>
+            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">{dgettext("dashboard_automation_chat", "Integration Details")}</h3>
             <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
               <%= details_subtitle(@mode) %>
             </p>
@@ -169,7 +173,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
             <%= if @mode != :oauth_pending do %>
               <.input
                 name="slack[name]"
-                label="Integration Name"
+                label={dgettext("dashboard_automation_chat", "Integration Name")}
                 value={Map.get(@form_values, "name", "")}
                 phx-blur={JS.push("slack_validate_field", value: %{"field" => "name"}, target: @parent_component)}
                 placeholder="Acme Slack Notifications"
@@ -178,7 +182,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                 icon="hero-tag"
               >
                 <:description>
-                  A label shown in your dashboard. Useful if you connect more than one Slack workspace.
+                  {dgettext("dashboard_automation_chat", "A label shown in your dashboard. Useful if you connect more than one Slack workspace.")}
                 </:description>
               </.input>
             <% end %>
@@ -188,7 +192,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                 <.input
                   name="slack[webhook_url]"
                   type="password"
-                  label="Slack Webhook URL"
+                  label={dgettext("dashboard_automation_chat", "Slack Webhook URL")}
                   value={Map.get(@form_values, "webhook_url", "")}
                   phx-blur={JS.push("slack_validate_field", value: %{"field" => "webhook_url"}, target: @parent_component)}
                   placeholder={webhook_url_placeholder(@mode)}
@@ -198,9 +202,9 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                 >
                   <:description>
                     <%= if @mode == :webhook_url_existing do %>
-                      Leave blank to keep the current webhook URL. Paste a new one only if you want to replace it.
+                      {dgettext("dashboard_automation_chat", "Leave blank to keep the current webhook URL. Paste a new one only if you want to replace it.")}
                     <% else %>
-                      Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created — see the full setup guide on
+                      {dgettext("dashboard_automation_chat", "Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created — see the full setup guide on")}
                       <a
                         href="https://tymeslot.app/docs/slack"
                         target="_blank"
@@ -213,7 +217,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
 
                 <.input
                   name="slack[webhook_channel_hint]"
-                  label="Channel hint (optional)"
+                  label={dgettext("dashboard_automation_chat", "Channel hint (optional)")}
                   value={Map.get(@form_values, "webhook_channel_hint", "")}
                   phx-blur={JS.push("slack_validate_field", value: %{"field" => "webhook_channel_hint"}, target: @parent_component)}
                   placeholder="#bookings"
@@ -221,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                   icon="hero-hashtag"
                 >
                   <:description>
-                    Display-only label shown in your dashboard. It does not change where messages are delivered — that is set by the webhook URL itself.
+                    {dgettext("dashboard_automation_chat", "Display-only label shown in your dashboard. It does not change where messages are delivered — that is set by the webhook URL itself.")}
                   </:description>
                 </.input>
 
@@ -241,9 +245,9 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
         <%!-- Events --%>
         <div class="card-glass">
           <div class="mb-6">
-            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">Event Subscriptions</h3>
+            <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">{dgettext("dashboard_automation_chat", "Event Subscriptions")}</h3>
             <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-              Select which events should trigger Slack notifications.
+              {dgettext("dashboard_automation_chat", "Select which events should trigger Slack notifications.")}
             </p>
           </div>
 
@@ -276,13 +280,13 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
             phx-click="slack_close_form"
             phx-target={@parent_component}
           >
-            Cancel
+            {dgettext("dashboard_automation_chat", "Cancel")}
           </CoreComponents.action_button>
           <CoreComponents.loading_button
             type="submit"
             variant={:primary}
             loading={@saving}
-            loading_text="Saving..."
+            loading_text={dgettext("dashboard_automation_chat", "Saving...")}
             disabled={!@can_submit}
             class={if !@can_submit, do: "opacity-50 cursor-not-allowed grayscale", else: ""}
           >
@@ -306,7 +310,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
     <div>
       <div class="flex items-center justify-between mb-2">
         <label class="block text-token-sm font-black text-tymeslot-900">
-          Channel <span class="text-red-500">*</span>
+          {dgettext("dashboard_automation_chat", "Channel")} <span class="text-red-500">*</span>
         </label>
         <button
           type="button"
@@ -314,18 +318,18 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
           phx-target={@target}
           disabled={@loading?}
           class="flex items-center gap-1.5 px-3 py-1.5 text-token-xs font-bold text-tymeslot-600 bg-tymeslot-50 rounded-token-lg border-2 border-tymeslot-100 hover:bg-tymeslot-100 hover:text-tymeslot-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Refresh channel list from Slack"
+          title={dgettext("dashboard_automation_chat", "Refresh channel list from Slack")}
         >
           <.icon
             name="hero-arrow-path"
             class={"w-3.5 h-3.5" <> if(@loading?, do: " animate-spin", else: "")}
           />
-          Refresh
+          {dgettext("dashboard_automation_chat", "Refresh")}
         </button>
       </div>
 
       <p class="text-token-xs text-tymeslot-500 font-medium mb-2 ml-1">
-        Tymeslot will post booking notifications to this channel. Public channels appear automatically; for a private channel, invite the Tymeslot bot in Slack (<code class="px-1 py-0.5 rounded bg-tymeslot-100 text-tymeslot-700">/invite @Tymeslot</code>), then click Refresh.
+        {dgettext("dashboard_automation_chat", "Tymeslot will post booking notifications to this channel. Public channels appear automatically; for a private channel, invite the Tymeslot bot in Slack (")}<code class="px-1 py-0.5 rounded bg-tymeslot-100 text-tymeslot-700">/invite @Tymeslot</code>{dgettext("dashboard_automation_chat", "), then click Refresh.")}
       </p>
 
       <%= cond do %>
@@ -334,7 +338,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
             <svg class="w-5 h-5 animate-spin text-turquoise-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            <span class="text-token-sm text-tymeslot-600 font-medium">Loading channels from Slack...</span>
+            <span class="text-token-sm text-tymeslot-600 font-medium">{dgettext("dashboard_automation_chat", "Loading channels from Slack...")}</span>
           </div>
 
         <% is_binary(@error) -> %>
@@ -344,7 +348,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
 
         <% @channels == [] -> %>
           <div class="p-4 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50 text-token-sm text-tymeslot-600 font-medium">
-            No channels available. Invite the Tymeslot bot to at least one channel in Slack, then click Refresh.
+            {dgettext("dashboard_automation_chat", "No channels available. Invite the Tymeslot bot to at least one channel in Slack, then click Refresh.")}
           </div>
 
         <% true -> %>
@@ -352,7 +356,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
             type="select"
             name="slack[channel_id]"
             value={Map.get(@form_values, "channel_id")}
-            prompt="Pick a channel..."
+            prompt={dgettext("dashboard_automation_chat", "Pick a channel...")}
             options={channel_options(@channels)}
             errors={FormValidationHelpers.field_errors(@form_errors, :channel_id)}
           />
@@ -368,7 +372,13 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
   # component. Private channels are suffixed so the user can tell them apart.
   defp channel_options(channels) do
     Enum.map(channels, fn c ->
-      label = "##{c.name}" <> if(c.is_private, do: " (private)", else: "")
+      label =
+        "##{c.name}" <>
+          if(c.is_private,
+            do: " " <> dgettext("dashboard_automation_chat", "(private)"),
+            else: ""
+          )
+
       {label, c.id}
     end)
   end
@@ -383,35 +393,59 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
 
   defp lookup_channel_name(_channels, _id), do: ""
 
-  defp form_title(:oauth_pending), do: "Finish Slack setup"
-  defp form_title(:oauth_existing), do: "Edit Slack Integration"
-  defp form_title(:webhook_url), do: "Add Slack via Webhook URL"
-  defp form_title(:webhook_url_existing), do: "Edit Slack Integration"
+  defp form_title(:oauth_pending), do: dgettext("dashboard_automation_chat", "Finish Slack setup")
+
+  defp form_title(:oauth_existing),
+    do: dgettext("dashboard_automation_chat", "Edit Slack Integration")
+
+  defp form_title(:webhook_url),
+    do: dgettext("dashboard_automation_chat", "Add Slack via Webhook URL")
+
+  defp form_title(:webhook_url_existing),
+    do: dgettext("dashboard_automation_chat", "Edit Slack Integration")
 
   defp details_subtitle(:oauth_pending),
-    do: "Pick a channel for Tymeslot to post booking notifications to."
+    do:
+      dgettext(
+        "dashboard_automation_chat",
+        "Pick a channel for Tymeslot to post booking notifications to."
+      )
 
   defp details_subtitle(:oauth_existing),
-    do: "Update the channel and event subscriptions for this Slack workspace."
+    do:
+      dgettext(
+        "dashboard_automation_chat",
+        "Update the channel and event subscriptions for this Slack workspace."
+      )
 
   defp details_subtitle(:webhook_url),
-    do: "Paste the Incoming Webhook URL Slack generated for your channel."
+    do:
+      dgettext(
+        "dashboard_automation_chat",
+        "Paste the Incoming Webhook URL Slack generated for your channel."
+      )
 
   defp details_subtitle(:webhook_url_existing),
-    do: "Update the webhook URL or event subscriptions for this Slack integration."
+    do:
+      dgettext(
+        "dashboard_automation_chat",
+        "Update the webhook URL or event subscriptions for this Slack integration."
+      )
 
   defp submit_event(:oauth_pending), do: "slack_save_channel"
   defp submit_event(:oauth_existing), do: "slack_update"
   defp submit_event(:webhook_url), do: "slack_save_webhook"
   defp submit_event(:webhook_url_existing), do: "slack_update"
 
-  defp webhook_url_placeholder(:webhook_url_existing), do: "Leave blank to keep current URL"
+  defp webhook_url_placeholder(:webhook_url_existing),
+    do: dgettext("dashboard_automation_chat", "Leave blank to keep current URL")
+
   defp webhook_url_placeholder(_mode), do: "https://hooks.slack.com/services/T.../B.../..."
 
-  defp submit_label(:oauth_pending), do: "Save channel"
-  defp submit_label(:oauth_existing), do: "Update"
-  defp submit_label(:webhook_url), do: "Save"
-  defp submit_label(:webhook_url_existing), do: "Update"
+  defp submit_label(:oauth_pending), do: dgettext("dashboard_automation_chat", "Save channel")
+  defp submit_label(:oauth_existing), do: dgettext("dashboard_automation_chat", "Update")
+  defp submit_label(:webhook_url), do: dgettext("dashboard_automation_chat", "Save")
+  defp submit_label(:webhook_url_existing), do: dgettext("dashboard_automation_chat", "Update")
 
   defp can_submit?(assigns) do
     values = assigns.form_values

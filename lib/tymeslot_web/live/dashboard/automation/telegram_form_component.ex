@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
   Renders own-bot mode form or shared-bot wizard based on feature flag.
   """
   use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Telegram
@@ -79,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
           </svg>
-          Close
+          {dgettext("dashboard_automation_chat", "Close")}
         </button>
       </div>
 
@@ -107,16 +108,16 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
           <%!-- Name & Details --%>
           <div class="card-glass">
             <div class="mb-6">
-              <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">Integration Details</h3>
+              <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">{dgettext("dashboard_automation_chat", "Integration Details")}</h3>
               <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-                Configure your Telegram notification settings.
+                {dgettext("dashboard_automation_chat", "Configure your Telegram notification settings.")}
               </p>
             </div>
 
             <div class="space-y-6">
               <.input
                 name="telegram[name]"
-                label="Integration Name"
+                label={dgettext("dashboard_automation_chat", "Integration Name")}
                 value={Map.get(@form_values, "name", "")}
                 phx-blur={JS.push("validate_telegram_field", value: %{"field" => "name"}, target: @parent_component)}
                 placeholder="My Telegram Notifications"
@@ -130,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                 <.input
                   name="telegram[bot_token]"
                   type="password"
-                  label="Bot Token"
+                  label={dgettext("dashboard_automation_chat", "Bot Token")}
                   value={Map.get(@form_values, "bot_token", "")}
                   phx-blur={JS.push("validate_telegram_field", value: %{"field" => "bot_token"}, target: @parent_component)}
                   placeholder="123456789:ABCdefGHI..."
@@ -141,7 +142,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
 
                 <.input
                   name="telegram[chat_id]"
-                  label="Chat ID"
+                  label={dgettext("dashboard_automation_chat", "Chat ID")}
                   value={Map.get(@form_values, "chat_id", "")}
                   phx-blur={JS.push("validate_telegram_field", value: %{"field" => "chat_id"}, target: @parent_component)}
                   placeholder="-1001234567890 or @channelname"
@@ -158,10 +159,10 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                       </svg>
                     </div>
                     <div>
-                      <p class="text-token-sm font-black text-turquoise-900">How to get your Bot Token & Chat ID</p>
+                      <p class="text-token-sm font-black text-turquoise-900">{dgettext("dashboard_automation_chat", "How to get your Bot Token & Chat ID")}</p>
                       <p class="text-token-xs text-turquoise-700 font-medium mt-0.5">
-                        Message <strong>@BotFather</strong> on Telegram to create a bot and get its token.
-                        To find your Chat ID, message <strong>@userinfobot</strong> or add your bot to a group and use the Telegram API.
+                        {dgettext("dashboard_automation_chat", "Message")} <strong>@BotFather</strong> {dgettext("dashboard_automation_chat", "on Telegram to create a bot and get its token.")}
+                        {dgettext("dashboard_automation_chat", "To find your Chat ID, message")} <strong>@userinfobot</strong> {dgettext("dashboard_automation_chat", "or add your bot to a group and use the Telegram API.")}
                       </p>
                     </div>
                   </div>
@@ -173,9 +174,9 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
           <%!-- Events Selection --%>
           <div class="card-glass">
             <div class="mb-6">
-              <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">Event Subscriptions</h3>
+              <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">{dgettext("dashboard_automation_chat", "Event Subscriptions")}</h3>
               <p class="text-token-sm text-tymeslot-500 font-bold mt-1">
-                Select which events should trigger Telegram notifications.
+                {dgettext("dashboard_automation_chat", "Select which events should trigger Telegram notifications.")}
               </p>
             </div>
 
@@ -208,20 +209,25 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
               phx-click="close_telegram_form"
               phx-target={@parent_component}
             >
-              Cancel
+              {dgettext("dashboard_automation_chat", "Cancel")}
             </CoreComponents.action_button>
             <CoreComponents.loading_button
               type="submit"
               variant={:primary}
               loading={@saving}
-              loading_text={if(!@shared_bot_mode && @mode == :create, do: "Testing & Saving...", else: "Saving...")}
+              loading_text={
+                if(!@shared_bot_mode && @mode == :create,
+                  do: dgettext("dashboard_automation_chat", "Testing & Saving..."),
+                  else: dgettext("dashboard_automation_chat", "Saving...")
+                )
+              }
               disabled={!@can_submit}
               class={if !@can_submit, do: "opacity-50 cursor-not-allowed grayscale", else: ""}
             >
               <%= cond do %>
-                <% !@shared_bot_mode && @mode == :create -> %>Test & Save
-                <% @mode == :create -> %>Save
-                <% true -> %>Update
+                <% !@shared_bot_mode && @mode == :create -> %>{dgettext("dashboard_automation_chat", "Test & Save")}
+                <% @mode == :create -> %>{dgettext("dashboard_automation_chat", "Save")}
+                <% true -> %>{dgettext("dashboard_automation_chat", "Update")}
               <% end %>
             </CoreComponents.loading_button>
           </div>
@@ -241,22 +247,21 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
       </div>
 
       <%= if @link_expired do %>
-        <h3 class="text-token-2xl font-black text-amber-700 mb-3">Link Expired</h3>
+        <h3 class="text-token-2xl font-black text-amber-700 mb-3">{dgettext("dashboard_automation_chat", "Link Expired")}</h3>
         <p class="text-tymeslot-600 font-medium mb-8 max-w-md mx-auto">
-          The link has expired. Click below to generate a new one.
+          {dgettext("dashboard_automation_chat", "The link has expired. Click below to generate a new one.")}
         </p>
         <button
           phx-click="refresh_telegram_link"
           phx-target={@parent_component}
           class="btn-primary"
         >
-          Generate New Link
+          {dgettext("dashboard_automation_chat", "Generate New Link")}
         </button>
       <% else %>
-        <h3 class="text-token-2xl font-black text-tymeslot-900 mb-3">Connect Telegram</h3>
+        <h3 class="text-token-2xl font-black text-tymeslot-900 mb-3">{dgettext("dashboard_automation_chat", "Connect Telegram")}</h3>
         <p class="text-tymeslot-600 font-medium mb-8 max-w-md mx-auto">
-          Click the button below to open Telegram and link your account.
-          Once connected, you'll configure notification preferences.
+          {dgettext("dashboard_automation_chat", "Click the button below to open Telegram and link your account. Once connected, you'll configure notification preferences.")}
         </p>
 
         <%= if @deep_link do %>
@@ -269,22 +274,22 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
             </svg>
-            Open in Telegram
+            {dgettext("dashboard_automation_chat", "Open in Telegram")}
           </a>
 
           <div class="mt-6 flex items-center justify-center gap-2 text-token-sm text-tymeslot-500">
             <svg class="w-4 h-4 animate-pulse text-turquoise-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>Waiting for Telegram connection... (link expires in 10 minutes)</span>
+            <span>{dgettext("dashboard_automation_chat", "Waiting for Telegram connection... (link expires in 10 minutes)")}</span>
           </div>
 
           <div class="mt-6 p-4 rounded-token-xl bg-tymeslot-50 border border-tymeslot-100 text-left max-w-md mx-auto">
             <p class="text-token-xs font-black text-tymeslot-700 mb-2 uppercase tracking-wide">
-              Button didn't work? Already started the bot before?
+              {dgettext("dashboard_automation_chat", "Button didn't work? Already started the bot before?")}
             </p>
             <p class="text-token-xs text-tymeslot-600 mb-3">
-              Send this command directly in the Telegram bot chat:
+              {dgettext("dashboard_automation_chat", "Send this command directly in the Telegram bot chat:")}
             </p>
             <code class="block text-token-xs font-mono bg-white border border-tymeslot-200 rounded-lg px-3 py-2 break-all select-all text-tymeslot-800">
               /start <%= String.split(@deep_link, "start=") |> List.last() |> String.trim_trailing("#") %>
@@ -292,7 +297,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
           </div>
         <% else %>
           <div class="text-tymeslot-500 font-medium">
-            Setting up connection...
+            {dgettext("dashboard_automation_chat", "Setting up connection...")}
           </div>
         <% end %>
       <% end %>
@@ -318,7 +323,11 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
     end
   end
 
-  defp form_title(:create, true, 1), do: "Connect Telegram"
-  defp form_title(:create, _shared_bot, _step), do: "Add Telegram Account"
-  defp form_title(:edit, _shared_bot, _step), do: "Edit Telegram Integration"
+  defp form_title(:create, true, 1), do: dgettext("dashboard_automation_chat", "Connect Telegram")
+
+  defp form_title(:create, _shared_bot, _step),
+    do: dgettext("dashboard_automation_chat", "Add Telegram Account")
+
+  defp form_title(:edit, _shared_bot, _step),
+    do: dgettext("dashboard_automation_chat", "Edit Telegram Integration")
 end

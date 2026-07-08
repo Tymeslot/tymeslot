@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.FormHandlers do
   refreshing the link token, validating fields, and toggling events.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Telegram
@@ -53,7 +55,13 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.FormHandlers do
           {:noreply, AutomationHelpers.handle_feature_access_error(socket, reason)}
 
         {:error, _reason} ->
-          Flash.error("Failed to initialize integration. Please try again.")
+          Flash.error(
+            dgettext(
+              "dashboard_automation_chat",
+              "Failed to initialize integration. Please try again."
+            )
+          )
+
           {:noreply, socket}
       end
     else
@@ -121,7 +129,10 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.FormHandlers do
          |> assign(:telegram_link_timer, timer_ref)}
 
       {:error, _reason} ->
-        Flash.error("Failed to generate link. Please try again.")
+        Flash.error(
+          dgettext("dashboard_automation_chat", "Failed to generate link. Please try again.")
+        )
+
         {:noreply, socket}
     end
   end

@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.ModalHandlers do
   and delivery-history viewer.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Slack
@@ -41,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.ModalHandlers do
           {:ok, integration} ->
             case Slack.delete_integration(integration) do
               {:ok, _deleted} ->
-                Flash.info("Slack integration deleted")
+                Flash.info(dgettext("dashboard_automation_chat", "Slack integration deleted"))
 
                 {:noreply,
                  socket
@@ -50,12 +52,12 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.ModalHandlers do
                  |> AutomationHelpers.maybe_load_slack()}
 
               {:error, _reason} ->
-                Flash.error("Failed to delete")
+                Flash.error(dgettext("dashboard_automation_chat", "Failed to delete"))
                 {:noreply, socket}
             end
 
           {:error, _reason} ->
-            Flash.error("Slack integration not found")
+            Flash.error(dgettext("dashboard_automation_chat", "Slack integration not found"))
             {:noreply, socket}
         end
     end
@@ -77,7 +79,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.ModalHandlers do
          |> assign(:slack_delivery_stats, stats)}
 
       {:error, _reason} ->
-        Flash.error("Slack integration not found")
+        Flash.error(dgettext("dashboard_automation_chat", "Slack integration not found"))
         {:noreply, socket}
     end
   end
