@@ -536,7 +536,7 @@ msgstr ""
 msgid "terms"
 msgstr ""
 
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:234
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:250
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Please try again."
 msgstr ""
@@ -561,18 +561,13 @@ msgstr ""
 msgid "Create an Account"
 msgstr ""
 
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:153
-#, elixir-autogen, elixir-format
-msgid "Email %{message}. Please provide a valid email address."
-msgstr ""
-
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:150
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:166
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:164
 #, elixir-autogen, elixir-format
 msgid "Email address is required to complete registration."
 msgstr ""
 
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:213
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:229
 #, elixir-autogen, elixir-format
 msgid "Email address is required to complete registration. Please provide your email address."
 msgstr ""
@@ -582,12 +577,12 @@ msgstr ""
 msgid "Enter your email to receive a password reset link for your Tymeslot account."
 msgstr ""
 
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:207
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:223
 #, elixir-autogen, elixir-format
 msgid "Failed to create user account. Please try again."
 msgstr ""
 
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:210
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:226
 #, elixir-autogen, elixir-format
 msgid "Invalid OAuth data received. Please try again."
 msgstr ""
@@ -602,13 +597,13 @@ msgstr ""
 msgid "Please correct the errors in the form."
 msgstr ""
 
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:169
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:219
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:167
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:235
 #, elixir-autogen, elixir-format
 msgid "Please provide a valid email address."
 msgstr ""
 
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:158
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:156
 #, elixir-autogen, elixir-format
 msgid "Registration failed due to validation errors. Please check your information and try again."
 msgstr ""
@@ -618,7 +613,7 @@ msgstr ""
 msgid "Sign in to your Tymeslot account to manage scheduling links, availability, and bookings."
 msgstr ""
 
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:225
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:241
 #, elixir-autogen, elixir-format
 msgid "This email address is already associated with another account. Please use a different email or sign in to your existing account."
 msgstr ""
@@ -628,8 +623,8 @@ msgstr ""
 msgid "Too many attempts. Please try again later."
 msgstr ""
 
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:172
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:222
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:170
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:238
 #, elixir-autogen, elixir-format
 msgid "You must accept the terms to continue."
 msgstr ""
@@ -662,4 +657,14 @@ msgstr ""
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex:114
 #, elixir-autogen, elixir-format
 msgid "This site is protected by reCAPTCHA and the Google %{privacy_policy} and %{terms} apply."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:182
+#, elixir-autogen, elixir-format
+msgid "An account with that email address already exists. Please log in instead."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:186
+#, elixir-autogen, elixir-format
+msgid "The email address from your login provider is not valid. Please try a different account."
 msgstr ""

@@ -150,9 +150,7 @@ defmodule TymeslotWeb.AuthControllerHelpers do
         dgettext("auth", "Email address is required to complete registration.")
 
       [email: {message, _opts}] when is_binary(message) ->
-        dgettext("auth", "Email %{message}. Please provide a valid email address.",
-          message: message
-        )
+        email_error_flash(message)
 
       _other_errors ->
         dgettext(
@@ -172,6 +170,24 @@ defmodule TymeslotWeb.AuthControllerHelpers do
     do: dgettext("auth", "You must accept the terms to continue.")
 
   def format_oauth_error_for_flash(error_message) when is_binary(error_message), do: error_message
+
+  # The changeset's email error carries an internal English diagnostic — either Ecto's
+  # constraint message, or one of `EmailValidator`'s strings, which already begin with
+  # "Email" ("Email format is invalid (missing @ symbol)"). It is never display text:
+  # interpolating it produced "Email Email format is invalid …", and no translation can
+  # inflect an embedded English fragment. Each case maps to a complete msgid instead.
+  @email_taken_messages ["has already been taken", "is already registered"]
+
+  defp email_error_flash(message) when message in @email_taken_messages do
+    dgettext("auth", "An account with that email address already exists. Please log in instead.")
+  end
+
+  defp email_error_flash(_message) do
+    dgettext(
+      "auth",
+      "The email address from your login provider is not valid. Please try a different account."
+    )
+  end
 
   @doc """
   Converts an OAuth error reason into a URL-safe query parameter value.
