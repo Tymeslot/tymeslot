@@ -14,209 +14,209 @@ msgstr ""
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:70
 #, elixir-autogen, elixir-format
 msgid "%{monthly} per month, or %{annual} per year — saving you %{savings} versus paying monthly. You can switch between monthly and annual billing at any time."
-msgstr ""
+msgstr "%{monthly} pro Monat oder %{annual} pro Jahr — Sie sparen %{savings} gegenüber der monatlichen Zahlung. Sie können jederzeit zwischen monatlicher und jährlicher Abrechnung wechseln."
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:86
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:82
 #, elixir-autogen, elixir-format
 msgid "A private, dedicated instance we run for you — with data residency, your own domain, and a support guarantee."
-msgstr ""
+msgstr "Eine private, dedizierte Instanz, die wir für Sie betreiben — mit Datenresidenz, Ihrer eigenen Domain und einer Support-Garantie."
 
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:98
 #, elixir-autogen, elixir-format
 msgid "Absolutely. It's the same product either way, so you can start on the managed cloud and move to your own server later, or the other way around, whenever it suits you."
-msgstr ""
+msgstr "Auf jeden Fall. Es ist so oder so dasselbe Produkt — Sie können in der Managed Cloud starten und später auf Ihren eigenen Server umziehen oder umgekehrt, ganz wie es Ihnen passt."
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:146
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:142
 #, elixir-autogen, elixir-format
 msgid "All calendar & video integrations"
-msgstr ""
+msgstr "Alle Kalender- & Video-Integrationen"
 
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:88
 #, elixir-autogen, elixir-format
 msgid "Can I cancel anytime?"
-msgstr ""
+msgstr "Kann ich jederzeit kündigen?"
 
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:96
 #, elixir-autogen, elixir-format
 msgid "Can I move between self-hosted and the cloud?"
-msgstr ""
+msgstr "Kann ich zwischen Self-Hosting und der Cloud wechseln?"
 
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:62
 #, elixir-autogen, elixir-format
 msgid "Cloud Free gives you unlimited bookings, every integration, all booking themes, and the embed — fully hosted by us. Cloud Pro adds automation (Slack, Telegram and webhooks), custom booking questions, booking analytics, and the ability to accept payments at booking, plus priority support."
-msgstr ""
+msgstr "Cloud Free bietet Ihnen unbegrenzte Buchungen, alle Integrationen, sämtliche Buchungs-Designs und die Einbettung — vollständig von uns gehostet. Cloud Pro ergänzt Automatisierung (Slack, Telegram und Webhooks), individuelle Buchungsfragen, Buchungsanalyse und die Möglichkeit, Zahlungen bei der Buchung anzunehmen, sowie Priority-Support."
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:150
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:146
 #, elixir-autogen, elixir-format
 msgid "Community support"
-msgstr ""
+msgstr "Community-Support"
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:59
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:55
 #, elixir-autogen, elixir-format
 msgid "Data residency"
-msgstr ""
+msgstr "Datenresidenz"
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:58
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:54
 #, elixir-autogen, elixir-format
 msgid "Dedicated instance"
-msgstr ""
+msgstr "Dedizierte Instanz"
 
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:79
 #, elixir-autogen, elixir-format
 msgid "Do I need a credit card to start?"
-msgstr ""
+msgstr "Brauche ich eine Kreditkarte, um zu starten?"
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:78
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:74
 #, elixir-autogen, elixir-format
 msgid "Enterprise"
-msgstr ""
+msgstr "Enterprise"
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:148
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:144
 #, elixir-autogen, elixir-format
 msgid "Every booking theme & embed option"
-msgstr ""
+msgstr "Alle Buchungs-Designs & Einbettungsoptionen"
 
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:19
 #, elixir-autogen, elixir-format
 msgid "Everything you might want to know before you pick a plan."
-msgstr ""
+msgstr "Alles, was Sie vor der Wahl eines Tarifs wissen möchten."
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:109
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:105
 #, elixir-autogen, elixir-format
 msgid "Explore Enterprise"
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:140
-#, elixir-autogen, elixir-format
-msgid "Forever — GNU AGPLv3"
-msgstr ""
+msgstr "Enterprise entdecken"
 
 #: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:136
 #, elixir-autogen, elixir-format
+msgid "Forever — GNU AGPLv3"
+msgstr "Für immer — GNU AGPLv3"
+
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:132
+#, elixir-autogen, elixir-format
 msgid "Free"
-msgstr ""
+msgstr "Kostenlos"
 
 #: lib/tymeslot_saas_web/live/pricing_live/hero_section.ex:23
 #, elixir-autogen, elixir-format
 msgid "Free to self-host."
-msgstr ""
+msgstr "Kostenlos selbst hosten."
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:145
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:141
 #, elixir-autogen, elixir-format
 msgid "Full feature set, no paywalls"
-msgstr ""
+msgstr "Voller Funktionsumfang, keine Paywalls"
 
 #: lib/tymeslot_saas_web/live/pricing_live/hero_section.ex:23
 #, elixir-autogen, elixir-format
 msgid "Fully managed on the cloud."
-msgstr ""
+msgstr "Voll verwaltet in der Cloud."
 
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:68
 #, elixir-autogen, elixir-format
 msgid "How much does Cloud Pro cost?"
-msgstr ""
+msgstr "Wie viel kostet Cloud Pro?"
 
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:51
 #, elixir-autogen, elixir-format
 msgid "Is self-hosting really free?"
-msgstr ""
+msgstr "Ist Self-Hosting wirklich kostenlos?"
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:81
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:77
 #, elixir-autogen, elixir-format
 msgid "Need something bigger?"
-msgstr ""
+msgstr "Brauchen Sie etwas Größeres?"
 
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:81
 #, elixir-autogen, elixir-format
 msgid "No. You can use Cloud Free indefinitely without a card, and the Pro plan starts with a %{days}-day free trial that doesn't ask for payment details up front."
-msgstr ""
+msgstr "Nein. Sie können Cloud Free unbegrenzt ohne Karte nutzen, und der Pro-Tarif beginnt mit einer kostenlosen Testphase von %{days} Tagen, bei der Sie im Voraus keine Zahlungsdaten angeben müssen."
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:149
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:145
 #, elixir-autogen, elixir-format
 msgid "Open source — audit, modify, fork"
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:34
-#, elixir-autogen, elixir-format
-msgid "Prices in EUR, VAT may apply. Existing subscriptions keep their original price. Self-hosting is governed by the"
-msgstr ""
+msgstr "Open Source — prüfen, anpassen, forken"
 
 #: lib/tymeslot_saas_web/live/pricing_live.ex:22
 #, elixir-autogen, elixir-format
 msgid "Pricing — Free Self-Hosting & Managed Cloud"
-msgstr ""
+msgstr "Preise — Kostenloses Self-Hosting & Managed Cloud"
 
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:16
 #, elixir-autogen, elixir-format
 msgid "Questions, answered."
-msgstr ""
+msgstr "Fragen, beantwortet."
 
 #: lib/tymeslot_saas_web/live/pricing_live/cta_section.ex:26
 #, elixir-autogen, elixir-format
 msgid "Ready when you are."
-msgstr ""
+msgstr "Bereit, wenn Sie es sind."
 
 #: lib/tymeslot_saas_web/live/pricing_live/hero_section.ex:30
 #, elixir-autogen, elixir-format
 msgid "Run Tymeslot yourself for free, forever — or let us handle the hosting, updates, and backups. No seat counts, no booking limits, no surprises."
-msgstr ""
+msgstr "Betreiben Sie Tymeslot selbst — kostenlos, für immer — oder überlassen Sie uns Hosting, Updates und Backups. Keine Nutzerkontingente, keine Buchungslimits, keine Überraschungen."
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:129
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:125
 #, elixir-autogen, elixir-format
 msgid "Run it on your own infrastructure with Docker."
-msgstr ""
+msgstr "Betreiben Sie es mit Docker auf Ihrer eigenen Infrastruktur."
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:61
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:57
 #, elixir-autogen, elixir-format
 msgid "SLA & DPA"
-msgstr ""
+msgstr "SLA & AVV"
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:60
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:56
 #, elixir-autogen, elixir-format
 msgid "SSO"
-msgstr ""
+msgstr "SSO"
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:126
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:122
 #, elixir-autogen, elixir-format
 msgid "Self-Hosted"
-msgstr ""
+msgstr "Self-Hosted"
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:161
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:157
 #, elixir-autogen, elixir-format
 msgid "Self-host with Docker"
-msgstr ""
+msgstr "Mit Docker selbst hosten"
 
 #: lib/tymeslot_saas_web/live/pricing_live/hero_section.ex:18
 #, elixir-autogen, elixir-format
 msgid "Simple, honest pricing"
-msgstr ""
+msgstr "Einfache, ehrliche Preise"
 
 #: lib/tymeslot_saas_web/live/pricing_live/cta_section.ex:16
 #, elixir-autogen, elixir-format
 msgid "Start free on the cloud, or self-host in minutes. Upgrade only when you need automation, custom questions, analytics, or payments."
-msgstr ""
+msgstr "Starten Sie kostenlos in der Cloud oder hosten Sie in Minuten selbst. Führen Sie ein Upgrade erst durch, wenn Sie Automatisierung, individuelle Fragen, Analyse oder Zahlungen benötigen."
 
 #: lib/tymeslot_saas_web/live/pricing_live.ex:26
 #, elixir-autogen, elixir-format
 msgid "Tymeslot pricing — self-host for free under the GNU AGPLv3, or let us run it for you on the managed cloud. Free plan included, Pro from %{price}/month."
-msgstr ""
+msgstr "Tymeslot-Preise — hosten Sie kostenlos selbst unter der GNU AGPLv3 oder lassen Sie uns Tymeslot in der Managed Cloud für Sie betreiben. Kostenloser Tarif inklusive, Pro ab %{price}/Monat."
 
-#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:147
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:143
 #, elixir-autogen, elixir-format
 msgid "Unlimited bookings & meeting types"
-msgstr ""
+msgstr "Unbegrenzte Buchungen & Termintypen"
 
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:60
 #, elixir-autogen, elixir-format
 msgid "What's the difference between Cloud Free and Cloud Pro?"
-msgstr ""
+msgstr "Was ist der Unterschied zwischen Cloud Free und Cloud Pro?"
 
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:53
 #, elixir-autogen, elixir-format
 msgid "Yes. The full Tymeslot product is open source under the GNU AGPLv3. Run it on your own server with Docker, with every feature and integration, at no cost. The one obligation is share-alike: if you run a modified version as a service, your changes stay open too."
-msgstr ""
+msgstr "Ja. Das vollständige Tymeslot-Produkt ist Open Source unter der GNU AGPLv3. Betreiben Sie es mit Docker auf Ihrem eigenen Server — mit allen Funktionen und Integrationen, kostenlos. Die einzige Verpflichtung ist Share-alike: Wenn Sie eine modifizierte Version als Dienst betreiben, bleiben auch Ihre Änderungen offen."
 
 #: lib/tymeslot_saas_web/live/pricing_live/faq_section.ex:90
 #, elixir-autogen, elixir-format
 msgid "Yes. There are no contracts or lock-in. Cancel from your dashboard and you'll keep Pro features until the end of the period you've already paid for."
-msgstr ""
+msgstr "Ja. Es gibt keine Verträge und kein Lock-in. Kündigen Sie über Ihr Dashboard und Sie behalten die Pro-Funktionen bis zum Ende des bereits bezahlten Zeitraums."
+
+#: lib/tymeslot_saas_web/live/pricing_live/plans_section.ex:37
+#, elixir-autogen, elixir-format
+msgid "Prices in EUR, VAT may apply. Existing subscriptions keep their original price. Self-hosting is governed by the %{license}."
+msgstr "Preise in EUR, ggf. zzgl. MwSt. Bestehende Abonnements behalten ihren ursprünglichen Preis. Self-Hosting unterliegt der %{license}."

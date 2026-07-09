@@ -12,7 +12,7 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:94
-#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:75
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:77
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
@@ -137,11 +137,6 @@ msgstr ""
 msgid "Advance booking window updated to %{days} days"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:59
-#, elixir-autogen, elixir-format
-msgid "Are you sure you want to delete the meeting type"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:25
 #, elixir-autogen, elixir-format
 msgid "Buffer Between Appointments"
@@ -180,7 +175,7 @@ msgid "Delete"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:52
-#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:81
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:83
 #, elixir-autogen, elixir-format
 msgid "Delete Meeting Type"
 msgstr ""
@@ -245,7 +240,7 @@ msgstr ""
 msgid "Scheduling Preferences"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:62
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:64
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone and will permanently remove this meeting type from your account."
 msgstr ""
@@ -283,4 +278,9 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:66
 #, elixir-autogen, elixir-format
 msgid "min"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex:59
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to delete the meeting type \"%{name}\"?"
 msgstr ""

@@ -57,11 +57,6 @@ msgstr ""
 msgid "Enter your server URL and credentials to discover calendars."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:64
-#, elixir-autogen, elixir-format
-msgid "If you have two-factor authentication enabled, generate an application-specific password under"
-msgstr ""
-
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:179
 #, elixir-autogen, elixir-format
 msgid "Integration Name"
@@ -246,7 +241,7 @@ msgstr ""
 msgid "Session expired. Please start the reconnect process again."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:68
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:70
 #, elixir-autogen, elixir-format
 msgid "Settings → Security"
 msgstr ""
@@ -262,7 +257,7 @@ msgstr ""
 msgid "Setup guide"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:78
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:75
 #, elixir-autogen, elixir-format
 msgid "Sign-In and Security → App-Specific Passwords"
 msgstr ""
@@ -320,34 +315,9 @@ msgstr ""
 msgid "Username"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:68
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:70
 #, elixir-autogen, elixir-format
 msgid "app-specific password"
-msgstr ""
-
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:69
-#, elixir-autogen, elixir-format
-msgid "at"
-msgstr ""
-
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:64
-#, elixir-autogen, elixir-format
-msgid "iCloud will not accept your Apple ID password here. Generate an"
-msgstr ""
-
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:69
-#, elixir-autogen, elixir-format
-msgid "on mailbox.org and use that here instead of your regular password."
-msgstr ""
-
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:80
-#, elixir-autogen, elixir-format
-msgid "then enter it below with your Apple ID email."
-msgstr ""
-
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:76
-#, elixir-autogen, elixir-format
-msgid "under"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:47
@@ -455,4 +425,14 @@ msgstr ""
 #: lib/tymeslot/integrations/calendar/providers/provider_config.ex:74
 #, elixir-autogen, elixir-format
 msgid "Universal CalDAV server support"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:65
+#, elixir-autogen, elixir-format
+msgid "If you have two-factor authentication enabled, generate an application-specific password under %{location} on mailbox.org and use that here instead of your regular password."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:65
+#, elixir-autogen, elixir-format
+msgid "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email."
 msgstr ""

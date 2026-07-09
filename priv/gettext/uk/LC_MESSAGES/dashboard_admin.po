@@ -89,7 +89,7 @@ msgstr "Мінімальний бал для бронювання"
 msgid "Booking slug"
 msgstr "URL-ідентифікатор бронювання"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:68
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:64
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Скасувати"
@@ -125,8 +125,7 @@ msgstr "Не вдалося підвищити користувача."
 msgid "Could not update setting."
 msgstr "Не вдалося оновити налаштування."
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:44
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:97
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:93
 #: lib/tymeslot_web/live/admin_live/components/users.ex:127
 #: lib/tymeslot_web/live/admin_live/components/users.ex:146
 #, elixir-autogen, elixir-format
@@ -138,27 +137,27 @@ msgstr "Понизити"
 msgid "Demote %{email} from admin"
 msgstr "Понизити %{email} з адміністратора"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:87
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:83
 #, elixir-autogen, elixir-format
 msgid "Demote admin"
 msgstr "Понизити адміністратора"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:96
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:92
 #, elixir-autogen, elixir-format
 msgid "Demote me"
 msgstr "Понизити мене"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:86
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:82
 #, elixir-autogen, elixir-format
 msgid "Demote yourself"
 msgstr "Понизити себе"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:38
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:36
 #, elixir-autogen, elixir-format
 msgid "Demote yourself from admin?"
 msgstr "Понизити себе з адміністратора?"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:100
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:96
 #, elixir-autogen, elixir-format
 msgid "Demoting..."
 msgstr "Пониження..."
@@ -246,8 +245,7 @@ msgstr "Автентифікація за паролем"
 msgid "Payments"
 msgstr "Платежі"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:30
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:95
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:91
 #: lib/tymeslot_web/live/admin_live/components/users.ex:158
 #, elixir-autogen, elixir-format
 msgid "Promote"
@@ -258,12 +256,12 @@ msgstr "Підвищити"
 msgid "Promote %{email} to admin"
 msgstr "Підвищити %{email} до адміністратора"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:85
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:81
 #, elixir-autogen, elixir-format
 msgid "Promote user to admin"
 msgstr "Підвищити користувача до адміністратора"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:99
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:95
 #, elixir-autogen, elixir-format
 msgid "Promoting..."
 msgstr "Підвищення..."
@@ -310,12 +308,12 @@ msgstr "Мінімальний бал для реєстрації"
 msgid "That change would lock everyone out and was not applied."
 msgstr "Ця зміна заблокувала б доступ для всіх і не була застосована."
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:50
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:46
 #, elixir-autogen, elixir-format
 msgid "They will gain access to admin settings and user management."
 msgstr "Вони отримають доступ до адміністративних налаштувань та керування користувачами."
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:58
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:54
 #, elixir-autogen, elixir-format
 msgid "They will lose access to admin settings and user management."
 msgstr "Вони втратять доступ до адміністративних налаштувань та керування користувачами."
@@ -355,7 +353,7 @@ msgstr "Користувачі"
 msgid "You have been demoted from admin."
 msgstr "Вас було понижено з адміністратора."
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:53
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:49
 #, elixir-autogen, elixir-format
 msgid "You will lose access to admin settings and user management, and be returned to your dashboard."
 msgstr "Ви втратите доступ до адміністративних налаштувань та керування користувачами і будете повернуті до вашого dashboard."
@@ -369,11 +367,6 @@ msgstr "Ви єдиний адміністратор. Підвищте кого�
 #, elixir-autogen, elixir-format
 msgid "admin@example.com"
 msgstr "admin@example.com"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:46
-#, elixir-autogen, elixir-format
-msgid "from admin?"
-msgstr "з адміністратора?"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:183
 #, elixir-autogen, elixir-format
@@ -389,11 +382,6 @@ msgstr "reCAPTCHA при бронюванні"
 #, elixir-autogen, elixir-format
 msgid "reCAPTCHA on signup"
 msgstr "reCAPTCHA при реєстрації"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:32
-#, elixir-autogen, elixir-format
-msgid "to admin?"
-msgstr "до адміністратора?"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:185
 #, elixir-autogen, elixir-format
@@ -488,4 +476,14 @@ msgstr ""
 #: lib/tymeslot_web/hooks/ensure_admin_hook.ex:58
 #, elixir-autogen, elixir-format
 msgid "Your admin access has been revoked."
+msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:42
+#, elixir-autogen, elixir-format
+msgid "Demote %{email} from admin?"
+msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:30
+#, elixir-autogen, elixir-format
+msgid "Promote %{email} to admin?"
 msgstr ""

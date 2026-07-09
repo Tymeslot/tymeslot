@@ -898,3 +898,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Self-hosted peer-to-peer video meetings"
 msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex:61
+#, elixir-autogen, elixir-format
+msgid "Error"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex:60
+#, elixir-autogen, elixir-format
+msgid "Warning"
+msgstr ""

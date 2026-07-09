@@ -531,7 +531,7 @@ msgstr "Nein"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:74
 #, elixir-autogen, elixir-format
 msgid "No meeting types available"
-msgstr "Keine Besprechungstypen verfügbar"
+msgstr "Keine Termintypen verfügbar"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex:101
 #, elixir-autogen, elixir-format
@@ -573,7 +573,7 @@ msgstr "Bitte wählen Sie unten eine Dauer aus."
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:75
 #, elixir-autogen, elixir-format
 msgid "Please contact the organizer"
-msgstr "Bitte kontaktieren Sie den Veranstalter"
+msgstr "Bitte kontaktieren Sie den Organisator"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:457
 #, elixir-autogen, elixir-format
@@ -1211,64 +1211,64 @@ msgstr "Zum Kalender hinzufügen"
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:71
 #, elixir-autogen, elixir-format
 msgid "Failed to create appointment. Please try again."
-msgstr ""
+msgstr "Termin konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:56
 #, elixir-autogen, elixir-format
 msgid "Failed to process booking. Please try again."
-msgstr ""
+msgstr "Buchung konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:38
 #, elixir-autogen, elixir-format
 msgid "Failed to save meeting to database"
-msgstr ""
+msgstr "Termin konnte nicht in der Datenbank gespeichert werden"
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:47
 #, elixir-autogen, elixir-format
 msgid "Host could not be found. Please refresh and try again."
-msgstr ""
+msgstr "Der Gastgeber konnte nicht gefunden werden. Bitte laden Sie die Seite neu und versuchen Sie es erneut."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:35
 #, elixir-autogen, elixir-format
 msgid "Organizer is required for booking"
-msgstr ""
+msgstr "Für die Buchung ist ein Organisator erforderlich."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:41
 #, elixir-autogen, elixir-format
 msgid "Payments are not available for this booking. Please contact the host."
-msgstr ""
+msgstr "Für diese Buchung sind keine Zahlungen möglich. Bitte wenden Sie sich an den Gastgeber."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:50
 #, elixir-autogen, elixir-format
 msgid "Please fill in all required fields before submitting."
-msgstr ""
+msgstr "Bitte füllen Sie alle Pflichtfelder aus, bevor Sie absenden."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:59
 #, elixir-autogen, elixir-format
 msgid "This meeting could not be found. Please refresh and try again."
-msgstr ""
+msgstr "Dieser Termin konnte nicht gefunden werden. Bitte laden Sie die Seite neu und versuchen Sie es erneut."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:29
 #, elixir-autogen, elixir-format
 msgid "This meeting type is no longer available. Please go back and select another."
-msgstr ""
+msgstr "Dieser Termintyp ist nicht mehr verfügbar. Bitte gehen Sie zurück und wählen Sie einen anderen."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:26
 #, elixir-autogen, elixir-format
 msgid "This meeting type is no longer available. Please refresh the page."
-msgstr ""
+msgstr "Dieser Termintyp ist nicht mehr verfügbar. Bitte laden Sie die Seite neu."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:20
 #, elixir-autogen, elixir-format
 msgid "This time slot is no longer available. Please select a different time."
-msgstr ""
+msgstr "Dieses Zeitfenster ist nicht mehr verfügbar. Bitte wählen Sie eine andere Zeit."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:53
 #, elixir-autogen, elixir-format
 msgid "We couldn't start the payment process. Please try again."
-msgstr ""
+msgstr "Der Zahlungsvorgang konnte nicht gestartet werden. Bitte versuchen Sie es erneut."
 
 #: lib/tymeslot_web/themes/shared/live_helpers.ex:265
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting type"
-msgstr ""
+msgstr "Ungültiger Termintyp"

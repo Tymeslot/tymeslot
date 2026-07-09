@@ -36,7 +36,7 @@ msgstr ""
 msgid "Almost There!"
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:179
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:181
 #, elixir-autogen, elixir-format
 msgid "Already have an account?"
 msgstr ""
@@ -88,7 +88,7 @@ msgstr ""
 msgid "Contact Support"
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:87
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:88
 #, elixir-autogen, elixir-format
 msgid "Create a password"
 msgstr ""
@@ -114,7 +114,7 @@ msgid "Don't have an account?"
 msgstr ""
 
 #: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex:76
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:72
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:73
 #: lib/tymeslot_web/components/auth/session/login_component.ex:58
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex:52
 #, elixir-autogen, elixir-format
@@ -162,11 +162,6 @@ msgstr ""
 msgid "Go to Login"
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/shared/auth_form_components.ex:65
-#, elixir-autogen, elixir-format
-msgid "I accept the"
-msgstr ""
-
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex:273
 #, elixir-autogen, elixir-format
 msgid "Invalid Link"
@@ -182,7 +177,7 @@ msgstr ""
 msgid "Invalid verification link"
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:33
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:34
 #, elixir-autogen, elixir-format
 msgid "Join Tymeslot"
 msgstr ""
@@ -198,7 +193,7 @@ msgstr ""
 msgid "Log In"
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:182
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:184
 #: lib/tymeslot_web/components/auth/session/login_component.ex:132
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex:109
 #, elixir-autogen, elixir-format
@@ -247,7 +242,7 @@ msgstr ""
 msgid "Or continue with"
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:86
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:87
 #: lib/tymeslot_web/components/auth/session/login_component.ex:71
 #, elixir-autogen, elixir-format
 msgid "Password"
@@ -273,7 +268,7 @@ msgstr ""
 msgid "Please enter your email and password."
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:119
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:118
 #, elixir-autogen, elixir-format
 msgid "Privacy Policy"
 msgstr ""
@@ -350,18 +345,18 @@ msgstr ""
 msgid "Set New Password"
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:169
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:171
 #: lib/tymeslot_web/components/auth/session/login_component.ex:146
 #, elixir-autogen, elixir-format
 msgid "Sign up"
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:167
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:169
 #, elixir-autogen, elixir-format
 msgid "Signing up..."
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:34
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:35
 #, elixir-autogen, elixir-format
 msgid "Start scheduling your meetings with ease. Zero friction, total control."
 msgstr ""
@@ -377,7 +372,7 @@ msgstr ""
 msgid "Successfully signed in with %{provider}."
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:128
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:125
 #, elixir-autogen, elixir-format
 msgid "Terms of Service"
 msgstr ""
@@ -390,11 +385,6 @@ msgstr ""
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex:287
 #, elixir-autogen, elixir-format
 msgid "The security link you followed is no longer valid. Please request a new one to continue."
-msgstr ""
-
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:112
-#, elixir-autogen, elixir-format
-msgid "This site is protected by reCAPTCHA and the Google"
 msgstr ""
 
 #: lib/tymeslot_web/controllers/auth/session_controller.ex:154
@@ -527,17 +517,6 @@ msgstr ""
 msgid "Your password has been successfully updated. You can now log in with your new credentials."
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:121
-#: lib/tymeslot_web/components/auth/shared/auth_form_components.ex:73
-#, elixir-autogen, elixir-format
-msgid "and"
-msgstr ""
-
-#: lib/tymeslot_web/components/auth/registration/signup_component.ex:130
-#, elixir-autogen, elixir-format
-msgid "apply."
-msgstr ""
-
 #: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex:61
 #, elixir-autogen, elixir-format
 msgid "e.g. John Doe"
@@ -553,7 +532,7 @@ msgstr ""
 msgid "privacy policy"
 msgstr ""
 
-#: lib/tymeslot_web/components/auth/shared/auth_form_components.ex:71
+#: lib/tymeslot_web/components/auth/shared/auth_form_components.ex:72
 #, elixir-autogen, elixir-format
 msgid "terms"
 msgstr ""
@@ -674,4 +653,14 @@ msgstr ""
 #: lib/tymeslot_web/hooks/auth_live_session_hook.ex:76
 #, elixir-autogen, elixir-format
 msgid "Your session has expired. Please log in again."
+msgstr ""
+
+#: lib/tymeslot_web/components/auth/shared/auth_form_components.ex:68
+#, elixir-autogen, elixir-format
+msgid "I accept the %{terms} and %{privacy_policy}"
+msgstr ""
+
+#: lib/tymeslot_web/components/auth/registration/signup_component.ex:114
+#, elixir-autogen, elixir-format
+msgid "This site is protected by reCAPTCHA and the Google %{privacy_policy} and %{terms} apply."
 msgstr ""

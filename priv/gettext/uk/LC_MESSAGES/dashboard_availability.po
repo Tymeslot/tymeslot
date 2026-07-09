@@ -54,11 +54,6 @@ msgstr ""
 msgid "Apply to Workdays"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex:60
-#, elixir-autogen, elixir-format
-msgid "Are you sure you want to clear all settings for"
-msgstr ""
-
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex:62
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete this break%{label}?"
@@ -106,14 +101,14 @@ msgstr ""
 msgid "Breaks"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex:74
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex:76
 #: lib/tymeslot_web/components/dashboard/availability/delete_break_modal.ex:75
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:222
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex:77
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex:79
 #, elixir-autogen, elixir-format
 msgid "Clear All Settings"
 msgstr ""
@@ -302,7 +297,7 @@ msgstr ""
 msgid "This action cannot be undone."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex:63
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex:65
 #, elixir-autogen, elixir-format
 msgid "This will remove all availability hours and breaks for this day. This action cannot be undone."
 msgstr ""
@@ -367,4 +362,9 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:183
 #, elixir-autogen, elixir-format
 msgid "e.g. Lunch"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex:60
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to clear all settings for %{day}?"
 msgstr ""

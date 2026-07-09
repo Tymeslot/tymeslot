@@ -11,14 +11,9 @@ msgstr ""
 "Language: it\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:31
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:35
 #, elixir-autogen, elixir-format
 msgid "%{count} Calendar Providers"
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:16
-#, elixir-autogen, elixir-format
-msgid ", or "
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/features_live/feature_data.ex:209
@@ -37,18 +32,18 @@ msgstr ""
 msgid "13 currencies — EUR, USD, GBP, CHF, and more."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:73
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:79
 #, elixir-autogen, elixir-format
 msgid "1‑click"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:34
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:38
 #, elixir-autogen, elixir-format
 msgid "4 Video Providers"
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/features_live/feature_data.ex:187
-#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:37
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:41
 #, elixir-autogen, elixir-format
 msgid "5 Languages"
 msgstr ""
@@ -58,7 +53,7 @@ msgstr ""
 msgid "A Linux server (or Cloudron/Railway), a PostgreSQL database, and a domain name. For calendar sync you supply your own Google and Microsoft OAuth credentials, or connect any CalDAV server. The documentation walks through each deployment target end to end."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:24
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:28
 #, elixir-autogen, elixir-format
 msgid "A complete look at every feature — from calendar sync to Slack and Telegram notifications. No surprises. No lock-in."
 msgstr ""
@@ -78,7 +73,7 @@ msgstr ""
 msgid "A persistent booking button fixed to the corner of every page, like a chat widget."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:53
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:59
 #, elixir-autogen, elixir-format
 msgid "A video room is generated on every confirmed booking and included in the confirmation email and calendar invite."
 msgstr ""
@@ -163,7 +158,7 @@ msgstr ""
 msgid "Auto-resizing iframe"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:32
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:34
 #, elixir-autogen, elixir-format
 msgid "Automated."
 msgstr ""
@@ -173,7 +168,7 @@ msgstr ""
 msgid "Automatic Reminders"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:29
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:31
 #, elixir-autogen, elixir-format
 msgid "Automation"
 msgstr ""
@@ -280,7 +275,7 @@ msgstr ""
 msgid "CalDAV is first-class"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:28
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:34
 #, elixir-autogen, elixir-format
 msgid "Calendar Providers"
 msgstr ""
@@ -355,12 +350,12 @@ msgstr ""
 msgid "Cancel-with-refund"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:50
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:56
 #, elixir-autogen, elixir-format
 msgid "Cards · Apple Pay · Google Pay"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:19
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:25
 #, elixir-autogen, elixir-format
 msgid "Charge attendees at booking time — the money lands directly in your Stripe account."
 msgstr ""
@@ -450,7 +445,7 @@ msgstr ""
 msgid "Connect any CalDAV server"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:34
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:40
 #, elixir-autogen, elixir-format
 msgid "Connect as many accounts as you like — free/busy is read across all of them at once."
 msgstr ""
@@ -470,7 +465,7 @@ msgstr ""
 msgid "Connect your calendars"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:20
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:26
 #, elixir-autogen, elixir-format
 msgid "Connect your calendars, pick a video tool, and you're done."
 msgstr ""
@@ -483,11 +478,6 @@ msgstr ""
 #: lib/tymeslot_saas_web/live/feature_live/pages/calendar_sync.ex:91
 #, elixir-autogen, elixir-format
 msgid "Connected calendars block your time without leaking event details. Guests see open or busy, never what you are busy with."
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:16
-#, elixir-autogen, elixir-format
-msgid "Connects to the tools"
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:47
@@ -510,7 +500,7 @@ msgstr ""
 msgid "Credentials and tokens never sit in plaintext."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:69
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:75
 #, elixir-autogen, elixir-format
 msgid "Currencies"
 msgstr ""
@@ -690,7 +680,7 @@ msgstr ""
 msgid "Every Tymeslot feature: booking pages, paid appointments via your own Stripe, calendar sync incl. CalDAV, automation, embeds and one-click self-hosting."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:35
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:37
 #, elixir-autogen, elixir-format
 msgid "Every booking event can fire a webhook or message you directly — the moment it happens."
 msgstr ""
@@ -700,7 +690,7 @@ msgstr ""
 msgid "Every confirmation includes a standards-compliant invite."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:46
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:48
 #, elixir-autogen, elixir-format
 msgid "Every event"
 msgstr ""
@@ -740,17 +730,12 @@ msgstr ""
 msgid "Everything %{feature} should do"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:20
-#, elixir-autogen, elixir-format
-msgid "Everything Tymeslot"
-msgstr ""
-
 #: lib/tymeslot_saas_web/live/features_live/embed_section.ex:32
 #, elixir-autogen, elixir-format
 msgid "Everywhere."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:65
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:71
 #, elixir-autogen, elixir-format
 msgid "Explore calendar sync"
 msgstr ""
@@ -760,7 +745,7 @@ msgstr ""
 msgid "Explore more"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:105
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:111
 #, elixir-autogen, elixir-format
 msgid "Explore payments"
 msgstr ""
@@ -841,7 +826,7 @@ msgstr ""
 msgid "Full or partial, straight from the dashboard."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:92
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:94
 #, elixir-autogen, elixir-format
 msgid "Full webhook reference →"
 msgstr ""
@@ -859,11 +844,6 @@ msgstr ""
 #: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:81
 #, elixir-autogen, elixir-format
 msgid "Funds settle to you directly"
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:15
-#, elixir-autogen, elixir-format
-msgid "Get paid the moment"
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/feature_live/pages/payments.ex:20
@@ -981,7 +961,7 @@ msgstr ""
 msgid "Install on Cloudron"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:108
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:110
 #, elixir-autogen, elixir-format
 msgid "Instant messages to your account or a group chat — just a bot token, no server required."
 msgstr ""
@@ -1046,7 +1026,7 @@ msgstr ""
 msgid "Match your brand across the whole booking flow."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:133
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:135
 #, elixir-autogen, elixir-format
 msgid "Messages to any channel, private channel, or DM — one-click OAuth or a webhook URL."
 msgstr ""
@@ -1218,7 +1198,7 @@ msgstr ""
 msgid "One-click refunds"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:40
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:44
 #, elixir-autogen, elixir-format
 msgid "Open source"
 msgstr ""
@@ -1285,7 +1265,7 @@ msgstr ""
 msgid "Pin a version, test in staging, and upgrade when you are ready. No forced migrations, no surprise UI changes."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:63
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:69
 #, elixir-autogen, elixir-format
 msgid "Platform fee"
 msgstr ""
@@ -1400,7 +1380,7 @@ msgstr ""
 msgid "Refund in full or part straight from the dashboard, and cancel-with-refund in one step. Reschedules never trigger a second charge."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:78
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:84
 #, elixir-autogen, elixir-format
 msgid "Refunds"
 msgstr ""
@@ -1510,10 +1490,10 @@ msgstr ""
 msgid "Set up payments with Stripe"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:117
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:142
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:119
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:144
 #: lib/tymeslot_saas_web/live/features_live/deployment_section.ex:48
-#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:109
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:115
 #, elixir-autogen, elixir-format
 msgid "Setup guide →"
 msgstr ""
@@ -1523,12 +1503,12 @@ msgstr ""
 msgid "Share your personal booking URL directly — in email signatures, social media bios, or anywhere you can paste a link. No website required."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:82
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:84
 #, elixir-autogen, elixir-format
 msgid "Signed HTTP POST with the full meeting object — works with %{platforms}."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:128
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:130
 #, elixir-autogen, elixir-format
 msgid "Slack Notifications"
 msgstr ""
@@ -1558,7 +1538,7 @@ msgstr ""
 msgid "Stripe Checkout accepts cards, Apple Pay, and Google Pay. You can charge in 13 currencies including EUR, USD, GBP, and CHF, set per host."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:34
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:40
 #, elixir-autogen, elixir-format
 msgid "Stripe Checkout, built in"
 msgstr ""
@@ -1594,7 +1574,7 @@ msgstr ""
 msgid "Tamper-Proof Forms"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:103
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:105
 #, elixir-autogen, elixir-format
 msgid "Telegram Notifications"
 msgstr ""
@@ -1664,7 +1644,7 @@ msgstr ""
 msgid "Turn bookings into paid bookings"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:39
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:45
 #, elixir-autogen, elixir-format
 msgid "Turn on payments for any event type and set a price. Attendees pay through Stripe before the slot is confirmed — no payment, no booking."
 msgstr ""
@@ -1729,7 +1709,7 @@ msgstr ""
 msgid "Upgrade on your terms"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:47
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:53
 #, elixir-autogen, elixir-format
 msgid "Video Conferencing"
 msgstr ""
@@ -1739,7 +1719,7 @@ msgstr ""
 msgid "View on GitHub"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:77
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:79
 #, elixir-autogen, elixir-format
 msgid "Webhooks"
 msgstr ""
@@ -1924,7 +1904,7 @@ msgstr ""
 msgid "Your own database"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:31
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:33
 #, elixir-autogen, elixir-format
 msgid "Your workflow."
 msgstr ""
@@ -1939,19 +1919,9 @@ msgstr ""
 msgid "Zero platform fee self-hosted"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:21
-#, elixir-autogen, elixir-format
-msgid "can do."
-msgstr ""
-
 #: lib/tymeslot_saas_web/live/feature_live/pages/embed.ex:165
 #, elixir-autogen, elixir-format
 msgid "data-theme, data-primary-color, and data-locale let each embed match its host page."
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:16
-#, elixir-autogen, elixir-format
-msgid "someone books."
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/features_live/feature_data.ex:280
@@ -1959,12 +1929,27 @@ msgstr ""
 msgid "tymeslot.app — we handle uptime, backups, and updates. Core is always free."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:17
-#, elixir-autogen, elixir-format
-msgid "you already use."
-msgstr ""
-
 #: lib/tymeslot_saas_web/live/features_live/feature_data.ex:81
 #, elixir-autogen, elixir-format
 msgid "your own backend"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/automation_section.ex:15
+#, elixir-autogen, elixir-format
+msgid "%{list}, or %{last}"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/integrations_section.ex:18
+#, elixir-autogen, elixir-format
+msgid "Connects to the tools <span class=\"block mt-1 text-transparent bg-clip-text bg-linear-to-r from-turquoise-600 to-cyan-600\">you already use.</span>"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/hero_section.ex:21
+#, elixir-autogen, elixir-format
+msgid "Everything Tymeslot<br /><span class=\"text-cyan-200\">can do.</span>"
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/features_live/payments_section.ex:17
+#, elixir-autogen, elixir-format
+msgid "Get paid the moment <span class=\"block mt-1 text-transparent bg-clip-text bg-linear-to-r from-turquoise-600 to-cyan-600\">someone books.</span>"
 msgstr ""

@@ -11,579 +11,559 @@ msgstr ""
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_saas_web/live/about_live.ex:288
+#: lib/tymeslot_saas_web/live/about_live.ex:285
 #, elixir-autogen, elixir-format
 msgid "%{name} — founder of Tymeslot"
-msgstr ""
+msgstr "%{name} — Gründer von Tymeslot"
 
 #: lib/tymeslot_saas_web/live/about_live.ex:79
 #: lib/tymeslot_saas_web/live/about_live.ex:142
 #: lib/tymeslot_saas_web/live/faq_live.ex:60
 #, elixir-autogen, elixir-format
 msgid "About Tymeslot"
-msgstr ""
+msgstr "Über Tymeslot"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:25
 #, elixir-autogen, elixir-format
 msgid "Answers to common questions about Tymeslot — what it is, pricing, calendar and video integrations, privacy, and self-hosting the open-source scheduling platform."
-msgstr ""
+msgstr "Antworten auf häufige Fragen zu Tymeslot — was es ist, Preise, Kalender- und Video-Integrationen, Datenschutz und das Self-Hosting der quelloffenen Terminplanungsplattform."
 
 #: lib/tymeslot_saas_web/live/changelog_live.ex:146
 #, elixir-autogen, elixir-format
 msgid "Breaking changes"
-msgstr ""
+msgstr "Breaking Changes"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:252
 #, elixir-autogen, elixir-format
 msgid "Can I ask guests custom questions when they book?"
-msgstr ""
+msgstr "Kann ich Gästen bei der Buchung eigene Fragen stellen?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:244
 #, elixir-autogen, elixir-format
 msgid "Can I embed Tymeslot on my website?"
-msgstr ""
+msgstr "Kann ich Tymeslot in meine Website einbetten?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:286
 #, elixir-autogen, elixir-format
 msgid "Can I take payments for bookings?"
-msgstr ""
+msgstr "Kann ich Zahlungen für Buchungen annehmen?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:294
 #, elixir-autogen, elixir-format
 msgid "Can Tymeslot notify my team or trigger automations?"
-msgstr ""
+msgstr "Kann Tymeslot mein Team benachrichtigen oder Automatisierungen auslösen?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:228
 #, elixir-autogen, elixir-format
 msgid "Can guests cancel or reschedule their own bookings?"
-msgstr ""
+msgstr "Können Gäste ihre eigenen Buchungen absagen oder verschieben?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:102
 #, elixir-autogen, elixir-format
 msgid "Choosing a scheduling tool"
-msgstr ""
+msgstr "Ein Terminplanungstool auswählen"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:180
 #, elixir-autogen, elixir-format
 msgid "Cloud Free includes unlimited bookings and meeting types, all calendar and video integrations, and every booking theme and embed option. Pro adds accepting payments at booking, custom booking questions, booking analytics, Slack / Telegram / webhook automation, and priority support."
-msgstr ""
+msgstr "Cloud Free umfasst unbegrenzte Buchungen und Termintypen, alle Kalender- und Video-Integrationen sowie jedes Buchungs-Design und jede Einbettungsoption. Pro ergänzt das Annehmen von Zahlungen bei der Buchung, eigene Buchungsfragen, Buchungsanalysen, Slack-/Telegram-/Webhook-Automatisierung und Priority-Support."
 
 #: lib/tymeslot_saas_web/live/about_live.ex:20
 #, elixir-autogen, elixir-format
 msgid "Design is the product"
-msgstr ""
+msgstr "Das Design ist das Produkt"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:362
 #, elixir-autogen, elixir-format
 msgid "Do I get updates and backups when self-hosting?"
-msgstr ""
+msgstr "Erhalte ich beim Self-Hosting Updates und Backups?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:220
 #, elixir-autogen, elixir-format
 msgid "Does Tymeslot handle time zones?"
-msgstr ""
+msgstr "Berücksichtigt Tymeslot Zeitzonen?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:212
 #, elixir-autogen, elixir-format
 msgid "Does Tymeslot prevent double-bookings?"
-msgstr ""
+msgstr "Verhindert Tymeslot Doppelbuchungen?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:312
 #, elixir-autogen, elixir-format
 msgid "Does Tymeslot track my visitors?"
-msgstr ""
+msgstr "Verfolgt Tymeslot meine Besucher?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:194
 #, elixir-autogen, elixir-format
 msgid "Does self-hosting cost anything?"
-msgstr ""
+msgstr "Kostet Self-Hosting etwas?"
 
 #: lib/tymeslot_saas_web/live/changelog_live.ex:22
 #, elixir-autogen, elixir-format
 msgid "Every new feature, improvement, and fix shipped in each release of Tymeslot — open-source meeting scheduling software."
-msgstr ""
+msgstr "Jede neue Funktion, Verbesserung und Fehlerbehebung aus jeder Version von Tymeslot — quelloffene Software zur Terminplanung."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:431
 #, elixir-autogen, elixir-format
 msgid "Everything worth knowing about Tymeslot — what it is, what it costs, what it connects to, and how to run it yourself."
-msgstr ""
+msgstr "Alles Wissenswerte über Tymeslot — was es ist, was es kostet, womit es sich verbindet und wie Sie es selbst betreiben."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:422
 #, elixir-autogen, elixir-format
 msgid "FAQ"
-msgstr ""
+msgstr "FAQ"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:208
 #, elixir-autogen, elixir-format
 msgid "Features & how it works"
-msgstr ""
+msgstr "Funktionen & Funktionsweise"
 
-#: lib/tymeslot_saas_web/live/about_live.ex:297
+#: lib/tymeslot_saas_web/live/about_live.ex:294
 #, elixir-autogen, elixir-format
 msgid "Founder & Creator"
-msgstr ""
+msgstr "Gründer & Entwickler"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:22
 #, elixir-autogen, elixir-format
 msgid "Frequently Asked Questions"
-msgstr ""
+msgstr "Häufig gestellte Fragen"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:428
 #, elixir-autogen, elixir-format
 msgid "Frequently asked questions"
-msgstr ""
+msgstr "Häufig gestellte Fragen"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:346
 #, elixir-autogen, elixir-format
 msgid "How do I self-host Tymeslot?"
-msgstr ""
+msgstr "Wie kann ich Tymeslot selbst hosten?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:80
 #, elixir-autogen, elixir-format
 msgid "How is Tymeslot different from Calendly or Cal.com?"
-msgstr ""
+msgstr "Worin unterscheidet sich Tymeslot von Calendly oder Cal.com?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:320
 #, elixir-autogen, elixir-format
 msgid "How is my data secured?"
-msgstr ""
+msgstr "Wie werden meine Daten geschützt?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:167
 #, elixir-autogen, elixir-format
 msgid "How much does Tymeslot cost?"
-msgstr ""
+msgstr "Was kostet Tymeslot?"
 
 #: lib/tymeslot_saas_web/live/about_live.ex:65
 #, elixir-autogen, elixir-format
 msgid "Immersive video backgrounds"
-msgstr ""
+msgstr "Immersive Video-Hintergründe"
 
 #: lib/tymeslot_saas_web/live/about_live.ex:29
 #, elixir-autogen, elixir-format
 msgid "Independent by design"
-msgstr ""
+msgstr "Unabhängig aus Prinzip"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:266
 #, elixir-autogen, elixir-format
 msgid "Integrations"
-msgstr ""
+msgstr "Integrationen"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:72
 #, elixir-autogen, elixir-format
 msgid "Is Tymeslot open source?"
-msgstr ""
+msgstr "Ist Tymeslot Open Source?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:146
 #, elixir-autogen, elixir-format
 msgid "Is there a Calendly alternative that does not track visitors?"
-msgstr ""
+msgstr "Gibt es eine Calendly-Alternative, die Besucher nicht verfolgt?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:186
 #, elixir-autogen, elixir-format
 msgid "Is there a free trial?"
-msgstr ""
+msgstr "Gibt es eine kostenlose Testphase?"
 
-#: lib/tymeslot_saas_web/live/about_live.ex:321
+#: lib/tymeslot_saas_web/live/about_live.ex:318
 #, elixir-autogen, elixir-format
 msgid "Join the contributors on GitHub"
-msgstr ""
+msgstr "Auf GitHub mitwirken"
 
 #: lib/tymeslot_saas_web/live/about_live.ex:120
 #, elixir-autogen, elixir-format
 msgid "Make scheduling beautiful"
-msgstr ""
+msgstr "Machen Sie Terminplanung schön"
 
-#: lib/tymeslot_saas_web/live/about_live.ex:196
+#: lib/tymeslot_saas_web/live/about_live.ex:193
 #, elixir-autogen, elixir-format
 msgid "Most schedulers do the job, but they all end up looking the same: a grey grid that pays no attention to your brand. Your booking page is often the first thing a new client sees of you, and we thought it deserved better than that."
-msgstr ""
+msgstr "Die meisten Planungstools erfüllen ihren Zweck, sehen am Ende aber alle gleich aus: ein graues Raster, das Ihre Marke völlig ignoriert. Ihre Buchungsseite ist oft das Erste, was ein neuer Kunde von Ihnen sieht — und wir fanden, sie hat etwas Besseres verdient."
 
 #: lib/tymeslot_saas_web/live/changelog_live.ex:84
 #, elixir-autogen, elixir-format
 msgid "New"
-msgstr ""
+msgstr "Neu"
 
 #: lib/tymeslot_saas_web/live/changelog_live.ex:87
 #, elixir-autogen, elixir-format
 msgid "New features shipped in every release of Tymeslot."
-msgstr ""
+msgstr "Neue Funktionen aus jeder Version von Tymeslot."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:314
 #, elixir-autogen, elixir-format
 msgid "No. Booking pages carry no advertising pixels and no third-party tracking scripts. The built-in booking analytics are cookie-less and store no IP addresses, so no cookie-consent banner is required."
-msgstr ""
+msgstr "Nein. Buchungsseiten enthalten keine Werbe-Pixel und keine Tracking-Skripte von Drittanbietern. Die integrierten Buchungsanalysen kommen ohne Cookies aus und speichern keine IP-Adressen, sodass kein Cookie-Consent-Banner nötig ist."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:196
 #, elixir-autogen, elixir-format
 msgid "No. Self-hosting Tymeslot is free forever, with the full feature set and no paywalls — you only pay for whatever server you choose to run it on."
-msgstr ""
+msgstr "Nein. Tymeslot selbst zu hosten ist für immer kostenlos, mit dem vollen Funktionsumfang und ohne Paywalls — Sie zahlen nur für den Server, auf dem Sie es betreiben."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:364
 #, elixir-autogen, elixir-format
 msgid "On the managed cloud, updates and backups are handled for you. When self-hosting, you manage updates (a single command, with automatic database migrations) and backups yourself — and on Cloudron both are automated."
-msgstr ""
+msgstr "In der Managed Cloud werden Updates und Backups für Sie erledigt. Beim Self-Hosting verwalten Sie Updates (ein einziger Befehl, mit automatischen Datenbankmigrationen) und Backups selbst — und auf Cloudron läuft beides automatisch."
 
 #: lib/tymeslot_saas_web/live/about_live.ex:38
 #, elixir-autogen, elixir-format
 msgid "Open by default"
-msgstr ""
+msgstr "Offen von Grund auf"
 
 #: lib/tymeslot_saas_web/live/changelog_live.ex:202
 #, elixir-autogen, elixir-format
 msgid "Other bug fixes and stability improvements."
-msgstr ""
+msgstr "Weitere Fehlerbehebungen und Stabilitätsverbesserungen."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:163
 #, elixir-autogen, elixir-format
 msgid "Pricing & plans"
-msgstr ""
+msgstr "Preise & Tarife"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:308
 #, elixir-autogen, elixir-format
 msgid "Privacy & security"
-msgstr ""
+msgstr "Datenschutz & Sicherheit"
 
 #: lib/tymeslot_saas_web/live/about_live.ex:59
 #, elixir-autogen, elixir-format
 msgid "Professional glassmorphism"
-msgstr ""
+msgstr "Professioneller Glasmorphismus"
 
 #: lib/tymeslot_saas_web/live/about_live.ex:111
 #, elixir-autogen, elixir-format
 msgid "Put together a booking page you'll actually want to send. It takes about five minutes to set up."
-msgstr ""
+msgstr "Erstellen Sie eine Buchungsseite, die Sie auch wirklich gerne verschicken. Die Einrichtung dauert etwa fünf Minuten."
 
 #: lib/tymeslot_saas_web/live/about_live.ex:47
 #, elixir-autogen, elixir-format
 msgid "Quietly private"
-msgstr ""
+msgstr "Diskret privat"
 
 #: lib/tymeslot_saas_web/live/about_live.ex:61
 #, elixir-autogen, elixir-format
 msgid "Quill theme — a glass-morphism booking flow"
-msgstr ""
+msgstr "Quill-Design — ein Buchungsablauf im Glasmorphismus-Stil"
 
-#: lib/tymeslot_saas_web/live/about_live.ex:306
+#: lib/tymeslot_saas_web/live/about_live.ex:303
 #, elixir-autogen, elixir-format
 msgid "Read more"
-msgstr ""
+msgstr "Mehr erfahren"
 
 #: lib/tymeslot_saas_web/live/about_live.ex:68
 #, elixir-autogen, elixir-format
 msgid "Rhythm theme — an immersive booking flow with a video background"
-msgstr ""
+msgstr "Rhythm-Design — ein immersiver Buchungsablauf mit Video-Hintergrund"
 
 #: lib/tymeslot_saas_web/live/about_live.ex:145
 #, elixir-autogen, elixir-format
 msgid "Scheduling should be beautiful"
-msgstr ""
+msgstr "Terminplanung sollte schön sein"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:342
 #, elixir-autogen, elixir-format
 msgid "Self-hosting"
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/about_live.ex:202
-#, elixir-autogen, elixir-format
-msgid "So we put our time into the parts other tools skip over: the themes, the typography, the way a page loads and moves, the video backgrounds. Getting the booking logic right is the easy bit. Making the whole thing"
-msgstr ""
+msgstr "Self-Hosting"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:393
 #, elixir-autogen, elixir-format
 msgid "Spin up a booking page and share one link. It takes about five minutes to set up."
-msgstr ""
+msgstr "Erstellen Sie eine Buchungsseite und teilen Sie einen einzigen Link. Die Einrichtung dauert etwa fünf Minuten."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:402
 #, elixir-autogen, elixir-format
 msgid "Still have a question?"
-msgstr ""
+msgstr "Noch Fragen?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:108
 #, elixir-autogen, elixir-format
 msgid "The best scheduling tool depends on what you value, but if privacy, ownership, and price matter to you, Tymeslot is a strong choice: it is open-source, self-hostable, and free with the complete feature set when you self-host. It does the core job well — a shareable booking page that drops meetings straight onto your calendar with no email back-and-forth — without advertising pixels, third-party trackers, or per-seat lock-in."
-msgstr ""
+msgstr "Das beste Planungstool hängt davon ab, worauf Sie Wert legen. Wenn Ihnen aber Datenschutz, Datenhoheit und Preis wichtig sind, ist Tymeslot eine starke Wahl: quelloffen, selbst hostbar und beim Self-Hosting mit dem kompletten Funktionsumfang kostenlos. Es erledigt die Kernaufgabe gut — eine teilbare Buchungsseite, die Termine ohne E-Mail-Hin-und-Her direkt in Ihren Kalender legt — ganz ohne Werbe-Pixel, Tracker von Drittanbietern oder Lock-in pro Platz."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:169
 #, elixir-autogen, elixir-format
 msgid "Tymeslot Cloud has a free plan at %{free}/month and a Pro plan at %{pro}/month (or %{annual}/year). Self-hosting is free forever with the complete feature set."
-msgstr ""
+msgstr "Tymeslot Cloud bietet einen kostenlosen Tarif für %{free}/Monat und einen Pro-Tarif für %{pro}/Monat (oder %{annual}/Jahr). Self-Hosting ist für immer kostenlos, mit dem kompletten Funktionsumfang."
 
 #: lib/tymeslot_saas_web/live/about_live.ex:40
 #, elixir-autogen, elixir-format
 msgid "Tymeslot Core is open-source. You can read the code, run it yourself, or help improve it. We'd rather you saw how it works than took our word for it."
-msgstr ""
+msgstr "Tymeslot Core ist quelloffen. Sie können den Code lesen, ihn selbst betreiben oder helfen, ihn zu verbessern. Uns ist es lieber, Sie sehen selbst, wie es funktioniert, als dass Sie uns einfach glauben müssen."
 
 #: lib/tymeslot_saas_web/live/changelog_live.ex:19
 #, elixir-autogen, elixir-format
 msgid "Tymeslot Releases & Changelog"
-msgstr ""
+msgstr "Tymeslot-Versionen & Changelog"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:280
 #, elixir-autogen, elixir-format
 msgid "Tymeslot can automatically create a meeting room with Zoom, Google Meet, Microsoft Teams, or MiroTalk — or attach your own custom video link — with every booking."
-msgstr ""
+msgstr "Tymeslot kann bei jeder Buchung automatisch einen Meetingraum mit Zoom, Google Meet, Microsoft Teams oder MiroTalk erstellen — oder Ihren eigenen Videolink anhängen."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:140
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is a self-hostable scheduling platform you can run with Docker (a single container with PostgreSQL built in), on Cloudron (one-click install with automatic updates, backups, and SSL), or on Railway (one-click deploy). Self-hosting is free forever with the full feature set, needs about 500 MB of RAM, and keeps all booking data on your own server."
-msgstr ""
+msgstr "Tymeslot ist eine selbst hostbare Terminplanungsplattform, die Sie mit Docker (ein einziger Container mit integriertem PostgreSQL), auf Cloudron (Ein-Klick-Installation mit automatischen Updates, Backups und SSL) oder auf Railway (Ein-Klick-Deployment) betreiben können. Self-Hosting ist für immer kostenlos, mit dem vollen Funktionsumfang, benötigt etwa 500 MB RAM und hält alle Buchungsdaten auf Ihrem eigenen Server."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:124
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is an open-source alternative to Calendly: every line of Core is public on GitHub under the GNU AGPLv3, so you can read it, audit it, modify it, and self-host it. Like Calendly it gives you booking pages, calendar sync, video links, and embeds — but it adds full self-hosting and cookie-less, tracker-free booking pages. Cal.com is another open-source option; Tymeslot differs in being privacy-first by default and free with the full feature set when self-hosted."
-msgstr ""
+msgstr "Tymeslot ist eine quelloffene Alternative zu Calendly: Jede Zeile von Core ist auf GitHub unter der GNU AGPLv3 öffentlich einsehbar, sodass Sie sie lesen, prüfen, verändern und selbst hosten können. Wie Calendly bietet es Buchungsseiten, Kalendersynchronisierung, Videolinks und Einbettungen — ergänzt aber vollständiges Self-Hosting sowie cookie-lose, trackerfreie Buchungsseiten. Cal.com ist eine weitere quelloffene Option; Tymeslot unterscheidet sich dadurch, dass es standardmäßig datenschutzorientiert und beim Self-Hosting mit dem vollen Funktionsumfang kostenlos ist."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:66
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is an open-source meeting-scheduling platform. You share a booking page, clients pick a time that suits them, and the meeting lands on your calendar automatically — with no email back-and-forth. You can use the managed cloud at tymeslot.app or self-host it yourself."
-msgstr ""
+msgstr "Tymeslot ist eine quelloffene Plattform zur Terminplanung. Sie teilen eine Buchungsseite, Kunden wählen eine Zeit, die ihnen passt, und der Termin landet automatisch in Ihrem Kalender — ganz ohne E-Mail-Hin-und-Her. Sie können die Managed Cloud unter tymeslot.app nutzen oder Tymeslot selbst hosten."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:238
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is available in English, German, Ukrainian, French, and Italian, and the booking page detects the visitor's language automatically."
-msgstr ""
+msgstr "Tymeslot ist auf Englisch, Deutsch, Ukrainisch, Französisch und Italienisch verfügbar, und die Buchungsseite erkennt die Sprache des Besuchers automatisch."
 
-#: lib/tymeslot_saas_web/live/about_live.ex:274
+#: lib/tymeslot_saas_web/live/about_live.ex:271
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is built and run by a small, independent team. We're registered in Estonia as Diletta Luna OÜ, but we work from different parts of the world, together with a growing group of community contributors."
-msgstr ""
+msgstr "Tymeslot wird von einem kleinen, unabhängigen Team entwickelt und betrieben. Wir sind in Estland als Diletta Luna OÜ eingetragen, arbeiten aber von verschiedenen Orten der Welt aus — zusammen mit einer wachsenden Gruppe von Mitwirkenden aus der Community."
 
 #: lib/tymeslot_saas_web/live/about_live.ex:82
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is built by a small, independent team who think scheduling should look good. Booking pages that match your brand, with no ads or tracking."
-msgstr ""
+msgstr "Tymeslot wird von einem kleinen, unabhängigen Team entwickelt, das findet: Terminplanung sollte gut aussehen. Buchungsseiten, die zu Ihrer Marke passen — ohne Werbung, ohne Tracking."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:132
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is built privacy-first: booking pages carry no advertising pixels and no third-party tracking scripts, the built-in analytics are cookie-less and store no IP addresses, and you can self-host so your data never leaves your own server. Credentials and tokens are AES-encrypted at rest, and because no cookies are set on booking pages, no cookie-consent banner is required."
-msgstr ""
+msgstr "Tymeslot ist von Grund auf datenschutzorientiert: Buchungsseiten enthalten keine Werbe-Pixel und keine Tracking-Skripte von Drittanbietern, die integrierte Analyse kommt ohne Cookies aus und speichert keine IP-Adressen, und Sie können selbst hosten, sodass Ihre Daten Ihren eigenen Server nie verlassen. Zugangsdaten und Tokens werden im Ruhezustand AES-verschlüsselt, und da auf Buchungsseiten keine Cookies gesetzt werden, ist kein Cookie-Consent-Banner nötig."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:90
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is for anyone who books appointments — coaches, consultants, therapists, lawyers, photographers, tutors, trainers, recruiters, agencies, and teams. If you currently trade emails to find a time, Tymeslot replaces that with a single shareable link."
-msgstr ""
+msgstr "Tymeslot ist für alle, die Termine vergeben — Coaches, Berater, Therapeuten, Anwälte, Fotografen, Nachhilfelehrer, Trainer, Recruiter, Agenturen und Teams. Wenn Sie derzeit E-Mails hin und her schicken, um einen Termin zu finden, ersetzt Tymeslot das durch einen einzigen teilbaren Link."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:116
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is free in two ways. Tymeslot Cloud has a free plan with unlimited bookings and meeting types, all calendar and video integrations, and every booking theme and embed option. Self-hosting is free forever with the complete feature set and no paywalls — including payments, custom questions, analytics, and automations — so you only pay for the server you run it on."
-msgstr ""
+msgstr "Tymeslot ist auf zwei Arten kostenlos. Tymeslot Cloud bietet einen kostenlosen Tarif mit unbegrenzten Buchungen und Termintypen, allen Kalender- und Video-Integrationen sowie jedem Buchungs-Design und jeder Einbettungsoption. Self-Hosting ist für immer kostenlos, mit dem kompletten Funktionsumfang und ohne Paywalls — inklusive Zahlungen, eigener Fragen, Analysen und Automatisierungen — sodass Sie nur für den Server zahlen, auf dem Sie es betreiben."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:82
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is privacy-first and self-hostable, and the full feature set is free when you self-host. Booking pages carry no advertising pixels or third-party tracking scripts, and the built-in analytics are cookie-less. Because Core is open-source, you can audit exactly what runs rather than trusting a closed service."
-msgstr ""
+msgstr "Tymeslot ist datenschutzorientiert und selbst hostbar, und beim Self-Hosting ist der volle Funktionsumfang kostenlos. Buchungsseiten enthalten keine Werbe-Pixel und keine Tracking-Skripte von Drittanbietern, und die integrierte Analyse kommt ohne Cookies aus. Da Core quelloffen ist, können Sie genau prüfen, was läuft, statt einem geschlossenen Dienst vertrauen zu müssen."
 
-#: lib/tymeslot_saas_web/live/about_live.ex:210
+#: lib/tymeslot_saas_web/live/about_live.ex:207
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is the scheduler we wanted for ourselves: good-looking from the first load, easy to make your own, open-source at the core, and with no ads or trackers."
-msgstr ""
+msgstr "Tymeslot ist der Terminplaner, den wir uns selbst gewünscht haben: gut aussehend vom ersten Laden an, leicht an die eigene Marke anpassbar, quelloffen im Kern und ohne Werbung oder Tracker."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:356
 #, elixir-autogen, elixir-format
 msgid "Tymeslot needs about 500 MB of RAM at minimum, with 1 GB recommended, plus one CPU core. It runs comfortably on a small VPS."
-msgstr ""
+msgstr "Tymeslot benötigt mindestens etwa 500 MB RAM, empfohlen ist 1 GB, plus einen CPU-Kern. Es läuft problemlos auf einem kleinen VPS."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:272
 #, elixir-autogen, elixir-format
 msgid "Tymeslot syncs with Google Calendar, Microsoft Outlook / 365, and any CalDAV server. Built-in presets make Apple iCloud, Nextcloud, Baikal, Radicale, Zimbra, and mailbox.org one-click to connect, and any other CalDAV provider — such as Fastmail — works by entering its server URL. Sync is two-way: bookings appear on your calendar and existing events block out your availability."
-msgstr ""
+msgstr "Tymeslot synchronisiert sich mit Google Calendar, Microsoft Outlook / 365 und jedem CalDAV-Server. Integrierte Voreinstellungen machen Apple iCloud, Nextcloud, Baikal, Radicale, Zimbra und mailbox.org per Klick verbindbar, und jeder andere CalDAV-Anbieter — etwa Fastmail — funktioniert durch Eingabe seiner Server-URL. Die Synchronisierung ist beidseitig: Buchungen erscheinen in Ihrem Kalender und bestehende Ereignisse blockieren Ihre Verfügbarkeit."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:322
 #, elixir-autogen, elixir-format
 msgid "Tymeslot uses OAuth 2.0 / OIDC sign-in, AES encryption at rest for credentials and tokens, rate limiting against brute-force attempts, and CSRF protection across all forms."
-msgstr ""
+msgstr "Tymeslot nutzt OAuth 2.0 / OIDC-Anmeldung, AES-Verschlüsselung im Ruhezustand für Zugangsdaten und Tokens, Ratenbegrenzung gegen Brute-Force-Versuche und CSRF-Schutz für alle Formulare."
 
 #: lib/tymeslot_saas_web/live/about_live.ex:31
 #, elixir-autogen, elixir-format
 msgid "We don't take venture capital and we don't run ads, so we answer to the people who actually use Tymeslot. That also lets us build for the long term."
-msgstr ""
+msgstr "Wir nehmen kein Risikokapital und schalten keine Werbung — also richten wir uns nach den Menschen, die Tymeslot tatsächlich nutzen. Das erlaubt uns außerdem, langfristig zu denken."
 
 #: lib/tymeslot_saas_web/live/about_live.ex:49
 #, elixir-autogen, elixir-format
 msgid "We don't track you or sell your data, and we don't charge extra for privacy. It's simply how Tymeslot works."
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/about_live.ex:148
-#, elixir-autogen, elixir-format
-msgid "We're a small, independent team, and we build a scheduler that looks like"
-msgstr ""
+msgstr "Wir verfolgen Sie nicht und verkaufen Ihre Daten nicht, und für Datenschutz verlangen wir keinen Aufpreis. So funktioniert Tymeslot ganz einfach."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:354
 #, elixir-autogen, elixir-format
 msgid "What are the system requirements for self-hosting?"
-msgstr ""
+msgstr "Welche Systemanforderungen gelten für das Self-Hosting?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:64
 #, elixir-autogen, elixir-format
 msgid "What is Tymeslot?"
-msgstr ""
+msgstr "Was ist Tymeslot?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:114
 #, elixir-autogen, elixir-format
 msgid "What is the best free scheduling tool?"
-msgstr ""
+msgstr "Was ist das beste kostenlose Planungstool?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:122
 #, elixir-autogen, elixir-format
 msgid "What is the best open-source alternative to Calendly?"
-msgstr ""
+msgstr "Was ist die beste quelloffene Alternative zu Calendly?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:106
 #, elixir-autogen, elixir-format
 msgid "What is the best scheduling tool?"
-msgstr ""
+msgstr "Was ist das beste Planungstool?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:138
 #, elixir-autogen, elixir-format
 msgid "What is the best self-hosted scheduling tool?"
-msgstr ""
+msgstr "Was ist das beste selbst gehostete Planungstool?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:178
 #, elixir-autogen, elixir-format
 msgid "What is the difference between the Free and Pro plans?"
-msgstr ""
+msgstr "Was ist der Unterschied zwischen dem Free- und dem Pro-Tarif?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:130
 #, elixir-autogen, elixir-format
 msgid "What is the most privacy-friendly scheduling tool?"
-msgstr ""
+msgstr "Was ist das datenschutzfreundlichste Planungstool?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:236
 #, elixir-autogen, elixir-format
 msgid "What languages does Tymeslot support?"
-msgstr ""
+msgstr "Welche Sprachen unterstützt Tymeslot?"
 
-#: lib/tymeslot_saas_web/live/about_live.ex:230
+#: lib/tymeslot_saas_web/live/about_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "What we believe"
-msgstr ""
+msgstr "Woran wir glauben"
 
 #: lib/tymeslot_saas_web/live/changelog_live.ex:83
 #, elixir-autogen, elixir-format
 msgid "What's"
-msgstr ""
+msgstr "Was ist"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:270
 #, elixir-autogen, elixir-format
 msgid "Which calendars does Tymeslot sync with?"
-msgstr ""
+msgstr "Mit welchen Kalendern synchronisiert sich Tymeslot?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:278
 #, elixir-autogen, elixir-format
 msgid "Which video tools does Tymeslot support?"
-msgstr ""
+msgstr "Welche Video-Tools unterstützt Tymeslot?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:88
 #, elixir-autogen, elixir-format
 msgid "Who is Tymeslot for?"
-msgstr ""
+msgstr "Für wen ist Tymeslot?"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:328
 #, elixir-autogen, elixir-format
 msgid "Who owns my data?"
-msgstr ""
+msgstr "Wem gehören meine Daten?"
 
-#: lib/tymeslot_saas_web/live/about_live.ex:271
+#: lib/tymeslot_saas_web/live/about_live.ex:268
 #, elixir-autogen, elixir-format
 msgid "Who's behind Tymeslot"
-msgstr ""
+msgstr "Wer hinter Tymeslot steht"
 
-#: lib/tymeslot_saas_web/live/about_live.ex:192
+#: lib/tymeslot_saas_web/live/about_live.ex:189
 #, elixir-autogen, elixir-format
 msgid "Why we built it"
-msgstr ""
+msgstr "Warum wir es entwickelt haben"
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:148
 #, elixir-autogen, elixir-format
 msgid "Yes — Tymeslot. Its booking pages load no advertising pixels and no third-party tracking scripts, and the built-in analytics are cookie-less and store no IP addresses. You can also self-host Tymeslot so booking data stays entirely on your own infrastructure."
-msgstr ""
+msgstr "Ja — Tymeslot. Seine Buchungsseiten laden keine Werbe-Pixel und keine Tracking-Skripte von Drittanbietern, und die integrierte Analyse kommt ohne Cookies aus und speichert keine IP-Adressen. Sie können Tymeslot außerdem selbst hosten, sodass Buchungsdaten vollständig auf Ihrer eigenen Infrastruktur bleiben."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:288
 #, elixir-autogen, elixir-format
 msgid "Yes, on Pro and when self-hosting. Tymeslot connects to your own Stripe account so guests can pay a deposit or the full amount at booking, with refund and cancellation policies configurable per meeting type."
-msgstr ""
+msgstr "Ja, mit Pro und beim Self-Hosting. Tymeslot verbindet sich mit Ihrem eigenen Stripe-Konto, sodass Gäste bei der Buchung eine Anzahlung oder den vollen Betrag zahlen können — mit Rückerstattungs- und Stornierungsregeln, die sich pro Termintyp konfigurieren lassen."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:254
 #, elixir-autogen, elixir-format
 msgid "Yes, on Pro and when self-hosting. You can add custom booking questions per meeting type, mark each one required or optional, and the answers flow into the confirmation emails, the calendar event, and your dashboard."
-msgstr ""
+msgstr "Ja, mit Pro und beim Self-Hosting. Sie können pro Termintyp eigene Buchungsfragen hinzufügen, jede als Pflicht- oder optionales Feld markieren, und die Antworten fließen in die Bestätigungs-E-Mails, den Kalendereintrag und Ihr Dashboard."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:230
 #, elixir-autogen, elixir-format
 msgid "Yes. Every booking includes a secure link that lets the guest reschedule or cancel without creating an account, and you are notified automatically."
-msgstr ""
+msgstr "Ja. Jede Buchung enthält einen sicheren Link, mit dem der Gast ohne Konto verschieben oder absagen kann, und Sie werden automatisch benachrichtigt."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:222
 #, elixir-autogen, elixir-format
 msgid "Yes. Guests see and book slots in their own time zone while you see them in yours, and daylight-saving changes are handled automatically."
-msgstr ""
+msgstr "Ja. Gäste sehen und buchen Zeitfenster in ihrer eigenen Zeitzone, während Sie sie in Ihrer sehen, und Umstellungen der Sommerzeit werden automatisch berücksichtigt."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:74
 #, elixir-autogen, elixir-format
 msgid "Yes. Tymeslot Core is open source under the GNU AGPLv3 — an OSI-approved licence. Every line is public on GitHub, so you can read it, audit it, modify it, self-host it, or fork it. The AGPL's one obligation is share-alike: if you run a modified version as a network service, you make your source changes available too."
-msgstr ""
+msgstr "Ja. Tymeslot Core ist Open Source unter der GNU AGPLv3 — einer von der OSI anerkannten Lizenz. Jede Zeile ist auf GitHub öffentlich, sodass Sie sie lesen, prüfen, verändern, selbst hosten oder forken können. Die einzige Auflage der AGPL ist Share-alike: Wenn Sie eine veränderte Version als Netzwerkdienst betreiben, machen Sie auch Ihre Quellcode-Änderungen verfügbar."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:188
 #, elixir-autogen, elixir-format
 msgid "Yes. Tymeslot Pro has a 7-day free trial, and no credit card is required to start."
-msgstr ""
+msgstr "Ja. Tymeslot Pro bietet eine 7-tägige kostenlose Testphase, und für den Start ist keine Kreditkarte erforderlich."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:214
 #, elixir-autogen, elixir-format
 msgid "Yes. Tymeslot checks your connected calendars in real time and hides any slot that conflicts with an existing event, across every calendar you connect, so you are never double-booked."
-msgstr ""
+msgstr "Ja. Tymeslot prüft Ihre verbundenen Kalender in Echtzeit und blendet jedes Zeitfenster aus, das mit einem bestehenden Ereignis kollidiert — über alle verbundenen Kalender hinweg, sodass Sie nie doppelt gebucht werden."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:296
 #, elixir-autogen, elixir-format
 msgid "Yes. Tymeslot sends notifications to Slack and Telegram and fires webhooks (meeting.created, meeting.cancelled, meeting.rescheduled) that connect to n8n, Zapier, Make, or your own backend."
-msgstr ""
+msgstr "Ja. Tymeslot sendet Benachrichtigungen an Slack und Telegram und löst Webhooks aus (meeting.created, meeting.cancelled, meeting.rescheduled), die sich mit n8n, Zapier, Make oder Ihrem eigenen Backend verbinden."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:246
 #, elixir-autogen, elixir-format
 msgid "Yes. You can embed the booking page inline with a single script tag, as a popup modal, or as a floating button — or simply share your booking link directly."
-msgstr ""
+msgstr "Ja. Sie können die Buchungsseite inline mit einem einzigen Script-Tag einbetten, als Popup-Modal oder als schwebende Schaltfläche — oder einfach Ihren Buchungslink direkt teilen."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:348
 #, elixir-autogen, elixir-format
 msgid "You can self-host Tymeslot with Docker (a single container with PostgreSQL built in), on Cloudron (a one-click install with automatic updates, backups, and SSL), or on Railway (a one-click deploy). Step-by-step guides for each are in the docs."
-msgstr ""
+msgstr "Sie können Tymeslot mit Docker (ein einziger Container mit integriertem PostgreSQL), auf Cloudron (eine Ein-Klick-Installation mit automatischen Updates, Backups und SSL) oder auf Railway (ein Ein-Klick-Deployment) selbst hosten. Schritt-für-Schritt-Anleitungen für jede Variante finden Sie in den Docs."
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:330
 #, elixir-autogen, elixir-format
 msgid "You do. On the managed cloud your data is yours to export at any time, and when you self-host it never leaves your own server."
-msgstr ""
+msgstr "Sie. In der Managed Cloud können Sie Ihre Daten jederzeit exportieren, und beim Self-Hosting verlassen sie Ihren eigenen Server nie."
 
 #: lib/tymeslot_saas_web/live/about_live.ex:22
 #, elixir-autogen, elixir-format
 msgid "Your booking page is often a client's first impression of you, so it should look like your brand rather than a form you got stuck with."
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/about_live.ex:153
-#, elixir-autogen, elixir-format
-msgid "brand instead of a generic form. The kind of booking page you don't mind sending a client."
-msgstr ""
+msgstr "Ihre Buchungsseite ist oft der erste Eindruck, den ein Kunde von Ihnen bekommt — sie sollte also wie Ihre Marke aussehen und nicht wie ein Formular, mit dem Sie sich abfinden mussten."
 
 #: lib/tymeslot_saas_web/live/changelog_live.ex:226
 #, elixir-autogen, elixir-format
 msgid "cloud"
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/about_live.ex:207
-#, elixir-autogen, elixir-format
-msgid "is what actually takes the work."
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/about_live.ex:206
-#, elixir-autogen, elixir-format
-msgid "look good"
-msgstr ""
+msgstr "Cloud"
 
 #: lib/tymeslot_saas_web/live/changelog_live.ex:220
 #, elixir-autogen, elixir-format
 msgid "self-hosted"
-msgstr ""
+msgstr "Selbst gehostet"
 
-#: lib/tymeslot_saas_web/live/about_live.ex:152
+#: lib/tymeslot_saas_web/live/about_live.ex:200
 #, elixir-autogen, elixir-format
-msgid "your"
-msgstr ""
+msgid "So we put our time into the parts other tools skip over: the themes, the typography, the way a page loads and moves, the video backgrounds. Getting the booking logic right is the easy bit. Making the whole thing <span class=\"text-primary font-semibold\">look good</span> is what actually takes the work."
+msgstr "Deshalb stecken wir unsere Zeit in die Dinge, die andere Tools links liegen lassen: die Designs, die Typografie, die Art, wie eine Seite lädt und sich bewegt, die Video-Hintergründe. Die Buchungslogik hinzubekommen ist der leichte Teil. Das Ganze <span class=\"text-primary font-semibold\">gut aussehen</span> zu lassen — das ist die eigentliche Arbeit."
+
+#: lib/tymeslot_saas_web/live/about_live.ex:149
+#, elixir-autogen, elixir-format
+msgid "We're a small, independent team, and we build a scheduler that looks like <em class=\"text-cyan-100 not-italic font-bold\">your</em> brand instead of a generic form. The kind of booking page you don't mind sending a client."
+msgstr "Wir sind ein kleines, unabhängiges Team und bauen einen Terminplaner, der aussieht wie <em class=\"text-cyan-100 not-italic font-bold\">Ihre</em> Marke — nicht wie ein Standardformular. Die Art Buchungsseite, die Sie einem Kunden gerne schicken."

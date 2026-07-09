@@ -89,7 +89,7 @@ msgstr "Booking min score"
 msgid "Booking slug"
 msgstr "Booking slug"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:68
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:64
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Cancel"
@@ -125,8 +125,7 @@ msgstr "Could not promote user."
 msgid "Could not update setting."
 msgstr "Could not update setting."
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:44
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:97
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:93
 #: lib/tymeslot_web/live/admin_live/components/users.ex:127
 #: lib/tymeslot_web/live/admin_live/components/users.ex:146
 #, elixir-autogen, elixir-format
@@ -138,27 +137,27 @@ msgstr "Demote"
 msgid "Demote %{email} from admin"
 msgstr "Demote %{email} from admin"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:87
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:83
 #, elixir-autogen, elixir-format
 msgid "Demote admin"
 msgstr "Demote admin"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:96
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:92
 #, elixir-autogen, elixir-format
 msgid "Demote me"
 msgstr "Demote me"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:86
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:82
 #, elixir-autogen, elixir-format
 msgid "Demote yourself"
 msgstr "Demote yourself"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:38
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:36
 #, elixir-autogen, elixir-format
 msgid "Demote yourself from admin?"
 msgstr "Demote yourself from admin?"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:100
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:96
 #, elixir-autogen, elixir-format
 msgid "Demoting..."
 msgstr "Demoting..."
@@ -246,8 +245,7 @@ msgstr "Password authentication"
 msgid "Payments"
 msgstr "Payments"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:30
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:95
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:91
 #: lib/tymeslot_web/live/admin_live/components/users.ex:158
 #, elixir-autogen, elixir-format
 msgid "Promote"
@@ -258,12 +256,12 @@ msgstr "Promote"
 msgid "Promote %{email} to admin"
 msgstr "Promote %{email} to admin"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:85
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:81
 #, elixir-autogen, elixir-format
 msgid "Promote user to admin"
 msgstr "Promote user to admin"
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:99
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:95
 #, elixir-autogen, elixir-format
 msgid "Promoting..."
 msgstr "Promoting..."
@@ -310,12 +308,12 @@ msgstr "Signup min score"
 msgid "That change would lock everyone out and was not applied."
 msgstr "That change would lock everyone out and was not applied."
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:50
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:46
 #, elixir-autogen, elixir-format
 msgid "They will gain access to admin settings and user management."
 msgstr "They will gain access to admin settings and user management."
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:58
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:54
 #, elixir-autogen, elixir-format
 msgid "They will lose access to admin settings and user management."
 msgstr "They will lose access to admin settings and user management."
@@ -355,7 +353,7 @@ msgstr "Users"
 msgid "You have been demoted from admin."
 msgstr "You have been demoted from admin."
 
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:53
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:49
 #, elixir-autogen, elixir-format
 msgid "You will lose access to admin settings and user management, and be returned to your dashboard."
 msgstr "You will lose access to admin settings and user management, and be returned to your dashboard."
@@ -369,11 +367,6 @@ msgstr "You're the only admin. Promote someone else before demoting yourself."
 #, elixir-autogen, elixir-format
 msgid "admin@example.com"
 msgstr "admin@example.com"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:46
-#, elixir-autogen, elixir-format
-msgid "from admin?"
-msgstr "from admin?"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:183
 #, elixir-autogen, elixir-format
@@ -389,11 +382,6 @@ msgstr "reCAPTCHA on booking"
 #, elixir-autogen, elixir-format
 msgid "reCAPTCHA on signup"
 msgstr "reCAPTCHA on signup"
-
-#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:32
-#, elixir-autogen, elixir-format
-msgid "to admin?"
-msgstr "to admin?"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:185
 #, elixir-autogen, elixir-format
@@ -488,4 +476,14 @@ msgstr ""
 #: lib/tymeslot_web/hooks/ensure_admin_hook.ex:58
 #, elixir-autogen, elixir-format
 msgid "Your admin access has been revoked."
+msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:42
+#, elixir-autogen, elixir-format
+msgid "Demote %{email} from admin?"
+msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:30
+#, elixir-autogen, elixir-format
+msgid "Promote %{email} to admin?"
 msgstr ""

@@ -11,7 +11,7 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:50
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:52
 #, elixir-autogen, elixir-format
 msgid "Already refunded:"
 msgstr ""
@@ -32,7 +32,7 @@ msgid "Attendee"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex:61
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:116
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:118
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
@@ -168,12 +168,12 @@ msgstr ""
 msgid "Finish connecting Stripe"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:80
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:82
 #, elixir-autogen, elixir-format
 msgid "Full refund"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:125
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:127
 #, elixir-autogen, elixir-format
 msgid "Issue refund"
 msgstr ""
@@ -203,7 +203,7 @@ msgstr ""
 msgid "Not connected"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:47
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:49
 #, elixir-autogen, elixir-format
 msgid "Original charge:"
 msgstr ""
@@ -213,12 +213,12 @@ msgstr ""
 msgid "Paid"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:98
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:100
 #, elixir-autogen, elixir-format
 msgid "Partial amount"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:91
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:93
 #, elixir-autogen, elixir-format
 msgid "Partial refund"
 msgstr ""
@@ -264,7 +264,6 @@ msgid "Recent payments"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:62
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:41
 #, elixir-autogen, elixir-format
 msgid "Refund"
 msgstr ""
@@ -284,7 +283,7 @@ msgstr ""
 msgid "Refund payment"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:71
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:73
 #, elixir-autogen, elixir-format
 msgid "Refund type"
 msgstr ""
@@ -295,7 +294,7 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:123
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:125
 #, elixir-autogen, elixir-format
 msgid "Refunding..."
 msgstr ""
@@ -305,7 +304,7 @@ msgstr ""
 msgid "Refunds older than 60 days must be processed in your Stripe dashboard."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:54
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:56
 #, elixir-autogen, elixir-format
 msgid "Remaining refundable:"
 msgstr ""
@@ -347,7 +346,7 @@ msgstr ""
 msgid "Stripe is reviewing your account. Charges switch on automatically once approved."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:60
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:62
 #, elixir-autogen, elixir-format
 msgid "The attendee receives the full amount you refund. Tymeslot's platform fee is reversed proportionally; Stripe processing fees on the original charge stay with you."
 msgstr ""
@@ -394,7 +393,7 @@ msgstr ""
 msgid "Your Stripe account is disconnected. Reconnect to accept payments again."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:42
+#: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:41
 #, elixir-autogen, elixir-format
-msgid "for"
+msgid "Refund %{attendee} for %{meeting_type}."
 msgstr ""

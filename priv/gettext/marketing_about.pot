@@ -11,7 +11,7 @@
 msgid ""
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/about_live.ex:288
+#: lib/tymeslot_saas_web/live/about_live.ex:285
 #, elixir-autogen, elixir-format
 msgid "%{name} — founder of Tymeslot"
 msgstr ""
@@ -118,7 +118,7 @@ msgstr ""
 msgid "Features & how it works"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/about_live.ex:297
+#: lib/tymeslot_saas_web/live/about_live.ex:294
 #, elixir-autogen, elixir-format
 msgid "Founder & Creator"
 msgstr ""
@@ -183,7 +183,7 @@ msgstr ""
 msgid "Is there a free trial?"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/about_live.ex:321
+#: lib/tymeslot_saas_web/live/about_live.ex:318
 #, elixir-autogen, elixir-format
 msgid "Join the contributors on GitHub"
 msgstr ""
@@ -193,7 +193,7 @@ msgstr ""
 msgid "Make scheduling beautiful"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/about_live.ex:196
+#: lib/tymeslot_saas_web/live/about_live.ex:193
 #, elixir-autogen, elixir-format
 msgid "Most schedulers do the job, but they all end up looking the same: a grey grid that pays no attention to your brand. Your booking page is often the first thing a new client sees of you, and we thought it deserved better than that."
 msgstr ""
@@ -263,7 +263,7 @@ msgstr ""
 msgid "Quill theme — a glass-morphism booking flow"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/about_live.ex:306
+#: lib/tymeslot_saas_web/live/about_live.ex:303
 #, elixir-autogen, elixir-format
 msgid "Read more"
 msgstr ""
@@ -281,11 +281,6 @@ msgstr ""
 #: lib/tymeslot_saas_web/live/faq_live.ex:342
 #, elixir-autogen, elixir-format
 msgid "Self-hosting"
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/about_live.ex:202
-#, elixir-autogen, elixir-format
-msgid "So we put our time into the parts other tools skip over: the themes, the typography, the way a page loads and moves, the video backgrounds. Getting the booking logic right is the easy bit. Making the whole thing"
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:393
@@ -343,7 +338,7 @@ msgstr ""
 msgid "Tymeslot is available in English, German, Ukrainian, French, and Italian, and the booking page detects the visitor's language automatically."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/about_live.ex:274
+#: lib/tymeslot_saas_web/live/about_live.ex:271
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is built and run by a small, independent team. We're registered in Estonia as Diletta Luna OÜ, but we work from different parts of the world, together with a growing group of community contributors."
 msgstr ""
@@ -373,7 +368,7 @@ msgstr ""
 msgid "Tymeslot is privacy-first and self-hostable, and the full feature set is free when you self-host. Booking pages carry no advertising pixels or third-party tracking scripts, and the built-in analytics are cookie-less. Because Core is open-source, you can audit exactly what runs rather than trusting a closed service."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/about_live.ex:210
+#: lib/tymeslot_saas_web/live/about_live.ex:207
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is the scheduler we wanted for ourselves: good-looking from the first load, easy to make your own, open-source at the core, and with no ads or trackers."
 msgstr ""
@@ -401,11 +396,6 @@ msgstr ""
 #: lib/tymeslot_saas_web/live/about_live.ex:49
 #, elixir-autogen, elixir-format
 msgid "We don't track you or sell your data, and we don't charge extra for privacy. It's simply how Tymeslot works."
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/about_live.ex:148
-#, elixir-autogen, elixir-format
-msgid "We're a small, independent team, and we build a scheduler that looks like"
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/faq_live.ex:354
@@ -453,7 +443,7 @@ msgstr ""
 msgid "What languages does Tymeslot support?"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/about_live.ex:230
+#: lib/tymeslot_saas_web/live/about_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "What we believe"
 msgstr ""
@@ -483,12 +473,12 @@ msgstr ""
 msgid "Who owns my data?"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/about_live.ex:271
+#: lib/tymeslot_saas_web/live/about_live.ex:268
 #, elixir-autogen, elixir-format
 msgid "Who's behind Tymeslot"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/about_live.ex:192
+#: lib/tymeslot_saas_web/live/about_live.ex:189
 #, elixir-autogen, elixir-format
 msgid "Why we built it"
 msgstr ""
@@ -558,24 +548,9 @@ msgstr ""
 msgid "Your booking page is often a client's first impression of you, so it should look like your brand rather than a form you got stuck with."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/about_live.ex:153
-#, elixir-autogen, elixir-format
-msgid "brand instead of a generic form. The kind of booking page you don't mind sending a client."
-msgstr ""
-
 #: lib/tymeslot_saas_web/live/changelog_live.ex:226
 #, elixir-autogen, elixir-format
 msgid "cloud"
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/about_live.ex:207
-#, elixir-autogen, elixir-format
-msgid "is what actually takes the work."
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/about_live.ex:206
-#, elixir-autogen, elixir-format
-msgid "look good"
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/changelog_live.ex:220
@@ -583,7 +558,12 @@ msgstr ""
 msgid "self-hosted"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/about_live.ex:152
+#: lib/tymeslot_saas_web/live/about_live.ex:200
 #, elixir-autogen, elixir-format
-msgid "your"
+msgid "So we put our time into the parts other tools skip over: the themes, the typography, the way a page loads and moves, the video backgrounds. Getting the booking logic right is the easy bit. Making the whole thing <span class=\"text-primary font-semibold\">look good</span> is what actually takes the work."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/about_live.ex:149
+#, elixir-autogen, elixir-format
+msgid "We're a small, independent team, and we build a scheduler that looks like <em class=\"text-cyan-100 not-italic font-bold\">your</em> brand instead of a generic form. The kind of booking page you don't mind sending a client."
 msgstr ""

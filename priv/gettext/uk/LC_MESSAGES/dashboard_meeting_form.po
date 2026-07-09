@@ -140,11 +140,6 @@ msgstr ""
 msgid "Complete the form to save"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:44
-#, elixir-autogen, elixir-format
-msgid "Connect Stripe on the"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:228
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar"
@@ -348,7 +343,7 @@ msgstr ""
 msgid "Min"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:94
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:100
 #, elixir-autogen, elixir-format
 msgid "Minimum %{amount}."
 msgstr ""
@@ -421,7 +416,7 @@ msgid "Options"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:39
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:46
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:52
 #, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr ""
@@ -437,7 +432,7 @@ msgstr ""
 msgid "Please select a video provider for video meetings"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:73
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:79
 #, elixir-autogen, elixir-format
 msgid "Price (%{currency})"
 msgstr ""
@@ -477,7 +472,7 @@ msgstr ""
 msgid "Remove reminder"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:64
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:70
 #, elixir-autogen, elixir-format
 msgid "Require payment for this meeting type"
 msgstr ""
@@ -632,12 +627,12 @@ msgstr ""
 msgid "e.g., Quick Chat"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:48
-#, elixir-autogen, elixir-format
-msgid "page to charge for this meeting type."
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex:131
 #, elixir-autogen, elixir-format
 msgid "required"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:45
+#, elixir-autogen, elixir-format
+msgid "Connect Stripe on the %{payments_link} page to charge for this meeting type."
 msgstr ""

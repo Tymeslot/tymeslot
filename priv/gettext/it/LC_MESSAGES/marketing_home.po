@@ -81,11 +81,6 @@ msgstr ""
 msgid "+%{count} more"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:43
-#, elixir-autogen, elixir-format
-msgid "5 minutes"
-msgstr ""
-
 #: lib/tymeslot_saas_web/live/homepage_live/features_section.ex:37
 #, elixir-autogen, elixir-format
 msgid "A complete booking toolkit, in an interface that stays out of your way."
@@ -196,7 +191,7 @@ msgstr ""
 msgid "Fault-tolerant"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:47
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:49
 #, elixir-autogen, elixir-format
 msgid "Four steps from sign-up to your first booking."
 msgstr ""
@@ -366,7 +361,7 @@ msgstr ""
 msgid "See it in action"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:105
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:107
 #, elixir-autogen, elixir-format
 msgid "Self-hosting? You can use your own custom domain."
 msgstr ""
@@ -374,11 +369,6 @@ msgstr ""
 #: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:15
 #, elixir-autogen, elixir-format
 msgid "Set availability"
-msgstr ""
-
-#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:41
-#, elixir-autogen, elixir-format
-msgid "Setup in"
 msgstr ""
 
 #: lib/tymeslot_saas_web/live/homepage_live/cta_section.ex:16
@@ -411,8 +401,8 @@ msgstr ""
 msgid "Speak their language"
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:62
-#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:69
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:64
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:71
 #, elixir-autogen, elixir-format
 msgid "Step %{number}"
 msgstr ""
@@ -467,7 +457,7 @@ msgstr ""
 msgid "Your choice. Your control."
 msgstr ""
 
-#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:101
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:103
 #, elixir-autogen, elixir-format
 msgid "Your link:"
 msgstr ""
@@ -475,4 +465,9 @@ msgstr ""
 #: lib/tymeslot_saas_web/live/homepage_live/themes_section.ex:70
 #, elixir-autogen, elixir-format
 msgid "Your style."
+msgstr ""
+
+#: lib/tymeslot_saas_web/live/homepage_live/how_it_works_section.ex:42
+#, elixir-autogen, elixir-format
+msgid "Setup in <span class=\"bg-linear-to-r from-turquoise-600 to-cyan-600 bg-clip-text text-transparent\">5 minutes</span>"
 msgstr ""

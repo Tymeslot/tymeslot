@@ -155,11 +155,6 @@ msgstr ""
 msgid "Also switches the current view"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:26
-#, elixir-autogen, elixir-format
-msgid "Are you sure you want to delete"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex:41
 #, elixir-autogen, elixir-format
 msgid "Attendee added and invited."
@@ -196,7 +191,7 @@ msgstr ""
 msgid "Calendars refreshed"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:50
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:51
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex:44
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:221
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:62
@@ -302,7 +297,7 @@ msgstr ""
 msgid "Default view"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:43
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:44
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr ""
@@ -318,7 +313,7 @@ msgstr ""
 msgid "Delete failed — queued to retry on next sync"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:39
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:40
 #, elixir-autogen, elixir-format
 msgid "Deleting..."
 msgstr ""
@@ -788,7 +783,7 @@ msgstr ""
 msgid "This and following events"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:31
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:32
 #, elixir-autogen, elixir-format
 msgid "This event is linked to a booking. The attendee will be notified of the cancellation."
 msgstr ""
@@ -803,7 +798,7 @@ msgstr ""
 msgid "This person will receive a cancellation from your calendar provider."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:28
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:29
 #, elixir-autogen, elixir-format
 msgid "This will also remove it from your calendar provider."
 msgstr ""
@@ -993,4 +988,9 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:241
 #, elixir-autogen, elixir-format
 msgid "year(s)"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:26
+#, elixir-autogen, elixir-format
+msgid "Are you sure you want to delete %{title}?"
 msgstr ""

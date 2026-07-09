@@ -14,137 +14,137 @@ msgstr ""
 #: lib/tymeslot_saas_web/live/author_live.ex:30
 #, elixir-autogen, elixir-format
 msgid "%{name} - %{title}"
-msgstr ""
+msgstr "%{name} – %{title}"
 
 #: lib/tymeslot_saas_web/live/author_live.ex:117
 #, elixir-autogen, elixir-format
 msgid "%{name}, %{title} — headshot"
-msgstr ""
+msgstr "%{name}, %{title} — Porträtfoto"
 
 #: lib/tymeslot_saas_web/live/author_live.ex:189
 #, elixir-autogen, elixir-format
 msgid "About"
-msgstr ""
+msgstr "Zur Person"
 
 #: lib/tymeslot_saas_web/live/blog_live/components.ex:203
 #, elixir-autogen, elixir-format
 msgid "All posts"
-msgstr ""
+msgstr "Alle Beiträge"
 
 #: lib/tymeslot_saas_web/live/author_live.ex:313
 #, elixir-autogen, elixir-format
 msgid "Article pages"
-msgstr ""
+msgstr "Artikelseiten"
 
 #: lib/tymeslot_saas_web/live/author_live.ex:271
 #, elixir-autogen, elixir-format
 msgid "Articles by %{name}"
-msgstr ""
+msgstr "Artikel von %{name}"
 
 #: lib/tymeslot_saas_web/live/author_live.ex:49
 #: lib/tymeslot_saas_web/live/author_live.ex:401
 #, elixir-autogen, elixir-format
 msgid "Author Not Found"
-msgstr ""
+msgstr "Autor nicht gefunden"
 
 #: lib/tymeslot_saas_web/live/author_live.ex:50
 #, elixir-autogen, elixir-format
 msgid "Author not found on Tymeslot."
-msgstr ""
+msgstr "Autor auf Tymeslot nicht gefunden."
 
 #: lib/tymeslot_saas_web/live/author_live.ex:407
 #, elixir-autogen, elixir-format
 msgid "Back to Documentation"
-msgstr ""
+msgstr "Zurück zur Dokumentation"
 
 #: lib/tymeslot_saas_web/live/blog_live.ex:28
 #: lib/tymeslot_saas_web/live/blog_live/components.ex:37
 #, elixir-autogen, elixir-format
 msgid "Blog"
-msgstr ""
+msgstr "Blog"
 
 #: lib/tymeslot_saas_web/live/blog_live.ex:40
 #, elixir-autogen, elixir-format
 msgid "Blog — Product & Engineering Notes"
-msgstr ""
+msgstr "Blog — Produkt- & Engineering-Notizen"
 
 #: lib/tymeslot_saas_web/live/author_live.ex:233
 #, elixir-autogen, elixir-format
 msgid "Education"
-msgstr ""
+msgstr "Ausbildung"
 
 #: lib/tymeslot_saas_web/live/author_live.ex:211
 #, elixir-autogen, elixir-format
 msgid "Experience"
-msgstr ""
+msgstr "Berufserfahrung"
 
 #: lib/tymeslot_saas_web/live/author_live.ex:197
 #, elixir-autogen, elixir-format
 msgid "Expertise"
-msgstr ""
+msgstr "Fachgebiete"
 
 #: lib/tymeslot_saas_web/live/blog_live/components.ex:89
 #, elixir-autogen, elixir-format
 msgid "Latest"
-msgstr ""
+msgstr "Neueste"
 
 #: lib/tymeslot_saas_web/live/author_live.ex:37
 #, elixir-autogen, elixir-format
 msgid "Learn about %{name}, creator of Tymeslot and %{title}. Explore articles on self-hosting, automation, and developer tooling."
-msgstr ""
+msgstr "Erfahren Sie mehr über %{name}, Entwickler von Tymeslot und %{title}. Entdecken Sie Artikel über Self-Hosting, Automatisierung und Entwickler-Tools."
 
 #: lib/tymeslot_saas_web/live/author_live.ex:354
 #, elixir-autogen, elixir-format
 msgid "Next"
-msgstr ""
+msgstr "Weiter"
 
 #: lib/tymeslot_saas_web/live/blog_live/components.ex:40
 #, elixir-autogen, elixir-format
 msgid "Notes on scheduling, focus, and building Tymeslot"
-msgstr ""
+msgstr "Notizen zu Terminplanung, Fokus und der Entwicklung von Tymeslot"
 
 #: lib/tymeslot_saas_web/live/author_live.ex:276
 #, elixir-autogen, elixir-format
 msgid "Page %{page} of %{total}"
-msgstr ""
+msgstr "Seite %{page} von %{total}"
 
 #: lib/tymeslot_saas_web/live/author_live.ex:329
 #, elixir-autogen, elixir-format
 msgid "Previous"
-msgstr ""
+msgstr "Zurück"
 
 #: lib/tymeslot_saas_web/live/blog_live.ex:19
 #, elixir-autogen, elixir-format
 msgid "Product thinking, engineering write-ups, and notes from the team building Tymeslot — the open-source meeting scheduling platform."
-msgstr ""
+msgstr "Produktdenken, technische Fachbeiträge und Notizen vom Team hinter Tymeslot — der Open-Source-Plattform für Terminplanung."
 
 #: lib/tymeslot_saas_web/live/blog_live/components.ex:43
 #, elixir-autogen, elixir-format
 msgid "Product thinking, engineering write-ups, and the occasional opinion — straight from the team."
-msgstr ""
+msgstr "Produktdenken, technische Fachbeiträge und gelegentlich eine Meinung — direkt vom Team."
 
 #: lib/tymeslot_saas_web/live/blog_live/components.ex:74
 #: lib/tymeslot_saas_web/live/blog_live/components.ex:133
 #, elixir-autogen, elixir-format
 msgid "Read %{title}"
-msgstr ""
+msgstr "%{title} lesen"
 
 #: lib/tymeslot_saas_web/live/blog_live.ex:100
 #, elixir-autogen, elixir-format
 msgid "Ready to give Tymeslot a try?"
-msgstr ""
+msgstr "Bereit, Tymeslot auszuprobieren?"
 
 #: lib/tymeslot_saas_web/live/author_live.ex:404
 #, elixir-autogen, elixir-format
 msgid "The author profile you are looking for does not exist."
-msgstr ""
+msgstr "Das gesuchte Autorenprofil existiert nicht."
 
 #: lib/tymeslot_saas_web/live/blog_live.ex:92
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is the open-source scheduling platform with a booking page worth sharing. Core scheduling is free, forever."
-msgstr ""
+msgstr "Tymeslot ist die Open-Source-Plattform für Terminplanung mit einer Buchungsseite, die man gerne teilt. Die grundlegende Terminplanung ist für immer kostenlos."
 
 #: lib/tymeslot_saas_web/live/author_live.ex:153
 #, elixir-autogen, elixir-format
 msgid "Website"
-msgstr ""
+msgstr "Website"
