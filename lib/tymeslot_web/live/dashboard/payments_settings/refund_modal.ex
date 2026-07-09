@@ -38,8 +38,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModal do
 
       <div class="space-y-4">
         <p class="text-tymeslot-700">
-          {dgettext("dashboard_payments", "Refund")} <strong>{@payment.attendee_name || @payment.attendee_email}</strong>
-          {dgettext("dashboard_payments", "for")} <strong>{@payment.meeting_type_name}</strong>.
+          {dgettext("dashboard_payments", "Refund %{attendee} for %{meeting_type}.",
+            attendee: @payment.attendee_name || @payment.attendee_email,
+            meeting_type: @payment.meeting_type_name
+          )}
         </p>
 
         <div class="rounded-token-md border border-tymeslot-100 bg-tymeslot-50 p-4 text-token-sm space-y-1">

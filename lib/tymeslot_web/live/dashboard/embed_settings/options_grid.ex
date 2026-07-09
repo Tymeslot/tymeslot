@@ -254,18 +254,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
 
     <%!-- Hardcoded link to the cloud docs hub (slash-docs is not available in standalone Core) --%>
     <p class="mt-6 text-center text-token-sm text-tymeslot-500">
-      {dgettext("dashboard_embed", "Need help? See the")}
-      <a
-        href="https://tymeslot.app/docs/embed"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="text-turquoise-600 hover:text-turquoise-700 font-medium underline"
-      >
-        {dgettext("dashboard_embed", "embedding guide")}
-      </a>
-      {dgettext(
-        "dashboard_embed",
-        "for step-by-step instructions, platform tips, and customization options."
+      {raw(
+        dgettext(
+          "dashboard_embed",
+          "Need help? See the %{guide} for step-by-step instructions, platform tips, and customization options.",
+          guide:
+            ~s(<a href="https://tymeslot.app/docs/embed" target="_blank" rel="noopener noreferrer" class="text-turquoise-600 hover:text-turquoise-700 font-medium underline">) <>
+              dgettext("dashboard_embed", "embedding guide") <> ~s(</a>)
+        )
       )}
     </p>
     """

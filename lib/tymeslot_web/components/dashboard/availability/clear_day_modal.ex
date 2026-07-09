@@ -57,7 +57,9 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.ClearDayModal do
       <%= if @day_data do %>
         <div class="space-y-4">
           <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-            {dgettext("dashboard_availability", "Are you sure you want to clear all settings for")} <strong>{@day_data.day_name}</strong>?
+            {dgettext("dashboard_availability", "Are you sure you want to clear all settings for %{day}?",
+              day: @day_data.day_name
+            )}
           </p>
           <p class="text-tymeslot-500 font-medium">
             {dgettext(

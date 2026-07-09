@@ -27,9 +27,7 @@ defmodule TymeslotWeb.AdminLive.Components.ConfirmRoleChangeModal do
       <:header>{header_label(@action, @self?)}</:header>
 
       <p :if={@action == :promote} class="text-base text-tymeslot-700 font-medium leading-relaxed">
-        {dgettext("dashboard_admin", "Promote")}
-        <span class="font-black text-tymeslot-900">{@user.email}</span>
-        {dgettext("dashboard_admin", "to admin?")}
+        {dgettext("dashboard_admin", "Promote %{email} to admin?", email: @user.email)}
       </p>
       <p
         :if={@action == :demote and @self?}
@@ -41,9 +39,7 @@ defmodule TymeslotWeb.AdminLive.Components.ConfirmRoleChangeModal do
         :if={@action == :demote and not @self?}
         class="text-base text-tymeslot-700 font-medium leading-relaxed"
       >
-        {dgettext("dashboard_admin", "Demote")}
-        <span class="font-black text-tymeslot-900">{@user.email}</span>
-        {dgettext("dashboard_admin", "from admin?")}
+        {dgettext("dashboard_admin", "Demote %{email} from admin?", email: @user.email)}
       </p>
 
       <p :if={@action == :promote} class="mt-3 text-sm text-tymeslot-500">

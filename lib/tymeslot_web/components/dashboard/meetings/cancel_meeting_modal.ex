@@ -72,8 +72,13 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         class="space-y-4"
       >
         <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-          {dgettext("dashboard_bookings", "Are you sure you want to cancel the meeting with")} <strong>{@meeting.attendee_name}</strong>
-          {dgettext("dashboard_bookings", "scheduled for")} <strong>{Helpers.format_meeting_date(@meeting, @timezone)} • {Helpers.format_meeting_time(@meeting, @timezone)}</strong>?
+          {dgettext(
+            "dashboard_bookings",
+            "Are you sure you want to cancel the meeting with %{name} scheduled for %{when}?",
+            name: @meeting.attendee_name,
+            when:
+              "#{Helpers.format_meeting_date(@meeting, @timezone)} • #{Helpers.format_meeting_time(@meeting, @timezone)}"
+          )}
         </p>
 
         <.paid_options :if={@paid?} booking_payment={@booking_payment} />

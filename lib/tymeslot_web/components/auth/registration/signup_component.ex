@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Registration.SignupComponent do
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
+  import TymeslotWeb.Components.CoreComponents.TranslatedLink, only: [link_html: 2]
   import TymeslotWeb.Shared.Auth.LayoutComponents
   import TymeslotWeb.Shared.Auth.FormComponents
   import TymeslotWeb.Shared.Auth.ButtonComponents
@@ -109,25 +110,26 @@ defmodule TymeslotWeb.Registration.SignupComponent do
               value=""
             />
             <div class="text-xs text-tymeslot-500 text-center mt-3">
-              {dgettext("auth", "This site is protected by reCAPTCHA and the Google")}
-              <a
-                href="https://policies.google.com/privacy"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-turquoise-600 underline hover:text-turquoise-700"
-              >
-                {dgettext("auth", "Privacy Policy")}
-              </a>
-              {dgettext("auth", "and")}
-              <a
-                href="https://policies.google.com/terms"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-turquoise-600 underline hover:text-turquoise-700"
-              >
-                {dgettext("auth", "Terms of Service")}
-              </a>
-              {dgettext("auth", "apply.")}
+              {raw(
+                dgettext(
+                  "auth",
+                  "This site is protected by reCAPTCHA and the Google %{privacy_policy} and %{terms} apply.",
+                  privacy_policy:
+                    link_html(dgettext("auth", "Privacy Policy"),
+                      href: "https://policies.google.com/privacy",
+                      target: "_blank",
+                      rel: "noopener noreferrer",
+                      class: "text-turquoise-600 underline hover:text-turquoise-700"
+                    ),
+                  terms:
+                    link_html(dgettext("auth", "Terms of Service"),
+                      href: "https://policies.google.com/terms",
+                      target: "_blank",
+                      rel: "noopener noreferrer",
+                      class: "text-turquoise-600 underline hover:text-turquoise-700"
+                    )
+                )
+              )}
             </div>
           <% end %>
 

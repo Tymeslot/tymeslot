@@ -61,14 +61,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.MailboxOrgConfi
       </div>
 
       <p class="text-sm text-tymeslot-600 leading-relaxed">
-        {dgettext(
-          "dashboard_calendar_providers",
-          "If you have two-factor authentication enabled, generate an application-specific password under"
-        )}
-        <span class="font-semibold">{dgettext("dashboard_calendar_providers", "Settings → Security")}</span>
-        {dgettext(
-          "dashboard_calendar_providers",
-          "on mailbox.org and use that here instead of your regular password."
+        {raw(
+          dgettext(
+            "dashboard_calendar_providers",
+            "If you have two-factor authentication enabled, generate an application-specific password under %{location} on mailbox.org and use that here instead of your regular password.",
+            location:
+              ~s(<span class="font-semibold">) <>
+                dgettext("dashboard_calendar_providers", "Settings → Security") <> ~s(</span>)
+          )
         )}
       </p>
 

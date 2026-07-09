@@ -161,8 +161,20 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                     <div>
                       <p class="text-token-sm font-black text-turquoise-900">{dgettext("dashboard_automation_chat", "How to get your Bot Token & Chat ID")}</p>
                       <p class="text-token-xs text-turquoise-700 font-medium mt-0.5">
-                        {dgettext("dashboard_automation_chat", "Message")} <strong>@BotFather</strong> {dgettext("dashboard_automation_chat", "on Telegram to create a bot and get its token.")}
-                        {dgettext("dashboard_automation_chat", "To find your Chat ID, message")} <strong>@userinfobot</strong> {dgettext("dashboard_automation_chat", "or add your bot to a group and use the Telegram API.")}
+                        {raw(
+                          dgettext(
+                            "dashboard_automation_chat",
+                            "Message %{bot} on Telegram to create a bot and get its token.",
+                            bot: ~s(<strong>@BotFather</strong>)
+                          )
+                        )}
+                        {raw(
+                          dgettext(
+                            "dashboard_automation_chat",
+                            "To find your Chat ID, message %{bot} or add your bot to a group and use the Telegram API.",
+                            bot: ~s(<strong>@userinfobot</strong>)
+                          )
+                        )}
                       </p>
                     </div>
                   </div>

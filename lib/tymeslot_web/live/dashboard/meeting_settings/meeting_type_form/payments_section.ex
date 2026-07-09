@@ -41,11 +41,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
       </div>
 
       <.info_box :if={not @charges_enabled} variant={:info}>
-        {dgettext("dashboard_meeting_form", "Connect Stripe on the")}
-        <.link navigate={~p"/dashboard/integrations?tab=payments"} class="underline text-turquoise-600">
-          {dgettext("dashboard_meeting_form", "Payments")}
-        </.link>
-        {dgettext("dashboard_meeting_form", "page to charge for this meeting type.")}
+        {raw(
+          dgettext(
+            "dashboard_meeting_form",
+            "Connect Stripe on the %{payments_link} page to charge for this meeting type.",
+            payments_link:
+              ~s(<a href=") <>
+                ~p"/dashboard/integrations?tab=payments" <>
+                ~s(" data-phx-link="redirect" data-phx-link-state="push" class="underline text-turquoise-600">) <>
+                dgettext("dashboard_meeting_form", "Payments") <> ~s(</a>)
+          )
+        )}
       </.info_box>
 
       <label class={[

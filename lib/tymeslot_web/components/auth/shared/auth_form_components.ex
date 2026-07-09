@@ -6,6 +6,8 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  import TymeslotWeb.Components.CoreComponents.TranslatedLink, only: [link_html: 2]
+
   alias Phoenix.Controller
 
   @spec auth_form(map()) :: Phoenix.LiveView.Rendered.t()
@@ -62,22 +64,26 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
         required
       />
       <label for="terms" class="text-sm text-tymeslot-500 font-medium leading-relaxed">
-        {dgettext("auth", "I accept the")}
-        <a
-          href={@terms_url}
-          target="_blank"
-          class="text-turquoise-600 hover:text-turquoise-700 font-bold underline decoration-turquoise-100 underline-offset-4"
-        >
-          {dgettext("auth", "terms")}
-        </a>
-        {dgettext("auth", "and")}
-        <a
-          href={@privacy_url}
-          target="_blank"
-          class="text-turquoise-600 hover:text-turquoise-700 font-bold underline decoration-turquoise-100 underline-offset-4"
-        >
-          {dgettext("auth", "privacy policy")}
-        </a>
+        {raw(
+          dgettext(
+            "auth",
+            "I accept the %{terms} and %{privacy_policy}",
+            terms:
+              link_html(dgettext("auth", "terms"),
+                href: @terms_url,
+                target: "_blank",
+                class:
+                  "text-turquoise-600 hover:text-turquoise-700 font-bold underline decoration-turquoise-100 underline-offset-4"
+              ),
+            privacy_policy:
+              link_html(dgettext("auth", "privacy policy"),
+                href: @privacy_url,
+                target: "_blank",
+                class:
+                  "text-turquoise-600 hover:text-turquoise-700 font-bold underline decoration-turquoise-100 underline-offset-4"
+              )
+          )
+        )}
       </label>
     </div>
     """

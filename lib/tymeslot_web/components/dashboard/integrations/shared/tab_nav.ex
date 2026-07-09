@@ -45,11 +45,18 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav do
             aria-hidden="true"
           />
           <span class="sr-only">
-            {dgettext("dashboard_integrations", "%{status} — needs attention", status: tab.status)}
+            {dgettext("dashboard_integrations", "%{status} — needs attention",
+              status: status_label(tab.status)
+            )}
           </span>
         </span>
       </.link>
     </div>
     """
   end
+
+  # Maps a tab's status atom to a localised label for the screen-reader hint.
+  # Tabs only ever render this span for a non-`:ok` status (`:warning`/`:error`).
+  defp status_label(:warning), do: dgettext("dashboard_integrations", "Warning")
+  defp status_label(:error), do: dgettext("dashboard_integrations", "Error")
 end

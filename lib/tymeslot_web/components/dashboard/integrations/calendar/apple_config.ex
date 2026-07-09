@@ -61,23 +61,23 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.AppleConfig do
       </div>
 
       <p class="text-sm text-tymeslot-600 leading-relaxed">
-        {dgettext(
-          "dashboard_calendar_providers",
-          "iCloud will not accept your Apple ID password here. Generate an"
+        {raw(
+          dgettext(
+            "dashboard_calendar_providers",
+            "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email.",
+            app_specific_password:
+              ~s(<span class="font-semibold">) <>
+                dgettext("dashboard_calendar_providers", "app-specific password") <> ~s(</span>),
+            link:
+              ~s(<a href="https://appleid.apple.com" target="_blank" rel="noopener noreferrer" class="font-semibold text-turquoise-600 hover:text-turquoise-700 underline">appleid.apple.com</a>),
+            location:
+              ~s(<span class="font-semibold">) <>
+                dgettext(
+                  "dashboard_calendar_providers",
+                  "Sign-In and Security → App-Specific Passwords"
+                ) <> ~s(</span>)
+          )
         )}
-        <span class="font-semibold">{dgettext("dashboard_calendar_providers", "app-specific password")}</span>
-        {dgettext("dashboard_calendar_providers", "at")}
-        <a
-          href="https://appleid.apple.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="font-semibold text-turquoise-600 hover:text-turquoise-700 underline"
-        >appleid.apple.com</a>
-        {dgettext("dashboard_calendar_providers", "under")}
-        <span class="font-semibold">
-          {dgettext("dashboard_calendar_providers", "Sign-In and Security → App-Specific Passwords")}
-        </span>,
-        {dgettext("dashboard_calendar_providers", "then enter it below with your Apple ID email.")}
       </p>
 
       <SharedForm.config_form

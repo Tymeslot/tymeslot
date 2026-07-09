@@ -68,7 +68,9 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
       <%= if @meeting do %>
         <div class="space-y-6">
           <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-            {dgettext("dashboard_bookings", "Send a reschedule request to")} <strong>{@meeting.attendee_name}</strong>?
+            {dgettext("dashboard_bookings", "Send a reschedule request to %{name}?",
+              name: @meeting.attendee_name
+            )}
           </p>
 
           <div class="bg-tymeslot-50 rounded-token-2xl p-6 border border-tymeslot-100 space-y-3">

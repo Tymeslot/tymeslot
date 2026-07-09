@@ -204,13 +204,14 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                     <%= if @mode == :webhook_url_existing do %>
                       {dgettext("dashboard_automation_chat", "Leave blank to keep the current webhook URL. Paste a new one only if you want to replace it.")}
                     <% else %>
-                      {dgettext("dashboard_automation_chat", "Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created — see the full setup guide on")}
-                      <a
-                        href="https://tymeslot.app/docs/slack"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="font-black text-turquoise-700 hover:text-turquoise-900 underline"
-                      >tymeslot.app/docs/slack</a>.
+                      {raw(
+                        dgettext(
+                          "dashboard_automation_chat",
+                          "Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created — see the full setup guide on %{guide}.",
+                          guide:
+                            ~s(<a href="https://tymeslot.app/docs/slack" target="_blank" rel="noopener noreferrer" class="font-black text-turquoise-700 hover:text-turquoise-900 underline">tymeslot.app/docs/slack</a>)
+                        )
+                      )}
                     <% end %>
                   </:description>
                 </.input>
@@ -329,7 +330,14 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
       </div>
 
       <p class="text-token-xs text-tymeslot-500 font-medium mb-2 ml-1">
-        {dgettext("dashboard_automation_chat", "Tymeslot will post booking notifications to this channel. Public channels appear automatically; for a private channel, invite the Tymeslot bot in Slack (")}<code class="px-1 py-0.5 rounded bg-tymeslot-100 text-tymeslot-700">/invite @Tymeslot</code>{dgettext("dashboard_automation_chat", "), then click Refresh.")}
+        {raw(
+          dgettext(
+            "dashboard_automation_chat",
+            "Tymeslot will post booking notifications to this channel. Public channels appear automatically; for a private channel, invite the Tymeslot bot in Slack (%{command}), then click Refresh.",
+            command:
+              ~s(<code class="px-1 py-0.5 rounded bg-tymeslot-100 text-tymeslot-700">/invite @Tymeslot</code>)
+          )
+        )}
       </p>
 
       <%= cond do %>

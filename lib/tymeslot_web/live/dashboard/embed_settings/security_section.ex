@@ -49,36 +49,57 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
                 )}
               </p>
               <p class="text-blue-800">
-                {dgettext("dashboard_embed", "For security,")}
-                <strong>{dgettext("dashboard_embed", "you must restrict embedding")}</strong>
-                {dgettext(
-                  "dashboard_embed",
-                  "to only specific domains you trust. This prevents your booking page from appearing on unauthorized websites."
+                {raw(
+                  dgettext(
+                    "dashboard_embed",
+                    "For security, %{emphasis} to only specific domains you trust. This prevents your booking page from appearing on unauthorized websites.",
+                    emphasis:
+                      ~s(<strong>) <>
+                        dgettext("dashboard_embed", "you must restrict embedding") <> ~s(</strong>)
+                  )
                 )}
               </p>
               <ul class="list-disc list-inside text-blue-800 space-y-1 mt-2">
                 <li>
-                  <strong>{dgettext("dashboard_embed", "Add domains")}</strong>
-                  {dgettext(
-                    "dashboard_embed",
-                    "to enable and restrict embedding to only those sites"
+                  {raw(
+                    dgettext(
+                      "dashboard_embed",
+                      "%{action} to enable and restrict embedding to only those sites",
+                      action:
+                        ~s(<strong>) <> dgettext("dashboard_embed", "Add domains") <> ~s(</strong>)
+                    )
                   )}
                 </li>
                 <li>
-                  <strong>{dgettext("dashboard_embed", "Use Disable Embedding")}</strong>
-                  {dgettext("dashboard_embed", "to block all embedding (default)")}
+                  {raw(
+                    dgettext(
+                      "dashboard_embed",
+                      "%{action} to block all embedding (default)",
+                      action:
+                        ~s(<strong>) <>
+                          dgettext("dashboard_embed", "Use Disable Embedding") <> ~s(</strong>)
+                    )
+                  )}
                 </li>
                 <li>
-                  {dgettext("dashboard_embed", "Adding")}
-                  <code class="bg-blue-100 px-2 py-0.5 rounded">example.com</code>
-                  {dgettext("dashboard_embed", "automatically allows")}
-                  <code class="bg-blue-100 px-2 py-0.5 rounded">www.example.com</code>
-                  {dgettext("dashboard_embed", "too (and vice versa)")}
+                  {raw(
+                    dgettext(
+                      "dashboard_embed",
+                      "Adding %{domain} automatically allows %{www_domain} too (and vice versa)",
+                      domain: ~s(<code class="bg-blue-100 px-2 py-0.5 rounded">example.com</code>),
+                      www_domain:
+                        ~s(<code class="bg-blue-100 px-2 py-0.5 rounded">www.example.com</code>)
+                    )
+                  )}
                 </li>
                 <li>
-                  {dgettext("dashboard_embed", "Use")}
-                  <code class="bg-blue-100 px-2 py-0.5 rounded">*.example.com</code>
-                  {dgettext("dashboard_embed", "to allow all subdomains")}
+                  {raw(
+                    dgettext(
+                      "dashboard_embed",
+                      "Use %{wildcard} to allow all subdomains",
+                      wildcard: ~s(<code class="bg-blue-100 px-2 py-0.5 rounded">*.example.com</code>)
+                    )
+                  )}
                 </li>
               </ul>
             </div>
@@ -103,9 +124,13 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
             icon="hero-globe-alt"
           />
           <p class="mt-2 text-token-xs text-tymeslot-600">
-            {dgettext("dashboard_embed", "Enter a domain and press enter to add it. Don't include")}
-            <code class="bg-tymeslot-100 px-1 py-0.5 rounded">https://</code>
-            {dgettext("dashboard_embed", "or paths.")}
+            {raw(
+              dgettext(
+                "dashboard_embed",
+                "Enter a domain and press enter to add it. Don't include %{scheme} or paths.",
+                scheme: ~s(<code class="bg-tymeslot-100 px-1 py-0.5 rounded">https://</code>)
+              )
+            )}
           </p>
 
           <%!-- Current Domains Tags --%>

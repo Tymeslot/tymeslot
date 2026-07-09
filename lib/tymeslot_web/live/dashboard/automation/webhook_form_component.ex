@@ -193,9 +193,13 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
                 </button>
               </div>
               <p class="text-token-xs text-tymeslot-500 font-medium">
-                {dgettext("dashboard_automation", "This token is automatically sent in the")}
-                <code class="bg-tymeslot-100 px-1 rounded">X-Tymeslot-Token</code>
-                {dgettext("dashboard_automation", "header.")}
+                {raw(
+                  dgettext(
+                    "dashboard_automation",
+                    "This token is automatically sent in the %{header} header.",
+                    header: ~s(<code class="bg-tymeslot-100 px-1 rounded">X-Tymeslot-Token</code>)
+                  )
+                )}
               </p>
             </div>
           </div>
