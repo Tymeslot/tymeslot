@@ -163,8 +163,8 @@ defmodule Tymeslot.AuthTest do
     test "persists a supported locale preference" do
       user = insert(:user)
 
-      assert {:ok, %{locale: "fr"}} = Auth.update_user_locale(user, "fr")
-      assert {:ok, %{locale: "fr"}} = UserQueries.get_user(user.id)
+      assert {:ok, %{locale: "de"}} = Auth.update_user_locale(user, "de")
+      assert {:ok, %{locale: "de"}} = UserQueries.get_user(user.id)
     end
 
     test "clears the preference for an empty string" do

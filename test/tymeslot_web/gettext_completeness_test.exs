@@ -1,283 +1,197 @@
 defmodule TymeslotWeb.GettextCompletenessTest do
   @moduledoc """
-  Tests to ensure translation completeness across all supported languages.
+  Enforces that every gettext domain is fully translated into every supported locale.
 
-  Strings are organised into per-area gettext domains (see
-  `CredoChecks.GettextDomainBoundary`). Two independent levels of guarantee are
-  enforced, so a domain can be wrapped for translation long before it is actually
-  translated:
+  Listing a locale in `config :tymeslot, :locales` is a promise: it appears in the
+  language switcher, so every string a user can reach must exist in it. This test is
+  what makes that promise checkable. To stage a partially-translated language, leave it
+  out of the config until its catalogues are complete — do not weaken this test.
 
-  - **Structure & consistency** (`@content_domains`, derived automatically from
-    the `.pot` templates present): every locale must carry the same `.po` files
-    with the same msgid set and proper headers. This holds even for domains that
-    are not translated yet — a missing translation falls back to English, but a
-    missing *msgid* is a real inconsistency. Newly-wrapped domains join this set
-    the moment their `.pot` is extracted; no edit here is needed.
-  - **No empty translations & size** (`@translated_domains` × `@launched_locales`):
-    domains declared complete must stay complete, in every launched locale.
+  Four independent gates, all derived from what is actually on disk, so a newly-wrapped
+  domain or a newly-added locale is covered without editing this file:
 
-  A domain graduates into `@translated_domains` only once it is fully translated;
-  a locale graduates into `@launched_locales` only once every `@translated_domains`
-  catalog is complete for it. This is the "never ship on the fallback" gate.
+    * **Structure** — every supported locale carries a `.po` for every `.pot` template,
+      with valid `Language:` and `Plural-Forms:` headers.
+    * **Consistency** — every locale's msgid set matches English exactly. A missing
+      translation falls back; a missing *msgid* is drift between source and catalogue.
+    * **Completeness** — no empty `msgstr` in any domain, in any locale other than the
+      default. The default locale's msgstrs are intentionally empty: gettext falls back
+      to the msgid, which is already English.
+    * **No fuzzy entries** — gettext *serves* a fuzzy translation rather than falling
+      back to the msgid, so a stale fuzzy msgstr ships as though it were correct. After
+      `mix gettext.extract --merge`, review each one and clear the flag.
 
-  Deliberately absent from `@translated_domains`: `dashboard`/`emails` (existing
-  untranslated strings) and every newly-wrapped authenticated-app domain
-  (`dashboard_*`, `auth`, `account`, `onboarding_wizard`, `dashboard_common`) —
-  those are wrapped English-only for now and translated in a later phase.
+  Parsing goes through `Expo`, not a line scanner, so a corrupt or truncated `.po` fails
+  here rather than at compile time.
+
+  Out of scope, deliberately: changelog and blog **content** (`priv/changelog.json`,
+  `priv/blog/*.md`) is data, not gettext, and stays untranslated. Only the page chrome
+  around it is wrapped, in the `marketing_about` and `marketing_blog` domains, and that
+  chrome is covered here like any other domain.
+
+  The `/for` profession pages localise through per-locale content files rather than
+  gettext; their completeness is enforced separately, in the SaaS app, by
+  `TymeslotSaasWeb.ForLive.ProfessionCompletenessTest`.
   """
   use ExUnit.Case, async: true
   @moduletag :utils
 
-  alias TymeslotWeb.Themes.Shared.LocaleHandler
+  alias Expo.PO
+  alias Tymeslot.Locales
 
   @gettext_path Path.expand("../../priv/gettext", __DIR__)
 
-  # Domains with content in every locale — checked for file presence, header
-  # correctness, and msgid-set consistency across locales. Derived from the
-  # `.pot` templates so every extracted domain is covered automatically.
-  @content_domains @gettext_path
-                   |> Path.join("*.pot")
-                   |> Path.wildcard()
-                   |> Enum.map(&Path.basename(&1, ".pot"))
-                   |> Enum.sort()
+  # Every extracted domain. Derived from the `.pot` templates, so a domain is covered
+  # the moment it is first extracted — there is no allowlist to forget to update.
+  @domains @gettext_path
+           |> Path.join("*.pot")
+           |> Path.wildcard()
+           |> Enum.map(&Path.basename(&1, ".pot"))
+           |> Enum.sort()
 
-  # Domains that are fully translated in every launched locale — additionally
-  # checked for empty translations and reasonable file size. Graduate a domain
-  # in here only when it reaches zero untranslated entries across all locales.
-  @translated_domains ~w(booking onboarding common errors embed)
-
-  # Locales that have been launched — every `@translated_domains` catalog is
-  # complete for these. The empty-translation and size gates run over this set,
-  # so a locale can be launched independently once its in-scope domains are done.
-  # Currently equal to the supported set (all translated domains are complete in
-  # all locales); trim/extend as new domains are translated locale-by-locale.
-  @launched_locales ~w(en de fr uk it)
-
-  @content_files Enum.map(@content_domains, &"#{&1}.po")
-  @translated_files Enum.map(@translated_domains, &"#{&1}.po")
-
-  describe "translation structure" do
-    test "all supported locales have all content translation files" do
-      for locale <- LocaleHandler.supported_locales() do
+  describe "structure" do
+    test "every supported locale has a .po for every domain" do
+      for locale <- Locales.supported_codes() do
         locale_dir = Path.join([@gettext_path, locale, "LC_MESSAGES"])
 
-        assert File.dir?(locale_dir),
-               "Missing LC_MESSAGES directory for locale: #{locale}"
+        assert File.dir?(locale_dir), "Missing LC_MESSAGES directory for locale: #{locale}"
 
-        for po_file <- @content_files do
-          po_path = Path.join(locale_dir, po_file)
+        missing = Enum.reject(@domains, &File.exists?(po_path(locale, &1)))
 
-          assert File.exists?(po_path),
-                 "Missing translation file: #{locale}/LC_MESSAGES/#{po_file}"
-        end
+        assert missing == [],
+               "Locale '#{locale}' is missing catalogues: #{Enum.join(missing, ", ")}"
       end
     end
 
-    test "all .po files have proper headers" do
-      for_each_locale_and_file(@content_files, &assert_proper_headers/2)
+    test "every .po has valid headers" do
+      for locale <- Locales.supported_codes(), domain <- @domains do
+        headers = locale |> po_path(domain) |> parse!() |> Map.fetch!(:headers) |> Enum.join()
+
+        assert headers =~ "Language: #{locale}",
+               "#{locale}/#{domain}.po is missing its `Language: #{locale}` header"
+
+        assert headers =~ "Plural-Forms:",
+               "#{locale}/#{domain}.po is missing its `Plural-Forms:` header"
+      end
     end
   end
 
   describe "msgid consistency across locales" do
-    for domain <- @content_domains do
-      test "all locales have the same msgids in #{domain}.po" do
-        assert_msgids_consistency("#{unquote(domain)}.po")
-      end
-    end
-  end
+    for domain <- @domains do
+      test "every locale has the same msgids in #{domain}.po" do
+        domain = unquote(domain)
+        reference = msgids(Locales.default_locale(), domain)
 
-  describe "translation completeness" do
-    test "no empty translations (msgstr) in fully-translated domains" do
-      for locale <- @launched_locales, po_file <- @translated_files do
-        assert_no_empty_translations(locale, po_file)
-      end
-    end
+        refute reference == [], "#{domain}.po has no msgids in the default locale"
 
-    test "translation file sizes are reasonable" do
-      # English is the reference - other translations shouldn't be much smaller
-      # (which might indicate missing content)
-      reference_sizes = get_file_sizes("en")
+        for locale <- Locales.supported_codes() -- [Locales.default_locale()] do
+          actual = msgids(locale, domain)
 
-      launched_locales = @launched_locales -- ["en"]
+          assert reference -- actual == [],
+                 """
+                 Locale '#{locale}' is missing msgids in #{domain}.po:
+                 #{format_list(reference -- actual)}
 
-      for locale <- launched_locales, po_file <- @translated_files do
-        po_path = Path.join([@gettext_path, locale, "LC_MESSAGES", po_file])
-        file_size = File.stat!(po_path).size
-        reference_size = reference_sizes[po_file]
+                 Run `mix gettext.extract --merge` to sync the catalogues.
+                 """
 
-        # Allow translations to be 50% to 150% of English size
-        # (different languages have different lengths)
-        min_size = div(reference_size, 2)
-        max_size = reference_size * 2
-
-        assert file_size >= min_size,
-               """
-               #{locale}/#{po_file} is suspiciously small (#{file_size} bytes).
-               English version is #{reference_size} bytes.
-               This might indicate missing translations.
-               """
-
-        assert file_size <= max_size,
-               """
-               #{locale}/#{po_file} is suspiciously large (#{file_size} bytes).
-               English version is #{reference_size} bytes.
-               """
-      end
-    end
-  end
-
-  # Helper functions
-
-  defp assert_msgids_consistency(po_file) do
-    msgids_by_locale = get_msgids_by_locale(po_file)
-
-    # Get English as reference (should be complete)
-    reference_msgids = msgids_by_locale["en"]
-    assert reference_msgids != [], "English #{po_file} has no msgids"
-
-    # Check all other locales have the same msgids
-    for {locale, msgids} <- msgids_by_locale do
-      missing_in_locale = reference_msgids -- msgids
-      extra_in_locale = msgids -- reference_msgids
-
-      assert missing_in_locale == [],
-             """
-             Locale '#{locale}' is missing msgids in #{po_file}:
-             #{inspect(missing_in_locale, pretty: true)}
-             """
-
-      assert extra_in_locale == [],
-             """
-             Locale '#{locale}' has extra msgids not in English #{po_file}:
-             #{inspect(extra_in_locale, pretty: true)}
-             """
-
-      assert length(msgids) == length(reference_msgids),
-             "Locale '#{locale}' has #{length(msgids)} msgids, expected #{length(reference_msgids)}"
-    end
-  end
-
-  defp for_each_locale_and_file(po_files, assertion_fn) do
-    supported_locales = LocaleHandler.supported_locales()
-
-    for locale <- supported_locales, po_file <- po_files do
-      assertion_fn.(locale, po_file)
-    end
-  end
-
-  defp assert_no_empty_translations(locale, po_file) do
-    po_path = Path.join([@gettext_path, locale, "LC_MESSAGES", po_file])
-    content = File.read!(po_path)
-
-    # Find all msgid/msgstr pairs
-    pairs = extract_msgid_msgstr_pairs(content)
-
-    empty_translations =
-      pairs
-      |> Enum.filter(fn {msgid, msgstr} ->
-        # Skip the header entry (empty msgid)
-        msgid != "" && msgstr == ""
-      end)
-      |> Enum.map(fn {msgid, _msgstr} -> msgid end)
-
-    assert empty_translations == [],
-           """
-           Locale '#{locale}' has empty translations in #{po_file}:
-           #{inspect(empty_translations, pretty: true)}
-           """
-  end
-
-  defp assert_proper_headers(locale, po_file) do
-    po_path = Path.join([@gettext_path, locale, "LC_MESSAGES", po_file])
-    content = File.read!(po_path)
-
-    # Check for required header fields
-    assert content =~ ~r/Language: #{locale}/,
-           "#{locale}/#{po_file} missing Language header"
-
-    assert content =~ ~r/Plural-Forms:/,
-           "#{locale}/#{po_file} missing Plural-Forms header"
-  end
-
-  defp get_msgids_by_locale(po_file) do
-    supported_locales = LocaleHandler.supported_locales()
-
-    for locale <- supported_locales, into: %{} do
-      po_path = Path.join([@gettext_path, locale, "LC_MESSAGES", po_file])
-      msgids = extract_msgids(po_path)
-      {locale, msgids}
-    end
-  end
-
-  defp extract_msgids(po_path) do
-    po_path
-    |> File.read!()
-    |> String.split("\n")
-    |> Enum.reduce([], fn line, acc ->
-      case String.trim(line) do
-        # Skip empty msgid (header entry)
-        "msgid \"\"" ->
-          acc
-
-        # Extract msgid
-        <<"msgid \"", rest::binary>> ->
-          msgid = String.trim_trailing(rest, "\"")
-          [msgid | acc]
-
-        _non_msgid_line ->
-          acc
-      end
-    end)
-    |> Enum.reverse()
-  end
-
-  defp extract_msgid_msgstr_pairs(content) do
-    lines = String.split(content, "\n")
-
-    lines
-    |> Enum.chunk_while(
-      nil,
-      fn line, acc ->
-        trimmed = String.trim(line)
-
-        cond do
-          # Start of msgid
-          String.starts_with?(trimmed, "msgid \"") ->
-            msgid = extract_quoted_value(trimmed, "msgid")
-            {:cont, {:msgid, msgid}}
-
-          # msgstr or msgstr[0] (plural) following msgid
-          (String.starts_with?(trimmed, "msgstr \"") ||
-             String.starts_with?(trimmed, "msgstr[0] \"")) &&
-              match?({:msgid, _msgid}, acc) ->
-            {:msgid, msgid} = acc
-            prefix = if String.starts_with?(trimmed, "msgstr["), do: "msgstr[0]", else: "msgstr"
-            msgstr = extract_quoted_value(trimmed, prefix)
-            {:cont, {msgid, msgstr}, nil}
-
-          true ->
-            {:cont, acc}
+          assert actual -- reference == [],
+                 """
+                 Locale '#{locale}' has msgids not present in the default locale, in #{domain}.po:
+                 #{format_list(actual -- reference)}
+                 """
         end
-      end,
-      fn
-        {:msgid, msgid} -> {:cont, {msgid, ""}, nil}
-        _acc -> {:cont, nil}
       end
-    )
-    |> Enum.reject(&is_nil/1)
-  end
-
-  defp extract_quoted_value(line, prefix) do
-    line
-    |> String.trim_leading(prefix <> " \"")
-    |> String.trim_trailing("\"")
-  end
-
-  defp get_file_sizes(locale) do
-    for po_file <- @translated_files, into: %{} do
-      po_path = Path.join([@gettext_path, locale, "LC_MESSAGES", po_file])
-      size = File.stat!(po_path).size
-      {po_file, size}
     end
+  end
+
+  describe "completeness" do
+    test "no untranslated entries in any domain, in any non-default locale" do
+      gaps =
+        for locale <- Locales.supported_codes() -- [Locales.default_locale()],
+            domain <- @domains,
+            entries = untranslated(locale, domain),
+            entries != [],
+            do: {locale, domain, entries}
+
+      assert gaps == [], """
+      #{Enum.reduce(gaps, 0, fn {_l, _d, e}, acc -> acc + length(e) end)} untranslated entries.
+
+      Every locale in `config :tymeslot, :locales` must be fully translated — it is
+      offered in the language switcher, so an empty msgstr ships English to a user who
+      asked for another language.
+
+      #{Enum.map_join(gaps, "\n", fn {locale, domain, entries} -> "  #{locale}/#{domain}.po — #{length(entries)} untranslated:\n#{format_list(entries)}" end)}
+      """
+    end
+
+    test "no fuzzy entries in any locale" do
+      fuzzy =
+        for locale <- Locales.supported_codes(),
+            domain <- @domains,
+            entries = fuzzy(locale, domain),
+            entries != [],
+            do: {locale, domain, entries}
+
+      assert fuzzy == [], """
+      Fuzzy entries found. Gettext SERVES a fuzzy translation — it does not fall back to
+      the msgid — so these ship stale text as though it were correct.
+
+      `mix gettext.extract --merge` marks an entry fuzzy when a msgid changed and it
+      copied the old msgstr across. Correct each translation (or blank the msgstr) and
+      delete the `, fuzzy` flag.
+
+      #{Enum.map_join(fuzzy, "\n", fn {locale, domain, entries} -> "  #{locale}/#{domain}.po:\n#{format_list(entries)}" end)}
+      """
+    end
+  end
+
+  # ── helpers ─────────────────────────────────────────────────────────────────
+
+  defp po_path(locale, domain),
+    do: Path.join([@gettext_path, locale, "LC_MESSAGES", "#{domain}.po"])
+
+  defp parse!(path) do
+    PO.parse_file!(path)
+  rescue
+    error in PO.SyntaxError ->
+      flunk("#{path} is not a valid .po file: #{Exception.message(error)}")
+  end
+
+  defp messages(locale, domain) do
+    locale
+    |> po_path(domain)
+    |> parse!()
+    |> Map.fetch!(:messages)
+    |> Enum.reject(&(text(&1.msgid) == ""))
+  end
+
+  defp msgids(locale, domain), do: locale |> messages(domain) |> Enum.map(&text(&1.msgid))
+
+  defp untranslated(locale, domain) do
+    locale
+    |> messages(domain)
+    |> Enum.filter(&empty_translation?/1)
+    |> Enum.map(&text(&1.msgid))
+  end
+
+  defp fuzzy(locale, domain) do
+    locale
+    |> messages(domain)
+    |> Enum.filter(&("fuzzy" in List.flatten(&1.flags)))
+    |> Enum.map(&text(&1.msgid))
+  end
+
+  defp empty_translation?(%Expo.Message.Singular{msgstr: msgstr}), do: text(msgstr) == ""
+
+  defp empty_translation?(%Expo.Message.Plural{msgstr: msgstr}),
+    do: Enum.any?(msgstr, fn {_index, str} -> text(str) == "" end)
+
+  defp text(iodata), do: IO.iodata_to_binary(iodata)
+
+  defp format_list(msgids) do
+    msgids
+    |> Enum.sort()
+    |> Enum.map_join("\n", &"      - #{inspect(String.slice(&1, 0, 90))}")
   end
 end

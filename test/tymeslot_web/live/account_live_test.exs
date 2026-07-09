@@ -311,7 +311,9 @@ defmodule TymeslotWeb.AccountLiveTest do
       # Persisted immediately, no separate save step.
       assert Repo.get(UserSchema, user.id).locale == "de"
       # Immediate feedback: confirmation flash + the German button now active.
-      assert html =~ "Language preference saved"
+      # Selecting German also switches the dashboard locale, so the flash
+      # renders in German.
+      assert html =~ "Spracheinstellung gespeichert"
       assert html =~ ~r/phx-value-locale="de"[^>]*btn-tag-selector-primary--active/s
     end
 

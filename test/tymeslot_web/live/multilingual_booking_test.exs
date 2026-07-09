@@ -6,6 +6,8 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
   import Tymeslot.Factory
   import Mox
 
+  alias Tymeslot.Locales
+
   setup do
     # Create a user with calendar integration for booking flow
     user = insert(:user)
@@ -116,10 +118,10 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
     end
 
     test "accepts Accept-Language header for initial locale", %{conn: conn, username: username} do
-      conn = put_req_header(conn, "accept-language", "uk-UA,uk;q=0.9")
+      conn = put_req_header(conn, "accept-language", "de-DE,de;q=0.9")
 
       view = start_view(conn, username)
-      assert render(view) =~ "data-locale=\"uk\""
+      assert render(view) =~ "data-locale=\"de\""
     end
 
     test "language switcher displays all supported locales", %{conn: conn, username: username} do
@@ -131,12 +133,19 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
       # Verify language switcher is present
       assert html =~ "language-switcher"
 
-      # All supported locales should be available in the dropdown
-      assert html =~ "phx-value-locale=\"en\""
-      assert html =~ "phx-value-locale=\"de\""
-      assert html =~ "phx-value-locale=\"uk\""
-      assert html =~ "phx-value-locale=\"fr\""
-      assert html =~ "phx-value-locale=\"it\""
+      supported = Locales.supported_codes()
+      refute supported == []
+
+      # Every supported locale is offered as a switch option...
+      for code <- supported do
+        assert html =~ ~s(phx-value-locale="#{code}")
+      end
+
+      # ...and no others: exactly one change_locale option per supported locale.
+      option_count =
+        html |> String.split(~s(phx-click="change_locale")) |> length() |> Kernel.-(1)
+
+      assert option_count == length(supported)
     end
   end
 
@@ -199,34 +208,21 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
   end
 
   describe "multilingual booking flow completeness" do
-    test "completes full booking flow in German", %{conn: conn, username: username} do
-      view = start_view(conn, username, "de", "30min")
+    test "completes full booking flow in every supported locale", %{
+      conn: conn,
+      username: username
+    } do
+      supported = Locales.supported_codes()
+      refute supported == []
 
-      # Verify we're in German
-      assert render(view) =~ "data-locale=\"de\""
+      # The booking flow must render end-to-end in each supported locale,
+      # including the non-default ones.
+      for locale <- supported do
+        view = start_view(conn, username, locale, "30min")
 
-      # Flow should work regardless of language
-      assert has_element?(view, "[data-testid='duration-option']")
-    end
-
-    test "completes full booking flow in Ukrainian", %{conn: conn, username: username} do
-      view = start_view(conn, username, "uk", "30min")
-
-      # Verify we're in Ukrainian
-      assert render(view) =~ "data-locale=\"uk\""
-
-      # Flow should work regardless of language
-      assert has_element?(view, "[data-testid='duration-option']")
-    end
-
-    test "completes full booking flow in Italian", %{conn: conn, username: username} do
-      view = start_view(conn, username, "it", "30min")
-
-      # Verify we're in Italian
-      assert render(view) =~ "data-locale=\"it\""
-
-      # Flow should work regardless of language
-      assert has_element?(view, "[data-testid='duration-option']")
+        assert render(view) =~ ~s(data-locale="#{locale}")
+        assert has_element?(view, "[data-testid='duration-option']")
+      end
     end
 
     test "language persists throughout booking flow steps", %{conn: conn, username: username} do

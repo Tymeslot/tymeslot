@@ -26,11 +26,11 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         conn
         |> Map.put(:params, %{})
         |> fetch_session()
-        |> put_session(:locale, "uk")
+        |> put_session(:locale, "de")
         |> LocalePlug.call([])
 
-      assert conn.assigns.locale == "uk"
-      assert Gettext.get_locale(TymeslotWeb.Gettext) == "uk"
+      assert conn.assigns.locale == "de"
+      assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
     end
 
     test "parses Accept-Language header when no session or query param", %{conn: conn} do
@@ -62,9 +62,10 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> init_test_session(%{})
         |> Map.put(:params, %{"locale" => "de"})
         |> fetch_session()
-        |> put_session(:locale, "uk")
+        |> put_session(:locale, "en")
         |> LocalePlug.call([])
 
+      # de can only come from the query param, so it winning proves priority.
       assert conn.assigns.locale == "de"
       assert get_session(conn, :locale) == "de"
     end
@@ -73,12 +74,13 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
       conn =
         build_conn()
         |> init_test_session(%{})
-        |> Map.put(:params, %{"locale" => "uk"})
+        |> Map.put(:params, %{"locale" => "de"})
         |> fetch_session()
-        |> put_req_header("accept-language", "de-DE")
+        |> put_req_header("accept-language", "en-US")
         |> LocalePlug.call([])
 
-      assert conn.assigns.locale == "uk"
+      # de comes only from the query param; the header would resolve to en.
+      assert conn.assigns.locale == "de"
     end
 
     test "prioritizes session over Accept-Language header", %{conn: conn} do
@@ -87,9 +89,10 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> Map.put(:params, %{})
         |> fetch_session()
         |> put_session(:locale, "de")
-        |> put_req_header("accept-language", "uk")
+        |> put_req_header("accept-language", "en")
         |> LocalePlug.call([])
 
+      # de comes only from the session; the header would resolve to en.
       assert conn.assigns.locale == "de"
     end
   end
@@ -118,14 +121,16 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
     end
 
     test "handles multiple languages with quality scores", %{conn: conn} do
+      # fr has the highest quality but is unsupported, so it is skipped in favour
+      # of the highest-quality supported language (de over en).
       conn =
         conn
         |> Map.put(:params, %{})
         |> fetch_session()
-        |> put_req_header("accept-language", "uk;q=0.9,de;q=0.8,en;q=0.7")
+        |> put_req_header("accept-language", "fr;q=0.9,de;q=0.8,en;q=0.7")
         |> LocalePlug.call([])
 
-      assert conn.assigns.locale == "uk"
+      assert conn.assigns.locale == "de"
     end
 
     test "picks first supported language from list", %{conn: conn} do
@@ -366,9 +371,10 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> Map.put(:params, %{})
         |> fetch_session()
         |> assign(:current_user, %{locale: "de"})
-        |> put_req_header("accept-language", "uk")
+        |> put_req_header("accept-language", "en")
         |> LocalePlug.call(prefer_user_locale: true)
 
+      # de comes only from the saved user preference; the header would give en.
       assert conn.assigns.locale == "de"
       assert get_session(conn, :locale) == "de"
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
@@ -380,12 +386,13 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> init_test_session(%{})
         |> Map.put(:params, %{})
         |> fetch_session()
-        |> assign(:current_user, %{locale: "de"})
-        |> put_req_header("accept-language", "uk")
+        |> assign(:current_user, %{locale: "en"})
+        |> put_req_header("accept-language", "de")
         |> LocalePlug.call([])
 
-      # Without prefer_user_locale, the chain falls through to the header.
-      assert conn.assigns.locale == "uk"
+      # Without prefer_user_locale, the chain ignores the user's en and falls
+      # through to the header's de.
+      assert conn.assigns.locale == "de"
     end
 
     test "falls through the normal chain when the user locale is nil", %{conn: _conn} do
@@ -395,10 +402,10 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> Map.put(:params, %{})
         |> fetch_session()
         |> assign(:current_user, %{locale: nil})
-        |> put_req_header("accept-language", "uk")
+        |> put_req_header("accept-language", "de")
         |> LocalePlug.call(prefer_user_locale: true)
 
-      assert conn.assigns.locale == "uk"
+      assert conn.assigns.locale == "de"
     end
   end
 
@@ -419,10 +426,10 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         conn
         |> Map.put(:params, %{})
         |> fetch_session()
-        |> put_req_header("accept-language", "uk")
+        |> put_req_header("accept-language", "de")
         |> LocalePlug.call([])
 
-      assert get_session(conn, :locale) == "uk"
+      assert get_session(conn, :locale) == "de"
     end
 
     test "updates Gettext locale for current process", %{conn: _conn} do

@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
   use TymeslotWeb.ConnCase, async: true
   @moduletag :utils
 
+  alias Tymeslot.Locales
   alias TymeslotWeb.Themes.Shared.LocaleHandler
 
   setup do
@@ -106,35 +107,26 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
     end
 
     test "transitions between all supported locales", %{socket: socket} do
-      # en -> de
-      socket = LocaleHandler.handle_locale_change(socket, "de")
-      assert socket.assigns.locale == "de"
+      # Drive the socket through every configured locale in turn, asserting each
+      # transition takes effect. Derived from config so a locale change never
+      # requires editing this test.
+      refute Locales.supported_codes() == []
 
-      # de -> uk
-      socket = LocaleHandler.handle_locale_change(socket, "uk")
-      assert socket.assigns.locale == "uk"
-
-      # uk -> fr
-      socket = LocaleHandler.handle_locale_change(socket, "fr")
-      assert socket.assigns.locale == "fr"
-
-      # fr -> it
-      socket = LocaleHandler.handle_locale_change(socket, "it")
-      assert socket.assigns.locale == "it"
-
-      # it -> en
-      socket = LocaleHandler.handle_locale_change(socket, "en")
-      assert socket.assigns.locale == "en"
+      Enum.reduce(Locales.supported_codes(), socket, fn code, socket ->
+        socket = LocaleHandler.handle_locale_change(socket, code)
+        assert socket.assigns.locale == code
+        socket
+      end)
     end
 
     test "updates Gettext locale on each change", %{socket: socket} do
       Gettext.put_locale(TymeslotWeb.Gettext, "en")
+      refute Locales.supported_codes() == []
 
-      _socket = LocaleHandler.handle_locale_change(socket, "de")
-      assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
-
-      _socket = LocaleHandler.handle_locale_change(socket, "uk")
-      assert Gettext.get_locale(TymeslotWeb.Gettext) == "uk"
+      Enum.each(Locales.supported_codes(), fn code ->
+        LocaleHandler.handle_locale_change(socket, code)
+        assert Gettext.get_locale(TymeslotWeb.Gettext) == code
+      end)
     end
   end
 
@@ -143,11 +135,9 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
       locales = LocaleHandler.supported_locales()
 
       assert is_list(locales)
+      assert locales == Locales.supported_codes()
       assert "en" in locales
       assert "de" in locales
-      assert "uk" in locales
-      assert "fr" in locales
-      assert "it" in locales
     end
 
     test "supported locales are derived from metadata configuration" do
@@ -160,16 +150,18 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
   end
 
   describe "get_locales_with_metadata/0" do
-    test "returns list of locale metadata maps" do
+    test "returns metadata for every supported locale, well-formed" do
       locales = LocaleHandler.get_locales_with_metadata()
 
       assert is_list(locales)
-      assert length(locales) == 5
+      # One metadata entry per configured locale, in the same order.
+      assert locales == Locales.supported()
+      refute locales == []
 
       Enum.each(locales, fn locale ->
-        assert Map.has_key?(locale, :code)
-        assert Map.has_key?(locale, :name)
-        assert Map.has_key?(locale, :country_code)
+        assert is_binary(locale.code)
+        assert is_binary(locale.name) and locale.name != ""
+        assert is_atom(locale.country_code)
       end)
     end
 
@@ -187,30 +179,6 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
 
       assert german.name == "Deutsch"
       assert german.country_code == :deu
-    end
-
-    test "includes Ukrainian metadata" do
-      locales = LocaleHandler.get_locales_with_metadata()
-      ukrainian = Enum.find(locales, &(&1.code == "uk"))
-
-      assert ukrainian.name == "Українська"
-      assert ukrainian.country_code == :ukr
-    end
-
-    test "includes French metadata" do
-      locales = LocaleHandler.get_locales_with_metadata()
-      french = Enum.find(locales, &(&1.code == "fr"))
-
-      assert french.name == "Français"
-      assert french.country_code == :fra
-    end
-
-    test "includes Italian metadata" do
-      locales = LocaleHandler.get_locales_with_metadata()
-      italian = Enum.find(locales, &(&1.code == "it"))
-
-      assert italian.name == "Italiano"
-      assert italian.country_code == :ita
     end
   end
 
