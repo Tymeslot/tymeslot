@@ -24,7 +24,10 @@ defmodule TymeslotWeb.Components.DashboardModalsTest do
     html = render_component(&ClearDayModal.clear_day_modal/1, assigns)
 
     assert html =~ "Clear Day Settings"
-    assert html =~ "Monday"
+    # The day name must appear inside the single interpolated question, not
+    # merely somewhere on the page — guards against the sentence being split
+    # back into gettext fragments around the value.
+    assert html =~ "clear all settings for Monday?"
     assert html =~ "Clear All Settings"
   end
 
@@ -211,7 +214,10 @@ defmodule TymeslotWeb.Components.DashboardModalsTest do
     html = render_component(&DeleteMeetingTypeModal.delete_meeting_type_modal/1, assigns)
 
     assert html =~ "Delete Meeting Type"
-    assert html =~ "Consultation"
+    # The name must sit inside the single interpolated question, with the
+    # literal quotes around it (escaped to &quot; in the rendered HTML) — this
+    # catches a regression where the sentence is re-split into fragments.
+    assert html =~ "delete the meeting type &quot;Consultation&quot;?"
     assert html =~ "confirm_delete_meeting_type"
   end
 

@@ -37,6 +37,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettings.RefundModalTest do
       html = render_modal(payment)
 
       assert html =~ "Refund payment"
+      # Attendee and meeting type must appear together inside the single
+      # interpolated sentence — guards against the message being re-split into
+      # gettext fragments around the values.
+      assert html =~ "Refund Alice for Consult."
       assert html =~ "id=\"refund-form\""
       # Original charge
       assert html =~ "€50.00"

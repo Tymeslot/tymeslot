@@ -482,7 +482,15 @@ defmodule TymeslotWeb.AdminLiveTest do
       html = lv |> promote_button(regular.id) |> render_click()
 
       assert html =~ "Promote user to admin"
-      assert html =~ regular.email
+
+      # The email must sit inside the single interpolated question, not merely
+      # somewhere on the page — guards against the sentence being split back
+      # into gettext fragments around the value. Scope to the modal body: the
+      # row's button carries a contiguous "Promote <email> to admin" aria-label,
+      # so a full-page match would pass even if the body were re-fragmented.
+      # (The en translation drops the trailing "?".)
+      modal_body = lv |> element("#confirm-role-change-modal .modal-body") |> render()
+      assert modal_body =~ "Promote #{regular.email} to admin"
     end
 
     test "cancelling the modal does not change admin status", %{conn: conn, regular: regular} do
@@ -498,6 +506,16 @@ defmodule TymeslotWeb.AdminLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/admin/users")
 
       lv |> demote_button(other_admin.id) |> render_click()
+
+      # The email must sit inside the single interpolated question for the
+      # non-self demote variant — guards against the sentence being split back
+      # into gettext fragments around the value. Scope to the modal body: the
+      # row's button carries a contiguous "Demote <email> from admin" aria-label,
+      # so a full-page match would pass even if the body were re-fragmented.
+      # (The en translation drops the trailing "?".)
+      modal_body = lv |> element("#confirm-role-change-modal .modal-body") |> render()
+      assert modal_body =~ "Demote #{other_admin.email} from admin"
+
       lv |> confirm_demote() |> render_click()
 
       refute Repo.reload!(other_admin).is_admin
