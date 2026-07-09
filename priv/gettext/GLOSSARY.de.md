@@ -135,6 +135,27 @@ Settled while translating; reuse rather than re-coining.
 
 **Weekday abbreviations:** Mo · Di · Mi · Do · Fr · Sa · So
 
+### Third-party UI labels — never guess
+
+When a setup instruction tells the user to click something in another company's product, the label
+must match what that product actually shows in German. Invent one and the user hunts for a menu item
+that does not exist. Look it up on the vendor's own German-language page, and note the surface: the
+web app and the mobile app often differ.
+
+| Context | English | German |
+|---|---|---|
+| Apple, **web** (`appleid.apple.com`, now `account.apple.com`) | Sign-In and Security | **Anmelden und Sicherheit** |
+| Apple, **iOS/macOS Settings** | Sign-In and Security | **Anmeldung & Sicherheit** — *different wording, note the ampersand* |
+| Apple | App-Specific Passwords (menu label) | **App-spezifische Passwörter** |
+| Apple | app-specific password (running prose) | **App-spezifisches Passwort** |
+| Apple | *Generate* an app-specific password | **Erstellen** (Apple's own verb; not "generieren") |
+| mailbox.org | Settings → Security | **Einstellungen → Sicherheit** |
+
+Source for the Apple labels: `support.apple.com/de-de/102654`. Our string links to the web page, so
+it uses **"Anmelden und Sicherheit"**. Apple has renamed "Apple ID" to "Apple Account" (untranslated
+in German), and `appleid.apple.com` now redirects to `account.apple.com`; our source string still
+says "Apple ID", so the German keeps **Apple-ID** until the English is updated.
+
 ### Sample and placeholder values
 
 Illustrative values inside input placeholders follow one rule:

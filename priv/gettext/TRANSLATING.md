@@ -146,6 +146,28 @@ interpolate the styled span, rather than emitting `"Get in"` + `"Touch"`.
 Cosmetic `<br/>` inside a clause should be dropped from the msgid; a `<br/>` that separates
 two clauses stays outside them.
 
+## Adding a locale is a promise
+
+`config :tymeslot, :locales` is the single source of truth. A locale listed there appears in the
+language switcher, so **every** string a user can reach must exist in it. Two tests hold us to that,
+and they derive their locale list from the config — there is no allowlist to update:
+
+| Test | Covers |
+|---|---|
+| `TymeslotWeb.GettextCompletenessTest` (Core) | every `.pot` domain, in every supported locale: structure, msgid consistency, no empty msgstr, no fuzzy |
+| `TymeslotSaasWeb.ForLive.ProfessionCompletenessTest` (SaaS) | `priv/professions/<locale>/<slug>.exs` exists for every profession and carries every translatable key |
+
+Both skip the default locale for the emptiness check — its msgstrs are intentionally empty, and
+gettext falls back to the msgid, which is already English.
+
+So the order of work for a new language is: translate the catalogues, write the profession files,
+*then* add the locale to the config. Adding it first turns both suites red, which is the point — the
+alternative is shipping a language switcher that quietly serves English.
+
+Changelog and blog **content** (`priv/changelog.json`, `priv/blog/*.md`) is data, not gettext, and
+deliberately stays untranslated. Only the chrome around it is wrapped, in `marketing_about` and
+`marketing_blog`.
+
 ## Locale resolution
 
 For HTTP requests, `LocalePlug` resolves in priority order: `?locale=` query param →
