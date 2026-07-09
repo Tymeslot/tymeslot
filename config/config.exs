@@ -218,14 +218,17 @@ config :tymeslot, :webhook_idempotency,
 config :tymeslot, TymeslotWeb.Gettext, default_locale: "en"
 
 # Locale configuration (single source of truth)
-# All supported languages with their metadata for UI rendering
+# All supported languages with their metadata for UI rendering.
+#
+# A locale listed here is a promise: the completeness tests require every gettext
+# domain and every /for profession page to be fully translated into it. Add a
+# locale only once its catalogues and `priv/professions/<locale>/` files are done.
+# The fr/it/uk catalogues exist on disk but are not yet complete, so they are not
+# listed — see priv/gettext/TRANSLATING.md.
 config :tymeslot, :locales,
   supported: [
     %{code: "en", name: "English", country_code: :gbr},
-    %{code: "de", name: "Deutsch", country_code: :deu},
-    %{code: "uk", name: "Українська", country_code: :ukr},
-    %{code: "fr", name: "Français", country_code: :fra},
-    %{code: "it", name: "Italiano", country_code: :ita}
+    %{code: "de", name: "Deutsch", country_code: :deu}
   ],
   default: "en"
 
