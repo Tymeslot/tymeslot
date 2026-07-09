@@ -260,7 +260,7 @@ msgstr "Einrichtungsanleitung"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:75
 #, elixir-autogen, elixir-format
 msgid "Sign-In and Security → App-Specific Passwords"
-msgstr "Sign-In and Security → App-Specific Passwords"
+msgstr "Anmelden und Sicherheit → App-spezifische Passwörter"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:434
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:358
@@ -317,7 +317,7 @@ msgstr "Nutzername"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:70
 #, elixir-autogen, elixir-format
 msgid "app-specific password"
-msgstr "app-spezifisches Passwort"
+msgstr "App-spezifisches Passwort"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:47
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:90
@@ -434,4 +434,4 @@ msgstr "Wenn Sie die Zwei-Faktor-Authentifizierung aktiviert haben, generieren S
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:65
 #, elixir-autogen, elixir-format
 msgid "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email."
-msgstr "iCloud akzeptiert Ihr Apple-ID-Passwort hier nicht. Generieren Sie auf %{link} unter %{location} ein %{app_specific_password} und geben Sie es dann unten zusammen mit Ihrer Apple-ID-E-Mail-Adresse ein."
+msgstr "iCloud akzeptiert Ihr Apple-ID-Passwort hier nicht. Erstellen Sie auf %{link} unter %{location} ein %{app_specific_password} und geben Sie es dann unten zusammen mit Ihrer Apple-ID-E-Mail-Adresse ein."
