@@ -17,6 +17,8 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
       `stripe_checkout_session_id` (prevents cross-meeting probing).
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Phoenix.PubSub
@@ -121,7 +123,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
         {:error, _reason} ->
           socket =
             socket
-            |> LiveView.put_flash(:error, "Payment not found.")
+            |> LiveView.put_flash(:error, dgettext("booking", "Payment not found."))
             |> LiveView.redirect(to: "/")
 
           {:ok, socket}

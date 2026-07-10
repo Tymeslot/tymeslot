@@ -575,13 +575,13 @@ msgstr "Bitte wählen Sie unten eine Dauer aus."
 msgid "Please contact the organizer"
 msgstr "Bitte kontaktieren Sie den Organisator"
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:457
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:469
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below before submitting."
 msgstr "Bitte korrigieren Sie die untenstehenden Fehler, bevor Sie absenden."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:113
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:314
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:320
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below."
 msgstr "Bitte korrigieren Sie die untenstehenden Fehler."
@@ -1191,7 +1191,7 @@ msgstr "Vereinbaren Sie einen Termin mit %{name}. Wählen Sie eine passende Zeit
 msgid "Pick a time that works for you and book a meeting in seconds."
 msgstr "Wählen Sie eine passende Zeit und vereinbaren Sie in Sekunden einen Termin."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:442
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:454
 #, elixir-autogen, elixir-format
 msgid "Preview session expired. Reload the page to continue."
 msgstr "Vorschausitzung abgelaufen. Laden Sie die Seite neu, um fortzufahren."
@@ -1272,3 +1272,29 @@ msgstr "Der Zahlungsvorgang konnte nicht gestartet werden. Bitte versuchen Sie e
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting type"
 msgstr "Ungültiger Termintyp"
+
+#: lib/tymeslot_web/themes/shared/payment_return.ex:126
+#, elixir-autogen, elixir-format
+msgid "Payment not found."
+msgstr "Zahlung nicht gefunden."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:378
+#, elixir-autogen, elixir-format
+msgid "Security verification failed. Please try again."
+msgstr "Sicherheitsüberprüfung fehlgeschlagen. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:389
+#, elixir-autogen, elixir-format
+msgid "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
+msgstr "Die Sicherheitsüberprüfung ist derzeit nicht verfügbar. Dies kann durch deaktiviertes JavaScript, Browser-Datenschutzerweiterungen (Privacy Badger, uBlock Origin usw.) oder Netzwerksicherheitsrichtlinien verursacht werden. Bitte passen Sie Ihre Einstellungen an oder kontaktieren Sie den Support, falls das Problem weiterhin besteht."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:143
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:176
+#, elixir-autogen, elixir-format
+msgid "Too many booking attempts. Please try again later."
+msgstr "Zu viele Buchungsversuche. Bitte versuchen Sie es später noch einmal."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:208
+#, elixir-autogen, elixir-format
+msgid "Your booking is already being processed. Please wait..."
+msgstr "Ihre Buchung wird bereits verarbeitet. Bitte warten …"

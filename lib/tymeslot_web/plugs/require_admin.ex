@@ -16,6 +16,8 @@ defmodule TymeslotWeb.Plugs.RequireAdmin do
     router: TymeslotWeb.Router,
     statics: TymeslotWeb.static_paths()
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Plug.Conn
 
   alias Phoenix.Controller
@@ -31,7 +33,7 @@ defmodule TymeslotWeb.Plugs.RequireAdmin do
 
   def call(%Plug.Conn{assigns: %{current_user: %UserSchema{}}} = conn, _opts) do
     conn
-    |> Controller.put_flash(:error, "Admin access required.")
+    |> Controller.put_flash(:error, dgettext("dashboard_admin", "Admin access required."))
     |> Controller.redirect(to: ~p"/dashboard")
     |> halt()
   end

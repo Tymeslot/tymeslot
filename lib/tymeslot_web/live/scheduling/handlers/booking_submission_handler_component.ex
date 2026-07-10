@@ -138,7 +138,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         socket =
           socket
           |> assign(:submitting, false)
-          |> Flash.put_flash(:error, "Too many booking attempts. Please try again later.")
+          |> Flash.put_flash(
+            :error,
+            dgettext("booking", "Too many booking attempts. Please try again later.")
+          )
 
         {:error, socket}
     end
@@ -168,7 +171,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         socket =
           socket
           |> assign(:submitting, false)
-          |> Flash.put_flash(:error, "Too many booking attempts. Please try again later.")
+          |> Flash.put_flash(
+            :error,
+            dgettext("booking", "Too many booking attempts. Please try again later.")
+          )
 
         {:error, socket}
     end
@@ -199,7 +205,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         Flash.put_flash(
           socket,
           :warning,
-          "Your booking is already being processed. Please wait..."
+          dgettext("booking", "Your booking is already being processed. Please wait...")
         )
 
       {:error, socket}
@@ -367,7 +373,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         socket =
           socket
           |> assign(:submitting, false)
-          |> Flash.put_flash(:error, "Security verification failed. Please try again.")
+          |> Flash.put_flash(
+            :error,
+            dgettext("booking", "Security verification failed. Please try again.")
+          )
 
         {:error, socket}
 
@@ -377,7 +386,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
           |> assign(:submitting, false)
           |> Flash.put_flash(
             :error,
-            "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
+            dgettext(
+              "booking",
+              "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
+            )
           )
 
         {:error, socket}

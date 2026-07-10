@@ -487,3 +487,8 @@ msgstr "%{email} vom Administrator herabstufen?"
 #, elixir-autogen, elixir-format
 msgid "Promote %{email} to admin?"
 msgstr "%{email} zum Administrator befördern?"
+
+#: lib/tymeslot_web/plugs/require_admin.ex:36
+#, elixir-autogen, elixir-format
+msgid "Admin access required."
+msgstr "Administratorzugriff erforderlich."

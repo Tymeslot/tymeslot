@@ -7,6 +7,8 @@ defmodule TymeslotWeb.Plugs.RequireAuthPlug do
     router: TymeslotWeb.Router,
     statics: TymeslotWeb.static_paths()
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Plug.Conn
 
   alias Phoenix.Controller
@@ -20,7 +22,10 @@ defmodule TymeslotWeb.Plugs.RequireAuthPlug do
       conn
     else
       conn
-      |> Controller.put_flash(:error, "You must be logged in to access this page.")
+      |> Controller.put_flash(
+        :error,
+        dgettext("auth", "You must be logged in to access this page.")
+      )
       |> Controller.redirect(to: ~p"/auth/login")
       |> halt()
     end
