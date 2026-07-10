@@ -11,11 +11,17 @@ defmodule Tymeslot.Emails.EmailScheduler.AccountSchedulerTest do
   alias Tymeslot.Emails.EmailScheduler.AccountScheduler
   alias Tymeslot.Workers.EmailWorker
 
+  # `insert(:user)` enqueues its own `send_email_verification` job, so an
+  # absolute count of EmailWorker jobs measures the factory as well as the
+  # function under test. Count what each call *adds* instead.
+  defp email_job_count, do: length(all_enqueued(worker: EmailWorker))
+
   describe "schedule_email_change_emails/3" do
     test "enqueues verification and notification jobs with correct args" do
       user = insert(:user)
       new_email = "new@example.com"
       verification_url = "https://example.com/verify/token123"
+      baseline = email_job_count()
 
       assert :ok =
                AccountScheduler.schedule_email_change_emails(
@@ -24,8 +30,7 @@ defmodule Tymeslot.Emails.EmailScheduler.AccountSchedulerTest do
                  verification_url
                )
 
-      jobs = all_enqueued(worker: EmailWorker)
-      assert length(jobs) == 2
+      assert email_job_count() - baseline == 2
 
       assert_enqueued(
         worker: EmailWorker,
@@ -51,6 +56,7 @@ defmodule Tymeslot.Emails.EmailScheduler.AccountSchedulerTest do
       user = insert(:user)
       new_email = "new@example.com"
       verification_url = "https://example.com/verify/token123"
+      baseline = email_job_count()
 
       assert :ok =
                AccountScheduler.schedule_email_change_emails(
@@ -66,13 +72,13 @@ defmodule Tymeslot.Emails.EmailScheduler.AccountSchedulerTest do
                  verification_url
                )
 
-      jobs = all_enqueued(worker: EmailWorker)
-      assert length(jobs) == 2
+      assert email_job_count() - baseline == 2
     end
 
     test "different new_email creates additional jobs" do
       user = insert(:user)
       verification_url = "https://example.com/verify/token123"
+      baseline = email_job_count()
 
       assert :ok =
                AccountScheduler.schedule_email_change_emails(
@@ -88,8 +94,7 @@ defmodule Tymeslot.Emails.EmailScheduler.AccountSchedulerTest do
                  verification_url
                )
 
-      jobs = all_enqueued(worker: EmailWorker)
-      assert length(jobs) == 4
+      assert email_job_count() - baseline == 4
     end
   end
 
@@ -132,6 +137,7 @@ defmodule Tymeslot.Emails.EmailScheduler.AccountSchedulerTest do
 
     test "enqueues exactly one job" do
       user = insert(:user)
+      baseline = email_job_count()
 
       assert :ok =
                AccountScheduler.schedule_email_change_confirmations(
@@ -140,8 +146,7 @@ defmodule Tymeslot.Emails.EmailScheduler.AccountSchedulerTest do
                  "new@example.com"
                )
 
-      jobs = all_enqueued(worker: EmailWorker)
-      assert length(jobs) == 1
+      assert email_job_count() - baseline == 1
     end
 
     test "duplicate call within 1-hour window does not create new jobs" do
