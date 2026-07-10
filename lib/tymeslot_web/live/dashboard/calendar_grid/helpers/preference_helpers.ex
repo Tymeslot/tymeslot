@@ -44,9 +44,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
 
   def period_label(%{view: :day, date: date}) do
     locale = Gettext.get_locale(TymeslotWeb.Gettext)
-
-    "#{LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :full)}, " <>
-      "#{LocaleFormat.format_month_name(date.month, locale)} #{date.day}, #{date.year}"
+    weekday = LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :full)
+    month = LocaleFormat.format_month_name(date.month, locale)
+    "#{weekday}, #{LocaleFormat.order_date_parts(date.day, month, date.year, locale)}"
   end
 
   def period_label(%{view: :month, date: date}) do
@@ -71,16 +71,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
 
   defp range_label(start_date, end_date) do
     locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    start_str = "#{LocaleFormat.format_month_name(start_date.month, locale)} #{start_date.day}"
-
-    end_str =
-      if start_date.month == end_date.month do
-        "#{end_date.day}, #{end_date.year}"
-      else
-        "#{LocaleFormat.format_month_name(end_date.month, locale)} #{end_date.day}, #{end_date.year}"
-      end
-
-    "#{start_str} \u2013 #{end_str}"
+    LocaleFormat.format_date_range(start_date, end_date, locale)
   end
 
   @spec view_label(atom()) :: String.t()

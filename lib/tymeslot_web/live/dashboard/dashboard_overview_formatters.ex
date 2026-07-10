@@ -54,9 +54,11 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewFormatters do
   """
   @spec now_time_label(DateTime.t(), String.t()) :: String.t()
   def now_time_label(datetime, timezone) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
     datetime
     |> DateTimeUtils.convert_to_timezone(timezone)
-    |> Calendar.strftime("%-I:%M %p")
+    |> LocaleFormat.format_time(locale)
   end
 
   @spec local_date(DateTime.t(), String.t()) :: Date.t()

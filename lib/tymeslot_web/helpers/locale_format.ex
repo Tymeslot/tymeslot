@@ -13,15 +13,68 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   @spec format_date(Calendar.date(), String.t()) :: String.t()
   def format_date(date, locale) do
     month_name = format_month_name(date.month, locale)
-    day_padded = String.pad_leading(to_string(date.day), 2, "0")
+    order_date_parts(date.day, month_name, date.year, locale)
+  end
+
+  @doc """
+  Orders a day, month name, and year according to locale word-order
+  conventions, given a bare (unpadded) day number. Shared by `format_date/2`
+  and callers that build their own day/month/year pieces (e.g. date ranges).
+  Matches `format_date/2`'s per-locale padding: `en`/unknown locales
+  zero-pad the day; `de`/`uk`/`fr`/`it` do not.
+  - en: April 05, 2026
+  - de: 5. April 2026
+  - uk/fr/it: 5 квітня 2026 (day before month, no period)
+  """
+  @spec order_date_parts(String.t() | integer(), String.t(), integer(), String.t()) :: String.t()
+  def order_date_parts(day, month_name, year, locale) do
+    case locale do
+      "de" -> "#{day}. #{month_name} #{year}"
+      loc when loc in ["uk", "fr", "it"] -> "#{day} #{month_name} #{year}"
+      _other_locale -> "#{month_name} #{pad_day(day)}, #{year}"
+    end
+  end
+
+  defp pad_day(day), do: day |> to_string() |> String.pad_leading(2, "0")
+
+  @doc """
+  Formats a start/end date range according to locale word-order conventions,
+  without the zero-padded day that `format_date/2` applies (ranges read more
+  naturally with bare day numbers, e.g. "April 10 – 12, 2026").
+  - en: April 10 – 12, 2026 / April 30 – May 2, 2026
+  - de: 10.–12. April 2026 / 30. April – 2. Mai 2026
+  - uk/fr/it: 10–12 квітня 2026 / 30 квітня – 2 травня 2026 (day before month, no period)
+  """
+  @spec format_date_range(Calendar.date(), Calendar.date(), String.t()) :: String.t()
+  def format_date_range(start_date, end_date, locale) do
+    start_month = format_month_name(start_date.month, locale)
+    end_month = format_month_name(end_date.month, locale)
 
     case locale do
-      "en" -> "#{month_name} #{day_padded}, #{date.year}"
-      "de" -> "#{date.day}. #{month_name} #{date.year}"
-      "uk" -> "#{date.day} #{month_name} #{date.year}"
-      "fr" -> "#{date.day} #{month_name} #{date.year}"
-      "it" -> "#{date.day} #{month_name} #{date.year}"
-      _other_locale -> "#{month_name} #{day_padded}, #{date.year}"
+      "de" ->
+        day_first_range(start_date, start_month, end_date, end_month, ".")
+
+      loc when loc in ["uk", "fr", "it"] ->
+        day_first_range(start_date, start_month, end_date, end_month, "")
+
+      _other ->
+        month_first_range(start_date, start_month, end_date, end_month)
+    end
+  end
+
+  defp day_first_range(start_date, start_month, end_date, end_month, day_suffix) do
+    if start_date.month == end_date.month do
+      "#{start_date.day}#{day_suffix}–#{end_date.day}#{day_suffix} #{end_month} #{end_date.year}"
+    else
+      "#{start_date.day}#{day_suffix} #{start_month} – #{end_date.day}#{day_suffix} #{end_month} #{end_date.year}"
+    end
+  end
+
+  defp month_first_range(start_date, start_month, end_date, end_month) do
+    if start_date.month == end_date.month do
+      "#{start_month} #{start_date.day} – #{end_date.day}, #{end_date.year}"
+    else
+      "#{start_month} #{start_date.day} – #{end_month} #{end_date.day}, #{end_date.year}"
     end
   end
 

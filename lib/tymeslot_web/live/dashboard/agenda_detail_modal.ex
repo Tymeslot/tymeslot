@@ -293,7 +293,10 @@ defmodule TymeslotWeb.Dashboard.AgendaDetailModal do
   defp countdown(seconds),
     do: dgettext("dashboard_home", "in %{days}d", days: div(seconds, 86_400))
 
-  defp clock(datetime, tz), do: datetime |> local(tz) |> Calendar.strftime("%-I:%M %p")
+  defp clock(datetime, tz) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+    datetime |> local(tz) |> LocaleFormat.format_time(locale)
+  end
 
   defp long_date(date) do
     locale = Gettext.get_locale(TymeslotWeb.Gettext)

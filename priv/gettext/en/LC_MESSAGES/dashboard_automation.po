@@ -607,3 +607,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This token is automatically sent in the %{header} header."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/helpers.ex:176
+#, elixir-autogen, elixir-format
+msgid "%{date} at %{time}"
+msgstr ""

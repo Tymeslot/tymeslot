@@ -9,6 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.OnboardingLive.StepConfig
   alias TymeslotWeb.OnboardingLive.TextHelpers
@@ -228,13 +229,14 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
 
   defp buffer_example(minutes) do
     next_start = Time.add(@example_meeting_end, minutes * 60)
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
 
     dgettext(
       "onboarding_wizard",
       "If someone books a meeting that ends at %{end_time} and your buffer is %{minutes} min, the next available slot starts at %{next_start}.",
-      end_time: format_12h(@example_meeting_end),
+      end_time: LocaleFormat.format_time(@example_meeting_end, locale),
       minutes: minutes,
-      next_start: format_12h(next_start)
+      next_start: LocaleFormat.format_time(next_start, locale)
     )
   end
 
@@ -280,14 +282,4 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
 
   defp humanize_hours(hours),
     do: dngettext("onboarding_wizard", "%{count} hour", "%{count} hours", hours, count: hours)
-
-  defp format_12h(%Time{hour: hour, minute: minute}) do
-    {hour12, meridiem} = to_12h(hour)
-    "#{hour12}:#{String.pad_leading(Integer.to_string(minute), 2, "0")} #{meridiem}"
-  end
-
-  defp to_12h(0), do: {12, "AM"}
-  defp to_12h(12), do: {12, "PM"}
-  defp to_12h(hour) when hour < 12, do: {hour, "AM"}
-  defp to_12h(hour), do: {hour - 12, "PM"}
 end

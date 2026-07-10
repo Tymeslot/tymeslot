@@ -73,9 +73,7 @@ defmodule TymeslotWeb.AccountLive.Helpers do
   def format_last_password_change(user) do
     if user.updated_at do
       locale = Gettext.get_locale(TymeslotWeb.Gettext)
-      date = user.updated_at
-      day_padded = String.pad_leading(Integer.to_string(date.day), 2, "0")
-      "#{LocaleFormat.format_month_name(date.month, locale)} #{day_padded}, #{date.year}"
+      LocaleFormat.format_date(user.updated_at, locale)
     else
       dgettext("account", "Never")
     end

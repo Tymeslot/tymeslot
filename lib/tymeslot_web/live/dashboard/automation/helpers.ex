@@ -171,9 +171,9 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
 
   def format_datetime(%DateTime{} = dt) do
     locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    month = LocaleFormat.format_month_name(dt.month, locale, :full)
-    day = String.pad_leading(to_string(dt.day), 2, "0")
-    "#{month} #{day}, #{dt.year} at #{Calendar.strftime(dt, "%I:%M %p")}"
+    date = LocaleFormat.format_date(dt, locale)
+    time = LocaleFormat.format_time(dt, locale)
+    dgettext("dashboard_automation", "%{date} at %{time}", date: date, time: time)
   end
 
   @doc """

@@ -61,18 +61,17 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   def format_meeting_date(meeting, timezone) do
     locale = Gettext.get_locale(TymeslotWeb.Gettext)
     local_time = DateTimeUtils.convert_to_timezone(meeting.start_time, timezone)
-    month = LocaleFormat.format_month_name(local_time.month, locale, :full)
-    day = String.pad_leading(to_string(local_time.day), 2, "0")
-    "#{month} #{day}, #{local_time.year}"
+    LocaleFormat.format_date(local_time, locale)
   end
 
   @spec format_meeting_time(Ecto.Schema.t(), String.t()) :: String.t()
   def format_meeting_time(meeting, timezone) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
     local_start = DateTimeUtils.convert_to_timezone(meeting.start_time, timezone)
     local_end = DateTimeUtils.convert_to_timezone(meeting.end_time, timezone)
 
-    start_time = Calendar.strftime(local_start, "%-I:%M %p")
-    end_time = Calendar.strftime(local_end, "%-I:%M %p")
+    start_time = LocaleFormat.format_time(local_start, locale)
+    end_time = LocaleFormat.format_time(local_end, locale)
     "#{start_time} - #{end_time}"
   end
 end
