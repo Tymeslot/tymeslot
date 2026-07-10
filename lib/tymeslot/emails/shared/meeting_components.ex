@@ -33,7 +33,6 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
     VideoSection
   }
 
-  defdelegate meeting_details_table(details), to: Hero
   defdelegate meeting_details_table(details, locale), to: Hero
   defdelegate format_meeting_time(details), to: Hero
   defdelegate format_meeting_time(details, locale), to: Hero

@@ -4,6 +4,7 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
   require Logger
 
   alias Tymeslot.Emails.Delivery
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.MjmlEmail
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Profiles
@@ -17,6 +18,8 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
   }
 
   alias Swoosh.Email
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
   Sends a calendar sync error notification to the calendar owner.
@@ -44,16 +47,16 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
       }
     )
 
-    {html_body, text_body} = CalendarSyncError.render_both(meeting, error_reason)
+    RecipientLocale.with_user_id_locale(Map.get(meeting, :organizer_user_id), fn ->
+      {html_body, text_body} = CalendarSyncError.render_both(meeting, error_reason)
 
-    email =
       MjmlEmail.base_email()
-      |> Email.to({meeting.organizer_name || "Calendar Owner", owner_email})
-      |> Email.subject("⚠️ Calendar Sync Error - Manual Action Required")
+      |> Email.to({meeting.organizer_name || dgettext("emails", "Calendar Owner"), owner_email})
+      |> Email.subject(dgettext("emails", "⚠️ Calendar Sync Error - Manual Action Required"))
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
-
-    Delivery.deliver(email)
+      |> Delivery.deliver()
+    end)
   end
 
   @doc """

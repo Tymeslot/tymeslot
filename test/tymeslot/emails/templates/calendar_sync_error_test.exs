@@ -2,9 +2,12 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
+  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Templates.CalendarSyncError
 
   import Tymeslot.Factory
+  import Tymeslot.TestFixtures
 
   describe "CalendarSyncError.render/2" do
     test "generates valid HTML output" do
@@ -116,8 +119,26 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
       assert text =~ "Calendar Sync Error"
       assert text =~ "Conference Room A"
-      assert text =~ "60 minutes"
+      # The duration now goes through the locale-aware formatter, which reads
+      # 60 minutes as "1 hour" — the same wording the HTML body already used.
+      assert text =~ "1 hour"
       assert text =~ "manually"
+    end
+
+    test "renders in the calendar owner's locale" do
+      user = create_user_fixture()
+      {:ok, user} = UserQueries.update_user_locale(user, "de")
+      meeting = insert(:meeting, organizer_user_id: user.id, duration: 60)
+
+      text =
+        RecipientLocale.with_user_id_locale(user.id, fn ->
+          CalendarSyncError.render_text(meeting, :network_error)
+        end)
+
+      assert text =~ "Kalender-Synchronisierungsfehler"
+      assert text =~ "TERMIN-DETAILS:"
+      assert text =~ "1 Stunde"
+      refute text =~ "MEETING DETAILS:"
     end
 
     test "handles missing organizer_user_id" do

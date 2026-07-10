@@ -5,7 +5,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Callouts, Cards, Greeting, TemplateHelper, Text}
+  alias Tymeslot.Emails.Shared.{Callouts, Cards, Formatting, Greeting, TemplateHelper, Text}
 
   # A positive confirmation that an account change succeeded.
   @intent :confirmed
@@ -128,6 +128,6 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
   defp format_time(nil), do: dgettext("emails", "Just now")
 
   defp format_time(datetime) do
-    Calendar.strftime(datetime, "%B %d, %Y at %I:%M %p %Z")
+    Formatting.format_datetime(datetime, Gettext.get_locale(TymeslotWeb.Gettext))
   end
 end

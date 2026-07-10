@@ -22,11 +22,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
           optional(atom()) => term()
         }
 
-  @doc "The hero meeting block, in the default locale."
-  @spec meeting_details_table(meeting_details()) :: String.t()
-  def meeting_details_table(details), do: meeting_details_table(details, "en")
-
-  @doc "The hero meeting block, locale-aware."
+  @doc "The hero meeting block, rendered in the recipient's locale."
   @spec meeting_details_table(meeting_details(), String.t()) :: String.t()
   def meeting_details_table(details, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->

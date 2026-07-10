@@ -4,6 +4,7 @@ defmodule Tymeslot.Emails.EmailService.AccountEmails do
   require Logger
 
   alias Tymeslot.Emails.Delivery
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.MjmlEmail
 
   alias Tymeslot.Emails.Templates.{
@@ -13,6 +14,8 @@ defmodule Tymeslot.Emails.EmailService.AccountEmails do
   }
 
   alias Swoosh.Email
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
   Sends an email change verification email to the NEW email address.
@@ -29,17 +32,17 @@ defmodule Tymeslot.Emails.EmailService.AccountEmails do
       new_email: new_email
     )
 
-    html_body = EmailChangeVerification.render(user, new_email, verification_url)
-    text_body = EmailChangeVerification.render_text(user, new_email, verification_url)
+    RecipientLocale.with_user_locale(user, fn ->
+      html_body = EmailChangeVerification.render(user, new_email, verification_url)
+      text_body = EmailChangeVerification.render_text(user, new_email, verification_url)
 
-    email =
       MjmlEmail.base_email()
       |> Email.to({user.name || new_email, new_email})
-      |> Email.subject("Verify your new email address")
+      |> Email.subject(dgettext("emails", "Verify your new email address"))
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
-
-    Delivery.deliver(email)
+      |> Delivery.deliver()
+    end)
   end
 
   @doc """
@@ -55,17 +58,18 @@ defmodule Tymeslot.Emails.EmailService.AccountEmails do
     )
 
     request_time = DateTime.utc_now()
-    html_body = EmailChangeNotification.render(user, new_email, request_time)
-    text_body = EmailChangeNotification.render_text(user, new_email, request_time)
 
-    email =
+    RecipientLocale.with_user_locale(user, fn ->
+      html_body = EmailChangeNotification.render(user, new_email, request_time)
+      text_body = EmailChangeNotification.render_text(user, new_email, request_time)
+
       MjmlEmail.base_email()
       |> Email.to({user.name || user.email, user.email})
-      |> Email.subject("⚠️ Email Change Request - Security Alert")
+      |> Email.subject(dgettext("emails", "⚠️ Email Change Request - Security Alert"))
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
-
-    Delivery.deliver(email)
+      |> Delivery.deliver()
+    end)
   end
 
   @doc """
@@ -86,33 +90,11 @@ defmodule Tymeslot.Emails.EmailService.AccountEmails do
 
     confirmed_time = DateTime.utc_now()
 
-    html_body_old = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, true)
-
-    text_body_old =
-      EmailChangeConfirmed.render_text(user, old_email, new_email, confirmed_time, true)
-
-    email_old =
-      MjmlEmail.base_email()
-      |> Email.to({user.name || old_email, old_email})
-      |> Email.subject("Email Address Changed - Tymeslot Account")
-      |> Email.html_body(html_body_old)
-      |> Email.text_body(text_body_old)
-
-    old_result = Delivery.deliver(email_old)
-
-    html_body_new = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, false)
-
-    text_body_new =
-      EmailChangeConfirmed.render_text(user, old_email, new_email, confirmed_time, false)
-
-    email_new =
-      MjmlEmail.base_email()
-      |> Email.to({user.name || new_email, new_email})
-      |> Email.subject("Email Address Changed Successfully")
-      |> Email.html_body(html_body_new)
-      |> Email.text_body(text_body_new)
-
-    new_result = Delivery.deliver(email_new)
+    {old_result, new_result} =
+      RecipientLocale.with_user_locale(user, fn ->
+        {deliver_confirmation(user, old_email, new_email, confirmed_time, true),
+         deliver_confirmation(user, old_email, new_email, confirmed_time, false)}
+      end)
 
     Logger.info("Email change confirmations sent",
       old_sent: match?({:ok, _}, old_result),
@@ -120,5 +102,27 @@ defmodule Tymeslot.Emails.EmailService.AccountEmails do
     )
 
     {old_result, new_result}
+  end
+
+  # `is_old_email?` selects both the recipient and the wording: the old address
+  # gets the "this switch happened" notice, the new one the welcome.
+  defp deliver_confirmation(user, old_email, new_email, confirmed_time, is_old_email?) do
+    {recipient, subject} =
+      if is_old_email? do
+        {old_email, dgettext("emails", "Email Address Changed - Tymeslot Account")}
+      else
+        {new_email, dgettext("emails", "Email Address Changed Successfully")}
+      end
+
+    MjmlEmail.base_email()
+    |> Email.to({user.name || recipient, recipient})
+    |> Email.subject(subject)
+    |> Email.html_body(
+      EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email?)
+    )
+    |> Email.text_body(
+      EmailChangeConfirmed.render_text(user, old_email, new_email, confirmed_time, is_old_email?)
+    )
+    |> Delivery.deliver()
   end
 end

@@ -13,7 +13,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.HeroTest do
         location: "<script>alert('xss')</script>Conference Room"
       }
 
-      html = Hero.meeting_details_table(details)
+      html = Hero.meeting_details_table(details, "en")
 
       refute html =~ "<script>"
       assert html =~ "&lt;script&gt;"
@@ -28,7 +28,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.HeroTest do
         meeting_type: "<img src=x onerror=alert(1)>Demo"
       }
 
-      html = Hero.meeting_details_table(details)
+      html = Hero.meeting_details_table(details, "en")
 
       refute html =~ "<img src=x"
       assert html =~ "Demo"
@@ -42,7 +42,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.HeroTest do
         location: nil
       }
 
-      html = Hero.meeting_details_table(details)
+      html = Hero.meeting_details_table(details, "en")
 
       assert html =~ "TBD"
     end
@@ -56,7 +56,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.HeroTest do
         meeting_type: "Discovery Call"
       }
 
-      html = Hero.meeting_details_table(details)
+      html = Hero.meeting_details_table(details, "en")
 
       assert html =~ "1 hour"
       assert html =~ "Virtual Meeting"

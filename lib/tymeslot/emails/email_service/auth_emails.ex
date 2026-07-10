@@ -5,8 +5,11 @@ defmodule Tymeslot.Emails.EmailService.AuthEmails do
 
   alias Swoosh.Email
   alias Tymeslot.Emails.Delivery
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.MjmlEmail
   alias Tymeslot.Emails.Templates.{EmailVerification, PasswordReset}
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
   Sends an email verification email to a new user.
@@ -16,17 +19,17 @@ defmodule Tymeslot.Emails.EmailService.AuthEmails do
   def send_email_verification(user, verification_url) do
     Logger.info("Sending email verification", user_id: user.id)
 
-    html_body = EmailVerification.render(user, verification_url)
-    text_body = EmailVerification.render_text(user, verification_url)
+    RecipientLocale.with_user_locale(user, fn ->
+      html_body = EmailVerification.render(user, verification_url)
+      text_body = EmailVerification.render_text(user, verification_url)
 
-    email =
       MjmlEmail.base_email()
       |> Email.to({user.name || user.email, user.email})
-      |> Email.subject("Verify your email address")
+      |> Email.subject(dgettext("emails", "Verify your email address"))
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
-
-    Delivery.deliver(email)
+      |> Delivery.deliver()
+    end)
   end
 
   @doc """
@@ -37,16 +40,16 @@ defmodule Tymeslot.Emails.EmailService.AuthEmails do
   def send_password_reset(user, reset_url) do
     Logger.info("Sending password reset email", user_id: user.id)
 
-    html_body = PasswordReset.render(user, reset_url)
-    text_body = PasswordReset.render_text(user, reset_url)
+    RecipientLocale.with_user_locale(user, fn ->
+      html_body = PasswordReset.render(user, reset_url)
+      text_body = PasswordReset.render_text(user, reset_url)
 
-    email =
       MjmlEmail.base_email()
       |> Email.to({user.name || user.email, user.email})
-      |> Email.subject("Reset your password")
+      |> Email.subject(dgettext("emails", "Reset your password"))
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
-
-    Delivery.deliver(email)
+      |> Delivery.deliver()
+    end)
   end
 end

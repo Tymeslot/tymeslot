@@ -2,11 +2,14 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   @moduledoc """
   MJML template for calendar sync error notification sent to the calendar owner.
 
-  This is an operational alert — always rendered in English.
+  Rendered in the owner's locale. The caller establishes it from
+  `organizer_user_id` via `Tymeslot.Emails.RecipientLocale`; this module only
+  reads the ambient locale for the pure date and time formatting.
   """
 
   alias Tymeslot.Emails.Shared.{
     Callouts,
+    Formatting,
     MeetingComponents,
     Styles,
     TemplateHelper,
@@ -15,6 +18,8 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   }
 
   alias Tymeslot.Profiles
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   # A sync failure the user needs to act on.
   @intent :alert
@@ -53,69 +58,91 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   end
 
   defp do_render_html(error_details, owner_start_time, meeting) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
     mjml_content = """
     #{Callouts.alert_box(:cancelled,
-    "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar.",
-    title: "Calendar Sync Error")}
+    dgettext("emails", "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar."),
+    title: dgettext("emails", "Calendar Sync Error"))}
 
-    #{Text.title_section("Meeting Details")}
-    #{MeetingComponents.meeting_details_table(%{date: owner_start_time, start_time: owner_start_time, duration: meeting.duration, location: meeting.location})}
+    #{Text.title_section(dgettext("emails", "Meeting Details"))}
+    #{MeetingComponents.meeting_details_table(%{date: owner_start_time, start_time: owner_start_time, duration: meeting.duration, location: meeting.location}, locale)}
 
     #{Text.divider()}
 
-    #{Text.title_section("Error Details")}
+    #{Text.title_section(dgettext("emails", "Error Details"))}
 
-    #{Callouts.alert_box(:cancelled, error_details, title: "Error")}
+    #{Callouts.alert_box(:cancelled, error_details, title: dgettext("emails", "Error"))}
 
-    #{Text.title_section("Action Required")}
+    #{Text.title_section(dgettext("emails", "Action Required"))}
 
     <mj-text color="#{Styles.ink_soft()}">
-      Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails — this is purely a technical calendar sync issue that doesn't affect the booking itself.
+      #{dgettext("emails", "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails — this is purely a technical calendar sync issue that doesn't affect the booking itself.")}
     </mj-text>
 
-    #{Callouts.alert_box(:alert,
-    "Common causes:<br/>• CalDAV server temporarily unavailable<br/>• Network connectivity issues<br/>• Calendar permissions or authentication problems<br/>• Maximum retries exceeded")}
+    #{Callouts.alert_box(:alert, common_causes_html())}
 
-    #{Text.system_footer_note("This is an automated system notification. Please check your calendar sync settings if this issue persists.")}
+    #{Text.system_footer_note(dgettext("emails", "This is an automated system notification. Please check your calendar sync settings if this issue persists."))}
     """
 
     TemplateHelper.compile_system_template(
       mjml_content,
-      "Calendar Sync Error",
-      "A meeting could not be added to your calendar.",
+      dgettext("emails", "Calendar Sync Error"),
+      dgettext("emails", "A meeting could not be added to your calendar."),
       intent: @intent,
-      eyebrow: "Action required",
-      stage_title: "Calendar didn't sync",
-      stage_subtitle: "The booking is safe — but please add it to your calendar manually."
+      eyebrow: dgettext("emails", "Action required"),
+      stage_title: dgettext("emails", "Calendar didn't sync"),
+      stage_subtitle:
+        dgettext("emails", "The booking is safe — but please add it to your calendar manually.")
     )
   end
 
   defp do_render_text(error_details, owner_start_time, meeting) do
+    locale = Gettext.get_locale(TymeslotWeb.Gettext)
+
     """
-    Calendar Sync Error — Manual Action Required
+    #{dgettext("emails", "Calendar Sync Error — Manual Action Required")}
 
-    I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar.
+    #{dgettext("emails", "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar.")}
 
-    MEETING DETAILS:
-    Date: #{Calendar.strftime(owner_start_time, "%B %d, %Y")}
-    Time: #{Calendar.strftime(owner_start_time, "%I:%M %p")}
-    Duration: #{meeting.duration} minutes
-    Location: #{meeting.location || "Not specified"}
+    #{dgettext("emails", "MEETING DETAILS:")}
+    #{dgettext("emails", "Date:")} #{Formatting.format_date(owner_start_time, locale)}
+    #{dgettext("emails", "Time:")} #{Formatting.format_time(owner_start_time, locale)}
+    #{dgettext("emails", "Duration:")} #{Formatting.format_duration(meeting.duration, locale)}
+    #{dgettext("emails", "Location:")} #{meeting.location || dgettext("emails", "Not specified")}
 
-    ERROR DETAILS:
+    #{dgettext("emails", "ERROR DETAILS:")}
     #{error_details}
 
-    ACTION REQUIRED:
-    Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails — this is purely a technical calendar sync issue that doesn't affect the booking itself.
+    #{dgettext("emails", "ACTION REQUIRED:")}
+    #{dgettext("emails", "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails — this is purely a technical calendar sync issue that doesn't affect the booking itself.")}
 
-    Common causes:
-    - CalDAV server temporarily unavailable
-    - Network connectivity issues
-    - Calendar permissions or authentication problems
-    - Maximum retries exceeded
+    #{common_causes_text()}
 
-    This is an automated system notification. Please check your calendar sync settings if this issue persists.
+    #{dgettext("emails", "This is an automated system notification. Please check your calendar sync settings if this issue persists.")}
     """
+  end
+
+  # The four causes are one list translated once, then joined for whichever body
+  # needs them. Keeping them as separate msgids from the surrounding prose means
+  # a translator never has to reproduce `<br/>•` markup by hand.
+  defp common_causes do
+    [
+      dgettext("emails", "CalDAV server temporarily unavailable"),
+      dgettext("emails", "Network connectivity issues"),
+      dgettext("emails", "Calendar permissions or authentication problems"),
+      dgettext("emails", "Maximum retries exceeded")
+    ]
+  end
+
+  defp common_causes_html do
+    causes = Enum.map_join(common_causes(), "<br/>• ", & &1)
+    "#{dgettext("emails", "Common causes:")}<br/>• #{causes}"
+  end
+
+  defp common_causes_text do
+    causes = Enum.map_join(common_causes(), "\n- ", & &1)
+    "#{dgettext("emails", "Common causes:")}\n- #{causes}"
   end
 
   defp owner_start_time(meeting) do
