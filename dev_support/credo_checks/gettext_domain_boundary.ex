@@ -41,15 +41,13 @@ defmodule CredoChecks.GettextDomainBoundary do
   The former monolithic `dashboard` domain has been resharded into
   `dashboard_admin` (the bulk) and the per-feature domains above.
 
-  Public marketing site — one small domain per page area:
-
-  - `marketing_common` — shared marketing chrome (nav, footer, reused CTAs)
-  - `marketing_home`, `marketing_features`, `marketing_pricing`, `marketing_for`,
-    `marketing_compare`, `marketing_blog`, `marketing_enterprise`,
-    `marketing_about`, `marketing_contact` — marketing page areas
-
-  A bare `marketing` domain is intentionally not allowed — always pick the
-  specific page area.
+  This list covers Core only. SaaS-owned domains (the `marketing_*` catalogs,
+  which live under `apps/tymeslot_saas/priv/gettext`) are not enumerated here —
+  this check module ships with Core and must carry no SaaS-specific
+  knowledge. The umbrella-root `.credo.exs` extends the allowlist with the
+  SaaS domains via the `:domains` param so both apps are covered when linting
+  runs at the umbrella root; Core's own `.credo.exs` (used for the standalone
+  open-source build) uses this module's plain default.
 
   Configure the allowlist with the `:domains` param.
 
@@ -87,10 +85,6 @@ defmodule CredoChecks.GettextDomainBoundary do
         dashboard_automation dashboard_automation_chat dashboard_appearance
         dashboard_embed dashboard_payments dashboard_bookings dashboard_profile
         dashboard_analytics dashboard_admin
-        marketing_common
-        marketing_home marketing_features marketing_pricing marketing_for
-        marketing_compare marketing_blog marketing_enterprise marketing_about
-        marketing_contact
       )
     ],
     explanations: [
