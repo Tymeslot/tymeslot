@@ -1,10 +1,12 @@
 defmodule TymeslotWeb.Plugs.LocalePlug do
   @moduledoc """
   Detects and sets the user's preferred locale from various sources:
-  1. Query parameter (?locale=de) - Highest priority, explicit user choice
-  2. Session - User's previously selected locale
-  3. Accept-Language header - Browser's preferred language
-  4. Default fallback (en) - When no preference is detected
+  1. Path-derived locale (`:path_locale` assign) - Highest priority; set as a
+     route assign by routers that serve locale-prefixed URLs (/de/...)
+  2. Query parameter (?locale=de) - Explicit user choice
+  3. Session - User's previously selected locale
+  4. Accept-Language header - Browser's preferred language
+  5. Default fallback (en) - When no preference is detected
 
   The selected locale is stored in the session for persistence across requests
   and set in Gettext for translation rendering.
@@ -32,7 +34,8 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
       if Keyword.get(opts, :prefer_user_locale, false), do: get_locale_from_user(conn), else: nil
 
     locale =
-      acceptable(user_locale) ||
+      acceptable(get_locale_from_path(conn)) ||
+        acceptable(user_locale) ||
         acceptable(get_locale_from_params(conn)) ||
         acceptable(get_locale_from_session(conn)) ||
         get_locale_from_header(conn) ||
@@ -62,6 +65,17 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
   # source (e.g. a valid session locale behind an invalid `?locale=` param).
   defp acceptable(nil), do: nil
   defp acceptable(locale), do: if(Locales.acceptable?(locale), do: locale, else: nil)
+
+  # A locale carried by the URL path itself, set as a static route assign
+  # (`assigns: %{path_locale: "de"}`) on locale-prefixed scopes. The URL is
+  # the most explicit statement of intent, so it outranks every other source,
+  # including the saved user preference.
+  defp get_locale_from_path(conn) do
+    case conn.assigns[:path_locale] do
+      locale when is_binary(locale) -> sanitize_locale_input(locale)
+      _other -> nil
+    end
+  end
 
   # The authenticated user's saved interface-language preference, when set.
   # Only consulted on pipelines that pass `prefer_user_locale: true` (the

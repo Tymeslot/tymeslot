@@ -379,6 +379,53 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
     end
   end
 
+  describe "path-derived locale (:path_locale assign)" do
+    test "wins over the query parameter, session, and header", %{conn: _conn} do
+      conn =
+        build_conn()
+        |> init_test_session(%{})
+        |> Map.put(:params, %{"locale" => "en"})
+        |> fetch_session()
+        |> put_session(:locale, "en")
+        |> put_req_header("accept-language", "en")
+        |> assign(:path_locale, "de")
+        |> LocalePlug.call([])
+
+      # de comes only from the path assign; every other source says en.
+      assert conn.assigns.locale == "de"
+      assert get_session(conn, :locale) == "de"
+      assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
+    end
+
+    test "wins over the saved user locale even with prefer_user_locale", %{conn: _conn} do
+      conn =
+        build_conn()
+        |> init_test_session(%{})
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> assign(:current_user, %{locale: "en"})
+        |> assign(:path_locale, "de")
+        |> LocalePlug.call(prefer_user_locale: true)
+
+      # The URL is the most explicit statement of intent — it beats the
+      # account preference on pages that carry a locale prefix.
+      assert conn.assigns.locale == "de"
+    end
+
+    test "an unsupported path locale falls through to the next source", %{conn: _conn} do
+      conn =
+        build_conn()
+        |> init_test_session(%{})
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> put_session(:locale, "de")
+        |> assign(:path_locale, "xx")
+        |> LocalePlug.call([])
+
+      assert conn.assigns.locale == "de"
+    end
+  end
+
   describe "user locale preference (prefer_user_locale)" do
     test "honours the current user's saved locale over the Accept-Language header", %{conn: _conn} do
       conn =
