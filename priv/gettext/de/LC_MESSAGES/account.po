@@ -220,7 +220,7 @@ msgstr "gerade eben"
 msgid "your.new@email.com"
 msgstr "your.new@email.com"
 
-#: lib/tymeslot_web/live/account_live/helpers.ex:80
+#: lib/tymeslot_web/live/account_live/helpers.ex:78
 #, elixir-autogen, elixir-format
 msgid "Never"
 msgstr "Nie"

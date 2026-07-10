@@ -26,7 +26,7 @@ msgstr "Ja"
 msgid "✓ Acknowledged (%{at})"
 msgstr "✓ Bestätigt (%{at})"
 
-#: lib/tymeslot_web/components/core_components/forms.ex:354
+#: lib/tymeslot_web/components/core_components/forms.ex:364
 #, elixir-autogen, elixir-format
 msgid "At least 8 characters"
 msgstr "Mindestens 8 Zeichen"
@@ -81,22 +81,22 @@ msgstr "JavaScript deaktiviert"
 msgid "Learn About Modern Browsers"
 msgstr "Mehr über moderne Browser erfahren"
 
-#: lib/tymeslot_web/components/core_components/forms.ex:365
+#: lib/tymeslot_web/components/core_components/forms.ex:375
 #, elixir-autogen, elixir-format
 msgid "One lowercase letter"
 msgstr "Einen Kleinbuchstaben"
 
-#: lib/tymeslot_web/components/core_components/forms.ex:389
+#: lib/tymeslot_web/components/core_components/forms.ex:399
 #, elixir-autogen, elixir-format
 msgid "One number"
 msgstr "Eine Zahl"
 
-#: lib/tymeslot_web/components/core_components/forms.ex:378
+#: lib/tymeslot_web/components/core_components/forms.ex:388
 #, elixir-autogen, elixir-format
 msgid "One uppercase letter"
 msgstr "Einen Großbuchstaben"
 
-#: lib/tymeslot_web/components/core_components/forms.ex:341
+#: lib/tymeslot_web/components/core_components/forms.ex:351
 #, elixir-autogen, elixir-format
 msgid "Password must contain:"
 msgstr "Das Passwort muss enthalten:"

@@ -11,8 +11,8 @@ msgstr ""
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:276
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:279
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:278
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:281
 #: lib/tymeslot_web/live/onboarding_live/text_helpers.ex:23
 #: lib/tymeslot_web/live/onboarding_live/text_helpers.ex:47
 #, elixir-autogen, elixir-format
@@ -21,8 +21,8 @@ msgid_plural "%{count} days"
 msgstr[0] "%{count} Tag"
 msgstr[1] "%{count} Tage"
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:273
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:282
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:275
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:284
 #, elixir-autogen, elixir-format
 msgid "%{count} hour"
 msgid_plural "%{count} hours"
@@ -376,7 +376,7 @@ msgstr "Das Design konnte nicht aktualisiert werden. Bitte versuchen Sie es erne
 msgid "Could not update your photo. Please try a different image."
 msgstr "Ihr Foto konnte nicht aktualisiert werden. Bitte versuchen Sie ein anderes Bild."
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:207
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:208
 #, elixir-autogen, elixir-format
 msgid "Custom"
 msgstr "Benutzerdefiniert"
@@ -451,7 +451,7 @@ msgstr "Wie weit im Voraus Kunden bei Ihnen buchen können."
 msgid "I'll connect a calendar later"
 msgstr "Ich verbinde später einen Kalender"
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:232
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:234
 #, elixir-autogen, elixir-format
 msgid "If someone books a meeting that ends at %{end_time} and your buffer is %{minutes} min, the next available slot starts at %{next_start}."
 msgstr "Wenn jemand einen Termin bucht, der um %{end_time} endet, und Ihr Puffer %{minutes} Min. beträgt, beginnt das nächste verfügbare Zeitfenster um %{next_start}."
@@ -657,7 +657,7 @@ msgstr "Trotzdem überspringen"
 msgid "Skip setup?"
 msgstr "Einrichtung überspringen?"
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:246
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:248
 #, elixir-autogen, elixir-format
 msgid "Someone visiting your page today can only book up to %{period} ahead — no further."
 msgstr "Wer Ihre Seite heute besucht, kann höchstens %{period} im Voraus buchen — nicht weiter."
@@ -764,17 +764,17 @@ msgstr "Willkommen bei Tymeslot"
 msgid "Welcome to Tymeslot! Your account is now set up."
 msgstr "Willkommen bei Tymeslot! Ihr Konto ist jetzt eingerichtet."
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:265
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:267
 #, elixir-autogen, elixir-format
 msgid "With %{notice} of notice, nobody can book a slot that starts sooner than %{notice} from now."
 msgstr "Mit %{notice} Vorlauf kann niemand ein Zeitfenster buchen, das früher als %{notice} ab jetzt beginnt."
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:224
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:225
 #, elixir-autogen, elixir-format
 msgid "With no buffer, the next available slot starts as soon as a meeting ends."
 msgstr "Ohne Puffer beginnt das nächste verfügbare Zeitfenster, sobald ein Termin endet."
 
-#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:257
+#: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:259
 #, elixir-autogen, elixir-format
 msgid "With no minimum notice, someone can book a slot that starts any time from now."
 msgstr "Ohne Mindestvorlauf kann jemand ein Zeitfenster buchen, das zu jeder Zeit ab jetzt beginnt."

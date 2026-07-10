@@ -641,6 +641,7 @@ msgid "You are already logged in."
 msgstr ""
 
 #: lib/tymeslot_web/hooks/auth_live_session_hook.ex:51
+#: lib/tymeslot_web/plugs/require_auth.ex:27
 #, elixir-autogen, elixir-format
 msgid "You must be logged in to access this page."
 msgstr ""
