@@ -22,13 +22,13 @@ defmodule TymeslotWeb.OnboardingPreferencesExampleTest do
       view = navigate_to_scheduling_steps(view)
 
       html = view |> element("button[phx-value-buffer_minutes='60']") |> render_click()
-      assert html =~ "ends at 2:00 PM"
+      assert html =~ "ends at 02:00 PM"
       assert html =~ "your buffer is 60 min"
-      assert html =~ "starts at 3:00 PM"
+      assert html =~ "starts at 03:00 PM"
 
       html = view |> element("button[phx-value-buffer_minutes='30']") |> render_click()
       assert html =~ "your buffer is 30 min"
-      assert html =~ "starts at 2:30 PM"
+      assert html =~ "starts at 02:30 PM"
     end
 
     test "uses a no-buffer phrasing for zero", %{conn: conn} do

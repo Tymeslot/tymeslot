@@ -62,6 +62,39 @@ defmodule Tymeslot.LocalesTest do
     end
   end
 
+  describe "supported/0" do
+    test "returns metadata for every supported locale, well-formed" do
+      locales = Locales.supported()
+
+      assert is_list(locales)
+      refute locales == []
+
+      Enum.each(locales, fn locale ->
+        assert is_binary(locale.code)
+        assert is_binary(locale.name) and locale.name != ""
+        assert is_atom(locale.country_code)
+      end)
+    end
+
+    test "includes English metadata" do
+      english = Enum.find(Locales.supported(), &(&1.code == "en"))
+
+      assert english.name == "English"
+      assert english.country_code == :gbr
+    end
+
+    test "includes German metadata" do
+      german = Enum.find(Locales.supported(), &(&1.code == "de"))
+
+      assert german.name == "Deutsch"
+      assert german.country_code == :deu
+    end
+
+    test "supported_codes/0 is derived from supported/0" do
+      assert Locales.supported_codes() == Enum.map(Locales.supported(), & &1.code)
+    end
+  end
+
   describe "acceptable?/1" do
     setup do
       Application.put_env(:tymeslot, :locales, supported: [%{code: "en"}, %{code: "de"}])

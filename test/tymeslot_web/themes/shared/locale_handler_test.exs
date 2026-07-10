@@ -47,7 +47,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
       }
 
       # Initial state
-      Gettext.put_locale(TymeslotWeb.Gettext, "en")
+      Gettext.put_locale("en")
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "en"
 
       # After assign_locale
@@ -120,80 +120,13 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
     end
 
     test "updates Gettext locale on each change", %{socket: socket} do
-      Gettext.put_locale(TymeslotWeb.Gettext, "en")
+      Gettext.put_locale("en")
       refute Locales.supported_codes() == []
 
       Enum.each(Locales.supported_codes(), fn code ->
         LocaleHandler.handle_locale_change(socket, code)
         assert Gettext.get_locale(TymeslotWeb.Gettext) == code
       end)
-    end
-  end
-
-  describe "supported_locales/0" do
-    test "returns list of supported locale codes" do
-      locales = LocaleHandler.supported_locales()
-
-      assert is_list(locales)
-      assert locales == Locales.supported_codes()
-      assert "en" in locales
-      assert "de" in locales
-    end
-
-    test "supported locales are derived from metadata configuration" do
-      locales = LocaleHandler.supported_locales()
-      metadata = LocaleHandler.get_locales_with_metadata()
-      expected_codes = Enum.map(metadata, & &1.code)
-
-      assert locales == expected_codes
-    end
-  end
-
-  describe "get_locales_with_metadata/0" do
-    test "returns metadata for every supported locale, well-formed" do
-      locales = LocaleHandler.get_locales_with_metadata()
-
-      assert is_list(locales)
-      # One metadata entry per configured locale, in the same order.
-      assert locales == Locales.supported()
-      refute locales == []
-
-      Enum.each(locales, fn locale ->
-        assert is_binary(locale.code)
-        assert is_binary(locale.name) and locale.name != ""
-        assert is_atom(locale.country_code)
-      end)
-    end
-
-    test "includes English metadata" do
-      locales = LocaleHandler.get_locales_with_metadata()
-      english = Enum.find(locales, &(&1.code == "en"))
-
-      assert english.name == "English"
-      assert english.country_code == :gbr
-    end
-
-    test "includes German metadata" do
-      locales = LocaleHandler.get_locales_with_metadata()
-      german = Enum.find(locales, &(&1.code == "de"))
-
-      assert german.name == "Deutsch"
-      assert german.country_code == :deu
-    end
-  end
-
-  describe "default_locale/0" do
-    test "returns configured default locale" do
-      default = LocaleHandler.default_locale()
-
-      assert default == "en"
-    end
-
-    test "default locale is in supported locales" do
-      default = LocaleHandler.default_locale()
-      supported = LocaleHandler.supported_locales()
-
-      assert default in supported
     end
   end
 

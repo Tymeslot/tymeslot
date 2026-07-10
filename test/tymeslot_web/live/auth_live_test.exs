@@ -619,4 +619,19 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert user.github_user_id == "gh_new_123"
     end
   end
+
+  describe "locale" do
+    test "connected mount keeps a non-default session locale", %{conn: conn} do
+      # The initial GET (still in the test process) runs LocalePlug, which
+      # accepts the query param and persists it to the session. Connecting
+      # the LiveView spawns a separate process — only the :auth live_session's
+      # own on_mount locale hook can carry that session locale into it.
+      {:ok, view, _html} = live(conn, "/auth/login?locale=de")
+
+      # "Welcome Back!" only renders in German as "Willkommen zurück!" if the
+      # connected LiveView process's own Gettext locale was set from the
+      # session, not left on the process default ("en").
+      assert render(view) =~ "Willkommen zurück!"
+    end
+  end
 end

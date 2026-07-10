@@ -49,6 +49,43 @@ defmodule CredoChecks.UnwrappedUserFacingStringTest do
       |> run_check(UnwrappedUserFacingString)
       |> assert_issue(fn issue -> assert issue.trigger == "Something went wrong." end)
     end
+
+    test "Controller.put_flash/3 with a string literal is flagged" do
+      """
+      defmodule TymeslotWeb.Plugs.RequireAuthPlug do
+        alias Phoenix.Controller
+        def go(conn), do: Controller.put_flash(conn, :error, "You must be logged in to access this page.")
+      end
+      """
+      |> to_source_file("lib/tymeslot_web/plugs/require_auth.ex")
+      |> run_check(UnwrappedUserFacingString)
+      |> assert_issue(fn issue ->
+        assert issue.trigger == "You must be logged in to access this page."
+      end)
+    end
+
+    test "piped LiveView.put_flash/2 with a string literal is flagged" do
+      """
+      defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
+        alias Phoenix.LiveView
+        def go(socket), do: socket |> LiveView.put_flash(:error, "Payment not found.")
+      end
+      """
+      |> to_source_file("lib/tymeslot_web/themes/shared/payment_return.ex")
+      |> run_check(UnwrappedUserFacingString)
+      |> assert_issue(fn issue -> assert issue.trigger == "Payment not found." end)
+    end
+
+    test "fully-qualified Phoenix.LiveView.put_flash/3 with a string literal is flagged" do
+      """
+      defmodule TymeslotWeb.Page do
+        def go(socket), do: Phoenix.LiveView.put_flash(socket, :error, "Something went wrong.")
+      end
+      """
+      |> to_source_file("lib/tymeslot_web/page.ex")
+      |> run_check(UnwrappedUserFacingString)
+      |> assert_issue(fn issue -> assert issue.trigger == "Something went wrong." end)
+    end
   end
 
   describe "flash calls that already localise are not flagged" do
@@ -56,6 +93,64 @@ defmodule CredoChecks.UnwrappedUserFacingStringTest do
       """
       defmodule TymeslotWeb.Page do
         def go(conn), do: put_flash(conn, :error, dgettext("auth", "Please try again."))
+      end
+      """
+      |> to_source_file("lib/tymeslot_web/page.ex")
+      |> run_check(UnwrappedUserFacingString)
+      |> refute_issues()
+    end
+
+    test "Controller.put_flash with dgettext is not flagged" do
+      """
+      defmodule TymeslotWeb.Plugs.RequireAuthPlug do
+        alias Phoenix.Controller
+        def go(conn), do: Controller.put_flash(conn, :error, dgettext("auth", "Please try again."))
+      end
+      """
+      |> to_source_file("lib/tymeslot_web/plugs/require_auth.ex")
+      |> run_check(UnwrappedUserFacingString)
+      |> refute_issues()
+    end
+
+    test "piped LiveView.put_flash with dgettext is not flagged" do
+      """
+      defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
+        alias Phoenix.LiveView
+        def go(socket), do: socket |> LiveView.put_flash(:error, dgettext("booking", "Payment not found."))
+      end
+      """
+      |> to_source_file("lib/tymeslot_web/themes/shared/payment_return.ex")
+      |> run_check(UnwrappedUserFacingString)
+      |> refute_issues()
+    end
+
+    test "Controller.put_flash with dgettext_noop is not flagged" do
+      """
+      defmodule TymeslotWeb.Plugs.RequireAuthPlug do
+        alias Phoenix.Controller
+        def go(conn), do: Controller.put_flash(conn, :error, dgettext_noop("Please try again."))
+      end
+      """
+      |> to_source_file("lib/tymeslot_web/plugs/require_auth.ex")
+      |> run_check(UnwrappedUserFacingString)
+      |> refute_issues()
+    end
+
+    test "LiveView.put_flash with an interpolated string is not flagged" do
+      """
+      defmodule TymeslotWeb.Page do
+        def go(socket, name), do: LiveView.put_flash(socket, :error, "Failed for \#{name}")
+      end
+      """
+      |> to_source_file("lib/tymeslot_web/page.ex")
+      |> run_check(UnwrappedUserFacingString)
+      |> refute_issues()
+    end
+
+    test "Controller.put_flash with a pinned assign is not flagged" do
+      """
+      defmodule TymeslotWeb.Page do
+        def go(conn, message), do: Controller.put_flash(conn, :error, message)
       end
       """
       |> to_source_file("lib/tymeslot_web/page.ex")

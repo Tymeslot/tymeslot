@@ -207,6 +207,46 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
     end
   end
 
+  describe "pseudo locale on booking themes" do
+    # async: false at module level already toggles this global application env.
+    setup do
+      original = Application.get_env(:tymeslot, :pseudo_locale_enabled)
+      Application.put_env(:tymeslot, :pseudo_locale_enabled, true)
+
+      on_exit(fn ->
+        if is_nil(original) do
+          Application.delete_env(:tymeslot, :pseudo_locale_enabled)
+        else
+          Application.put_env(:tymeslot, :pseudo_locale_enabled, original)
+        end
+
+        Gettext.put_locale(TymeslotWeb.Gettext, "en")
+      end)
+
+      :ok
+    end
+
+    test "LocaleHook keeps the pseudo locale carried over from the session instead of " <>
+           "resetting to the default",
+         %{conn: conn, username: username} do
+      # First request: LocalePlug accepts ?locale=pseudo and persists it to the session.
+      conn = get(conn, "/#{username}?locale=pseudo")
+
+      # Second navigation carries NO locale param, so the Dispatcher LiveView's own
+      # `handle_params` locale sync (which only fires when `params["locale"]` is
+      # present) is a no-op — resolution falls entirely to LocaleHook reading the
+      # session. This is what isolates the hook's own acceptance check.
+      conn = get(recycle(conn), "/#{username}")
+      {:ok, view, _html} = live(conn)
+
+      html = render(view)
+      assert html =~ ~s(data-locale="pseudo")
+      # Pseudo-localisation coverage markers on the always-rendered greeting —
+      # proves the booking theme actually renders pseudo text, not just the assign.
+      assert html =~ "⟦"
+    end
+  end
+
   describe "multilingual booking flow completeness" do
     test "completes full booking flow in every supported locale", %{
       conn: conn,

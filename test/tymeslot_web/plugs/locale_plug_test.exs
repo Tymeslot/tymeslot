@@ -95,6 +95,22 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
       # de comes only from the session; the header would resolve to en.
       assert conn.assigns.locale == "de"
     end
+
+    test "an unsupported query parameter falls through to the valid session locale instead of overwriting it",
+         %{conn: _conn} do
+      conn =
+        build_conn()
+        |> init_test_session(%{})
+        |> Map.put(:params, %{"locale" => "fr"})
+        |> fetch_session()
+        |> put_session(:locale, "de")
+        |> LocalePlug.call([])
+
+      # fr is a shape-valid but unsupported param — it must not short-circuit
+      # past the valid "de" session locale and be coerced to the default.
+      assert conn.assigns.locale == "de"
+      assert get_session(conn, :locale) == "de"
+    end
   end
 
   describe "Accept-Language header parsing" do
@@ -441,6 +457,27 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> LocalePlug.call([])
 
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
+    end
+  end
+
+  describe "locale reaches every Gettext backend" do
+    # LocalePlug must set the locale globally (`Gettext.put_locale/1`), not
+    # per-backend (`Gettext.put_locale/2`), so a second backend — e.g. the
+    # SaaS marketing backend, which Core cannot reference directly — still
+    # resolves the chosen locale. `TymeslotWeb.SecondGettextBackendForTest`
+    # stands in for that second backend. Regression test for the case where
+    # a language switcher appears to work but silently does nothing outside
+    # the backend that was written to directly.
+    test "a second backend resolves the same locale set by LocalePlug", %{conn: _conn} do
+      _conn =
+        build_conn()
+        |> init_test_session(%{})
+        |> Map.put(:params, %{"locale" => "de"})
+        |> fetch_session()
+        |> LocalePlug.call([])
+
+      assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
+      assert Gettext.get_locale(TymeslotWeb.SecondGettextBackendForTest) == "de"
     end
   end
 end
