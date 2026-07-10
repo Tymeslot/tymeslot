@@ -125,19 +125,19 @@ defmodule Tymeslot.EmailTestHelpers do
   end
 
   @doc """
-  Formats a date using SharedHelpers for consistent test assertions.
+  Formats a date for test assertions, in the locale the assertion expects.
   """
-  @spec format_date_short(Date.t()) :: String.t()
-  def format_date_short(date) do
-    Formatting.format_date_short(date)
+  @spec format_date_short(Date.t(), String.t()) :: String.t()
+  def format_date_short(date, locale \\ "en") do
+    Formatting.format_date_short(date, locale)
   end
 
   @doc """
-  Formats a time using SharedHelpers for consistent test assertions.
+  Formats a time for test assertions, in the locale the assertion expects.
   """
-  @spec format_time(DateTime.t()) :: String.t()
-  def format_time(datetime) do
-    Formatting.format_time(datetime)
+  @spec format_time(DateTime.t(), String.t()) :: String.t()
+  def format_time(datetime, locale \\ "en") do
+    Formatting.format_time(datetime, locale)
   end
 
   @doc """

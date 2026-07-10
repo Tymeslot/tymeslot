@@ -58,7 +58,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
         meeting_type: details.event_title
       }
 
-      changes_table = build_changes_table(details.changes)
+      changes_table = build_changes_table(details.changes, locale)
 
       mjml_content = """
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
@@ -133,10 +133,10 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
     end
   end
 
-  defp build_changes_table(changes) do
+  defp build_changes_table(changes, locale) do
     rows =
       changes
-      |> Enum.map(&change_to_row/1)
+      |> Enum.map(&change_to_row(&1, locale))
       |> Enum.filter(& &1)
 
     case rows do
@@ -192,23 +192,23 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
     end
   end
 
-  defp change_to_row({:title, from, to}),
+  defp change_to_row({:title, from, to}, _locale),
     do: {dgettext("emails", "Title"), escape(from), escape(to)}
 
-  defp change_to_row({:location, from, to}),
+  defp change_to_row({:location, from, to}, _locale),
     do: {dgettext("emails", "Location"), escape(from), escape(to)}
 
-  defp change_to_row({:description, _from, _to}),
+  defp change_to_row({:description, _from, _to}, _locale),
     do:
       {dgettext("emails", "Description"), dgettext("emails", "(previous)"),
        dgettext("emails", "(updated)")}
 
-  defp change_to_row({:time, from_start, to_start}),
+  defp change_to_row({:time, from_start, to_start}, locale),
     do:
-      {dgettext("emails", "Time"), escape(Formatting.format_time_short(from_start)),
-       escape(Formatting.format_time_short(to_start))}
+      {dgettext("emails", "Time"), escape(Formatting.format_time_short(from_start, locale)),
+       escape(Formatting.format_time_short(to_start, locale))}
 
-  defp change_to_row(_other), do: nil
+  defp change_to_row(_other, _locale), do: nil
 
   defp escape(nil), do: dgettext("emails", "(none)")
   defp escape(val), do: val |> to_string() |> Sanitise.sanitize_for_email()

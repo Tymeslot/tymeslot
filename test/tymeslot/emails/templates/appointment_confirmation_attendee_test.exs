@@ -283,7 +283,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendeeTest do
         email =
           AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
 
-        formatted = Formatting.format_duration(duration)
+        formatted = Formatting.format_duration(duration, "en")
 
         assert email.html_body =~ formatted,
                "Expected html_body to contain duration #{formatted} for #{duration} minutes"

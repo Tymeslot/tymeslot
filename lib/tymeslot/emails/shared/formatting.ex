@@ -2,37 +2,31 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   @moduledoc """
   Date, time, weekday, duration, currency, location, and general text formatting
   helpers for Tymeslot emails.
+
+  ## Locale contract
+
+  Every formatter that produces locale-dependent output takes the recipient's
+  locale as an explicit argument. There is deliberately no arity that defaults to
+  English: `Calendar.strftime/2` always renders English month and meridiem names,
+  so a "convenience" arity is indistinguishable at the call site from a correct
+  one, and silently ships `02:30 PM` into a German email. Callers that genuinely
+  want English (admin alerts) pass `"en"` and say so.
+
+  The one exception is `format_location/1`, which resolves through `dgettext/2`
+  and so reads the ambient Gettext locale. It must be called inside a
+  `Gettext.with_locale/3` block. The rule: **pure formatters take a locale,
+  gettext-backed helpers read the ambient one.**
   """
 
-  alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Helpers.LocaleFormat
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
-  Formats a date into a full readable format.
-  Example: "November 25, 2024"
-  """
-  @spec format_date(Date.t() | DateTime.t() | NaiveDateTime.t()) :: String.t()
-  def format_date(%Date{} = date) do
-    Calendar.strftime(date, "%B %d, %Y")
-  end
-
-  def format_date(%DateTime{} = datetime) do
-    datetime
-    |> DateTime.to_date()
-    |> format_date()
-  end
-
-  def format_date(%NaiveDateTime{} = datetime) do
-    datetime
-    |> NaiveDateTime.to_date()
-    |> format_date()
-  end
-
-  @doc """
   Formats a date according to locale conventions.
   Delegates to LocaleFormat for locale-aware formatting.
+  - en: November 25, 2024
+  - de: 25. November 2024
   """
   @spec format_date(Date.t() | DateTime.t() | NaiveDateTime.t(), String.t()) :: String.t()
   def format_date(%Date{} = date, locale), do: LocaleFormat.format_date(date, locale)
@@ -43,27 +37,6 @@ defmodule Tymeslot.Emails.Shared.Formatting do
 
   def format_date(%NaiveDateTime{} = datetime, locale) do
     datetime |> NaiveDateTime.to_date() |> format_date(locale)
-  end
-
-  @doc """
-  Formats a date into a short readable format.
-  Example: "Nov 25"
-  """
-  @spec format_date_short(Date.t() | DateTime.t() | NaiveDateTime.t()) :: String.t()
-  def format_date_short(%Date{} = date) do
-    "#{Calendar.strftime(date, "%b")} #{date.day}"
-  end
-
-  def format_date_short(%DateTime{} = datetime) do
-    datetime
-    |> DateTime.to_date()
-    |> format_date_short()
-  end
-
-  def format_date_short(%NaiveDateTime{} = datetime) do
-    datetime
-    |> NaiveDateTime.to_date()
-    |> format_date_short()
   end
 
   @doc """
@@ -102,15 +75,6 @@ defmodule Tymeslot.Emails.Shared.Formatting do
     do: datetime |> NaiveDateTime.to_date() |> format_weekday(locale)
 
   @doc """
-  Formats a time with timezone.
-  Example: "02:30 PM PST"
-  """
-  @spec format_time(DateTime.t()) :: String.t()
-  def format_time(%DateTime{} = datetime) do
-    Calendar.strftime(datetime, "%I:%M %p %Z")
-  end
-
-  @doc """
   Formats a time with timezone, locale-aware.
   Example (en): "02:30 PM PST", (de): "14:30 PST"
   """
@@ -122,41 +86,34 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   end
 
   @doc """
-  Formats a time range.
-  Example: "02:30 PM - 03:00 PM PST"
-  """
-  @spec format_time_range(DateTime.t(), DateTime.t()) :: String.t()
-  def format_time_range(%DateTime{} = start_time, %DateTime{} = end_time) do
-    start_str = Calendar.strftime(start_time, "%I:%M %p")
-    end_str = Calendar.strftime(end_time, "%I:%M %p %Z")
-    "#{start_str} - #{end_str}"
-  end
-
-  @doc """
   Formats a datetime as a short UTC timestamp for change-summary displays.
-  Example: "25 Jun 2026, 14:30 UTC"
+  The clock is always 24-hour and the zone always UTC — these summaries compare
+  two instants, so a stable, unambiguous rendering matters more than local
+  convention. Only the month abbreviation is localised.
+  Example (en): "25 Jun 2026, 14:30 UTC", (de): "25 Jun 2026, 14:30 UTC"
   Falls back to `to_string/1` for non-DateTime values.
   """
-  @spec format_time_short(DateTime.t() | term()) :: String.t()
-  def format_time_short(%DateTime{} = dt), do: Calendar.strftime(dt, "%d %b %Y, %H:%M UTC")
-  def format_time_short(val), do: to_string(val)
-
-  @doc """
-  Formats a complete datetime.
-  Example: "November 25, 2024 at 2:30 PM PST"
-  """
-  @spec format_datetime(DateTime.t()) :: String.t()
-  def format_datetime(%DateTime{} = datetime) do
-    "#{format_date(datetime)} at #{format_time(datetime)}"
+  @spec format_time_short(DateTime.t() | term(), String.t()) :: String.t()
+  def format_time_short(%DateTime{} = dt, locale) do
+    month = LocaleFormat.format_month_name(dt.month, locale, :short)
+    day = dt.day |> to_string() |> String.pad_leading(2, "0")
+    "#{day} #{month} #{dt.year}, #{Calendar.strftime(dt, "%H:%M")} UTC"
   end
 
+  def format_time_short(val, _locale), do: to_string(val)
+
   @doc """
-  Formats a meeting duration.
-  Example: "30 minutes" or "1 hour"
+  Formats a complete datetime, locale-aware.
+  Example (en): "November 25, 2024 at 02:30 PM PST", (de): "25. November 2024 um 14:30 PST"
   """
-  @spec format_duration(integer() | String.t()) :: String.t()
-  def format_duration(duration) do
-    Duration.format(duration)
+  @spec format_datetime(DateTime.t(), String.t()) :: String.t()
+  def format_datetime(%DateTime{} = datetime, locale) do
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      dgettext("emails", "%{date} at %{time}",
+        date: format_date(datetime, locale),
+        time: format_time(datetime, locale)
+      )
+    end)
   end
 
   @doc """

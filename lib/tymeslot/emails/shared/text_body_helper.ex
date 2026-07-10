@@ -203,27 +203,27 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   def format_event_changes(changes, locale \\ "en") do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       changes
-      |> Enum.map(&format_single_change/1)
+      |> Enum.map(&format_single_change(&1, locale))
       |> Enum.filter(& &1)
       |> Enum.join("\n")
     end)
   end
 
-  defp format_single_change({:title, from, to}) do
+  defp format_single_change({:title, from, to}, _locale) do
     "#{dgettext("emails", "Title:")} #{from || dgettext("emails", "(none)")} → #{to || dgettext("emails", "(none)")}"
   end
 
-  defp format_single_change({:location, from, to}) do
+  defp format_single_change({:location, from, to}, _locale) do
     "#{dgettext("emails", "Location:")} #{from || dgettext("emails", "(none)")} → #{to || dgettext("emails", "(none)")}"
   end
 
-  defp format_single_change({:description, _from, _to}) do
+  defp format_single_change({:description, _from, _to}, _locale) do
     dgettext("emails", "Description updated")
   end
 
-  defp format_single_change({:time, from_start, to_start}) do
-    "#{dgettext("emails", "Time:")} #{Formatting.format_time_short(from_start)} → #{Formatting.format_time_short(to_start)}"
+  defp format_single_change({:time, from_start, to_start}, locale) do
+    "#{dgettext("emails", "Time:")} #{Formatting.format_time_short(from_start, locale)} → #{Formatting.format_time_short(to_start, locale)}"
   end
 
-  defp format_single_change(_other), do: nil
+  defp format_single_change(_other, _locale), do: nil
 end

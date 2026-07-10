@@ -4,124 +4,10 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
 
   alias Tymeslot.Emails.Shared.Formatting
 
-  describe "format_date/1" do
-    test "formats Date struct correctly" do
-      date = ~D[2024-11-25]
-      assert Formatting.format_date(date) == "November 25, 2024"
-    end
-
-    test "formats DateTime struct correctly" do
-      datetime = ~U[2024-11-25 14:30:00Z]
-      assert Formatting.format_date(datetime) == "November 25, 2024"
-    end
-
-    test "formats NaiveDateTime struct correctly" do
-      naive_datetime = ~N[2024-11-25 14:30:00]
-      assert Formatting.format_date(naive_datetime) == "November 25, 2024"
-    end
-
-    test "handles different months correctly" do
-      dates = [
-        {~D[2024-01-15], "January 15, 2024"},
-        {~D[2024-02-29], "February 29, 2024"},
-        {~D[2024-12-31], "December 31, 2024"}
-      ]
-
-      for {date, expected} <- dates do
-        assert Formatting.format_date(date) == expected
-      end
-    end
-  end
-
-  describe "format_date_short/1" do
-    test "formats Date struct in short format" do
-      date = ~D[2024-11-25]
-      assert Formatting.format_date_short(date) == "Nov 25"
-    end
-
-    test "formats DateTime struct in short format" do
-      datetime = ~U[2024-11-25 14:30:00Z]
-      assert Formatting.format_date_short(datetime) == "Nov 25"
-    end
-
-    test "formats NaiveDateTime struct in short format" do
-      naive_datetime = ~N[2024-11-25 14:30:00]
-      assert Formatting.format_date_short(naive_datetime) == "Nov 25"
-    end
-
-    test "handles different months correctly" do
-      dates = [
-        {~D[2024-01-15], "Jan 15"},
-        {~D[2024-02-01], "Feb 1"},
-        {~D[2024-12-31], "Dec 31"}
-      ]
-
-      for {date, expected} <- dates do
-        assert Formatting.format_date_short(date) == expected
-      end
-    end
-  end
-
-  describe "format_time/1" do
-    test "formats time with timezone" do
-      datetime = DateTime.from_naive!(~N[2024-11-25 14:30:00], "America/New_York")
-      result = Formatting.format_time(datetime)
-
-      assert result =~ "02:30 PM"
-      assert result =~ "EST" or result =~ "EDT"
-    end
-
-    test "formats time with UTC timezone" do
-      datetime = ~U[2024-11-25 14:30:00Z]
-      result = Formatting.format_time(datetime)
-
-      assert result =~ "02:30 PM"
-      assert result =~ "UTC"
-    end
-
-    test "handles AM times correctly" do
-      datetime = ~U[2024-11-25 09:15:00Z]
-      result = Formatting.format_time(datetime)
-
-      assert result =~ "09:15 AM"
-    end
-  end
-
-  describe "format_time_range/2" do
-    test "formats time range correctly" do
-      start_time = DateTime.from_naive!(~N[2024-11-25 14:30:00], "America/New_York")
-      end_time = DateTime.from_naive!(~N[2024-11-25 15:30:00], "America/New_York")
-
-      result = Formatting.format_time_range(start_time, end_time)
-
-      assert result =~ "02:30 PM - 03:30 PM"
-      assert result =~ "EST" or result =~ "EDT"
-    end
-
-    test "formats time range across different hours" do
-      start_time = ~U[2024-11-25 09:00:00Z]
-      end_time = ~U[2024-11-25 10:30:00Z]
-
-      result = Formatting.format_time_range(start_time, end_time)
-
-      assert result =~ "09:00 AM - 10:30 AM"
-    end
-
-    test "shows timezone only on end time" do
-      start_time = ~U[2024-11-25 14:30:00Z]
-      end_time = ~U[2024-11-25 15:30:00Z]
-
-      result = Formatting.format_time_range(start_time, end_time)
-
-      # Start time should not have timezone
-      assert result =~ ~r/\d{2}:\d{2} (AM|PM) - \d{2}:\d{2} (AM|PM)/
-    end
-  end
-
-  describe "format_datetime/1" do
+  describe "format_datetime/2" do
     test "formats complete datetime" do
       datetime = DateTime.from_naive!(~N[2024-11-25 14:30:00], "America/New_York")
-      result = Formatting.format_datetime(datetime)
+      result = Formatting.format_datetime(datetime, "en")
 
       assert result =~ "November 25, 2024"
       assert result =~ " at "
@@ -129,32 +15,35 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
 
     test "combines date and time formatting" do
-      datetime = ~U[2024-01-15 09:00:00Z]
-      result = Formatting.format_datetime(datetime)
+      assert Formatting.format_datetime(~U[2024-01-15 09:00:00Z], "en") ==
+               "January 15, 2024 at 09:00 AM UTC"
+    end
 
-      assert result == "January 15, 2024 at 09:00 AM UTC"
+    # The payment timestamp on a paid booking confirmation used to render through
+    # a hardcoded-English helper while the date beside it was localised, so a
+    # German reader saw "15. Januar 2024 at 02:30 PM UTC".
+    test "localises the date, the clock, and the joining word together" do
+      assert Formatting.format_datetime(~U[2024-01-15 14:30:00Z], "de") ==
+               "15. Januar 2024 um 14:30 UTC"
     end
   end
 
-  describe "format_duration/1" do
-    test "formats single minute" do
-      assert Formatting.format_duration(1) == "1 minute"
+  describe "format_time_short/2" do
+    test "renders a zero-padded day, short month, 24-hour UTC clock" do
+      assert Formatting.format_time_short(~U[2026-03-05 14:30:00Z], "en") ==
+               "05 Mar 2026, 14:30 UTC"
     end
 
-    test "formats 30 minutes" do
-      assert Formatting.format_duration(30) == "30 minutes"
+    test "localises the month abbreviation" do
+      assert Formatting.format_time_short(~U[2026-03-25 14:30:00Z], "de") ==
+               "25 März 2026, 14:30 UTC"
+
+      assert Formatting.format_time_short(~U[2026-12-25 14:30:00Z], "de") ==
+               "25 Dez 2026, 14:30 UTC"
     end
 
-    test "formats 60 minutes" do
-      assert Formatting.format_duration(60) == "1 hour"
-    end
-
-    test "formats 90 minutes" do
-      assert Formatting.format_duration(90) == "1.5 hours"
-    end
-
-    test "formats zero minutes" do
-      assert Formatting.format_duration(0) == "0 minutes"
+    test "falls back to to_string/1 for non-DateTime values" do
+      assert Formatting.format_time_short(nil, "de") == ""
     end
   end
 
@@ -265,6 +154,14 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
       datetime = ~U[2026-01-15 14:30:00Z]
       result = Formatting.format_time(datetime, "en")
       assert result =~ "UTC"
+    end
+
+    test "carries a non-UTC zone abbreviation through" do
+      datetime = DateTime.from_naive!(~N[2024-11-25 14:30:00], "America/New_York")
+      result = Formatting.format_time(datetime, "en")
+
+      assert result =~ "02:30 PM"
+      assert result =~ "EST" or result =~ "EDT"
     end
   end
 

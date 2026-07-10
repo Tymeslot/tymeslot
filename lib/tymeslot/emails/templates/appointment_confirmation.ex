@@ -490,9 +490,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
   defp format_paid_at(%{paid_at: %DateTime{} = paid_at}, appointment_details) do
     locale = Map.get(appointment_details, :attendee_locale, "en")
-    date = Formatting.format_date(DateTime.to_date(paid_at), locale)
-    time = Formatting.format_time(paid_at)
-    dgettext("emails", "%{date} at %{time}", date: date, time: time)
+    Formatting.format_datetime(paid_at, locale)
   end
 
   defp format_paid_at(_bp, _appointment_details), do: nil
