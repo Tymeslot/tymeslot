@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   def render(assigns) do
     # Ensure Gettext locale is set correctly for this render cycle
     if locale = assigns[:locale] do
-      Gettext.put_locale(TymeslotWeb.Gettext, locale)
+      Gettext.put_locale(locale)
     end
 
     cond do

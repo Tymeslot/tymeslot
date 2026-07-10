@@ -11,11 +11,11 @@ defmodule TymeslotWeb.AccountLive.Handlers do
 
   alias Phoenix.LiveView
   alias Tymeslot.Auth
+  alias Tymeslot.Locales
   alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.AccountLive.{ErrorFormatter, Helpers}
   alias TymeslotWeb.Helpers.ClientIP
-  alias TymeslotWeb.Themes.Shared.LocaleHandler
 
   # Provider constants
   @social_provider_default "social"
@@ -69,8 +69,8 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   def handle_event("change_language", %{"locale" => locale}, socket) do
     case Auth.update_user_locale(socket.assigns.current_user, locale) do
       {:ok, updated_user} ->
-        new_locale = updated_user.locale || LocaleHandler.default_locale()
-        Gettext.put_locale(TymeslotWeb.Gettext, new_locale)
+        new_locale = updated_user.locale || Locales.default_locale()
+        Gettext.put_locale(new_locale)
 
         {:noreply,
          socket

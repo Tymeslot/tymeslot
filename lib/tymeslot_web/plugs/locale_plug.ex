@@ -16,7 +16,6 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
   - DoS via extremely long inputs
   """
   alias Tymeslot.Locales
-  alias TymeslotWeb.Themes.Shared.LocaleHandler
   import Plug.Conn
   require Logger
 
@@ -33,27 +32,36 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
       if Keyword.get(opts, :prefer_user_locale, false), do: get_locale_from_user(conn), else: nil
 
     locale =
-      user_locale ||
-        get_locale_from_params(conn) ||
-        get_locale_from_session(conn) ||
+      acceptable(user_locale) ||
+        acceptable(get_locale_from_params(conn)) ||
+        acceptable(get_locale_from_session(conn)) ||
         get_locale_from_header(conn) ||
-        LocaleHandler.default_locale()
+        Locales.default_locale()
 
     # Validate locale is supported (or the dev-only pseudo locale)
     locale =
       if Locales.acceptable?(locale),
         do: locale,
-        else: LocaleHandler.default_locale()
+        else: Locales.default_locale()
 
     # Store in session for persistence
     conn = put_session(conn, :locale, locale)
 
-    # Set for Gettext
-    Gettext.put_locale(TymeslotWeb.Gettext, locale)
+    # Set for Gettext (global — reaches every backend for this process)
+    Gettext.put_locale(locale)
 
     # Store in assigns for LiveView access
     assign(conn, :locale, locale)
   end
+
+  # Returns `locale` unchanged when it is acceptable (a supported locale, or
+  # the dev-only pseudo locale when enabled), or `nil` otherwise — so an
+  # unacceptable candidate falls through to the next source in the `||` chain
+  # in `call/2` instead of short-circuiting it and then being coerced to the
+  # default, which would silently discard a perfectly valid lower-priority
+  # source (e.g. a valid session locale behind an invalid `?locale=` param).
+  defp acceptable(nil), do: nil
+  defp acceptable(locale), do: if(Locales.acceptable?(locale), do: locale, else: nil)
 
   # The authenticated user's saved interface-language preference, when set.
   # Only consulted on pipelines that pass `prefer_user_locale: true` (the
@@ -207,7 +215,7 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
 
   defp find_best_match(parsed_locales) do
     Enum.find_value(parsed_locales, fn {locale, _quality} ->
-      if locale in LocaleHandler.supported_locales(), do: locale
+      if locale in Locales.supported_codes(), do: locale
     end)
   end
 end

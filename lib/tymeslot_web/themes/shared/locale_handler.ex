@@ -2,9 +2,14 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
   @moduledoc """
   Shared locale handling for scheduling LiveViews.
   Provides functions for managing locale in LiveView context.
+
+  Locale configuration (default locale, supported set) is owned by
+  `Tymeslot.Locales` — this module only handles the LiveView-socket concern
+  of applying a locale to the current process and socket assigns.
   """
 
   alias Phoenix.Component
+  alias Tymeslot.Locales
 
   @doc """
   Assigns the current locale to the socket from the connection assigns.
@@ -12,8 +17,8 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
   """
   @spec assign_locale(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def assign_locale(socket) do
-    locale = socket.assigns[:locale] || default_locale()
-    Gettext.put_locale(TymeslotWeb.Gettext, locale)
+    locale = socket.assigns[:locale] || Locales.default_locale()
+    Gettext.put_locale(locale)
     Component.assign(socket, :locale, locale)
   end
 
@@ -34,8 +39,8 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
 
     # Always ensure Gettext is set for the current process
     # This handles cases where the process might have been reused or dictionary cleared
-    if new_locale in supported_locales() do
-      Gettext.put_locale(TymeslotWeb.Gettext, new_locale)
+    if Locales.acceptable?(new_locale) do
+      Gettext.put_locale(new_locale)
     end
 
     # Skip if locale is already set in assigns (idempotent for assigns)
@@ -43,7 +48,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
       new_locale == current_locale ->
         socket
 
-      new_locale in supported_locales() ->
+      Locales.acceptable?(new_locale) ->
         # Update socket assigns
         # Note: For persistence across navigation, themes should use a full
         # redirect (external: true) with the locale in query params to ensure
@@ -53,30 +58,5 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
       true ->
         socket
     end
-  end
-
-  @doc """
-  Returns the list of supported locale codes.
-  Derived from the locale metadata configuration.
-  """
-  @spec supported_locales() :: [String.t()]
-  def supported_locales do
-    Enum.map(get_locales_with_metadata(), & &1.code)
-  end
-
-  @doc """
-  Returns the full locale metadata including name and country code for UI rendering.
-  """
-  @spec get_locales_with_metadata() :: [map()]
-  def get_locales_with_metadata do
-    Application.get_env(:tymeslot, :locales)[:supported] || []
-  end
-
-  @doc """
-  Returns the default locale code.
-  """
-  @spec default_locale() :: String.t()
-  def default_locale do
-    Application.get_env(:tymeslot, :locales)[:default] || "en"
   end
 end

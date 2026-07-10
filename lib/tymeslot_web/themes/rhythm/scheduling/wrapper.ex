@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
   """
   use Phoenix.Component
 
+  alias Tymeslot.Locales
+
   import TymeslotWeb.Themes.Shared.Customization.Helpers
   import TymeslotWeb.Components.LanguageSwitcher
   import TymeslotWeb.Themes.Shared.VideoSources, only: [video_sources: 1]
@@ -79,7 +81,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
             ]}>
               <.language_switcher
                 locale={@locale}
-                locales={TymeslotWeb.Themes.Shared.LocaleHandler.get_locales_with_metadata()}
+                locales={Locales.supported()}
                 dropdown_open={@language_dropdown_open}
                 theme="rhythm"
               />

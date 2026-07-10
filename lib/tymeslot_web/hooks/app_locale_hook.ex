@@ -15,7 +15,6 @@ defmodule TymeslotWeb.Hooks.AppLocaleHook do
 
   import Phoenix.Component
   alias Tymeslot.Locales
-  alias TymeslotWeb.Themes.Shared.LocaleHandler
 
   @spec on_mount(atom(), map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()}
@@ -23,14 +22,14 @@ defmodule TymeslotWeb.Hooks.AppLocaleHook do
     locale =
       user_locale(socket) ||
         session_locale(session) ||
-        LocaleHandler.default_locale()
+        Locales.default_locale()
 
     locale =
       if Locales.acceptable?(locale),
         do: locale,
-        else: LocaleHandler.default_locale()
+        else: Locales.default_locale()
 
-    Gettext.put_locale(TymeslotWeb.Gettext, locale)
+    Gettext.put_locale(locale)
 
     {:cont, assign(socket, :locale, locale)}
   end

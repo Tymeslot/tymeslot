@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Hooks.LocaleHook do
   """
 
   import Phoenix.Component
-  alias TymeslotWeb.Themes.Shared.LocaleHandler
+  alias Tymeslot.Locales
 
   @spec on_mount(atom(), map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()}
@@ -15,16 +15,16 @@ defmodule TymeslotWeb.Hooks.LocaleHook do
     locale =
       params["locale"] ||
         session["locale"] ||
-        LocaleHandler.default_locale()
+        Locales.default_locale()
 
-    # Validate locale is supported
+    # Validate locale is supported (or the dev-only pseudo locale)
     locale =
-      if locale in LocaleHandler.supported_locales(),
+      if Locales.acceptable?(locale),
         do: locale,
-        else: LocaleHandler.default_locale()
+        else: Locales.default_locale()
 
-    # Set for Gettext process dictionary
-    Gettext.put_locale(TymeslotWeb.Gettext, locale)
+    # Set for Gettext process dictionary (global — reaches every backend)
+    Gettext.put_locale(locale)
 
     # Assign to socket
     {:cont, assign(socket, :locale, locale)}

@@ -128,7 +128,7 @@ defmodule TymeslotWeb.Router do
 
     # LiveView authentication routes with route bundle loading
     live_session :auth,
-      on_mount: [TymeslotWeb.Hooks.RouteBundleHook] do
+      on_mount: [TymeslotWeb.Hooks.LocaleHook, TymeslotWeb.Hooks.RouteBundleHook] do
       live "/auth/login", AuthLive, :login
       live "/auth/signup", AuthLive, :signup
       live "/auth/verify-email", AuthLive, :verify_email
