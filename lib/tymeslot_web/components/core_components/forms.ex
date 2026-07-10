@@ -316,11 +316,21 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   """
   @spec translate_error(any()) :: String.t()
   def translate_error({msg, opts}) do
-    # When using gettext, we should pass the compiled message
-    # For now, we'll just do a simple string replacement
-    Enum.reduce(opts, msg, fn {key, value}, acc ->
-      String.replace(acc, "%{#{key}}", to_string(value))
-    end)
+    # When using gettext, we typically pass the strings we want
+    # to translate as a static argument:
+    #
+    #     # Translate the number of files with plural rules
+    #     dngettext("errors", "1 file", "%{count} files", count)
+    #
+    # However the error messages in our forms and APIs are generated
+    # dynamically, so we need to translate them by calling Gettext
+    # with our gettext backend as first argument. Translations are
+    # available in the errors.po file (as we use the "errors" domain).
+    if count = opts[:count] do
+      Gettext.dngettext(TymeslotWeb.Gettext, "errors", msg, msg, count, opts)
+    else
+      Gettext.dgettext(TymeslotWeb.Gettext, "errors", msg, opts)
+    end
   end
 
   def translate_error(msg) when is_binary(msg), do: msg
