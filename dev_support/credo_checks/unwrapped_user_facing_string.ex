@@ -8,14 +8,16 @@ defmodule CredoChecks.UnwrappedUserFacingString do
   lowest-noise positions where an un-translated literal is almost always a real
   bug:
 
-  1. **Flash messages** — the message argument of `put_flash/2,3` (both the
-     direct `put_flash(conn, :error, "…")` and the piped
-     `socket |> put_flash(:error, "…")` forms) and of the project's
-     `Flash.error/info/warning/success("…")` helper. A bare string literal here
-     ships untranslated to the user. The codebase already routes these through
-     helper functions or `dgettext`; a raw literal is the exact gap that slipped
-     past the first localisation pass (e.g. an entire controller-helper module
-     that never declared `use Gettext`).
+  1. **Flash messages** — the message argument of `put_flash/2,3` (the direct
+     `put_flash(conn, :error, "…")` and piped `socket |> put_flash(:error, "…")`
+     forms), including the module-qualified call — `Controller.put_flash(...)`,
+     `LiveView.put_flash(...)`, `Phoenix.Controller.put_flash(...)`, etc., under
+     any alias — and of the project's `Flash.error/info/warning/success("…")`
+     helper. A bare string literal here ships untranslated to the user. The
+     codebase already routes these through helper functions or `dgettext`; a
+     raw literal is the exact gap that slipped past the first localisation
+     pass (e.g. an entire controller-helper module that never declared
+     `use Gettext`).
 
   2. **Phoenix `attr` defaults** — a prose `default:` on a component attribute,
      e.g. `attr :confirm_text, :string, default: "Processing…"`. Because an
@@ -36,6 +38,8 @@ defmodule CredoChecks.UnwrappedUserFacingString do
       # Bad — untranslated flash literal
       put_flash(conn, :error, "Please try again.")
       socket |> put_flash(:info, "Saved!")
+      Controller.put_flash(conn, :error, "Please try again.")
+      socket |> LiveView.put_flash(:error, "Payment not found.")
       Flash.error("Something went wrong.")
 
       # Good — wrapped, or routed through a helper that wraps
@@ -119,6 +123,32 @@ defmodule CredoChecks.UnwrappedUserFacingString do
 
   # socket |> put_flash(:level, "literal")  — the piped subject is not an arg here
   defp traverse({:put_flash, meta, [level, message]} = ast, issues, im, levels, _helpers)
+       when is_atom(level) and is_binary(message) do
+    maybe_flash_issue(ast, issues, im, meta, level, message, levels)
+  end
+
+  # Controller.put_flash(conn, :level, "literal") / LiveView.put_flash(socket, :level, "literal")
+  # — any module-qualified alias (Controller, LiveView, Phoenix.Controller, …).
+  defp traverse(
+         {{:., _, [{:__aliases__, _, _mods}, :put_flash]}, meta, [_subject, level, message]} =
+           ast,
+         issues,
+         im,
+         levels,
+         _helpers
+       )
+       when is_atom(level) and is_binary(message) do
+    maybe_flash_issue(ast, issues, im, meta, level, message, levels)
+  end
+
+  # socket |> Controller.put_flash(:level, "literal") — the piped subject is not an arg here.
+  defp traverse(
+         {{:., _, [{:__aliases__, _, _mods}, :put_flash]}, meta, [level, message]} = ast,
+         issues,
+         im,
+         levels,
+         _helpers
+       )
        when is_atom(level) and is_binary(message) do
     maybe_flash_issue(ast, issues, im, meta, level, message, levels)
   end
