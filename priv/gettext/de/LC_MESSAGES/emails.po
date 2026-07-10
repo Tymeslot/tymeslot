@@ -461,7 +461,6 @@ msgstr "auf diese E-Mail antworten"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:61
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:171
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:98
 #, elixir-autogen, elixir-format
 msgid "soon"
 msgstr "bald"
@@ -1739,34 +1738,10 @@ msgstr ""
 "Bestätigung wird an Ihre bisherige Adresse gesendet, damit Sie wissen, dass"
 " die Umstellung erfolgt ist."
 
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:124
-#, elixir-autogen, elixir-format
-msgid "in %{count} day"
-msgid_plural "in %{count} days"
-msgstr[0] "in %{count} Tag"
-msgstr[1] "in %{count} Tagen"
-
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:113
-#, elixir-autogen, elixir-format
-msgid "in %{count} hour"
-msgid_plural "in %{count} hours"
-msgstr[0] "in %{count} Stunde"
-msgstr[1] "in %{count} Stunden"
-
 #: dev_support/email_testing/helpers.ex:77
 #, elixir-autogen, elixir-format
 msgid "in %{time_until}"
 msgstr "in %{time_until}"
-
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:130
-#, elixir-autogen, elixir-format
-msgid "today"
-msgstr "heute"
-
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:127
-#, elixir-autogen, elixir-format
-msgid "tomorrow"
-msgstr "morgen"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:170
 #, elixir-autogen, elixir-format

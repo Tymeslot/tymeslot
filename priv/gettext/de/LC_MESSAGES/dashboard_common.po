@@ -225,13 +225,3 @@ msgstr "Design-Auswahl"
 #, elixir-autogen, elixir-format
 msgid "Video Integration"
 msgstr "Video-Integration"
-
-#: lib/tymeslot_saas_web/live/dashboard/contact_support_component.ex:51
-#, elixir-autogen, elixir-format
-msgid "Contact & Support"
-msgstr "Kontakt & Support"
-
-#: lib/tymeslot_saas_web/live/dashboard/subscription_component.ex:85
-#, elixir-autogen, elixir-format
-msgid "Subscription"
-msgstr "Abonnement"
