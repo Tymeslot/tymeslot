@@ -63,56 +63,93 @@ The embedded PostgreSQL listens only on `localhost` inside the container and is 
 
 ### Option B — Build from source (Docker Compose)
 
-Clone the repository, configure `.env`, then build and run with Docker Compose.
+Create a file `compose.yaml`
 
-#### 1. Clone Repository
+```yaml
+services:
+  tymeslot:
+    pull_policy: build
+    build:
+      context: https://github.com/Tymeslot/tymeslot.git#${VERSION:-main}
+      args:
+        VERSION: ${VERSION:-main}
+      labels:
+        - x-image-version=${VERSION:-main}
+      dockerfile: Dockerfile.docker
+    image: tymeslot:latest
+    container_name: tymeslot
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    environment:
+      DEPLOYMENT_TYPE: "docker"
+      # REQUIRED: Must be at least 64 characters
+      SECRET_KEY_BASE: "${SECRET_KEY_BASE:?openssl rand -base64 64 | tr -d \'\\n\'}"
+      # REQUIRED: Your domain (or "localhost" for testing)
+      PHX_HOST: "${PHX_HOST:-localhost}"
+      # REQUIRED: Database credentials
+      POSTGRES_DB: "${POSTGRES_DB:-tymeslot}"
+      POSTGRES_USER: "${POSTGRES_USER:-tymeslot}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?openssl rand -base64 64 | tr -d \'\\n\'}"
+      PORT: "${PORT:-4000}"
 
-```bash
-git clone https://github.com/Tymeslot/tymeslot.git
-cd tymeslot
+    volumes:
+      - tymeslot_data:/app/data
+      - tymeslot_pg:/var/lib/postgresql/data
+
+# Volume names are pinned with `name:` so they match the `docker run` quick-start
+# (which uses `tymeslot_data` and `tymeslot_pg`) instead of being prefixed with
+# the Compose project name. This keeps a single set of volumes whether you start
+# Tymeslot with `docker run` or `docker compose`.
+volumes:
+  tymeslot_data:
+    name: tymeslot_data
+  tymeslot_pg:
+    name: tymeslot_pg
+
+networks:
+  default:
+    name: tymeslot_network
 ```
 
-#### 2. Configure Environment
-
-```bash
-# Copy environment template
-cp .env.example .env
-
-# Generate required secrets
-openssl rand -base64 64 | tr -d '\n'  # For SECRET_KEY_BASE
-openssl rand -base64 32 | tr -d '\n'  # For POSTGRES_PASSWORD
-
-# Edit .env and fill in the required values
-nano .env
+Fill basic security information:
+```
+echo "POSTGRES_PASSWORD=$(openssl rand -base64 64 | tr -d '\n')" >> .env
+echo "SECRET_KEY_BASE=$(openssl rand -base64 64 | tr -d '\n')" >> .env
 ```
 
-**Required Configuration** (`.env` file):
-
-```bash
-# REQUIRED: Must be at least 64 characters
-SECRET_KEY_BASE=<paste_generated_secret>
-
-# REQUIRED: Your domain (or "localhost" for testing)
-PHX_HOST=localhost
-
-# REQUIRED: Database credentials
-POSTGRES_DB=tymeslot
-POSTGRES_USER=tymeslot
-POSTGRES_PASSWORD=<paste_generated_password>
-
-# OPTIONAL: Port (defaults to 4000)
-PORT=4000
-```
+For the full env example create a copy of [.env.example](.env.example)
 
 #### 3. Build and run
 
 **Method 1 — Docker Compose (recommended):**
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
 Compose reads your `.env`, builds the image, and starts the container with the `tymeslot_data` and `tymeslot_pg` volumes.
+
+If you want to mount the volumes locally you can create a `compose.override.yaml`
+
+```
+volumes:
+  tymeslot_data:
+    name: tymeslot_data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./tymeslot_data
+  tymeslot_pg:
+    name: tymeslot_pg
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./tymeslot_pg
+```
+
 
 **Method 2 — Build script:**
 
