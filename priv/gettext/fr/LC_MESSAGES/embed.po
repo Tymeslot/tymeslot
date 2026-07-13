@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Language: fr\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Plural-Forms: nplurals=2; plural=(n>1);\n"
 
 #: lib/tymeslot_web/controllers/embed_blocked_html.ex:28
 #, elixir-autogen, elixir-format

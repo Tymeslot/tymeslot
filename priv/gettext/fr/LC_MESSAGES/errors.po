@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Language: fr\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Plural-Forms: nplurals=2; plural=(n>1);\n"
 
 #: Error Messages
 msgid "something_went_wrong"
