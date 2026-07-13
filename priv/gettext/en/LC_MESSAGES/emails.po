@@ -413,11 +413,6 @@ msgstr "We're writing to confirm that your appointment has been cancelled."
 msgid "Would you like to schedule a new appointment?"
 msgstr "Would you like to schedule a new appointment?"
 
-#: lib/tymeslot/emails/appointment_builder.ex:245
-#, elixir-autogen, elixir-format
-msgid "You'll receive %{count} reminders before the appointment."
-msgstr "You'll receive %{count} reminders before the appointment."
-
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:303
 #, elixir-autogen, elixir-format
 msgid "attendee"
@@ -436,8 +431,8 @@ msgstr "in %{label}"
 msgid "in 30 minutes"
 msgstr "in 30 minutes"
 
-#: lib/tymeslot/emails/appointment_builder.ex:279
-#: lib/tymeslot/emails/appointment_builder.ex:282
+#: lib/tymeslot/emails/appointment_builder.ex:283
+#: lib/tymeslot/emails/appointment_builder.ex:286
 #: lib/tymeslot/emails/shared/formatting.ex:236
 #: lib/tymeslot/emails/shared/formatting.ex:251
 #, elixir-autogen, elixir-format
@@ -468,7 +463,7 @@ msgstr "Having trouble with the button? Copy and paste this link into your brows
 msgid "Meeting will start at the scheduled time"
 msgstr "Meeting will start at the scheduled time"
 
-#: lib/tymeslot/emails/appointment_builder.ex:281
+#: lib/tymeslot/emails/appointment_builder.ex:285
 #, elixir-autogen, elixir-format
 msgid "day"
 msgid_plural "days"
@@ -476,7 +471,7 @@ msgstr[0] "day"
 msgstr[1] "days"
 
 #: dev_support/email_testing/helpers.ex:76
-#: lib/tymeslot/emails/appointment_builder.ex:280
+#: lib/tymeslot/emails/appointment_builder.ex:284
 #: lib/tymeslot/emails/shared/formatting.ex:239
 #: lib/tymeslot/emails/shared/formatting.ex:240
 #: lib/tymeslot/emails/shared/formatting.ex:244
@@ -1895,3 +1890,10 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "⚠️ Email Change Request - Security Alert"
 msgstr ""
+
+#: lib/tymeslot/emails/appointment_builder.ex:245
+#, elixir-autogen, elixir-format
+msgid "You'll receive %{count} reminder before the appointment."
+msgid_plural "You'll receive %{count} reminders before the appointment."
+msgstr[0] "You'll receive %{count} reminder before the appointment."
+msgstr[1] "You'll receive %{count} reminders before the appointment."

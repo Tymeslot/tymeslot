@@ -413,11 +413,6 @@ msgstr "Nous vous confirmons l'annulation de votre rendez-vous."
 msgid "Would you like to schedule a new appointment?"
 msgstr "Souhaitez-vous prendre un nouveau rendez-vous ?"
 
-#: lib/tymeslot/emails/appointment_builder.ex:245
-#, elixir-autogen, elixir-format
-msgid "You'll receive %{count} reminders before the appointment."
-msgstr "Vous recevrez %{count} rappels avant le rendez-vous."
-
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:303
 #, elixir-autogen, elixir-format
 msgid "attendee"
@@ -436,8 +431,8 @@ msgstr "dans %{label}"
 msgid "in 30 minutes"
 msgstr "dans 30 minutes"
 
-#: lib/tymeslot/emails/appointment_builder.ex:279
-#: lib/tymeslot/emails/appointment_builder.ex:282
+#: lib/tymeslot/emails/appointment_builder.ex:283
+#: lib/tymeslot/emails/appointment_builder.ex:286
 #: lib/tymeslot/emails/shared/formatting.ex:236
 #: lib/tymeslot/emails/shared/formatting.ex:251
 #, elixir-autogen, elixir-format
@@ -468,7 +463,7 @@ msgstr "Le bouton ne fonctionne pas ? Copiez-collez ce lien dans votre navigateu
 msgid "Meeting will start at the scheduled time"
 msgstr "La réunion commencera à l'heure prévue"
 
-#: lib/tymeslot/emails/appointment_builder.ex:281
+#: lib/tymeslot/emails/appointment_builder.ex:285
 #, elixir-autogen, elixir-format
 msgid "day"
 msgid_plural "days"
@@ -476,7 +471,7 @@ msgstr[0] "jour"
 msgstr[1] "jours"
 
 #: dev_support/email_testing/helpers.ex:76
-#: lib/tymeslot/emails/appointment_builder.ex:280
+#: lib/tymeslot/emails/appointment_builder.ex:284
 #: lib/tymeslot/emails/shared/formatting.ex:239
 #: lib/tymeslot/emails/shared/formatting.ex:240
 #: lib/tymeslot/emails/shared/formatting.ex:244
@@ -620,6 +615,8 @@ msgid "%{name} has updated an event you're attending."
 msgstr "%{name} a mis à jour un événement auquel vous participez."
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:213
+#: lib/tymeslot/emails/shared/text_body_helper.ex:213
+#: lib/tymeslot/emails/shared/text_body_helper.ex:217
 #: lib/tymeslot/emails/shared/text_body_helper.ex:217
 #: lib/tymeslot/emails/templates/event_update_notification.ex:213
 #, elixir-autogen, elixir-format
@@ -1893,3 +1890,10 @@ msgstr "⚠️ Erreur de synchronisation du calendrier - Action manuelle requise
 #, elixir-autogen, elixir-format
 msgid "⚠️ Email Change Request - Security Alert"
 msgstr "⚠️ Demande de changement d'e-mail - Alerte de sécurité"
+
+#: lib/tymeslot/emails/appointment_builder.ex:245
+#, elixir-autogen, elixir-format
+msgid "You'll receive %{count} reminder before the appointment."
+msgid_plural "You'll receive %{count} reminders before the appointment."
+msgstr[0] "Vous recevrez %{count} rappel avant le rendez-vous."
+msgstr[1] "Vous recevrez %{count} rappels avant le rendez-vous."

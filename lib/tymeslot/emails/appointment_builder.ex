@@ -242,7 +242,11 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       time_until_friendly: dgettext("emails", "in %{label}", label: reminder_label),
       reminders_enabled: true,
       reminders_summary:
-        dgettext("emails", "You'll receive %{count} reminders before the appointment.",
+        dngettext(
+          "emails",
+          "You'll receive %{count} reminder before the appointment.",
+          "You'll receive %{count} reminders before the appointment.",
+          length(reminder_list),
           count: length(reminder_list)
         )
     }

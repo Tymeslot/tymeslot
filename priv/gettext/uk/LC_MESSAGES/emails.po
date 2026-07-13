@@ -413,11 +413,6 @@ msgstr "Пишемо, щоб підтвердити скасування ваш�
 msgid "Would you like to schedule a new appointment?"
 msgstr "Бажаєте запланувати нову зустріч?"
 
-#: lib/tymeslot/emails/appointment_builder.ex:245
-#, elixir-autogen, elixir-format
-msgid "You'll receive %{count} reminders before the appointment."
-msgstr "Ви отримаєте %{count} нагадувань до початку зустрічі."
-
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:303
 #, elixir-autogen, elixir-format
 msgid "attendee"
@@ -436,8 +431,8 @@ msgstr "через %{label}"
 msgid "in 30 minutes"
 msgstr "через 30 хвилин"
 
-#: lib/tymeslot/emails/appointment_builder.ex:279
-#: lib/tymeslot/emails/appointment_builder.ex:282
+#: lib/tymeslot/emails/appointment_builder.ex:283
+#: lib/tymeslot/emails/appointment_builder.ex:286
 #: lib/tymeslot/emails/shared/formatting.ex:236
 #: lib/tymeslot/emails/shared/formatting.ex:251
 #, elixir-autogen, elixir-format
@@ -469,7 +464,7 @@ msgstr "Не працює кнопка? Скопіюйте та вставте �
 msgid "Meeting will start at the scheduled time"
 msgstr "Зустріч розпочнеться у запланований час"
 
-#: lib/tymeslot/emails/appointment_builder.ex:281
+#: lib/tymeslot/emails/appointment_builder.ex:285
 #, elixir-autogen, elixir-format
 msgid "day"
 msgid_plural "days"
@@ -478,7 +473,7 @@ msgstr[1] "дні"
 msgstr[2] "днів"
 
 #: dev_support/email_testing/helpers.ex:76
-#: lib/tymeslot/emails/appointment_builder.ex:280
+#: lib/tymeslot/emails/appointment_builder.ex:284
 #: lib/tymeslot/emails/shared/formatting.ex:239
 #: lib/tymeslot/emails/shared/formatting.ex:240
 #: lib/tymeslot/emails/shared/formatting.ex:244
@@ -1898,3 +1893,11 @@ msgstr "⚠️ Помилка синхронізації календаря — 
 #, elixir-autogen, elixir-format
 msgid "⚠️ Email Change Request - Security Alert"
 msgstr "⚠️ Запит на зміну електронної адреси — сповіщення безпеки"
+
+#: lib/tymeslot/emails/appointment_builder.ex:245
+#, elixir-autogen, elixir-format
+msgid "You'll receive %{count} reminder before the appointment."
+msgid_plural "You'll receive %{count} reminders before the appointment."
+msgstr[0] "Ви отримаєте %{count} нагадування до початку зустрічі."
+msgstr[1] "Ви отримаєте %{count} нагадування до початку зустрічі."
+msgstr[2] "Ви отримаєте %{count} нагадувань до початку зустрічі."
