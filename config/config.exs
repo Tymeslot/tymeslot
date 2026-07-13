@@ -221,16 +221,17 @@ config :tymeslot, TymeslotWeb.Gettext, default_locale: "en"
 # All supported languages with their metadata for UI rendering.
 #
 # A locale listed here is a promise: the completeness tests require every gettext
-# domain and every /for profession page to be fully translated into it. Add a
-# locale only once its catalogues and `priv/professions/<locale>/` files are done.
-# The uk catalogues exist on disk but are not yet complete, so it is not
-# listed — see priv/gettext/TRANSLATING.md.
+# domain and every /for profession page to be fully translated into it, and the
+# marketing pages need a `localized_slugs` entry per profession. Add a locale only
+# once its catalogues, its `priv/professions/<locale>/` files, and its URL slugs
+# are all done — see priv/gettext/TRANSLATING.md.
 config :tymeslot, :locales,
   supported: [
     %{code: "en", name: "English", country_code: :gbr},
     %{code: "de", name: "Deutsch", country_code: :deu},
     %{code: "fr", name: "Français", country_code: :fra},
-    %{code: "it", name: "Italiano", country_code: :ita}
+    %{code: "it", name: "Italiano", country_code: :ita},
+    %{code: "uk", name: "Українська", country_code: :ukr}
   ],
   default: "en"
 
