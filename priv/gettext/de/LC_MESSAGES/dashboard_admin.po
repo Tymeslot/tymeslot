@@ -331,7 +331,7 @@ msgstr "Nutzer"
 #: lib/tymeslot_web/live/admin_live.ex:298
 #, elixir-autogen, elixir-format
 msgid "User demoted from admin."
-msgstr "Nutzer wurde vom Administrator herabgestuft."
+msgstr "Nutzer ist nicht mehr Administrator."
 
 #: lib/tymeslot_web/live/admin_live.ex:310
 #, elixir-autogen, elixir-format
@@ -351,7 +351,7 @@ msgstr "Nutzer"
 #: lib/tymeslot_web/live/admin_live.ex:291
 #, elixir-autogen, elixir-format
 msgid "You have been demoted from admin."
-msgstr "Sie wurden vom Administrator herabgestuft."
+msgstr "Sie sind nicht mehr Administrator."
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:49
 #, elixir-autogen, elixir-format
