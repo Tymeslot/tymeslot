@@ -141,7 +141,7 @@ msgstr "Cette %{context} nécessite un navigateur moderne prenant en charge les 
 #: lib/tymeslot_web/components/layouts/root.html.heex:51
 #, elixir-autogen, elixir-format
 msgid "This app requires JavaScript to function. Please enable it in your browser settings."
-msgstr "Cette application nécessite JavaScript pour fonctionner. Veuillez l'activer dans les paramètres de votre navigateur."
+msgstr "Cette application nécessite JavaScript pour fonctionner. Veuillez l’activer dans les paramètres de votre navigateur."
 
 #: lib/tymeslot_web/components/timezone_dropdown.ex:166
 #, elixir-autogen, elixir-format

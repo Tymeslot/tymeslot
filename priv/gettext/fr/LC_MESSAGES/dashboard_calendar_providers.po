@@ -30,17 +30,17 @@ msgstr "Choisissez les calendriers que nous vérifions pour éviter les doubles 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:222
 #, elixir-autogen, elixir-format
 msgid "Confirm or update the server URL and credentials for this integration. You'll be able to review and adjust the synced calendars on the next step."
-msgstr "Confirmez ou mettez à jour l'URL du serveur et les identifiants de cette intégration. Vous pourrez vérifier et ajuster les calendriers synchronisés à l'étape suivante."
+msgstr "Confirmez ou mettez à jour l’URL du serveur et les identifiants de cette intégration. Vous pourrez vérifier et ajuster les calendriers synchronisés à l’étape suivante."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex:37
 #, elixir-autogen, elixir-format
 msgid "Connect any CalDAV-compatible server"
-msgstr "Connectez n'importe quel serveur compatible CalDAV"
+msgstr "Connectez n’importe quel serveur compatible CalDAV"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:165
 #, elixir-autogen, elixir-format
 msgid "Could not save: %{reason}"
-msgstr "Impossible d'enregistrer : %{reason}"
+msgstr "Impossible d’enregistrer : %{reason}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:91
 #, elixir-autogen, elixir-format
@@ -55,12 +55,12 @@ msgstr "Terminé"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:83
 #, elixir-autogen, elixir-format
 msgid "Enter your server URL and credentials to discover calendars."
-msgstr "Saisissez l'URL de votre serveur et vos identifiants pour découvrir les calendriers."
+msgstr "Saisissez l’URL de votre serveur et vos identifiants pour découvrir les calendriers."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:179
 #, elixir-autogen, elixir-format
 msgid "Integration Name"
-msgstr "Nom de l'intégration"
+msgstr "Nom de l’intégration"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:60
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:98
@@ -164,13 +164,13 @@ msgstr "Mon calendrier mailbox.org"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:106
 #, elixir-autogen, elixir-format
 msgid "No calendars found. Try refreshing the integration."
-msgstr "Aucun calendrier trouvé. Essayez d'actualiser l'intégration."
+msgstr "Aucun calendrier trouvé. Essayez d’actualiser l’intégration."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:328
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:199
 #, elixir-autogen, elixir-format
 msgid "No calendars were discovered. Double-check your credentials or try again."
-msgstr "Aucun calendrier n'a été découvert. Vérifiez vos identifiants ou réessayez."
+msgstr "Aucun calendrier n’a été découvert. Vérifiez vos identifiants ou réessayez."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/baikal_config.ex:37
 #, elixir-autogen, elixir-format
@@ -181,7 +181,7 @@ msgstr "Serveur CalDAV/CardDAV basé sur PHP"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:139
 #, elixir-autogen, elixir-format
 msgid "Password / App Password"
-msgstr "Mot de passe / mot de passe d'application"
+msgstr "Mot de passe / mot de passe d’application"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:151
 #, elixir-autogen, elixir-format
@@ -255,7 +255,7 @@ msgstr "Paramètres → Sécurité"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex:55
 #, elixir-autogen, elixir-format
 msgid "Setup guide"
-msgstr "Guide d'installation"
+msgstr "Guide d’installation"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:75
 #, elixir-autogen, elixir-format
@@ -266,7 +266,7 @@ msgstr "Connexion et sécurité → Mots de passe spécifiques aux applications"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:358
 #, elixir-autogen, elixir-format
 msgid "Something went wrong. Please try again."
-msgstr "Une erreur s'est produite. Veuillez réessayer."
+msgstr "Une erreur s’est produite. Veuillez réessayer."
 
 #: lib/tymeslot/integrations/calendar/providers/provider_config.ex:117
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:41
@@ -312,12 +312,12 @@ msgstr "Calendrier sans nom"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:129
 #, elixir-autogen, elixir-format
 msgid "Username"
-msgstr "Nom d'utilisateur"
+msgstr "Nom d’utilisateur"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:70
 #, elixir-autogen, elixir-format
 msgid "app-specific password"
-msgstr "mot de passe spécifique à l'application"
+msgstr "mot de passe spécifique à l’application"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:47
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:90
@@ -399,7 +399,7 @@ msgstr "Intégration OAuth complète avec prise en charge de Google Meet"
 #: lib/tymeslot/integrations/calendar/providers/provider_config.ex:157
 #, elixir-autogen, elixir-format
 msgid "Homepage demo provider"
-msgstr "Fournisseur de démonstration de la page d'accueil"
+msgstr "Fournisseur de démonstration de la page d’accueil"
 
 #: lib/tymeslot/integrations/calendar/providers/provider_config.ex:82
 #, elixir-autogen, elixir-format
@@ -429,9 +429,9 @@ msgstr "Prise en charge universelle des serveurs CalDAV"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:65
 #, elixir-autogen, elixir-format
 msgid "If you have two-factor authentication enabled, generate an application-specific password under %{location} on mailbox.org and use that here instead of your regular password."
-msgstr "Si vous avez activé l'authentification à deux facteurs, générez un mot de passe spécifique à l'application sous %{location} sur mailbox.org et utilisez-le ici à la place de votre mot de passe habituel."
+msgstr "Si vous avez activé l’authentification à deux facteurs, générez un mot de passe spécifique à l’application sous %{location} sur mailbox.org et utilisez-le ici à la place de votre mot de passe habituel."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:65
 #, elixir-autogen, elixir-format
 msgid "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email."
-msgstr "iCloud n'acceptera pas votre mot de passe Apple ID ici. Générez un %{app_specific_password} sur %{link} sous %{location}, puis saisissez-le ci-dessous avec votre adresse e-mail Apple ID."
+msgstr "iCloud n’acceptera pas votre mot de passe Apple ID ici. Générez un %{app_specific_password} sur %{link} sous %{location}, puis saisissez-le ci-dessous avec votre adresse e-mail Apple ID."

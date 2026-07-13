@@ -65,7 +65,7 @@ msgstr "Ajouter une question"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex:31
 #, elixir-autogen, elixir-format
 msgid "Add up to three reminder emails for this meeting type. We recommend using only one."
-msgstr "Ajoutez jusqu'à trois e-mails de rappel pour ce type de réunion. Nous recommandons de n'en utiliser qu'un seul."
+msgstr "Ajoutez jusqu’à trois e-mails de rappel pour ce type de réunion. Nous recommandons de n’en utiliser qu’un seul."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:538
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:569
@@ -81,7 +81,7 @@ msgstr "Toutes les modifications ont été enregistrées"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex:177
 #, elixir-autogen, elixir-format
 msgid "An error occurred"
-msgstr "Une erreur s'est produite"
+msgstr "Une erreur s’est produite"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex:66
 #, elixir-autogen, elixir-format
@@ -123,12 +123,12 @@ msgstr "Annuler le rappel personnalisé"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:318
 #, elixir-autogen, elixir-format
 msgid "Changing the type will clear the configuration you've defined (options, body, min/max). Past bookings keep their original answers. Continue?"
-msgstr "Changer le type effacera la configuration que vous avez définie (options, corps, min/max). Les réservations passées conservent leurs réponses d'origine. Continuer ?"
+msgstr "Changer le type effacera la configuration que vous avez définie (options, corps, min/max). Les réservations passées conservent leurs réponses d’origine. Continuer ?"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:79
 #, elixir-autogen, elixir-format
 msgid "Choose an icon to represent this meeting type, or select \"No Icon\" for no visual indicator."
-msgstr "Choisissez une icône pour représenter ce type de réunion, ou sélectionnez « Aucune icône » pour n'avoir aucun indicateur visuel."
+msgstr "Choisissez une icône pour représenter ce type de réunion, ou sélectionnez « Aucune icône » pour n’avoir aucun indicateur visuel."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:215
 #, elixir-autogen, elixir-format
@@ -153,7 +153,7 @@ msgstr "Détermine comment la personne qui réserve saisit sa réponse."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex:163
 #, elixir-autogen, elixir-format
 msgid "Couldn't save changes"
-msgstr "Impossible d'enregistrer les modifications"
+msgstr "Impossible d’enregistrer les modifications"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:318
 #, elixir-autogen, elixir-format
@@ -254,7 +254,7 @@ msgstr "Saisissez un prix valide pour ce type de réunion"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex:162
 #, elixir-autogen, elixir-format
 msgid "Failed to save meeting type"
-msgstr "Échec de l'enregistrement du type de réunion"
+msgstr "Échec de l’enregistrement du type de réunion"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex:26
 #, elixir-autogen, elixir-format
@@ -264,7 +264,7 @@ msgstr "Invités"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:215
 #, elixir-autogen, elixir-format
 msgid "Help text (optional)"
-msgstr "Texte d'aide (facultatif)"
+msgstr "Texte d’aide (facultatif)"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:468
 #, elixir-autogen, elixir-format
@@ -304,7 +304,7 @@ msgstr "Heure la plus tardive que la personne qui réserve peut choisir."
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex:40
 #, elixir-autogen, elixir-format
 msgid "Let invitees add up to %{max_guests} guests to this meeting"
-msgstr "Permettez aux invités d'ajouter jusqu'à %{max_guests} invités à cette réunion"
+msgstr "Permettez aux invités d’ajouter jusqu’à %{max_guests} invités à cette réunion"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:459
 #, elixir-autogen, elixir-format
@@ -465,7 +465,7 @@ msgstr "Rappels"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:402
 #, elixir-autogen, elixir-format
 msgid "Remove option"
-msgstr "Supprimer l'option"
+msgstr "Supprimer l’option"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex:55
 #, elixir-autogen, elixir-format
@@ -505,7 +505,7 @@ msgstr "Sélectionnez une unité de rappel valide"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:154
 #, elixir-autogen, elixir-format
 msgid "Set up video integration"
-msgstr "Configurer l'intégration vidéo"
+msgstr "Configurer l’intégration vidéo"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex:240
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:478
@@ -542,12 +542,12 @@ msgstr "La personne qui réserve doit répondre à cette question avant de pouvo
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/show_as_free_section.ex:44
 #, elixir-autogen, elixir-format
 msgid "The event is still created, but marked as free time so it doesn't block other bookings or appear busy to people who can see your availability."
-msgstr "L'événement est toujours créé, mais marqué comme temps libre afin de ne pas bloquer d'autres réservations ni apparaître comme occupé pour les personnes qui voient votre disponibilité."
+msgstr "L’événement est toujours créé, mais marqué comme temps libre afin de ne pas bloquer d’autres réservations ni apparaître comme occupé pour les personnes qui voient votre disponibilité."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:282
 #, elixir-autogen, elixir-format
 msgid "The notice the booker must read and confirm before they can continue."
-msgstr "L'avis que la personne qui réserve doit lire et confirmer avant de pouvoir continuer."
+msgstr "L’avis que la personne qui réserve doit lire et confirmer avant de pouvoir continuer."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:207
 #, elixir-autogen, elixir-format
@@ -584,7 +584,7 @@ msgstr "URL"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex:145
 #, elixir-autogen, elixir-format
 msgid "Unable to verify subscription status. Please try again."
-msgstr "Impossible de vérifier le statut de l'abonnement. Veuillez réessayer."
+msgstr "Impossible de vérifier le statut de l’abonnement. Veuillez réessayer."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex:174
 #, elixir-autogen, elixir-format
@@ -610,12 +610,12 @@ msgstr "Oui, changer le type"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex:49
 #, elixir-autogen, elixir-format
 msgid "You can configure up to 3 reminders"
-msgstr "Vous pouvez configurer jusqu'à 3 rappels"
+msgstr "Vous pouvez configurer jusqu’à 3 rappels"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:200
 #, elixir-autogen, elixir-format
 msgid "e.g., Company name"
-msgstr "p. ex., Nom de l'entreprise"
+msgstr "p. ex., Nom de l’entreprise"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:216
 #, elixir-autogen, elixir-format

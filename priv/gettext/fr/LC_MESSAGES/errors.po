@@ -15,7 +15,7 @@ msgid "invalid_meeting_link"
 msgstr "Lien de réunion invalide"
 
 msgid "slot_no_longer_available"
-msgstr "Ce créneau n'est plus disponible"
+msgstr "Ce créneau n’est plus disponible"
 
 msgid "name_required"
 msgstr "Nom requis"
@@ -34,7 +34,7 @@ msgstr "Configuration du calendrier requise"
 #: lib/tymeslot_web/themes/shared/components/error_component.ex:44
 #, elixir-autogen
 msgid "connect_calendar_first"
-msgstr "Veuillez d'abord connecter votre calendrier"
+msgstr "Veuillez d’abord connecter votre calendrier"
 
 #: Status
 msgid "loading"
@@ -56,7 +56,7 @@ msgstr "ne peut pas être vide"
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:31
 #, elixir-autogen, elixir-format
 msgid "does not exist"
-msgstr "n'existe pas"
+msgstr "n’existe pas"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:28
 #, elixir-autogen, elixir-format
@@ -194,4 +194,4 @@ msgstr[1] "devrait avoir au plus %{count} éléments"
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:32
 #, elixir-autogen, elixir-format
 msgid "violates an exclusion constraint"
-msgstr "viole une contrainte d'exclusion"
+msgstr "viole une contrainte d’exclusion"

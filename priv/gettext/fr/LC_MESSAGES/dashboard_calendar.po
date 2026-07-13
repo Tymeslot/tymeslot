@@ -243,7 +243,7 @@ msgstr "Rechercher des événements"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex:37
 #, elixir-autogen, elixir-format
 msgid "Some calendars have never been synced."
-msgstr "Certains calendriers n'ont jamais été synchronisés."
+msgstr "Certains calendriers n’ont jamais été synchronisés."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:218
 #, elixir-autogen, elixir-format
@@ -259,7 +259,7 @@ msgstr "Synchronisation des calendriers%{progress}..."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:69
 #, elixir-autogen, elixir-format
 msgid "Today"
-msgstr "Aujourd'hui"
+msgstr "Aujourd’hui"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:164
 #, elixir-autogen, elixir-format
@@ -298,7 +298,7 @@ msgstr "toute la journée"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex:56
 #, elixir-autogen, elixir-format
 msgid "just now"
-msgstr "à l'instant"
+msgstr "à l’instant"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:66
 #, elixir-autogen, elixir-format

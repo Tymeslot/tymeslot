@@ -199,7 +199,7 @@ msgstr "Grille"
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex:389
 #, elixir-autogen, elixir-format
 msgid "Invalid time format"
-msgstr "Format d'heure invalide"
+msgstr "Format d’heure invalide"
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:182
 #, elixir-autogen, elixir-format
@@ -229,7 +229,7 @@ msgstr "Aucun horaire défini"
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:276
 #, elixir-autogen, elixir-format
 msgid "Not taking any bookings on this day."
-msgstr "Aucune réservation n'est acceptée ce jour-là."
+msgstr "Aucune réservation n’est acceptée ce jour-là."
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:72
 #, elixir-autogen, elixir-format
@@ -239,7 +239,7 @@ msgstr "Indisponible"
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:283
 #, elixir-autogen, elixir-format
 msgid "Outside business hours"
-msgstr "En dehors des heures d'ouverture"
+msgstr "En dehors des heures d’ouverture"
 
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:176
 #, elixir-autogen, elixir-format
@@ -331,7 +331,7 @@ msgstr "Indisponible"
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:203
 #, elixir-autogen, elixir-format
 msgid "Until"
-msgstr "Jusqu'à"
+msgstr "Jusqu’à"
 
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:111
 #, elixir-autogen, elixir-format

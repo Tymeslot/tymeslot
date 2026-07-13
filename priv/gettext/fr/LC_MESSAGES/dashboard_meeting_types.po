@@ -187,7 +187,7 @@ msgstr "Modifier"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:111
 #, elixir-autogen, elixir-format
 msgid "How Far in Advance Can People Book"
-msgstr "Jusqu'à combien de temps à l'avance peut-on réserver"
+msgstr "Jusqu’à combien de temps à l’avance peut-on réserver"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:109
 #, elixir-autogen, elixir-format
@@ -197,7 +197,7 @@ msgstr "En personne"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:173
 #, elixir-autogen, elixir-format
 msgid "Maximum number of days into the future that appointments can be booked."
-msgstr "Nombre maximal de jours à l'avance pendant lesquels les rendez-vous peuvent être réservés."
+msgstr "Nombre maximal de jours à l’avance pendant lesquels les rendez-vous peuvent être réservés."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex:22
 #, elixir-autogen, elixir-format
@@ -217,7 +217,7 @@ msgstr "Délai de réservation minimum mis à jour à %{hours} heures"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:262
 #, elixir-autogen, elixir-format
 msgid "Minimum hours of notice required before an appointment can be booked."
-msgstr "Nombre minimum d'heures de préavis requis avant qu'un rendez-vous puisse être réservé."
+msgstr "Nombre minimum d’heures de préavis requis avant qu’un rendez-vous puisse être réservé."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:259
 #, elixir-autogen, elixir-format

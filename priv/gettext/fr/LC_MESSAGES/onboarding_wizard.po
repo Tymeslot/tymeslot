@@ -167,7 +167,7 @@ msgstr "Une pause entre les réunions (%{minutes} min)"
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:78
 #, elixir-autogen, elixir-format
 msgid "A few recommended steps — tick off the ones you don't need."
-msgstr "Quelques étapes recommandées : cochez celles dont vous n'avez pas besoin."
+msgstr "Quelques étapes recommandées : cochez celles dont vous n’avez pas besoin."
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex:50
 #, elixir-autogen, elixir-format
@@ -192,7 +192,7 @@ msgstr "Toutes vos disponibilités et réservations seront affichées dans ce fu
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex:246
 #, elixir-autogen, elixir-format
 msgid "App password or token"
-msgstr "Mot de passe d'application ou jeton"
+msgstr "Mot de passe d’application ou jeton"
 
 #: lib/tymeslot_web/live/onboarding_live/skip_confirmation_modal.ex:45
 #, elixir-autogen, elixir-format
@@ -217,7 +217,7 @@ msgstr "Réserver"
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex:315
 #, elixir-autogen, elixir-format
 msgid "Bookable up to %{days}"
-msgstr "Réservable jusqu'à %{days}"
+msgstr "Réservable jusqu’à %{days}"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:189
 #, elixir-autogen, elixir-format
@@ -349,12 +349,12 @@ msgstr "Copier le lien"
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex:257
 #, elixir-autogen, elixir-format
 msgid "Could not create calendar integration. Please try again."
-msgstr "Impossible de créer l'intégration du calendrier. Veuillez réessayer."
+msgstr "Impossible de créer l’intégration du calendrier. Veuillez réessayer."
 
 #: lib/tymeslot_web/live/onboarding_live/theme_handlers.ex:108
 #, elixir-autogen, elixir-format
 msgid "Could not open the preview. Please try again."
-msgstr "Impossible d'ouvrir l'aperçu. Veuillez réessayer."
+msgstr "Impossible d’ouvrir l’aperçu. Veuillez réessayer."
 
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex:260
 #, elixir-autogen, elixir-format
@@ -444,7 +444,7 @@ msgstr "Google Calendar"
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex:246
 #, elixir-autogen, elixir-format
 msgid "How far into the future clients can schedule with you."
-msgstr "Jusqu'à quand vos clients peuvent réserver avec vous."
+msgstr "Jusqu’à quand vos clients peuvent réserver avec vous."
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex:108
 #, elixir-autogen, elixir-format
@@ -454,7 +454,7 @@ msgstr "Je connecterai un calendrier plus tard"
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:234
 #, elixir-autogen, elixir-format
 msgid "If someone books a meeting that ends at %{end_time} and your buffer is %{minutes} min, the next available slot starts at %{next_start}."
-msgstr "Si quelqu'un réserve une réunion qui se termine à %{end_time} et que votre tampon est de %{minutes} min, le prochain créneau disponible commence à %{next_start}."
+msgstr "Si quelqu’un réserve une réunion qui se termine à %{end_time} et que votre tampon est de %{minutes} min, le prochain créneau disponible commence à %{next_start}."
 
 #: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex:93
 #, elixir-autogen, elixir-format
@@ -469,7 +469,7 @@ msgstr "Voyons comment vous mettre en route en quelques étapes seulement."
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex:266
 #, elixir-autogen, elixir-format
 msgid "Let's go"
-msgstr "C'est parti"
+msgstr "C’est parti"
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:284
 #, elixir-autogen, elixir-format
@@ -539,12 +539,12 @@ msgstr "Le mot de passe est requis"
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex:56
 #, elixir-autogen, elixir-format
 msgid "Pick the look and feel invitees see on your booking page."
-msgstr "Choisissez l'apparence que vos invités verront sur votre page de réservation."
+msgstr "Choisissez l’apparence que vos invités verront sur votre page de réservation."
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex:233
 #, elixir-autogen, elixir-format
 msgid "Pick the look and feel of your booking page — then preview the real thing."
-msgstr "Choisissez l'apparence de votre page de réservation, puis prévisualisez le résultat final."
+msgstr "Choisissez l’apparence de votre page de réservation, puis prévisualisez le résultat final."
 
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex:299
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:61
@@ -610,12 +610,12 @@ msgstr "URL du serveur"
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex:148
 #, elixir-autogen, elixir-format
 msgid "Server URL is required"
-msgstr "L'URL du serveur est requise"
+msgstr "L’URL du serveur est requise"
 
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex:88
 #, elixir-autogen, elixir-format
 msgid "Set the accent colour that ties your page together."
-msgstr "Définissez la couleur d'accent qui unifie votre page."
+msgstr "Définissez la couleur d’accent qui unifie votre page."
 
 #: lib/tymeslot_web/live/onboarding_live/welcome_step.ex:30
 #, elixir-autogen, elixir-format
@@ -660,17 +660,17 @@ msgstr "Passer la configuration ?"
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:248
 #, elixir-autogen, elixir-format
 msgid "Someone visiting your page today can only book up to %{period} ahead — no further."
-msgstr "Une personne visitant votre page aujourd'hui ne peut réserver que jusqu'à %{period} à l'avance, pas plus."
+msgstr "Une personne visitant votre page aujourd’hui ne peut réserver que jusqu’à %{period} à l’avance, pas plus."
 
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex:281
 #, elixir-autogen, elixir-format
 msgid "Something went wrong while contacting the calendar server. Please try again."
-msgstr "Une erreur s'est produite lors de la connexion au serveur de calendrier. Veuillez réessayer."
+msgstr "Une erreur s’est produite lors de la connexion au serveur de calendrier. Veuillez réessayer."
 
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex:252
 #, elixir-autogen, elixir-format
 msgid "Something went wrong. Please try again."
-msgstr "Une erreur s'est produite. Veuillez réessayer."
+msgstr "Une erreur s’est produite. Veuillez réessayer."
 
 #: lib/tymeslot_web/live/onboarding_live/onboarding_layout.ex:51
 #, elixir-autogen, elixir-format
@@ -696,12 +696,12 @@ msgstr "Voici votre page de réservation en ligne"
 #: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex:104
 #, elixir-autogen, elixir-format
 msgid "This username is already taken"
-msgstr "Ce nom d'utilisateur est déjà pris"
+msgstr "Ce nom d’utilisateur est déjà pris"
 
 #: lib/tymeslot_web/live/onboarding_live/profile_handlers.ex:98
 #, elixir-autogen, elixir-format
 msgid "This username is reserved"
-msgstr "Ce nom d'utilisateur est réservé"
+msgstr "Ce nom d’utilisateur est réservé"
 
 #: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex:98
 #, elixir-autogen, elixir-format
@@ -716,7 +716,7 @@ msgstr "Ajustez les durées et les questions"
 #: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex:41
 #, elixir-autogen, elixir-format
 msgid "Tymeslot is built around your calendar. Once it's connected, we read your real availability so you're never double-booked and write every new booking back automatically — that's what makes Tymeslot worthwhile."
-msgstr "Tymeslot est conçu autour de votre calendrier. Une fois connecté, nous lisons vos disponibilités réelles pour que vous ne soyez jamais en double réservation, et chaque nouvelle réservation y est automatiquement inscrite : c'est ce qui fait tout l'intérêt de Tymeslot."
+msgstr "Tymeslot est conçu autour de votre calendrier. Une fois connecté, nous lisons vos disponibilités réelles pour que vous ne soyez jamais en double réservation, et chaque nouvelle réservation y est automatiquement inscrite : c’est ce qui fait tout l’intérêt de Tymeslot."
 
 #: lib/tymeslot_web/live/onboarding_live/avatar_handlers.ex:43
 #, elixir-autogen, elixir-format
@@ -736,18 +736,18 @@ msgstr "Téléversement en cours… %{percent} %"
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex:214
 #, elixir-autogen, elixir-format
 msgid "Username"
-msgstr "Nom d'utilisateur"
+msgstr "Nom d’utilisateur"
 
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex:335
 #, elixir-autogen, elixir-format
 msgid "Username is already taken. Please choose another."
-msgstr "Ce nom d'utilisateur est déjà pris. Veuillez en choisir un autre."
+msgstr "Ce nom d’utilisateur est déjà pris. Veuillez en choisir un autre."
 
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex:154
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex:325
 #, elixir-autogen, elixir-format
 msgid "Username is required"
-msgstr "Le nom d'utilisateur est requis"
+msgstr "Le nom d’utilisateur est requis"
 
 #: lib/tymeslot_web/live/onboarding_live/initializer.ex:60
 #, elixir-autogen, elixir-format
@@ -772,7 +772,7 @@ msgstr "Avec un préavis de %{notice}, personne ne peut réserver un créneau qu
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:225
 #, elixir-autogen, elixir-format
 msgid "With no buffer, the next available slot starts as soon as a meeting ends."
-msgstr "Sans tampon, le prochain créneau disponible commence dès la fin d'une réunion."
+msgstr "Sans tampon, le prochain créneau disponible commence dès la fin d’une réunion."
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:259
 #, elixir-autogen, elixir-format
@@ -863,7 +863,7 @@ msgstr "votrenom"
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:147
 #, elixir-autogen, elixir-format
 msgid "Advance booking days"
-msgstr "Jours de réservation à l'avance"
+msgstr "Jours de réservation à l’avance"
 
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:145
 #, elixir-autogen, elixir-format

@@ -66,7 +66,7 @@ msgstr "Jeton du bot"
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:301
 #, elixir-autogen, elixir-format
 msgid "Button didn't work? Already started the bot before?"
-msgstr "Le bouton n'a pas fonctionné ? Vous avez déjà démarré le bot auparavant ?"
+msgstr "Le bouton n’a pas fonctionné ? Vous avez déjà démarré le bot auparavant ?"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:284
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:224
@@ -93,7 +93,7 @@ msgstr "Impossible de reconnecter en mode bot personnel"
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex:26
 #, elixir-autogen, elixir-format
 msgid "Cannot toggle in current state"
-msgstr "Impossible de basculer dans l'état actuel"
+msgstr "Impossible de basculer dans l’état actuel"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:314
 #, elixir-autogen, elixir-format
@@ -214,7 +214,7 @@ msgstr "Déconnecter Telegram"
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:229
 #, elixir-autogen, elixir-format
 msgid "Display-only label shown in your dashboard. It does not change where messages are delivered — that is set by the webhook URL itself."
-msgstr "Libellé d'affichage uniquement, visible dans votre Dashboard. Il ne modifie pas la destination des messages : celle-ci est déterminée par l'URL du webhook elle-même."
+msgstr "Libellé d’affichage uniquement, visible dans votre Dashboard. Il ne modifie pas la destination des messages : celle-ci est déterminée par l’URL du webhook elle-même."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:190
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:185
@@ -226,12 +226,12 @@ msgstr "Modifier"
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:413
 #, elixir-autogen, elixir-format
 msgid "Edit Slack Integration"
-msgstr "Modifier l'intégration Slack"
+msgstr "Modifier l’intégration Slack"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:344
 #, elixir-autogen, elixir-format
 msgid "Edit Telegram Integration"
-msgstr "Modifier l'intégration Telegram"
+msgstr "Modifier l’intégration Telegram"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:249
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:189
@@ -243,7 +243,7 @@ msgstr "Abonnements aux événements"
 #: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex:144
 #, elixir-autogen, elixir-format
 msgid "Failed to create integration"
-msgstr "Échec de la création de l'intégration"
+msgstr "Échec de la création de l’intégration"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack/modal_handlers.ex:55
 #: lib/tymeslot_web/live/dashboard/automation/telegram/modal_handlers.ex:55
@@ -264,7 +264,7 @@ msgstr "Échec de la génération du lien. Veuillez réessayer."
 #: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex:59
 #, elixir-autogen, elixir-format
 msgid "Failed to initialize integration. Please try again."
-msgstr "Échec de l'initialisation de l'intégration. Veuillez réessayer."
+msgstr "Échec de l’initialisation de l’intégration. Veuillez réessayer."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex:146
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex:71
@@ -275,18 +275,18 @@ msgstr "Échec de la réactivation"
 #: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex:65
 #, elixir-autogen, elixir-format
 msgid "Failed to save channel"
-msgstr "Échec de l'enregistrement du canal"
+msgstr "Échec de l’enregistrement du canal"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex:184
 #, elixir-autogen, elixir-format
 msgid "Failed to save integration"
-msgstr "Échec de l'enregistrement de l'intégration"
+msgstr "Échec de l’enregistrement de l’intégration"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex:103
 #: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex:54
 #, elixir-autogen, elixir-format
 msgid "Failed to update integration"
-msgstr "Échec de la mise à jour de l'intégration"
+msgstr "Échec de la mise à jour de l’intégration"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex:35
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex:33
@@ -313,13 +313,13 @@ msgstr "Comment obtenir votre jeton de bot et votre ID de discussion"
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:111
 #, elixir-autogen, elixir-format
 msgid "Integration Details"
-msgstr "Détails de l'intégration"
+msgstr "Détails de l’intégration"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:176
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:120
 #, elixir-autogen, elixir-format
 msgid "Integration Name"
-msgstr "Nom de l'intégration"
+msgstr "Nom de l’intégration"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram/modal_handlers.ex:46
 #, elixir-autogen, elixir-format
@@ -352,7 +352,7 @@ msgstr "Intégration réactivée"
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex:22
 #, elixir-autogen, elixir-format
 msgid "Integration status updated"
-msgstr "Statut de l'intégration mis à jour"
+msgstr "Statut de l’intégration mis à jour"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex:41
 #, elixir-autogen, elixir-format
@@ -368,12 +368,12 @@ msgstr "Dernier déclenchement : %{time}"
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:449
 #, elixir-autogen, elixir-format
 msgid "Leave blank to keep current URL"
-msgstr "Laissez vide pour conserver l'URL actuelle"
+msgstr "Laissez vide pour conserver l’URL actuelle"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:205
 #, elixir-autogen, elixir-format
 msgid "Leave blank to keep the current webhook URL. Paste a new one only if you want to replace it."
-msgstr "Laissez vide pour conserver l'URL de webhook actuelle. Collez-en une nouvelle uniquement si vous souhaitez la remplacer."
+msgstr "Laissez vide pour conserver l’URL de webhook actuelle. Collez-en une nouvelle uniquement si vous souhaitez la remplacer."
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:262
 #, elixir-autogen, elixir-format
@@ -420,7 +420,7 @@ msgstr "Ouvrir dans Telegram"
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:431
 #, elixir-autogen, elixir-format
 msgid "Paste the Incoming Webhook URL Slack generated for your channel."
-msgstr "Collez l'URL de webhook entrant générée par Slack pour votre canal."
+msgstr "Collez l’URL de webhook entrant générée par Slack pour votre canal."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:244
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:245
@@ -638,7 +638,7 @@ msgstr "Mettez à jour le canal et les abonnements aux événements pour cet esp
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:438
 #, elixir-autogen, elixir-format
 msgid "Update the webhook URL or event subscriptions for this Slack integration."
-msgstr "Mettez à jour l'URL de webhook ou les abonnements aux événements pour cette intégration Slack."
+msgstr "Mettez à jour l’URL de webhook ou les abonnements aux événements pour cette intégration Slack."
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:296
 #, elixir-autogen, elixir-format
@@ -654,7 +654,7 @@ msgstr "désactivé automatiquement"
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:317
 #, elixir-autogen, elixir-format
 msgid "webhook URL was revoked in Slack"
-msgstr "l'URL du webhook a été révoquée dans Slack"
+msgstr "l’URL du webhook a été révoquée dans Slack"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:179
 #, elixir-autogen, elixir-format
@@ -700,7 +700,7 @@ msgstr "Envoyez un message à %{bot} sur Telegram pour créer un bot et obtenir 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:172
 #, elixir-autogen, elixir-format
 msgid "To find your Chat ID, message %{bot} or add your bot to a group and use the Telegram API."
-msgstr "Pour trouver votre ID de discussion, envoyez un message à %{bot} ou ajoutez votre bot à un groupe et utilisez l'API Telegram."
+msgstr "Pour trouver votre ID de discussion, envoyez un message à %{bot} ou ajoutez votre bot à un groupe et utilisez l’API Telegram."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:208
 #, elixir-autogen, elixir-format

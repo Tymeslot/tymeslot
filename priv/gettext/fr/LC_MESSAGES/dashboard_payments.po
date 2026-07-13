@@ -40,7 +40,7 @@ msgstr "Annuler"
 #: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex:28
 #, elixir-autogen, elixir-format
 msgid "Changing the currency will reset every paid event type to free — existing prices are recorded in the previous currency and would otherwise be charged at the new one."
-msgstr "Changer de devise rendra gratuits tous les types d'événements payants : les prix existants sont enregistrés dans l'ancienne devise et seraient sinon facturés dans la nouvelle."
+msgstr "Changer de devise rendra gratuits tous les types d’événements payants : les prix existants sont enregistrés dans l’ancienne devise et seraient sinon facturés dans la nouvelle."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:94
 #, elixir-autogen, elixir-format
@@ -66,7 +66,7 @@ msgstr "Connectez Stripe pour commencer à facturer vos réunions."
 #: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex:18
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe to start charging for meetings. Money goes directly to your Stripe account."
-msgstr "Connectez Stripe pour commencer à facturer vos réunions. L'argent est versé directement sur votre compte Stripe."
+msgstr "Connectez Stripe pour commencer à facturer vos réunions. L’argent est versé directement sur votre compte Stripe."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:83
 #, elixir-autogen, elixir-format
@@ -82,7 +82,7 @@ msgstr "Connexion…"
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:59
 #, elixir-autogen, elixir-format
 msgid "Continue onboarding"
-msgstr "Poursuivre l'intégration"
+msgstr "Poursuivre l’intégration"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:154
 #, elixir-autogen, elixir-format
@@ -113,7 +113,7 @@ msgstr "Devise mise à jour."
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:242
 #, elixir-autogen, elixir-format
 msgid "Currency updated. Paid event-type prices have been reset."
-msgstr "Devise mise à jour. Les prix des types d'événements payants ont été réinitialisés."
+msgstr "Devise mise à jour. Les prix des types d’événements payants ont été réinitialisés."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:36
 #, elixir-autogen, elixir-format
@@ -136,12 +136,12 @@ msgstr "Déconnecter Stripe"
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:104
 #, elixir-autogen, elixir-format
 msgid "Disconnect your Stripe account from Tymeslot. Existing payments remain visible. New paid bookings will fail until you reconnect."
-msgstr "Déconnectez votre compte Stripe de Tymeslot. Les paiements existants restent visibles. Les nouvelles réservations payantes échoueront jusqu'à ce que vous vous reconnectiez."
+msgstr "Déconnectez votre compte Stripe de Tymeslot. Les paiements existants restent visibles. Les nouvelles réservations payantes échoueront jusqu’à ce que vous vous reconnectiez."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex:38
 #, elixir-autogen, elixir-format
 msgid "Disconnect your Stripe account from Tymeslot? Existing payments remain visible, but new paid bookings will fail until you reconnect."
-msgstr "Déconnecter votre compte Stripe de Tymeslot ? Les paiements existants restent visibles, mais les nouvelles réservations payantes échoueront jusqu'à ce que vous vous reconnectiez."
+msgstr "Déconnecter votre compte Stripe de Tymeslot ? Les paiements existants restent visibles, mais les nouvelles réservations payantes échoueront jusqu’à ce que vous vous reconnectiez."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:86
 #, elixir-autogen, elixir-format
@@ -206,7 +206,7 @@ msgstr "Non connecté"
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:49
 #, elixir-autogen, elixir-format
 msgid "Original charge:"
-msgstr "Prélèvement d'origine :"
+msgstr "Prélèvement d’origine :"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:82
 #, elixir-autogen, elixir-format
@@ -317,7 +317,7 @@ msgstr "Restreint"
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:401
 #, elixir-autogen, elixir-format
 msgid "Something went wrong while issuing the refund. Please try again."
-msgstr "Une erreur est survenue lors de l'émission du remboursement. Veuillez réessayer."
+msgstr "Une erreur est survenue lors de l’émission du remboursement. Veuillez réessayer."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:40
 #, elixir-autogen, elixir-format
@@ -339,22 +339,22 @@ msgstr[1] "Compte Stripe déconnecté. %{count} réservations en attente annulé
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:394
 #, elixir-autogen, elixir-format
 msgid "Stripe has not yet captured a charge for this booking. Try again in a moment."
-msgstr "Stripe n'a pas encore capturé de paiement pour cette réservation. Réessayez dans un instant."
+msgstr "Stripe n’a pas encore capturé de paiement pour cette réservation. Réessayez dans un instant."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:98
 #, elixir-autogen, elixir-format
 msgid "Stripe is reviewing your account. Charges switch on automatically once approved."
-msgstr "Stripe examine votre compte. Les paiements s'activeront automatiquement une fois celui-ci approuvé."
+msgstr "Stripe examine votre compte. Les paiements s’activeront automatiquement une fois celui-ci approuvé."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:62
 #, elixir-autogen, elixir-format
 msgid "The attendee receives the full amount you refund. Tymeslot's platform fee is reversed proportionally; Stripe processing fees on the original charge stay with you."
-msgstr "Le participant reçoit l'intégralité du montant remboursé. Les frais de plateforme de Tymeslot sont remboursés proportionnellement ; les frais de traitement Stripe sur le prélèvement d'origine restent à votre charge."
+msgstr "Le participant reçoit l’intégralité du montant remboursé. Les frais de plateforme de Tymeslot sont remboursés proportionnellement ; les frais de traitement Stripe sur le prélèvement d’origine restent à votre charge."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:387
 #, elixir-autogen, elixir-format
 msgid "This booking has not been paid yet, so it cannot be refunded."
-msgstr "Cette réservation n'a pas encore été payée, elle ne peut donc pas être remboursée."
+msgstr "Cette réservation n’a pas encore été payée, elle ne peut donc pas être remboursée."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:193
 #, elixir-autogen, elixir-format
@@ -369,7 +369,7 @@ msgstr "Ce paiement a déjà été intégralement remboursé."
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:373
 #, elixir-autogen, elixir-format
 msgid "This payment is under dispute and must be handled in your Stripe dashboard."
-msgstr "Ce paiement fait l'objet d'un litige et doit être traité depuis votre tableau de bord Stripe."
+msgstr "Ce paiement fait l’objet d’un litige et doit être traité depuis votre tableau de bord Stripe."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/lifetime_stats.ex:22
 #, elixir-autogen, elixir-format
@@ -380,13 +380,13 @@ msgstr "Total reçu"
 #, elixir-autogen, elixir-format
 msgid "You have %{count} pending booking awaiting payment. Disconnecting will cancel it."
 msgid_plural "You have %{count} pending bookings awaiting payment. Disconnecting will cancel them."
-msgstr[0] "Vous avez %{count} réservation en attente de paiement. La déconnexion l'annulera."
+msgstr[0] "Vous avez %{count} réservation en attente de paiement. La déconnexion l’annulera."
 msgstr[1] "Vous avez %{count} réservations en attente de paiement. La déconnexion les annulera."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:105
 #, elixir-autogen, elixir-format
 msgid "You started connecting Stripe but haven't finished onboarding yet. Continue to start accepting payments."
-msgstr "Vous avez commencé à connecter Stripe mais n'avez pas terminé l'intégration. Poursuivez pour commencer à accepter des paiements."
+msgstr "Vous avez commencé à connecter Stripe mais n’avez pas terminé l’intégration. Poursuivez pour commencer à accepter des paiements."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:112
 #, elixir-autogen, elixir-format

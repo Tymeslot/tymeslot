@@ -19,7 +19,7 @@ msgstr "%{rate} % de réussite"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:151
 #, elixir-autogen, elixir-format
 msgid "A unique security token will be automatically generated for this webhook once created. You'll use it to verify requests in your automation tool."
-msgstr "Un jeton de sécurité unique sera automatiquement généré pour ce webhook une fois créé. Vous l'utiliserez pour vérifier les requêtes dans votre outil d'automatisation."
+msgstr "Un jeton de sécurité unique sera automatiquement généré pour ce webhook une fois créé. Vous l’utiliserez pour vérifier les requêtes dans votre outil d’automatisation."
 
 #: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:462
 #, elixir-autogen, elixir-format
@@ -54,7 +54,7 @@ msgstr "Toutes les requêtes webhook incluent un jeton de sécurité unique dans
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:204
 #, elixir-autogen, elixir-format
 msgid "Are you sure? The current security token will be immediately invalidated and any existing integrations using it will stop working."
-msgstr "Êtes-vous sûr ? Le jeton de sécurité actuel sera immédiatement invalidé et toutes les intégrations existantes qui l'utilisent cesseront de fonctionner."
+msgstr "Êtes-vous sûr ? Le jeton de sécurité actuel sera immédiatement invalidé et toutes les intégrations existantes qui l’utilisent cesseront de fonctionner."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:294
 #, elixir-autogen, elixir-format
@@ -74,7 +74,7 @@ msgstr "Automatisation"
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex:207
 #, elixir-autogen, elixir-format
 msgid "Automation is available on Pro plans."
-msgstr "L'automatisation est disponible avec les forfaits Pro."
+msgstr "L’automatisation est disponible avec les forfaits Pro."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:94
 #, elixir-autogen, elixir-format
@@ -122,7 +122,7 @@ msgstr "Configurez les informations de base de votre webhook."
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:28
 #, elixir-autogen, elixir-format
 msgid "Connect Tymeslot to n8n, Zapier, Make, or your custom automation workflows"
-msgstr "Connectez Tymeslot à n8n, Zapier, Make ou vos propres workflows d'automatisation"
+msgstr "Connectez Tymeslot à n8n, Zapier, Make ou vos propres workflows d’automatisation"
 
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex:222
 #, elixir-autogen, elixir-format
@@ -151,7 +151,7 @@ msgstr "Créez votre premier webhook"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:68
 #, elixir-autogen, elixir-format
 msgid "Create a webhook above and paste the URL"
-msgstr "Créez un webhook ci-dessus et collez l'URL"
+msgstr "Créez un webhook ci-dessus et collez l’URL"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:63
 #, elixir-autogen, elixir-format
@@ -162,17 +162,17 @@ msgstr "Créez un workflow"
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:417
 #, elixir-autogen, elixir-format
 msgid "Delete Integration"
-msgstr "Supprimer l'intégration"
+msgstr "Supprimer l’intégration"
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:392
 #, elixir-autogen, elixir-format
 msgid "Delete Slack Integration?"
-msgstr "Supprimer l'intégration Slack ?"
+msgstr "Supprimer l’intégration Slack ?"
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:254
 #, elixir-autogen, elixir-format
 msgid "Delete Telegram Integration?"
-msgstr "Supprimer l'intégration Telegram ?"
+msgstr "Supprimer l’intégration Telegram ?"
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:167
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:234
@@ -437,7 +437,7 @@ msgstr "Cette action est irréversible. Tous les journaux de livraison de ce web
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex:214
 #, elixir-autogen, elixir-format
 msgid "This automation feature is available on the Pro plan."
-msgstr "Cette fonctionnalité d'automatisation est disponible avec le forfait Pro."
+msgstr "Cette fonctionnalité d’automatisation est disponible avec le forfait Pro."
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:468
 #, elixir-autogen, elixir-format
@@ -447,27 +447,27 @@ msgstr "Total"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:119
 #, elixir-autogen, elixir-format
 msgid "Triggers when a booking time is changed"
-msgstr "Se déclenche lorsque l'horaire d'une réservation est modifié"
+msgstr "Se déclenche lorsque l’horaire d’une réservation est modifié"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:115
 #, elixir-autogen, elixir-format
 msgid "Triggers when a new booking is successfully created"
-msgstr "Se déclenche lorsqu'une nouvelle réservation est créée avec succès"
+msgstr "Se déclenche lorsqu’une nouvelle réservation est créée avec succès"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:117
 #, elixir-autogen, elixir-format
 msgid "Triggers when an existing booking is cancelled"
-msgstr "Se déclenche lorsqu'une réservation existante est annulée"
+msgstr "Se déclenche lorsqu’une réservation existante est annulée"
 
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex:240
 #, elixir-autogen, elixir-format
 msgid "Unable to perform this action. Please try again."
-msgstr "Impossible d'effectuer cette action. Veuillez réessayer."
+msgstr "Impossible d’effectuer cette action. Veuillez réessayer."
 
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex:230
 #, elixir-autogen, elixir-format
 msgid "Unable to verify subscription status. Please try again."
-msgstr "Impossible de vérifier le statut de l'abonnement. Veuillez réessayer."
+msgstr "Impossible de vérifier le statut de l’abonnement. Veuillez réessayer."
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:110
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:261
@@ -478,12 +478,12 @@ msgstr "Mettre à jour le webhook"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:164
 #, elixir-autogen, elixir-format
 msgid "Use this in your n8n/Zapier header verification"
-msgstr "Utilisez-le pour la vérification d'en-tête dans n8n/Zapier"
+msgstr "Utilisez-le pour la vérification d’en-tête dans n8n/Zapier"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:174
 #, elixir-autogen, elixir-format
 msgid "Verify the token in your automation tool to ensure requests are from Tymeslot."
-msgstr "Vérifiez le jeton dans votre outil d'automatisation pour vous assurer que les requêtes proviennent bien de Tymeslot."
+msgstr "Vérifiez le jeton dans votre outil d’automatisation pour vous assurer que les requêtes proviennent bien de Tymeslot."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:72
 #, elixir-autogen, elixir-format
@@ -503,7 +503,7 @@ msgstr "Détails du webhook"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:25
 #, elixir-autogen, elixir-format
 msgid "Webhook Integration Guide"
-msgstr "Guide d'intégration des webhooks"
+msgstr "Guide d’intégration des webhooks"
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:43
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:118
@@ -520,7 +520,7 @@ msgstr "URL du webhook"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:291
 #, elixir-autogen, elixir-format
 msgid "Webhook URL is required."
-msgstr "L'URL du webhook est requise."
+msgstr "L’URL du webhook est requise."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_event_handlers.ex:333
 #, elixir-autogen, elixir-format
@@ -570,7 +570,7 @@ msgstr "Webhooks"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:46
 #, elixir-autogen, elixir-format
 msgid "Webhooks send real-time HTTP POST notifications to your automation tools whenever booking events occur. Perfect for triggering automated workflows, sending custom emails, syncing data, or building integrations."
-msgstr "Les webhooks envoient des notifications HTTP POST en temps réel à vos outils d'automatisation à chaque événement de réservation. Idéal pour déclencher des workflows automatisés, envoyer des e-mails personnalisés, synchroniser des données ou créer des intégrations."
+msgstr "Les webhooks envoient des notifications HTTP POST en temps réel à vos outils d’automatisation à chaque événement de réservation. Idéal pour déclencher des workflows automatisés, envoyer des e-mails personnalisés, synchroniser des données ou créer des intégrations."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:42
 #, elixir-autogen, elixir-format
@@ -601,7 +601,7 @@ msgstr "Mon automatisation n8n"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:197
 #, elixir-autogen, elixir-format
 msgid "This token is automatically sent in the %{header} header."
-msgstr "Ce jeton est automatiquement envoyé dans l'en-tête %{header}."
+msgstr "Ce jeton est automatiquement envoyé dans l’en-tête %{header}."
 
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex:176
 #, elixir-autogen, elixir-format

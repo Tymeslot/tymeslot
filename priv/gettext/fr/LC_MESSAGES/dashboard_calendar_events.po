@@ -15,8 +15,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "%{count} attendee hasn't been invited yet. Discard?"
 msgid_plural "%{count} attendees haven't been invited yet. Discard?"
-msgstr[0] "%{count} participant n'a pas encore été invité. Abandonner ?"
-msgstr[1] "%{count} participants n'ont pas encore été invités. Abandonner ?"
+msgstr[0] "%{count} participant n’a pas encore été invité. Abandonner ?"
+msgstr[1] "%{count} participants n’ont pas encore été invités. Abandonner ?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:106
 #, elixir-autogen, elixir-format
@@ -302,7 +302,7 @@ msgstr "Supprimer"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:425
 #, elixir-autogen, elixir-format
 msgid "Delete event"
-msgstr "Supprimer l'événement"
+msgstr "Supprimer l’événement"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:204
 #, elixir-autogen, elixir-format
@@ -347,7 +347,7 @@ msgstr "Chaque personne recevra une invitation de votre fournisseur de calendrie
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex:21
 #, elixir-autogen, elixir-format
 msgid "Edit recurring event"
-msgstr "Modifier l'événement récurrent"
+msgstr "Modifier l’événement récurrent"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:70
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:98
@@ -363,7 +363,7 @@ msgstr "La date de fin ne doit pas être antérieure à la date de début"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:104
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
-msgstr "L'heure de fin doit être postérieure à l'heure de début"
+msgstr "L’heure de fin doit être postérieure à l’heure de début"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:170
 #, elixir-autogen, elixir-format
@@ -383,7 +383,7 @@ msgstr "Événement créé. Les participants ont été invités."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:177
 #, elixir-autogen, elixir-format
 msgid "Event deleted, but meeting cancellation failed. The attendee may not be notified."
-msgstr "Événement supprimé, mais l'annulation du rendez-vous a échoué. Le participant risque de ne pas être informé."
+msgstr "Événement supprimé, mais l’annulation du rendez-vous a échoué. Le participant risque de ne pas être informé."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:227
 #, elixir-autogen, elixir-format
@@ -398,7 +398,7 @@ msgstr "Événement supprimé. Les participants ont été informés."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:46
 #, elixir-autogen, elixir-format
 msgid "Event details"
-msgstr "Détails de l'événement"
+msgstr "Détails de l’événement"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:66
 #, elixir-autogen, elixir-format
@@ -409,18 +409,18 @@ msgstr "Tous les"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:220
 #, elixir-autogen, elixir-format
 msgid "Failed to create event"
-msgstr "Échec de la création de l'événement"
+msgstr "Échec de la création de l’événement"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:207
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:221
 #, elixir-autogen, elixir-format
 msgid "Failed to delete event"
-msgstr "Échec de la suppression de l'événement"
+msgstr "Échec de la suppression de l’événement"
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:126
 #, elixir-autogen, elixir-format
 msgid "Failed to move event"
-msgstr "Échec du déplacement de l'événement"
+msgstr "Échec du déplacement de l’événement"
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:201
 #, elixir-autogen, elixir-format
@@ -433,12 +433,12 @@ msgstr "Échec de la création de la salle vidéo — lien non mis à jour"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:94
 #, elixir-autogen, elixir-format
 msgid "Failed to save preference"
-msgstr "Échec de l'enregistrement de la préférence"
+msgstr "Échec de l’enregistrement de la préférence"
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:98
 #, elixir-autogen, elixir-format
 msgid "Failed to update event — changes reverted"
-msgstr "Échec de la mise à jour de l'événement — modifications annulées"
+msgstr "Échec de la mise à jour de l’événement — modifications annulées"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:29
 #, elixir-autogen, elixir-format
@@ -488,7 +488,7 @@ msgstr "Heure non valide"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:173
 #, elixir-autogen, elixir-format
 msgid "Invitations will be sent when you create the event."
-msgstr "Les invitations seront envoyées lors de la création de l'événement."
+msgstr "Les invitations seront envoyées lors de la création de l’événement."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:128
 #, elixir-autogen, elixir-format
@@ -498,7 +498,7 @@ msgstr "Inviter des participants (facultatif)"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:52
 #, elixir-autogen, elixir-format
 msgid "Jump to today"
-msgstr "Aller à aujourd'hui"
+msgstr "Aller à aujourd’hui"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:22
 #, elixir-autogen, elixir-format
@@ -630,8 +630,8 @@ msgstr "Principal"
 #, elixir-autogen, elixir-format
 msgid "Refresh failed for %{count} integration"
 msgid_plural "Refresh failed for %{count} integrations"
-msgstr[0] "Échec de l'actualisation pour %{count} intégration"
-msgstr[1] "Échec de l'actualisation pour %{count} intégrations"
+msgstr[0] "Échec de l’actualisation pour %{count} intégration"
+msgstr[1] "Échec de l’actualisation pour %{count} intégrations"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:32
 #, elixir-autogen, elixir-format
@@ -641,7 +641,7 @@ msgstr "Rappels"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:80
 #, elixir-autogen, elixir-format
 msgid "Reminders are synced to your calendar so it can alert you on your own devices."
-msgstr "Les rappels sont synchronisés avec votre calendrier afin qu'il puisse vous alerter sur vos propres appareils."
+msgstr "Les rappels sont synchronisés avec votre calendrier afin qu’il puisse vous alerter sur vos propres appareils."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex:24
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex:38
@@ -728,13 +728,13 @@ msgstr "Sam"
 #, elixir-autogen, elixir-format
 msgid "Send cancellation to %{count} attendee?"
 msgid_plural "Send cancellation to %{count} attendees?"
-msgstr[0] "Envoyer l'annulation à %{count} participant ?"
-msgstr[1] "Envoyer l'annulation à %{count} participants ?"
+msgstr[0] "Envoyer l’annulation à %{count} participant ?"
+msgstr[1] "Envoyer l’annulation à %{count} participants ?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex:49
 #, elixir-autogen, elixir-format
 msgid "Send cancellation?"
-msgstr "Envoyer l'annulation ?"
+msgstr "Envoyer l’annulation ?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:88
 #, elixir-autogen, elixir-format
@@ -765,7 +765,7 @@ msgstr "Dim"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex:329
 #, elixir-autogen, elixir-format
 msgid "The recurrence end date must be on or after the event start."
-msgstr "La date de fin de récurrence doit être identique ou postérieure au début de l'événement."
+msgstr "La date de fin de récurrence doit être identique ou postérieure au début de l’événement."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex:40
 #, elixir-autogen, elixir-format
@@ -775,7 +775,7 @@ msgstr "Cet événement et les suivants"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:32
 #, elixir-autogen, elixir-format
 msgid "This event is linked to a booking. The attendee will be notified of the cancellation."
-msgstr "Cet événement est lié à une réservation. Le participant sera informé de l'annulation."
+msgstr "Cet événement est lié à une réservation. Le participant sera informé de l’annulation."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex:32
 #, elixir-autogen, elixir-format
@@ -805,12 +805,12 @@ msgstr "Heure"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:545
 #, elixir-autogen, elixir-format
 msgid "Time editing is not available for all-day events."
-msgstr "La modification de l'heure n'est pas disponible pour les événements sur toute la journée."
+msgstr "La modification de l’heure n’est pas disponible pour les événements sur toute la journée."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:48
 #, elixir-autogen, elixir-format
 msgid "Time format"
-msgstr "Format de l'heure"
+msgstr "Format de l’heure"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:40
 #, elixir-autogen, elixir-format
@@ -838,7 +838,7 @@ msgstr "Trop de déplacements. Veuillez patienter un instant."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:67
 #, elixir-autogen, elixir-format
 msgid "Too many refreshes. Please wait a moment."
-msgstr "Trop d'actualisations. Veuillez patienter un instant."
+msgstr "Trop d’actualisations. Veuillez patienter un instant."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:247
 #, elixir-autogen, elixir-format
@@ -920,18 +920,18 @@ msgstr "Oui, envoyer"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:47
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to delete this event"
-msgstr "Vous n'avez pas la permission de supprimer cet événement"
+msgstr "Vous n’avez pas la permission de supprimer cet événement"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex:74
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex:308
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to modify this event"
-msgstr "Vous n'avez pas la permission de modifier cet événement"
+msgstr "Vous n’avez pas la permission de modifier cet événement"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:333
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to move this event"
-msgstr "Vous n'avez pas la permission de déplacer cet événement"
+msgstr "Vous n’avez pas la permission de déplacer cet événement"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:238
 #, elixir-autogen, elixir-format
@@ -965,7 +965,7 @@ msgstr "les %{days}"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:222
 #, elixir-autogen, elixir-format
 msgid "until %{date}"
-msgstr "jusqu'au %{date}"
+msgstr "jusqu’au %{date}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:239
 #, elixir-autogen, elixir-format

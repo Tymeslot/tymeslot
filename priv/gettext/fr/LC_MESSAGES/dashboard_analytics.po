@@ -56,7 +56,7 @@ msgstr "Les statistiques de réservation ne sont pas activées sur cette install
 #: lib/tymeslot_web/live/dashboard/analytics_live.ex:160
 #, elixir-autogen, elixir-format
 msgid "Booking analytics started collecting on %{date}. Dates before then show no data, so longer ranges will look sparse until more history builds up."
-msgstr "La collecte des statistiques de réservation a commencé le %{date}. Les dates antérieures n'affichent aucune donnée ; les périodes plus longues paraîtront donc incomplètes tant que l'historique ne sera pas plus fourni."
+msgstr "La collecte des statistiques de réservation a commencé le %{date}. Les dates antérieures n’affichent aucune donnée ; les périodes plus longues paraîtront donc incomplètes tant que l’historique ne sera pas plus fourni."
 
 #: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:46
 #: lib/tymeslot_web/live/dashboard/analytics_live/sources_table.ex:75

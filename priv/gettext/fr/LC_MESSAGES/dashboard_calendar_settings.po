@@ -161,7 +161,7 @@ msgstr "Aucun calendrier connecté pour le moment"
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:322
 #, elixir-autogen, elixir-format
 msgid "Not a Google Calendar"
-msgstr "Ce n'est pas un calendrier Google"
+msgstr "Ce n’est pas un calendrier Google"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:420
 #, elixir-autogen, elixir-format
@@ -186,7 +186,7 @@ msgstr "Reconnecter"
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:373
 #, elixir-autogen, elixir-format
 msgid "Reconnect integration"
-msgstr "Reconnecter l'intégration"
+msgstr "Reconnecter l’intégration"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:209
 #, elixir-autogen, elixir-format
@@ -196,7 +196,7 @@ msgstr "Tout actualiser"
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:379
 #, elixir-autogen, elixir-format
 msgid "Refresh process failed unexpectedly."
-msgstr "Le processus d'actualisation a échoué de manière inattendue."
+msgstr "Le processus d’actualisation a échoué de manière inattendue."
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:208
 #, elixir-autogen, elixir-format
@@ -217,7 +217,7 @@ msgstr "Supprimer la connexion"
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:522
 #, elixir-autogen, elixir-format
 msgid "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
-msgstr "Partagez un lien en lecture seule qui publie vos horaires occupés (sans les détails de l'événement) sous la forme d'un flux iCalendar standard, afin que d'autres systèmes de calendrier puissent superposer vos disponibilités."
+msgstr "Partagez un lien en lecture seule qui publie vos horaires occupés (sans les détails de l’événement) sous la forme d’un flux iCalendar standard, afin que d’autres systèmes de calendrier puissent superposer vos disponibilités."
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:569
 #, elixir-autogen, elixir-format
@@ -232,7 +232,7 @@ msgstr "Ces calendriers sont actuellement ignorés lors de la vérification des 
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:264
 #, elixir-autogen, elixir-format
 msgid "This calendar integration is no longer available."
-msgstr "Cette intégration de calendrier n'est plus disponible."
+msgstr "Cette intégration de calendrier n’est plus disponible."
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:199
 #, elixir-autogen, elixir-format

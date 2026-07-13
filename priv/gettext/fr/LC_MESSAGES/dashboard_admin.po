@@ -306,7 +306,7 @@ msgstr "Score minimum pour l’inscription"
 #: lib/tymeslot_web/live/admin_live.ex:125
 #, elixir-autogen, elixir-format
 msgid "That change would lock everyone out and was not applied."
-msgstr "Cette modification aurait bloqué l'accès de tout le monde et n'a pas été appliquée."
+msgstr "Cette modification aurait bloqué l’accès de tout le monde et n’a pas été appliquée."
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:46
 #, elixir-autogen, elixir-format
