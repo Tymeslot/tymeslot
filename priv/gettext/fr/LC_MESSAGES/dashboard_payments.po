@@ -40,7 +40,7 @@ msgstr "Annuler"
 #: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex:28
 #, elixir-autogen, elixir-format
 msgid "Changing the currency will reset every paid event type to free — existing prices are recorded in the previous currency and would otherwise be charged at the new one."
-msgstr "Changer de devise réinitialisera gratuitement tous les types d'événements payants : les prix existants sont enregistrés dans l'ancienne devise et seraient sinon facturés dans la nouvelle."
+msgstr "Changer de devise rendra gratuits tous les types d'événements payants : les prix existants sont enregistrés dans l'ancienne devise et seraient sinon facturés dans la nouvelle."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:94
 #, elixir-autogen, elixir-format
