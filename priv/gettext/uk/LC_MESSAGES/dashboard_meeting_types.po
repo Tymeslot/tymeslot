@@ -50,7 +50,7 @@ msgstr "Зберегти посилання"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:56
 #, elixir-autogen, elixir-format
 msgid "Unlisted"
-msgstr "Не для всіх"
+msgstr "Прихований"
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:81
 #, elixir-autogen, elixir-format
@@ -218,7 +218,7 @@ msgstr "Мінімальний час до бронювання оновлено
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:262
 #, elixir-autogen, elixir-format
 msgid "Minimum hours of notice required before an appointment can be booked."
-msgstr "Мінімальна кількість годин, за яку потрібно забронювати зустріч."
+msgstr "Мінімальна кількість годин, які мають лишатися до зустрічі, щоб її можна було забронювати."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/scheduling_settings_component.ex:259
 #, elixir-autogen, elixir-format

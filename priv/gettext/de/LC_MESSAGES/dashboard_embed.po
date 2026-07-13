@@ -349,7 +349,7 @@ msgstr "Quellcode"
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:58
 #, elixir-autogen, elixir-format
 msgid "you must restrict embedding"
-msgstr "beschränken Sie das Einbetten"
+msgstr "müssen Sie das Einbetten"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:334
 #, elixir-autogen, elixir-format
@@ -404,7 +404,7 @@ msgstr "Geben Sie eine Domain ein und drücken Sie die Eingabetaste, um sie hinz
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:53
 #, elixir-autogen, elixir-format
 msgid "For security, %{emphasis} to only specific domains you trust. This prevents your booking page from appearing on unauthorized websites."
-msgstr "Aus Sicherheitsgründen %{emphasis} auf nur bestimmte Domains, denen Sie vertrauen. Dies verhindert, dass Ihre Buchungsseite auf nicht autorisierten Websites erscheint."
+msgstr "Aus Sicherheitsgründen %{emphasis} auf bestimmte Domains beschränken, denen Sie vertrauen. Dies verhindert, dass Ihre Buchungsseite auf nicht autorisierten Websites erscheint."
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:258
 #, elixir-autogen, elixir-format

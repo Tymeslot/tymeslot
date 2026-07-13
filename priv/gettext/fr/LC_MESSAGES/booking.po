@@ -195,7 +195,7 @@ msgstr "Avril"
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex:91
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to cancel this appointment?"
-msgstr "Êtes-vous sûr de vouloir annuler ce rendez-vous?"
+msgstr "Êtes-vous sûr de vouloir annuler ce rendez-vous ?"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:189
 #, elixir-autogen, elixir-format
@@ -375,7 +375,7 @@ msgstr "Accéder au calendrier"
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex:65
 #, elixir-autogen, elixir-format
 msgid "Great! Your meeting is still scheduled as planned."
-msgstr "Parfait ! Votre réunion est toujours prévue comme prévu."
+msgstr "Parfait ! Votre réunion est toujours prévue comme convenu."
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:64
 #, elixir-autogen, elixir-format

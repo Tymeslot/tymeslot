@@ -44,7 +44,7 @@ msgstr "Ajouter"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex:118
 #, elixir-autogen, elixir-format
 msgid "Add Custom"
-msgstr "Ajouter personnalisé"
+msgstr "Ajouter un rappel personnalisé"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex:89
 #, elixir-autogen, elixir-format
@@ -118,7 +118,7 @@ msgstr "Annuler"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex:117
 #, elixir-autogen, elixir-format
 msgid "Cancel Custom"
-msgstr "Annuler personnalisé"
+msgstr "Annuler le rappel personnalisé"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:318
 #, elixir-autogen, elixir-format
@@ -128,7 +128,7 @@ msgstr "Changer le type effacera la configuration que vous avez définie (option
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:79
 #, elixir-autogen, elixir-format
 msgid "Choose an icon to represent this meeting type, or select \"No Icon\" for no visual indicator."
-msgstr "Choisissez une icône pour représenter ce type de réunion, ou sélectionnez \"Aucune icône\" pour n'avoir aucun indicateur visuel."
+msgstr "Choisissez une icône pour représenter ce type de réunion, ou sélectionnez « Aucune icône » pour n'avoir aucun indicateur visuel."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:215
 #, elixir-autogen, elixir-format

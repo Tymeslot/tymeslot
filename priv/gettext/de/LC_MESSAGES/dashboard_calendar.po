@@ -56,12 +56,12 @@ msgstr "%{event}, %{time}"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex:58
 #, elixir-autogen, elixir-format
 msgid "%{hours}h ago"
-msgstr "vor %{hours} Std"
+msgstr "vor %{hours} Std."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex:57
 #, elixir-autogen, elixir-format
 msgid "%{minutes}m ago"
-msgstr "vor %{minutes} Min"
+msgstr "vor %{minutes} Min."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex:99
 #, elixir-autogen, elixir-format

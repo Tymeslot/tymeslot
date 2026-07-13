@@ -65,7 +65,7 @@ msgstr "Додати запитання"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex:31
 #, elixir-autogen, elixir-format
 msgid "Add up to three reminder emails for this meeting type. We recommend using only one."
-msgstr "Додайте до трьох електронних листів із нагадуванням про цю зустріч. Рекомендуємо використовувати лише одне."
+msgstr "Додайте до трьох електронних листів із нагадуванням про цю зустріч. Рекомендуємо використовувати лише один."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:538
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:569

@@ -960,7 +960,7 @@ msgstr[1] "occorrenze"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:207
 #, elixir-autogen, elixir-format
 msgid "on %{days}"
-msgstr "il %{days}"
+msgstr "nei giorni %{days}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:222
 #, elixir-autogen, elixir-format

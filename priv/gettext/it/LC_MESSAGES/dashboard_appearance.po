@@ -245,12 +245,12 @@ msgstr "Video"
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:163
 #, elixir-autogen, elixir-format
 msgid "You have a custom image. Selecting a preset will remove it."
-msgstr "Hai un'immagine personalizzata. Selezionando un preset verrà rimossa."
+msgstr "Hai un'immagine personalizzata. Se selezioni un preset, verrà rimossa."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:187
 #, elixir-autogen, elixir-format
 msgid "You have a custom video. Selecting a preset will remove it."
-msgstr "Hai un video personalizzato. Selezionando un preset verrà rimosso."
+msgstr "Hai un video personalizzato. Se selezioni un preset, verrà rimosso."
 
 #: lib/tymeslot_web/themes/quill/theme.ex:52
 #, elixir-autogen, elixir-format

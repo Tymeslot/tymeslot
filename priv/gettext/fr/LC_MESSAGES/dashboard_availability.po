@@ -234,7 +234,7 @@ msgstr "Aucune réservation n'est acceptée ce jour-là."
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:72
 #, elixir-autogen, elixir-format
 msgid "Off"
-msgstr "Fermé"
+msgstr "Indisponible"
 
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:283
 #, elixir-autogen, elixir-format

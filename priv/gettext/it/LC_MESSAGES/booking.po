@@ -385,7 +385,7 @@ msgstr "Ciao! Sono %{name}."
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:116
 #, elixir-autogen, elixir-format
 msgid "Hi, I'm %{name}. Select how much time you need for our conversation."
-msgstr "Ciao, sono %{name}. Scegli la durata del nostro incontro."
+msgstr "Ciao, sono %{name}. Scegli la durata della nostra conversazione."
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/note.ex:34
 #, elixir-autogen, elixir-format

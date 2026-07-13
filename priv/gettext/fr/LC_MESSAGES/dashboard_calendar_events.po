@@ -322,7 +322,7 @@ msgstr "Description"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:117
 #, elixir-autogen, elixir-format
 msgid "Desktop reminders"
-msgstr "Rappels de bureau"
+msgstr "Notifications de bureau"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_discard_attendees_modal.ex:39
 #, elixir-autogen, elixir-format
@@ -448,7 +448,7 @@ msgstr "Premier jour de la semaine"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:64
 #, elixir-autogen, elixir-format
 msgid "Focus search"
-msgstr "Rechercher"
+msgstr "Aller à la recherche"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:250
 #, elixir-autogen, elixir-format
@@ -960,7 +960,7 @@ msgstr[1] "occurrences"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:207
 #, elixir-autogen, elixir-format
 msgid "on %{days}"
-msgstr "le %{days}"
+msgstr "les %{days}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:222
 #, elixir-autogen, elixir-format

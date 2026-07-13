@@ -1159,7 +1159,7 @@ msgstr "Ви збираєтеся відхилити запрошення"
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:98
 #, elixir-autogen, elixir-format
 msgid "You're going!"
-msgstr "Ви йдете!"
+msgstr "Ви прийдете!"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:98
 #, elixir-autogen, elixir-format

@@ -89,7 +89,7 @@ msgstr "Einen Kleinbuchstaben"
 #: lib/tymeslot_web/components/core_components/forms.ex:399
 #, elixir-autogen, elixir-format
 msgid "One number"
-msgstr "Eine Zahl"
+msgstr "Eine Ziffer"
 
 #: lib/tymeslot_web/components/core_components/forms.ex:388
 #, elixir-autogen, elixir-format

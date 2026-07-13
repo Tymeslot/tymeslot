@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:548
 #, elixir-autogen, elixir-format
 msgid "%{going} of %{total} going"
-msgstr "%{going} з %{total} йдуть"
+msgstr "%{going} з %{total} прийдуть"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:242
 #, elixir-autogen, elixir-format
@@ -29,7 +29,7 @@ msgstr "Відхилено"
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:530
 #, elixir-autogen, elixir-format
 msgid "Going"
-msgstr "Йдуть"
+msgstr "Прийде"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:190
 #, elixir-autogen, elixir-format

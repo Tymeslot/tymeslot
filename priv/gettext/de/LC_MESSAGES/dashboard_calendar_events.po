@@ -680,28 +680,28 @@ msgstr "Wiederholt sich täglich"
 #, elixir-autogen, elixir-format
 msgid "Repeats every %{count} day"
 msgid_plural "Repeats every %{count} days"
-msgstr[0] "Wiederholt sich alle %{count} Tage"
+msgstr[0] "Wiederholt sich im Abstand von %{count} Tag"
 msgstr[1] "Wiederholt sich alle %{count} Tage"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:184
 #, elixir-autogen, elixir-format
 msgid "Repeats every %{count} month"
 msgid_plural "Repeats every %{count} months"
-msgstr[0] "Wiederholt sich alle %{count} Monate"
+msgstr[0] "Wiederholt sich im Abstand von %{count} Monat"
 msgstr[1] "Wiederholt sich alle %{count} Monate"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:175
 #, elixir-autogen, elixir-format
 msgid "Repeats every %{count} week"
 msgid_plural "Repeats every %{count} weeks"
-msgstr[0] "Wiederholt sich alle %{count} Wochen"
+msgstr[0] "Wiederholt sich im Abstand von %{count} Woche"
 msgstr[1] "Wiederholt sich alle %{count} Wochen"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:193
 #, elixir-autogen, elixir-format
 msgid "Repeats every %{count} year"
 msgid_plural "Repeats every %{count} years"
-msgstr[0] "Wiederholt sich alle %{count} Jahre"
+msgstr[0] "Wiederholt sich im Abstand von %{count} Jahr"
 msgstr[1] "Wiederholt sich alle %{count} Jahre"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:202
@@ -960,7 +960,7 @@ msgstr[1] "Vorkommen"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:207
 #, elixir-autogen, elixir-format
 msgid "on %{days}"
-msgstr "am %{days}"
+msgstr "jeweils %{days}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:222
 #, elixir-autogen, elixir-format

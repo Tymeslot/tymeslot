@@ -77,7 +77,7 @@ msgstr "Автентифікація"
 #: lib/tymeslot_web/live/admin_live/components/layout.ex:32
 #, elixir-autogen, elixir-format
 msgid "Back to Dashboard"
-msgstr "Повернутися до Dashboard"
+msgstr "Повернутися до панелі керування"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:24
 #, elixir-autogen, elixir-format
@@ -187,7 +187,7 @@ msgstr "Увімкнено"
 #: lib/tymeslot_web/live/admin_live.ex:206
 #, elixir-autogen, elixir-format
 msgid "Enter a number between 0.0 and 1.0."
-msgstr "Введіть число від 0.0 до 1.0."
+msgstr "Введіть число від 0,0 до 1,0."
 
 #: lib/tymeslot_web/live/admin_live.ex:207
 #, elixir-autogen, elixir-format
@@ -356,7 +356,7 @@ msgstr "Вас було понижено з адміністратора."
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:49
 #, elixir-autogen, elixir-format
 msgid "You will lose access to admin settings and user management, and be returned to your dashboard."
-msgstr "Ви втратите доступ до адміністративних налаштувань та керування користувачами і будете повернуті до вашого dashboard."
+msgstr "Ви втратите доступ до адміністративних налаштувань та керування користувачами і будете повернуті до вашої панелі керування."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:130
 #, elixir-autogen, elixir-format

@@ -135,7 +135,7 @@ msgstr "Herabstufen"
 #: lib/tymeslot_web/live/admin_live/components/users.ex:143
 #, elixir-autogen, elixir-format
 msgid "Demote %{email} from admin"
-msgstr "%{email} vom Administrator herabstufen"
+msgstr "%{email} die Administratorrechte entziehen"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:83
 #, elixir-autogen, elixir-format
@@ -155,7 +155,7 @@ msgstr "Sich selbst herabstufen"
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:36
 #, elixir-autogen, elixir-format
 msgid "Demote yourself from admin?"
-msgstr "Sich selbst vom Administrator herabstufen?"
+msgstr "Sich selbst die Administratorrechte entziehen?"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:96
 #, elixir-autogen, elixir-format
@@ -481,7 +481,7 @@ msgstr "Ihr Admin-Zugriff wurde widerrufen."
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:42
 #, elixir-autogen, elixir-format
 msgid "Demote %{email} from admin?"
-msgstr "%{email} vom Administrator herabstufen?"
+msgstr "%{email} die Administratorrechte entziehen?"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:30
 #, elixir-autogen, elixir-format

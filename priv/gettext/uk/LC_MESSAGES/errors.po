@@ -81,7 +81,7 @@ msgstr "має некоректний формат"
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:22
 #, elixir-autogen, elixir-format
 msgid "is invalid"
-msgstr "некоректне"
+msgstr "має некоректне значення"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:24
 #, elixir-autogen, elixir-format

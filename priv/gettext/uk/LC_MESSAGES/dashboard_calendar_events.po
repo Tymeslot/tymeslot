@@ -260,7 +260,7 @@ msgstr "Помилка створення — додано в чергу для 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:100
 #, elixir-autogen, elixir-format
 msgid "Created by Tymeslot"
-msgstr "Створено в Tymeslot"
+msgstr "Створено Tymeslot"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:210
 #, elixir-autogen, elixir-format

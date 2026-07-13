@@ -40,7 +40,7 @@ msgstr "Adresse du lien"
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:77
 #, elixir-autogen, elixir-format
 msgid "Randomise"
-msgstr "Aléatoire"
+msgstr "Générer aléatoirement"
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:100
 #, elixir-autogen, elixir-format
@@ -55,7 +55,7 @@ msgstr "Non répertorié"
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:81
 #, elixir-autogen, elixir-format
 msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessable link."
-msgstr "Utilisez des lettres minuscules, des chiffres et des tirets. Aléatoire crée un lien impossible à deviner."
+msgstr "Utilisez des lettres minuscules, des chiffres et des tirets. « Générer aléatoirement » crée un lien impossible à deviner."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:69
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:47

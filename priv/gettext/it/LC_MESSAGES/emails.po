@@ -295,7 +295,7 @@ msgstr "Promemoria %{label} prima dell'appuntamento."
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:81
 #, elixir-autogen, elixir-format
 msgid "Reminder: Our meeting is %{time_until}"
-msgstr "Promemoria: La nostra riunione è %{time_until}"
+msgstr "Promemoria: la nostra riunione è tra %{time_until}"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:87
 #, elixir-autogen, elixir-format
@@ -426,8 +426,6 @@ msgstr "tra %{label}"
 msgid "in 30 minutes"
 msgstr "tra 30 minuti"
 
-#: lib/tymeslot/emails/appointment_builder.ex:283
-#: lib/tymeslot/emails/appointment_builder.ex:286
 #: lib/tymeslot/emails/shared/formatting.ex:236
 #: lib/tymeslot/emails/shared/formatting.ex:251
 #, elixir-autogen, elixir-format
@@ -446,7 +444,7 @@ msgstr "rispondi a questa email"
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:171
 #, elixir-autogen, elixir-format
 msgid "soon"
-msgstr "A breve"
+msgstr "a breve"
 
 #: lib/tymeslot/emails/shared/text.ex:237
 #, elixir-autogen, elixir-format
@@ -458,15 +456,7 @@ msgstr "Hai problemi con il pulsante? Copia e incolla questo link nel tuo browse
 msgid "Meeting will start at the scheduled time"
 msgstr "L'incontro inizierà all'orario previsto"
 
-#: lib/tymeslot/emails/appointment_builder.ex:285
-#, elixir-autogen, elixir-format
-msgid "day"
-msgid_plural "days"
-msgstr[0] "giorno"
-msgstr[1] "giorni"
-
 #: dev_support/email_testing/helpers.ex:76
-#: lib/tymeslot/emails/appointment_builder.ex:284
 #: lib/tymeslot/emails/shared/formatting.ex:239
 #: lib/tymeslot/emails/shared/formatting.ex:240
 #: lib/tymeslot/emails/shared/formatting.ex:244
@@ -820,7 +810,7 @@ msgstr "Ciao %{name}, il nostro appuntamento è stato annullato. Mi scuso per il
 #: lib/tymeslot/emails/templates/reschedule_request.ex:81
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, I need to reschedule our upcoming meeting."
-msgstr "Ciao %{name}, ho bisogno di riprogrammare il nostro prossimo incontro. Potresti scegliere un nuovo orario che ti vada bene?"
+msgstr "Ciao %{name}, ho bisogno di riprogrammare il nostro prossimo incontro."
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:113
 #, elixir-autogen, elixir-format
@@ -1180,7 +1170,7 @@ msgstr "Vedi i dettagli della riunione"
 #: lib/tymeslot/emails/templates/external_booking_change.ex:212
 #, elixir-autogen, elixir-format
 msgid "View meeting:"
-msgstr "Riunione video:"
+msgstr "Vedi la riunione:"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:67
 #, elixir-autogen, elixir-format
@@ -1605,7 +1595,7 @@ msgstr "Il tuo pagamento è stato rimborsato."
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex:80
 #, elixir-autogen, elixir-format
 msgid "your host"
-msgstr "il tuo host"
+msgstr "l'organizzatore"
 
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex:163
 #, elixir-autogen, elixir-format
@@ -1892,3 +1882,28 @@ msgid "You'll receive %{count} reminder before the appointment."
 msgid_plural "You'll receive %{count} reminders before the appointment."
 msgstr[0] "Riceverai %{count} promemoria prima dell'appuntamento."
 msgstr[1] "Riceverai %{count} promemoria prima dell'appuntamento."
+
+#: lib/tymeslot/emails/appointment_builder.ex:291
+#, elixir-autogen, elixir-format
+msgctxt "time until"
+msgid "day"
+msgid_plural "days"
+msgstr[0] "giorno"
+msgstr[1] "giorni"
+
+#: lib/tymeslot/emails/appointment_builder.ex:290
+#, elixir-autogen, elixir-format
+msgctxt "time until"
+msgid "hour"
+msgid_plural "hours"
+msgstr[0] "ora"
+msgstr[1] "ore"
+
+#: lib/tymeslot/emails/appointment_builder.ex:289
+#: lib/tymeslot/emails/appointment_builder.ex:292
+#, elixir-autogen, elixir-format
+msgctxt "time until"
+msgid "minute"
+msgid_plural "minutes"
+msgstr[0] "minuto"
+msgstr[1] "minuti"

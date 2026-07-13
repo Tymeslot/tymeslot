@@ -257,7 +257,7 @@ msgstr "Neue Zeit wählen"
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex:243
 #, elixir-autogen, elixir-format
 msgid "Click to schedule your meeting"
-msgstr "Hier klicken, um Termin zu buchen"
+msgstr "Hier klicken, um einen Termin zu buchen"
 
 #: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex:44
 #, elixir-autogen, elixir-format
@@ -375,7 +375,7 @@ msgstr "Zum Kalender"
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex:65
 #, elixir-autogen, elixir-format
 msgid "Great! Your meeting is still scheduled as planned."
-msgstr "Großartig! Ihr Termin ist weiterhin wie geplant."
+msgstr "Großartig! Ihr Termin findet weiterhin wie geplant statt."
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:64
 #, elixir-autogen, elixir-format

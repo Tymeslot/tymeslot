@@ -164,7 +164,7 @@ msgstr "Плаваюча кнопка"
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:238
 #, elixir-autogen, elixir-format
 msgid "Get it on WordPress.org"
-msgstr "Завантажити на WordPress.org"
+msgstr "Завантажити з WordPress.org"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:43
 #, elixir-autogen, elixir-format
@@ -319,7 +319,7 @@ msgstr "Оновлює всі фрагменти коду нижче. Станд
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:80
 #, elixir-autogen, elixir-format
 msgid "Use Disable Embedding"
-msgstr "Скористайтеся опцією «Вимкнути вбудовування»"
+msgstr "Скористайтеся опцією «Заборонити будь-яке вбудовування»"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:224
 #, elixir-autogen, elixir-format

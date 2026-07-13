@@ -254,12 +254,12 @@ msgstr "Promouvoir"
 #: lib/tymeslot_web/live/admin_live/components/users.ex:155
 #, elixir-autogen, elixir-format
 msgid "Promote %{email} to admin"
-msgstr "Promouvoir %{email} administrateur"
+msgstr "Nommer %{email} administrateur"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:81
 #, elixir-autogen, elixir-format
 msgid "Promote user to admin"
-msgstr "Promouvoir l’utilisateur administrateur"
+msgstr "Nommer l’utilisateur administrateur"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:95
 #, elixir-autogen, elixir-format
@@ -486,7 +486,7 @@ msgstr "Retirer le rôle d’administrateur à %{email} ?"
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:30
 #, elixir-autogen, elixir-format
 msgid "Promote %{email} to admin?"
-msgstr "Promouvoir %{email} administrateur ?"
+msgstr "Nommer %{email} administrateur ?"
 
 #: lib/tymeslot_web/plugs/require_admin.ex:36
 #, elixir-autogen, elixir-format

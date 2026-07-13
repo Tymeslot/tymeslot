@@ -113,7 +113,7 @@ msgstr "Kanal erforderlich"
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:145
 #, elixir-autogen, elixir-format
 msgid "Chat ID"
-msgstr "Chat ID"
+msgstr "Chat-ID"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:55
 #, elixir-autogen, elixir-format
@@ -307,7 +307,7 @@ msgstr "Neuen Link erstellen"
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:162
 #, elixir-autogen, elixir-format
 msgid "How to get your Bot Token & Chat ID"
-msgstr "So erhalten Sie Ihren Bot-Token und Ihre Chat ID"
+msgstr "So erhalten Sie Ihren Bot-Token und Ihre Chat-ID"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:166
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:111
@@ -700,7 +700,7 @@ msgstr "Schreiben Sie %{bot} auf Telegram, um einen Bot zu erstellen und dessen 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:172
 #, elixir-autogen, elixir-format
 msgid "To find your Chat ID, message %{bot} or add your bot to a group and use the Telegram API."
-msgstr "Um Ihre Chat ID zu finden, schreiben Sie %{bot} oder fügen Sie Ihren Bot zu einer Gruppe hinzu und verwenden Sie die Telegram-API."
+msgstr "Um Ihre Chat-ID zu finden, schreiben Sie %{bot} oder fügen Sie Ihren Bot zu einer Gruppe hinzu und verwenden Sie die Telegram-API."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:208
 #, elixir-autogen, elixir-format

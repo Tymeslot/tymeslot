@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex:55
 #, elixir-autogen, elixir-format
 msgid "%{accepted} of %{total} guests going"
-msgstr "%{accepted} invités sur %{total} présents"
+msgstr "%{accepted} invités présents sur %{total}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex:62
 #, elixir-autogen, elixir-format

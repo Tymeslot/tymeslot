@@ -156,7 +156,7 @@ msgstr "Логотип Tymeslot"
 #: lib/tymeslot_web/components/core_components/layout.ex:69
 #, elixir-autogen, elixir-format
 msgid "Tymeslot team"
-msgstr "команда Tymeslot"
+msgstr "командою Tymeslot"
 
 #: lib/tymeslot_web/components/timezone_dropdown.ex:41
 #, elixir-autogen, elixir-format
@@ -182,4 +182,4 @@ msgstr "сторінка планування"
 #: lib/tymeslot_web/components/core_components/layout.ex:64
 #, elixir-autogen, elixir-format
 msgid "Made with %{heart} by the %{team}"
-msgstr "Створено з %{heart} — %{team}"
+msgstr "Створено з %{heart} %{team}"

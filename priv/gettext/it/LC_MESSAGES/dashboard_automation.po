@@ -19,7 +19,7 @@ msgstr "Tasso di successo del %{rate}%"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:151
 #, elixir-autogen, elixir-format
 msgid "A unique security token will be automatically generated for this webhook once created. You'll use it to verify requests in your automation tool."
-msgstr "Una volta creato il webhook, verrà generato automaticamente un token di sicurezza univoco, da utilizzare per verificare le richieste nel proprio strumento di automazione."
+msgstr "Una volta creato il webhook, verrà generato automaticamente un token di sicurezza univoco, che puoi usare per verificare le richieste nel tuo strumento di automazione."
 
 #: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:462
 #, elixir-autogen, elixir-format
@@ -54,7 +54,7 @@ msgstr "Tutte le richieste webhook includono un token di sicurezza univoco negli
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:204
 #, elixir-autogen, elixir-format
 msgid "Are you sure? The current security token will be immediately invalidated and any existing integrations using it will stop working."
-msgstr "Confermare l'operazione? Il token di sicurezza attuale verrà invalidato immediatamente e tutte le integrazioni esistenti che lo utilizzano smetteranno di funzionare."
+msgstr "Vuoi davvero procedere? Il token di sicurezza attuale verrà invalidato immediatamente e tutte le integrazioni esistenti che lo utilizzano smetteranno di funzionare."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:294
 #, elixir-autogen, elixir-format
@@ -117,12 +117,12 @@ msgstr "Configura in Tymeslot"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:111
 #, elixir-autogen, elixir-format
 msgid "Configure the basic information for your webhook."
-msgstr "Configurare le informazioni di base del webhook."
+msgstr "Configura le informazioni di base del tuo webhook."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:28
 #, elixir-autogen, elixir-format
 msgid "Connect Tymeslot to n8n, Zapier, Make, or your custom automation workflows"
-msgstr "Collega Tymeslot a n8n, Zapier, Make o ai propri flussi di lavoro di automazione personalizzati"
+msgstr "Collega Tymeslot a n8n, Zapier, Make o ai tuoi flussi di lavoro di automazione personalizzati"
 
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex:222
 #, elixir-autogen, elixir-format
@@ -297,7 +297,7 @@ msgstr "Ancora nessuna consegna"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:285
 #, elixir-autogen, elixir-format
 msgid "Please fix the validation errors above."
-msgstr "Correggere gli errori di convalida qui sopra."
+msgstr "Correggi gli errori di convalida qui sopra."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:58
 #, elixir-autogen, elixir-format
@@ -365,12 +365,12 @@ msgstr "Seleziona eventi"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:215
 #, elixir-autogen, elixir-format
 msgid "Select which events should trigger this webhook."
-msgstr "Selezionare quali eventi devono attivare questo webhook."
+msgstr "Seleziona quali eventi devono attivare questo webhook."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_empty_state.ex:24
 #, elixir-autogen, elixir-format
 msgid "Set up webhooks to automatically trigger actions in n8n, Zapier, or your custom tools when bookings are created, cancelled, or rescheduled."
-msgstr "Configurare i webhook per attivare automaticamente azioni in n8n, Zapier o nei propri strumenti personalizzati quando le prenotazioni vengono create, annullate o riprogrammate."
+msgstr "Configura i webhook per attivare automaticamente azioni in n8n, Zapier o nei tuoi strumenti personalizzati quando le prenotazioni vengono create, annullate o riprogrammate."
 
 #: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:378
 #, elixir-autogen, elixir-format
@@ -467,12 +467,12 @@ msgstr "Si attiva quando una prenotazione esistente viene annullata"
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex:240
 #, elixir-autogen, elixir-format
 msgid "Unable to perform this action. Please try again."
-msgstr "Impossibile eseguire questa azione. Riprovare."
+msgstr "Impossibile eseguire questa azione. Riprova."
 
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex:230
 #, elixir-autogen, elixir-format
 msgid "Unable to verify subscription status. Please try again."
-msgstr "Impossibile verificare lo stato dell'abbonamento. Riprovare."
+msgstr "Impossibile verificare lo stato dell'abbonamento. Riprova."
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:110
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:261
@@ -483,12 +483,12 @@ msgstr "Aggiorna webhook"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:164
 #, elixir-autogen, elixir-format
 msgid "Use this in your n8n/Zapier header verification"
-msgstr "Da utilizzare nella verifica dell'header di n8n/Zapier"
+msgstr "Usalo nella verifica dell'header di n8n/Zapier"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:174
 #, elixir-autogen, elixir-format
 msgid "Verify the token in your automation tool to ensure requests are from Tymeslot."
-msgstr "Verificare il token nel proprio strumento di automazione per assicurarsi che le richieste provengano da Tymeslot."
+msgstr "Verifica il token nel tuo strumento di automazione per assicurarti che le richieste provengano da Tymeslot."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:72
 #, elixir-autogen, elixir-format
@@ -575,7 +575,7 @@ msgstr "Webhook"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:46
 #, elixir-autogen, elixir-format
 msgid "Webhooks send real-time HTTP POST notifications to your automation tools whenever booking events occur. Perfect for triggering automated workflows, sending custom emails, syncing data, or building integrations."
-msgstr "I webhook inviano notifiche HTTP POST in tempo reale ai propri strumenti di automazione ogni volta che si verifica un evento di prenotazione. Perfetti per attivare flussi di lavoro automatizzati, inviare email personalizzate, sincronizzare i dati o creare integrazioni."
+msgstr "I webhook inviano notifiche HTTP POST in tempo reale ai tuoi strumenti di automazione ogni volta che si verifica un evento di prenotazione. Perfetti per attivare flussi di lavoro automatizzati, inviare email personalizzate, sincronizzare i dati o creare integrazioni."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:42
 #, elixir-autogen, elixir-format

@@ -118,7 +118,7 @@ msgstr "Два режими"
 #: lib/tymeslot/onboarding/dashboard_tour.ex:35
 #, elixir-autogen, elixir-format
 msgid "Welcome to your Tymeslot dashboard"
-msgstr "Ласкаво просимо до вашого Tymeslot dashboard"
+msgstr "Ласкаво просимо до вашої панелі керування Tymeslot"
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:82
 #, elixir-autogen, elixir-format

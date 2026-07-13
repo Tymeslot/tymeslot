@@ -163,7 +163,7 @@ msgstr "Meeting beitreten"
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:473
 #, elixir-autogen, elixir-format
 msgid "Join Video"
-msgstr "Video beitreten"
+msgstr "Videoanruf beitreten"
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex:96
 #, elixir-autogen, elixir-format
@@ -324,7 +324,7 @@ msgstr "Der aktuelle Termin wird sofort abgesagt"
 #: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:111
 #, elixir-autogen, elixir-format
 msgid "They can choose a new time from your availability"
-msgstr "Sie können eine neue Zeit aus Ihrer Verfügbarkeit wählen"
+msgstr "Der Teilnehmer kann eine neue Zeit aus Ihrer Verfügbarkeit wählen"
 
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex:86
 #, elixir-autogen, elixir-format

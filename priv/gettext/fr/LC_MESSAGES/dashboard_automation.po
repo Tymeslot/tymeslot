@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:482
 #, elixir-autogen, elixir-format
 msgid "%{rate}% success rate"
-msgstr "Taux de réussite : %{rate} %"
+msgstr "%{rate} % de réussite"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:151
 #, elixir-autogen, elixir-format
