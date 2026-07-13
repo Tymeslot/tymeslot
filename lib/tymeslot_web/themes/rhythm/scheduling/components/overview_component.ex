@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                   {dgettext("booking", "Hi! I'm %{name}.", name: display_name(@organizer_profile))}
                 </p>
                 <p class="organizer-instruction">
-                  {dgettext("booking", "Pick a meeting duration below.")}
+                  {dgettext("booking", "Pick an option below.")}
                 </p>
               </div>
             </div>

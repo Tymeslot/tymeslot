@@ -113,10 +113,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                       class="overview-description text-glass-primary"
                     >
                       <%= if display_name = Profiles.display_name(@organizer_profile) do %>
-                        {dgettext("booking", "Hi, I'm %{name}. Select how much time you need for our conversation.", name: display_name)}
-                      <% else %>
-                        {dgettext("booking", "Select how much time you need for our conversation.")}
+                        {dgettext("booking", "Hi! I'm %{name}.", name: display_name)}
                       <% end %>
+                      {dgettext("booking", "Pick an option below.")}
                     </p>
 
                     <div class="overview-duration-list">
