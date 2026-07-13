@@ -15,213 +15,213 @@ msgstr ""
 #: lib/tymeslot_web/helpers/page_titles.ex:18
 #, elixir-autogen, elixir-format
 msgid "Account"
-msgstr ""
+msgstr "Compte"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:139
 #, elixir-autogen, elixir-format
 msgid "Add a meeting type so guests have something to book"
-msgstr ""
+msgstr "Ajoutez un type de réunion pour que les invités puissent réserver"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:123
 #, elixir-autogen, elixir-format
 msgid "Analytics"
-msgstr ""
+msgstr "Statistiques"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:206
 #: lib/tymeslot_web/helpers/page_titles.ex:31
 #, elixir-autogen, elixir-format
 msgid "Automation"
-msgstr ""
+msgstr "Automatisation"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:151
 #: lib/tymeslot_web/helpers/page_titles.ex:16
 #, elixir-autogen, elixir-format
 msgid "Availability"
-msgstr ""
+msgstr "Disponibilités"
 
 #: lib/tymeslot_web/components/dashboard_layout.ex:179
 #: lib/tymeslot_web/helpers/page_titles.ex:23
 #, elixir-autogen, elixir-format
 msgid "Calendar"
-msgstr ""
+msgstr "Calendrier"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:51
 #, elixir-autogen, elixir-format
 msgid "Close sidebar"
-msgstr ""
+msgstr "Fermer la barre latérale"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:174
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar or video provider to finish setup"
-msgstr ""
+msgstr "Connectez un calendrier ou un fournisseur de visioconférence pour terminer la configuration"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:85
 #, elixir-autogen, elixir-format
 msgid "Copy link to clipboard"
-msgstr ""
+msgstr "Copier le lien dans le presse-papiers"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:183
 #, elixir-autogen, elixir-format
 msgid "Distribution"
-msgstr ""
+msgstr "Distribution"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:187
 #: lib/tymeslot_web/helpers/page_titles.ex:34
 #, elixir-autogen, elixir-format
 msgid "Embed & Share"
-msgstr ""
+msgstr "Intégrer et partager"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:103
 #, elixir-autogen, elixir-format
 msgid "General"
-msgstr ""
+msgstr "Général"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:166
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:177
 #, elixir-autogen, elixir-format
 msgid "Integrations"
-msgstr ""
+msgstr "Intégrations"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:142
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
-msgstr ""
+msgstr "Types de réunion"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:112
 #: lib/tymeslot_web/helpers/page_titles.ex:33
 #, elixir-autogen, elixir-format
 msgid "Meetings"
-msgstr ""
+msgstr "Réunions"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:107
 #, elixir-autogen, elixir-format
 msgid "Overview"
-msgstr ""
+msgstr "Aperçu"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:320
 #, elixir-autogen, elixir-format
 msgid "Pro"
-msgstr ""
+msgstr "Pro"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:197
 #, elixir-autogen, elixir-format
 msgid "Profile"
-msgstr ""
+msgstr "Profil"
 
 #: lib/tymeslot_web/components/dashboard_layout.ex:170
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:131
 #, elixir-autogen, elixir-format
 msgid "Scheduling"
-msgstr ""
+msgstr "Planification"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:299
 #, elixir-autogen, elixir-format
 msgid "Setup recommended"
-msgstr ""
+msgstr "Configuration recommandée"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:160
 #, elixir-autogen, elixir-format
 msgid "Theme"
-msgstr ""
+msgstr "Thème"
 
 #: lib/tymeslot_web/components/dashboard_layout.ex:113
 #, elixir-autogen, elixir-format
 msgid "Toggle sidebar"
-msgstr ""
+msgstr "Afficher/masquer la barre latérale"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:66
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:74
 #, elixir-autogen, elixir-format
 msgid "View Page"
-msgstr ""
+msgstr "Voir la page"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex:83
 #, elixir-autogen, elixir-format
 msgid "Scheduling link copied to clipboard!"
-msgstr ""
+msgstr "Lien de planification copié dans le presse-papiers !"
 
 #: lib/tymeslot_web/components/user_dropdown_component.ex:53
 #, elixir-autogen, elixir-format
 msgid "Account Settings"
-msgstr ""
+msgstr "Paramètres du compte"
 
 #: lib/tymeslot_web/components/user_dropdown_component.ex:61
 #, elixir-autogen, elixir-format
 msgid "Admin Settings"
-msgstr ""
+msgstr "Paramètres d’administration"
 
 #: lib/tymeslot_web/components/user_dropdown_component.ex:69
 #, elixir-autogen, elixir-format
 msgid "Sign Out"
-msgstr ""
+msgstr "Se déconnecter"
 
 #: lib/tymeslot_web/live/dashboard/component_dispatch.ex:121
 #, elixir-autogen, elixir-format
 msgid "This feature (%{feature_name}) is not available on your current plan."
-msgstr ""
+msgstr "Cette fonctionnalité (%{feature_name}) n’est pas disponible avec votre offre actuelle."
 
 #: lib/tymeslot_web/components/user_dropdown_component.ex:117
 #, elixir-autogen, elixir-format
 msgid "User"
-msgstr ""
+msgstr "Utilisateur"
 
 #: lib/tymeslot_web/components/icons/provider_icon.ex:50
 #, elixir-autogen, elixir-format
 msgid "%{provider} icon"
-msgstr ""
+msgstr "Icône %{provider}"
 
 #: lib/tymeslot_web/helpers/page_titles.ex:50
 #, elixir-autogen, elixir-format
 msgid "%{section} - Dashboard"
-msgstr ""
+msgstr "%{section} - Dashboard"
 
 #: lib/tymeslot_web/helpers/page_titles.ex:26
 #, elixir-autogen, elixir-format
 msgid "Calendar Integration"
-msgstr ""
+msgstr "Intégration du calendrier"
 
 #: lib/tymeslot/scheduling/link_access_policy.ex:78
 #, elixir-autogen, elixir-format
 msgid "Complete setup to enable this feature"
-msgstr ""
+msgstr "Terminez la configuration pour activer cette fonctionnalité"
 
 #: lib/tymeslot/scheduling/link_access_policy.ex:72
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar in Calendar settings to enable this feature"
-msgstr ""
+msgstr "Connectez un calendrier dans les paramètres du calendrier pour activer cette fonctionnalité"
 
 #: lib/tymeslot_web/helpers/page_titles.ex:12
 #: lib/tymeslot_web/helpers/page_titles.ex:43
 #, elixir-autogen, elixir-format
 msgid "Dashboard"
-msgstr ""
+msgstr "Dashboard"
 
 #: lib/tymeslot_web/helpers/page_titles.ex:21
 #, elixir-autogen, elixir-format
 msgid "Meeting Settings"
-msgstr ""
+msgstr "Paramètres de réunion"
 
 #: lib/tymeslot_web/helpers/page_titles.ex:35
 #, elixir-autogen, elixir-format
 msgid "Payments"
-msgstr ""
+msgstr "Paiements"
 
 #: lib/tymeslot/scheduling/link_access_policy.ex:69
 #, elixir-autogen, elixir-format
 msgid "Set a username in Settings to enable this feature"
-msgstr ""
+msgstr "Définissez un nom d’utilisateur dans les paramètres pour activer cette fonctionnalité"
 
 #: lib/tymeslot_web/helpers/page_titles.ex:13
 #, elixir-autogen, elixir-format
 msgid "Settings"
-msgstr ""
+msgstr "Paramètres"
 
 #: lib/tymeslot_web/helpers/page_titles.ex:32
 #, elixir-autogen, elixir-format
 msgid "Theme Selection"
-msgstr ""
+msgstr "Sélection du thème"
 
 #: lib/tymeslot_web/helpers/page_titles.ex:29
 #, elixir-autogen, elixir-format
 msgid "Video Integration"
-msgstr ""
+msgstr "Intégration vidéo"

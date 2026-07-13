@@ -396,99 +396,99 @@ msgstr "Statistiques de réservation"
 #: lib/tymeslot_web/live/admin_live/formatters.ex:49
 #, elixir-autogen, elixir-format
 msgid "Allow log-in with email and password. When disabled, users can only authenticate through configured OAuth providers."
-msgstr ""
+msgstr "Autoriser la connexion par e-mail et mot de passe. Lorsque cette option est désactivée, les utilisateurs ne peuvent s’authentifier que via les fournisseurs OAuth configurés."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:42
 #, elixir-autogen, elixir-format
 msgid "Allow new users to sign up via the public registration page. Disable for a private install where admins create accounts manually."
-msgstr ""
+msgstr "Autoriser les nouveaux utilisateurs à s’inscrire via la page d’inscription publique. Désactivez cette option pour une installation privée où les administrateurs créent les comptes manuellement."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:208
 #, elixir-autogen, elixir-format
 msgid "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
-msgstr ""
+msgstr "Impossible de désactiver l’authentification par mot de passe tant qu’au moins un administrateur se connecte par e-mail et mot de passe : cela le bloquerait hors de son compte. Rétrogradez ces administrateurs ou faites-les d’abord basculer vers une connexion OAuth."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:228
 #, elixir-autogen, elixir-format
 msgid "Cannot disable this login provider while it is the only working sign-in path for admins. Enable password authentication or another credentialed SSO provider first."
-msgstr ""
+msgstr "Impossible de désactiver ce fournisseur de connexion tant qu’il constitue le seul moyen de connexion fonctionnel pour les administrateurs. Activez d’abord l’authentification par mot de passe ou un autre fournisseur SSO avec identifiants."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:126
 #, elixir-autogen, elixir-format
 msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint — no raw IP is stored. Off by default; review your privacy policy before enabling."
-msgstr ""
+msgstr "Collecter des statistiques respectueuses de la vie privée pour les pages de réservation de cette instance : pages vues, source du trafic (UTM/référent) et conversion. Les visiteurs uniques sont comptabilisés à l’aide d’une empreinte sans cookie renouvelée chaque jour ; aucune adresse IP brute n’est stockée. Désactivé par défaut ; consultez votre politique de confidentialité avant d’activer cette option."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:112
 #, elixir-autogen, elixir-format
 msgid "Email address that receives admin alerts when the toggle above is enabled. Leave blank to fall back to the ADMIN_ALERT_EMAIL environment variable."
-msgstr ""
+msgstr "Adresse e-mail qui reçoit les alertes administrateur lorsque l’option ci-dessus est activée. Laissez vide pour utiliser par défaut la variable d’environnement ADMIN_ALERT_EMAIL."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:105
 #, elixir-autogen, elixir-format
 msgid "Email operational alerts (webhook failures, integration health issues, background job errors) to the admin alert recipient. Requires a recipient address to be set below."
-msgstr ""
+msgstr "Envoyer par e-mail les alertes opérationnelles (échecs de webhook, problèmes de santé des intégrations, erreurs de tâches en arrière-plan) au destinataire des alertes administrateur. Nécessite qu’une adresse de destinataire soit définie ci-dessous."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:70
 #, elixir-autogen, elixir-format
 msgid "Enable generic OAuth 2.0 / OIDC single sign-on (Keycloak, Authentik, Lemonldap, etc.). Requires the OAUTH_* environment variables to be set."
-msgstr ""
+msgstr "Activer l’authentification unique OAuth 2.0 / OIDC générique (Keycloak, Authentik, Lemonldap, etc.). Nécessite que les variables d’environnement OAUTH_* soient définies."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:119
 #, elixir-autogen, elixir-format
 msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment — without them the toggle stays locked."
-msgstr ""
+msgstr "Permettre aux hôtes de cette instance de recevoir les paiements des personnes qui réservent via Stripe Connect. Nécessite que STRIPE_SECRET_KEY et STRIPE_CONNECT_WEBHOOK_SECRET soient définis dans l’environnement : sans ces valeurs, l’option reste verrouillée."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:98
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a booking. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
-msgstr ""
+msgstr "Score reCAPTCHA v3 minimum (0.0 à 1.0) requis pour accepter une réservation. Des valeurs plus basses sont plus permissives ; 0.3 est la valeur par défaut et correspond à la recommandation de Google pour les formulaires à faible risque d’abus."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:91
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a signup. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
-msgstr ""
+msgstr "Score reCAPTCHA v3 minimum (0.0 à 1.0) requis pour accepter une inscription. Des valeurs plus basses sont plus permissives ; 0.3 est la valeur par défaut et correspond à la recommandation de Google pour les formulaires à faible risque d’abus."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:84
 #, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
-msgstr ""
+msgstr "Exiger un score reCAPTCHA v3 suffisant sur le formulaire public de réservation. Nécessite que RECAPTCHA_SITE_KEY et RECAPTCHA_SECRET_KEY soient définis dans l’environnement : si les clés sont absentes, l’option est respectée mais la vérification est ignorée silencieusement."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:77
 #, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
-msgstr ""
+msgstr "Exiger un score reCAPTCHA v3 suffisant sur le formulaire public d’inscription. Nécessite que RECAPTCHA_SITE_KEY et RECAPTCHA_SECRET_KEY soient définis dans l’environnement : si les clés sont absentes, l’option est respectée mais la vérification est ignorée silencieusement."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:219
 #, elixir-autogen, elixir-format
 msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
-msgstr ""
+msgstr "Définissez STRIPE_SECRET_KEY et STRIPE_CONNECT_WEBHOOK_SECRET dans l’environnement pour activer les paiements de réunion. Sans identifiants de plateforme, le parcours d’intégration Stripe Connect ne peut pas démarrer."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:63
 #, elixir-autogen, elixir-format
 msgid "Show the \"Continue with GitHub\" button on login and signup. Requires GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to be set in the environment."
-msgstr ""
+msgstr "Afficher le bouton « Continuer avec GitHub » sur les pages de connexion et d’inscription. Nécessite que GITHUB_CLIENT_ID et GITHUB_CLIENT_SECRET soient définis dans l’environnement."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:56
 #, elixir-autogen, elixir-format
 msgid "Show the \"Continue with Google\" button on login and signup. Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to be set in the environment."
-msgstr ""
+msgstr "Afficher le bouton « Continuer avec Google » sur les pages de connexion et d’inscription. Nécessite que GOOGLE_CLIENT_ID et GOOGLE_CLIENT_SECRET soient définis dans l’environnement."
 
 #: lib/tymeslot_web/hooks/ensure_admin_hook.ex:58
 #, elixir-autogen, elixir-format
 msgid "Your admin access has been revoked."
-msgstr ""
+msgstr "Votre accès administrateur a été révoqué."
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:42
 #, elixir-autogen, elixir-format
 msgid "Demote %{email} from admin?"
-msgstr ""
+msgstr "Retirer le rôle d’administrateur à %{email} ?"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:30
 #, elixir-autogen, elixir-format
 msgid "Promote %{email} to admin?"
-msgstr ""
+msgstr "Promouvoir %{email} administrateur ?"
 
 #: lib/tymeslot_web/plugs/require_admin.ex:36
 #, elixir-autogen, elixir-format
 msgid "Admin access required."
-msgstr ""
+msgstr "Accès administrateur requis."

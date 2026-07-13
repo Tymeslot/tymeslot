@@ -14,48 +14,48 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:526
 #, elixir-autogen, elixir-format
 msgid "Anyone with this link can book this meeting type directly, without seeing your other meeting types."
-msgstr ""
+msgstr "Chiunque abbia questo link può prenotare direttamente questo tipo di riunione, senza vedere gli altri tipi di riunione."
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:491
 #, elixir-autogen, elixir-format
 msgid "Booking link & visibility"
-msgstr ""
+msgstr "Link di prenotazione e visibilità"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:511
 #, elixir-autogen, elixir-format
 msgid "Booking link copied!"
-msgstr ""
+msgstr "Link di prenotazione copiato!"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:340
 #, elixir-autogen, elixir-format
 msgid "Booking link updated"
-msgstr ""
+msgstr "Link di prenotazione aggiornato"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:522
 #, elixir-autogen, elixir-format
 msgid "Change link"
-msgstr ""
+msgstr "Cambia link"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:514
 #, elixir-autogen, elixir-format
 msgid "Copy"
-msgstr ""
+msgstr "Copia"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:497
 #, elixir-autogen, elixir-format
 msgid "Direct booking link"
-msgstr ""
+msgstr "Link di prenotazione diretto"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:328
 #, elixir-autogen, elixir-format
 msgid "Failed to update visibility"
-msgstr ""
+msgstr "Aggiornamento della visibilità non riuscito"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:535
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:548
 #, elixir-autogen, elixir-format
 msgid "Hide from public booking page"
-msgstr ""
+msgstr "Nascondi dalla pagina di prenotazione pubblica"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:94
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:220
@@ -63,92 +63,92 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:317
 #, elixir-autogen, elixir-format
 msgid "Meeting type not found"
-msgstr ""
+msgstr "Tipo di riunione non trovato"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:349
 #, elixir-autogen, elixir-format
 msgid "That link is already taken. Please choose another."
-msgstr ""
+msgstr "Questo link è già in uso. Scegline un altro."
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:324
 #, elixir-autogen, elixir-format
 msgid "Visibility updated"
-msgstr ""
+msgstr "Visibilità aggiornata"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:538
 #, elixir-autogen, elixir-format
 msgid "When on, this meeting type is reachable only through its direct link."
-msgstr ""
+msgstr "Se attivo, questo tipo di riunione è raggiungibile solo tramite il suo link diretto."
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:356
 #, elixir-autogen, elixir-format
 msgid "That link isn't valid. Use lowercase letters, numbers and hyphens."
-msgstr ""
+msgstr "Questo link non è valido. Usa lettere minuscole, numeri e trattini."
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:205
 #, elixir-autogen, elixir-format
 msgid "%{count} connection needs attention — %{message}"
 msgid_plural "%{count} connections need attention — %{message}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{count} connessione richiede attenzione — %{message}"
+msgstr[1] "%{count} connessioni richiedono attenzione — %{message}"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:137
 #, elixir-autogen, elixir-format
 msgid "%{name} needs reconnecting."
-msgstr ""
+msgstr "%{name} deve essere riconnesso."
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:149
 #, elixir-autogen, elixir-format
 msgid "%{name} stopped syncing."
-msgstr ""
+msgstr "%{name} ha smesso di sincronizzarsi."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex:48
 #, elixir-autogen, elixir-format
 msgid "%{status} — needs attention"
-msgstr ""
+msgstr "%{status} — richiede attenzione"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:512
 #, elixir-autogen, elixir-format
 msgid "A video integration with this configuration already exists"
-msgstr ""
+msgstr "Esiste già un'integrazione video con questa configurazione"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:387
 #, elixir-autogen, elixir-format
 msgid "Active Video Integrations"
-msgstr ""
+msgstr "Integrazioni video attive"
 
 #: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex:84
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:95
 #, elixir-autogen, elixir-format
 msgid "Add Integration"
-msgstr ""
+msgstr "Aggiungi integrazione"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:450
 #, elixir-autogen, elixir-format
 msgid "Add Meeting Type"
-msgstr ""
+msgstr "Aggiungi tipo di riunione"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:429
 #, elixir-autogen, elixir-format
 msgid "Add a video link to online meetings automatically when they're booked."
-msgstr ""
+msgstr "Aggiungi automaticamente un link video alle riunioni online al momento della prenotazione."
 
 #: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex:81
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:92
 #, elixir-autogen, elixir-format
 msgid "Adding..."
-msgstr ""
+msgstr "Aggiunta in corso..."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:103
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:264
 #, elixir-autogen, elixir-format
 msgid "All meetings will use the same room URL"
-msgstr ""
+msgstr "Tutte le riunioni useranno lo stesso URL della stanza"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:150
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete this %{type} integration?"
-msgstr ""
+msgstr "Vuoi davvero eliminare questa integrazione %{type}?"
 
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex:53
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex:70
@@ -158,13 +158,13 @@ msgstr ""
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:172
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Please try again."
-msgstr ""
+msgstr "Autenticazione non riuscita. Riprova."
 
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex:188
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:286
 #, elixir-autogen, elixir-format
 msgid "Authentication session mismatch. Please sign in and try again."
-msgstr ""
+msgstr "Sessione di autenticazione non corrispondente. Accedi e riprova."
 
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex:50
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex:67
@@ -174,27 +174,27 @@ msgstr ""
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:169
 #, elixir-autogen, elixir-format
 msgid "Authorization was denied. Please try again."
-msgstr ""
+msgstr "Autorizzazione negata. Riprova."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/provider_picker_modal.ex:76
 #, elixir-autogen, elixir-format
 msgid "Back to providers"
-msgstr ""
+msgstr "Torna ai provider"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:212
 #, elixir-autogen, elixir-format
 msgid "Base URL"
-msgstr ""
+msgstr "URL di base"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:193
 #, elixir-autogen, elixir-format
 msgid "Calendar"
-msgstr ""
+msgstr "Calendario"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:81
 #, elixir-autogen, elixir-format
 msgid "Calendars"
-msgstr ""
+msgstr "Calendari"
 
 #: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex:59
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:170
@@ -204,236 +204,236 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:93
 #, elixir-autogen, elixir-format
 msgid "Cancel"
-msgstr ""
+msgstr "Annulla"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:253
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate — another active integration already uses this account"
-msgstr ""
+msgstr "Impossibile riattivare — un'altra integrazione attiva utilizza già questo account"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:32
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:43
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:457
 #, elixir-autogen, elixir-format
 msgid "Close"
-msgstr ""
+msgstr "Chiudi"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:348
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:374
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:427
 #, elixir-autogen, elixir-format
 msgid "Connect a video provider"
-msgstr ""
+msgstr "Connetti un provider video"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:46
 #, elixir-autogen, elixir-format
 msgid "Connect any video platform"
-msgstr ""
+msgstr "Connetti qualsiasi piattaforma video"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:363
 #, elixir-autogen, elixir-format
 msgid "Connect one so online meetings get a video link added automatically when they're booked."
-msgstr ""
+msgstr "Connettine uno per aggiungere automaticamente un link video alle riunioni online al momento della prenotazione."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/provider_picker_modal.ex:136
 #, elixir-autogen, elixir-format
 msgid "Connected"
-msgstr ""
+msgstr "Connesso"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:151
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:161
 #, elixir-autogen, elixir-format
 msgid "Connection issues"
-msgstr ""
+msgstr "Problemi di connessione"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:325
 #, elixir-autogen, elixir-format
 msgid "Connection test failed unexpectedly: %{reason}"
-msgstr ""
+msgstr "Test della connessione non riuscito in modo imprevisto: %{reason}"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:312
 #, elixir-autogen, elixir-format
 msgid "Connection test failed: %{reason}"
-msgstr ""
+msgstr "Test della connessione non riuscito: %{reason}"
 
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:267
 #, elixir-autogen, elixir-format
 msgid "Could not identify your Zoom account. Please try again."
-msgstr ""
+msgstr "Impossibile identificare il tuo account Zoom. Riprova."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:43
 #, elixir-autogen, elixir-format
 msgid "Custom Video Link"
-msgstr ""
+msgstr "Link video personalizzato"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:143
 #, elixir-autogen, elixir-format
 msgid "Delete %{type} Integration"
-msgstr ""
+msgstr "Elimina integrazione %{type}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:176
 #, elixir-autogen, elixir-format
 msgid "Delete Integration"
-msgstr ""
+msgstr "Elimina integrazione"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:111
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:112
 #, elixir-autogen, elixir-format
 msgid "Delete integration"
-msgstr ""
+msgstr "Elimina integrazione"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:168
 #, elixir-autogen, elixir-format
 msgid "Edit Integration"
-msgstr ""
+msgstr "Modifica integrazione"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:449
 #, elixir-autogen, elixir-format
 msgid "Edit Meeting Type"
-msgstr ""
+msgstr "Modifica tipo di riunione"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:101
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:102
 #, elixir-autogen, elixir-format
 msgid "Edit integration"
-msgstr ""
+msgstr "Modifica integrazione"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:59
 #, elixir-autogen, elixir-format
 msgid "Enter a URL to see a preview"
-msgstr ""
+msgstr "Inserisci un URL per vedere un'anteprima"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:112
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:273
 #, elixir-autogen, elixir-format
 msgid "Enter a custom video link to configure meeting rooms"
-msgstr ""
+msgstr "Inserisci un link video personalizzato per configurare le stanze delle riunioni"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:229
 #, elixir-autogen, elixir-format
 msgid "Enter new API key"
-msgstr ""
+msgstr "Inserisci una nuova chiave API"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:72
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:201
 #, elixir-autogen, elixir-format
 msgid "Enter your video meeting URL. Use {{meeting_id}} for unique rooms per meeting"
-msgstr ""
+msgstr "Inserisci l'URL della tua riunione video. Usa {{meeting_id}} per creare stanze uniche per ogni riunione"
 
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:212
 #, elixir-autogen, elixir-format
 msgid "Failed to connect Google Meet. Please try again."
-msgstr ""
+msgstr "Connessione a Google Meet non riuscita. Riprova."
 
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:242
 #, elixir-autogen, elixir-format
 msgid "Failed to connect Microsoft Teams. Please try again."
-msgstr ""
+msgstr "Connessione a Microsoft Teams non riuscita. Riprova."
 
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex:164
 #, elixir-autogen, elixir-format
 msgid "Failed to connect Outlook Calendar. Please try again."
-msgstr ""
+msgstr "Connessione a Outlook Calendar non riuscita. Riprova."
 
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:274
 #, elixir-autogen, elixir-format
 msgid "Failed to connect Zoom. Please try again."
-msgstr ""
+msgstr "Connessione a Zoom non riuscita. Riprova."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:109
 #, elixir-autogen, elixir-format
 msgid "Failed to delete integration"
-msgstr ""
+msgstr "Eliminazione dell'integrazione non riuscita"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:241
 #, elixir-autogen, elixir-format
 msgid "Failed to delete meeting type"
-msgstr ""
+msgstr "Eliminazione del tipo di riunione non riuscita"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:217
 #, elixir-autogen, elixir-format
 msgid "Failed to reconnect. Please try again."
-msgstr ""
+msgstr "Riconnessione non riuscita. Riprova."
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:278
 #, elixir-autogen, elixir-format
 msgid "Failed to reorder meeting types"
-msgstr ""
+msgstr "Riordinamento dei tipi di riunione non riuscito"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:141
 #, elixir-autogen, elixir-format
 msgid "Failed to update integration"
-msgstr ""
+msgstr "Aggiornamento dell'integrazione non riuscito"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:265
 #, elixir-autogen, elixir-format
 msgid "Failed to update integration status"
-msgstr ""
+msgstr "Aggiornamento dello stato dell'integrazione non riuscito"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:308
 #, elixir-autogen, elixir-format
 msgid "Failed to update meeting type"
-msgstr ""
+msgstr "Aggiornamento del tipo di riunione non riuscito"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:184
 #, elixir-autogen, elixir-format
 msgid "Finish connecting Stripe to accept payments."
-msgstr ""
+msgstr "Completa la connessione a Stripe per accettare pagamenti."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:116
 #, elixir-autogen, elixir-format
 msgid "Found 'meeting_id' without brackets - use {{meeting_id}}"
-msgstr ""
+msgstr "Trovato 'meeting_id' senza parentesi - usa {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:82
 #, elixir-autogen, elixir-format
 msgid "Get your API key from your MiroTalk instance configuration"
-msgstr ""
+msgstr "Ottieni la tua chiave API dalla configurazione della tua istanza MiroTalk"
 
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:38
 #, elixir-autogen, elixir-format
 msgid "Google Meet connected successfully!"
-msgstr ""
+msgstr "Google Meet connesso con successo!"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:162
 #, elixir-autogen, elixir-format
 msgid "Healthy"
-msgstr ""
+msgstr "Funzionante"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:407
 #, elixir-autogen, elixir-format
 msgid "Inactive Video Integrations"
-msgstr ""
+msgstr "Integrazioni video inattive"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex:27
 #, elixir-autogen, elixir-format
 msgid "Integration Name"
-msgstr ""
+msgstr "Nome dell'integrazione"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:88
 #, elixir-autogen, elixir-format
 msgid "Integration deleted successfully"
-msgstr ""
+msgstr "Integrazione eliminata con successo"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:97
 #, elixir-autogen, elixir-format
 msgid "Integration not found. It may have already been deleted."
-msgstr ""
+msgstr "Integrazione non trovata. Potrebbe essere già stata eliminata."
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:243
 #, elixir-autogen, elixir-format
 msgid "Integration status updated"
-msgstr ""
+msgstr "Stato dell'integrazione aggiornato"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:126
 #, elixir-autogen, elixir-format
 msgid "Integration updated successfully"
-msgstr ""
+msgstr "Integrazione aggiornata con successo"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:229
 #, elixir-autogen, elixir-format
 msgid "Integrations"
-msgstr ""
+msgstr "Integrazioni"
 
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex:86
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex:139
@@ -442,469 +442,469 @@ msgstr ""
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:188
 #, elixir-autogen, elixir-format
 msgid "Invalid authentication response. Please try again."
-msgstr ""
+msgstr "Risposta di autenticazione non valida. Riprova."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:37
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:114
 #, elixir-autogen, elixir-format
 msgid "Invalid integration ID"
-msgstr ""
+msgstr "ID dell'integrazione non valido"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:431
 #, elixir-autogen, elixir-format
 msgid "Meeting Settings"
-msgstr ""
+msgstr "Impostazioni della riunione"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:65
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:194
 #, elixir-autogen, elixir-format
 msgid "Meeting URL"
-msgstr ""
+msgstr "URL della riunione"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:237
 #, elixir-autogen, elixir-format
 msgid "Meeting type deleted"
-msgstr ""
+msgstr "Tipo di riunione eliminato"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:296
 #, elixir-autogen, elixir-format
 msgid "Meeting type status updated"
-msgstr ""
+msgstr "Stato del tipo di riunione aggiornato"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:273
 #, elixir-autogen, elixir-format
 msgid "Meeting types reordered"
-msgstr ""
+msgstr "Tipi di riunione riordinati"
 
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:94
 #, elixir-autogen, elixir-format
 msgid "Microsoft Teams connected successfully!"
-msgstr ""
+msgstr "Microsoft Teams connesso con successo!"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:178
 #, elixir-autogen, elixir-format
 msgid "Mismatched brackets detected - use {{meeting_id}}"
-msgstr ""
+msgstr "Rilevate parentesi non corrispondenti - usa {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:171
 #, elixir-autogen, elixir-format
 msgid "Mismatched brackets: [[meeting_id}} should be {{meeting_id}}"
-msgstr ""
+msgstr "Parentesi non corrispondenti: [[meeting_id}} dovrebbe essere {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:157
 #, elixir-autogen, elixir-format
 msgid "Mismatched brackets: {meeting_id}} should be {{meeting_id}}"
-msgstr ""
+msgstr "Parentesi non corrispondenti: {meeting_id}} dovrebbe essere {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:150
 #, elixir-autogen, elixir-format
 msgid "Mismatched brackets: {{meeting_id) should be {{meeting_id}}"
-msgstr ""
+msgstr "Parentesi non corrispondenti: {{meeting_id) dovrebbe essere {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:164
 #, elixir-autogen, elixir-format
 msgid "Mismatched brackets: {{meeting_id]] should be {{meeting_id}}"
-msgstr ""
+msgstr "Parentesi non corrispondenti: {{meeting_id]] dovrebbe essere {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:201
 #, elixir-autogen, elixir-format
 msgid "Missing brackets - use {{meeting_id}}"
-msgstr ""
+msgstr "Parentesi mancanti - usa {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:193
 #, elixir-autogen, elixir-format
 msgid "Missing closing brackets - should be {{meeting_id}}"
-msgstr ""
+msgstr "Parentesi di chiusura mancanti - dovrebbe essere {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:197
 #, elixir-autogen, elixir-format
 msgid "Missing opening brackets - should be {{meeting_id}}"
-msgstr ""
+msgstr "Parentesi di apertura mancanti - dovrebbe essere {{meeting_id}}"
 
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:234
 #, elixir-autogen, elixir-format
 msgid "Missing required Microsoft Teams information. Please try again."
-msgstr ""
+msgstr "Informazioni obbligatorie di Microsoft Teams mancanti. Riprova."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:264
 #, elixir-autogen, elixir-format
 msgid "Missing underscore: {{meeting_id}} not {{meetingid}}"
-msgstr ""
+msgstr "Trattino basso mancante: {{meeting_id}} non {{meetingid}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:110
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:271
 #, elixir-autogen, elixir-format
 msgid "No URL Configured"
-msgstr ""
+msgstr "Nessun URL configurato"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:181
 #, elixir-autogen, elixir-format
 msgid "No calendars selected"
-msgstr ""
+msgstr "Nessun calendario selezionato"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:174
 #, elixir-autogen, elixir-format
 msgid "No calendars selected — nothing will sync until you pick at least one."
-msgstr ""
+msgstr "Nessun calendario selezionato — non verrà sincronizzato nulla finché non ne selezioni almeno uno."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:55
 #, elixir-autogen, elixir-format
 msgid "No integration selected for deletion"
-msgstr ""
+msgstr "Nessuna integrazione selezionata per l'eliminazione"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:360
 #, elixir-autogen, elixir-format
 msgid "No video providers connected yet"
-msgstr ""
+msgstr "Nessun provider video ancora connesso"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:137
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:167
 #, elixir-autogen, elixir-format
 msgid "OAuth"
-msgstr ""
+msgstr "OAuth"
 
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex:154
 #, elixir-autogen, elixir-format
 msgid "Outlook Calendar connected successfully!"
-msgstr ""
+msgstr "Outlook Calendar connesso con successo!"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:159
 #, elixir-autogen, elixir-format
 msgid "Paused"
-msgstr ""
+msgstr "In pausa"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:100
 #, elixir-autogen, elixir-format
 msgid "Payments"
-msgstr ""
+msgstr "Pagamenti"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:178
 #, elixir-autogen, elixir-format
 msgid "Please select a provider"
-msgstr ""
+msgstr "Seleziona un provider"
 
 #: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex:38
 #, elixir-autogen, elixir-format
 msgid "Provider:"
-msgstr ""
+msgstr "Provider:"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:94
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:160
 #, elixir-autogen, elixir-format
 msgid "Reconnect"
-msgstr ""
+msgstr "Riconnetti"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:91
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:92
 #, elixir-autogen, elixir-format
 msgid "Reconnect integration"
-msgstr ""
+msgstr "Riconnetti integrazione"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:242
 #, elixir-autogen, elixir-format
 msgid "Review"
-msgstr ""
+msgstr "Rivedi"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:293
 #, elixir-autogen, elixir-format
 msgid "Save Changes"
-msgstr ""
+msgstr "Salva modifiche"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:294
 #, elixir-autogen, elixir-format
 msgid "Saving..."
-msgstr ""
+msgstr "Salvataggio in corso..."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:41
 #, elixir-autogen, elixir-format
 msgid "Self-hosted video conferencing"
-msgstr ""
+msgstr "Videoconferenza self-hosted"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:59
 #, elixir-autogen, elixir-format
 msgid "Server URL"
-msgstr ""
+msgstr "URL del server"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:101
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:262
 #, elixir-autogen, elixir-format
 msgid "Static Meeting Room"
-msgstr ""
+msgstr "Stanza riunioni statica"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:123
 #, elixir-autogen, elixir-format
 msgid "Static URL - all meetings will use the same room"
-msgstr ""
+msgstr "URL statico - tutte le riunioni useranno la stessa stanza"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:174
 #, elixir-autogen, elixir-format
 msgid "Stripe is still reviewing your account."
-msgstr ""
+msgstr "Stripe sta ancora esaminando il tuo account."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:46
 #, elixir-autogen, elixir-format
 msgid "Template in fragment (#) won't work - fragments aren't sent to servers. Use path instead: https://example.com/{{meeting_id}}"
-msgstr ""
+msgstr "Un template nel frammento (#) non funzionerà - i frammenti non vengono inviati ai server. Usa invece il percorso: https://example.com/{{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:85
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:75
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:246
 #, elixir-autogen, elixir-format
 msgid "Template variable detected: {{meeting_id}}"
-msgstr ""
+msgstr "Variabile di template rilevata: {{meeting_id}}"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:67
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:72
 #, elixir-autogen, elixir-format
 msgid "Test connection"
-msgstr ""
+msgstr "Prova connessione"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:71
 #, elixir-autogen, elixir-format
 msgid "Testing connection…"
-msgstr ""
+msgstr "Prova della connessione in corso…"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:66
 #, elixir-autogen, elixir-format
 msgid "Testing…"
-msgstr ""
+msgstr "Prova in corso…"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:66
 #, elixir-autogen, elixir-format
 msgid "The full URL where your MiroTalk P2P instance is hosted"
-msgstr ""
+msgstr "L'URL completo in cui è ospitata la tua istanza MiroTalk P2P"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:157
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone and will remove all associated %{data}."
-msgstr ""
+msgstr "Questa azione non può essere annullata e rimuoverà tutti i %{data} associati."
 
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex:178
 #, elixir-autogen, elixir-format
 msgid "Too many requests. Please try again later."
-msgstr ""
+msgstr "Troppe richieste. Riprova più tardi."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:109
 #, elixir-autogen, elixir-format
 msgid "Unknown template variable. Only {{meeting_id}} is supported"
-msgstr ""
+msgstr "Variabile di template sconosciuta. È supportato solo {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:231
 #, elixir-autogen, elixir-format
 msgid "Use curly brackets: {{meeting_id}} not ((meeting_id))"
-msgstr ""
+msgstr "Usa le parentesi graffe: {{meeting_id}} non ((meeting_id))"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:238
 #, elixir-autogen, elixir-format
 msgid "Use curly brackets: {{meeting_id}} not <meeting_id>"
-msgstr ""
+msgstr "Usa le parentesi graffe: {{meeting_id}} non <meeting_id>"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:224
 #, elixir-autogen, elixir-format
 msgid "Use curly brackets: {{meeting_id}} not [[meeting_id]]"
-msgstr ""
+msgstr "Usa le parentesi graffe: {{meeting_id}} non [[meeting_id]]"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:242
 #, elixir-autogen, elixir-format
 msgid "Use double curly brackets: {{meeting_id}}"
-msgstr ""
+msgstr "Usa le doppie parentesi graffe: {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:217
 #, elixir-autogen, elixir-format
 msgid "Use double curly brackets: {{meeting_id}} not {meeting_id}"
-msgstr ""
+msgstr "Usa le doppie parentesi graffe: {{meeting_id}} non {meeting_id}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:86
 #, elixir-autogen, elixir-format
 msgid "Use lowercase: {{meeting_id}} not {{MEETING_ID}} or {{Meeting_Id}}"
-msgstr ""
+msgstr "Usa il minuscolo: {{meeting_id}} non {{MEETING_ID}} o {{Meeting_Id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:257
 #, elixir-autogen, elixir-format
 msgid "Use underscore not hyphen: {{meeting_id}} not {{meeting-id}}"
-msgstr ""
+msgstr "Usa il trattino basso, non il trattino: {{meeting_id}} non {{meeting-id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:271
 #, elixir-autogen, elixir-format
 msgid "Variable name should be: {{meeting_id}}"
-msgstr ""
+msgstr "Il nome della variabile dovrebbe essere: {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:194
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:87
 #, elixir-autogen, elixir-format
 msgid "Video"
-msgstr ""
+msgstr "Video"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:340
 #, elixir-autogen, elixir-format
 msgid "Video Integration"
-msgstr ""
+msgstr "Integrazione video"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:487
 #, elixir-autogen, elixir-format
 msgid "Video integration added successfully"
-msgstr ""
+msgstr "Integrazione video aggiunta con successo"
 
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex:114
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:109
 #, elixir-autogen, elixir-format
 msgid "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
-msgstr ""
+msgstr "La tua organizzazione Microsoft richiede l'approvazione di un amministratore prima che Tymeslot possa essere connesso. Chiedi al tuo amministratore IT di concedere il consenso per l'app."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:219
 #, elixir-autogen, elixir-format
 msgid "Your MiroTalk instance base URL"
-msgstr ""
+msgstr "L'URL di base della tua istanza MiroTalk"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:165
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account is restricted."
-msgstr ""
+msgstr "Il tuo account Stripe è soggetto a restrizioni."
 
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:155
 #, elixir-autogen, elixir-format
 msgid "Zoom connected successfully!"
-msgstr ""
+msgstr "Zoom connesso con successo!"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:196
 #, elixir-autogen, elixir-format
 msgid "calendar data"
-msgstr ""
+msgstr "dati del calendario"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:170
 #, elixir-autogen, elixir-format
 msgid "custom"
-msgstr ""
+msgstr "personalizzato"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:143
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:169
 #, elixir-autogen, elixir-format
 msgid "self-hosted"
-msgstr ""
+msgstr "self-hosted"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:199
 #, elixir-autogen, elixir-format
 msgid "video conferencing configuration"
-msgstr ""
+msgstr "configurazione della videoconferenza"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:93
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:254
 #, elixir-autogen, elixir-format
 msgid "⚠ Invalid Syntax"
-msgstr ""
+msgstr "⚠ Sintassi non valida"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:83
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:244
 #, elixir-autogen, elixir-format
 msgid "✓ Valid Template"
-msgstr ""
+msgstr "✓ Template valido"
 
 #: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:139
 #, elixir-autogen, elixir-format
 msgid "%{service} connected successfully!"
-msgstr ""
+msgstr "%{service} connesso con successo!"
 
 #: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:171
 #, elixir-autogen, elixir-format
 msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" — Tymeslot needs this to create meetings and Google Meet links."
-msgstr ""
+msgstr "%{service} non è stato connesso perché l'autorizzazione al Calendario non è stata concessa. Riprova e seleziona la casella \"Visualizza, modifica, condividi ed elimina definitivamente tutti i calendari a cui puoi accedere tramite Google Calendar\" — Tymeslot ne ha bisogno per creare riunioni e link di Google Meet."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex:137
 #, elixir-autogen, elixir-format
 msgid "API Key"
-msgstr ""
+msgstr "Chiave API"
 
 #: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:185
 #, elixir-autogen, elixir-format
 msgid "Failed to connect %{service}. Please try again."
-msgstr ""
+msgstr "Connessione a %{service} non riuscita. Riprova."
 
 #: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:110
 #, elixir-autogen, elixir-format
 msgid "Failed to initiate %{service} authentication."
-msgstr ""
+msgstr "Impossibile avviare l'autenticazione di %{service}."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:57
 #, elixir-autogen, elixir-format
 msgid "My Custom Video"
-msgstr ""
+msgstr "Il mio video personalizzato"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:52
 #, elixir-autogen, elixir-format
 msgid "My MiroTalk"
-msgstr ""
+msgstr "Il mio MiroTalk"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex:51
 #, elixir-autogen, elixir-format
 msgid "My Video Integration"
-msgstr ""
+msgstr "La mia integrazione video"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex:161
 #, elixir-autogen, elixir-format
 msgid "Your API key"
-msgstr ""
+msgstr "La tua chiave API"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:147
 #, elixir-autogen, elixir-format
 msgid "custom link"
-msgstr ""
+msgstr "link personalizzato"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:138
 #, elixir-autogen, elixir-format
 msgid "rooms created automatically"
-msgstr ""
+msgstr "stanze create automaticamente"
 
 #: lib/tymeslot_web/components/integrations/providers/generic_provider_form_component.ex:22
 #, elixir-autogen, elixir-format
 msgid "Save"
-msgstr ""
+msgstr "Salva"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:67
 #, elixir-autogen, elixir-format
 msgid "https://jitsi.example.org/{{meeting_id}}"
-msgstr ""
+msgstr "https://jitsi.example.org/{{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:61
 #, elixir-autogen, elixir-format
 msgid "https://mirotalk.yourdomain.com"
-msgstr ""
+msgstr "https://mirotalk.yourdomain.com"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:78
 #, elixir-autogen, elixir-format
 msgid "your-api-key-here"
-msgstr ""
+msgstr "la-tua-chiave-api-qui"
 
 #: lib/tymeslot/integrations/video/provider_config.ex:65
 #, elixir-autogen, elixir-format
 msgid "Any video platform with static meeting URLs"
-msgstr ""
+msgstr "Qualsiasi piattaforma video con URL delle riunioni statici"
 
 #: lib/tymeslot/integrations/video/provider_config.ex:43
 #, elixir-autogen, elixir-format
 msgid "Enterprise OAuth integration with organizational accounts"
-msgstr ""
+msgstr "Integrazione OAuth aziendale con account organizzativi"
 
 #: lib/tymeslot/integrations/video/provider_config.ex:32
 #, elixir-autogen, elixir-format
 msgid "Full OAuth integration with automatic room creation"
-msgstr ""
+msgstr "Integrazione OAuth completa con creazione automatica delle stanze"
 
 #: lib/tymeslot/integrations/video/provider_config.ex:54
 #, elixir-autogen, elixir-format
 msgid "OAuth integration with automatic Zoom meeting creation"
-msgstr ""
+msgstr "Integrazione OAuth con creazione automatica delle riunioni Zoom"
 
 #: lib/tymeslot/integrations/video/provider_config.ex:24
 #, elixir-autogen, elixir-format
 msgid "Self-hosted peer-to-peer video meetings"
-msgstr ""
+msgstr "Riunioni video peer-to-peer self-hosted"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex:61
 #, elixir-autogen, elixir-format
 msgid "Error"
-msgstr ""
+msgstr "Errore"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex:60
 #, elixir-autogen, elixir-format
 msgid "Warning"
-msgstr ""
+msgstr "Avviso"

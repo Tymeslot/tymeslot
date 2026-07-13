@@ -15,177 +15,177 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "%{count} attendee hasn't been invited yet. Discard?"
 msgid_plural "%{count} attendees haven't been invited yet. Discard?"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{count} partecipante non è ancora stato invitato. Ignorare?"
+msgstr[1] "%{count} partecipanti non sono ancora stati invitati. Ignorare?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:106
 #, elixir-autogen, elixir-format
 msgid "%{count} hour before"
 msgid_plural "%{count} hours before"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{count} ora prima"
+msgstr[1] "%{count} ore prima"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:115
 #, elixir-autogen, elixir-format
 msgid "%{count} minute before"
 msgid_plural "%{count} minutes before"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "%{count} minuto prima"
+msgstr[1] "%{count} minuti prima"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:92
 #, elixir-autogen, elixir-format
 msgid "%{method} %{minutes}"
-msgstr ""
+msgstr "%{method} %{minutes}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:27
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:84
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:92
 #, elixir-autogen, elixir-format
 msgid "(No title)"
-msgstr ""
+msgstr "(Senza titolo)"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:327
 #, elixir-autogen, elixir-format
 msgid "+%{count} more"
 msgid_plural "+%{count} more"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "+%{count} altro"
+msgstr[1] "+%{count} altri"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:101
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:128
 #, elixir-autogen, elixir-format
 msgid "1 day before"
-msgstr ""
+msgstr "1 giorno prima"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:102
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:127
 #, elixir-autogen, elixir-format
 msgid "1 hour before"
-msgstr ""
+msgstr "1 ora prima"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:125
 #, elixir-autogen, elixir-format
 msgid "10 minutes before"
-msgstr ""
+msgstr "10 minuti prima"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:49
 #, elixir-autogen, elixir-format
 msgid "12-hour or 24-hour clock"
-msgstr ""
+msgstr "Formato orario a 12 o 24 ore"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:57
 #, elixir-autogen, elixir-format
 msgid "12h"
-msgstr ""
+msgstr "12h"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:58
 #, elixir-autogen, elixir-format
 msgid "24h"
-msgstr ""
+msgstr "24h"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:126
 #, elixir-autogen, elixir-format
 msgid "30 minutes before"
-msgstr ""
+msgstr "30 minuti prima"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:124
 #, elixir-autogen, elixir-format
 msgid "5 minutes before"
-msgstr ""
+msgstr "5 minuti prima"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:61
 #, elixir-autogen, elixir-format
 msgid "Actions"
-msgstr ""
+msgstr "Azioni"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:169
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:313
 #, elixir-autogen, elixir-format
 msgid "Add"
-msgstr ""
+msgstr "Aggiungi"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:229
 #, elixir-autogen, elixir-format
 msgid "Add description"
-msgstr ""
+msgstr "Aggiungi descrizione"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:197
 #, elixir-autogen, elixir-format
 msgid "Add location"
-msgstr ""
+msgstr "Aggiungi luogo"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:76
 #, elixir-autogen, elixir-format
 msgid "Add reminder"
-msgstr ""
+msgstr "Aggiungi promemoria"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:41
 #, elixir-autogen, elixir-format
 msgid "Add title"
-msgstr ""
+msgstr "Aggiungi titolo"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:106
 #, elixir-autogen, elixir-format
 msgid "After"
-msgstr ""
+msgstr "Dopo"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:59
 #, elixir-autogen, elixir-format
 msgid "Agenda view"
-msgstr ""
+msgstr "Vista agenda"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:50
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:112
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:173
 #, elixir-autogen, elixir-format
 msgid "All day"
-msgstr ""
+msgstr "Tutto il giorno"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex:48
 #, elixir-autogen, elixir-format
 msgid "All events in series"
-msgstr ""
+msgstr "Tutti gli eventi della serie"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:68
 #, elixir-autogen, elixir-format
 msgid "Also switches the current view"
-msgstr ""
+msgstr "Cambia anche la vista corrente"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex:41
 #, elixir-autogen, elixir-format
 msgid "Attendee added and invited."
-msgstr ""
+msgstr "Partecipante aggiunto e invitato."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/attendee_management.ex:85
 #, elixir-autogen, elixir-format
 msgid "Attendee removed and notified."
-msgstr ""
+msgstr "Partecipante rimosso e avvisato."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:249
 #, elixir-autogen, elixir-format
 msgid "Attendees"
-msgstr ""
+msgstr "Partecipanti"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:54
 #, elixir-autogen, elixir-format
 msgid "Attendees will be notified of pending changes."
-msgstr ""
+msgstr "I partecipanti verranno avvisati delle modifiche in sospeso."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:393
 #, elixir-autogen, elixir-format
 msgid "Calendar"
-msgstr ""
+msgstr "Calendario"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:23
 #, elixir-autogen, elixir-format
 msgid "Calendar Settings"
-msgstr ""
+msgstr "Impostazioni calendario"
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:65
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:133
 #, elixir-autogen, elixir-format
 msgid "Calendars refreshed"
-msgstr ""
+msgstr "Calendari aggiornati"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:51
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex:44
@@ -194,7 +194,7 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex:57
 #, elixir-autogen, elixir-format
 msgid "Cancel"
-msgstr ""
+msgstr "Annulla"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex:36
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:463
@@ -205,227 +205,227 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex:88
 #, elixir-autogen, elixir-format
 msgid "Changes saved."
-msgstr ""
+msgstr "Modifiche salvate."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:591
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex:24
 #, elixir-autogen, elixir-format
 msgid "Changes saved. Attendees will be notified shortly."
-msgstr ""
+msgstr "Modifiche salvate. I partecipanti verranno avvisati a breve."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:66
 #, elixir-autogen, elixir-format
 msgid "Close dialogs"
-msgstr ""
+msgstr "Chiudi le finestre di dialogo"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:71
 #, elixir-autogen, elixir-format
 msgid "Close modal"
-msgstr ""
+msgstr "Chiudi la finestra"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:412
 #, elixir-autogen, elixir-format
 msgid "Colour"
-msgstr ""
+msgstr "Colore"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex:40
 #, elixir-autogen, elixir-format
 msgid "Could not schedule notification. Changes were saved."
-msgstr ""
+msgstr "Impossibile programmare la notifica. Le modifiche sono state salvate."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex:69
 #, elixir-autogen, elixir-format
 msgid "Could not schedule notification. Please try again."
-msgstr ""
+msgstr "Impossibile programmare la notifica. Riprova."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:214
 #, elixir-autogen, elixir-format
 msgid "Create"
-msgstr ""
+msgstr "Crea"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:63
 #, elixir-autogen, elixir-format
 msgid "Create event"
-msgstr ""
+msgstr "Crea evento"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:203
 #, elixir-autogen, elixir-format
 msgid "Create failed — queued to retry on next sync"
-msgstr ""
+msgstr "Creazione non riuscita — in coda per un nuovo tentativo alla prossima sincronizzazione"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:100
 #, elixir-autogen, elixir-format
 msgid "Created by Tymeslot"
-msgstr ""
+msgstr "Creato da Tymeslot"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:210
 #, elixir-autogen, elixir-format
 msgid "Creating..."
-msgstr ""
+msgstr "Creazione in corso..."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:259
 #, elixir-autogen, elixir-format
 msgid "Daily"
-msgstr ""
+msgstr "Giornaliera"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:76
 #, elixir-autogen, elixir-format
 msgid "Day"
-msgstr ""
+msgstr "Giorno"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:56
 #, elixir-autogen, elixir-format
 msgid "Day view"
-msgstr ""
+msgstr "Vista giorno"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:462
 #, elixir-autogen, elixir-format
 msgid "Default"
-msgstr ""
+msgstr "Predefinito"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:65
 #, elixir-autogen, elixir-format
 msgid "Default calendar"
-msgstr ""
+msgstr "Calendario predefinito"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:67
 #, elixir-autogen, elixir-format
 msgid "Default view"
-msgstr ""
+msgstr "Vista predefinita"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:44
 #, elixir-autogen, elixir-format
 msgid "Delete"
-msgstr ""
+msgstr "Elimina"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:23
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:425
 #, elixir-autogen, elixir-format
 msgid "Delete event"
-msgstr ""
+msgstr "Elimina evento"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:204
 #, elixir-autogen, elixir-format
 msgid "Delete failed — queued to retry on next sync"
-msgstr ""
+msgstr "Eliminazione non riuscita — in coda per un nuovo tentativo alla prossima sincronizzazione"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:40
 #, elixir-autogen, elixir-format
 msgid "Deleting..."
-msgstr ""
+msgstr "Eliminazione in corso..."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:223
 #, elixir-autogen, elixir-format
 msgid "Description"
-msgstr ""
+msgstr "Descrizione"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:117
 #, elixir-autogen, elixir-format
 msgid "Desktop reminders"
-msgstr ""
+msgstr "Promemoria desktop"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_discard_attendees_modal.ex:39
 #, elixir-autogen, elixir-format
 msgid "Discard"
-msgstr ""
+msgstr "Ignora"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:103
 #, elixir-autogen, elixir-format
 msgid "Display Saturday and Sunday in week view"
-msgstr ""
+msgstr "Mostra sabato e domenica nella vista settimana"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:258
 #, elixir-autogen, elixir-format
 msgid "Does not repeat"
-msgstr ""
+msgstr "Non si ripete"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:317
 #, elixir-autogen, elixir-format
 msgid "Each person will receive an invitation from your calendar provider."
-msgstr ""
+msgstr "Ogni persona riceverà un invito dal tuo provider di calendario."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex:21
 #, elixir-autogen, elixir-format
 msgid "Edit recurring event"
-msgstr ""
+msgstr "Modifica evento ricorrente"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:70
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:98
 #, elixir-autogen, elixir-format
 msgid "Email"
-msgstr ""
+msgstr "Email"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:72
 #, elixir-autogen, elixir-format
 msgid "End date must not be before start date"
-msgstr ""
+msgstr "La data di fine non può precedere la data di inizio"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:104
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
-msgstr ""
+msgstr "L'ora di fine deve essere successiva all'ora di inizio"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:170
 #, elixir-autogen, elixir-format
 msgid "Event and linked meeting cancelled."
-msgstr ""
+msgstr "Evento e riunione collegata annullati."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:243
 #, elixir-autogen, elixir-format
 msgid "Event created."
-msgstr ""
+msgstr "Evento creato."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:246
 #, elixir-autogen, elixir-format
 msgid "Event created. Attendees have been invited."
-msgstr ""
+msgstr "Evento creato. I partecipanti sono stati invitati."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:177
 #, elixir-autogen, elixir-format
 msgid "Event deleted, but meeting cancellation failed. The attendee may not be notified."
-msgstr ""
+msgstr "Evento eliminato, ma l'annullamento della riunione non è riuscito. Il partecipante potrebbe non essere avvisato."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:227
 #, elixir-autogen, elixir-format
 msgid "Event deleted."
-msgstr ""
+msgstr "Evento eliminato."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:225
 #, elixir-autogen, elixir-format
 msgid "Event deleted. Attendees have been notified."
-msgstr ""
+msgstr "Evento eliminato. I partecipanti sono stati avvisati."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:46
 #, elixir-autogen, elixir-format
 msgid "Event details"
-msgstr ""
+msgstr "Dettagli evento"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:66
 #, elixir-autogen, elixir-format
 msgid "Every"
-msgstr ""
+msgstr "Ogni"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:206
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:220
 #, elixir-autogen, elixir-format
 msgid "Failed to create event"
-msgstr ""
+msgstr "Creazione dell'evento non riuscita"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:207
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:221
 #, elixir-autogen, elixir-format
 msgid "Failed to delete event"
-msgstr ""
+msgstr "Eliminazione dell'evento non riuscita"
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:126
 #, elixir-autogen, elixir-format
 msgid "Failed to move event"
-msgstr ""
+msgstr "Spostamento dell'evento non riuscito"
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:201
 #, elixir-autogen, elixir-format
 msgid "Failed to provision video room — link not updated"
-msgstr ""
+msgstr "Impossibile creare la stanza video — link non aggiornato"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:51
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:74
@@ -433,394 +433,394 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:94
 #, elixir-autogen, elixir-format
 msgid "Failed to save preference"
-msgstr ""
+msgstr "Salvataggio della preferenza non riuscito"
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:98
 #, elixir-autogen, elixir-format
 msgid "Failed to update event — changes reverted"
-msgstr ""
+msgstr "Aggiornamento dell'evento non riuscito — modifiche ripristinate"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:29
 #, elixir-autogen, elixir-format
 msgid "First day of week"
-msgstr ""
+msgstr "Primo giorno della settimana"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:64
 #, elixir-autogen, elixir-format
 msgid "Focus search"
-msgstr ""
+msgstr "Attiva la ricerca"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:250
 #, elixir-autogen, elixir-format
 msgid "Fri"
-msgstr ""
+msgstr "Ven"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_discard_attendees_modal.ex:45
 #, elixir-autogen, elixir-format
 msgid "Go back"
-msgstr ""
+msgstr "Indietro"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:397
 #, elixir-autogen, elixir-format
 msgid "Input contains invalid characters"
-msgstr ""
+msgstr "Il testo contiene caratteri non validi"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:396
 #, elixir-autogen, elixir-format
 msgid "Input too long"
-msgstr ""
+msgstr "Testo troppo lungo"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:38
 #, elixir-autogen, elixir-format
 msgid "Invalid calendar selected"
-msgstr ""
+msgstr "Calendario selezionato non valido"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:51
 #, elixir-autogen, elixir-format
 msgid "Invalid date"
-msgstr ""
+msgstr "Data non valida"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:125
 #, elixir-autogen, elixir-format
 msgid "Invalid time"
-msgstr ""
+msgstr "Ora non valida"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:173
 #, elixir-autogen, elixir-format
 msgid "Invitations will be sent when you create the event."
-msgstr ""
+msgstr "Gli inviti verranno inviati al momento della creazione dell'evento."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:128
 #, elixir-autogen, elixir-format
 msgid "Invite attendees (optional)"
-msgstr ""
+msgstr "Invita partecipanti (facoltativo)"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:52
 #, elixir-autogen, elixir-format
 msgid "Jump to today"
-msgstr ""
+msgstr "Vai a oggi"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:22
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
-msgstr ""
+msgstr "Scorciatoie da tastiera"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:188
 #, elixir-autogen, elixir-format
 msgid "Location"
-msgstr ""
+msgstr "Luogo"
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:177
 #, elixir-autogen, elixir-format
 msgid "Meeting created and invitation sent"
-msgstr ""
+msgstr "Riunione creata e invito inviato"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:246
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:38
 #, elixir-autogen, elixir-format
 msgid "Mon"
-msgstr ""
+msgstr "Lun"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:78
 #, elixir-autogen, elixir-format
 msgid "Month"
-msgstr ""
+msgstr "Mese"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:58
 #, elixir-autogen, elixir-format
 msgid "Month view"
-msgstr ""
+msgstr "Vista mese"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:261
 #, elixir-autogen, elixir-format
 msgid "Monthly"
-msgstr ""
+msgstr "Mensile"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:48
 #, elixir-autogen, elixir-format
 msgid "Navigation"
-msgstr ""
+msgstr "Navigazione"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:105
 #, elixir-autogen, elixir-format
 msgid "Never ends"
-msgstr ""
+msgstr "Non termina mai"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:33
 #, elixir-autogen, elixir-format
 msgid "New Event"
-msgstr ""
+msgstr "Nuovo evento"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex:92
 #, elixir-autogen, elixir-format
 msgid "Next month"
-msgstr ""
+msgstr "Mese successivo"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:50
 #, elixir-autogen, elixir-format
 msgid "Next period"
-msgstr ""
+msgstr "Periodo successivo"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex:41
 #, elixir-autogen, elixir-format
 msgid "No"
-msgstr ""
+msgstr "No"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:126
 #, elixir-autogen, elixir-format
 msgid "No calendars to sync"
-msgstr ""
+msgstr "Nessun calendario da sincronizzare"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:188
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:495
 #, elixir-autogen, elixir-format
 msgid "None"
-msgstr ""
+msgstr "Nessuno"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:69
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:99
 #, elixir-autogen, elixir-format
 msgid "Notification"
-msgstr ""
+msgstr "Notifica"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex:62
 #, elixir-autogen, elixir-format
 msgid "Notify %{count} attendee of this change?"
 msgid_plural "Notify %{count} attendees of this change?"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Avvisare %{count} partecipante di questa modifica?"
+msgstr[1] "Avvisare %{count} partecipanti di questa modifica?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex:50
 #, elixir-autogen, elixir-format
 msgid "Notify attendees?"
-msgstr ""
+msgstr "Avvisare i partecipanti?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:107
 #, elixir-autogen, elixir-format
 msgid "On date"
-msgstr ""
+msgstr "In data"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex:119
 #, elixir-autogen, elixir-format
 msgid "Pending notification cancelled."
-msgstr ""
+msgstr "Notifica in sospeso annullata."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex:54
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex:57
 #, elixir-autogen, elixir-format
 msgid "Pick a date"
-msgstr ""
+msgstr "Scegli una data"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex:80
 #, elixir-autogen, elixir-format
 msgid "Previous month"
-msgstr ""
+msgstr "Mese precedente"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:51
 #, elixir-autogen, elixir-format
 msgid "Previous period"
-msgstr ""
+msgstr "Periodo precedente"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:53
 #, elixir-autogen, elixir-format
 msgid "Primary"
-msgstr ""
+msgstr "Principale"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:113
 #, elixir-autogen, elixir-format
 msgid "Refresh failed for %{count} integration"
 msgid_plural "Refresh failed for %{count} integrations"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Aggiornamento non riuscito per %{count} integrazione"
+msgstr[1] "Aggiornamento non riuscito per %{count} integrazioni"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:32
 #, elixir-autogen, elixir-format
 msgid "Reminders"
-msgstr ""
+msgstr "Promemoria"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:80
 #, elixir-autogen, elixir-format
 msgid "Reminders are synced to your calendar so it can alert you on your own devices."
-msgstr ""
+msgstr "I promemoria vengono sincronizzati con il tuo calendario, così può avvisarti sui tuoi dispositivi."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex:24
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex:38
 #, elixir-autogen, elixir-format
 msgid "Remove"
-msgstr ""
+msgstr "Rimuovi"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:146
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:271
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:290
 #, elixir-autogen, elixir-format
 msgid "Remove %{email}"
-msgstr ""
+msgstr "Rimuovi %{email}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex:21
 #, elixir-autogen, elixir-format
 msgid "Remove attendee"
-msgstr ""
+msgstr "Rimuovi partecipante"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:46
 #, elixir-autogen, elixir-format
 msgid "Remove reminder %{label}"
-msgstr ""
+msgstr "Rimuovi promemoria %{label}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:52
 #, elixir-autogen, elixir-format
 msgid "Repeat"
-msgstr ""
+msgstr "Ripeti"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:200
 #, elixir-autogen, elixir-format
 msgid "Repeats daily"
-msgstr ""
+msgstr "Si ripete ogni giorno"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:166
 #, elixir-autogen, elixir-format
 msgid "Repeats every %{count} day"
 msgid_plural "Repeats every %{count} days"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Si ripete ogni %{count} giorno"
+msgstr[1] "Si ripete ogni %{count} giorni"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:184
 #, elixir-autogen, elixir-format
 msgid "Repeats every %{count} month"
 msgid_plural "Repeats every %{count} months"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Si ripete ogni %{count} mese"
+msgstr[1] "Si ripete ogni %{count} mesi"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:175
 #, elixir-autogen, elixir-format
 msgid "Repeats every %{count} week"
 msgid_plural "Repeats every %{count} weeks"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Si ripete ogni %{count} settimana"
+msgstr[1] "Si ripete ogni %{count} settimane"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:193
 #, elixir-autogen, elixir-format
 msgid "Repeats every %{count} year"
 msgid_plural "Repeats every %{count} years"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Si ripete ogni %{count} anno"
+msgstr[1] "Si ripete ogni %{count} anni"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:202
 #, elixir-autogen, elixir-format
 msgid "Repeats monthly"
-msgstr ""
+msgstr "Si ripete ogni mese"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:201
 #, elixir-autogen, elixir-format
 msgid "Repeats weekly"
-msgstr ""
+msgstr "Si ripete ogni settimana"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:203
 #, elixir-autogen, elixir-format
 msgid "Repeats yearly"
-msgstr ""
+msgstr "Si ripete ogni anno"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:251
 #, elixir-autogen, elixir-format
 msgid "Sat"
-msgstr ""
+msgstr "Sab"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex:53
 #, elixir-autogen, elixir-format
 msgid "Send cancellation to %{count} attendee?"
 msgid_plural "Send cancellation to %{count} attendees?"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Inviare l'annullamento a %{count} partecipante?"
+msgstr[1] "Inviare l'annullamento a %{count} partecipanti?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex:49
 #, elixir-autogen, elixir-format
 msgid "Send cancellation?"
-msgstr ""
+msgstr "Inviare l'annullamento?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:88
 #, elixir-autogen, elixir-format
 msgid "Show ISO week numbers in month view"
-msgstr ""
+msgstr "Mostra i numeri di settimana ISO nella vista mese"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:119
 #, elixir-autogen, elixir-format
 msgid "Show browser notifications before events while Tymeslot is open"
-msgstr ""
+msgstr "Mostra le notifiche del browser prima degli eventi mentre Tymeslot è aperto"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:102
 #, elixir-autogen, elixir-format
 msgid "Show weekends"
-msgstr ""
+msgstr "Mostra i fine settimana"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:30
 #, elixir-autogen, elixir-format
 msgid "Start weeks on Monday or Sunday"
-msgstr ""
+msgstr "Inizia la settimana di lunedì o di domenica"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:252
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:39
 #, elixir-autogen, elixir-format
 msgid "Sun"
-msgstr ""
+msgstr "Dom"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex:329
 #, elixir-autogen, elixir-format
 msgid "The recurrence end date must be on or after the event start."
-msgstr ""
+msgstr "La data di fine della ricorrenza deve coincidere con l'inizio dell'evento o essere successiva."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex:40
 #, elixir-autogen, elixir-format
 msgid "This and following events"
-msgstr ""
+msgstr "Questo evento e i successivi"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:32
 #, elixir-autogen, elixir-format
 msgid "This event is linked to a booking. The attendee will be notified of the cancellation."
-msgstr ""
+msgstr "Questo evento è collegato a una prenotazione. Il partecipante verrà avvisato dell'annullamento."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex:32
 #, elixir-autogen, elixir-format
 msgid "This event only"
-msgstr ""
+msgstr "Solo questo evento"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex:28
 #, elixir-autogen, elixir-format
 msgid "This person will receive a cancellation from your calendar provider."
-msgstr ""
+msgstr "Questa persona riceverà un annullamento dal tuo provider di calendario."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:29
 #, elixir-autogen, elixir-format
 msgid "This will also remove it from your calendar provider."
-msgstr ""
+msgstr "Verrà rimosso anche dal tuo provider di calendario."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:249
 #, elixir-autogen, elixir-format
 msgid "Thu"
-msgstr ""
+msgstr "Gio"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:105
 #, elixir-autogen, elixir-format
 msgid "Time"
-msgstr ""
+msgstr "Ora"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:545
 #, elixir-autogen, elixir-format
 msgid "Time editing is not available for all-day events."
-msgstr ""
+msgstr "La modifica dell'orario non è disponibile per gli eventi che durano tutto il giorno."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:48
 #, elixir-autogen, elixir-format
 msgid "Time format"
-msgstr ""
+msgstr "Formato ora"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:40
 #, elixir-autogen, elixir-format
 msgid "Title"
-msgstr ""
+msgstr "Titolo"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:65
 #, elixir-autogen, elixir-format
 msgid "Toggle this help"
-msgstr ""
+msgstr "Attiva/disattiva questa guida"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/drag_drop.ex:32
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/drag_drop.ex:72
@@ -828,156 +828,156 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex:318
 #, elixir-autogen, elixir-format
 msgid "Too many edits. Please wait a moment."
-msgstr ""
+msgstr "Troppe modifiche. Attendi un momento."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:346
 #, elixir-autogen, elixir-format
 msgid "Too many moves. Please wait a moment."
-msgstr ""
+msgstr "Troppi spostamenti. Attendi un momento."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:67
 #, elixir-autogen, elixir-format
 msgid "Too many refreshes. Please wait a moment."
-msgstr ""
+msgstr "Troppi aggiornamenti. Attendi un momento."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:247
 #, elixir-autogen, elixir-format
 msgid "Tue"
-msgstr ""
+msgstr "Mar"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_discard_attendees_modal.ex:21
 #, elixir-autogen, elixir-format
 msgid "Unsent invitations"
-msgstr ""
+msgstr "Inviti non inviati"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:178
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:340
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:344
 #, elixir-autogen, elixir-format
 msgid "Video"
-msgstr ""
+msgstr "Video"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:54
 #, elixir-autogen, elixir-format
 msgid "Views"
-msgstr ""
+msgstr "Viste"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex:69
 #, elixir-autogen, elixir-format
 msgid "W%{week}"
-msgstr ""
+msgstr "S%{week}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:248
 #, elixir-autogen, elixir-format
 msgid "Wed"
-msgstr ""
+msgstr "Mer"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:77
 #, elixir-autogen, elixir-format
 msgid "Week"
-msgstr ""
+msgstr "Settimana"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:87
 #, elixir-autogen, elixir-format
 msgid "Week numbers"
-msgstr ""
+msgstr "Numeri di settimana"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:57
 #, elixir-autogen, elixir-format
 msgid "Week view"
-msgstr ""
+msgstr "Vista settimana"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:260
 #, elixir-autogen, elixir-format
 msgid "Weekly"
-msgstr ""
+msgstr "Settimanale"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex:23
 #, elixir-autogen, elixir-format
 msgid "Which events do you want to update?"
-msgstr ""
+msgstr "Quali eventi vuoi aggiornare?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex:104
 #, elixir-autogen, elixir-format
 msgid "Wk"
-msgstr ""
+msgstr "Sett."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:262
 #, elixir-autogen, elixir-format
 msgid "Yearly"
-msgstr ""
+msgstr "Annuale"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex:71
 #, elixir-autogen, elixir-format
 msgid "Yes, notify"
-msgstr ""
+msgstr "Sì, avvisa"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex:70
 #, elixir-autogen, elixir-format
 msgid "Yes, send"
-msgstr ""
+msgstr "Sì, invia"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:47
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to delete this event"
-msgstr ""
+msgstr "Non hai l'autorizzazione per eliminare questo evento"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex:74
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex:308
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to modify this event"
-msgstr ""
+msgstr "Non hai l'autorizzazione per modificare questo evento"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:333
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to move this event"
-msgstr ""
+msgstr "Non hai l'autorizzazione per spostare questo evento"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:238
 #, elixir-autogen, elixir-format
 msgid "day(s)"
-msgstr ""
+msgstr "giorno/i"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:214
 #, elixir-autogen, elixir-format
 msgid "for %{count} occurrence"
 msgid_plural "for %{count} occurrences"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "per %{count} occorrenza"
+msgstr[1] "per %{count} occorrenze"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:240
 #, elixir-autogen, elixir-format
 msgid "month(s)"
-msgstr ""
+msgstr "mese/i"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:119
 #, elixir-autogen, elixir-format
 msgid "occurrence"
 msgid_plural "occurrences"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "occorrenza"
+msgstr[1] "occorrenze"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:207
 #, elixir-autogen, elixir-format
 msgid "on %{days}"
-msgstr ""
+msgstr "il %{days}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:222
 #, elixir-autogen, elixir-format
 msgid "until %{date}"
-msgstr ""
+msgstr "fino al %{date}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:239
 #, elixir-autogen, elixir-format
 msgid "week(s)"
-msgstr ""
+msgstr "settimana/e"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:241
 #, elixir-autogen, elixir-format
 msgid "year(s)"
-msgstr ""
+msgstr "anno/i"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:26
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete %{title}?"
-msgstr ""
+msgstr "Vuoi davvero eliminare %{title}?"
