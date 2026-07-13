@@ -46,161 +46,161 @@ msgstr "Надсилання…"
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:30
 #, elixir-autogen, elixir-format
 msgid "are still associated with this entry"
-msgstr ""
+msgstr "досі пов'язані з цим записом"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:21
 #, elixir-autogen, elixir-format
 msgid "can't be blank"
-msgstr ""
+msgstr "не може бути порожнім"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:31
 #, elixir-autogen, elixir-format
 msgid "does not exist"
-msgstr ""
+msgstr "не існує"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:28
 #, elixir-autogen, elixir-format
 msgid "does not match confirmation"
-msgstr ""
+msgstr "не збігається з підтвердженням"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:23
 #, elixir-autogen, elixir-format
 msgid "has already been taken"
-msgstr ""
+msgstr "вже використовується"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:26
 #, elixir-autogen, elixir-format
 msgid "has an invalid entry"
-msgstr ""
+msgstr "містить некоректне значення"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:25
 #, elixir-autogen, elixir-format
 msgid "has invalid format"
-msgstr ""
+msgstr "має некоректний формат"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:22
 #, elixir-autogen, elixir-format
 msgid "is invalid"
-msgstr ""
+msgstr "некоректне"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:24
 #, elixir-autogen, elixir-format
 msgid "is reserved"
-msgstr ""
+msgstr "зарезервовано"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:29
 #, elixir-autogen, elixir-format
 msgid "is still associated with this entry"
-msgstr ""
+msgstr "досі пов'язано з цим записом"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:27
 #, elixir-autogen, elixir-format
 msgid "must be accepted"
-msgstr ""
+msgstr "необхідно прийняти"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:37
 #, elixir-autogen, elixir-format
 msgid "must be equal to %{number}"
-msgstr ""
+msgstr "має дорівнювати %{number}"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:34
 #, elixir-autogen, elixir-format
 msgid "must be greater than %{number}"
-msgstr ""
+msgstr "має бути більшим за %{number}"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:36
 #, elixir-autogen, elixir-format
 msgid "must be greater than or equal to %{number}"
-msgstr ""
+msgstr "має бути більшим або дорівнювати %{number}"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:33
 #, elixir-autogen, elixir-format
 msgid "must be less than %{number}"
-msgstr ""
+msgstr "має бути меншим за %{number}"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:35
 #, elixir-autogen, elixir-format
 msgid "must be less than or equal to %{number}"
-msgstr ""
+msgstr "має бути меншим або дорівнювати %{number}"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:38
 #, elixir-autogen, elixir-format
 msgid "must be not equal to %{number}"
-msgstr ""
+msgstr "не може дорівнювати %{number}"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:46
 #, elixir-autogen, elixir-format
 msgid "should be %{count} byte(s)"
 msgid_plural "should be %{count} byte(s)"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "має бути %{count} байт"
+msgstr[1] "має бути %{count} байти"
+msgstr[2] "має бути %{count} байтів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:40
 #, elixir-autogen, elixir-format
 msgid "should be %{count} character(s)"
 msgid_plural "should be %{count} character(s)"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "має бути %{count} символ"
+msgstr[1] "має бути %{count} символи"
+msgstr[2] "має бути %{count} символів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:55
 #, elixir-autogen, elixir-format
 msgid "should be at least %{count} byte(s)"
 msgid_plural "should be at least %{count} byte(s)"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "має бути щонайменше %{count} байт"
+msgstr[1] "має бути щонайменше %{count} байти"
+msgstr[2] "має бути щонайменше %{count} байтів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:49
 #, elixir-autogen, elixir-format
 msgid "should be at least %{count} character(s)"
 msgid_plural "should be at least %{count} character(s)"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "має бути щонайменше %{count} символ"
+msgstr[1] "має бути щонайменше %{count} символи"
+msgstr[2] "має бути щонайменше %{count} символів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:73
 #, elixir-autogen, elixir-format
 msgid "should be at most %{count} byte(s)"
 msgid_plural "should be at most %{count} byte(s)"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "має бути щонайбільше %{count} байт"
+msgstr[1] "має бути щонайбільше %{count} байти"
+msgstr[2] "має бути щонайбільше %{count} байтів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:67
 #, elixir-autogen, elixir-format
 msgid "should be at most %{count} character(s)"
 msgid_plural "should be at most %{count} character(s)"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "має бути щонайбільше %{count} символ"
+msgstr[1] "має бути щонайбільше %{count} символи"
+msgstr[2] "має бути щонайбільше %{count} символів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:47
 #, elixir-autogen, elixir-format
 msgid "should have %{count} item(s)"
 msgid_plural "should have %{count} item(s)"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "має містити %{count} елемент"
+msgstr[1] "має містити %{count} елементи"
+msgstr[2] "має містити %{count} елементів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:61
 #, elixir-autogen, elixir-format
 msgid "should have at least %{count} item(s)"
 msgid_plural "should have at least %{count} item(s)"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "має містити щонайменше %{count} елемент"
+msgstr[1] "має містити щонайменше %{count} елементи"
+msgstr[2] "має містити щонайменше %{count} елементів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:79
 #, elixir-autogen, elixir-format
 msgid "should have at most %{count} item(s)"
 msgid_plural "should have at most %{count} item(s)"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "має містити щонайбільше %{count} елемент"
+msgstr[1] "має містити щонайбільше %{count} елементи"
+msgstr[2] "має містити щонайбільше %{count} елементів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:32
 #, elixir-autogen, elixir-format
 msgid "violates an exclusion constraint"
-msgstr ""
+msgstr "порушує обмеження виключення"

@@ -990,7 +990,7 @@ msgstr "Швидкі дії"
 #: lib/tymeslot/emails/templates/email_change_notification.ex:61
 #, elixir-autogen, elixir-format
 msgid "REQUEST DETAILS:"
-msgstr ""
+msgstr "ДЕТАЛІ ЗАПИТУ:"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:72
 #, elixir-autogen, elixir-format
@@ -1193,7 +1193,7 @@ msgstr "Переглянути деталі зустрічі"
 #: lib/tymeslot/emails/templates/external_booking_change.ex:212
 #, elixir-autogen, elixir-format
 msgid "View meeting:"
-msgstr ""
+msgstr "Переглянути зустріч:"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:67
 #, elixir-autogen, elixir-format
@@ -1317,27 +1317,27 @@ msgstr "До"
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
 #, elixir-autogen, elixir-format
 msgid "Change details"
-msgstr ""
+msgstr "Деталі зміни"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
 #, elixir-autogen, elixir-format
 msgid "Changed at"
-msgstr ""
+msgstr "Час зміни"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:116
 #, elixir-autogen, elixir-format
 msgid "Changed at:"
-msgstr ""
+msgstr "Час зміни:"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:26
 #, elixir-autogen, elixir-format
 msgid "Current email"
-msgstr ""
+msgstr "Поточна електронна адреса"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:63
 #, elixir-autogen, elixir-format
 msgid "Current email:"
-msgstr ""
+msgstr "Поточна електронна адреса:"
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:203
 #, elixir-autogen, elixir-format
@@ -1357,7 +1357,7 @@ msgstr "Не запитували це?"
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:39
 #, elixir-autogen, elixir-format
 msgid "Email change completed successfully."
-msgstr ""
+msgstr "Електронну адресу успішно змінено."
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:183
 #, elixir-autogen, elixir-format
@@ -1368,56 +1368,56 @@ msgstr "Поле"
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:94
 #, elixir-autogen, elixir-format
 msgid "If you did not authorise this change, please contact support immediately. You will no longer receive emails at this address."
-msgstr ""
+msgstr "Якщо ви не дозволяли цю зміну, негайно зверніться до служби підтримки. Ви більше не отримуватимете листи на цю адресу."
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:33
 #: lib/tymeslot/emails/templates/email_change_notification.ex:73
 #, elixir-autogen, elixir-format
 msgid "If you did not request this change, your account may be compromised. Please sign in to your account immediately and change your password."
-msgstr ""
+msgstr "Якщо ви не надсилали цей запит, ваш обліковий запис може бути скомпрометовано. Негайно ввійдіть у систему та змініть пароль."
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
 #: lib/tymeslot/emails/templates/email_change_notification.ex:26
 #, elixir-autogen, elixir-format
 msgid "New email"
-msgstr ""
+msgstr "Нова електронна адреса"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:115
 #: lib/tymeslot/emails/templates/email_change_notification.ex:62
 #, elixir-autogen, elixir-format
 msgid "New email:"
-msgstr ""
+msgstr "Нова електронна адреса:"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:26
 #: lib/tymeslot/emails/templates/email_change_notification.ex:65
 #, elixir-autogen, elixir-format
 msgid "Pending verification"
-msgstr ""
+msgstr "Очікує підтвердження"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:41
 #, elixir-autogen, elixir-format
 msgid "Previous email"
-msgstr ""
+msgstr "Попередня електронна адреса"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:114
 #, elixir-autogen, elixir-format
 msgid "Previous email:"
-msgstr ""
+msgstr "Попередня електронна адреса:"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:26
 #, elixir-autogen, elixir-format
 msgid "Request details"
-msgstr ""
+msgstr "Деталі запиту"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:26
 #, elixir-autogen, elixir-format
 msgid "Requested at"
-msgstr ""
+msgstr "Час запиту"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:64
 #, elixir-autogen, elixir-format
 msgid "Requested at:"
-msgstr ""
+msgstr "Час запиту:"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:41
 #, elixir-autogen, elixir-format
@@ -1433,7 +1433,7 @@ msgstr "Надіслано від"
 #: lib/tymeslot/emails/templates/email_change_notification.ex:26
 #, elixir-autogen, elixir-format
 msgid "Status"
-msgstr ""
+msgstr "Статус"
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:208
 #, elixir-autogen, elixir-format
@@ -1453,12 +1453,12 @@ msgstr "Що змінилося"
 #: lib/tymeslot/emails/templates/email_change_notification.ex:28
 #, elixir-autogen, elixir-format
 msgid "What happens next"
-msgstr ""
+msgstr "Що буде далі"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:43
 #, elixir-autogen, elixir-format
 msgid "What you need to know"
-msgstr ""
+msgstr "Що варто знати"
 
 #: lib/tymeslot/emails/shared/layouts.ex:152
 #: lib/tymeslot/emails/shared/mjml_email.ex:326
@@ -1655,7 +1655,7 @@ msgstr "Вітаю!"
 #: dev_support/email_testing/helpers.ex:80
 #, elixir-autogen, elixir-format
 msgid "I'll send you a reminder 24 hours before our appointment."
-msgstr ""
+msgstr "Я надішлю вам нагадування за 24 години до нашої зустрічі."
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:28
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:85
@@ -1672,97 +1672,97 @@ msgstr "Адресу email вашого акаунта Tymeslot успішно �
 #: dev_support/email_testing/helpers.ex:77
 #, elixir-autogen, elixir-format
 msgid "in %{time_until}"
-msgstr ""
+msgstr "через %{time_until}"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:170
 #, elixir-autogen, elixir-format
 msgid "ADDITIONAL DETAILS:"
-msgstr ""
+msgstr "ДОДАТКОВА ІНФОРМАЦІЯ:"
 
 #: lib/tymeslot/emails/shared/meeting/custom_answers.ex:54
 #, elixir-autogen, elixir-format
 msgid "Additional details"
-msgstr ""
+msgstr "Додаткова інформація"
 
 #: lib/tymeslot/emails/templates/external_booking_change.ex:105
 #, elixir-autogen, elixir-format
 msgid "A meeting changed in your external calendar."
-msgstr ""
+msgstr "У вашому зовнішньому календарі змінено зустріч."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:299
 #, elixir-autogen, elixir-format
 msgid "%{booker} has invited you as a guest to this meeting with %{organizer}."
-msgstr ""
+msgstr "%{booker} запрошує вас як гостя на цю зустріч із %{organizer}."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:159
 #, elixir-autogen, elixir-format
 msgid "Can't make it"
-msgstr ""
+msgstr "Не зможу бути"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:306
 #, elixir-autogen, elixir-format
 msgid "Can't make it: %{url}"
-msgstr ""
+msgstr "Не зможу бути: %{url}"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:144
 #, elixir-autogen, elixir-format
 msgid "Hi %{guest} — %{booker} has invited you as a guest to this meeting with %{organizer}."
-msgstr ""
+msgstr "Вітаємо, %{guest} — %{booker} запрошує вас як гостя на цю зустріч із %{organizer}."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:297
 #, elixir-autogen, elixir-format
 msgid "Hi %{guest},"
-msgstr ""
+msgstr "Вітаємо, %{guest},"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:304
 #, elixir-autogen, elixir-format
 msgid "WILL YOU BE THERE?"
-msgstr ""
+msgstr "ЧИ БУДЕТЕ ВИ ПРИСУТНІ?"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:157
 #, elixir-autogen, elixir-format
 msgid "Will you be there?"
-msgstr ""
+msgstr "Чи будете ви присутні?"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:159
 #, elixir-autogen, elixir-format
 msgid "Yes, I'll attend"
-msgstr ""
+msgstr "Так, я буду"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:305
 #, elixir-autogen, elixir-format
 msgid "Yes, I'll attend: %{url}"
-msgstr ""
+msgstr "Так, я буду: %{url}"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:161
 #, elixir-autogen, elixir-format
 msgid "You can change your response any time using the buttons above."
-msgstr ""
+msgstr "Ви можете змінити свою відповідь у будь-який час за допомогою кнопок вище."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:308
 #, elixir-autogen, elixir-format
 msgid "You can change your response any time using the links above."
-msgstr ""
+msgstr "Ви можете змінити свою відповідь у будь-який час за допомогою посилань вище."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:167
 #, elixir-autogen, elixir-format
 msgid "You're invited"
-msgstr ""
+msgstr "Вас запрошено"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:180
 #, elixir-autogen, elixir-format
 msgid "You're invited - %{date} with %{name}"
-msgstr ""
+msgstr "Вас запрошено — %{date} з %{name}"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:295
 #, elixir-autogen, elixir-format
 msgid "You're invited!"
-msgstr ""
+msgstr "Вас запрошено!"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:168
 #, elixir-autogen, elixir-format
 msgid "You've been added as a guest"
-msgstr ""
+msgstr "Вас додано як гостя"
 
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:156
 #, elixir-autogen, elixir-format
@@ -1772,129 +1772,129 @@ msgstr "Приєднатися до відеодзвінка"
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:91
 #, elixir-autogen, elixir-format
 msgid "A meeting could not be added to your calendar."
-msgstr ""
+msgstr "Не вдалося додати зустріч до вашого календаря."
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:117
 #, elixir-autogen, elixir-format
 msgid "ACTION REQUIRED:"
-msgstr ""
+msgstr "ПОТРІБНА ДІЯ:"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:77
 #, elixir-autogen, elixir-format
 msgid "Action Required"
-msgstr ""
+msgstr "Потрібна дія"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:131
 #, elixir-autogen, elixir-format
 msgid "CalDAV server temporarily unavailable"
-msgstr ""
+msgstr "Сервер CalDAV тимчасово недоступний"
 
 #: lib/tymeslot/emails/email_service/calendar_emails.ex:54
 #, elixir-autogen, elixir-format
 msgid "Calendar Owner"
-msgstr ""
+msgstr "Власник календаря"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:66
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:90
 #, elixir-autogen, elixir-format
 msgid "Calendar Sync Error"
-msgstr ""
+msgstr "Помилка синхронізації календаря"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:104
 #, elixir-autogen, elixir-format
 msgid "Calendar Sync Error — Manual Action Required"
-msgstr ""
+msgstr "Помилка синхронізації календаря — потрібна дія вручну"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:94
 #, elixir-autogen, elixir-format
 msgid "Calendar didn't sync"
-msgstr ""
+msgstr "Календар не синхронізовано"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:133
 #, elixir-autogen, elixir-format
 msgid "Calendar permissions or authentication problems"
-msgstr ""
+msgstr "Проблеми з дозволами календаря або автентифікацією"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:140
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:145
 #, elixir-autogen, elixir-format
 msgid "Common causes:"
-msgstr ""
+msgstr "Поширені причини:"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:114
 #, elixir-autogen, elixir-format
 msgid "ERROR DETAILS:"
-msgstr ""
+msgstr "ДЕТАЛІ ПОМИЛКИ:"
 
 #: lib/tymeslot/emails/email_service/account_emails.ex:112
 #, elixir-autogen, elixir-format
 msgid "Email Address Changed - Tymeslot Account"
-msgstr ""
+msgstr "Електронну адресу змінено — обліковий запис Tymeslot"
 
 #: lib/tymeslot/emails/email_service/account_emails.ex:114
 #, elixir-autogen, elixir-format
 msgid "Email Address Changed Successfully"
-msgstr ""
+msgstr "Електронну адресу успішно змінено"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:75
 #, elixir-autogen, elixir-format
 msgid "Error"
-msgstr ""
+msgstr "Помилка"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:73
 #, elixir-autogen, elixir-format
 msgid "Error Details"
-msgstr ""
+msgstr "Деталі помилки"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:65
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:106
 #, elixir-autogen, elixir-format
 msgid "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar."
-msgstr ""
+msgstr "Не вдалося додати цю зустріч до вашого календаря. Її успішно підтверджено в Tymeslot, і ви та інший учасник отримали листи з підтвердженням. Однак вам потрібно буде додати її до свого календаря вручну."
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:134
 #, elixir-autogen, elixir-format
 msgid "Maximum retries exceeded"
-msgstr ""
+msgstr "Перевищено максимальну кількість спроб"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:68
 #, elixir-autogen, elixir-format
 msgid "Meeting Details"
-msgstr ""
+msgstr "Деталі зустрічі"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:132
 #, elixir-autogen, elixir-format
 msgid "Network connectivity issues"
-msgstr ""
+msgstr "Проблеми з підключенням до мережі"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:80
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:118
 #, elixir-autogen, elixir-format
 msgid "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails — this is purely a technical calendar sync issue that doesn't affect the booking itself."
-msgstr ""
+msgstr "Будь ласка, додайте цю зустріч до свого календаря вручну, щоб не пропустити її. Ви та інший учасник уже отримали листи з підтвердженням — це суто технічна проблема синхронізації календаря, яка не впливає на саме бронювання."
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:96
 #, elixir-autogen, elixir-format
 msgid "The booking is safe — but please add it to your calendar manually."
-msgstr ""
+msgstr "Бронювання збережено, але, будь ласка, додайте його до свого календаря вручну."
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:85
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:122
 #, elixir-autogen, elixir-format
 msgid "This is an automated system notification. Please check your calendar sync settings if this issue persists."
-msgstr ""
+msgstr "Це автоматичне системне сповіщення. Будь ласка, перевірте налаштування синхронізації календаря, якщо ця проблема не зникне."
 
 #: lib/tymeslot/emails/email_service/auth_emails.ex:28
 #, elixir-autogen, elixir-format
 msgid "Verify your email address"
-msgstr ""
+msgstr "Підтвердьте свою електронну адресу"
 
 #: lib/tymeslot/emails/email_service/calendar_emails.ex:55
 #, elixir-autogen, elixir-format
 msgid "⚠️ Calendar Sync Error - Manual Action Required"
-msgstr ""
+msgstr "⚠️ Помилка синхронізації календаря — потрібна дія вручну"
 
 #: lib/tymeslot/emails/email_service/account_emails.ex:68
 #, elixir-autogen, elixir-format
 msgid "⚠️ Email Change Request - Security Alert"
-msgstr ""
+msgstr "⚠️ Запит на зміну електронної адреси — сповіщення безпеки"
