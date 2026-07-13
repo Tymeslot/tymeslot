@@ -66,17 +66,17 @@ msgstr "%{month} %{year}"
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex:82
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} has been rescheduled."
-msgstr "%{name}, votre réunion avec %{organizer} a été reportée."
+msgstr "%{name}, votre réunion %{organizer} a été reportée."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex:84
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} is all set."
-msgstr "%{name}, tout est prêt pour votre réunion avec %{organizer}."
+msgstr "%{name}, tout est prêt pour votre réunion %{organizer}."
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex:60
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} is confirmed"
-msgstr "%{name}, votre réunion avec %{organizer} est confirmée"
+msgstr "%{name}, votre réunion %{organizer} est confirmée"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:275
 #, elixir-autogen, elixir-format

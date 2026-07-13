@@ -30,7 +30,7 @@ msgstr "%{date} alle %{time}"
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:287
 #, elixir-autogen, elixir-format
 msgid "%{days} days in advance"
-msgstr "con %{days} giorni di anticipo"
+msgstr "%{days} giorni di anticipo"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:85
 #, elixir-autogen, elixir-format
@@ -50,7 +50,7 @@ msgstr "%{minutes} minuti"
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:309
 #, elixir-autogen, elixir-format
 msgid "%{months} months in advance"
-msgstr "con %{months} mesi di anticipo"
+msgstr "%{months} mesi di anticipo"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:114
 #, elixir-autogen, elixir-format
@@ -66,17 +66,17 @@ msgstr "%{month} %{year}"
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex:82
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} has been rescheduled."
-msgstr "%{name}, il tuo appuntamento con %{organizer} è stato riprogrammato."
+msgstr "%{name}, il tuo appuntamento %{organizer} è stato riprogrammato."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex:84
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} is all set."
-msgstr "%{name}, è tutto pronto per il tuo appuntamento con %{organizer}."
+msgstr "%{name}, è tutto pronto per il tuo appuntamento %{organizer}."
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex:60
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} is confirmed"
-msgstr "%{name}, il tuo appuntamento con %{organizer} è confermato"
+msgstr "%{name}, il tuo appuntamento %{organizer} è confermato"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:275
 #, elixir-autogen, elixir-format
@@ -111,17 +111,17 @@ msgstr "%{weekday} %{day} %{month} %{year} alle %{time} %{timezone}"
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:306
 #, elixir-autogen, elixir-format
 msgid "%{weeks} weeks in advance"
-msgstr "con %{weeks} settimane di anticipo"
+msgstr "%{weeks} settimane di anticipo"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:312
 #, elixir-autogen, elixir-format
 msgid "%{years} years in advance"
-msgstr "con %{years} anni di anticipo"
+msgstr "%{years} anni di anticipo"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:284
 #, elixir-autogen, elixir-format
 msgid "1 day in advance"
-msgstr "con 1 giorno di anticipo"
+msgstr "1 giorno di anticipo"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:291
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:304
@@ -138,17 +138,17 @@ msgstr "1 minuto"
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:294
 #, elixir-autogen, elixir-format
 msgid "1 month in advance"
-msgstr "con 1 mese di anticipo"
+msgstr "1 mese di anticipo"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:289
 #, elixir-autogen, elixir-format
 msgid "1 week in advance"
-msgstr "con 1 settimana di anticipo"
+msgstr "1 settimana di anticipo"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:299
 #, elixir-autogen, elixir-format
 msgid "1 year in advance"
-msgstr "con 1 anno di anticipo"
+msgstr "1 anno di anticipo"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:145
 #, elixir-autogen, elixir-format
@@ -163,7 +163,7 @@ msgstr "30 minuti"
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:301
 #, elixir-autogen, elixir-format
 msgid "90 days in advance"
-msgstr "con 90 giorni di anticipo"
+msgstr "90 giorni di anticipo"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex:178
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex:140

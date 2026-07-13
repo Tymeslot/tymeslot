@@ -30,7 +30,7 @@ msgstr "%{date} о %{time}"
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:287
 #, elixir-autogen, elixir-format
 msgid "%{days} days in advance"
-msgstr "за %{days} дн."
+msgstr "%{days} дн."
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:85
 #, elixir-autogen, elixir-format
@@ -50,7 +50,7 @@ msgstr "%{minutes} хв"
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:309
 #, elixir-autogen, elixir-format
 msgid "%{months} months in advance"
-msgstr "за %{months} міс."
+msgstr "%{months} міс."
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:114
 #, elixir-autogen, elixir-format
@@ -66,17 +66,17 @@ msgstr "%{month} %{year}"
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex:82
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} has been rescheduled."
-msgstr "%{name}, вашу зустріч із %{organizer} перенесено."
+msgstr "%{name}, вашу зустріч %{organizer} перенесено."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex:84
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} is all set."
-msgstr "%{name}, вашу зустріч із %{organizer} підтверджено."
+msgstr "%{name}, усе готово до вашої зустрічі %{organizer}."
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex:60
 #, elixir-autogen, elixir-format
 msgid "%{name}, your meeting %{organizer} is confirmed"
-msgstr "%{name}, вашу зустріч із %{organizer} підтверджено"
+msgstr "%{name}, вашу зустріч %{organizer} підтверджено"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:275
 #, elixir-autogen, elixir-format
@@ -111,17 +111,17 @@ msgstr "%{weekday}, %{day} %{month} %{year} о %{time} %{timezone}"
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:306
 #, elixir-autogen, elixir-format
 msgid "%{weeks} weeks in advance"
-msgstr "за %{weeks} тиж."
+msgstr "%{weeks} тиж."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:312
 #, elixir-autogen, elixir-format
 msgid "%{years} years in advance"
-msgstr "за %{years} р."
+msgstr "%{years} р."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:284
 #, elixir-autogen, elixir-format
 msgid "1 day in advance"
-msgstr "за 1 день"
+msgstr "1 день"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:291
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:304
@@ -138,17 +138,17 @@ msgstr "1 хвилина"
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:294
 #, elixir-autogen, elixir-format
 msgid "1 month in advance"
-msgstr "за 1 місяць"
+msgstr "1 місяць"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:289
 #, elixir-autogen, elixir-format
 msgid "1 week in advance"
-msgstr "за 1 тиждень"
+msgstr "1 тиждень"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:299
 #, elixir-autogen, elixir-format
 msgid "1 year in advance"
-msgstr "за 1 рік"
+msgstr "1 рік"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:145
 #, elixir-autogen, elixir-format
@@ -163,7 +163,7 @@ msgstr "30 хвилин"
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:301
 #, elixir-autogen, elixir-format
 msgid "90 days in advance"
-msgstr "за 90 днів"
+msgstr "90 днів"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex:178
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex:140
