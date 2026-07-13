@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:548
 #, elixir-autogen, elixir-format
 msgid "%{going} of %{total} going"
-msgstr "%{going} sur %{total} confirmés"
+msgstr "%{going} sur %{total} présents"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:242
 #, elixir-autogen, elixir-format
@@ -198,7 +198,7 @@ msgstr "Réunion annulée et remboursement effectué."
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:438
 #, elixir-autogen, elixir-format
 msgid "Meeting cancelled but refund could not be issued. Please issue the refund manually from your Stripe dashboard."
-msgstr "Réunion annulée, mais le remboursement n’a pas pu être effectué. Veuillez effectuer le remboursement manuellement depuis votre Dashboard Stripe."
+msgstr "Réunion annulée, mais le remboursement n’a pas pu être effectué. Veuillez effectuer le remboursement manuellement depuis votre tableau de bord Stripe."
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:486
 #, elixir-autogen, elixir-format

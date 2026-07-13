@@ -625,7 +625,7 @@ msgstr "Політика конфіденційності"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex:37
 #, elixir-autogen, elixir-format
 msgid "Question %{n} of %{m}"
-msgstr "Питання %{n} з %{m}"
+msgstr "Запитання %{n} з %{m}"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:147
 #, elixir-autogen, elixir-format
@@ -726,7 +726,7 @@ msgstr "Оберіть тривалість нашої розмови."
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:122
 #, elixir-autogen, elixir-format
 msgid "Select timezone"
-msgstr "Оберіть часовий пояс"
+msgstr "Виберіть часовий пояс"
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/single_select.ex:50
 #, elixir-autogen, elixir-format
@@ -1261,7 +1261,7 @@ msgstr "Цей тип зустрічі більше недоступний. Он
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:20
 #, elixir-autogen, elixir-format
 msgid "This time slot is no longer available. Please select a different time."
-msgstr "Цей час більше недоступний. Виберіть інший час."
+msgstr "Цей часовий слот більше недоступний. Виберіть інший час."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:53
 #, elixir-autogen, elixir-format
@@ -1271,7 +1271,7 @@ msgstr "Не вдалося розпочати процес оплати. Спр
 #: lib/tymeslot_web/themes/shared/live_helpers.ex:265
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting type"
-msgstr "Недійсний тип зустрічі"
+msgstr "Некоректний тип зустрічі"
 
 #: lib/tymeslot_web/themes/shared/payment_return.ex:126
 #, elixir-autogen, elixir-format

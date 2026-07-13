@@ -51,9 +51,9 @@ msgstr "(Без назви)"
 #, elixir-autogen, elixir-format
 msgid "+%{count} more"
 msgid_plural "+%{count} more"
-msgstr[0] "ще +%{count}"
-msgstr[1] "ще +%{count}"
-msgstr[2] "ще +%{count}"
+msgstr[0] "ще %{count}"
+msgstr[1] "ще %{count}"
+msgstr[2] "ще %{count}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:101
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex:128
@@ -136,7 +136,7 @@ msgstr "Після"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:59
 #, elixir-autogen, elixir-format
 msgid "Agenda view"
-msgstr "Розклад"
+msgstr "Подання «Розклад»"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:50
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:112
@@ -285,7 +285,7 @@ msgstr "Денне подання"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:462
 #, elixir-autogen, elixir-format
 msgid "Default"
-msgstr "За замовчуванням"
+msgstr "Стандартний"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:65
 #, elixir-autogen, elixir-format
@@ -346,7 +346,7 @@ msgstr "Не повторюється"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:317
 #, elixir-autogen, elixir-format
 msgid "Each person will receive an invitation from your calendar provider."
-msgstr "Кожна особа отримає запрошення від вашого постачальника послуг календаря."
+msgstr "Кожна особа отримає запрошення від вашого провайдера календаря."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex:21
 #, elixir-autogen, elixir-format
@@ -477,17 +477,17 @@ msgstr "Введений текст занадто довгий"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:38
 #, elixir-autogen, elixir-format
 msgid "Invalid calendar selected"
-msgstr "Вибрано недійсний календар"
+msgstr "Вибрано некоректний календар"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:51
 #, elixir-autogen, elixir-format
 msgid "Invalid date"
-msgstr "Неправильна дата"
+msgstr "Некоректна дата"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:125
 #, elixir-autogen, elixir-format
 msgid "Invalid time"
-msgstr "Неправильний час"
+msgstr "Некоректний час"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:173
 #, elixir-autogen, elixir-format
@@ -750,7 +750,7 @@ msgstr "Надіслати скасування?"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:88
 #, elixir-autogen, elixir-format
 msgid "Show ISO week numbers in month view"
-msgstr "Показувати номери тижнів за ISO у режимі місяця"
+msgstr "Показувати номери тижнів за ISO у місячному поданні"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:119
 #, elixir-autogen, elixir-format
@@ -871,7 +871,7 @@ msgstr "Відео"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:54
 #, elixir-autogen, elixir-format
 msgid "Views"
-msgstr "Режими перегляду"
+msgstr "Подання"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex:69
 #, elixir-autogen, elixir-format
@@ -896,7 +896,7 @@ msgstr "Номери тижнів"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex:57
 #, elixir-autogen, elixir-format
 msgid "Week view"
-msgstr "Режим тижня"
+msgstr "Тижневе подання"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:260
 #, elixir-autogen, elixir-format

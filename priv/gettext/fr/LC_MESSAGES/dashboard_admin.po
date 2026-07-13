@@ -77,7 +77,7 @@ msgstr "Authentification"
 #: lib/tymeslot_web/live/admin_live/components/layout.ex:32
 #, elixir-autogen, elixir-format
 msgid "Back to Dashboard"
-msgstr "Retour au Dashboard"
+msgstr "Retour au tableau de bord"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:24
 #, elixir-autogen, elixir-format
@@ -356,7 +356,7 @@ msgstr "Vous n’êtes plus administrateur."
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:49
 #, elixir-autogen, elixir-format
 msgid "You will lose access to admin settings and user management, and be returned to your dashboard."
-msgstr "Vous perdrez l’accès aux paramètres d’administration et à la gestion des utilisateurs, et serez redirigé vers votre Dashboard."
+msgstr "Vous perdrez l’accès aux paramètres d’administration et à la gestion des utilisateurs, et serez redirigé vers votre tableau de bord."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:130
 #, elixir-autogen, elixir-format
@@ -436,7 +436,7 @@ msgstr "Activer l’authentification unique OAuth 2.0 / OIDC générique (Keyclo
 #: lib/tymeslot_web/live/admin_live/formatters.ex:119
 #, elixir-autogen, elixir-format
 msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment — without them the toggle stays locked."
-msgstr "Permettre aux hôtes de cette instance de recevoir les paiements des personnes qui réservent via Stripe Connect. Nécessite que STRIPE_SECRET_KEY et STRIPE_CONNECT_WEBHOOK_SECRET soient définis dans l’environnement : sans ces valeurs, l’option reste verrouillée."
+msgstr "Permettre aux organisateurs de cette instance de recevoir les paiements des personnes qui réservent via Stripe Connect. Nécessite que STRIPE_SECRET_KEY et STRIPE_CONNECT_WEBHOOK_SECRET soient définis dans l’environnement : sans ces valeurs, l’option reste verrouillée."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:98
 #, elixir-autogen, elixir-format

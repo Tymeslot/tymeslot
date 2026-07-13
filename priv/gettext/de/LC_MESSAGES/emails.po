@@ -217,7 +217,7 @@ msgstr "NACHRICHT DES TEILNEHMERS:"
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:124
 #, elixir-autogen, elixir-format
 msgid "Meeting"
-msgstr "Meeting"
+msgstr "Termin"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:138
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:196
@@ -237,12 +237,12 @@ msgstr "Termin abgesagt – %{date} mit %{name}"
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:212
 #, elixir-autogen, elixir-format
 msgid "Meeting with %{name}"
-msgstr "Treffen mit %{name}"
+msgstr "Termin mit %{name}"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:145
 #, elixir-autogen, elixir-format
 msgid "Meeting with:"
-msgstr "Treffen mit:"
+msgstr "Termin mit:"
 
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:305
 #, elixir-autogen, elixir-format
@@ -574,7 +574,7 @@ msgstr "• Materialien vorbereitet"
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:140
 #, elixir-autogen, elixir-format
 msgid "⏰ Meeting with %{name} in %{time_until}"
-msgstr "⏰ Treffen mit %{name} in %{time_until}"
+msgstr "⏰ Termin mit %{name} in %{time_until}"
 
 #: lib/tymeslot/emails/shared/formatting.ex:153
 #, elixir-autogen, elixir-format
@@ -952,7 +952,7 @@ msgstr "Ein Klick und die Umstellung ist erledigt."
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:68
 #, elixir-autogen, elixir-format
 msgid "Our meeting is coming up"
-msgstr "Unser Meeting beginnt bald!"
+msgstr "Unser Treffen steht bevor"
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex:51
 #, elixir-autogen, elixir-format

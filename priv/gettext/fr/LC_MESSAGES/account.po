@@ -65,7 +65,7 @@ msgstr "L’authentification est gérée via %{provider}"
 #: lib/tymeslot_web/live/account_live.ex:42
 #, elixir-autogen, elixir-format
 msgid "Back to Dashboard"
-msgstr "Retour au Dashboard"
+msgstr "Retour au tableau de bord"
 
 #: lib/tymeslot_web/live/account_live/components.ex:60
 #: lib/tymeslot_web/live/account_live/components.ex:100
@@ -228,7 +228,7 @@ msgstr "Jamais"
 #: lib/tymeslot_web/live/account_live/components.ex:146
 #, elixir-autogen, elixir-format
 msgid "Choose the language for your dashboard. Automatic follows your browser's preference."
-msgstr "Choisissez la langue de votre Dashboard. Automatique suit la préférence de votre navigateur."
+msgstr "Choisissez la langue de votre tableau de bord. Automatique suit la préférence de votre navigateur."
 
 #: lib/tymeslot_web/live/account_live/handlers.ex:86
 #, elixir-autogen, elixir-format

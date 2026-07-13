@@ -643,7 +643,7 @@ msgstr "Що змінилося"
 #: lib/tymeslot/emails/templates/email_change_notification.ex:42
 #, elixir-autogen, elixir-format
 msgid "A change was requested on your Tymeslot account."
-msgstr "На вашому акаунті Tymeslot запитано зміну."
+msgstr "У вашому обліковому записі Tymeslot запитано зміну."
 
 #: lib/tymeslot/emails/templates/password_reset.ex:36
 #, elixir-autogen, elixir-format
@@ -659,17 +659,17 @@ msgstr "Лист для підтвердження надіслано на но�
 #: lib/tymeslot/emails/templates/password_reset.ex:31
 #, elixir-autogen, elixir-format
 msgid "Account Security"
-msgstr "Безпека акаунта"
+msgstr "Безпека облікового запису"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:61
 #, elixir-autogen, elixir-format
 msgid "Account Update"
-msgstr "Оновлення акаунта"
+msgstr "Оновлення облікового запису"
 
 #: lib/tymeslot/emails/templates/email_verification.ex:30
 #, elixir-autogen, elixir-format
 msgid "Account Verification"
-msgstr "Підтвердження акаунта"
+msgstr "Підтвердження облікового запису"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:93
 #: lib/tymeslot/emails/templates/external_booking_change.ex:107
@@ -728,22 +728,22 @@ msgstr "Компанія"
 #: lib/tymeslot/emails/templates/email_verification.ex:19
 #, elixir-autogen, elixir-format
 msgid "Confirm Email & Get Started"
-msgstr "Підтвердити email і почати"
+msgstr "Підтвердити електронну пошту й почати"
 
 #: lib/tymeslot/emails/templates/email_verification.ex:48
 #, elixir-autogen, elixir-format
 msgid "Confirm Email & Get Started:"
-msgstr "Підтвердити email і почати:"
+msgstr "Підтвердити електронну пошту й почати:"
 
 #: lib/tymeslot/emails/templates/email_change_verification.ex:55
 #, elixir-autogen, elixir-format
 msgid "Confirm the new email address on your Tymeslot account."
-msgstr "Підтвердьте нову адресу електронної пошти для вашого акаунта Tymeslot."
+msgstr "Підтвердьте нову адресу електронної пошти для вашого облікового запису Tymeslot."
 
 #: lib/tymeslot/emails/templates/email_change_verification.ex:58
 #, elixir-autogen, elixir-format
 msgid "Confirm your new email"
-msgstr "Підтвердьте новий email"
+msgstr "Підтвердьте нову електронну адресу"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:94
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:64
@@ -755,7 +755,7 @@ msgstr "Підтверджено"
 #: lib/tymeslot/emails/templates/email_change_verification.ex:111
 #, elixir-autogen, elixir-format
 msgid "Didn't request this change? You can safely ignore this email — nothing will happen to your account."
-msgstr "Не запитували цю зміну? Ви можете безпечно проігнорувати цей лист — з вашим акаунтом нічого не станеться."
+msgstr "Не запитували цю зміну? Ви можете безпечно проігнорувати цей лист — з вашим обліковим записом нічого не станеться."
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex:125
 #, elixir-autogen, elixir-format
@@ -766,18 +766,18 @@ msgstr "Електронна пошта"
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:107
 #, elixir-autogen, elixir-format
 msgid "Email change complete"
-msgstr "Зміну email завершено"
+msgstr "Зміну електронної пошти завершено"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:45
 #: lib/tymeslot/emails/templates/email_change_notification.ex:54
 #, elixir-autogen, elixir-format
 msgid "Email change requested"
-msgstr "Запит на зміну email"
+msgstr "Запит на зміну електронної пошти"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:24
 #, elixir-autogen, elixir-format
 msgid "Email change requested to: %{new_email}"
-msgstr "Запит на зміну email на: %{new_email}"
+msgstr "Запит на зміну електронної пошти на: %{new_email}"
 
 #: lib/tymeslot/emails/templates/event_update_notification.ex:75
 #, elixir-autogen, elixir-format
@@ -843,7 +843,7 @@ msgstr "Якщо новий час остаточний, будь ласка, о
 #: lib/tymeslot/emails/templates/password_reset.ex:54
 #, elixir-autogen, elixir-format
 msgid "If you didn't request this change, your account is still secure — you can simply delete this email."
-msgstr "Якщо ви не запитували цю зміну, ваш акаунт у безпеці — ви можете просто видалити цей лист."
+msgstr "Якщо ви не запитували цю зміну, ваш обліковий запис у безпеці — ви можете просто видалити цей лист."
 
 #: lib/tymeslot/emails/templates/password_reset.ex:32
 #, elixir-autogen, elixir-format
@@ -858,7 +858,7 @@ msgstr "Запрошено"
 #: lib/tymeslot/emails/templates/password_reset.ex:47
 #, elixir-autogen, elixir-format
 msgid "It happens to the best of us! Click the link below to choose a new password and regain access to your account."
-msgstr "Таке трапляється з найкращими! Натисніть посилання нижче, щоб обрати новий пароль і відновити доступ до свого акаунта."
+msgstr "Таке трапляється з найкращими! Натисніть посилання нижче, щоб обрати новий пароль і відновити доступ до свого облікового запису."
 
 #: lib/tymeslot/emails/templates/password_reset.ex:17
 #, elixir-autogen, elixir-format
@@ -932,7 +932,7 @@ msgstr "Нове бронювання"
 #: lib/tymeslot/emails/templates/email_change_verification.ex:83
 #, elixir-autogen, elixir-format
 msgid "New email address"
-msgstr "Нова адреса email"
+msgstr "Нова адреса електронної пошти"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:112
 #: lib/tymeslot/emails/templates/external_booking_change.ex:183
@@ -1079,18 +1079,18 @@ msgstr "Посилання для підтвердження дійсне 24 г�
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:56
 #, elixir-autogen, elixir-format
 msgid "This is a confirmation of changes made to your account. If you have any questions, please contact support."
-msgstr "Це підтвердження змін, внесених до вашого акаунта. Якщо маєте запитання, будь ласка, зв'яжіться з підтримкою."
+msgstr "Це підтвердження змін, внесених до вашого облікового запису. Якщо маєте запитання, будь ласка, зв'яжіться з підтримкою."
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:36
 #, elixir-autogen, elixir-format
 msgid "This is a security notification sent to protect your account. If you have concerns, please contact support immediately."
-msgstr "Це сповіщення про безпеку, надіслане для захисту вашого акаунта. Якщо у вас є занепокоєння, будь ласка, негайно зв'яжіться з підтримкою."
+msgstr "Це сповіщення про безпеку, надіслане для захисту вашого облікового запису. Якщо у вас є занепокоєння, будь ласка, негайно зв'яжіться з підтримкою."
 
 #: lib/tymeslot/emails/templates/email_change_verification.ex:39
 #: lib/tymeslot/emails/templates/email_change_verification.ex:109
 #, elixir-autogen, elixir-format
 msgid "This link expires in 24 hours. Once confirmed, you'll sign in with your new email address."
-msgstr "Це посилання дійсне 24 години. Після підтвердження ви зможете входити з новою адресою email."
+msgstr "Це посилання дійсне 24 години. Після підтвердження ви зможете входити з новою адресою електронної пошти."
 
 #: lib/tymeslot/emails/templates/password_reset.ex:21
 #: lib/tymeslot/emails/templates/password_reset.ex:52
@@ -1154,14 +1154,14 @@ msgstr "Підтвердити"
 #: lib/tymeslot/emails/templates/email_change_verification.ex:36
 #, elixir-autogen, elixir-format
 msgid "Verify New Email Address"
-msgstr "Підтвердити нову адресу email"
+msgstr "Підтвердити нову адресу електронної пошти"
 
 #: lib/tymeslot/emails/email_service/account_emails.ex:41
 #: lib/tymeslot/emails/templates/email_change_verification.ex:54
 #: lib/tymeslot/emails/templates/email_change_verification.ex:100
 #, elixir-autogen, elixir-format
 msgid "Verify your new email address"
-msgstr "Підтвердьте свою нову адресу email"
+msgstr "Підтвердьте свою нову адресу електронної пошти"
 
 #: lib/tymeslot/emails/shared/meeting/video_section.ex:68
 #, elixir-autogen, elixir-format
@@ -1192,12 +1192,12 @@ msgstr "ЩО ВАРТО ЗНАТИ:"
 #: lib/tymeslot/emails/templates/email_verification.ex:46
 #, elixir-autogen, elixir-format
 msgid "We're excited to have you on board! To start scheduling meetings and simplify your calendar, please verify your email address."
-msgstr "Ми раді вітати вас! Щоб почати планувати зустрічі та спростити свій календар, будь ласка, підтвердьте свою адресу email."
+msgstr "Ми раді вітати вас! Щоб почати планувати зустрічі та спростити свій календар, будь ласка, підтвердьте свою адресу електронної пошти."
 
 #: lib/tymeslot/emails/templates/email_verification.ex:17
 #, elixir-autogen, elixir-format
 msgid "We're glad you're here. One quick step and your calendar will be ready to go — please confirm your email below."
-msgstr "Раді бачити вас тут. Ще один швидкий крок — і ваш календар готовий до роботи. Будь ласка, підтвердьте свій email нижче."
+msgstr "Раді бачити вас тут. Ще один швидкий крок — і ваш календар готовий до роботи. Будь ласка, підтвердьте свою електронну пошту нижче."
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:46
 #, elixir-autogen, elixir-format
@@ -1222,7 +1222,7 @@ msgstr "Ласкаво просимо до Tymeslot"
 #: lib/tymeslot/emails/templates/email_verification.ex:31
 #, elixir-autogen, elixir-format
 msgid "Welcome to Tymeslot — please verify your email."
-msgstr "Ласкаво просимо до Tymeslot — будь ласка, підтвердьте свій email."
+msgstr "Ласкаво просимо до Tymeslot — будь ласка, підтвердьте свою електронну пошту."
 
 #: lib/tymeslot/emails/templates/email_verification.ex:42
 #, elixir-autogen, elixir-format
@@ -1232,12 +1232,12 @@ msgstr "Ласкаво просимо до Tymeslot!"
 #: lib/tymeslot/emails/templates/email_change_verification.ex:104
 #, elixir-autogen, elixir-format
 msgid "You asked to change the email address on your Tymeslot account to %{new_email}."
-msgstr "Ви запитали змінити адресу email вашого акаунта Tymeslot на %{new_email}."
+msgstr "Ви надіслали запит на зміну адреси електронної пошти вашого облікового запису Tymeslot на %{new_email}."
 
 #: lib/tymeslot/emails/templates/email_change_verification.ex:29
 #, elixir-autogen, elixir-format
 msgid "You asked to change the email address on your Tymeslot account. Confirm the new address below to finish the switch."
-msgstr "Ви запитали змінити адресу email вашого акаунта Tymeslot. Підтвердьте нову адресу нижче, щоб завершити зміну."
+msgstr "Ви надіслали запит на зміну адреси електронної пошти вашого облікового запису Tymeslot. Підтвердьте нову адресу нижче, щоб завершити зміну."
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:45
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:123
@@ -1253,18 +1253,18 @@ msgstr "Зустріч заплановано."
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:62
 #, elixir-autogen, elixir-format
 msgid "Your Tymeslot email address has been changed."
-msgstr "Адресу email вашого акаунта Tymeslot було змінено."
+msgstr "Адресу електронної пошти вашого облікового запису Tymeslot було змінено."
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:66
 #, elixir-autogen, elixir-format
 msgid "Your account is now using the new address."
-msgstr "Ваш акаунт тепер використовує нову адресу."
+msgstr "Ваш обліковий запис тепер використовує нову адресу."
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:30
 #: lib/tymeslot/emails/templates/email_change_notification.ex:71
 #, elixir-autogen, elixir-format
 msgid "Your current email remains active until the change is confirmed"
-msgstr "Ваша поточна адреса email залишається активною до підтвердження зміни"
+msgstr "Ваша поточна адреса електронної пошти залишається активною до підтвердження зміни"
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:45
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:122
@@ -1454,7 +1454,7 @@ msgstr "планування, що поважає ваш час"
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:100
 #, elixir-autogen, elixir-format
 msgid "For security, a copy of this confirmation was sent to your previous email address."
-msgstr "З міркувань безпеки копію цього підтвердження надіслано на вашу попередню адресу email."
+msgstr "З міркувань безпеки копію цього підтвердження надіслано на вашу попередню адресу електронної пошти."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:521
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:586
@@ -1628,7 +1628,7 @@ msgstr "Вітаю! Ваш платіж на суму %{amount} було пов�
 #: lib/tymeslot/emails/templates/email_change_notification.ex:58
 #, elixir-autogen, elixir-format
 msgid "A request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you."
-msgstr "Надійшов запит на зміну адреси email вашого акаунта Tymeslot. Ми повідомляємо вам про це, щоб ви могли підтвердити, що це були саме ви."
+msgstr "Надійшов запит на зміну адреси електронної пошти вашого облікового запису Tymeslot. Ми повідомляємо вам про це, щоб ви могли підтвердити, що це були саме ви."
 
 #: lib/tymeslot/emails/shared/greeting.ex:26
 #: lib/tymeslot/emails/shared/greeting.ex:37
@@ -1645,13 +1645,13 @@ msgstr "Я надішлю вам нагадування за 24 години д�
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:85
 #, elixir-autogen, elixir-format
 msgid "Your Tymeslot account email address has been successfully changed."
-msgstr "Адресу email вашого акаунта Tymeslot успішно змінено."
+msgstr "Адресу електронної пошти вашого облікового запису Tymeslot успішно змінено."
 
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:23
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:80
 #, elixir-autogen, elixir-format
 msgid "Your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened."
-msgstr "Адресу email вашого акаунта Tymeslot успішно змінено. Це підтвердження надсилається на вашу попередню адресу, щоб ви знали, що зміна відбулася."
+msgstr "Адресу електронної пошти вашого облікового запису Tymeslot успішно змінено. Це підтвердження надсилається на вашу попередню адресу, щоб ви знали, що зміна відбулася."
 
 #: dev_support/email_testing/helpers.ex:77
 #, elixir-autogen, elixir-format

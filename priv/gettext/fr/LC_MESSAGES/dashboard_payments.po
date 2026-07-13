@@ -171,7 +171,7 @@ msgstr "Terminer la connexion à Stripe"
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:82
 #, elixir-autogen, elixir-format
 msgid "Full refund"
-msgstr "Remboursement total"
+msgstr "Remboursement intégral"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:127
 #, elixir-autogen, elixir-format

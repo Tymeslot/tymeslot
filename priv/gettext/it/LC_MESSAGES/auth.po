@@ -632,7 +632,7 @@ msgstr "Devi accettare i termini per continuare."
 #: lib/tymeslot_web/components/auth/registration/complete_registration_component.ex:77
 #, elixir-autogen, elixir-format
 msgid "your.email@example.com"
-msgstr "tua.email@esempio.com"
+msgstr "tua.email@example.com"
 
 #: lib/tymeslot_web/hooks/auth_live_session_hook.ex:117
 #, elixir-autogen, elixir-format

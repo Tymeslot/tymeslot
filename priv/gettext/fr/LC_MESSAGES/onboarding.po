@@ -88,7 +88,7 @@ msgstr "Profil, disponibilités, intégrations et automatisation — tout à un 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:66
 #, elixir-autogen, elixir-format
 msgid "Quick links to set up your profile, availability, and meeting types. Start here."
-msgstr "Liens rapides pour configurer votre profil, vos disponibilités et vos types de rendez-vous. Commencez ici."
+msgstr "Liens rapides pour configurer votre profil, vos disponibilités et vos types de réunion. Commencez ici."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:53
 #, elixir-autogen, elixir-format
@@ -118,7 +118,7 @@ msgstr "Deux modes"
 #: lib/tymeslot/onboarding/dashboard_tour.ex:35
 #, elixir-autogen, elixir-format
 msgid "Welcome to your Tymeslot dashboard"
-msgstr "Bienvenue sur votre Dashboard Tymeslot"
+msgstr "Bienvenue sur votre tableau de bord Tymeslot"
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:82
 #, elixir-autogen, elixir-format

@@ -15,7 +15,7 @@ msgid "invalid_meeting_link"
 msgstr "Ungültiger Link"
 
 msgid "slot_no_longer_available"
-msgstr "Dieser Termin ist leider nicht mehr verfügbar"
+msgstr "Dieses Zeitfenster ist leider nicht mehr verfügbar"
 
 msgid "name_required"
 msgstr "Name erforderlich"
@@ -34,14 +34,14 @@ msgstr "Diese Buchungsseite ist noch nicht verfügbar"
 #: lib/tymeslot_web/themes/shared/components/error_component.ex:44
 #, elixir-autogen
 msgid "connect_calendar_first"
-msgstr "Falls Sie der Veranstalter sind: Bitte verknüpfen Sie einen Kalender in Ihrem Dashboard."
+msgstr "Falls Sie der Gastgeber sind: Bitte verknüpfen Sie einen Kalender in Ihrem Dashboard."
 
 #: Status
 msgid "loading"
-msgstr "Lädt …"
+msgstr "Lädt…"
 
 msgid "submitting"
-msgstr "Wird gesendet …"
+msgstr "Wird gesendet…"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex:30
 #, elixir-autogen, elixir-format

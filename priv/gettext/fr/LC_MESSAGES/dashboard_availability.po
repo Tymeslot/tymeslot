@@ -61,7 +61,7 @@ msgstr "Voulez-vous vraiment supprimer cette pause%{label} ?"
 #: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex:78
 #, elixir-autogen, elixir-format
 msgid "Availability"
-msgstr "Disponibilité"
+msgstr "Disponibilités"
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:71
 #, elixir-autogen, elixir-format
@@ -172,7 +172,7 @@ msgstr "Échec de la mise à jour de la disponibilité"
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:113
 #, elixir-autogen, elixir-format
 msgid "Fri"
-msgstr "Ven"
+msgstr "Ven."
 
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:23
 #, elixir-autogen, elixir-format
@@ -214,7 +214,7 @@ msgstr "Liste"
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:109
 #, elixir-autogen, elixir-format
 msgid "Mon"
-msgstr "Lun"
+msgstr "Lun."
 
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:19
 #, elixir-autogen, elixir-format
@@ -259,7 +259,7 @@ msgstr "Pause rapide ajoutée"
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:114
 #, elixir-autogen, elixir-format
 msgid "Sat"
-msgstr "Sam"
+msgstr "Sam."
 
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:24
 #, elixir-autogen, elixir-format
@@ -284,7 +284,7 @@ msgstr "Heure de début"
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:115
 #, elixir-autogen, elixir-format
 msgid "Sun"
-msgstr "Dim"
+msgstr "Dim."
 
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:25
 #, elixir-autogen, elixir-format
@@ -304,7 +304,7 @@ msgstr "Cela supprimera tous les horaires de disponibilité et les pauses de ce 
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:112
 #, elixir-autogen, elixir-format
 msgid "Thu"
-msgstr "Jeu"
+msgstr "Jeu."
 
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:22
 #, elixir-autogen, elixir-format
@@ -314,7 +314,7 @@ msgstr "Jeudi"
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:110
 #, elixir-autogen, elixir-format
 msgid "Tue"
-msgstr "Mar"
+msgstr "Mar."
 
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:20
 #, elixir-autogen, elixir-format
@@ -336,7 +336,7 @@ msgstr "Jusqu’à"
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:111
 #, elixir-autogen, elixir-format
 msgid "Wed"
-msgstr "Mer"
+msgstr "Mer."
 
 #: lib/tymeslot_web/live/dashboard/availability/grid_component.ex:21
 #, elixir-autogen, elixir-format
@@ -361,7 +361,7 @@ msgstr "Vous ajoutez des pauses trop rapidement. Veuillez patienter un instant."
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:183
 #, elixir-autogen, elixir-format
 msgid "e.g. Lunch"
-msgstr "ex. Déjeuner"
+msgstr "p. ex. Déjeuner"
 
 #: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex:60
 #, elixir-autogen, elixir-format

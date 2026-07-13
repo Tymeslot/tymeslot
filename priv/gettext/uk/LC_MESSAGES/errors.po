@@ -15,7 +15,7 @@ msgid "invalid_meeting_link"
 msgstr "Посилання на зустріч недійсне"
 
 msgid "slot_no_longer_available"
-msgstr "Цей час більше недоступний"
+msgstr "Цей часовий слот більше недоступний"
 
 msgid "name_required"
 msgstr "Вкажіть ім'я"

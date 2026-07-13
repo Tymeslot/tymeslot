@@ -128,7 +128,7 @@ msgstr "Gérer la réservation"
 #: lib/tymeslot_web/live/dashboard_live.ex:210
 #, elixir-autogen, elixir-format
 msgid "Meeting payments require an upgraded plan."
-msgstr "Les paiements de réunion nécessitent une offre supérieure."
+msgstr "Les paiements de réunion nécessitent un forfait supérieur."
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:283
 #, elixir-autogen, elixir-format

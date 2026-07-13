@@ -74,7 +74,7 @@ msgstr "Connessione persa"
 #: lib/tymeslot_web/components/layouts.ex:146
 #, elixir-autogen, elixir-format
 msgid "JavaScript Disabled"
-msgstr "JavaScript disabilitato"
+msgstr "JavaScript disattivato"
 
 #: lib/tymeslot_web/components/layouts.ex:186
 #, elixir-autogen, elixir-format
@@ -115,7 +115,7 @@ msgstr "Aggiorna la pagina"
 #: lib/tymeslot_web/components/layouts/root.html.heex:13
 #, elixir-autogen, elixir-format
 msgid "Schedule a Meeting"
-msgstr "Fissa un appuntamento"
+msgstr "Fissa una riunione"
 
 #: lib/tymeslot_web/components/timezone_dropdown.ex:112
 #, elixir-autogen, elixir-format
@@ -177,7 +177,7 @@ msgstr "ora locale"
 #: lib/tymeslot_web/components/layouts.ex:194
 #, elixir-autogen, elixir-format
 msgid "scheduling page"
-msgstr "pagina di pianificazione"
+msgstr "pagina di prenotazione"
 
 #: lib/tymeslot_web/components/core_components/layout.ex:64
 #, elixir-autogen, elixir-format

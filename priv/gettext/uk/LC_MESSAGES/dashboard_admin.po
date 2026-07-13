@@ -217,13 +217,13 @@ msgstr "Вхід через Google"
 #: lib/tymeslot_web/live/admin_live.ex:241
 #, elixir-autogen, elixir-format
 msgid "Invalid request."
-msgstr "Недійсний запит."
+msgstr "Некоректний запит."
 
 #: lib/tymeslot_web/live/admin_live.ex:236
 #: lib/tymeslot_web/live/admin_live.ex:250
 #, elixir-autogen, elixir-format
 msgid "Invalid user id."
-msgstr "Недійсний ідентифікатор користувача."
+msgstr "Некоректний ідентифікатор користувача."
 
 #: lib/tymeslot_web/live/admin_live/components/layout.ex:52
 #, elixir-autogen, elixir-format

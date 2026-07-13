@@ -88,7 +88,7 @@ msgstr "Profilo, disponibilità, integrazioni e automazioni — tutto a un solo 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:66
 #, elixir-autogen, elixir-format
 msgid "Quick links to set up your profile, availability, and meeting types. Start here."
-msgstr "Collegamenti rapidi per configurare il profilo, la disponibilità e i tipi di incontro. Inizia da qui."
+msgstr "Collegamenti rapidi per configurare il profilo, la disponibilità e i tipi di riunione. Inizia da qui."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:53
 #, elixir-autogen, elixir-format

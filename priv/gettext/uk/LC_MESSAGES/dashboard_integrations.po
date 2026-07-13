@@ -83,7 +83,7 @@ msgstr "Якщо ввімкнено, цей тип зустрічі буде д�
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:356
 #, elixir-autogen, elixir-format
 msgid "That link isn't valid. Use lowercase letters, numbers and hyphens."
-msgstr "Недійсне посилання. Використовуйте малі літери, цифри та дефіси."
+msgstr "Некоректне посилання. Використовуйте малі літери, цифри та дефіси."
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:205
 #, elixir-autogen, elixir-format
@@ -210,7 +210,7 @@ msgstr "Скасувати"
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:253
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate — another active integration already uses this account"
-msgstr "Неможливо відновити — цей обліковий запис уже використовується іншою активною інтеграцією"
+msgstr "Неможливо активувати повторно — цей обліковий запис уже використовується іншою активною інтеграцією"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:32
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:43
@@ -449,12 +449,12 @@ msgstr "Некоректна відповідь під час автентифі
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:114
 #, elixir-autogen, elixir-format
 msgid "Invalid integration ID"
-msgstr "Некоректний ID інтеграції"
+msgstr "Некоректний ідентифікатор інтеграції"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:431
 #, elixir-autogen, elixir-format
 msgid "Meeting Settings"
-msgstr "Налаштування зустрічі"
+msgstr "Налаштування зустрічей"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:65
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:194
@@ -739,7 +739,7 @@ msgstr "Відео"
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:340
 #, elixir-autogen, elixir-format
 msgid "Video Integration"
-msgstr "Інтеграція відео"
+msgstr "Інтеграція відеозв'язку"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:487
 #, elixir-autogen, elixir-format
@@ -750,7 +750,7 @@ msgstr "Інтеграцію відео успішно додано"
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:109
 #, elixir-autogen, elixir-format
 msgid "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
-msgstr "Ваша організація Microsoft вимагає схвалення адміністратора перед підключенням Tymeslot. Будь ласка, попросіть свого ІТ-адміністратора надати дозвіл для цього додатка."
+msgstr "Ваша організація Microsoft вимагає схвалення адміністратора перед підключенням Tymeslot. Будь ласка, попросіть свого ІТ-адміністратора надати дозвіл для цього застосунку."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:219
 #, elixir-autogen, elixir-format
@@ -792,7 +792,7 @@ msgstr "налаштування відеоконференцій"
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:254
 #, elixir-autogen, elixir-format
 msgid "⚠ Invalid Syntax"
-msgstr "⚠ Неправильний синтаксис"
+msgstr "⚠ Некоректний синтаксис"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:83
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:244
@@ -838,7 +838,7 @@ msgstr "Мій MiroTalk"
 #: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex:51
 #, elixir-autogen, elixir-format
 msgid "My Video Integration"
-msgstr "Моя інтеграція відео"
+msgstr "Моя інтеграція відеозв'язку"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex:161
 #, elixir-autogen, elixir-format

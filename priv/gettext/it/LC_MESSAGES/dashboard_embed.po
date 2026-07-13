@@ -104,12 +104,12 @@ msgstr "Link diretto"
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:199
 #, elixir-autogen, elixir-format
 msgid "Disable All Embedding"
-msgstr "Disabilita tutto l'incorporamento"
+msgstr "Disattiva tutto l'incorporamento"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:173
 #, elixir-autogen, elixir-format
 msgid "Disabled:"
-msgstr "Disabilitato:"
+msgstr "Disattivato:"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:234
 #, elixir-autogen, elixir-format
@@ -119,7 +119,7 @@ msgstr "Dominio rimosso con successo"
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:126
 #, elixir-autogen, elixir-format
 msgid "Easiest"
-msgstr "Più semplice"
+msgstr "Il più semplice"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:82
 #, elixir-autogen, elixir-format
@@ -144,7 +144,7 @@ msgstr "L'incorporamento è bloccato ovunque (predefinito)"
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:248
 #, elixir-autogen, elixir-format
 msgid "Embedding is now disabled"
-msgstr "L'incorporamento è ora disabilitato"
+msgstr "L'incorporamento è ora disattivato"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:300
 #, elixir-autogen, elixir-format
@@ -199,7 +199,7 @@ msgstr "Link disattivato"
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:116
 #, elixir-autogen, elixir-format
 msgid "Live Preview"
-msgstr "Anteprima dal vivo"
+msgstr "Anteprima in tempo reale"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:373
 #, elixir-autogen, elixir-format
@@ -319,7 +319,7 @@ msgstr "Aggiorna ogni snippet qui sotto. Le impostazioni predefinite vanno bene 
 #: lib/tymeslot_web/live/dashboard/embed_settings/security_section.ex:80
 #, elixir-autogen, elixir-format
 msgid "Use Disable Embedding"
-msgstr "Usa Disabilita incorporamento"
+msgstr "Usa Disattiva incorporamento"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:224
 #, elixir-autogen, elixir-format

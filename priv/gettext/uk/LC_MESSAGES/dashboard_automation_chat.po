@@ -41,7 +41,7 @@ msgstr "Додати Slack через URL-адресу вебхука"
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:341
 #, elixir-autogen, elixir-format
 msgid "Add Telegram Account"
-msgstr "Додати акаунт Telegram"
+msgstr "Додати обліковий запис Telegram"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex:31
 #, elixir-autogen, elixir-format
@@ -77,12 +77,12 @@ msgstr "Скасувати"
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex:93
 #, elixir-autogen, elixir-format
 msgid "Cannot disconnect in own-bot mode"
-msgstr "Неможливо відключити в режимі власного бота"
+msgstr "Неможливо від'єднати в режимі власного бота"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex:112
 #, elixir-autogen, elixir-format
 msgid "Cannot disconnect this integration"
-msgstr "Неможливо відключити цю інтеграцію"
+msgstr "Неможливо від'єднати цю інтеграцію"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex:138
 #, elixir-autogen, elixir-format
@@ -123,7 +123,7 @@ msgstr "Чат: %{chat_id}"
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:276
 #, elixir-autogen, elixir-format
 msgid "Click the button below to open Telegram and link your account. Once connected, you'll configure notification preferences."
-msgstr "Натисніть кнопку нижче, щоб відкрити Telegram і прив’язати свій акаунт. Після підключення ви зможете налаштувати сповіщення."
+msgstr "Натисніть кнопку нижче, щоб відкрити Telegram і прив’язати свій обліковий запис. Після підключення ви зможете налаштувати сповіщення."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:152
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:83
@@ -204,12 +204,12 @@ msgstr "Вимкнено: %{reason}"
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:201
 #, elixir-autogen, elixir-format
 msgid "Disconnect Slack"
-msgstr "Відключити Slack"
+msgstr "Від'єднати Slack"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:198
 #, elixir-autogen, elixir-format
 msgid "Disconnect Telegram"
-msgstr "Відключити Telegram"
+msgstr "Від'єднати Telegram"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:229
 #, elixir-autogen, elixir-format
@@ -254,7 +254,7 @@ msgstr "Не вдалося видалити"
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex:107
 #, elixir-autogen, elixir-format
 msgid "Failed to disconnect Slack"
-msgstr "Не вдалося відключити Slack"
+msgstr "Не вдалося від'єднати Slack"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex:133
 #, elixir-autogen, elixir-format
@@ -514,7 +514,7 @@ msgstr "URL-адреса вебхука Slack"
 #: lib/tymeslot_web/live/dashboard/automation/slack/state_handlers.ex:95
 #, elixir-autogen, elixir-format
 msgid "Slack channel disconnected. Pick a new channel to reconnect."
-msgstr "Канал Slack відключено. Виберіть новий канал для перепідключення."
+msgstr "Канал Slack від'єднано. Виберіть новий канал для перепідключення."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex:56
 #, elixir-autogen, elixir-format

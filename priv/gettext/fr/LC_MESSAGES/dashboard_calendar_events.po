@@ -221,7 +221,7 @@ msgstr "Fermer les boîtes de dialogue"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:71
 #, elixir-autogen, elixir-format
 msgid "Close modal"
-msgstr "Fermer la fenêtre"
+msgstr "Fermer la fenêtre modale"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:412
 #, elixir-autogen, elixir-format
@@ -368,7 +368,7 @@ msgstr "L’heure de fin doit être postérieure à l’heure de début"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:170
 #, elixir-autogen, elixir-format
 msgid "Event and linked meeting cancelled."
-msgstr "Événement et rendez-vous associé annulés."
+msgstr "Événement et réunion associée annulés."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:243
 #, elixir-autogen, elixir-format
@@ -383,7 +383,7 @@ msgstr "Événement créé. Les participants ont été invités."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:177
 #, elixir-autogen, elixir-format
 msgid "Event deleted, but meeting cancellation failed. The attendee may not be notified."
-msgstr "Événement supprimé, mais l’annulation du rendez-vous a échoué. Le participant risque de ne pas être informé."
+msgstr "Événement supprimé, mais l’annulation de la réunion a échoué. Le participant risque de ne pas être informé."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:227
 #, elixir-autogen, elixir-format
@@ -453,7 +453,7 @@ msgstr "Aller à la recherche"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:250
 #, elixir-autogen, elixir-format
 msgid "Fri"
-msgstr "Ven"
+msgstr "Ven."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_discard_attendees_modal.ex:45
 #, elixir-autogen, elixir-format
@@ -463,7 +463,7 @@ msgstr "Retour"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:397
 #, elixir-autogen, elixir-format
 msgid "Input contains invalid characters"
-msgstr "Le champ contient des caractères non valides"
+msgstr "Le champ contient des caractères invalides"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex:396
 #, elixir-autogen, elixir-format
@@ -473,17 +473,17 @@ msgstr "Le champ est trop long"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:38
 #, elixir-autogen, elixir-format
 msgid "Invalid calendar selected"
-msgstr "Calendrier sélectionné non valide"
+msgstr "Calendrier sélectionné invalide"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:51
 #, elixir-autogen, elixir-format
 msgid "Invalid date"
-msgstr "Date non valide"
+msgstr "Date invalide"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:125
 #, elixir-autogen, elixir-format
 msgid "Invalid time"
-msgstr "Heure non valide"
+msgstr "Heure invalide"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:173
 #, elixir-autogen, elixir-format
@@ -513,13 +513,13 @@ msgstr "Lieu"
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:177
 #, elixir-autogen, elixir-format
 msgid "Meeting created and invitation sent"
-msgstr "Rendez-vous créé et invitation envoyée"
+msgstr "Réunion créée et invitation envoyée"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:246
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:38
 #, elixir-autogen, elixir-format
 msgid "Mon"
-msgstr "Lun"
+msgstr "Lun."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:78
 #, elixir-autogen, elixir-format
@@ -722,7 +722,7 @@ msgstr "Se répète annuellement"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:251
 #, elixir-autogen, elixir-format
 msgid "Sat"
-msgstr "Sam"
+msgstr "Sam."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/notify_prompt_modal.ex:53
 #, elixir-autogen, elixir-format
@@ -760,7 +760,7 @@ msgstr "Commencer la semaine le lundi ou le dimanche"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:39
 #, elixir-autogen, elixir-format
 msgid "Sun"
-msgstr "Dim"
+msgstr "Dim."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex:329
 #, elixir-autogen, elixir-format
@@ -795,7 +795,7 @@ msgstr "Cela le supprimera également de votre fournisseur de calendrier."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:249
 #, elixir-autogen, elixir-format
 msgid "Thu"
-msgstr "Jeu"
+msgstr "Jeu."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:105
 #, elixir-autogen, elixir-format
@@ -843,7 +843,7 @@ msgstr "Trop d’actualisations. Veuillez patienter un instant."
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:247
 #, elixir-autogen, elixir-format
 msgid "Tue"
-msgstr "Mar"
+msgstr "Mar."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_discard_attendees_modal.ex:21
 #, elixir-autogen, elixir-format
@@ -870,7 +870,7 @@ msgstr "S%{week}"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:248
 #, elixir-autogen, elixir-format
 msgid "Wed"
-msgstr "Mer"
+msgstr "Mer."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:77
 #, elixir-autogen, elixir-format

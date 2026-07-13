@@ -87,7 +87,7 @@ msgstr "Продовжити налаштування"
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:154
 #, elixir-autogen, elixir-format
 msgid "Could not disconnect Stripe. Please try again."
-msgstr "Не вдалося відключити Stripe. Спробуйте ще раз."
+msgstr "Не вдалося від'єднати Stripe. Спробуйте ще раз."
 
 #: lib/tymeslot_web/controllers/dashboard/payments_controller.ex:67
 #: lib/tymeslot_web/controllers/dashboard/payments_controller.ex:72
@@ -131,22 +131,22 @@ msgstr "Валюта за замовчуванням"
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:114
 #, elixir-autogen, elixir-format
 msgid "Disconnect Stripe"
-msgstr "Відключити Stripe"
+msgstr "Від'єднати Stripe"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:104
 #, elixir-autogen, elixir-format
 msgid "Disconnect your Stripe account from Tymeslot. Existing payments remain visible. New paid bookings will fail until you reconnect."
-msgstr "Відключити обліковий запис Stripe від Tymeslot. Наявні платежі залишаться видимими. Нові платні бронювання не здійснюватимуться, доки ви не підключите його знову."
+msgstr "Від'єднати обліковий запис Stripe від Tymeslot. Наявні платежі залишаться видимими. Нові платні бронювання не здійснюватимуться, доки ви не підключите його знову."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex:38
 #, elixir-autogen, elixir-format
 msgid "Disconnect your Stripe account from Tymeslot? Existing payments remain visible, but new paid bookings will fail until you reconnect."
-msgstr "Відключити обліковий запис Stripe від Tymeslot? Наявні платежі залишаться видимими, але нові платні бронювання не здійснюватимуться, доки ви не підключите його знову."
+msgstr "Від'єднати обліковий запис Stripe від Tymeslot? Наявні платежі залишаться видимими, але нові платні бронювання не здійснюватимуться, доки ви не підключите його знову."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:86
 #, elixir-autogen, elixir-format
 msgid "Disconnected"
-msgstr "Відключено"
+msgstr "Від'єднано"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:88
 #, elixir-autogen, elixir-format
@@ -161,7 +161,7 @@ msgstr "Введіть коректну суму повернення."
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex:90
 #, elixir-autogen, elixir-format
 msgid "Failed"
-msgstr "Не виконано"
+msgstr "Помилка"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:87
 #, elixir-autogen, elixir-format
@@ -327,7 +327,7 @@ msgstr "Статус"
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:137
 #, elixir-autogen, elixir-format
 msgid "Stripe account disconnected."
-msgstr "Обліковий запис Stripe відключено."
+msgstr "Обліковий запис Stripe від'єднано."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex:142
 #, elixir-autogen, elixir-format
@@ -393,7 +393,7 @@ msgstr "Ви почали підключення Stripe, але ще не зав
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:112
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account is disconnected. Reconnect to accept payments again."
-msgstr "Ваш обліковий запис Stripe відключено. Підключіть його знову, щоб приймати платежі."
+msgstr "Ваш обліковий запис Stripe від'єднано. Підключіть його знову, щоб приймати платежі."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:41
 #, elixir-autogen, elixir-format

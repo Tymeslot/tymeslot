@@ -900,7 +900,7 @@ msgstr "Quali eventi vuoi aggiornare?"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex:104
 #, elixir-autogen, elixir-format
 msgid "Wk"
-msgstr "Sett."
+msgstr "Sett"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex:262
 #, elixir-autogen, elixir-format

@@ -119,7 +119,7 @@ msgstr "Зображення"
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:277
 #, elixir-autogen, elixir-format
 msgid "Invalid theme selection"
-msgstr "Неправильний вибір теми"
+msgstr "Некоректний вибір теми"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex:153
 #, elixir-autogen, elixir-format

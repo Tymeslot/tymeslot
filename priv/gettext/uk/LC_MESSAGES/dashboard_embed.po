@@ -199,7 +199,7 @@ msgstr "Посилання деактивовано"
 #: lib/tymeslot_web/live/dashboard/embed_settings_component.ex:116
 #, elixir-autogen, elixir-format
 msgid "Live Preview"
-msgstr "Попередній перегляд"
+msgstr "Перегляд наживо"
 
 #: lib/tymeslot_web/live/dashboard/embed_settings/options_grid.ex:373
 #, elixir-autogen, elixir-format

@@ -24,7 +24,7 @@ msgstr "(privé)"
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:185
 #, elixir-autogen, elixir-format
 msgid "A label shown in your dashboard. Useful if you connect more than one Slack workspace."
-msgstr "Un libellé affiché dans votre Dashboard. Utile si vous connectez plusieurs espaces de travail Slack."
+msgstr "Un libellé affiché dans votre tableau de bord. Utile si vous connectez plusieurs espaces de travail Slack."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:235
 #, elixir-autogen, elixir-format
@@ -214,7 +214,7 @@ msgstr "Déconnecter Telegram"
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:229
 #, elixir-autogen, elixir-format
 msgid "Display-only label shown in your dashboard. It does not change where messages are delivered — that is set by the webhook URL itself."
-msgstr "Libellé d’affichage uniquement, visible dans votre Dashboard. Il ne modifie pas la destination des messages : celle-ci est déterminée par l’URL du webhook elle-même."
+msgstr "Libellé d’affichage uniquement, visible dans votre tableau de bord. Il ne modifie pas la destination des messages : celle-ci est déterminée par l’URL du webhook elle-même."
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:190
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:185

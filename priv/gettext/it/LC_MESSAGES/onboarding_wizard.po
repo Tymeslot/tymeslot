@@ -77,7 +77,7 @@ msgstr "%{minutes} min di margine tra le riunioni"
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex:169
 #, elixir-autogen, elixir-format
 msgid "%{provider} · Connected"
-msgstr "%{provider} · Connesso"
+msgstr "%{provider} · Collegato"
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex:330
 #, elixir-autogen, elixir-format
@@ -283,7 +283,7 @@ msgstr "Combinazione di colori"
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:276
 #, elixir-autogen, elixir-format
 msgid "Connect"
-msgstr "Connetti"
+msgstr "Collega"
 
 #: lib/tymeslot_web/live/onboarding_live/welcome_step.ex:45
 #, elixir-autogen, elixir-format
@@ -299,12 +299,12 @@ msgstr "Collega un calendario"
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex:178
 #, elixir-autogen, elixir-format
 msgid "Connect via Google"
-msgstr "Connetti tramite Google"
+msgstr "Collega tramite Google"
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex:88
 #, elixir-autogen, elixir-format
 msgid "Connect via Microsoft"
-msgstr "Connetti tramite Microsoft"
+msgstr "Collega tramite Microsoft"
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex:203
 #, elixir-autogen, elixir-format
@@ -514,7 +514,7 @@ msgstr "Non ora"
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex:181
 #, elixir-autogen, elixir-format
 msgid "One click — connect %{email}"
-msgstr "Un clic — connetti %{email}"
+msgstr "Un clic — collega %{email}"
 
 #: lib/tymeslot_web/live/onboarding_live/choose_theme_step.ex:121
 #, elixir-autogen, elixir-format

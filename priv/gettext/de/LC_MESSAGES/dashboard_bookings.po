@@ -19,7 +19,7 @@ msgstr "%{going} von %{total} zugesagt"
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:242
 #, elixir-autogen, elixir-format
 msgid "Custom answers"
-msgstr "Individuelle Antworten"
+msgstr "Benutzerdefinierte Antworten"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:531
 #, elixir-autogen, elixir-format
@@ -163,7 +163,7 @@ msgstr "Videoanruf beitreten"
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex:96
 #, elixir-autogen, elixir-format
 msgid "Keep Meeting"
-msgstr "Termin behalten"
+msgstr "Termin beibehalten"
 
 #: lib/tymeslot_web/live/dashboard/bookings_management_component.ex:306
 #, elixir-autogen, elixir-format

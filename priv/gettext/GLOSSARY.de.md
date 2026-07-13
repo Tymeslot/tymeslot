@@ -132,6 +132,15 @@ Settled while translating; reuse rather than re-coining.
 | occurrence (recurrence) | **Vorkommen** |
 | declined (a guest) | **abgelehnt** — distinct from **abgesagt** (a cancelled meeting) |
 | avatar | **Avatar** |
+| booking theme (the compound) | **Buchungs-Design** — hyphenated, never *Buchungsdesign*, never *Buchungs-Theme* |
+| "%{name} theme preview" | **%{name}-Design-Vorschau** — the variable leads and takes the hyphen |
+| Reconnect (button, and the action generally) | **Erneut verbinden** — never *Neu verbinden*, *Neuverbindung*, or *Wiederverbindung*. The noun form is the nominalised infinitive: *das erneute Verbinden*. |
+| Testing / Testing… (in-flight status) | **Wird getestet** / **Wird getestet…** — never *Test läuft*. Scoped variants keep the passive: *Verbindung wird getestet…* |
+| Keep Meeting (button) | **Termin beibehalten** — never *Termin behalten* |
+| Custom \<X\> (a user-defined value) | **Benutzerdefiniert** everywhere, including marketing: *benutzerdefinierte Fragen / Antworten / Farben / Hintergründe*. Never *individuell*, never *eigen* in this sense. |
+| custom domain | **eigene Domain** — a *different* sense (a domain you already own, not a value you define), so it keeps **eigen**. |
+| custom deployment (enterprise sales) | **individuelle Lösung** — the "bespoke" sense, also distinct from a user-defined value. |
+| `+%{count} more` (overflow badge) | **+%{count} weitere** in **both** plural forms. The elided noun differs per surface (Ereignis n., Teilnehmer m., Termin m., Kalender m.), so no gendered singular is right everywhere; the invariant plural form is the convention. |
 
 **Weekday abbreviations:** Mo · Di · Mi · Do · Fr · Sa · So
 
@@ -208,7 +217,7 @@ Upgrade, Workflow.
 - `&` stays literal (not `&amp;`). Bullets `•`, checkmarks `✓`, emoji are preserved.
 
 **Typography — use these characters:**
-- Ellipsis **`…`** (U+2026), never `...`
+- Ellipsis **`…`** (U+2026), never `...`. **No space before it** — `Wird geladen…`, `Auswählen…`, not `Wird geladen …`. This is the project convention across every domain; apply it even where German typographic tradition would allow a space.
 - En dash **`–`** for ranges and subject-line separators
 - Em dash **`—`** (space-padded) for parenthetical asides, mirroring the English em dash
 - German quotes **`„…“`** — low-9 opening `„` (U+201E), high-6 closing `“` (U+201C)

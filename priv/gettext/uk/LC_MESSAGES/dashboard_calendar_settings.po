@@ -141,7 +141,7 @@ msgstr "Інтеграцію не знайдено"
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:308
 #, elixir-autogen, elixir-format
 msgid "Invalid calendar ID"
-msgstr "Недійсний ідентифікатор календаря"
+msgstr "Некоректний ідентифікатор календаря"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:334
 #, elixir-autogen, elixir-format

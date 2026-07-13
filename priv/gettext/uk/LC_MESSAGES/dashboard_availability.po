@@ -200,7 +200,7 @@ msgstr "Сітка"
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex:389
 #, elixir-autogen, elixir-format
 msgid "Invalid time format"
-msgstr "Неправильний формат часу"
+msgstr "Некоректний формат часу"
 
 #: lib/tymeslot_web/live/dashboard/availability/day_card_component.ex:182
 #, elixir-autogen, elixir-format

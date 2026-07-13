@@ -95,7 +95,7 @@ msgstr[1] "%{count} Verbindungen erfordern Aufmerksamkeit — %{message}"
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:137
 #, elixir-autogen, elixir-format
 msgid "%{name} needs reconnecting."
-msgstr "%{name} muss neu verbunden werden."
+msgstr "%{name} muss erneut verbunden werden."
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:149
 #, elixir-autogen, elixir-format
@@ -353,7 +353,7 @@ msgstr "Termintyp konnte nicht gelöscht werden"
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:217
 #, elixir-autogen, elixir-format
 msgid "Failed to reconnect. Please try again."
-msgstr "Neuverbindung fehlgeschlagen. Bitte versuchen Sie es erneut."
+msgstr "Erneutes Verbinden fehlgeschlagen. Bitte versuchen Sie es noch einmal."
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex:278
 #, elixir-autogen, elixir-format
@@ -592,13 +592,13 @@ msgstr "Anbieter:"
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:160
 #, elixir-autogen, elixir-format
 msgid "Reconnect"
-msgstr "Neu verbinden"
+msgstr "Erneut verbinden"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:91
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:92
 #, elixir-autogen, elixir-format
 msgid "Reconnect integration"
-msgstr "Integration neu verbinden"
+msgstr "Integration erneut verbinden"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:242
 #, elixir-autogen, elixir-format

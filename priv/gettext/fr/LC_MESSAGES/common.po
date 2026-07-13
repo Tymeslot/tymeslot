@@ -182,4 +182,4 @@ msgstr "page de planification"
 #: lib/tymeslot_web/components/core_components/layout.ex:64
 #, elixir-autogen, elixir-format
 msgid "Made with %{heart} by the %{team}"
-msgstr "Créé avec %{heart} par l'%{team}"
+msgstr "Créé avec %{heart} par l’%{team}"

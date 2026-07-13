@@ -247,7 +247,7 @@ msgstr "Die Absage-E-Mails wurden an alle Teilnehmer versendet."
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex:166
 #, elixir-autogen, elixir-format
 msgid "Cancelling..."
-msgstr "Wird abgesagt …"
+msgstr "Wird abgesagt…"
 
 #: lib/tymeslot_web/themes/quill/meeting/reschedule.ex:105
 #, elixir-autogen, elixir-format
@@ -273,7 +273,7 @@ msgstr "Bestätigung gesendet an"
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex:51
 #, elixir-autogen, elixir-format
 msgid "Confirming your payment…"
-msgstr "Zahlung wird bestätigt …"
+msgstr "Zahlung wird bestätigt…"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex:85
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex:85
@@ -436,7 +436,7 @@ msgstr "Späte Nacht"
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex:166
 #, elixir-autogen, elixir-format
 msgid "Let me know what you'd like to discuss..."
-msgstr "Teilen Sie mir mit, was Sie besprechen möchten …"
+msgstr "Teilen Sie mir mit, was Sie besprechen möchten…"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:110
 #, elixir-autogen, elixir-format
@@ -449,7 +449,7 @@ msgstr "Lassen Sie uns sprechen!"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:268
 #, elixir-autogen, elixir-format
 msgid "Loading available times..."
-msgstr "Verfügbare Zeiten werden geladen …"
+msgstr "Verfügbare Zeiten werden geladen…"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:219
 #, elixir-autogen, elixir-format
@@ -697,7 +697,7 @@ msgstr "Termin mit %{name}"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:144
 #, elixir-autogen, elixir-format
 msgid "Search cities, countries, or timezones..."
-msgstr "Stadt, Land oder Zeitzone suchen …"
+msgstr "Stadt, Land oder Zeitzone suchen…"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex:263
 #, elixir-autogen, elixir-format
@@ -836,13 +836,13 @@ msgstr "Unbekannte Dauer"
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex:237
 #, elixir-autogen, elixir-format
 msgid "Verifying slot availability and creating your meeting..."
-msgstr "Verfügbarkeit wird geprüft und Termin erstellt …"
+msgstr "Verfügbarkeit wird geprüft und Termin erstellt…"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex:208
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex:228
 #, elixir-autogen, elixir-format
 msgid "Verifying..."
-msgstr "Prüfung läuft …"
+msgstr "Prüfung läuft…"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:221
 #, elixir-autogen, elixir-format
@@ -928,7 +928,7 @@ msgstr "Ihre Zeitzone"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex:163
 #, elixir-autogen, elixir-format
 msgid "add_details"
-msgstr "Weitere Details …"
+msgstr "Weitere Details…"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex:200
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex:74
@@ -1297,4 +1297,4 @@ msgstr "Zu viele Buchungsversuche. Bitte versuchen Sie es später noch einmal."
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:208
 #, elixir-autogen, elixir-format
 msgid "Your booking is already being processed. Please wait..."
-msgstr "Ihre Buchung wird bereits verarbeitet. Bitte warten …"
+msgstr "Ihre Buchung wird bereits verarbeitet. Bitte warten…"

@@ -223,22 +223,22 @@ msgstr "Chiudi"
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:427
 #, elixir-autogen, elixir-format
 msgid "Connect a video provider"
-msgstr "Connetti un provider video"
+msgstr "Collega un provider video"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:46
 #, elixir-autogen, elixir-format
 msgid "Connect any video platform"
-msgstr "Connetti qualsiasi piattaforma video"
+msgstr "Collega qualsiasi piattaforma video"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:363
 #, elixir-autogen, elixir-format
 msgid "Connect one so online meetings get a video link added automatically when they're booked."
-msgstr "Connettine uno per aggiungere automaticamente un link video alle riunioni online al momento della prenotazione."
+msgstr "Collegane uno per aggiungere automaticamente un link video alle riunioni online al momento della prenotazione."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/provider_picker_modal.ex:136
 #, elixir-autogen, elixir-format
 msgid "Connected"
-msgstr "Connesso"
+msgstr "Collegato"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:151
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:161
@@ -393,7 +393,7 @@ msgstr "Ottieni la tua chiave API dalla configurazione della tua istanza MiroTal
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:38
 #, elixir-autogen, elixir-format
 msgid "Google Meet connected successfully!"
-msgstr "Google Meet connesso con successo!"
+msgstr "Google Meet collegato con successo!"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:162
 #, elixir-autogen, elixir-format
@@ -479,7 +479,7 @@ msgstr "Tipi di riunione riordinati"
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:94
 #, elixir-autogen, elixir-format
 msgid "Microsoft Teams connected successfully!"
-msgstr "Microsoft Teams connesso con successo!"
+msgstr "Microsoft Teams collegato con successo!"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:178
 #, elixir-autogen, elixir-format
@@ -555,7 +555,7 @@ msgstr "Nessuna integrazione selezionata per l'eliminazione"
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:360
 #, elixir-autogen, elixir-format
 msgid "No video providers connected yet"
-msgstr "Nessun provider video ancora connesso"
+msgstr "Nessun provider video ancora collegato"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:137
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:167
@@ -566,7 +566,7 @@ msgstr "OAuth"
 #: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex:154
 #, elixir-autogen, elixir-format
 msgid "Outlook Calendar connected successfully!"
-msgstr "Outlook Calendar connesso con successo!"
+msgstr "Outlook Calendar collegato con successo!"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:159
 #, elixir-autogen, elixir-format
@@ -592,13 +592,13 @@ msgstr "Provider:"
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:160
 #, elixir-autogen, elixir-format
 msgid "Reconnect"
-msgstr "Riconnetti"
+msgstr "Ricollega"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:91
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex:92
 #, elixir-autogen, elixir-format
 msgid "Reconnect integration"
-msgstr "Riconnetti integrazione"
+msgstr "Ricollega integrazione"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:242
 #, elixir-autogen, elixir-format
@@ -749,7 +749,7 @@ msgstr "Integrazione video aggiunta con successo"
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:109
 #, elixir-autogen, elixir-format
 msgid "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
-msgstr "La tua organizzazione Microsoft richiede l'approvazione di un amministratore prima che Tymeslot possa essere connesso. Chiedi al tuo amministratore IT di concedere il consenso per l'app."
+msgstr "La tua organizzazione Microsoft richiede l'approvazione di un amministratore prima che Tymeslot possa essere collegato. Chiedi al tuo amministratore IT di concedere il consenso per l'app."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:219
 #, elixir-autogen, elixir-format
@@ -764,7 +764,7 @@ msgstr "Il tuo account Stripe è soggetto a restrizioni."
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:155
 #, elixir-autogen, elixir-format
 msgid "Zoom connected successfully!"
-msgstr "Zoom connesso con successo!"
+msgstr "Zoom collegato con successo!"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:196
 #, elixir-autogen, elixir-format
@@ -802,12 +802,12 @@ msgstr "✓ Template valido"
 #: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:139
 #, elixir-autogen, elixir-format
 msgid "%{service} connected successfully!"
-msgstr "%{service} connesso con successo!"
+msgstr "%{service} collegato con successo!"
 
 #: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:171
 #, elixir-autogen, elixir-format
 msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" — Tymeslot needs this to create meetings and Google Meet links."
-msgstr "%{service} non è stato connesso perché l'autorizzazione al Calendario non è stata concessa. Riprova e seleziona la casella \"Visualizza, modifica, condividi ed elimina definitivamente tutti i calendari a cui puoi accedere tramite Google Calendar\" — Tymeslot ne ha bisogno per creare riunioni e link di Google Meet."
+msgstr "%{service} non è stato collegato perché l'autorizzazione al Calendario non è stata concessa. Riprova e seleziona la casella \"Visualizza, modifica, condividi ed elimina definitivamente tutti i calendari a cui puoi accedere tramite Google Calendar\" — Tymeslot ne ha bisogno per creare riunioni e link di Google Meet."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex:137
 #, elixir-autogen, elixir-format

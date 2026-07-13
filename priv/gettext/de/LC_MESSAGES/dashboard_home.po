@@ -45,7 +45,7 @@ msgstr "%{minutes} Min. frei"
 #, elixir-autogen, elixir-format
 msgid "+%{count} more"
 msgid_plural "+%{count} more"
-msgstr[0] "+%{count} weiterer"
+msgstr[0] "+%{count} weitere"
 msgstr[1] "+%{count} weitere"
 
 #: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:249

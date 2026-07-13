@@ -86,7 +86,7 @@ msgstr "(Kein Titel)"
 #, elixir-autogen, elixir-format
 msgid "+%{count} more"
 msgid_plural "+%{count} more"
-msgstr[0] "+%{count} weiteres"
+msgstr[0] "+%{count} weitere"
 msgstr[1] "+%{count} weitere"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:261

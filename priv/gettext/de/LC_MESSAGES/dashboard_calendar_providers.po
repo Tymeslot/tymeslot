@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:143
 #, elixir-autogen, elixir-format
 msgid "Calendar reconnected"
-msgstr "Kalender wieder verbunden"
+msgstr "Kalender erneut verbunden"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:283
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:363
@@ -239,7 +239,7 @@ msgstr "Server-URL"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:120
 #, elixir-autogen, elixir-format
 msgid "Session expired. Please start the reconnect process again."
-msgstr "Sitzung abgelaufen. Bitte starten Sie den Wiederverbindungsvorgang erneut."
+msgstr "Sitzung abgelaufen. Bitte starten Sie das erneute Verbinden noch einmal."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:70
 #, elixir-autogen, elixir-format

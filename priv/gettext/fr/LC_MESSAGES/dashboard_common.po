@@ -158,7 +158,7 @@ msgstr "Se déconnecter"
 #: lib/tymeslot_web/live/dashboard/component_dispatch.ex:121
 #, elixir-autogen, elixir-format
 msgid "This feature (%{feature_name}) is not available on your current plan."
-msgstr "Cette fonctionnalité (%{feature_name}) n’est pas disponible avec votre offre actuelle."
+msgstr "Cette fonctionnalité (%{feature_name}) n’est pas disponible avec votre forfait actuel."
 
 #: lib/tymeslot_web/components/user_dropdown_component.ex:117
 #, elixir-autogen, elixir-format
@@ -173,7 +173,7 @@ msgstr "Icône %{provider}"
 #: lib/tymeslot_web/helpers/page_titles.ex:50
 #, elixir-autogen, elixir-format
 msgid "%{section} - Dashboard"
-msgstr "%{section} - Dashboard"
+msgstr "%{section} - Tableau de bord"
 
 #: lib/tymeslot_web/helpers/page_titles.ex:26
 #, elixir-autogen, elixir-format
@@ -194,7 +194,7 @@ msgstr "Connectez un calendrier dans les paramètres du calendrier pour activer 
 #: lib/tymeslot_web/helpers/page_titles.ex:43
 #, elixir-autogen, elixir-format
 msgid "Dashboard"
-msgstr "Dashboard"
+msgstr "Tableau de bord"
 
 #: lib/tymeslot_web/helpers/page_titles.ex:21
 #, elixir-autogen, elixir-format

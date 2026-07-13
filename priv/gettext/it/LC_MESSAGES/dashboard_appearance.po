@@ -131,7 +131,7 @@ msgstr "JPG, PNG o WebP. Massimo 5 MB."
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex:183
 #, elixir-autogen, elixir-format
 msgid "Live Preview"
-msgstr "Anteprima dal vivo"
+msgstr "Anteprima in tempo reale"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex:177
 #, elixir-autogen, elixir-format

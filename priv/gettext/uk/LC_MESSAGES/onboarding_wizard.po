@@ -197,7 +197,7 @@ msgstr "Ваш розклад і бронювання відображатиму
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex:246
 #, elixir-autogen, elixir-format
 msgid "App password or token"
-msgstr "Пароль додатка або токен"
+msgstr "Пароль застосунку або токен"
 
 #: lib/tymeslot_web/live/onboarding_live/skip_confirmation_modal.ex:45
 #, elixir-autogen, elixir-format
@@ -399,7 +399,7 @@ msgstr "Налаштуйте свою тему"
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex:230
 #, elixir-autogen, elixir-format
 msgid "Debug: Onboarding would be completed. Redirecting to debug start."
-msgstr "Налагодження: Онбординг було б завершено. Переспрямування на початок налагодження."
+msgstr "Налагодження: Початкове налаштування було б завершено. Переспрямування на початок налагодження."
 
 #: lib/tymeslot_web/live/onboarding_live/welcome_step.ex:62
 #, elixir-autogen, elixir-format
@@ -464,7 +464,7 @@ msgstr "Якщо хтось забронює зустріч, яка закінч
 #: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex:93
 #, elixir-autogen, elixir-format
 msgid "Invalid timezone"
-msgstr "Недійсний часовий пояс"
+msgstr "Некоректний часовий пояс"
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex:215
 #, elixir-autogen, elixir-format
@@ -635,7 +635,7 @@ msgstr "Налаштуйте свій профіль"
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:69
 #, elixir-autogen, elixir-format
 msgid "Setup checklist"
-msgstr "Чекліст налаштування"
+msgstr "Контрольний список налаштування"
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex:132
 #, elixir-autogen, elixir-format
@@ -772,12 +772,12 @@ msgstr "Вітаємо в Tymeslot! Ваш обліковий запис нал�
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:267
 #, elixir-autogen, elixir-format
 msgid "With %{notice} of notice, nobody can book a slot that starts sooner than %{notice} from now."
-msgstr "Із часом попередження %{notice} ніхто не зможе забронювати вікно, що починається раніше, ніж через %{notice} від поточного моменту."
+msgstr "Із часом попередження %{notice} ніхто не зможе забронювати слот, що починається раніше, ніж через %{notice} від поточного моменту."
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:225
 #, elixir-autogen, elixir-format
 msgid "With no buffer, the next available slot starts as soon as a meeting ends."
-msgstr "Без буферного часу наступне доступне вікно починається відразу після завершення попередньої зустрічі."
+msgstr "Без буферного часу наступний доступний слот починається відразу після завершення попередньої зустрічі."
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:259
 #, elixir-autogen, elixir-format

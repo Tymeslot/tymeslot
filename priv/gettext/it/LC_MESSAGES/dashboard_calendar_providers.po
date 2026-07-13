@@ -196,12 +196,12 @@ msgstr "Principale"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:291
 #, elixir-autogen, elixir-format
 msgid "Reconnect"
-msgstr "Riconnetti"
+msgstr "Ricollega"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:186
 #, elixir-autogen, elixir-format
 msgid "Reconnect %{name}"
-msgstr "Riconnetti %{name}"
+msgstr "Ricollega %{name}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:371
 #, elixir-autogen, elixir-format

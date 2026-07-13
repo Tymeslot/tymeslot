@@ -24,7 +24,7 @@ msgstr "Після створення для цього вебхука буде 
 #: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:462
 #, elixir-autogen, elixir-format
 msgid "Add Telegram Account"
-msgstr "Додати акаунт Telegram"
+msgstr "Додати обліковий запис Telegram"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:74
 #, elixir-autogen, elixir-format
@@ -34,7 +34,7 @@ msgstr "Додайте дії для обробки даних вебхука"
 #: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:512
 #, elixir-autogen, elixir-format
 msgid "Add to Slack"
-msgstr "Додати в Slack"
+msgstr "Додати до Slack"
 
 #: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:520
 #, elixir-autogen, elixir-format
@@ -127,7 +127,7 @@ msgstr "Підключіть Tymeslot до n8n, Zapier, Make або власни
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex:222
 #, elixir-autogen, elixir-format
 msgid "Connect a Stripe account to use this automation."
-msgstr "Підключіть акаунт Stripe, щоб використовувати цю автоматизацію."
+msgstr "Підключіть обліковий запис Stripe, щоб використовувати цю автоматизацію."
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:183
 #, elixir-autogen, elixir-format
@@ -207,7 +207,7 @@ msgstr "Редагувати вебхук"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:167
 #, elixir-autogen, elixir-format
 msgid "Enable webhook to test"
-msgstr "Увімкніть вебхук для тестування"
+msgstr "Увімкніть вебхук, щоб виконати перевірку"
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:542
 #, elixir-autogen, elixir-format
@@ -267,7 +267,7 @@ msgstr "Останнє спрацювання: %{time}"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:210
 #, elixir-autogen, elixir-format
 msgid "Logs"
-msgstr "Логи"
+msgstr "Журнали"
 
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex:170
 #, elixir-autogen, elixir-format
@@ -391,7 +391,7 @@ msgstr "Telegram"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:192
 #, elixir-autogen, elixir-format
 msgid "Test"
-msgstr "Тестувати"
+msgstr "Перевірити"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:169
 #, elixir-autogen, elixir-format
@@ -411,28 +411,28 @@ msgstr "Перевірити з'єднання"
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex:297
 #, elixir-autogen, elixir-format
 msgid "Test failed: %{reason}"
-msgstr "Помилка тестування: %{reason}"
+msgstr "Перевірка не вдалася: %{reason}"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:182
 #, elixir-autogen, elixir-format
 msgid "Testing"
-msgstr "Тестування"
+msgstr "Перевірка"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:168
 #, elixir-autogen, elixir-format
 msgid "Testing..."
-msgstr "Тестування..."
+msgstr "Перевірка..."
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:260
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:398
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone. All delivery logs for this integration will also be deleted."
-msgstr "Цю дію неможливо скасувати. Усі логи відправлень для цієї інтеграції також будуть видалені."
+msgstr "Цю дію неможливо скасувати. Усі журнали відправлень для цієї інтеграції також будуть видалені."
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:148
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone. All delivery logs for this webhook will also be deleted."
-msgstr "Цю дію неможливо скасувати. Усі логи відправлень для цього вебхука також будуть видалені."
+msgstr "Цю дію неможливо скасувати. Усі журнали відправлень для цього вебхука також будуть видалені."
 
 #: lib/tymeslot_web/live/dashboard/automation/helpers.ex:214
 #, elixir-autogen, elixir-format
@@ -493,7 +493,7 @@ msgstr "Перевірте, чи правильно працює вебхук"
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:200
 #, elixir-autogen, elixir-format
 msgid "View Delivery Logs"
-msgstr "Переглянути логи відправлень"
+msgstr "Переглянути журнали відправлень"
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:108
 #, elixir-autogen, elixir-format

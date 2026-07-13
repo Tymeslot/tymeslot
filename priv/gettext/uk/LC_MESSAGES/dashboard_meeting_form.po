@@ -209,7 +209,7 @@ msgstr "Тривалість (у хвилинах)"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex:116
 #, elixir-autogen, elixir-format
 msgid "Duration must be a valid number"
-msgstr "Тривалість має бути дійсним числом"
+msgstr "Тривалість має бути коректним числом"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:376
 #, elixir-autogen, elixir-format
@@ -249,7 +249,7 @@ msgstr "Введіть тривалість від %{min} до %{max} хвили
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex:125
 #, elixir-autogen, elixir-format
 msgid "Enter a valid price for this meeting type"
-msgstr "Введіть дійсну ціну для цього типу зустрічі"
+msgstr "Введіть коректну ціну для цього типу зустрічі"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex:162
 #, elixir-autogen, elixir-format
@@ -500,7 +500,7 @@ msgstr "Вибрати відеосервіс"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex:55
 #, elixir-autogen, elixir-format
 msgid "Select a valid reminder unit"
-msgstr "Виберіть дійсну одиницю часу для нагадування"
+msgstr "Виберіть коректну одиницю часу для нагадування"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:154
 #, elixir-autogen, elixir-format

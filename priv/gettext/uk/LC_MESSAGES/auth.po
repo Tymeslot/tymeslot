@@ -76,7 +76,7 @@ msgstr "Завершіть реєстрацію"
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex:206
 #, elixir-autogen, elixir-format
 msgid "Confirm New Password"
-msgstr "Підтвердити новий пароль"
+msgstr "Підтвердьте новий пароль"
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex:207
 #, elixir-autogen, elixir-format
@@ -219,7 +219,7 @@ msgstr "Вхід..."
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex:213
 #, elixir-autogen, elixir-format
 msgid "Missing OAuth provider information. Please try again."
-msgstr "Відсутня інформація про постачальника OAuth. Спробуйте ще раз."
+msgstr "Відсутня інформація про провайдера OAuth. Спробуйте ще раз."
 
 #: lib/tymeslot_web/components/auth/session/password_reset_component.ex:348
 #, elixir-autogen, elixir-format
@@ -235,7 +235,7 @@ msgstr "Новий пароль"
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex:150
 #, elixir-autogen, elixir-format
 msgid "OAuth authentication failed - missing provider."
-msgstr "Помилка автентифікації OAuth — відсутній постачальник."
+msgstr "Помилка автентифікації OAuth — відсутній провайдер."
 
 #: lib/tymeslot_web/components/auth/shared/auth_layout_components.ex:143
 #, elixir-autogen, elixir-format
@@ -440,14 +440,14 @@ msgstr "Не вдалося повторно надіслати лист для 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex:253
 #, elixir-autogen, elixir-format
 msgid "Unsupported OAuth provider."
-msgstr "Цей постачальник OAuth не підтримується."
+msgstr "Цей провайдер OAuth не підтримується."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex:38
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex:118
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex:142
 #, elixir-autogen, elixir-format
 msgid "Unsupported OAuth provider: %{provider}"
-msgstr "Непідтримуваний постачальник OAuth: %{provider}"
+msgstr "Непідтримуваний провайдер OAuth: %{provider}"
 
 #: lib/tymeslot_web/live/auth_live.ex:355
 #: lib/tymeslot_web/live/auth_live.ex:379
@@ -669,4 +669,4 @@ msgstr "Обліковий запис із такою електронною а�
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex:186
 #, elixir-autogen, elixir-format
 msgid "The email address from your login provider is not valid. Please try a different account."
-msgstr "Електронна адреса від вашого провайдера авторизації недійсна. Спробуйте використати інший обліковий запис."
+msgstr "Електронна адреса від вашого провайдера входу є некоректною. Спробуйте використати інший обліковий запис."

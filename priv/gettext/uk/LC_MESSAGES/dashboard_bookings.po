@@ -49,7 +49,7 @@ msgstr "%{attendee_name} отримає електронний лист із п�
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:168
 #, elixir-autogen, elixir-format
 msgid "Attendee Email"
-msgstr "Email учасника"
+msgstr "Електронна пошта учасника"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:453
 #, elixir-autogen, elixir-format

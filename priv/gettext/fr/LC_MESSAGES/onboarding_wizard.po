@@ -72,7 +72,7 @@ msgstr "%{field} doit être compris entre %{min} et %{max}"
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex:256
 #, elixir-autogen, elixir-format
 msgid "%{minutes} min buffer between meetings"
-msgstr "Tampon de %{minutes} min entre les réunions"
+msgstr "Marge de %{minutes} min entre les réunions"
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex:169
 #, elixir-autogen, elixir-format
@@ -197,7 +197,7 @@ msgstr "Mot de passe d’application ou jeton"
 #: lib/tymeslot_web/live/onboarding_live/skip_confirmation_modal.ex:45
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to skip the quick start? You can always configure these settings later in your dashboard."
-msgstr "Voulez-vous vraiment passer le démarrage rapide ? Vous pourrez toujours configurer ces paramètres plus tard dans votre Dashboard."
+msgstr "Voulez-vous vraiment passer le démarrage rapide ? Vous pourrez toujours configurer ces paramètres plus tard dans votre tableau de bord."
 
 #: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:275
 #, elixir-autogen, elixir-format
@@ -247,7 +247,7 @@ msgstr "Une marge entre vos rendez-vous pour ne jamais vous sentir bousculé."
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex:205
 #, elixir-autogen, elixir-format
 msgid "Buffer between meetings"
-msgstr "Tampon entre les réunions"
+msgstr "Marge entre les réunions"
 
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex:208
 #, elixir-autogen, elixir-format
@@ -399,7 +399,7 @@ msgstr "Débogage : la configuration serait terminée. Redirection vers le débu
 #: lib/tymeslot_web/live/onboarding_live/welcome_step.ex:62
 #, elixir-autogen, elixir-format
 msgid "Define buffer times, booking windows, and minimum notice to stay in control."
-msgstr "Définissez les temps tampons, les fenêtres de réservation et le délai de préavis minimum pour garder le contrôle."
+msgstr "Définissez les temps de marge, les fenêtres de réservation et le délai de préavis minimum pour garder le contrôle."
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex:274
 #, elixir-autogen, elixir-format
@@ -434,7 +434,7 @@ msgstr "Terminer la configuration"
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex:267
 #, elixir-autogen, elixir-format
 msgid "Go to dashboard"
-msgstr "Aller au Dashboard"
+msgstr "Aller au tableau de bord"
 
 #: lib/tymeslot_web/live/onboarding_live/connect_calendar_step.ex:76
 #, elixir-autogen, elixir-format
@@ -454,7 +454,7 @@ msgstr "Je connecterai un calendrier plus tard"
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:234
 #, elixir-autogen, elixir-format
 msgid "If someone books a meeting that ends at %{end_time} and your buffer is %{minutes} min, the next available slot starts at %{next_start}."
-msgstr "Si quelqu’un réserve une réunion qui se termine à %{end_time} et que votre tampon est de %{minutes} min, le prochain créneau disponible commence à %{next_start}."
+msgstr "Si quelqu’un réserve une réunion qui se termine à %{end_time} et que votre marge est de %{minutes} min, le prochain créneau disponible commence à %{next_start}."
 
 #: lib/tymeslot_web/live/onboarding_live/timezone_handlers.ex:93
 #, elixir-autogen, elixir-format
@@ -499,7 +499,7 @@ msgstr "Nextcloud, Radicale ou tout autre serveur CalDAV"
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex:294
 #, elixir-autogen, elixir-format
 msgid "No buffer"
-msgstr "Aucun tampon"
+msgstr "Aucune marge"
 
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex:329
 #, elixir-autogen, elixir-format
@@ -772,7 +772,7 @@ msgstr "Avec un préavis de %{notice}, personne ne peut réserver un créneau qu
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:225
 #, elixir-autogen, elixir-format
 msgid "With no buffer, the next available slot starts as soon as a meeting ends."
-msgstr "Sans tampon, le prochain créneau disponible commence dès la fin d’une réunion."
+msgstr "Sans marge, le prochain créneau disponible commence dès la fin d’une réunion."
 
 #: lib/tymeslot_web/live/onboarding_live/preferences_step.ex:259
 #, elixir-autogen, elixir-format
@@ -782,7 +782,7 @@ msgstr "Sans préavis minimum, il est possible de réserver un créneau commenç
 #: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex:47
 #, elixir-autogen, elixir-format
 msgid "Without a connected calendar you'll have to manage clashes yourself. You can still carry on and connect one later from your dashboard."
-msgstr "Sans calendrier connecté, vous devrez gérer les conflits vous-même. Vous pouvez tout de même continuer et en connecter un plus tard depuis votre Dashboard."
+msgstr "Sans calendrier connecté, vous devrez gérer les conflits vous-même. Vous pouvez tout de même continuer et en connecter un plus tard depuis votre tableau de bord."
 
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex:327
 #, elixir-autogen, elixir-format
@@ -797,7 +797,7 @@ msgstr "Vous êtes prêt !"
 #: lib/tymeslot_web/live/onboarding_live/step_config.ex:257
 #, elixir-autogen, elixir-format
 msgid "Your account is ready. Head to your dashboard to start scheduling."
-msgstr "Votre compte est prêt. Rendez-vous sur votre Dashboard pour commencer à planifier."
+msgstr "Votre compte est prêt. Rendez-vous sur votre tableau de bord pour commencer à planifier."
 
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex:130
 #, elixir-autogen, elixir-format
@@ -848,7 +848,7 @@ msgstr "Votre fuseau horaire"
 #: lib/tymeslot_web/live/onboarding_live/profile_step.ex:120
 #, elixir-autogen, elixir-format
 msgid "e.g. Jane Smith"
-msgstr "ex. Jeanne Dupont"
+msgstr "p. ex. Jeanne Dupont"
 
 #: lib/tymeslot_web/live/onboarding_live/live_preview.ex:359
 #, elixir-autogen, elixir-format
@@ -868,7 +868,7 @@ msgstr "Jours de réservation à l’avance"
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:145
 #, elixir-autogen, elixir-format
 msgid "Buffer minutes"
-msgstr "Minutes de tampon"
+msgstr "Minutes de marge"
 
 #: lib/tymeslot_web/live/onboarding_live/scheduling_handlers.ex:149
 #, elixir-autogen, elixir-format

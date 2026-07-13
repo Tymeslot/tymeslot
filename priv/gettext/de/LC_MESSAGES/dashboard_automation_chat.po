@@ -611,7 +611,7 @@ msgstr "Testnachricht gesendet! Überprüfen Sie Telegram."
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:138
 #, elixir-autogen, elixir-format
 msgid "Testing"
-msgstr "Test läuft"
+msgstr "Wird getestet"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:232
 #, elixir-autogen, elixir-format

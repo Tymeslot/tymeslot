@@ -176,7 +176,7 @@ msgstr "Nome visualizzato"
 #: lib/tymeslot_web/live/admin_live/components/users.ex:33
 #, elixir-autogen, elixir-format
 msgid "Email"
-msgstr "E-mail"
+msgstr "Email"
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:140
 #: lib/tymeslot_web/live/admin_live/formatters.ex:145
@@ -233,7 +233,7 @@ msgstr "Gestisci questa installazione self-hosted di Tymeslot."
 #: lib/tymeslot_web/live/admin_live/formatters.ex:27
 #, elixir-autogen, elixir-format
 msgid "Meeting payments"
-msgstr "Pagamenti degli incontri"
+msgstr "Pagamenti delle riunioni"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:14
 #, elixir-autogen, elixir-format
@@ -366,7 +366,7 @@ msgstr "Sei l'unico amministratore. Promuovi qualcun altro prima di rimuovere il
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:197
 #, elixir-autogen, elixir-format
 msgid "admin@example.com"
-msgstr "admin@esempio.it"
+msgstr "admin@example.com"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:183
 #, elixir-autogen, elixir-format
@@ -396,7 +396,7 @@ msgstr "Statistiche delle prenotazioni"
 #: lib/tymeslot_web/live/admin_live/formatters.ex:49
 #, elixir-autogen, elixir-format
 msgid "Allow log-in with email and password. When disabled, users can only authenticate through configured OAuth providers."
-msgstr "Consenti l'accesso con e-mail e password. Se disattivato, gli utenti possono autenticarsi solo tramite i provider OAuth configurati."
+msgstr "Consenti l'accesso con email e password. Se disattivato, gli utenti possono autenticarsi solo tramite i provider OAuth configurati."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:42
 #, elixir-autogen, elixir-format
@@ -406,7 +406,7 @@ msgstr "Consenti ai nuovi utenti di registrarsi tramite la pagina di registrazio
 #: lib/tymeslot_web/live/admin_live/formatters.ex:208
 #, elixir-autogen, elixir-format
 msgid "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
-msgstr "Impossibile disattivare l'autenticazione tramite password mentre almeno un amministratore accede con e-mail e password: farlo gli impedirebbe l'accesso. Rimuovi il ruolo a quegli amministratori o fai in modo che passino prima a un accesso OAuth."
+msgstr "Impossibile disattivare l'autenticazione tramite password mentre almeno un amministratore accede con email e password: farlo gli impedirebbe l'accesso. Rimuovi il ruolo a quegli amministratori o fai in modo che passino prima a un accesso OAuth."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:228
 #, elixir-autogen, elixir-format
@@ -416,17 +416,17 @@ msgstr "Impossibile disattivare questo provider di accesso mentre è l'unico met
 #: lib/tymeslot_web/live/admin_live/formatters.ex:126
 #, elixir-autogen, elixir-format
 msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint — no raw IP is stored. Off by default; review your privacy policy before enabling."
-msgstr "Raccogli statistiche rispettose della privacy per le pagine di prenotazione di questa istanza: visualizzazioni di pagina, sorgente del traffico (UTM/referrer) e conversione. Conta i visitatori unici con un'impronta digitale senza cookie che ruota giornalmente: nessun indirizzo IP grezzo viene memorizzato. Disattivato per impostazione predefinita; rivedi le tue norme sulla privacy prima di attivarlo."
+msgstr "Raccogli statistiche rispettose della privacy per le pagine di prenotazione di questa istanza: visualizzazioni di pagina, sorgente del traffico (UTM/referrer) e conversione. Conta i visitatori unici con un'impronta digitale senza cookie che ruota giornalmente: nessun indirizzo IP grezzo viene memorizzato. Disattivato per impostazione predefinita; rivedi la tua informativa sulla privacy prima di attivarlo."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:112
 #, elixir-autogen, elixir-format
 msgid "Email address that receives admin alerts when the toggle above is enabled. Leave blank to fall back to the ADMIN_ALERT_EMAIL environment variable."
-msgstr "Indirizzo e-mail che riceve gli avvisi di amministrazione quando l'interruttore qui sopra è attivo. Lascia vuoto per usare la variabile d'ambiente ADMIN_ALERT_EMAIL."
+msgstr "Indirizzo email che riceve gli avvisi di amministrazione quando l'interruttore qui sopra è attivo. Lascia vuoto per usare la variabile d'ambiente ADMIN_ALERT_EMAIL."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:105
 #, elixir-autogen, elixir-format
 msgid "Email operational alerts (webhook failures, integration health issues, background job errors) to the admin alert recipient. Requires a recipient address to be set below."
-msgstr "Invia tramite e-mail gli avvisi operativi (errori dei webhook, problemi di integrità delle integrazioni, errori dei processi in background) al destinatario degli avvisi di amministrazione. Richiede l'impostazione di un indirizzo destinatario qui sotto."
+msgstr "Invia tramite email gli avvisi operativi (errori dei webhook, problemi di integrità delle integrazioni, errori dei processi in background) al destinatario degli avvisi di amministrazione. Richiede l'impostazione di un indirizzo destinatario qui sotto."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:70
 #, elixir-autogen, elixir-format

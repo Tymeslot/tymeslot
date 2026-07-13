@@ -72,7 +72,7 @@ msgstr "Інтеграцію не знайдено"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:56
 #, elixir-autogen, elixir-format
 msgid "Invalid calendar ID"
-msgstr "Недійсний ідентифікатор календаря"
+msgstr "Некоректний ідентифікатор календаря"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex:37
 #, elixir-autogen, elixir-format
@@ -181,7 +181,7 @@ msgstr "Сервер CalDAV/CardDAV на базі PHP"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:139
 #, elixir-autogen, elixir-format
 msgid "Password / App Password"
-msgstr "Пароль / Пароль додатка"
+msgstr "Пароль / Пароль застосунку"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:151
 #, elixir-autogen, elixir-format
@@ -260,7 +260,7 @@ msgstr "Посібник із налаштування"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:75
 #, elixir-autogen, elixir-format
 msgid "Sign-In and Security → App-Specific Passwords"
-msgstr "Вхід і безпека → Паролі додатків"
+msgstr "Вхід і безпека → Паролі застосунків"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:434
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:358
@@ -318,7 +318,7 @@ msgstr "Ім'я користувача"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:70
 #, elixir-autogen, elixir-format
 msgid "app-specific password"
-msgstr "пароль додатка"
+msgstr "пароль застосунку"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:47
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:90
@@ -430,7 +430,7 @@ msgstr "Універсальна підтримка серверів CalDAV"
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:65
 #, elixir-autogen, elixir-format
 msgid "If you have two-factor authentication enabled, generate an application-specific password under %{location} on mailbox.org and use that here instead of your regular password."
-msgstr "Якщо у вас увімкнено двофакторну автентифікацію, згенеруйте пароль додатка в розділі %{location} на mailbox.org і введіть його тут замість звичайного пароля."
+msgstr "Якщо у вас увімкнено двофакторну автентифікацію, згенеруйте пароль застосунку в розділі %{location} на mailbox.org і введіть його тут замість звичайного пароля."
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:65
 #, elixir-autogen, elixir-format

@@ -89,9 +89,9 @@ msgstr "(Без назви)"
 #, elixir-autogen, elixir-format
 msgid "+%{count} more"
 msgid_plural "+%{count} more"
-msgstr[0] "ще +%{count}"
-msgstr[1] "ще +%{count}"
-msgstr[2] "ще +%{count}"
+msgstr[0] "ще %{count}"
+msgstr[1] "ще %{count}"
+msgstr[2] "ще %{count}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex:261
 #: lib/tymeslot_web/live/dashboard/calendar_grid/helpers/preference_helpers.ex:79

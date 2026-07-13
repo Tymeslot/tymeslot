@@ -184,7 +184,7 @@ msgstr "Après-midi"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex:102
 #, elixir-autogen, elixir-format
 msgid "Appointment host"
-msgstr "Hôte du rendez-vous"
+msgstr "Organisateur du rendez-vous"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:185
 #, elixir-autogen, elixir-format
@@ -495,7 +495,7 @@ msgstr "Réunion reportée !"
 #: lib/tymeslot_web/themes/shared/components/meeting_details.ex:50
 #, elixir-autogen, elixir-format
 msgid "Meeting with"
-msgstr "Rendez-vous avec"
+msgstr "Réunion avec"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex:314
 #, elixir-autogen, elixir-format
@@ -619,7 +619,7 @@ msgstr "Veuillez patienter pendant la confirmation de votre réservation."
 #: lib/tymeslot_web/themes/shared/security_fields.ex:119
 #, elixir-autogen, elixir-format
 msgid "Privacy Policy"
-msgstr "Règles de confidentialité"
+msgstr "Politique de confidentialité"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex:40
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex:37
@@ -642,7 +642,7 @@ msgstr "Prêt à choisir un nouvel horaire ? Trouvons le créneau qui vous convi
 #: lib/tymeslot_web/themes/rhythm/meeting/reschedule.ex:55
 #, elixir-autogen, elixir-format
 msgid "Reschedule Appointment"
-msgstr "Reprogrammer le rendez-vous"
+msgstr "Reporter le rendez-vous"
 
 #: lib/tymeslot_web/themes/quill/payment_cancelled/live.ex:49
 #: lib/tymeslot_web/themes/rhythm/payment_cancelled/live.ex:47
@@ -836,7 +836,7 @@ msgstr "Durée inconnue"
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex:237
 #, elixir-autogen, elixir-format
 msgid "Verifying slot availability and creating your meeting..."
-msgstr "Vérification des disponibilités et création de la réunion..."
+msgstr "Vérification de la disponibilité du créneau et création de la réunion..."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex:208
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex:228
@@ -963,7 +963,7 @@ msgstr "Saisissez votre nom complet"
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex:152
 #, elixir-autogen, elixir-format
 msgid "john@example.com"
-msgstr "jean.dupont@exemple.fr"
+msgstr "jean.dupont@example.com"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex:112
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex:114
@@ -1226,7 +1226,7 @@ msgstr "Échec de l’enregistrement de la réunion dans la base de données"
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:47
 #, elixir-autogen, elixir-format
 msgid "Host could not be found. Please refresh and try again."
-msgstr "Impossible de trouver l’hôte. Veuillez actualiser la page et réessayer."
+msgstr "Impossible de trouver l’organisateur. Veuillez actualiser la page et réessayer."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:35
 #, elixir-autogen, elixir-format
@@ -1236,7 +1236,7 @@ msgstr "Un organisateur est requis pour la réservation"
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:41
 #, elixir-autogen, elixir-format
 msgid "Payments are not available for this booking. Please contact the host."
-msgstr "Les paiements ne sont pas disponibles pour cette réservation. Veuillez contacter l’hôte."
+msgstr "Les paiements ne sont pas disponibles pour cette réservation. Veuillez contacter l’organisateur."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:50
 #, elixir-autogen, elixir-format

@@ -219,7 +219,7 @@ msgstr "Chaque entrée devient un choix sélectionnable pour la personne qui ré
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/guests_section.ex:45
 #, elixir-autogen, elixir-format
 msgid "Each guest is emailed a confirmation with their own link to accept or decline. You'll see every guest's response on your dashboard."
-msgstr "Chaque invité reçoit un e-mail de confirmation avec son propre lien pour accepter ou refuser. Vous verrez la réponse de chaque invité sur votre Dashboard."
+msgstr "Chaque invité reçoit un e-mail de confirmation avec son propre lien pour accepter ou refuser. Vous verrez la réponse de chaque invité sur votre tableau de bord."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:462
 #, elixir-autogen, elixir-format
@@ -615,17 +615,17 @@ msgstr "Vous pouvez configurer jusqu’à 3 rappels"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:200
 #, elixir-autogen, elixir-format
 msgid "e.g., Company name"
-msgstr "p. ex., Nom de l’entreprise"
+msgstr "p. ex. Nom de l’entreprise"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:216
 #, elixir-autogen, elixir-format
 msgid "e.g., Enter your company's registered name"
-msgstr "p. ex., Saisissez le nom légal de votre entreprise"
+msgstr "p. ex. Saisissez le nom légal de votre entreprise"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:121
 #, elixir-autogen, elixir-format
 msgid "e.g., Quick Chat"
-msgstr "p. ex., Discussion rapide"
+msgstr "p. ex. Discussion rapide"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex:131
 #, elixir-autogen, elixir-format
