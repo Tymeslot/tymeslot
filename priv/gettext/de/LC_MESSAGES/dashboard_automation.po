@@ -11,7 +11,7 @@ msgstr ""
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:482
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:488
 #, elixir-autogen, elixir-format
 msgid "%{rate}% success rate"
 msgstr "%{rate}% Erfolgsquote"
@@ -61,7 +61,7 @@ msgstr "Sind Sie sicher? Der aktuelle Sicherheitstoken wird sofort ungültig und
 msgid "At least one event subscription is required."
 msgstr "Mindestens ein Ereignis-Abonnement ist erforderlich."
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:527
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:533
 #, elixir-autogen, elixir-format
 msgid "Attempt %{count}"
 msgstr "Versuch %{count}"
@@ -209,7 +209,7 @@ msgstr "Webhook bearbeiten"
 msgid "Enable webhook to test"
 msgstr "Webhook aktivieren, um zu testen"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:536
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:542
 #, elixir-autogen, elixir-format
 msgid "Error: %{message}"
 msgstr "Fehler: %{message}"
@@ -224,7 +224,7 @@ msgstr "Ereignis-Abonnements"
 msgid "Events to Subscribe *"
 msgstr "Zu abonnierende Ereignisse *"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:488
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:494
 #, elixir-autogen, elixir-format
 msgid "Failed"
 msgstr "Fehlgeschlagen"
@@ -259,11 +259,6 @@ msgstr "Webhook-Status konnte nicht aktualisiert werden"
 msgid "Insert a Webhook node and copy its URL"
 msgstr "Fügen Sie einen Webhook-Node ein und kopieren Sie dessen URL"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:472
-#, elixir-autogen, elixir-format
-msgid "Last %{days} days"
-msgstr "Letzte %{days} Tage"
-
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:113
 #, elixir-autogen, elixir-format
 msgid "Last triggered: %{time}"
@@ -289,7 +284,7 @@ msgstr "Nie ausgelöst"
 msgid "No Webhooks Yet"
 msgstr "Noch keine Webhooks"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:503
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:509
 #, elixir-autogen, elixir-format
 msgid "No deliveries yet"
 msgstr "Noch keine Zustellungen"
@@ -382,7 +377,7 @@ msgstr "Slack"
 msgid "Start a new workflow in your n8n instance"
 msgstr "Starten Sie einen neuen Workflow in Ihrer n8n-Instanz"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:477
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:483
 #, elixir-autogen, elixir-format
 msgid "Success"
 msgstr "Erfolgreich"
@@ -612,3 +607,10 @@ msgstr "Dieser Token wird automatisch im %{header}-Header gesendet."
 #, elixir-autogen, elixir-format
 msgid "%{date} at %{time}"
 msgstr "%{date} um %{time}"
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:472
+#, elixir-autogen, elixir-format
+msgid "Last %{days} day"
+msgid_plural "Last %{days} days"
+msgstr[0] "Letzter %{days} Tag"
+msgstr[1] "Letzte %{days} Tage"

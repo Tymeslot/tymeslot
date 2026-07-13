@@ -469,7 +469,13 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
           </div>
           <div class="text-token-3xl font-black text-tymeslot-900 mt-1"><%= @stats.total %></div>
           <div class="text-token-xs text-tymeslot-500 font-medium mt-1">
-            {dgettext("dashboard_automation", "Last %{days} days", days: Map.get(@stats, :period_days, 7))}
+            {dngettext(
+              "dashboard_automation",
+              "Last %{days} day",
+              "Last %{days} days",
+              Map.get(@stats, :period_days, 7),
+              days: Map.get(@stats, :period_days, 7)
+            )}
           </div>
         </div>
         <div class="bg-green-50 rounded-token-2xl p-4 border border-green-100">

@@ -11,7 +11,7 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:482
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:488
 #, elixir-autogen, elixir-format
 msgid "%{rate}% success rate"
 msgstr ""
@@ -61,7 +61,7 @@ msgstr ""
 msgid "At least one event subscription is required."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:527
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:533
 #, elixir-autogen, elixir-format
 msgid "Attempt %{count}"
 msgstr ""
@@ -209,7 +209,7 @@ msgstr ""
 msgid "Enable webhook to test"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:536
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:542
 #, elixir-autogen, elixir-format
 msgid "Error: %{message}"
 msgstr ""
@@ -224,7 +224,7 @@ msgstr ""
 msgid "Events to Subscribe *"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:488
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:494
 #, elixir-autogen, elixir-format
 msgid "Failed"
 msgstr ""
@@ -259,11 +259,6 @@ msgstr ""
 msgid "Insert a Webhook node and copy its URL"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:472
-#, elixir-autogen, elixir-format
-msgid "Last %{days} days"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:113
 #, elixir-autogen, elixir-format
 msgid "Last triggered: %{time}"
@@ -289,7 +284,7 @@ msgstr ""
 msgid "No Webhooks Yet"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:503
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:509
 #, elixir-autogen, elixir-format
 msgid "No deliveries yet"
 msgstr ""
@@ -382,7 +377,7 @@ msgstr ""
 msgid "Start a new workflow in your n8n instance"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:477
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:483
 #, elixir-autogen, elixir-format
 msgid "Success"
 msgstr ""
@@ -612,3 +607,10 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "%{date} at %{time}"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:472
+#, elixir-autogen, elixir-format
+msgid "Last %{days} day"
+msgid_plural "Last %{days} days"
+msgstr[0] ""
+msgstr[1] ""

@@ -41,14 +41,9 @@ msgstr ""
 msgid "Pending"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:103
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:111
 #, elixir-autogen, elixir-format
 msgid "%{attendee_name} will receive an email explaining you need to reschedule"
-msgstr ""
-
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:87
-#, elixir-autogen, elixir-format
-msgid "%{duration} minutes"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:168
@@ -63,7 +58,7 @@ msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:303
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:467
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:128
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:136
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
@@ -296,7 +291,7 @@ msgstr ""
 msgid "Scheduled"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:136
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:144
 #, elixir-autogen, elixir-format
 msgid "Send Request"
 msgstr ""
@@ -306,7 +301,7 @@ msgstr ""
 msgid "Send Reschedule Request"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:134
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:142
 #, elixir-autogen, elixir-format
 msgid "Sending..."
 msgstr ""
@@ -316,12 +311,12 @@ msgstr ""
 msgid "The attendee keeps no money. Use only if the attendee already agreed."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:99
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:107
 #, elixir-autogen, elixir-format
 msgid "The current meeting will be cancelled immediately"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:111
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:119
 #, elixir-autogen, elixir-format
 msgid "They can choose a new time from your availability"
 msgstr ""
@@ -361,7 +356,7 @@ msgstr ""
 msgid "Video Call"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:94
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:102
 #, elixir-autogen, elixir-format
 msgid "What happens next:"
 msgstr ""
@@ -381,7 +376,7 @@ msgstr ""
 msgid "You haven't had any meetings in this period yet."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:115
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:123
 #, elixir-autogen, elixir-format
 msgid "You'll both receive confirmation once they select a new time"
 msgstr ""
@@ -400,3 +395,10 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Send a reschedule request to %{name}?"
 msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex:88
+#, elixir-autogen, elixir-format
+msgid "%{duration} minute"
+msgid_plural "%{duration} minutes"
+msgstr[0] ""
+msgstr[1] ""

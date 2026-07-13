@@ -84,7 +84,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
               </div>
               <div class="flex items-center gap-3">
                 <CoreComponents.icon name="hero-clock" class="w-5 h-5 text-turquoise-600" />
-                <span>{dgettext("dashboard_bookings", "%{duration} minutes", duration: @meeting.duration)}</span>
+                <span>
+                  {dngettext(
+                    "dashboard_bookings",
+                    "%{duration} minute",
+                    "%{duration} minutes",
+                    @meeting.duration,
+                    duration: @meeting.duration
+                  )}
+                </span>
               </div>
             </div>
           </div>
