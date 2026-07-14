@@ -1,4 +1,7 @@
 
+[1.4.2]
+
+
 [1.4.1]
 * core: Fix invisible outline button in onboarding calendar skip modal
 * core: Show a branded 404 page for unknown routes
