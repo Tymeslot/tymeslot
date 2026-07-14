@@ -1,10 +1,22 @@
 name: DCO
 
+# Uses pull_request_target, not pull_request, deliberately.
+#
+# pull_request runs from the merge of the fork's head into this branch, so GitHub
+# treats it as untrusted and holds it for maintainer approval whenever the author is
+# a first-time contributor. The check then never reports, and because dco-check is a
+# required status check the pull request sits blocked rather than failing honestly.
+#
+# pull_request_target runs this file from the base branch in this repository's
+# context, so it needs no approval and reports immediately. That trigger is only safe
+# because nothing here touches the fork's code: there is no checkout, and the commit
+# metadata is read from the API with a read-only token.
 on:
-  pull_request:
+  pull_request_target:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   dco-check:
@@ -13,45 +25,56 @@ jobs:
     if: github.server_url == 'https://github.com'
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Check Developer Certificate of Origin sign-off
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
 
-          commits=$(git rev-list "${BASE_SHA}..${HEAD_SHA}")
-          if [ -z "$commits" ]; then
-            echo "No commits to check."
-            exit 0
+          # The commits endpoint returns at most 250 commits. Refuse to pass silently
+          # past that rather than leave a gap an unsigned commit could hide in.
+          total=$(gh api "repos/${REPO}/pulls/${PR}" --jq '.commits')
+          if [ "$total" -gt 250 ]; then
+            echo "This pull request has ${total} commits, more than the 250 the API returns."
+            echo "Sign-off cannot be verified automatically. Please split the pull request."
+            exit 1
           fi
 
-          failed=0
-          for sha in $commits; do
-            # Skip merge commits (two or more parents) — they carry no new work.
-            if [ "$(git rev-list --parents -n 1 "$sha" | wc -w)" -gt 2 ]; then
-              continue
-            fi
+          gh api --paginate "repos/${REPO}/pulls/${PR}/commits" > commits.json
 
-            author_email=$(git show -s --format='%ae' "$sha")
-            subject=$(git show -s --format='%s' "$sha")
+          failed=0
+          checked=0
+
+          # Merge commits (two or more parents) carry no new work and are filtered out.
+          while IFS= read -r row; do
+            entry=$(printf '%s' "$row" | base64 -d)
+            sha=$(printf '%s' "$entry" | jq -r '.sha')
+            author_email=$(printf '%s' "$entry" | jq -r '.email')
+            message=$(printf '%s' "$entry" | jq -r '.message')
+            subject=$(printf '%s\n' "$message" | head -1)
+
+            checked=$((checked + 1))
 
             # A commit passes if any Signed-off-by line carries the author's email.
-            if git show -s --format='%B' "$sha" \
-                 | grep -i '^Signed-off-by:' \
-                 | grep -qF "<${author_email}>"; then
+            if printf '%s\n' "$message" | grep -i '^Signed-off-by:' | grep -qF "<${author_email}>"; then
               echo "✓ ${sha:0:12}  ${subject}"
             else
               echo "✗ ${sha:0:12}  ${subject}"
               echo "      missing: Signed-off-by: <author> <${author_email}>"
               failed=1
             fi
-          done
+          done < <(jq -r '.[]
+            | select((.parents | length) < 2)
+            | {sha: .sha, email: .commit.author.email, message: .commit.message}
+            | @base64' commits.json)
+
+          if [ "$checked" -eq 0 ]; then
+            echo "No commits to check."
+            exit 0
+          fi
 
           if [ "$failed" -ne 0 ]; then
             echo ""
