@@ -275,7 +275,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec register_graph_subscription(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()}
           | {:error, :webhook_base_url_not_configured}
-          | {:error, :circuit_open}
+          | {:error, term()}
           | api_error()
   def register_graph_subscription(%CalendarIntegrationSchema{} = integration) do
     GraphSubscription.register(integration)
@@ -291,7 +291,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @impl CalendarAPIBehaviour
   @spec bootstrap_sync(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()}
-          | {:error, :circuit_open}
+          | {:error, term()}
           | api_error()
   def bootstrap_sync(%CalendarIntegrationSchema{} = integration) do
     GraphSubscription.bootstrap_sync(integration)

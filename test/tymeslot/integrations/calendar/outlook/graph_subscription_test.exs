@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -172,6 +173,43 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
 
       assert {:ok, updated} = GraphSubscription.bootstrap_sync(integration)
       assert updated.graph_delta_link =~ "deltatoken=done"
+    end
+
+    test "returns an error tuple when the HTTP client raises", %{integration: integration} do
+      # The circuit breaker rescues exceptions and hands back `{:error, exception}`.
+      # Matching only `{:error, :circuit_open}` used to turn that into a
+      # CaseClauseError, crashing the caller instead of failing the sync.
+      on_exit(fn -> CalendarCircuitBreaker.reset(:outlook) end)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        raise "graph exploded"
+      end)
+
+      assert {:error, %RuntimeError{message: "graph exploded"}} =
+               GraphSubscription.bootstrap_sync(integration)
+    end
+
+    test "returns an error tuple when Graph paginates past the page limit",
+         %{integration: integration} do
+      # Every page carries a nextLink and never a deltaLink, so pagination runs
+      # into @max_delta_pages. `fetch_delta_page/5` reports that as a plain
+      # 2-tuple, which the breaker passes straight through.
+      on_exit(fn -> CalendarCircuitBreaker.reset(:outlook) end)
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [],
+               "@odata.nextLink" =>
+                 "https://graph.microsoft.com/v1.0/me/calendarView/delta?$skiptoken=endless"
+             })
+         }}
+      end)
+
+      assert {:error, :pagination_limit_exceeded} = GraphSubscription.bootstrap_sync(integration)
     end
 
     test "does not require :webhook_base_url to be configured",

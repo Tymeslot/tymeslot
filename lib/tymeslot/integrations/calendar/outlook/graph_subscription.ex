@@ -55,7 +55,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   """
   @spec bootstrap_sync(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()}
-          | {:error, :circuit_open}
+          | {:error, term()}
           | CalendarAPI.api_error()
   def bootstrap_sync(%CalendarIntegrationSchema{} = integration) do
     AccessToken.with_access_token(integration, &CalendarAPI.refresh_token/1, fn token ->
@@ -78,7 +78,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   @spec register(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()}
           | {:error, :webhook_base_url_not_configured}
-          | {:error, :circuit_open}
+          | {:error, term()}
           | CalendarAPI.api_error()
   def register(%CalendarIntegrationSchema{} = integration) do
     case Application.get_env(:tymeslot, :webhook_base_url) do
@@ -91,6 +91,21 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   end
 
   # Private helpers
+
+  # Both Graph calls below unwrap a `CalendarCircuitBreaker.call/2` result, which
+  # comes in three shapes:
+  #
+  #   * `{:ok, result}` — the breaker passes `{:ok, _}` returns through untouched
+  #     and wraps any *other* shape in `{:ok, _}`. `CalendarAPI` signals failure
+  #     with a 3-tuple, so its errors arrive as `{:ok, {:error, type, message}}`,
+  #     and `fetch_delta_page/5`'s 3-tuple success as `{:ok, {:ok, events, link}}`.
+  #   * `{:error, :circuit_open}` — the breaker refused the call.
+  #   * `{:error, reason}` — any other breaker-level failure: `:breaker_not_found`,
+  #     an exception the breaker rescued (`{:error, %RuntimeError{}}`), or a plain
+  #     2-tuple error from the wrapped function (`:pagination_limit_exceeded`).
+  #
+  # The last shape must stay a catch-all: matching only `:circuit_open` turns
+  # every rescued exception into a `CaseClauseError` that crashes the caller.
 
   defp do_register(integration, webhook_base_url) do
     client_state = Base.url_encode64(:crypto.strong_rand_bytes(32))
@@ -149,7 +164,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
       {:ok, error} ->
         error
 
-      {:error, :circuit_open} = error ->
+      {:error, _reason} = error ->
         error
     end
   end
@@ -167,7 +182,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
       {:ok, error} ->
         error
 
-      {:error, :circuit_open} = error ->
+      {:error, _reason} = error ->
         error
     end
   end

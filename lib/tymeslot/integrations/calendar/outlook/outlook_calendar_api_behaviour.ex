@@ -34,10 +34,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour do
   @callback register_graph_subscription(CalendarIntegrationSchema.t()) ::
               {:ok, CalendarIntegrationSchema.t()}
               | {:error, :webhook_base_url_not_configured}
-              | {:error, :circuit_open}
+              | {:error, term()}
               | api_error()
   @callback bootstrap_sync(CalendarIntegrationSchema.t()) ::
               {:ok, CalendarIntegrationSchema.t()}
-              | {:error, :circuit_open}
+              | {:error, term()}
               | api_error()
 end
