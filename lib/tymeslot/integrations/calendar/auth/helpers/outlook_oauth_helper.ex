@@ -13,7 +13,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.PrimarySelection
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
@@ -23,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
   alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
+  alias Tymeslot.Workers.RefreshOutlookCalendarWorker
 
   @calendar_scope "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access openid profile email"
   @oauth_base_url "https://login.microsoftonline.com/common/oauth2/v2.0"
@@ -62,47 +62,35 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
     with {:ok, %{user_id: user_id, integration_id: integration_id}} <- verify_state(state),
          {:ok, tokens} <- exchange_code_for_tokens(code, redirect_uri),
          {:ok, integration} <- create_calendar_integration(user_id, tokens, integration_id) do
-      seed_delta_async(integration)
+      enqueue_initial_sync(integration)
       {:ok, integration}
     else
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp seed_delta_async(integration) do
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
-      case OutlookCalendarAPI.bootstrap_sync(integration) do
-        {:ok, updated} ->
-          Logger.info("Outlook initial delta seeded after OAuth",
-            integration_id: integration.id
-          )
+  defp enqueue_initial_sync(integration) do
+    # The worker already owns this path: a nil `graph_delta_link` makes it
+    # bootstrap a delta baseline and opportunistically register the Graph
+    # subscription. Enqueueing rather than seeding inline buys retries, and
+    # keeps the OAuth callback free of a fire-and-forget supervised task.
+    result =
+      %{"calendar_integration_id" => integration.id}
+      |> RefreshOutlookCalendarWorker.new()
+      |> Oban.insert()
 
-          case Application.get_env(:tymeslot, :webhook_base_url) do
-            nil ->
-              :ok
+    case result do
+      {:ok, _job} ->
+        :ok
 
-            _url ->
-              case OutlookCalendarAPI.register_graph_subscription(updated) do
-                {:ok, _registered} ->
-                  Logger.info("Outlook Graph subscription registered",
-                    integration_id: integration.id
-                  )
+      {:error, reason} ->
+        Logger.error("Failed to enqueue initial Outlook Calendar sync",
+          integration_id: integration.id,
+          error: inspect(reason)
+        )
 
-                {:error, reason} ->
-                  Logger.error("Outlook Graph subscription registration failed",
-                    integration_id: integration.id,
-                    reason: inspect(reason)
-                  )
-              end
-          end
-
-        {:error, reason} ->
-          Logger.error("Outlook initial delta seed failed after OAuth",
-            integration_id: integration.id,
-            reason: inspect(reason)
-          )
-      end
-    end)
+        :ok
+    end
   end
 
   @doc """

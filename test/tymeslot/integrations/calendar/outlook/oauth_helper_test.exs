@@ -1,10 +1,13 @@
 defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
+
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Outlook.OAuthHelper
   alias Tymeslot.Integrations.Common.OAuth.State
+  alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   import Tymeslot.Factory
   import Mox
 
@@ -51,6 +54,16 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
       assert integration.user_id == user.id
       assert integration.provider == "outlook"
 
+      # The initial delta baseline is seeded by the worker, not inline: the
+      # integration lands with a nil `graph_delta_link` and the enqueued job
+      # bootstraps it (and registers the Graph subscription) on its first run.
+      assert is_nil(integration.graph_delta_link)
+
+      assert_enqueued(
+        worker: RefreshOutlookCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+
       integration =
         CalendarIntegrationSchema.decrypt_credentials(integration)
 
@@ -75,39 +88,22 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
     end
   end
 
-  # Dispatches on the HTTP verb in a single multi-clause stub:
-  #
-  #   * `:post` → succeeds with a token payload (the token exchange)
-  #   * anything else → `Mint.TransportError{reason: :timeout}` (the
-  #     supervised seed_delta_async task's `:get` against Graph)
-  #
-  # Using `stub/3` rather than `expect/4` is deliberate. In `async: false`
-  # Mox shared mode, a supervised task from a *previous* test can still be
-  # running when this test's setup installs its mocks. That stray task
-  # makes the next HTTPClient.request call the test sees. If we used an
-  # `expect`, the stray task would consume it — with the wrong HTTP verb
-  # — so when the real token exchange fires, its call would fall through
-  # to the fallback stub and return `:timeout`, manifesting as
-  # `{:error, "Network error during token exchange: ..."}` from the
-  # `handle_callback/3` flow. A single multi-clause stub matches on verb,
-  # is not consumed, and is therefore immune to the cross-test race.
+  # The token exchange is the only HTTP call `handle_callback/3` makes — calendar
+  # discovery goes through `OutlookCalendarAPIMock`, and the initial delta fetch
+  # is the enqueued worker's job, not the callback's.
   defp expect_token_response(access_token, refresh_token) do
-    stub(Tymeslot.HTTPClientMock, :request, fn
-      :post, _url, _body, _headers, _opts ->
-        {:ok,
-         %{
-           status: 200,
-           body:
-             Jason.encode!(%{
-               "access_token" => access_token,
-               "refresh_token" => refresh_token,
-               "expires_in" => 3600,
-               "scope" => "Calendars.ReadWrite"
-             })
-         }}
-
-      _other_method, _url, _body, _headers, _opts ->
-        {:error, %Mint.TransportError{reason: :timeout}}
+    expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+      {:ok,
+       %{
+         status: 200,
+         body:
+           Jason.encode!(%{
+             "access_token" => access_token,
+             "refresh_token" => refresh_token,
+             "expires_in" => 3600,
+             "scope" => "Calendars.ReadWrite"
+           })
+       }}
     end)
   end
 
