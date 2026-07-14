@@ -4,7 +4,7 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
   @moduletag :e2e
 
   feature "user changes password from account settings", %{session: session} do
-    {session, _user} = log_in_via_browser(session)
+    {session, user} = log_in_via_browser(session)
     new_password = "NewSecurePass456!"
 
     session =
@@ -24,7 +24,24 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
       )
       |> click(css("form[phx-submit='update_password'] button[type='submit']"))
 
-    # Should see success flash (role=alert from flash component)
-    assert_has(session, css("[role='alert']", text: "Password updated"))
+    # Changing your own password revokes every session, so the user is signed out
+    # and lands back on the login page.
+    #
+    # We deliberately don't assert the flash wording here. The LiveView redirects
+    # with "Your password has been changed…", but the revocation's disconnect
+    # broadcast tears the socket down first, so the browser reconnects and the
+    # auth layer's own "Your session has expired…" notice is what actually wins.
+    # Which of the two lands is a race; being signed out is not.
+    session =
+      session
+      |> assert_has(css("#password-input"))
+      |> wait_for_live()
+
+    # The new password is the one that now works.
+    session
+    |> fill_in(text_field("email"), with: user.email)
+    |> fill_in(css("#password-input"), with: new_password)
+    |> click(css("button[type='submit']"))
+    |> wait_for_dashboard()
   end
 end

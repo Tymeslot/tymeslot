@@ -58,7 +58,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
 
   feature "overview + schedule fit without horizontal overflow in both themes",
           %{session: session} do
-    {profile, slug} = create_user_with_meeting_type()
+    {profile, _slug} = create_user_with_meeting_type()
 
     for {theme_id, theme_name} <- @themes, width <- @widths, reduce: session do
       acc ->
@@ -67,12 +67,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> visit("/#{profile.username}?theme=#{theme_id}")
         |> wait_for_live()
         |> assert_no_horizontal_overflow("#{theme_name} overview width=#{width}px")
-        |> visit("/#{profile.username}/#{slug}?theme=#{theme_id}")
-        |> wait_for_live()
-        # back-step is the one schedule-step control present in both themes at
-        # every width (the monthly calendar collapses to a weekly strip <400px,
-        # so calendar-day isn't a width-stable "loaded" signal).
-        |> assert_has(css("[data-testid='back-step']"))
+        |> advance_to_schedule()
         |> assert_no_horizontal_overflow("#{theme_name} schedule width=#{width}px")
     end
   end
@@ -89,22 +84,19 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> resize_window(width, height)
         |> visit("/#{profile.username}/#{slug}?theme=#{theme_id}")
         |> wait_for_live()
-        # back-step is pinned and always on-screen; calendar-day can be scrolled
-        # out of the card's internal scroll region (so not a reliable visible
-        # loaded-signal), but it still exists in the DOM for the rect checks.
-        |> assert_has(css("[data-testid='back-step']"))
+        |> assert_has(css("[data-testid='schedule-actions']"))
         |> assert_no_horizontal_overflow(context)
         |> assert_no_actions_calendar_overlap(context)
         |> assert_cta_reachable(context)
     end
   end
 
-  feature "Quill schedule pins Back/Next inside the viewport at short heights",
+  feature "Quill schedule pins the actions row inside the viewport at short heights",
           %{session: session} do
     # Quill viewport-locks the schedule step (app-shell): the calendar's internal
     # scroll is the single scroll region, and the header + actions are pinned. So
-    # at every short height — down to extreme landscape — the Back/Next actions
-    # stay fully on-screen, not merely reachable by scrolling.
+    # at every short height — down to extreme landscape — the actions row stays
+    # fully on-screen, not merely reachable by scrolling.
     {profile, slug} = create_user_with_meeting_type()
 
     for {width, height} <- @short_sizes, reduce: session do
@@ -115,7 +107,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
         |> resize_window(width, height)
         |> visit("/#{profile.username}/#{slug}?theme=1")
         |> wait_for_live()
-        |> assert_has(css("[data-testid='back-step']"))
+        |> assert_has(css("[data-testid='schedule-actions']"))
         |> assert_actions_within_viewport(context)
         |> assert_no_vertical_page_scroll(context)
     end
@@ -230,6 +222,36 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
 
   # ── Navigation helpers ────────────────────────────────────────────────
 
+  # Walks the overview → schedule journey: pick the meeting type, then Next.
+  #
+  # This is the only entry path that renders the Back button, and so the only one
+  # that produces the full two-button actions row: a direct booking link sets
+  # `entered_via_overview: false`, because there is no overview to go back to.
+  # It is also the journey an embedded booker actually takes.
+  #
+  # The short-viewport features deliberately deep-link instead. Below roughly
+  # 250px of usable height the overview's own CTA sits past the end of a page
+  # that doesn't scroll, so it can't be clicked — a limit of the overview, not of
+  # the schedule layout those features guard.
+  defp advance_to_schedule(session) do
+    session
+    |> pick_first_duration()
+    # Both themes disable Next until the selected duration round-trips to the
+    # server. Clicking it before then is a no-op, so wait for it to enable.
+    |> assert_has(css("[data-testid='next-step']:not([disabled])"))
+    |> click_next_step()
+    |> assert_has(css("[data-testid='back-step']"))
+  end
+
+  defp pick_first_duration(session) do
+    session
+    |> find(css("[data-testid='duration-option']", count: :any))
+    |> List.first()
+    |> Element.click()
+
+    session
+  end
+
   defp click_next_step(session) do
     click(session, css("[data-testid='next-step']"))
   end
@@ -284,6 +306,10 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   # Stronger than assert_cta_reachable: on Quill's bounded-card model the pinned
   # actions must sit fully inside the viewport at short heights — proving the
   # calendar scrolls internally rather than pushing the buttons off-screen.
+  #
+  # Measures the actions row rather than the individual buttons: Back only exists
+  # when the booker came via the overview, but the row it lives in is what has to
+  # stay pinned, and both buttons share its vertical extent.
   defp assert_actions_within_viewport(session, context) do
     me = self()
     ref = make_ref()
@@ -291,31 +317,21 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     execute_script(
       session,
       """
-      const back = document.querySelector("[data-testid='back-step']");
-      const next = document.querySelector("[data-testid='next-step']");
-      if (!back || !next) return null;
-      const b = back.getBoundingClientRect(), n = next.getBoundingClientRect();
-      return [
-        Math.round(b.top), Math.round(b.bottom),
-        Math.round(n.top), Math.round(n.bottom),
-        window.innerHeight
-      ];
+      const actions = document.querySelector("[data-testid='schedule-actions']");
+      if (!actions) return null;
+      const a = actions.getBoundingClientRect();
+      return [Math.round(a.top), Math.round(a.bottom), window.innerHeight];
       """,
       fn value -> send(me, {:actions, ref, value}) end
     )
 
     assert_receive {:actions, ^ref, value}, 5_000
     assert is_list(value), "schedule actions not found at #{context}"
-    [b_top, b_bottom, n_top, n_bottom, inner_h] = value
+    [top, bottom, inner_h] = value
 
-    assert b_top >= -@overflow_tolerance and b_bottom <= inner_h + @overflow_tolerance,
-           "Back button is outside the viewport at #{context} " <>
-             "(top=#{b_top}, bottom=#{b_bottom}, viewport=#{inner_h}) — the bounded " <>
-             "schedule card should keep it pinned on-screen."
-
-    assert n_top >= -@overflow_tolerance and n_bottom <= inner_h + @overflow_tolerance,
-           "Next button is outside the viewport at #{context} " <>
-             "(top=#{n_top}, bottom=#{n_bottom}, viewport=#{inner_h}) — the bounded " <>
+    assert top >= -@overflow_tolerance and bottom <= inner_h + @overflow_tolerance,
+           "The schedule actions row is outside the viewport at #{context} " <>
+             "(top=#{top}, bottom=#{bottom}, viewport=#{inner_h}) — the bounded " <>
              "schedule card should keep it pinned on-screen."
 
     session
@@ -352,7 +368,7 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
   end
 
   # Guards the wide-short schedule fix: the layout must not let the calendar
-  # overflow its card and paint over the back/next actions.
+  # overflow its card and paint over the actions row.
   defp assert_no_actions_calendar_overlap(session, context) do
     me = self()
     ref = make_ref()
@@ -360,10 +376,10 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     execute_script(
       session,
       """
-      const back = document.querySelector("[data-testid='back-step']");
+      const actions = document.querySelector("[data-testid='schedule-actions']");
       const day = document.querySelector("[data-testid='calendar-day']");
-      if (!back || !day) return null;
-      const a = back.getBoundingClientRect(), c = day.getBoundingClientRect();
+      if (!actions || !day) return null;
+      const a = actions.getBoundingClientRect(), c = day.getBoundingClientRect();
       // overlap iff the rects intersect on both axes
       return !(a.right <= c.left || a.left >= c.right || a.bottom <= c.top || a.top >= c.bottom);
       """,
@@ -373,8 +389,9 @@ defmodule TymeslotWeb.E2E.EmbedSizesMatrixTest do
     assert_receive {:overlap, ^ref, overlap}, 5_000
 
     refute overlap,
-           "Back button overlaps the calendar at #{context} — the schedule card " <>
-             "is clipping/overflowing instead of growing to its natural height."
+           "The schedule actions row overlaps the calendar at #{context} — the " <>
+             "schedule card is clipping/overflowing instead of growing to its " <>
+             "natural height."
 
     session
   end

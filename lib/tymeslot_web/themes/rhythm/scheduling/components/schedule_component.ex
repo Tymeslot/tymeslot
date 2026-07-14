@@ -316,7 +316,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
               </div>
             </div>
 
-            <div class="slide-actions horizontal">
+            <div class="slide-actions horizontal" data-testid="schedule-actions">
               <button
                 :if={@entered_via_overview}
                 class="prev-button"
