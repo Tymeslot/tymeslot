@@ -224,12 +224,20 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     """
   end
 
-  # Sidebar extensions supply their labels as English strings via config.
-  # Localise them through the shared nav domain; an extension registers the
-  # msgid where it displays the label, and an unknown label falls back to the
+  # Sidebar extensions supply their labels as English strings via config. Each
+  # extension owns its labels' translations in its own gettext catalogue, so the
+  # {backend, domain} to localise through is configurable (:dashboard_extension_gettext)
+  # and defaults to Core's shared nav domain. An unknown label falls back to the
   # English text unchanged.
   defp extension_label(label) do
-    Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_common", label)
+    {backend, domain} =
+      Application.get_env(
+        :tymeslot,
+        :dashboard_extension_gettext,
+        {TymeslotWeb.Gettext, "dashboard_common"}
+      )
+
+    Gettext.dgettext(backend, domain, label)
   end
 
   # Collapses the hub action and every legacy action that redirects into it to

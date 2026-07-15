@@ -129,7 +129,12 @@ config :tymeslot,
 
   # Dashboard Extensions
   dashboard_sidebar_extensions: [],
-  dashboard_action_components: %{}
+  dashboard_action_components: %{},
+  # Gettext {backend, domain} used to localise extension sidebar labels. An
+  # extension owns its labels' translations in its own catalogue, so SaaS
+  # overrides this to point at its backend, keeping SaaS-only strings (and SaaS
+  # source paths) out of Core's publicly mirrored gettext files.
+  dashboard_extension_gettext: {TymeslotWeb.Gettext, "dashboard_common"}
 
 # Feature Announcements - Catalog modules that contribute to the
 # what's-new modal shown on dashboard mount. SaaS appends its own catalog.
