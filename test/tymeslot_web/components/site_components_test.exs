@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Components.SiteComponentsTest do
 
   @moduletag :components
 
+  import Phoenix.Component, only: [sigil_H: 2]
   import Phoenix.LiveViewTest
 
   alias TymeslotWeb.Components.SiteComponents
@@ -48,6 +49,30 @@ defmodule TymeslotWeb.Components.SiteComponentsTest do
       html = render_component(&SiteComponents.navigation/1, current_user: nil)
 
       assert html =~ ~s(href="/auth/login")
+    end
+  end
+
+  describe "navigation - optional slots" do
+    test "renders end_actions and mobile_actions content when provided" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <SiteComponents.navigation current_user={nil}>
+          <:end_actions><span>DESKTOP-ACTIONS</span></:end_actions>
+          <:mobile_actions><span>MOBILE-ACTIONS</span></:mobile_actions>
+        </SiteComponents.navigation>
+        """)
+
+      assert html =~ "DESKTOP-ACTIONS"
+      assert html =~ "MOBILE-ACTIONS"
+    end
+
+    test "renders nothing extra when the slots are omitted" do
+      html = render_component(&SiteComponents.navigation/1, current_user: nil)
+
+      refute html =~ "DESKTOP-ACTIONS"
+      refute html =~ "MOBILE-ACTIONS"
     end
   end
 

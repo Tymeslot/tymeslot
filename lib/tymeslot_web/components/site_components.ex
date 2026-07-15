@@ -17,8 +17,20 @@ defmodule TymeslotWeb.Components.SiteComponents do
 
   @doc """
   Main navigation component used across the application.
+
+  ## Slots
+
+    * `end_actions` — optional controls rendered in the desktop right-hand action
+      zone, before the account actions (Login / Get Started). Used by consumers
+      that need a compact top-level control such as a language switcher.
+    * `mobile_actions` — the mobile counterpart, rendered inside the mobile menu
+      after the marketing links.
+
+  Both slots are optional; Core standalone renders neither.
   """
   attr :current_user, :map, default: nil
+  slot :end_actions, required: false
+  slot :mobile_actions, required: false
 
   @spec navigation(map()) :: Phoenix.LiveView.Rendered.t()
   def navigation(assigns) do
@@ -51,6 +63,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
 
     <%!-- Desktop Navigation: account actions (right zone) --%>
         <div class="hidden lg:flex items-center gap-3">
+          {render_slot(@end_actions)}
           <%= if @current_user do %>
             <.link
               navigate={~p"/dashboard"}
@@ -114,6 +127,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
             <%= if Config.show_marketing_links?() do %>
               <.nav_section_mobile :for={section <- menu_sections} section={section} />
             <% end %>
+            {render_slot(@mobile_actions)}
             <%= if @current_user do %>
               <.link
                 navigate={~p"/dashboard"}
