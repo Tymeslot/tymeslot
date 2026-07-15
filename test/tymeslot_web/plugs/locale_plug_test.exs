@@ -101,12 +101,12 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
       conn =
         build_conn()
         |> init_test_session(%{})
-        |> Map.put(:params, %{"locale" => "fr"})
+        |> Map.put(:params, %{"locale" => "es"})
         |> fetch_session()
         |> put_session(:locale, "de")
         |> LocalePlug.call([])
 
-      # fr is a shape-valid but unsupported param — it must not short-circuit
+      # es is a shape-valid but unsupported param — it must not short-circuit
       # past the valid "de" session locale and be coerced to the default.
       assert conn.assigns.locale == "de"
       assert get_session(conn, :locale) == "de"
@@ -137,13 +137,13 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
     end
 
     test "handles multiple languages with quality scores", %{conn: conn} do
-      # fr has the highest quality but is unsupported, so it is skipped in favour
+      # es has the highest quality but is unsupported, so it is skipped in favour
       # of the highest-quality supported language (de over en).
       conn =
         conn
         |> Map.put(:params, %{})
         |> fetch_session()
-        |> put_req_header("accept-language", "fr;q=0.9,de;q=0.8,en;q=0.7")
+        |> put_req_header("accept-language", "es;q=0.9,de;q=0.8,en;q=0.7")
         |> LocalePlug.call([])
 
       assert conn.assigns.locale == "de"

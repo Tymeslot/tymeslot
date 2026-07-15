@@ -11,9 +11,10 @@ defmodule Tymeslot.Emails.EmailScheduler.AccountSchedulerTest do
   alias Tymeslot.Emails.EmailScheduler.AccountScheduler
   alias Tymeslot.Workers.EmailWorker
 
-  # `insert(:user)` enqueues its own `send_email_verification` job, so an
-  # absolute count of EmailWorker jobs measures the factory as well as the
-  # function under test. Count what each call *adds* instead.
+  # Count what each call *adds* rather than asserting absolute totals, so the
+  # assertions stay tied to the function under test and keep passing even if
+  # setup (factories, other scheduled emails) ever enqueues EmailWorker jobs
+  # of its own.
   defp email_job_count, do: length(all_enqueued(worker: EmailWorker))
 
   describe "schedule_email_change_emails/3" do

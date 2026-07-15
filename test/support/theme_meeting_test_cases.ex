@@ -307,7 +307,7 @@ defmodule TymeslotWeb.ThemeMeetingTestCases do
   defp translated_cancel_kept_strings("de") do
     %{
       meeting_confirmed: "Termin bestätigt",
-      still_scheduled: "Großartig! Ihr Termin ist weiterhin wie geplant.",
+      still_scheduled: "Großartig! Ihr Termin findet weiterhin wie geplant statt.",
       look_forward: "Wir freuen uns, Sie zur geplanten Zeit zu begrüßen.",
       done: "Fertig"
     }
