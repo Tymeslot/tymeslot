@@ -44,12 +44,6 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
         get_locale_from_header(conn) ||
         Locales.default_locale()
 
-    # Validate locale is supported (or the dev-only pseudo locale)
-    locale =
-      if Locales.acceptable?(locale),
-        do: locale,
-        else: Locales.default_locale()
-
     # Store in session for persistence
     conn = put_session(conn, :locale, locale)
 
