@@ -7,6 +7,11 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
   alias Floki
   alias TymeslotWeb.Components.DashboardSidebar
 
+  setup do
+    on_exit(fn -> Gettext.put_locale(TymeslotWeb.Gettext, "en") end)
+    :ok
+  end
+
   test "renders sidebar with all navigation links" do
     assigns = %{
       current_action: :overview,
@@ -193,5 +198,49 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
       |> Floki.parse_document!()
 
     assert Floki.find(doc, "a[href='/dashboard/integrations'] .dashboard-nav-notification") == []
+  end
+
+  test "translates sidebar extension labels through the dashboard_common domain" do
+    assigns = %{
+      current_action: :overview,
+      integration_status: %{has_calendar: true, has_video: true, has_meeting_types: true},
+      profile: %{username: "testuser"},
+      sidebar_extensions: [
+        %{
+          id: :subscription,
+          label: "Subscription",
+          icon: "hero-credit-card",
+          path: "/dashboard/subscription",
+          action: :subscription
+        }
+      ]
+    }
+
+    Gettext.put_locale(TymeslotWeb.Gettext, "de")
+    html = render_component(&DashboardSidebar.sidebar/1, assigns)
+
+    assert html =~ "Abonnement"
+  end
+
+  test "falls back to the raw label when an extension has no matching translation" do
+    assigns = %{
+      current_action: :overview,
+      integration_status: %{has_calendar: true, has_video: true, has_meeting_types: true},
+      profile: %{username: "testuser"},
+      sidebar_extensions: [
+        %{
+          id: :unregistered,
+          label: "Some Untranslated Extension",
+          icon: "hero-puzzle-piece",
+          path: "/dashboard/unregistered",
+          action: :unregistered
+        }
+      ]
+    }
+
+    Gettext.put_locale(TymeslotWeb.Gettext, "de")
+    html = render_component(&DashboardSidebar.sidebar/1, assigns)
+
+    assert html =~ "Some Untranslated Extension"
   end
 end

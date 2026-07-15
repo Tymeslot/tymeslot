@@ -225,3 +225,13 @@ msgstr "Вибір теми"
 #, elixir-autogen, elixir-format
 msgid "Video Integration"
 msgstr "Інтеграція відеозв'язку"
+
+#: lib/tymeslot_saas/dashboard/sidebar_extension_labels.ex:20
+#, elixir-autogen, elixir-format
+msgid "Contact & Support"
+msgstr "Зв'язок і підтримка"
+
+#: lib/tymeslot_saas/dashboard/sidebar_extension_labels.ex:19
+#, elixir-autogen, elixir-format
+msgid "Subscription"
+msgstr "Підписка"
