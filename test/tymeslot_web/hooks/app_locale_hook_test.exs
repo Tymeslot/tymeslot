@@ -42,9 +42,38 @@ defmodule TymeslotWeb.Hooks.AppLocaleHookTest do
       assert socket.assigns.locale == "en"
     end
 
-    test "an unsupported path locale is coerced to the default" do
+    test "an unsupported path locale with no other source falls back to the default" do
       {:cont, socket} = AppLocaleHook.on_mount(:default, %{}, %{"path_locale" => "xx"}, socket())
       assert socket.assigns.locale == "en"
+    end
+  end
+
+  describe "per-source validation (matching LocalePlug)" do
+    test "an unsupported user locale falls through to the valid session locale" do
+      # A stale "es" preference must not be coerced to the default; the valid
+      # "de" session locale (what LocalePlug resolved on the dead render) wins.
+      {:cont, socket} =
+        AppLocaleHook.on_mount(
+          :default,
+          %{},
+          %{"locale" => "de"},
+          socket(%{current_user: %{locale: "es"}})
+        )
+
+      assert socket.assigns.locale == "de"
+      assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
+    end
+
+    test "an unsupported path locale falls through to the user preference" do
+      {:cont, socket} =
+        AppLocaleHook.on_mount(
+          :default,
+          %{},
+          %{"path_locale" => "xx", "locale" => "en"},
+          socket(%{current_user: %{locale: "de"}})
+        )
+
+      assert socket.assigns.locale == "de"
     end
   end
 end

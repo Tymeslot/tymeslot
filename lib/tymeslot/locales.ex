@@ -51,6 +51,21 @@ defmodule Tymeslot.Locales do
   def acceptable?(_code), do: false
 
   @doc """
+  Returns `code` unchanged when it is acceptable (see `acceptable?/1`), or
+  `nil` otherwise.
+
+  Designed for per-source locale-resolution `||` chains: an unacceptable
+  candidate falls through to the next source instead of short-circuiting the
+  chain and then being coerced to the default, which would silently discard a
+  perfectly valid lower-priority source (e.g. a valid session locale behind a
+  stale, unsupported user preference or an invalid `?locale=` param).
+  """
+  @spec acceptable(term()) :: String.t() | nil
+  def acceptable(code) do
+    if acceptable?(code), do: code
+  end
+
+  @doc """
   Returns the full list of supported locales from application configuration,
   each a `%{code:, name:, country_code:}` map. Returns an empty list if the
   configuration key is absent.

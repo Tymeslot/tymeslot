@@ -33,11 +33,14 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     user_locale =
       if Keyword.get(opts, :prefer_user_locale, false), do: get_locale_from_user(conn), else: nil
 
+    # Each source is validated individually (`Locales.acceptable/1`) so an
+    # unacceptable candidate falls through to the next source instead of
+    # short-circuiting the chain and being coerced to the default.
     locale =
-      acceptable(get_locale_from_path(conn)) ||
-        acceptable(user_locale) ||
-        acceptable(get_locale_from_params(conn)) ||
-        acceptable(get_locale_from_session(conn)) ||
+      Locales.acceptable(get_locale_from_path(conn)) ||
+        Locales.acceptable(user_locale) ||
+        Locales.acceptable(get_locale_from_params(conn)) ||
+        Locales.acceptable(get_locale_from_session(conn)) ||
         get_locale_from_header(conn) ||
         Locales.default_locale()
 
@@ -56,15 +59,6 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     # Store in assigns for LiveView access
     assign(conn, :locale, locale)
   end
-
-  # Returns `locale` unchanged when it is acceptable (a supported locale, or
-  # the dev-only pseudo locale when enabled), or `nil` otherwise — so an
-  # unacceptable candidate falls through to the next source in the `||` chain
-  # in `call/2` instead of short-circuiting it and then being coerced to the
-  # default, which would silently discard a perfectly valid lower-priority
-  # source (e.g. a valid session locale behind an invalid `?locale=` param).
-  defp acceptable(nil), do: nil
-  defp acceptable(locale), do: if(Locales.acceptable?(locale), do: locale, else: nil)
 
   # A locale carried by the URL path itself, set as a static route assign
   # (`assigns: %{path_locale: "de"}`) on locale-prefixed scopes. The URL is

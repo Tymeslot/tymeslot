@@ -11,17 +11,15 @@ defmodule TymeslotWeb.Hooks.LocaleHook do
   @spec on_mount(atom(), map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()}
   def on_mount(:default, params, session, socket) do
-    # Priority: 1. URL parameter, 2. Session, 3. Default
+    # Priority: 1. URL parameter, 2. Session, 3. Default. Each source is
+    # validated individually (`Locales.acceptable/1`), matching LocalePlug: an
+    # unacceptable candidate (e.g. an unsupported `?locale=` param) falls
+    # through to the next source instead of short-circuiting the chain and
+    # being coerced to the default.
     locale =
-      params["locale"] ||
-        session["locale"] ||
+      Locales.acceptable(params["locale"]) ||
+        Locales.acceptable(session["locale"]) ||
         Locales.default_locale()
-
-    # Validate locale is supported (or the dev-only pseudo locale)
-    locale =
-      if Locales.acceptable?(locale),
-        do: locale,
-        else: Locales.default_locale()
 
     # Set for Gettext process dictionary (global — reaches every backend)
     Gettext.put_locale(locale)
