@@ -134,3 +134,159 @@ msgstr "Ihr Konto"
 #, elixir-autogen, elixir-format
 msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
 msgstr "Wechseln Sie zwischen Planung (Ihre Termintypen) und Kalender (eine vollständige Ansicht Ihrer Buchungen und synchronisierten Termine)."
+
+#: lib/tymeslot/announcements/catalog.ex:209
+#, elixir-autogen, elixir-format
+msgid "A few more things we've shipped lately:"
+msgstr "Einige weitere Neuerungen der letzten Zeit:"
+
+#: lib/tymeslot/announcements/catalog.ex:155
+#, elixir-autogen, elixir-format
+msgid "Add custom questions to any meeting type — short text, long answers, dropdowns and more — so you have exactly what you need before each booking."
+msgstr ""
+"Fügen Sie jedem Termintyp individuelle Fragen hinzu – ob kurzer Text, lange "
+"Antworten, Dropdowns oder mehr. So haben Sie vor jeder Buchung genau die "
+"Informationen, die Sie brauchen."
+
+#: lib/tymeslot/announcements/catalog.ex:81
+#, elixir-autogen, elixir-format
+msgid "All your integrations in one place"
+msgstr "Alle Ihre Integrationen an einem Ort"
+
+#: lib/tymeslot/announcements/catalog.ex:153
+#, elixir-autogen, elixir-format
+msgid "Ask the right questions up front"
+msgstr "Stellen Sie vorab die richtigen Fragen"
+
+#: lib/tymeslot/announcements/catalog.ex:213
+#, elixir-autogen, elixir-format
+msgid "Booking pages and emails now in German, French, Ukrainian and Italian"
+msgstr ""
+"Buchungsseiten und E-Mails jetzt auf Deutsch, Französisch, Ukrainisch und "
+"Italienisch"
+
+#: lib/tymeslot/announcements/catalog.ex:119
+#, elixir-autogen, elixir-format
+msgid "Bookings can now include additional guests. Each guest gets their own email invitation and can RSVP with a tap, so everyone who needs to be there is on the invite — without anyone booking a second time. Set a guest limit per meeting type to keep group sizes in check."
+msgstr ""
+"Buchungen können ab sofort zusätzliche Gäste beinhalten. Jeder Gast erhält "
+"eine eigene E-Mail-Einladung und kann mit nur einem Klick zu- oder absagen. "
+"So sind alle wichtigen Personen direkt eingeladen – ohne dass jemand einen "
+"separaten Termin buchen muss. Legen Sie zudem ein Gästelimit pro Termintyp "
+"fest, um die Gruppengröße zu kontrollieren."
+
+#: lib/tymeslot/announcements/catalog.ex:83
+#, elixir-autogen, elixir-format
+msgid "Calendars, video and payments now live together in one Integrations hub. See at a glance what's connected and what needs attention, reconnect a provider in a click, and add something new — all from a single screen instead of hunting through separate settings pages."
+msgstr ""
+"Kalender, Videokonferenzen und Zahlungen sind jetzt zentral in einem "
+"Integrations-Hub vereint. Sehen Sie auf einen Blick, was bereits verknüpft "
+"ist und wo Handlungsbedarf besteht. Verbinden Sie Anbieter mit nur einem "
+"Klick neu oder fügen Sie weitere hinzu – alles auf einer einzigen Seite, "
+"ganz ohne lästiges Suchen in verschiedenen Menüs."
+
+#: lib/tymeslot/announcements/catalog.ex:173
+#, elixir-autogen, elixir-format
+msgid "Collect payment automatically at the moment of booking, with Stripe-powered checkout built right into your booking page."
+msgstr ""
+"Kassieren Sie Zahlungen automatisch direkt bei der Buchung – dank des "
+"nahtlos in Ihre Buchungsseite integrierten Stripe-Checkouts."
+
+#: lib/tymeslot/announcements/catalog.ex:99
+#, elixir-autogen, elixir-format
+msgid "Colour-code your calendar events"
+msgstr "Kalendertermine farblich kennzeichnen"
+
+#: lib/tymeslot/announcements/catalog.ex:191
+#, elixir-autogen, elixir-format
+msgid "Connect your Zoom account and Tymeslot creates a Zoom meeting for every booking — the link is added to the calendar invite and confirmation automatically."
+msgstr ""
+"Verknüpfen Sie Ihr Zoom-Konto, und Tymeslot erstellt für jede Buchung "
+"automatisch ein Zoom-Meeting. Der entsprechende Link wird der "
+"Kalendereinladung und der Bestätigung direkt hinzugefügt."
+
+#: lib/tymeslot/announcements/catalog.ex:137
+#, elixir-autogen, elixir-format
+msgid "Every meeting type now has its own direct link that takes people straight to booking it — without showing your other meeting types. Mark a type as unlisted to keep it off your public page, and randomise its link any time to make it unguessable or to retire an old one."
+msgstr ""
+"Jeder Termintyp verfügt nun über einen eigenen Direktlink, der Nutzer "
+"unmittelbar zur Buchung führt – ohne dass Ihre anderen Termintypen sichtbar "
+"sind. Markieren Sie einen Termintyp als „nicht gelistet“, um ihn auf Ihrer "
+"öffentlichen Seite zu verbergen. Sie können den Link zudem jederzeit neu "
+"generieren, um ihn vor unerwünschten Zugriffen zu schützen oder einen alten "
+"Link zu deaktivieren."
+
+#: lib/tymeslot/announcements/catalog.ex:212
+#, elixir-autogen, elixir-format
+msgid "Faster, more responsive Quill and Rhythm booking pages"
+msgstr "Schnellere und responsivere Quill- und Rhythm-Buchungsseiten"
+
+#: lib/tymeslot/announcements/catalog.ex:171
+#, elixir-autogen, elixir-format
+msgid "Get paid when people book"
+msgstr "Zahlungen direkt bei der Buchung erhalten"
+
+#: lib/tymeslot/announcements/catalog.ex:101
+#, elixir-autogen, elixir-format
+msgid "Give any event its own colour, right from your dashboard agenda. Colours you set in Tymeslot write back to your connected calendar, and colours already on your Google or CalDAV events show up here too — so your day is colour-coded exactly the way you like it, everywhere you look."
+msgstr ""
+"Weisen Sie jedem Termin direkt in Ihrer Dashboard-Agenda eine eigene Farbe "
+"zu. In Tymeslot festgelegte Farben werden automatisch mit Ihrem verknüpften "
+"Kalender synchronisiert. Ebenso werden Farben, die Sie bereits in Google "
+"oder CalDAV nutzen, hier übernommen. So ist Ihr Tag überall genau nach Ihren"
+" Vorstellungen farblich strukturiert."
+
+#: lib/tymeslot/announcements/catalog.ex:117
+#, elixir-autogen, elixir-format
+msgid "Invite guests to any booking"
+msgstr "Gäste zu beliebigen Buchungen einladen"
+
+#: lib/tymeslot/announcements/catalog.ex:189
+#, elixir-autogen, elixir-format
+msgid "Meet on Zoom, automatically"
+msgstr "Automatische Zoom-Meetings"
+
+#: lib/tymeslot/announcements/catalog.ex:208
+#, elixir-autogen, elixir-format
+msgid "Plus a host of improvements"
+msgstr "Dazu viele weitere Verbesserungen"
+
+#: lib/tymeslot/announcements/catalog.ex:161
+#: lib/tymeslot/announcements/catalog.ex:179
+#: lib/tymeslot/announcements/catalog.ex:197
+#, elixir-autogen, elixir-format
+msgid "Read the docs"
+msgstr "Zur Dokumentation"
+
+#: lib/tymeslot/announcements/catalog.ex:135
+#, elixir-autogen, elixir-format
+msgid "Share private booking links"
+msgstr "Private Buchungslinks teilen"
+
+#: lib/tymeslot/announcements/catalog.ex:211
+#, elixir-autogen, elixir-format
+msgid "Slack notifications when a booking is made"
+msgstr "Slack-Benachrichtigungen bei neuen Buchungen"
+
+#: lib/tymeslot/announcements/catalog.ex:217
+#, elixir-autogen, elixir-format
+msgid "Smarter embeds that auto-fit their height, with an optional column layout"
+msgstr ""
+"Intelligentere Embeds mit automatischer Höhenanpassung und optionalem "
+"Spaltenlayout"
+
+#: lib/tymeslot/announcements/catalog.ex:65
+#, elixir-autogen, elixir-format
+msgid "The whole app - your dashboard, booking pages and every email - is now available in German, French, Italian and Ukrainian. Tymeslot follows your browser's language automatically, or pick one yourself in Account settings. Your invitees get booking pages and confirmations in their own language, too."
+msgstr ""
+"Die gesamte App – von Ihrem Dashboard über die Buchungsseiten bis hin zu "
+"jeder E-Mail – ist jetzt auf Deutsch, Französisch, Italienisch und "
+"Ukrainisch verfügbar. Tymeslot übernimmt dabei automatisch die Sprache Ihres"
+" Browsers, alternativ können Sie diese in den Kontoeinstellungen selbst "
+"festlegen. Auch Ihre Gäste erhalten Buchungsseiten und Bestätigungen in "
+"ihrer jeweiligen Muttersprache."
+
+#: lib/tymeslot/announcements/catalog.ex:63
+#, elixir-autogen, elixir-format
+msgid "Tymeslot now speaks your language"
+msgstr "Tymeslot spricht jetzt Ihre Sprache"
