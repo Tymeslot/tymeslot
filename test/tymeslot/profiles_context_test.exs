@@ -8,8 +8,10 @@ defmodule Tymeslot.ProfilesContextTest do
   @moduletag :profiles
   @moduletag :unit
 
+  alias Tymeslot.Locales
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Profiles.ReservedPaths
   alias TymeslotWeb.Themes.Core.ThemeInfo
 
   # =====================================
@@ -163,6 +165,18 @@ defmodule Tymeslot.ProfilesContextTest do
       assert {:error, reason} = Profiles.update_username(profile, "admin", user.id)
       assert is_binary(reason)
       assert reason =~ "reserved"
+    end
+
+    test "every supported locale code is a reserved path" do
+      # Locale codes are top-level URL prefixes on localised deployments; a
+      # username matching one would shadow the locale scope (or vice versa),
+      # so reservation must track the locale config rather than a hardcoded
+      # list.
+      reserved = ReservedPaths.list()
+
+      for code <- Locales.supported_codes() do
+        assert code in reserved
+      end
     end
   end
 

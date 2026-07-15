@@ -4,6 +4,8 @@ defmodule Tymeslot.Profiles.ReservedPaths do
   This module separates the concern of namespace management from the broader profile context.
   """
 
+  alias Tymeslot.Locales
+
   @doc """
   Returns a list of top-level paths and usernames that are reserved for system use.
   Includes system routes, security-sensitive terms, brand-related paths, and inappropriate content.
@@ -12,12 +14,18 @@ defmodule Tymeslot.Profiles.ReservedPaths do
   def list do
     # Combine static paths from the web layer with domain-level reserved terms
     TymeslotWeb.static_paths() ++
+      locale_paths() ++
       system_paths() ++
       brand_paths() ++
       security_paths() ++
       common_paths() ++
       offensive_paths()
   end
+
+  # Supported locale codes can serve as top-level URL prefixes for localised
+  # pages (/de, /fr, ...), so a username must never be able to shadow one —
+  # or be shadowed by one — should a longer locale code ever launch.
+  defp locale_paths, do: Locales.supported_codes()
 
   defp system_paths do
     ~w(
