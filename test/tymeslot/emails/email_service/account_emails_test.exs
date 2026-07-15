@@ -20,7 +20,7 @@ defmodule Tymeslot.Emails.EmailService.AccountEmailsTest do
   # Global mode routes it here instead; it requires `async: false`.
   setup :set_swoosh_global
 
-  defp german_user(overrides \\ %{}) do
+  defp german_user(overrides) do
     build_user_data(Map.merge(%{name: "Anja Bauer", email: "anja@example.com"}, overrides))
   end
 
