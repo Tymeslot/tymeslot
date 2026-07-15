@@ -21,12 +21,12 @@ msgstr "%{label} avant"
 msgid "1 hour before"
 msgstr "1 heure avant"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:221
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:215
 #, elixir-autogen, elixir-format
 msgid "1. Select Calendar Account"
 msgstr "1. Sélectionnez un compte de calendrier"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:275
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:269
 #, elixir-autogen, elixir-format
 msgid "2. Select Specific Calendar"
 msgstr "2. Sélectionnez un calendrier spécifique"
@@ -93,7 +93,7 @@ msgstr "Posez des questions supplémentaires aux personnes qui réservent pendan
 msgid "Body text"
 msgstr "Texte du corps"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:212
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:206
 #, elixir-autogen, elixir-format
 msgid "Booking Destination"
 msgstr "Destination de la réservation"
@@ -130,7 +130,7 @@ msgstr "Changer le type effacera la configuration que vous avez définie (option
 msgid "Choose an icon to represent this meeting type, or select \"No Icon\" for no visual indicator."
 msgstr "Choisissez une icône pour représenter ce type de réunion, ou sélectionnez « Aucune icône » pour n’avoir aucun indicateur visuel."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:215
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:209
 #, elixir-autogen, elixir-format
 msgid "Choose where new bookings for this meeting type should be created."
 msgstr "Choisissez où les nouvelles réservations de ce type de réunion doivent être créées."
@@ -140,7 +140,7 @@ msgstr "Choisissez où les nouvelles réservations de ce type de réunion doiven
 msgid "Complete the form to save"
 msgstr "Complétez le formulaire pour enregistrer"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:228
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:222
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar"
 msgstr "Connecter un calendrier"
@@ -276,12 +276,12 @@ msgstr "Valeur la plus élevée que la personne qui réserve peut saisir."
 msgid "Hours"
 msgstr "Heures"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:30
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:31
 #, elixir-autogen, elixir-format
 msgid "Icon"
 msgstr "Icône"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:122
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:119
 #, elixir-autogen, elixir-format
 msgid "In-Person"
 msgstr "En personne"
@@ -364,12 +364,12 @@ msgstr "Choix multiple"
 msgid "Name"
 msgstr "Nom"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:226
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:220
 #, elixir-autogen, elixir-format
 msgid "No calendar integrations configured."
 msgstr "Aucune intégration de calendrier configurée."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:290
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:284
 #, elixir-autogen, elixir-format
 msgid "No calendars found for this account."
 msgstr "Aucun calendrier trouvé pour ce compte."
@@ -384,7 +384,7 @@ msgstr "Aucune question personnalisée pour le moment"
 msgid "No reminders configured."
 msgstr "Aucun rappel configuré."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:152
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:146
 #, elixir-autogen, elixir-format
 msgid "No video integrations configured."
 msgstr "Aucune intégration vidéo configurée."
@@ -437,12 +437,12 @@ msgstr "Veuillez sélectionner un fournisseur vidéo pour les réunions vidéo"
 msgid "Price (%{currency})"
 msgstr "Prix (%{currency})"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:259
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:253
 #, elixir-autogen, elixir-format
 msgid "Reconnect"
 msgstr "Reconnecter"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:284
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:278
 #, elixir-autogen, elixir-format
 msgid "Refreshing calendars..."
 msgstr "Actualisation des calendriers..."
@@ -492,7 +492,7 @@ msgstr "Enregistrer la question"
 msgid "Saving..."
 msgstr "Enregistrement..."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:147
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:141
 #, elixir-autogen, elixir-format
 msgid "Select Video Provider"
 msgstr "Sélectionner un fournisseur vidéo"
@@ -502,7 +502,7 @@ msgstr "Sélectionner un fournisseur vidéo"
 msgid "Select a valid reminder unit"
 msgstr "Sélectionnez une unité de rappel valide"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:154
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:148
 #, elixir-autogen, elixir-format
 msgid "Set up video integration"
 msgstr "Configurer l’intégration vidéo"
@@ -591,7 +591,7 @@ msgstr "Impossible de vérifier le statut de l’abonnement. Veuillez réessayer
 msgid "Unsaved changes"
 msgstr "Modifications non enregistrées"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:139
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:133
 #, elixir-autogen, elixir-format
 msgid "Video Meeting"
 msgstr "Réunion vidéo"

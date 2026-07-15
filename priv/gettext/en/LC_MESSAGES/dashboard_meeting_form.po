@@ -21,12 +21,12 @@ msgstr ""
 msgid "1 hour before"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:221
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:215
 #, elixir-autogen, elixir-format
 msgid "1. Select Calendar Account"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:275
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:269
 #, elixir-autogen, elixir-format
 msgid "2. Select Specific Calendar"
 msgstr ""
@@ -93,7 +93,7 @@ msgstr ""
 msgid "Body text"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:212
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:206
 #, elixir-autogen, elixir-format
 msgid "Booking Destination"
 msgstr ""
@@ -130,7 +130,7 @@ msgstr ""
 msgid "Choose an icon to represent this meeting type, or select \"No Icon\" for no visual indicator."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:215
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:209
 #, elixir-autogen, elixir-format
 msgid "Choose where new bookings for this meeting type should be created."
 msgstr ""
@@ -140,7 +140,7 @@ msgstr ""
 msgid "Complete the form to save"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:228
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:222
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar"
 msgstr ""
@@ -276,12 +276,12 @@ msgstr ""
 msgid "Hours"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:30
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:31
 #, elixir-autogen, elixir-format
 msgid "Icon"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:122
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:119
 #, elixir-autogen, elixir-format
 msgid "In-Person"
 msgstr ""
@@ -364,12 +364,12 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:226
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:220
 #, elixir-autogen, elixir-format
 msgid "No calendar integrations configured."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:290
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:284
 #, elixir-autogen, elixir-format
 msgid "No calendars found for this account."
 msgstr ""
@@ -384,7 +384,7 @@ msgstr ""
 msgid "No reminders configured."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:152
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:146
 #, elixir-autogen, elixir-format
 msgid "No video integrations configured."
 msgstr ""
@@ -437,12 +437,12 @@ msgstr ""
 msgid "Price (%{currency})"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:259
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:253
 #, elixir-autogen, elixir-format
 msgid "Reconnect"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:284
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:278
 #, elixir-autogen, elixir-format
 msgid "Refreshing calendars..."
 msgstr ""
@@ -492,7 +492,7 @@ msgstr ""
 msgid "Saving..."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:147
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:141
 #, elixir-autogen, elixir-format
 msgid "Select Video Provider"
 msgstr ""
@@ -502,7 +502,7 @@ msgstr ""
 msgid "Select a valid reminder unit"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:154
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:148
 #, elixir-autogen, elixir-format
 msgid "Set up video integration"
 msgstr ""
@@ -591,7 +591,7 @@ msgstr ""
 msgid "Unsaved changes"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:139
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex:133
 #, elixir-autogen, elixir-format
 msgid "Video Meeting"
 msgstr ""
