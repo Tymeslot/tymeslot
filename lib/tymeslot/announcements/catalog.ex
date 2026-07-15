@@ -25,9 +25,24 @@ defmodule Tymeslot.Announcements.Catalog do
   @event_colours_published_at ~U[2026-07-06 00:00:00Z]
   @event_colours_expires_at ~U[2026-08-05 00:00:00Z]
 
+  @languages_published_at ~U[2026-07-15 00:00:00Z]
+  @languages_expires_at ~U[2026-08-14 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     [
+      %Announcement{
+        key: "app_languages",
+        title: "Tymeslot now speaks your language",
+        body:
+          "The whole app - your dashboard, booking pages and every email - is now available " <>
+            "in German, French, Italian and Ukrainian. Tymeslot follows your browser's " <>
+            "language automatically, or pick one yourself in Account settings. Your invitees " <>
+            "get booking pages and confirmations in their own language, too.",
+        image_path: "/images/announcements/languages.svg",
+        published_at: @languages_published_at,
+        expires_at: @languages_expires_at
+      },
       %Announcement{
         key: "integrations_hub",
         title: "All your integrations in one place",

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" fill="none" role="img" aria-label="Tymeslot speaks your language">
+  <defs>
+    <linearGradient id="lang-bg" x1="0" y1="0" x2="640" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ecfeff"/>
+      <stop offset="1" stop-color="#f0fdfa"/>
+    </linearGradient>
+    <filter id="lang-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d9488" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="640" height="240" fill="url(#lang-bg)"/>
+
+  <!-- globe behind the conversation -->
+  <g stroke="#5eead4" stroke-width="2" opacity="0.6">
+    <circle cx="320" cy="120" r="72"/>
+    <ellipse cx="320" cy="120" rx="30" ry="72"/>
+    <line x1="254" y1="92" x2="386" y2="92"/>
+    <line x1="248" y1="120" x2="392" y2="120"/>
+    <line x1="254" y1="148" x2="386" y2="148"/>
+  </g>
+
+  <!-- greetings, one bubble per language -->
+  <g filter="url(#lang-shadow)">
+    <rect x="96" y="52" width="104" height="44" rx="14" fill="#ffffff"/>
+    <path d="M132 96 l12 16 12 -16 z" fill="#ffffff"/>
+  </g>
+  <text x="148" y="81" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="600" fill="#0f766e" text-anchor="middle">Hallo</text>
+
+  <g filter="url(#lang-shadow)">
+    <rect x="436" y="48" width="124" height="44" rx="14" fill="#ffffff"/>
+    <path d="M508 92 l12 16 12 -16 z" fill="#ffffff"/>
+  </g>
+  <text x="498" y="77" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="600" fill="#0f766e" text-anchor="middle">Привіт</text>
+
+  <g filter="url(#lang-shadow)">
+    <rect x="140" y="150" width="88" height="44" rx="14" fill="#ffffff"/>
+    <path d="M164 150 l12 -16 12 16 z" fill="#ffffff"/>
+  </g>
+  <text x="184" y="179" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="600" fill="#0f766e" text-anchor="middle">Ciao</text>
+
+  <g filter="url(#lang-shadow)">
+    <rect x="420" y="152" width="100" height="44" rx="14" fill="#ffffff"/>
+    <path d="M480 152 l12 -16 12 16 z" fill="#ffffff"/>
+  </g>
+  <text x="470" y="181" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="600" fill="#0f766e" text-anchor="middle">Hello</text>
+
+  <!-- centre bubble carries the brand colour -->
+  <g filter="url(#lang-shadow)">
+    <rect x="256" y="96" width="132" height="48" rx="16" fill="#0d9488"/>
+    <path d="M310 144 l12 16 12 -16 z" fill="#0d9488"/>
+  </g>
+  <text x="322" y="128" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#ffffff" text-anchor="middle">Bonjour</text>
+</svg>
