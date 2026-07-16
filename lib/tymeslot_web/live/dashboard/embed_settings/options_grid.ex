@@ -196,7 +196,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         <:footer_info>
           {dgettext(
             "dashboard_embed",
-            "A floating button stays visible as visitors scroll — like a chat widget, but for booking."
+            "A floating button stays visible as visitors scroll - like a chat widget, but for booking."
           )}
         </:footer_info>
       </.embed_option_card>
@@ -225,7 +225,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
         <p class="text-token-sm text-indigo-800">
           {dgettext(
             "dashboard_embed",
-            "Install the official Tymeslot plugin to embed your booking page with a block or shortcode — no code."
+            "Install the official Tymeslot plugin to embed your booking page with a block or shortcode - no code."
           )}
           <a
             href="https://wordpress.org/plugins/tymeslot/"
@@ -288,7 +288,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           <p class="text-token-sm text-tymeslot-600 mt-1">
             {dgettext(
               "dashboard_embed",
-              "Updates every snippet below. Defaults work for most embeds — adjust when your site needs them."
+              "Updates every snippet below. Defaults work for most embeds - adjust when your site needs them."
             )}
           </p>
         </div>
@@ -319,7 +319,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           <:description>
             {dgettext(
               "dashboard_embed",
-              "Column adapts to any container width. Default centres the booker — useful when you want a self-contained card inside a wide page."
+              "Column adapts to any container width. Default centres the booker - useful when you want a self-contained card inside a wide page."
             )}
           </:description>
         </.input>

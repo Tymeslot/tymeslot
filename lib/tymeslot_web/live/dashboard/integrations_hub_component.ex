@@ -204,8 +204,8 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
 
     dngettext(
       "dashboard_integrations",
-      "%{count} connection needs attention — %{message}",
-      "%{count} connections need attention — %{message}",
+      "%{count} connection needs attention - %{message}",
+      "%{count} connections need attention - %{message}",
       count,
       count: count,
       message: hd(attention).message

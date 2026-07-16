@@ -307,7 +307,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
       <p class="text-sm text-tymeslot-500">
         {dgettext(
           "dashboard_calendar_providers",
-          "Select the calendars you want to sync for availability checks. Calendars you previously synced are already ticked — untick to stop syncing them, or tick new calendars to add them."
+          "Select the calendars you want to sync for availability checks. Calendars you previously synced are already ticked - untick to stop syncing them, or tick new calendars to add them."
         )}
       </p>
 

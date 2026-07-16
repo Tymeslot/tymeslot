@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
       <p>
         {dgettext(
           "dashboard_bookings",
-          "This booking was paid. Choose how to handle the refund — the attendee always receives the full amount you refund."
+          "This booking was paid. Choose how to handle the refund - the attendee always receives the full amount you refund."
         )}
       </p>
 

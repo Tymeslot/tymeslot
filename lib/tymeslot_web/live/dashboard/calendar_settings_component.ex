@@ -150,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         Flash.error(
           dgettext(
             "dashboard_calendar_settings",
-            "Cannot reactivate — another active integration already uses this account"
+            "Cannot reactivate - another active integration already uses this account"
           )
         )
 

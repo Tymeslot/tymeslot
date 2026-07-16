@@ -247,7 +247,7 @@ defmodule TymeslotWeb.OnboardingLive.PreferencesStep do
 
     dgettext(
       "onboarding_wizard",
-      "Someone visiting your page today can only book up to %{period} ahead — no further.",
+      "Someone visiting your page today can only book up to %{period} ahead - no further.",
       period: phrase
     )
   end

@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsAutosaveRateLimitLiveTest do
       assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).duration_minutes == 30
 
       # The editor must show the throttled indicator copy.
-      assert html =~ "Too many changes — saving shortly…"
+      assert html =~ "Too many changes - saving shortly…"
     end
   end
 end

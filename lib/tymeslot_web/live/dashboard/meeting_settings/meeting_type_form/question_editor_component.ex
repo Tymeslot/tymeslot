@@ -222,7 +222,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
             <:description>
               {dgettext(
                 "dashboard_meeting_form",
-                "Shown below the question — use it to clarify what you're asking or give an example."
+                "Shown below the question - use it to clarify what you're asking or give an example."
               )}
             </:description>
           </CoreComponents.input>

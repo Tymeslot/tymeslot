@@ -207,7 +207,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                       {raw(
                         dgettext(
                           "dashboard_automation_chat",
-                          "Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created — see the full setup guide on %{guide}.",
+                          "Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created - see the full setup guide on %{guide}.",
                           guide:
                             ~s(<a href="https://tymeslot.app/docs/slack" target="_blank" rel="noopener noreferrer" class="font-black text-turquoise-700 hover:text-turquoise-900 underline">tymeslot.app/docs/slack</a>)
                         )

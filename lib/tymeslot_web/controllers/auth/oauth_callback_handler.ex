@@ -170,7 +170,7 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
           :error,
           dgettext(
             "dashboard_integrations",
-            "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" — Tymeslot needs this to create meetings and Google Meet links.",
+            "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links.",
             service: service_name
           )
         )

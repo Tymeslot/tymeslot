@@ -84,7 +84,7 @@ defmodule Tymeslot.Announcements.Catalog do
           "onboarding",
           "Calendars, video and payments now live together in one Integrations hub. See at " <>
             "a glance what's connected and what needs attention, reconnect a provider in a " <>
-            "click, and add something new — all from a single screen instead of hunting " <>
+            "click, and add something new - all from a single screen instead of hunting " <>
             "through separate settings pages."
         ),
       image_path: "/images/announcements/integrations-hub.svg",
@@ -102,7 +102,7 @@ defmodule Tymeslot.Announcements.Catalog do
           "onboarding",
           "Give any event its own colour, right from your dashboard agenda. Colours you set " <>
             "in Tymeslot write back to your connected calendar, and colours already on your " <>
-            "Google or CalDAV events show up here too — so your day is colour-coded exactly " <>
+            "Google or CalDAV events show up here too - so your day is colour-coded exactly " <>
             "the way you like it, everywhere you look."
         ),
       image_path: "/images/announcements/event-colours.svg",
@@ -120,7 +120,7 @@ defmodule Tymeslot.Announcements.Catalog do
           "onboarding",
           "Bookings can now include additional guests. Each guest gets their own email " <>
             "invitation and can RSVP with a tap, so everyone who needs to be there is on the " <>
-            "invite — without anyone booking a second time. Set a guest limit per meeting " <>
+            "invite - without anyone booking a second time. Set a guest limit per meeting " <>
             "type to keep group sizes in check."
         ),
       image_path: "/images/announcements/guest-rsvp.svg",
@@ -137,7 +137,7 @@ defmodule Tymeslot.Announcements.Catalog do
         dgettext(
           "onboarding",
           "Every meeting type now has its own direct link that takes people straight to " <>
-            "booking it — without showing your other meeting types. Mark a type as unlisted " <>
+            "booking it - without showing your other meeting types. Mark a type as unlisted " <>
             "to keep it off your public page, and randomise its link any time to make it " <>
             "unguessable or to retire an old one."
         ),
@@ -154,8 +154,8 @@ defmodule Tymeslot.Announcements.Catalog do
       body:
         dgettext(
           "onboarding",
-          "Add custom questions to any meeting type — short text, long answers, " <>
-            "dropdowns and more — so you have exactly what you need before each booking."
+          "Add custom questions to any meeting type - short text, long answers, " <>
+            "dropdowns and more - so you have exactly what you need before each booking."
         ),
       image_path: "/images/announcements/custom-questions.svg",
       cta_label: dgettext("onboarding", "Read the docs"),
@@ -191,7 +191,7 @@ defmodule Tymeslot.Announcements.Catalog do
         dgettext(
           "onboarding",
           "Connect your Zoom account and Tymeslot creates a Zoom meeting for every " <>
-            "booking — the link is added to the calendar invite and confirmation automatically."
+            "booking - the link is added to the calendar invite and confirmation automatically."
         ),
       image_path: "/images/announcements/zoom.svg",
       cta_label: dgettext("onboarding", "Read the docs"),

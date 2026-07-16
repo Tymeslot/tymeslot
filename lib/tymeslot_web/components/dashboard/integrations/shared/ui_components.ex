@@ -173,7 +173,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
       title={
         dgettext(
           "dashboard_integrations",
-          "No calendars selected — nothing will sync until you pick at least one."
+          "No calendars selected - nothing will sync until you pick at least one."
         )
       }
     >

@@ -252,7 +252,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
                  {:error,
                   dgettext(
                     "dashboard_integrations",
-                    "Cannot reactivate — another active integration already uses this account"
+                    "Cannot reactivate - another active integration already uses this account"
                   )}}
               )
 

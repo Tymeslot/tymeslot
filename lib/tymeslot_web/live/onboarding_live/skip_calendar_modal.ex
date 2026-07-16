@@ -40,7 +40,7 @@ defmodule TymeslotWeb.OnboardingLive.SkipCalendarModal do
       <p class="text-tymeslot-600 font-medium text-token-lg leading-relaxed">
         {dgettext(
           "onboarding_wizard",
-          "Tymeslot is built around your calendar. Once it's connected, we read your real availability so you're never double-booked and write every new booking back automatically — that's what makes Tymeslot worthwhile."
+          "Tymeslot is built around your calendar. Once it's connected, we read your real availability so you're never double-booked and write every new booking back automatically - that's what makes Tymeslot worthwhile."
         )}
       </p>
       <p class="mt-3 text-tymeslot-500 text-token-base leading-relaxed">
