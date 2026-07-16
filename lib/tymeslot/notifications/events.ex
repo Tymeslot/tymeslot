@@ -4,6 +4,8 @@ defmodule Tymeslot.Notifications.Events do
   Pure functions for determining what notifications should be sent based on events.
   """
 
+  require Logger
+
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Slack.Dispatcher, as: SlackDispatcher
   alias Tymeslot.Telegram.Dispatcher, as: TelegramDispatcher
@@ -57,6 +59,12 @@ defmodule Tymeslot.Notifications.Events do
     # Send email notifications
     result = Orchestrator.send_reschedule_notifications(updated_meeting, original_meeting)
 
+    # Re-pin reminders to the new meeting time. This replaces reminder jobs
+    # still aimed at the old time and recreates the ones deleted when an
+    # organizer reschedule request voided the original slot. Failures are
+    # logged but never fail the reschedule itself.
+    reschedule_reminders(updated_meeting)
+
     # Dispatch webhooks (don't fail if webhooks fail)
     Dispatcher.dispatch(:meeting_rescheduled, updated_meeting)
 
@@ -67,6 +75,24 @@ defmodule Tymeslot.Notifications.Events do
     SlackDispatcher.dispatch(:meeting_rescheduled, updated_meeting)
 
     result
+  end
+
+  defp reschedule_reminders(meeting) do
+    case Orchestrator.schedule_reminder_notifications(meeting) do
+      :ok ->
+        :ok
+
+      {:ok, _result} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to re-schedule reminders after reschedule",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
   end
 
   @doc """

@@ -68,10 +68,7 @@ defmodule Tymeslot.Bookings.Reschedule do
          end_time: end_dt,
          duration_minutes: _dur
        }) do
-    attrs = %{
-      start_time: start_dt,
-      end_time: end_dt
-    }
+    attrs = Map.merge(%{start_time: start_dt, end_time: end_dt}, status_attrs(meeting))
 
     case Repo.transaction(fn ->
            with {:ok, updated} <- update_meeting(meeting, attrs),
@@ -88,6 +85,13 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, _reason} -> {:error, :failed_to_update_meeting}
     end
   end
+
+  # Booking a new time settles an organizer reschedule request, so the meeting
+  # becomes a live booking again: the badge clears and conflict checks count it
+  # at its new time. All other statuses (confirmed, pending, awaiting_payment)
+  # carry through a plain reschedule unchanged.
+  defp status_attrs(%{status: "reschedule_requested"}), do: %{status: "confirmed"}
+  defp status_attrs(_meeting), do: %{}
 
   defp validate_can_reschedule(meeting) do
     Policy.can_reschedule_meeting?(meeting)

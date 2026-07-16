@@ -183,6 +183,15 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
                })
     end
 
+    test "skips if a reschedule has been requested" do
+      meeting = insert(:meeting, status: "reschedule_requested")
+
+      assert {:discard, "Meeting reschedule_requested"} =
+               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+                 "meeting_id" => meeting.id
+               })
+    end
+
     test "skips reminder if already sent for the interval" do
       meeting =
         insert(:meeting,

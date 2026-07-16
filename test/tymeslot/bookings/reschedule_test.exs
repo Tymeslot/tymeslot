@@ -11,10 +11,12 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.Bookings.Validation
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoSyncWorker
   alias Tymeslot.ZoomOAuthHelperMock
   import Tymeslot.MeetingTestHelpers
@@ -68,6 +70,57 @@ defmodule Tymeslot.Bookings.RescheduleTest do
 
       assert DateTime.compare(reloaded.start_time, updated_meeting.start_time) == :eq
       assert DateTime.compare(reloaded.end_time, updated_meeting.end_time) == :eq
+    end
+
+    test "keeps the existing status on a plain reschedule" do
+      %{meeting: meeting, new_params: new_params} = setup_reschedule_test()
+
+      assert {:ok, updated_meeting} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+
+      assert updated_meeting.status == "confirmed"
+    end
+
+    test "restores confirmed status when settling an organizer reschedule request" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_meeting_for_user(user, %{status: "reschedule_requested"})
+
+      new_params = %{
+        date: Date.to_string(Date.add(Date.utc_today(), 2)),
+        time: "2:00 PM",
+        duration: "60min",
+        user_timezone: "America/New_York"
+      }
+
+      assert {:ok, updated_meeting} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+
+      assert updated_meeting.status == "confirmed"
+
+      {:ok, reloaded} = MeetingQueries.get_meeting_by_uid(meeting.uid)
+      assert reloaded.status == "confirmed"
+    end
+
+    test "re-pins the reminder email to the new meeting time" do
+      %{meeting: meeting, new_params: new_params} = setup_reschedule_test()
+
+      # Reminder created at booking time, pinned to the original slot.
+      :ok = EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes")
+
+      assert {:ok, updated_meeting} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+
+      expected_at = DateTime.add(updated_meeting.start_time, -30 * 60, :second)
+
+      # Exactly one reminder job remains and it targets the new time — the
+      # job aimed at the old slot has been replaced, not duplicated.
+      assert [job] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
+               )
+
+      assert DateTime.compare(DateTime.truncate(job.scheduled_at, :second), expected_at) == :eq
     end
   end
 

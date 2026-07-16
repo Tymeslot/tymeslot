@@ -161,6 +161,25 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   @doc """
+  Deletes all pending reminder email jobs for a meeting.
+
+  Used when the meeting's scheduled time stops being valid — cancellation or
+  an organizer reschedule request — so no reminder fires for a void time slot.
+  """
+  @spec cancel_reminder_emails(term()) :: :ok
+  def cancel_reminder_emails(meeting_id) do
+    {deleted, _result} =
+      ObanJobQueries.delete_reminder_jobs_for_meeting(meeting_id, to_string(EmailWorker), %{})
+
+    Logger.info("Cancelled pending reminder email jobs",
+      meeting_id: meeting_id,
+      deleted_count: deleted
+    )
+
+    :ok
+  end
+
+  @doc """
   Schedules a reschedule request email to be sent to the attendee.
   """
   @spec schedule_reschedule_request(term()) :: :ok | {:error, term()}

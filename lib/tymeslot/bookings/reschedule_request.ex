@@ -5,7 +5,10 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   This module manages the process when an organizer requests to reschedule a meeting:
   1. Validates the meeting is eligible for rescheduling (via Policy)
   2. Updates the meeting status to "reschedule_requested"
-  3. Schedules a reschedule request email to be sent to the attendee
+  3. Deletes the calendar event and pending reminder emails — the original time
+     slot is void, exactly as if the meeting were cancelled, until the attendee
+     books a new time
+  4. Schedules a reschedule request email to be sent to the attendee
 
   This is distinct from `Bookings.Reschedule` which actually performs the reschedule
   with a new time. This module only initiates the request workflow.
@@ -15,6 +18,7 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
 
@@ -24,7 +28,8 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   This function:
   1. Checks if the meeting is eligible for rescheduling via Policy
   2. Updates the meeting status to "reschedule_requested"
-  3. Queues a high-priority email job to notify the attendee
+  3. Deletes the calendar event and pending reminder email jobs
+  4. Queues a high-priority email job to notify the attendee
 
   ## Parameters
     - meeting: The meeting struct to send reschedule request for
@@ -66,6 +71,15 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
     # Update the meeting status to reschedule_requested
     case MeetingQueries.update_meeting(meeting, %{status: "reschedule_requested"}) do
       {:ok, updated_meeting} ->
+        # The original slot is void until the attendee books a new time, so the
+        # request email tells the attendee the appointment has been cancelled.
+        # Make the system state match: remove the calendar event and drop any
+        # reminders still pointing at the old time. Rebooking recreates both —
+        # the calendar sync recreates the event on its update-404 path, and
+        # reminders are re-scheduled from the meeting_rescheduled event.
+        :ok = Meetings.cancel_calendar_event(updated_meeting)
+        :ok = EmailScheduler.cancel_reminder_emails(updated_meeting.id)
+
         schedule_reschedule_email(updated_meeting)
 
       {:error, reason} ->

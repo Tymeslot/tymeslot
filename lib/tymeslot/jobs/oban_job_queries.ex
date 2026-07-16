@@ -5,6 +5,7 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   import Ecto.Query, warn: false
   alias Ecto.Changeset
   alias Oban.Job
+  alias Oban.Worker
   alias Tymeslot.Repo
 
   @doc """
@@ -120,6 +121,11 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   @spec delete_reminder_jobs_for_meeting(term(), String.t(), map()) ::
           {non_neg_integer(), nil}
   def delete_reminder_jobs_for_meeting(meeting_id, worker_name, reminder_params) do
+    # Oban stores worker names without the "Elixir." prefix, but callers passing
+    # `to_string(SomeWorker)` produce the prefixed form. Normalise so the match
+    # can't silently miss every job.
+    worker_name = Worker.to_string(worker_name)
+
     args_match =
       Map.merge(
         %{"action" => "send_reminder_emails", "meeting_id" => meeting_id},

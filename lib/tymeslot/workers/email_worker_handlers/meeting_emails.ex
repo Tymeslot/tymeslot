@@ -23,12 +23,17 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_reminder_emails(%{"meeting_id" => meeting_id} = args) do
     with_meeting(meeting_id, "reminder emails", fn meeting ->
-      if meeting.status == "cancelled" do
-        Logger.info("Skipping reminder emails for cancelled meeting",
-          meeting_id: meeting_id
+      # "reschedule_requested" means the original time slot is void until the
+      # attendee books a new one — reminding anyone of it would contradict the
+      # reschedule request email. Pending reminder jobs are deleted when the
+      # request is sent; this guards any job already in flight at that moment.
+      if meeting.status in ["cancelled", "reschedule_requested"] do
+        Logger.info("Skipping reminder emails for inactive meeting",
+          meeting_id: meeting_id,
+          status: meeting.status
         )
 
-        {:discard, "Meeting cancelled"}
+        {:discard, "Meeting #{meeting.status}"}
       else
         reminder_value = Map.get(args, "reminder_value", 30)
         reminder_unit = Map.get(args, "reminder_unit", "minutes")

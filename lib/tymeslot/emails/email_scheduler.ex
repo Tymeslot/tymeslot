@@ -33,6 +33,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_reminder_emails(meeting_id, reminder_value, reminder_unit, scheduled_at),
     to: MeetingScheduler
 
+  defdelegate cancel_reminder_emails(meeting_id), to: MeetingScheduler
+
   defdelegate schedule_reschedule_request(meeting_id), to: MeetingScheduler
 
   # Auth emails
