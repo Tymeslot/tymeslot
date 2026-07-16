@@ -28,6 +28,10 @@ defmodule Tymeslot.Timezones.Data do
     "peking" => "Asia/Shanghai",
     "cape town" => "Africa/Johannesburg",
     "saigon" => "Asia/Ho_Chi_Minh",
+    # Vietnam and Alberta each have a single IANA zone; the second city is an
+    # alias rather than an entry, so the picker can't offer a fictional id.
+    "hanoi" => "Asia/Ho_Chi_Minh",
+    "calgary" => "America/Edmonton",
     "constantinople" => "Europe/Istanbul",
     "rangoon" => "Asia/Yangon",
     "burma" => "Asia/Yangon",
@@ -71,7 +75,9 @@ defmodule Tymeslot.Timezones.Data do
   # Lookup maps
   @timezone_to_country Map.new(@all_entries, fn e -> {e.timezone_id, e.country_alpha3} end)
   @timezone_to_label Map.new(@all_entries, fn e -> {e.timezone_id, e.label} end)
-  @valid_ids MapSet.new(@all_entries, fn e -> e.timezone_id end)
+  # Zones the picker can render as "City, Country" with a flag. This is a
+  # presentation list, not a validity list — see `valid?/1` vs `offered?/1`.
+  @offered_ids MapSet.new(@all_entries, fn e -> e.timezone_id end)
 
   # Search index: lowercase label → entry, plus aliases
   @search_index (
@@ -269,15 +275,40 @@ defmodule Tymeslot.Timezones.Data do
   defp etc_gmt_zone("-", hours) when hours in 1..12, do: "Etc/GMT+#{hours}"
   defp etc_gmt_zone(_sign, _hours), do: nil
 
+  @doc """
+  Returns true when the runtime time zone database can resolve `timezone_id`.
+
+  This is a real IANA check, so link aliases (`Asia/Calcutta`), zones with no
+  curated entry (`America/Detroit`) and fixed offsets (`Etc/GMT+5`, which
+  `sanitize/1` itself emits) are all valid.
+
+  Callers asking "may I accept and store this value?" want this. Callers asking
+  "can the picker render this as a City, Country entry?" want `offered?/1`.
+  """
   @spec valid?(term()) :: boolean()
   def valid?(timezone_id) when is_binary(timezone_id) do
-    MapSet.member?(@valid_ids, timezone_id)
+    match?({:ok, _now}, DateTime.now(timezone_id))
   end
 
   def valid?(_other), do: false
 
-  @spec valid_ids() :: MapSet.t(String.t())
-  def valid_ids, do: @valid_ids
+  @doc """
+  Returns true when `timezone_id` has a curated entry, so the picker can render
+  it with a "City, Country" label and a flag.
+
+  A zone can be valid without being offered: `display_name/1` falls back to the
+  city segment of the id and `country_code/1` returns nil, which the selector
+  renders with a globe instead of a flag.
+  """
+  @spec offered?(term()) :: boolean()
+  def offered?(timezone_id) when is_binary(timezone_id) do
+    MapSet.member?(@offered_ids, timezone_id)
+  end
+
+  def offered?(_other), do: false
+
+  @spec offered_ids() :: MapSet.t(String.t())
+  def offered_ids, do: @offered_ids
 
   @spec flag_exists?(term()) :: boolean()
   def flag_exists?(nil), do: false

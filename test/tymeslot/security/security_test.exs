@@ -26,9 +26,22 @@ defmodule Tymeslot.Security.SecurityTest do
       assert {:ok, "Etc/UTC"} = Security.validate_timezone("Etc/UTC")
     end
 
+    test "accepts real zones a format regex would reject" do
+      # Regression: a prior format check rejected these, silently discarding the
+      # visitor's choice even though the picker offers them.
+      assert {:ok, _tz} = Security.validate_timezone("America/Argentina/Buenos_Aires")
+      assert {:ok, _tz} = Security.validate_timezone("America/Indiana/Indianapolis")
+      assert {:ok, _tz} = Security.validate_timezone("Etc/GMT+5")
+    end
+
     test "rejects invalid formats" do
-      assert {:error, "Invalid timezone format"} = Security.validate_timezone("InvalidTimezone")
-      assert {:error, "Invalid timezone format"} = Security.validate_timezone("Europe/Kyiv/Kiev")
+      assert {:error, "Unknown timezone"} = Security.validate_timezone("InvalidTimezone")
+      assert {:error, "Unknown timezone"} = Security.validate_timezone("Europe/Kyiv/Kiev")
+    end
+
+    test "rejects an oversized string before the zone lookup" do
+      assert {:error, "Timezone too long"} =
+               Security.validate_timezone(String.duplicate("a", 101))
     end
 
     test "rejects non-string values" do

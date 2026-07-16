@@ -18,7 +18,6 @@ defmodule Tymeslot.Timezones.Cities.Americas do
       # North America — Canada
       {"America/Vancouver", "Vancouver", "Canada", "CA"},
       {"America/Edmonton", "Edmonton", "Canada", "CA"},
-      {"America/Calgary", "Calgary", "Canada", "CA"},
       {"America/Winnipeg", "Winnipeg", "Canada", "CA"},
       {"America/Toronto", "Toronto", "Canada", "CA"},
       {"America/Montreal", "Montreal", "Canada", "CA"},

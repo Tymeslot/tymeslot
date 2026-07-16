@@ -148,9 +148,27 @@ defmodule Tymeslot.TimezonesTest do
       assert Timezones.valid?("Atlantic/Reykjavik")
     end
 
-    test "returns false for non-country IANA timezones" do
-      refute Timezones.valid?("UTC")
-      refute Timezones.valid?("Etc/UTC")
+    test "returns true for non-country IANA timezones" do
+      assert Timezones.valid?("UTC")
+      assert Timezones.valid?("Etc/UTC")
+    end
+
+    test "returns true for real zones absent from the curated picker list" do
+      # Regression: these resolve in the IANA database but have no curated city
+      # entry, and were rewritten to Europe/Tallinn.
+      assert Timezones.valid?("America/Detroit")
+      assert Timezones.valid?("America/Argentina/Cordoba")
+    end
+
+    test "returns true for deprecated IANA link aliases" do
+      # Browsers still report these; both resolve to a real zone.
+      assert Timezones.valid?("Asia/Calcutta")
+      assert Timezones.valid?("Asia/Katmandu")
+    end
+
+    test "returns true for offset zones that sanitize/1 itself emits" do
+      assert Timezones.valid?("Etc/GMT+5")
+      assert Timezones.valid?("Etc/GMT-2")
     end
 
     test "returns false for invalid timezone" do
@@ -164,9 +182,25 @@ defmodule Tymeslot.TimezonesTest do
     end
   end
 
-  describe "valid_ids/0" do
+  describe "offered?/1" do
+    test "returns true for zones with a curated city entry" do
+      assert Timezones.offered?("Europe/Brussels")
+      assert Timezones.offered?("Asia/Kathmandu")
+    end
+
+    test "returns false for real zones with no curated entry" do
+      refute Timezones.offered?("America/Detroit")
+      refute Timezones.offered?("Etc/UTC")
+    end
+
+    test "returns false for non-string input" do
+      refute Timezones.offered?(nil)
+    end
+  end
+
+  describe "offered_ids/0" do
     test "returns a MapSet" do
-      ids = Timezones.valid_ids()
+      ids = Timezones.offered_ids()
       assert %MapSet{} = ids
       assert MapSet.member?(ids, "Europe/Brussels")
       assert MapSet.member?(ids, "Europe/Amsterdam")

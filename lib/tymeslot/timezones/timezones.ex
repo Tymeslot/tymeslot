@@ -16,7 +16,8 @@ defmodule Tymeslot.Timezones do
   defdelegate normalize(timezone_id), to: Data
   defdelegate sanitize(timezone), to: Data
   defdelegate valid?(timezone_id), to: Data
-  defdelegate valid_ids(), to: Data
+  defdelegate offered?(timezone_id), to: Data
+  defdelegate offered_ids(), to: Data
   defdelegate flag_exists?(country_code), to: Data
 
   defdelegate format(timezone_id), to: Formatting
@@ -27,9 +28,8 @@ defmodule Tymeslot.Timezones do
   Validates a timezone string at the LiveView edge, returning it unchanged if valid
   or `"Etc/UTC"` if invalid.
 
-  Validity is determined by attempting an actual `DateTime.shift_zone/2` against a
-  known UTC instant, so the check reflects the runtime time-zone database rather
-  than just the curated city list.
+  Validity is `valid?/1`, a real runtime time-zone database lookup, so any zone
+  IANA knows is kept as-is.
 
   Emits one `Logger.warning` on fallback. Supply `metadata` (a keyword list) to
   include contextual fields — e.g. `[user_id: user.id]` — so operators can surface
@@ -45,17 +45,15 @@ defmodule Tymeslot.Timezones do
   """
   @spec validate_or_utc(String.t(), keyword()) :: String.t()
   def validate_or_utc(timezone, metadata \\ []) when is_binary(timezone) do
-    case DateTime.shift_zone(DateTime.utc_now(), timezone) do
-      {:ok, _shifted} ->
-        timezone
+    if valid?(timezone) do
+      timezone
+    else
+      Logger.warning(
+        "Invalid user timezone; falling back to UTC for calendar rendering",
+        Keyword.merge([timezone: timezone], metadata)
+      )
 
-      {:error, _reason} ->
-        Logger.warning(
-          "Invalid user timezone; falling back to UTC for calendar rendering",
-          Keyword.merge([timezone: timezone], metadata)
-        )
-
-        "Etc/UTC"
+      "Etc/UTC"
     end
   end
 end

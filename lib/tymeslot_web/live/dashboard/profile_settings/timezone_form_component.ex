@@ -46,19 +46,13 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimezoneFormComponent do
   def handle_event("change_timezone", %{"timezone" => timezone}, socket) do
     socket = assign(socket, timezone_dropdown_open: false, timezone_search: "")
 
-    if valid_timezone?(timezone) do
+    if Timezones.valid?(timezone) do
       update_timezone(socket, timezone)
     else
-      errors = Map.put(socket.assigns.form_errors, :timezone, "Invalid timezone format")
+      errors = Map.put(socket.assigns.form_errors, :timezone, "Unknown timezone")
       {:noreply, assign(socket, :form_errors, errors)}
     end
   end
-
-  defp valid_timezone?(timezone) when is_binary(timezone) do
-    String.match?(timezone, ~r/^[A-Za-z_]+\/[A-Za-z_]+$/) or timezone in ["UTC", "GMT"]
-  end
-
-  defp valid_timezone?(_invalid), do: false
 
   defp update_timezone(socket, sanitized_timezone) do
     profile = socket.assigns.profile

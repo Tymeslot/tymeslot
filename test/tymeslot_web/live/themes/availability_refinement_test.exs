@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
 
     test "greys out today if business hours have passed", %{conn: conn} do
       # Use a valid IANA timezone that's far ahead of UTC (UTC+13)
-      # Must be in the app's valid timezone list (Timezones.Data.valid_ids)
+      # Must be in the app's offered timezone list (Timezones.Data.offered_ids)
       timezone = "Pacific/Tongatapu"
       user = insert(:user)
       username = "today-grey-test-#{System.unique_integer([:positive])}"

@@ -365,7 +365,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       |> element("#timezone-form-container [phx-click='change_timezone']", "Adak, United States")
       |> render_click(%{timezone: "Invalid-Timezone-Format"})
 
-      assert render(view) =~ "Invalid timezone format"
+      assert render(view) =~ "Unknown timezone"
     end
   end
 end

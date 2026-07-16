@@ -39,7 +39,6 @@ defmodule Tymeslot.Timezones.Cities.Asia do
       {"Asia/Vientiane", "Vientiane", "Laos", "LA"},
       {"Asia/Phnom_Penh", "Phnom Penh", "Cambodia", "KH"},
       {"Asia/Ho_Chi_Minh", "Ho Chi Minh City", "Vietnam", "VN"},
-      {"Asia/Hanoi", "Hanoi", "Vietnam", "VN"},
       {"Asia/Jakarta", "Jakarta", "Indonesia", "ID"},
       {"Asia/Makassar", "Makassar", "Indonesia", "ID"},
       {"Asia/Singapore", "Singapore", "Singapore", "SG"},

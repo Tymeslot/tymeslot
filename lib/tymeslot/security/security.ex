@@ -10,6 +10,11 @@ defmodule Tymeslot.Security.Security do
   alias Tymeslot.Profiles
   alias Tymeslot.Security.FieldValidators.TLDList
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Timezones
+
+  # Longest IANA id is well under 40 chars; this is an injection guard, not a
+  # format check, so it stays generous.
+  @max_timezone_length 100
 
   @doc """
   Validates URL parameters to prevent injection attacks.
@@ -60,26 +65,31 @@ defmodule Tymeslot.Security.Security do
 
   @doc """
   Sanitizes timezone input to prevent injection.
+
+  Identity is decided by `Timezones.valid?/1`, a real IANA lookup, so anything
+  the time zone database resolves is accepted. A prior format regex rejected
+  legitimate zones the picker itself offers — three-segment ids such as
+  `America/Argentina/Buenos_Aires` and offset zones such as `Etc/GMT+5` — which
+  silently discarded the user's choice.
+
+  The length guard runs first so an oversized string is rejected before it
+  reaches the lookup.
   """
   @spec validate_timezone(String.t()) :: {:ok, String.t()} | {:error, String.t()}
   def validate_timezone(timezone) when is_binary(timezone) do
-    # Only allow valid timezone format: Region/City or UTC
-    timezone_pattern = ~r/^[A-Za-z0-9_]+\/[A-Za-z0-9_]+$|^UTC$|^Etc\/UTC$/
-
     cond do
-      String.length(timezone) > 100 ->
+      String.length(timezone) > @max_timezone_length ->
         Logger.warning("Timezone validation failed: too long",
           timezone_length: String.length(timezone)
         )
 
         {:error, "Timezone too long"}
 
-      not Regex.match?(timezone_pattern, timezone) ->
-        Logger.warning("Timezone validation failed: invalid format")
-        {:error, "Invalid timezone format"}
+      not Timezones.valid?(timezone) ->
+        Logger.warning("Timezone validation failed: unknown zone", timezone: timezone)
+        {:error, "Unknown timezone"}
 
       true ->
-        Logger.debug("Timezone validated successfully")
         {:ok, timezone}
     end
   end
