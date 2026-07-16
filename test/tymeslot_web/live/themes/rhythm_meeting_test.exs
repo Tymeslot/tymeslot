@@ -14,7 +14,10 @@ defmodule TymeslotWeb.Live.Themes.RhythmMeetingTest do
       color_scheme: "purple",
       background_value: "gradient_1",
       start_time: DateTime.add(DateTime.utc_now(), 1, :day),
-      duration: 30
+      duration: 30,
+      # Non-UTC, DST-free zone: proves the reschedule page actually shifts
+      # the rendered clock rather than showing the raw stored UTC value.
+      attendee_timezone: "Asia/Kathmandu"
     })
   end
 

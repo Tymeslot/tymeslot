@@ -96,6 +96,28 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   @doc """
+  Shifts a meeting's stored UTC `start_time` into the zone it should be shown in.
+
+  `start_time` is a `:utc_datetime`, so it must be shifted before formatting or
+  the rendered clock is UTC. The returned struct carries the zone it actually
+  landed in (`time_zone`), which is what callers must label it with: when
+  `timezone` is nil, empty, or unresolvable the value stays UTC, and labelling
+  it with the requested zone would assert a time that is not that time.
+  """
+  @spec to_attendee_datetime(DateTime.t() | NaiveDateTime.t() | nil, String.t() | nil) ::
+          {:ok, DateTime.t()} | :error
+  def to_attendee_datetime(%DateTime{} = dt, timezone), do: {:ok, shift_or_keep(dt, timezone)}
+
+  def to_attendee_datetime(%NaiveDateTime{} = naive, timezone) do
+    case DateTime.from_naive(naive, "Etc/UTC") do
+      {:ok, dt} -> {:ok, shift_or_keep(dt, timezone)}
+      _error -> :error
+    end
+  end
+
+  def to_attendee_datetime(_other, _timezone), do: :error
+
+  @doc """
   Formats date string or struct for display.
   """
   @spec format_date(String.t() | Date.t() | DateTime.t() | nil) :: String.t()
@@ -316,17 +338,6 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   defp parse_date(date) when is_binary(date), do: Date.from_iso8601(date)
-
-  defp to_attendee_datetime(%DateTime{} = dt, timezone), do: {:ok, shift_or_keep(dt, timezone)}
-
-  defp to_attendee_datetime(%NaiveDateTime{} = naive, timezone) do
-    case DateTime.from_naive(naive, "Etc/UTC") do
-      {:ok, dt} -> {:ok, shift_or_keep(dt, timezone)}
-      _error -> :error
-    end
-  end
-
-  defp to_attendee_datetime(_other, _timezone), do: :error
 
   defp shift_or_keep(dt, timezone) when is_binary(timezone) and timezone != "" do
     case DateTime.shift_zone(dt, timezone) do

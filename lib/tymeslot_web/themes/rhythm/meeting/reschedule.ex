@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
   import TymeslotWeb.Themes.Shared.Components.MeetingDetails, only: [meeting_detail_rows: 1]
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
   alias TymeslotWeb.Themes.Shared.PathHandlers
 
@@ -67,9 +66,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                   </div>
 
                   <.meeting_detail_rows
-                    date={LocaleFormat.format_date(@meeting.start_time, @locale)}
-                    time={LocaleFormat.format_time(@meeting.start_time, @locale)}
+                    start_time={@meeting.start_time}
                     timezone={@meeting.attendee_timezone}
+                    organizer_profile={@organizer_profile}
+                    locale={@locale}
                     organizer_name={@meeting.organizer_name}
                     class="ticket-body"
                   />

@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
+  alias TymeslotWeb.ThemeMeetingTestCases
 
   setup :verify_on_exit!
 
@@ -143,6 +144,32 @@ defmodule TymeslotWeb.Live.Scheduling.DispatcherCancelCompositionTest do
     # Meeting must NOT be cancelled — otherwise a rate-limited attacker
     # is still succeeding, which defeats the limiter.
     assert Repo.get!(MeetingSchema, meeting.id).status == "confirmed"
+  end
+
+  @tag :capture_log
+  test "cancel page renders the meeting clock shifted into the attendee's timezone, not raw UTC",
+       %{conn: conn, user: user, profile: profile} do
+    meeting =
+      insert(:meeting,
+        organizer_user: user,
+        organizer_user_id: user.id,
+        organizer_name: user.name,
+        attendee_timezone: profile.timezone,
+        status: "confirmed"
+      )
+
+    {:ok, view, _html} =
+      live(conn, "/#{profile.username}/meeting/#{meeting.uid}/cancel")
+
+    # Real dispatcher wiring end to end: a wiring regression (dispatcher not
+    # surfacing organizer_profile, a theme view passing the wrong assign)
+    # would render the raw UTC clock instead and fail this assertion.
+    ThemeMeetingTestCases.assert_meeting_details_rendered(
+      view,
+      meeting,
+      meeting.organizer_name,
+      meeting.duration
+    )
   end
 
   @tag :capture_log

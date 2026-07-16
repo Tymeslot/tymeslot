@@ -12,7 +12,10 @@ defmodule TymeslotWeb.Live.Themes.QuillMeetingTest do
       color_scheme: "turquoise",
       background_value: "gradient_2",
       start_time: DateTime.add(DateTime.utc_now(), 1, :day),
-      duration: 45
+      duration: 45,
+      # Non-UTC, DST-free zone: proves the reschedule page actually shifts
+      # the rendered clock rather than showing the raw stored UTC value.
+      attendee_timezone: "Asia/Kathmandu"
     })
   end
 

@@ -25,6 +25,7 @@ defmodule TymeslotWeb.ThemeMeetingTestCases do
     background_value = Map.get(attrs, :background_value)
     start_time = Map.get(attrs, :start_time)
     duration = Map.get(attrs, :duration)
+    attendee_timezone = Map.get(attrs, :attendee_timezone, "UTC")
 
     user = insert(:user, name: user_name)
     profile = insert(:profile, user: user, username: username, booking_theme: theme_id)
@@ -43,7 +44,7 @@ defmodule TymeslotWeb.ThemeMeetingTestCases do
         organizer_name: user.name,
         start_time: start_time,
         duration: duration,
-        attendee_timezone: "UTC",
+        attendee_timezone: attendee_timezone,
         status: "confirmed"
       )
 
@@ -117,20 +118,42 @@ defmodule TymeslotWeb.ThemeMeetingTestCases do
   end
 
   @doc """
-  Asserts that meeting details (date, time, organizer, duration) are rendered.
+  Asserts that meeting details (date, time, organizer, duration) are rendered
+  in the meeting's attendee timezone — not the raw UTC value the meeting is
+  stored as. Also verifies the attendee's zone label is what's shown.
   """
   @spec assert_meeting_details_rendered(term(), term(), String.t(), integer()) :: term()
   def assert_meeting_details_rendered(view, meeting, organizer_name, duration) do
     html = render(view)
 
-    formatted_date = Calendar.strftime(meeting.start_time, "%B %d, %Y")
-    formatted_time = Calendar.strftime(meeting.start_time, "%-I:%M %p")
+    local_time = shift_to_attendee_zone(meeting)
+
+    formatted_date = Calendar.strftime(local_time, "%B %d, %Y")
+    formatted_time = Calendar.strftime(local_time, "%-I:%M %p")
+    raw_utc_time = Calendar.strftime(meeting.start_time, "%-I:%M %p")
 
     assert html =~ formatted_date
     assert html =~ formatted_time
     assert html =~ organizer_name
     assert html =~ "#{duration} min"
+    assert html =~ local_time.time_zone
+
+    if formatted_time != raw_utc_time do
+      refute html =~ raw_utc_time
+    end
   end
+
+  # Mirrors the production shift in `LocalizationHelpers.to_attendee_datetime/2`
+  # so the expectation reflects what the page is actually meant to render.
+  defp shift_to_attendee_zone(%{start_time: start_time, attendee_timezone: timezone})
+       when is_binary(timezone) and timezone != "" do
+    case DateTime.shift_zone(start_time, timezone) do
+      {:ok, shifted} -> shifted
+      _error -> start_time
+    end
+  end
+
+  defp shift_to_attendee_zone(%{start_time: start_time}), do: start_time
 
   # --- Locale-switched helpers ---
 

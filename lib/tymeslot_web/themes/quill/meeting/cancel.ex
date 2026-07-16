@@ -6,7 +6,6 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Quill.Scheduling.Wrapper
 
   import TymeslotWeb.Components.CoreComponents
@@ -17,6 +16,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
   attr :locale, :string, required: true
   attr :language_dropdown_open, :boolean, required: true
   attr :meeting, :map, required: true
+  attr :organizer_profile, :map, default: nil
   attr :loading, :boolean, required: true
   attr :meeting_kept, :boolean, default: false
 
@@ -85,9 +85,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     </div>
 
                     <.meeting_detail_rows
-                      date={LocaleFormat.format_date(@meeting.start_time, @locale)}
-                      time={LocaleFormat.format_time(@meeting.start_time, @locale)}
+                      start_time={@meeting.start_time}
                       timezone={@meeting.attendee_timezone}
+                      organizer_profile={@organizer_profile}
+                      locale={@locale}
                       organizer_name={@meeting.organizer_name}
                     />
                   </div>
@@ -150,9 +151,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     </div>
 
                     <.meeting_detail_rows
-                      date={LocaleFormat.format_date(@meeting.start_time, @locale)}
-                      time={LocaleFormat.format_time(@meeting.start_time, @locale)}
+                      start_time={@meeting.start_time}
                       timezone={@meeting.attendee_timezone}
+                      organizer_profile={@organizer_profile}
+                      locale={@locale}
                       organizer_name={@meeting.organizer_name}
                     />
                   </div>
