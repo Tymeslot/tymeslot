@@ -117,7 +117,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
       :cancelled,
       dgettext(
         "emails",
-        "The meeting \"%{title}\" was deleted from your external calendar. Tymeslot still has this booking on record — please review and cancel it here if the meeting is no longer taking place.",
+        "The meeting \"%{title}\" was deleted from your external calendar. Tymeslot still has this booking on record - please review and cancel it here if the meeting is no longer taking place.",
         title: title
       ),
       dgettext("emails", "Meeting Deleted in External Calendar")
@@ -131,7 +131,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
       :alert,
       dgettext(
         "emails",
-        "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking — please review the details and update or cancel it accordingly.",
+        "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking - please review the details and update or cancel it accordingly.",
         title: title
       ),
       dgettext("emails", "Meeting Rescheduled in External Calendar")

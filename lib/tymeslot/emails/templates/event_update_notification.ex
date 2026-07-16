@@ -99,7 +99,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       |> to(attendee_email)
       |> subject(
         Sanitise.sanitize_for_header(
-          dgettext("emails", "Updated: %{title} — %{date}",
+          dgettext("emails", "Updated: %{title} - %{date}",
             title: details.event_title,
             date: date_short
           )

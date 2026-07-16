@@ -137,14 +137,14 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
     if context.is_full_refund? do
       dgettext(
         "emails",
-        "Hi %{name} — your payment of %{amount} has been refunded in full.",
+        "Hi %{name} - your payment of %{amount} has been refunded in full.",
         name: context.attendee_name,
         amount: refunded_amount
       )
     else
       dgettext(
         "emails",
-        "Hi %{name} — %{amount} of your %{original} payment has been refunded.",
+        "Hi %{name} - %{amount} of your %{original} payment has been refunded.",
         name: context.attendee_name,
         amount: refunded_amount,
         original: original_amount
@@ -156,13 +156,13 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
     if context.is_full_refund? do
       dgettext(
         "emails",
-        "Hi — your payment of %{amount} has been refunded in full.",
+        "Hi - your payment of %{amount} has been refunded in full.",
         amount: refunded_amount
       )
     else
       dgettext(
         "emails",
-        "Hi — %{amount} of your %{original} payment has been refunded.",
+        "Hi - %{amount} of your %{original} payment has been refunded.",
         amount: refunded_amount,
         original: original_amount
       )

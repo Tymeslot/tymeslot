@@ -41,7 +41,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
 
     #{Text.divider(margin: "24px 0 16px 0")}
 
-    #{Text.centered_text(dgettext("emails", "Didn't request this change? You can safely ignore this email — nothing will happen to your account."),
+    #{Text.centered_text(dgettext("emails", "Didn't request this change? You can safely ignore this email - nothing will happen to your account."),
     font_size: "13px",
     color: Styles.ink_muted(),
     padding: "0 0 14px 0")}
@@ -108,7 +108,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
 
     #{dgettext("emails", "This link expires in 24 hours. Once confirmed, you'll sign in with your new email address.")}
 
-    #{dgettext("emails", "Didn't request this change? You can safely ignore this email — nothing will happen to your account.")}
+    #{dgettext("emails", "Didn't request this change? You can safely ignore this email - nothing will happen to your account.")}
     """
   end
 end

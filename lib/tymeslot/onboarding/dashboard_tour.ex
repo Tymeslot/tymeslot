@@ -54,7 +54,7 @@ defmodule Tymeslot.Onboarding.DashboardTour do
         body:
           dgettext(
             "onboarding",
-            "Profile, availability, integrations, and automation — all one click away."
+            "Profile, availability, integrations, and automation - all one click away."
           )
       },
       %{
@@ -80,7 +80,7 @@ defmodule Tymeslot.Onboarding.DashboardTour do
         anchor: nil,
         placement: :center,
         title: dgettext("onboarding", "You're set"),
-        body: dgettext("onboarding", "Go create your first event type — and let people book you.")
+        body: dgettext("onboarding", "Go create your first event type - and let people book you.")
       }
     ]
   end

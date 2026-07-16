@@ -46,7 +46,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
       }
 
       mjml_content = """
-      #{Text.centered_text(dgettext("emails", "Hi %{name} — our appointment has been cancelled. I'm sorry for the inconvenience.", name: appointment_details.attendee_name), padding: "8px 0 16px 0")}
+      #{Text.centered_text(dgettext("emails", "Hi %{name} - our appointment has been cancelled. I'm sorry for the inconvenience.", name: appointment_details.attendee_name), padding: "8px 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 

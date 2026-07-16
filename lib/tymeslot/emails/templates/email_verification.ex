@@ -14,7 +14,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerification do
     mjml_content = """
     #{Text.centered_text(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
 
-    #{Text.centered_text(dgettext("emails", "We're glad you're here. One quick step and your calendar will be ready to go — please confirm your email below."), padding: "0 0 20px 0")}
+    #{Text.centered_text(dgettext("emails", "We're glad you're here. One quick step and your calendar will be ready to go - please confirm your email below."), padding: "0 0 20px 0")}
 
     #{Buttons.action_button(@intent, dgettext("emails", "Confirm Email & Get Started"), verification_url, full_width: true, size: :large)}
 
@@ -28,7 +28,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerification do
     TemplateHelper.compile_system_template(
       mjml_content,
       dgettext("emails", "Account Verification"),
-      dgettext("emails", "Welcome to Tymeslot — please verify your email."),
+      dgettext("emails", "Welcome to Tymeslot - please verify your email."),
       intent: @intent,
       eyebrow: dgettext("emails", "Welcome"),
       stage_title: dgettext("emails", "Welcome to Tymeslot"),

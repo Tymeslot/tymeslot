@@ -54,7 +54,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       intro_copy =
         dgettext(
           "emails",
-          "Hi %{name} — I've blocked the time on my calendar and I'm looking forward to our meeting.",
+          "Hi %{name} - I've blocked the time on my calendar and I'm looking forward to our meeting.",
           name: appointment_details.attendee_name
         )
 
@@ -143,7 +143,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       intro_copy =
         dgettext(
           "emails",
-          "Hi %{guest} — %{booker} has invited you as a guest to this meeting with %{organizer}.",
+          "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}.",
           guest: guest_name,
           booker: appointment_details.attendee_name,
           organizer: appointment_details.organizer_name

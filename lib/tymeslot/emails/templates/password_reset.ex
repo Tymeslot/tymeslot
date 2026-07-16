@@ -19,7 +19,7 @@ defmodule Tymeslot.Emails.Templates.PasswordReset do
     #{Buttons.action_button(@intent, dgettext("emails", "Set New Password"), reset_url, full_width: true, size: :large)}
 
     #{Text.system_footer_note(dgettext("emails", "This link is valid for the next 2 hours."))}
-    #{Text.system_footer_note(dgettext("emails", "If you didn't request this change, your account is still secure — you can simply delete this email."))}
+    #{Text.system_footer_note(dgettext("emails", "If you didn't request this change, your account is still secure - you can simply delete this email."))}
 
     #{Text.divider(margin: "28px 0 16px 0")}
 
@@ -51,7 +51,7 @@ defmodule Tymeslot.Emails.Templates.PasswordReset do
 
     #{dgettext("emails", "This link is valid for the next 2 hours.")}
 
-    #{dgettext("emails", "If you didn't request this change, your account is still secure — you can simply delete this email.")}
+    #{dgettext("emails", "If you didn't request this change, your account is still secure - you can simply delete this email.")}
     """
   end
 end
