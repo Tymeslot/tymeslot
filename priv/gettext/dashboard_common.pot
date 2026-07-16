@@ -98,7 +98,7 @@ msgstr ""
 msgid "Overview"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:320
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:328
 #, elixir-autogen, elixir-format
 msgid "Pro"
 msgstr ""
@@ -114,7 +114,7 @@ msgstr ""
 msgid "Scheduling"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:299
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:307
 #, elixir-autogen, elixir-format
 msgid "Setup recommended"
 msgstr ""

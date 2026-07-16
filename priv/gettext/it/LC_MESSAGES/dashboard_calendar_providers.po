@@ -224,11 +224,6 @@ msgstr "Seleziona i calendari da sincronizzare:"
 msgid "Select the calendars you want to sync for availability checks."
 msgstr "Seleziona i calendari da sincronizzare per i controlli di disponibilità."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:308
-#, elixir-autogen, elixir-format
-msgid "Select the calendars you want to sync for availability checks. Calendars you previously synced are already ticked — untick to stop syncing them, or tick new calendars to add them."
-msgstr "Seleziona i calendari da sincronizzare per i controlli di disponibilità. I calendari già sincronizzati in precedenza sono contrassegnati — deseleziona per interromperne la sincronizzazione o seleziona nuovi calendari per aggiungerli."
-
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:239
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:111
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:241
@@ -435,3 +430,8 @@ msgstr "Se hai attivato l'autenticazione a due fattori, genera una password spec
 #, elixir-autogen, elixir-format
 msgid "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email."
 msgstr "iCloud non accetterà qui la password del tuo ID Apple. Genera una %{app_specific_password} su %{link} in %{location}, quindi inseriscila qui sotto insieme all'email del tuo ID Apple."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:308
+#, elixir-autogen, elixir-format
+msgid "Select the calendars you want to sync for availability checks. Calendars you previously synced are already ticked - untick to stop syncing them, or tick new calendars to add them."
+msgstr "Seleziona i calendari da sincronizzare per i controlli di disponibilità. I calendari già sincronizzati in precedenza sono contrassegnati - deseleziona per interromperne la sincronizzazione o seleziona nuovi calendari per aggiungerli."

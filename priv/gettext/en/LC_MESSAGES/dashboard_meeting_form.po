@@ -518,11 +518,6 @@ msgstr ""
 msgid "Show these bookings as free on my calendar"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:223
-#, elixir-autogen, elixir-format
-msgid "Shown below the question — use it to clarify what you're asking or give an example."
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex:242
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:480
 #, elixir-autogen, elixir-format
@@ -563,11 +558,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:486
 #, elixir-autogen, elixir-format
 msgid "Time"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex:167
-#, elixir-autogen, elixir-format
-msgid "Too many changes — saving shortly…"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:235
@@ -635,4 +625,14 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:45
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe on the %{payments_link} page to charge for this meeting type."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:223
+#, elixir-autogen, elixir-format
+msgid "Shown below the question - use it to clarify what you're asking or give an example."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex:167
+#, elixir-autogen, elixir-format
+msgid "Too many changes - saving shortly…"
 msgstr ""

@@ -185,12 +185,6 @@ msgstr ""
 msgid "Delete Webhook?"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:350
-#: lib/tymeslot_web/live/dashboard/automation/modals.ex:437
-#, elixir-autogen, elixir-format
-msgid "Delivery History — %{name}"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:72
 #: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:365
 #, elixir-autogen, elixir-format
@@ -614,3 +608,9 @@ msgid "Last %{days} day"
 msgid_plural "Last %{days} days"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:350
+#: lib/tymeslot_web/live/dashboard/automation/modals.ex:437
+#, elixir-autogen, elixir-format
+msgid "Delivery History - %{name}"
+msgstr ""

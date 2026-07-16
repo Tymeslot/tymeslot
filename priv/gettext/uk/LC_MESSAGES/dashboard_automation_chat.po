@@ -211,11 +211,6 @@ msgstr "Від'єднати Slack"
 msgid "Disconnect Telegram"
 msgstr "Від'єднати Telegram"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:229
-#, elixir-autogen, elixir-format
-msgid "Display-only label shown in your dashboard. It does not change where messages are delivered — that is set by the webhook URL itself."
-msgstr "Ця назва відображається лише на панелі керування. Вона не впливає на те, куди надсилаються повідомлення — це визначається самою URL-адресою вебхука."
-
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:190
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:185
 #, elixir-autogen, elixir-format
@@ -682,11 +677,6 @@ msgstr "Некоректний зворотний виклик Slack. Будь �
 msgid "Slack callback did not match your session. Please retry."
 msgstr "Зворотний виклик Slack не збігається з вашим сеансом. Будь ласка, спробуйте ще раз."
 
-#: lib/tymeslot_web/controllers/slack_oauth_controller.ex:89
-#, elixir-autogen, elixir-format
-msgid "Slack connected — pick a channel to finish setup."
-msgstr "Slack підключено — виберіть канал, щоб завершити налаштування."
-
 #: lib/tymeslot_web/controllers/slack_oauth_controller.ex:97
 #, elixir-autogen, elixir-format
 msgid "Slack connection expired. Please try again."
@@ -702,12 +692,22 @@ msgstr "Напишіть %{bot} у Telegram, щоб створити бота т
 msgid "To find your Chat ID, message %{bot} or add your bot to a group and use the Telegram API."
 msgstr "Щоб дізнатися свій Chat ID, напишіть %{bot} або додайте свого бота до групи й скористайтеся API Telegram."
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:208
-#, elixir-autogen, elixir-format
-msgid "Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created — see the full setup guide on %{guide}."
-msgstr "Tymeslot надсилає сповіщення на цю URL-адресу. Цільовий канал закріплюється у Slack під час створення вебхука — повну інструкцію з налаштування дивіться на %{guide}."
-
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:334
 #, elixir-autogen, elixir-format
 msgid "Tymeslot will post booking notifications to this channel. Public channels appear automatically; for a private channel, invite the Tymeslot bot in Slack (%{command}), then click Refresh."
 msgstr "Tymeslot надсилатиме сповіщення про бронювання в цей канал. Публічні канали відображаються автоматично; щоб додати приватний канал, запросіть бота Tymeslot у Slack (%{command}), а потім натисніть «Оновити»."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:229
+#, elixir-autogen, elixir-format
+msgid "Display-only label shown in your dashboard. It does not change where messages are delivered - that is set by the webhook URL itself."
+msgstr "Ця назва відображається лише на панелі керування. Вона не впливає на те, куди надсилаються повідомлення - це визначається самою URL-адресою вебхука."
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex:89
+#, elixir-autogen, elixir-format
+msgid "Slack connected - pick a channel to finish setup."
+msgstr "Slack підключено - виберіть канал, щоб завершити налаштування."
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:208
+#, elixir-autogen, elixir-format
+msgid "Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created - see the full setup guide on %{guide}."
+msgstr "Tymeslot надсилає сповіщення на цю URL-адресу. Цільовий канал закріплюється у Slack під час створення вебхука - повну інструкцію з налаштування дивіться на %{guide}."

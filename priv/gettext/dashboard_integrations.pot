@@ -85,13 +85,6 @@ msgstr ""
 msgid "That link isn't valid. Use lowercase letters, numbers and hyphens."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:205
-#, elixir-autogen, elixir-format
-msgid "%{count} connection needs attention — %{message}"
-msgid_plural "%{count} connections need attention — %{message}"
-msgstr[0] ""
-msgstr[1] ""
-
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:137
 #, elixir-autogen, elixir-format
 msgid "%{name} needs reconnecting."
@@ -100,11 +93,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:149
 #, elixir-autogen, elixir-format
 msgid "%{name} stopped syncing."
-msgstr ""
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex:48
-#, elixir-autogen, elixir-format
-msgid "%{status} — needs attention"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:512
@@ -204,11 +192,6 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:93
 #, elixir-autogen, elixir-format
 msgid "Cancel"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/video_settings_component.ex:253
-#, elixir-autogen, elixir-format
-msgid "Cannot reactivate — another active integration already uses this account"
 msgstr ""
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:32
@@ -542,11 +525,6 @@ msgstr ""
 msgid "No calendars selected"
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:174
-#, elixir-autogen, elixir-format
-msgid "No calendars selected — nothing will sync until you pick at least one."
-msgstr ""
-
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:55
 #, elixir-autogen, elixir-format
 msgid "No integration selected for deletion"
@@ -804,11 +782,6 @@ msgstr ""
 msgid "%{service} connected successfully!"
 msgstr ""
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:171
-#, elixir-autogen, elixir-format
-msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" — Tymeslot needs this to create meetings and Google Meet links."
-msgstr ""
-
 #: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex:137
 #, elixir-autogen, elixir-format
 msgid "API Key"
@@ -907,4 +880,31 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex:60
 #, elixir-autogen, elixir-format
 msgid "Warning"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:205
+#, elixir-autogen, elixir-format
+msgid "%{count} connection needs attention - %{message}"
+msgid_plural "%{count} connections need attention - %{message}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:171
+#, elixir-autogen, elixir-format
+msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex:48
+#, elixir-autogen, elixir-format
+msgid "%{status} - needs attention"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/video_settings_component.ex:253
+#, elixir-autogen, elixir-format
+msgid "Cannot reactivate - another active integration already uses this account"
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:174
+#, elixir-autogen, elixir-format
+msgid "No calendars selected - nothing will sync until you pick at least one."
 msgstr ""

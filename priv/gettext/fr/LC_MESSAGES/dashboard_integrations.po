@@ -85,13 +85,6 @@ msgstr "Lorsque cette option est activée, ce type de réunion n’est accessibl
 msgid "That link isn't valid. Use lowercase letters, numbers and hyphens."
 msgstr "Ce lien n’est pas valide. Utilisez des lettres minuscules, des chiffres et des tirets."
 
-#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:205
-#, elixir-autogen, elixir-format
-msgid "%{count} connection needs attention — %{message}"
-msgid_plural "%{count} connections need attention — %{message}"
-msgstr[0] "%{count} connexion nécessite votre attention — %{message}"
-msgstr[1] "%{count} connexions nécessitent votre attention — %{message}"
-
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:137
 #, elixir-autogen, elixir-format
 msgid "%{name} needs reconnecting."
@@ -101,11 +94,6 @@ msgstr "%{name} doit être reconnecté."
 #, elixir-autogen, elixir-format
 msgid "%{name} stopped syncing."
 msgstr "%{name} a cessé de se synchroniser."
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex:48
-#, elixir-autogen, elixir-format
-msgid "%{status} — needs attention"
-msgstr "%{status} — nécessite votre attention"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex:512
 #, elixir-autogen, elixir-format
@@ -205,11 +193,6 @@ msgstr "Calendriers"
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Annuler"
-
-#: lib/tymeslot_web/live/dashboard/video_settings_component.ex:253
-#, elixir-autogen, elixir-format
-msgid "Cannot reactivate — another active integration already uses this account"
-msgstr "Réactivation impossible — une autre intégration active utilise déjà ce compte"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:32
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:43
@@ -383,7 +366,7 @@ msgstr "Terminez la connexion à Stripe pour accepter les paiements."
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:116
 #, elixir-autogen, elixir-format
 msgid "Found 'meeting_id' without brackets - use {{meeting_id}}"
-msgstr "« meeting_id » trouvé sans accolades — utilisez {{meeting_id}}"
+msgstr "« meeting_id » trouvé sans accolades - utilisez {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex:82
 #, elixir-autogen, elixir-format
@@ -484,7 +467,7 @@ msgstr "Microsoft Teams connecté avec succès !"
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:178
 #, elixir-autogen, elixir-format
 msgid "Mismatched brackets detected - use {{meeting_id}}"
-msgstr "Accolades non concordantes détectées — utilisez {{meeting_id}}"
+msgstr "Accolades non concordantes détectées - utilisez {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:171
 #, elixir-autogen, elixir-format
@@ -509,17 +492,17 @@ msgstr "Accolades non concordantes : {{meeting_id]] devrait être {{meeting_id}}
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:201
 #, elixir-autogen, elixir-format
 msgid "Missing brackets - use {{meeting_id}}"
-msgstr "Accolades manquantes — utilisez {{meeting_id}}"
+msgstr "Accolades manquantes - utilisez {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:193
 #, elixir-autogen, elixir-format
 msgid "Missing closing brackets - should be {{meeting_id}}"
-msgstr "Accolades fermantes manquantes — devrait être {{meeting_id}}"
+msgstr "Accolades fermantes manquantes - devrait être {{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:197
 #, elixir-autogen, elixir-format
 msgid "Missing opening brackets - should be {{meeting_id}}"
-msgstr "Accolades ouvrantes manquantes — devrait être {{meeting_id}}"
+msgstr "Accolades ouvrantes manquantes - devrait être {{meeting_id}}"
 
 #: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex:234
 #, elixir-autogen, elixir-format
@@ -541,11 +524,6 @@ msgstr "Aucune URL configurée"
 #, elixir-autogen, elixir-format
 msgid "No calendars selected"
 msgstr "Aucun calendrier sélectionné"
-
-#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:174
-#, elixir-autogen, elixir-format
-msgid "No calendars selected — nothing will sync until you pick at least one."
-msgstr "Aucun calendrier sélectionné — rien ne sera synchronisé tant que vous n’en aurez pas choisi au moins un."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:55
 #, elixir-autogen, elixir-format
@@ -634,7 +612,7 @@ msgstr "Salle de réunion statique"
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:123
 #, elixir-autogen, elixir-format
 msgid "Static URL - all meetings will use the same room"
-msgstr "URL statique — toutes les réunions utiliseront la même salle"
+msgstr "URL statique - toutes les réunions utiliseront la même salle"
 
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:174
 #, elixir-autogen, elixir-format
@@ -644,7 +622,7 @@ msgstr "Stripe examine encore votre compte."
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:46
 #, elixir-autogen, elixir-format
 msgid "Template in fragment (#) won't work - fragments aren't sent to servers. Use path instead: https://example.com/{{meeting_id}}"
-msgstr "Un modèle dans le fragment (#) ne fonctionnera pas — les fragments ne sont pas envoyés aux serveurs. Utilisez plutôt un chemin d’accès : https://example.com/{{meeting_id}}"
+msgstr "Un modèle dans le fragment (#) ne fonctionnera pas - les fragments ne sont pas envoyés aux serveurs. Utilisez plutôt un chemin d’accès : https://example.com/{{meeting_id}}"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:85
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex:75
@@ -804,11 +782,6 @@ msgstr "✓ Modèle valide"
 msgid "%{service} connected successfully!"
 msgstr "%{service} connecté avec succès !"
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:171
-#, elixir-autogen, elixir-format
-msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" — Tymeslot needs this to create meetings and Google Meet links."
-msgstr "%{service} n’a pas été connecté car l’autorisation d’accès au calendrier n’a pas été accordée. Veuillez réessayer et cocher la case « Voir, modifier, partager et supprimer définitivement tous les calendriers auxquels vous pouvez accéder avec Google Agenda » — Tymeslot en a besoin pour créer des réunions et des liens Google Meet."
-
 #: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex:137
 #, elixir-autogen, elixir-format
 msgid "API Key"
@@ -908,3 +881,30 @@ msgstr "Erreur"
 #, elixir-autogen, elixir-format
 msgid "Warning"
 msgstr "Avertissement"
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:205
+#, elixir-autogen, elixir-format
+msgid "%{count} connection needs attention - %{message}"
+msgid_plural "%{count} connections need attention - %{message}"
+msgstr[0] "%{count} connexion nécessite votre attention - %{message}"
+msgstr[1] "%{count} connexions nécessitent votre attention - %{message}"
+
+#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex:171
+#, elixir-autogen, elixir-format
+msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links."
+msgstr "%{service} n’a pas été connecté car l’autorisation d’accès au calendrier n’a pas été accordée. Veuillez réessayer et cocher la case « Voir, modifier, partager et supprimer définitivement tous les calendriers auxquels vous pouvez accéder avec Google Agenda » - Tymeslot en a besoin pour créer des réunions et des liens Google Meet."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex:48
+#, elixir-autogen, elixir-format
+msgid "%{status} - needs attention"
+msgstr "%{status} - nécessite votre attention"
+
+#: lib/tymeslot_web/live/dashboard/video_settings_component.ex:253
+#, elixir-autogen, elixir-format
+msgid "Cannot reactivate - another active integration already uses this account"
+msgstr "Réactivation impossible - une autre intégration active utilise déjà ce compte"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:174
+#, elixir-autogen, elixir-format
+msgid "No calendars selected - nothing will sync until you pick at least one."
+msgstr "Aucun calendrier sélectionné - rien ne sera synchronisé tant que vous n’en aurez pas choisi au moins un."

@@ -224,11 +224,6 @@ msgstr "Kalender zum Synchronisieren auswählen:"
 msgid "Select the calendars you want to sync for availability checks."
 msgstr "Wählen Sie die Kalender aus, die Sie für Verfügbarkeitsprüfungen synchronisieren möchten."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:308
-#, elixir-autogen, elixir-format
-msgid "Select the calendars you want to sync for availability checks. Calendars you previously synced are already ticked — untick to stop syncing them, or tick new calendars to add them."
-msgstr "Wählen Sie die Kalender aus, die Sie für Verfügbarkeitsprüfungen synchronisieren möchten. Bereits synchronisierte Kalender sind schon angehakt — entfernen Sie das Häkchen, um die Synchronisierung zu beenden, oder haken Sie neue Kalender an, um sie hinzuzufügen."
-
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:239
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:111
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:241
@@ -435,3 +430,8 @@ msgstr "Wenn Sie die Zwei-Faktor-Authentifizierung aktiviert haben, generieren S
 #, elixir-autogen, elixir-format
 msgid "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email."
 msgstr "iCloud akzeptiert Ihr Apple-ID-Passwort hier nicht. Erstellen Sie auf %{link} unter %{location} ein %{app_specific_password} und geben Sie es dann unten zusammen mit Ihrer Apple-ID-E-Mail-Adresse ein."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:308
+#, elixir-autogen, elixir-format
+msgid "Select the calendars you want to sync for availability checks. Calendars you previously synced are already ticked - untick to stop syncing them, or tick new calendars to add them."
+msgstr "Wählen Sie die Kalender aus, die Sie für Verfügbarkeitsprüfungen synchronisieren möchten. Bereits synchronisierte Kalender sind schon angehakt - entfernen Sie das Häkchen, um die Synchronisierung zu beenden, oder haken Sie neue Kalender an, um sie hinzuzufügen."

@@ -248,11 +248,6 @@ msgstr "Erstellen"
 msgid "Create event"
 msgstr "Ereignis erstellen"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:203
-#, elixir-autogen, elixir-format
-msgid "Create failed — queued to retry on next sync"
-msgstr "Erstellung fehlgeschlagen — wird bei der nächsten Synchronisierung erneut versucht"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:100
 #, elixir-autogen, elixir-format
 msgid "Created by Tymeslot"
@@ -303,11 +298,6 @@ msgstr "Löschen"
 #, elixir-autogen, elixir-format
 msgid "Delete event"
 msgstr "Ereignis löschen"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:204
-#, elixir-autogen, elixir-format
-msgid "Delete failed — queued to retry on next sync"
-msgstr "Löschen fehlgeschlagen — wird bei der nächsten Synchronisierung erneut versucht"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:40
 #, elixir-autogen, elixir-format
@@ -422,11 +412,6 @@ msgstr "Ereignis konnte nicht gelöscht werden"
 msgid "Failed to move event"
 msgstr "Ereignis konnte nicht verschoben werden"
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:201
-#, elixir-autogen, elixir-format
-msgid "Failed to provision video room — link not updated"
-msgstr "Videoraum konnte nicht bereitgestellt werden — Link nicht aktualisiert"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:51
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:74
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:118
@@ -434,11 +419,6 @@ msgstr "Videoraum konnte nicht bereitgestellt werden — Link nicht aktualisiert
 #, elixir-autogen, elixir-format
 msgid "Failed to save preference"
 msgstr "Einstellung konnte nicht gespeichert werden"
-
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:98
-#, elixir-autogen, elixir-format
-msgid "Failed to update event — changes reverted"
-msgstr "Ereignis konnte nicht aktualisiert werden — Änderungen zurückgesetzt"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:29
 #, elixir-autogen, elixir-format
@@ -981,3 +961,23 @@ msgstr "Jahr(e)"
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete %{title}?"
 msgstr "Möchten Sie %{title} wirklich löschen?"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:203
+#, elixir-autogen, elixir-format
+msgid "Create failed - queued to retry on next sync"
+msgstr "Erstellung fehlgeschlagen - wird bei der nächsten Synchronisierung erneut versucht"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:204
+#, elixir-autogen, elixir-format
+msgid "Delete failed - queued to retry on next sync"
+msgstr "Löschen fehlgeschlagen - wird bei der nächsten Synchronisierung erneut versucht"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:201
+#, elixir-autogen, elixir-format
+msgid "Failed to provision video room - link not updated"
+msgstr "Videoraum konnte nicht bereitgestellt werden - Link nicht aktualisiert"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:98
+#, elixir-autogen, elixir-format
+msgid "Failed to update event - changes reverted"
+msgstr "Ereignis konnte nicht aktualisiert werden - Änderungen zurückgesetzt"

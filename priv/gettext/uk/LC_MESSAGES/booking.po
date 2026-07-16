@@ -81,12 +81,12 @@ msgstr "%{name}, вашу зустріч %{organizer} підтверджено"
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:275
 #, elixir-autogen, elixir-format
 msgid "%{start_month} %{start_year} - %{end_month} %{end_year}"
-msgstr "%{start_month} %{start_year} — %{end_month} %{end_year}"
+msgstr "%{start_month} %{start_year} - %{end_month} %{end_year}"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:268
 #, elixir-autogen, elixir-format
 msgid "%{start_month} - %{end_month} %{year}"
-msgstr "%{start_month} — %{end_month} %{year}"
+msgstr "%{start_month} - %{end_month} %{year}"
 
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:66
 #, elixir-autogen, elixir-format
@@ -511,7 +511,7 @@ msgstr "Ранок"
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex:170
 #, elixir-autogen, elixir-format
 msgid "Need to make changes? Check your email for reschedule options"
-msgstr "Потрібно внести зміни? Перевірте пошту — там є варіанти перенесення"
+msgstr "Потрібно внести зміни? Перевірте пошту - там є варіанти перенесення"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex:182
 #, elixir-autogen, elixir-format

@@ -224,11 +224,6 @@ msgstr ""
 msgid "Select the calendars you want to sync for availability checks."
 msgstr ""
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:308
-#, elixir-autogen, elixir-format
-msgid "Select the calendars you want to sync for availability checks. Calendars you previously synced are already ticked — untick to stop syncing them, or tick new calendars to add them."
-msgstr ""
-
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:239
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:111
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:241
@@ -434,4 +429,9 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:65
 #, elixir-autogen, elixir-format
 msgid "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email."
+msgstr ""
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:308
+#, elixir-autogen, elixir-format
+msgid "Select the calendars you want to sync for availability checks. Calendars you previously synced are already ticked - untick to stop syncing them, or tick new calendars to add them."
 msgstr ""

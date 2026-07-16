@@ -63,11 +63,6 @@ msgstr "Integrazione del calendario aggiunta con successo"
 msgid "Calendar status updated"
 msgstr "Stato del calendario aggiornato"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:151
-#, elixir-autogen, elixir-format
-msgid "Cannot reactivate — another active integration already uses this account"
-msgstr "Impossibile riattivare: un'altra integrazione attiva utilizza già questo account"
-
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:310
 #, elixir-autogen, elixir-format
 msgid "Choose which calendars sync"
@@ -268,3 +263,8 @@ msgstr "controlla i conflitti su %{selected} di %{total} calendari"
 #, elixir-autogen, elixir-format
 msgid "synced %{time}"
 msgstr "sincronizzato %{time}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:151
+#, elixir-autogen, elixir-format
+msgid "Cannot reactivate - another active integration already uses this account"
+msgstr "Impossibile riattivare: un'altra integrazione attiva utilizza già questo account"

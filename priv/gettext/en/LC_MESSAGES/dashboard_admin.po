@@ -403,19 +403,9 @@ msgstr ""
 msgid "Allow new users to sign up via the public registration page. Disable for a private install where admins create accounts manually."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:208
-#, elixir-autogen, elixir-format
-msgid "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
-msgstr ""
-
 #: lib/tymeslot_web/live/admin_live/formatters.ex:228
 #, elixir-autogen, elixir-format
 msgid "Cannot disable this login provider while it is the only working sign-in path for admins. Enable password authentication or another credentialed SSO provider first."
-msgstr ""
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex:126
-#, elixir-autogen, elixir-format
-msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint — no raw IP is stored. Off by default; review your privacy policy before enabling."
 msgstr ""
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:112
@@ -433,11 +423,6 @@ msgstr ""
 msgid "Enable generic OAuth 2.0 / OIDC single sign-on (Keycloak, Authentik, Lemonldap, etc.). Requires the OAUTH_* environment variables to be set."
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:119
-#, elixir-autogen, elixir-format
-msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment — without them the toggle stays locked."
-msgstr ""
-
 #: lib/tymeslot_web/live/admin_live/formatters.ex:98
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a booking. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
@@ -446,16 +431,6 @@ msgstr ""
 #: lib/tymeslot_web/live/admin_live/formatters.ex:91
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a signup. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
-msgstr ""
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex:84
-#, elixir-autogen, elixir-format
-msgid "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
-msgstr ""
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex:77
-#, elixir-autogen, elixir-format
-msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
 msgstr ""
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:219
@@ -491,4 +466,29 @@ msgstr ""
 #: lib/tymeslot_web/plugs/require_admin.ex:36
 #, elixir-autogen, elixir-format
 msgid "Admin access required."
+msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:208
+#, elixir-autogen, elixir-format
+msgid "Cannot disable password authentication while at least one admin signs in with email and password - doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
+msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:126
+#, elixir-autogen, elixir-format
+msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint - no raw IP is stored. Off by default; review your privacy policy before enabling."
+msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:119
+#, elixir-autogen, elixir-format
+msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment - without them the toggle stays locked."
+msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:84
+#, elixir-autogen, elixir-format
+msgid "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
+msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:77
+#, elixir-autogen, elixir-format
+msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
 msgstr ""

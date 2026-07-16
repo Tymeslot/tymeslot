@@ -14,7 +14,7 @@ msgstr ""
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex:130
 #, elixir-autogen, elixir-format
 msgid "%{provider} authentication failed - missing authorization code or security token."
-msgstr "Помилка автентифікації через %{provider} — відсутній код авторизації або маркер безпеки."
+msgstr "Помилка автентифікації через %{provider} - відсутній код авторизації або маркер безпеки."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex:97
 #, elixir-autogen, elixir-format
@@ -235,7 +235,7 @@ msgstr "Новий пароль"
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex:150
 #, elixir-autogen, elixir-format
 msgid "OAuth authentication failed - missing provider."
-msgstr "Помилка автентифікації OAuth — відсутній провайдер."
+msgstr "Помилка автентифікації OAuth - відсутній провайдер."
 
 #: lib/tymeslot_web/components/auth/shared/auth_layout_components.ex:143
 #, elixir-autogen, elixir-format
@@ -494,7 +494,7 @@ msgstr "Вітаємо! Ви успішно зареєструвалися че�
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex:319
 #, elixir-autogen, elixir-format
 msgid "Welcome! You've successfully signed up with %{provider}. Verification email could not be sent - please contact support if needed."
-msgstr "Вітаємо! Ви успішно зареєструвалися через %{provider}. Не вдалося надіслати лист для підтвердження — за потреби зверніться до служби підтримки."
+msgstr "Вітаємо! Ви успішно зареєструвалися через %{provider}. Не вдалося надіслати лист для підтвердження - за потреби зверніться до служби підтримки."
 
 #: lib/tymeslot_web/controllers/auth/session_controller.ex:240
 #: lib/tymeslot_web/controllers/auth/session_controller.ex:253

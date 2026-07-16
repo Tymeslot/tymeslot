@@ -37,11 +37,6 @@ msgstr "Учасник"
 msgid "Cancel"
 msgstr "Скасувати"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex:28
-#, elixir-autogen, elixir-format
-msgid "Changing the currency will reset every paid event type to free — existing prices are recorded in the previous currency and would otherwise be charged at the new one."
-msgstr "Зміна валюти зробить усі платні типи подій безкоштовними — поточні ціни збережено в попередній валюті, інакше кошти стягувалися б у новій."
-
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:94
 #, elixir-autogen, elixir-format
 msgid "Charges and payouts are enabled."
@@ -399,3 +394,8 @@ msgstr "Ваш обліковий запис Stripe від'єднано. Під�
 #, elixir-autogen, elixir-format
 msgid "Refund %{attendee} for %{meeting_type}."
 msgstr "Повернути кошти учаснику %{attendee} за %{meeting_type}."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex:28
+#, elixir-autogen, elixir-format
+msgid "Changing the currency will reset every paid event type to free - existing prices are recorded in the previous currency and would otherwise be charged at the new one."
+msgstr "Зміна валюти зробить усі платні типи подій безкоштовними - поточні ціни збережено в попередній валюті, інакше кошти стягувалися б у новій."

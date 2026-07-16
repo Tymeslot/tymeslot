@@ -37,11 +37,6 @@ msgstr "Partecipante"
 msgid "Cancel"
 msgstr "Annulla"
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex:28
-#, elixir-autogen, elixir-format
-msgid "Changing the currency will reset every paid event type to free — existing prices are recorded in the previous currency and would otherwise be charged at the new one."
-msgstr "La modifica della valuta reimposterà su gratuito ogni tipo di evento a pagamento: i prezzi esistenti sono registrati nella valuta precedente e altrimenti verrebbero addebitati con quella nuova."
-
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:94
 #, elixir-autogen, elixir-format
 msgid "Charges and payouts are enabled."
@@ -397,3 +392,8 @@ msgstr "Il tuo account Stripe è scollegato. Ricollegalo per accettare di nuovo 
 #, elixir-autogen, elixir-format
 msgid "Refund %{attendee} for %{meeting_type}."
 msgstr "Rimborsa %{attendee} per %{meeting_type}."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex:28
+#, elixir-autogen, elixir-format
+msgid "Changing the currency will reset every paid event type to free - existing prices are recorded in the previous currency and would otherwise be charged at the new one."
+msgstr "La modifica della valuta reimposterà su gratuito ogni tipo di evento a pagamento: i prezzi esistenti sono registrati nella valuta precedente e altrimenti verrebbero addebitati con quella nuova."

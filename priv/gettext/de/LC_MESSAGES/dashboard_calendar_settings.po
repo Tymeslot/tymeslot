@@ -63,11 +63,6 @@ msgstr "Kalenderintegration erfolgreich hinzugefügt"
 msgid "Calendar status updated"
 msgstr "Kalenderstatus aktualisiert"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:151
-#, elixir-autogen, elixir-format
-msgid "Cannot reactivate — another active integration already uses this account"
-msgstr "Reaktivierung nicht möglich — eine andere aktive Integration nutzt dieses Konto bereits"
-
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:310
 #, elixir-autogen, elixir-format
 msgid "Choose which calendars sync"
@@ -268,3 +263,8 @@ msgstr "prüft %{selected} von %{total} Kalendern auf Konflikte"
 #, elixir-autogen, elixir-format
 msgid "synced %{time}"
 msgstr "synchronisiert %{time}"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:151
+#, elixir-autogen, elixir-format
+msgid "Cannot reactivate - another active integration already uses this account"
+msgstr "Reaktivierung nicht möglich - eine andere aktive Integration nutzt dieses Konto bereits"

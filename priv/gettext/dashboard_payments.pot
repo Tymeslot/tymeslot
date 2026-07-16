@@ -37,11 +37,6 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex:28
-#, elixir-autogen, elixir-format
-msgid "Changing the currency will reset every paid event type to free — existing prices are recorded in the previous currency and would otherwise be charged at the new one."
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex:94
 #, elixir-autogen, elixir-format
 msgid "Charges and payouts are enabled."
@@ -396,4 +391,9 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex:41
 #, elixir-autogen, elixir-format
 msgid "Refund %{attendee} for %{meeting_type}."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex:28
+#, elixir-autogen, elixir-format
+msgid "Changing the currency will reset every paid event type to free - existing prices are recorded in the previous currency and would otherwise be charged at the new one."
 msgstr ""

@@ -211,11 +211,6 @@ msgstr ""
 msgid "Disconnect Telegram"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:229
-#, elixir-autogen, elixir-format
-msgid "Display-only label shown in your dashboard. It does not change where messages are delivered — that is set by the webhook URL itself."
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:190
 #: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:185
 #, elixir-autogen, elixir-format
@@ -682,11 +677,6 @@ msgstr ""
 msgid "Slack callback did not match your session. Please retry."
 msgstr ""
 
-#: lib/tymeslot_web/controllers/slack_oauth_controller.ex:89
-#, elixir-autogen, elixir-format
-msgid "Slack connected — pick a channel to finish setup."
-msgstr ""
-
 #: lib/tymeslot_web/controllers/slack_oauth_controller.ex:97
 #, elixir-autogen, elixir-format
 msgid "Slack connection expired. Please try again."
@@ -702,12 +692,22 @@ msgstr ""
 msgid "To find your Chat ID, message %{bot} or add your bot to a group and use the Telegram API."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:208
-#, elixir-autogen, elixir-format
-msgid "Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created — see the full setup guide on %{guide}."
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:334
 #, elixir-autogen, elixir-format
 msgid "Tymeslot will post booking notifications to this channel. Public channels appear automatically; for a private channel, invite the Tymeslot bot in Slack (%{command}), then click Refresh."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:229
+#, elixir-autogen, elixir-format
+msgid "Display-only label shown in your dashboard. It does not change where messages are delivered - that is set by the webhook URL itself."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex:89
+#, elixir-autogen, elixir-format
+msgid "Slack connected - pick a channel to finish setup."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/automation/slack_form_component.ex:208
+#, elixir-autogen, elixir-format
+msgid "Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created - see the full setup guide on %{guide}."
 msgstr ""

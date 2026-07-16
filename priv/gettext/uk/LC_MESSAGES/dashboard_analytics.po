@@ -143,7 +143,7 @@ msgstr "Унікальні відвідувачі"
 #: lib/tymeslot_web/live/dashboard/analytics_live.ex:184
 #, elixir-autogen, elixir-format
 msgid "Unique visitors and conversion are cookieless estimates: each visitor is counted once per day, so totals over a longer range approximate the number of distinct people. Conversion is the share of visitors who went on to book and is indicative, not exact."
-msgstr "Унікальні відвідувачі та конверсія — це приблизні оцінки без використання файлів cookie: кожен відвідувач враховується один раз на день, тому загальні показники за довший період є приблизною кількістю окремих людей. Конверсія — це частка відвідувачів, які здійснили бронювання; цей показник є орієнтовним, а не точним."
+msgstr "Унікальні відвідувачі та конверсія - це приблизні оцінки без використання файлів cookie: кожен відвідувач враховується один раз на день, тому загальні показники за довший період є приблизною кількістю окремих людей. Конверсія - це частка відвідувачів, які здійснили бронювання; цей показник є орієнтовним, а не точним."
 
 #: lib/tymeslot_web/live/dashboard/analytics_live/device_breakdown.ex:57
 #, elixir-autogen, elixir-format

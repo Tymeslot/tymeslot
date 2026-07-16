@@ -326,11 +326,6 @@ msgstr "Учасник зможе вибрати новий час із дост
 msgid "This action cannot be undone. The attendee will be notified of the cancellation."
 msgstr "Цю дію неможливо скасувати. Учасник отримає сповіщення про скасування."
 
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex:121
-#, elixir-autogen, elixir-format
-msgid "This booking was paid. Choose how to handle the refund — the attendee always receives the full amount you refund."
-msgstr "Це бронювання було оплачено. Виберіть спосіб повернення коштів — учасник завжди отримує повну суму, яку ви повертаєте."
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:328
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was deleted from your external calendar."
@@ -403,3 +398,8 @@ msgid_plural "%{duration} minutes"
 msgstr[0] "%{duration} хвилина"
 msgstr[1] "%{duration} хвилини"
 msgstr[2] "%{duration} хвилин"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex:121
+#, elixir-autogen, elixir-format
+msgid "This booking was paid. Choose how to handle the refund - the attendee always receives the full amount you refund."
+msgstr "Це бронювання було оплачено. Виберіть спосіб повернення коштів - учасник завжди отримує повну суму, яку ви повертаєте."

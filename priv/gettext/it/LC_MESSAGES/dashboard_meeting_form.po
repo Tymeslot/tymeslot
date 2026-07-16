@@ -518,11 +518,6 @@ msgstr "Testo breve"
 msgid "Show these bookings as free on my calendar"
 msgstr "Mostra queste prenotazioni come libere nel mio calendario"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:223
-#, elixir-autogen, elixir-format
-msgid "Shown below the question — use it to clarify what you're asking or give an example."
-msgstr "Mostrato sotto la domanda: usalo per chiarire cosa stai chiedendo o per fornire un esempio."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex:242
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:480
 #, elixir-autogen, elixir-format
@@ -564,11 +559,6 @@ msgstr "Questo promemoria esiste già"
 #, elixir-autogen, elixir-format
 msgid "Time"
 msgstr "Orario"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex:167
-#, elixir-autogen, elixir-format
-msgid "Too many changes — saving shortly…"
-msgstr "Troppe modifiche: salvataggio a breve…"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:235
 #, elixir-autogen, elixir-format
@@ -636,3 +626,13 @@ msgstr "obbligatorio"
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe on the %{payments_link} page to charge for this meeting type."
 msgstr "Collega Stripe nella pagina %{payments_link} per far pagare questo tipo di riunione."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:223
+#, elixir-autogen, elixir-format
+msgid "Shown below the question - use it to clarify what you're asking or give an example."
+msgstr "Mostrato sotto la domanda: usalo per chiarire cosa stai chiedendo o per fornire un esempio."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex:167
+#, elixir-autogen, elixir-format
+msgid "Too many changes - saving shortly…"
+msgstr "Troppe modifiche: salvataggio a breve…"

@@ -224,11 +224,6 @@ msgstr "Sélectionnez les calendriers à synchroniser :"
 msgid "Select the calendars you want to sync for availability checks."
 msgstr "Sélectionnez les calendriers à synchroniser pour la vérification des disponibilités."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:308
-#, elixir-autogen, elixir-format
-msgid "Select the calendars you want to sync for availability checks. Calendars you previously synced are already ticked — untick to stop syncing them, or tick new calendars to add them."
-msgstr "Sélectionnez les calendriers à synchroniser pour la vérification des disponibilités. Les calendriers déjà synchronisés sont cochés : décochez-les pour arrêter leur synchronisation, ou cochez de nouveaux calendriers pour les ajouter."
-
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:239
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:111
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:241
@@ -435,3 +430,8 @@ msgstr "Si vous avez activé l’authentification à deux facteurs, générez un
 #, elixir-autogen, elixir-format
 msgid "iCloud will not accept your Apple ID password here. Generate an %{app_specific_password} at %{link} under %{location}, then enter it below with your Apple ID email."
 msgstr "iCloud n’acceptera pas votre mot de passe Apple ID ici. Générez un %{app_specific_password} sur %{link} sous %{location}, puis saisissez-le ci-dessous avec votre adresse e-mail Apple ID."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:308
+#, elixir-autogen, elixir-format
+msgid "Select the calendars you want to sync for availability checks. Calendars you previously synced are already ticked - untick to stop syncing them, or tick new calendars to add them."
+msgstr "Sélectionnez les calendriers à synchroniser pour la vérification des disponibilités. Les calendriers déjà synchronisés sont cochés : décochez-les pour arrêter leur synchronisation, ou cochez de nouveaux calendriers pour les ajouter."

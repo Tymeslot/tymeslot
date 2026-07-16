@@ -518,11 +518,6 @@ msgstr "Kurztext"
 msgid "Show these bookings as free on my calendar"
 msgstr "Diese Buchungen in meinem Kalender als frei anzeigen"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:223
-#, elixir-autogen, elixir-format
-msgid "Shown below the question — use it to clarify what you're asking or give an example."
-msgstr "Wird unter der Frage angezeigt — nutzen Sie ihn, um zu verdeutlichen, was Sie fragen, oder ein Beispiel zu geben."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex:242
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:480
 #, elixir-autogen, elixir-format
@@ -564,11 +559,6 @@ msgstr "Diese Erinnerung existiert bereits"
 #, elixir-autogen, elixir-format
 msgid "Time"
 msgstr "Zeit"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex:167
-#, elixir-autogen, elixir-format
-msgid "Too many changes — saving shortly…"
-msgstr "Zu viele Änderungen — wird in Kürze gespeichert…"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:235
 #, elixir-autogen, elixir-format
@@ -636,3 +626,13 @@ msgstr "erforderlich"
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe on the %{payments_link} page to charge for this meeting type."
 msgstr "Verbinden Sie Stripe auf der Seite %{payments_link}, um für diesen Termintyp Gebühren zu erheben."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:223
+#, elixir-autogen, elixir-format
+msgid "Shown below the question - use it to clarify what you're asking or give an example."
+msgstr "Wird unter der Frage angezeigt - nutzen Sie ihn, um zu verdeutlichen, was Sie fragen, oder ein Beispiel zu geben."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex:167
+#, elixir-autogen, elixir-format
+msgid "Too many changes - saving shortly…"
+msgstr "Zu viele Änderungen - wird in Kürze gespeichert…"

@@ -403,20 +403,10 @@ msgstr "Consenti l'accesso con email e password. Se disattivato, gli utenti poss
 msgid "Allow new users to sign up via the public registration page. Disable for a private install where admins create accounts manually."
 msgstr "Consenti ai nuovi utenti di registrarsi tramite la pagina di registrazione pubblica. Disattiva per un'installazione privata in cui gli amministratori creano gli account manualmente."
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:208
-#, elixir-autogen, elixir-format
-msgid "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
-msgstr "Impossibile disattivare l'autenticazione tramite password mentre almeno un amministratore accede con email e password: farlo gli impedirebbe l'accesso. Rimuovi il ruolo a quegli amministratori o fai in modo che passino prima a un accesso OAuth."
-
 #: lib/tymeslot_web/live/admin_live/formatters.ex:228
 #, elixir-autogen, elixir-format
 msgid "Cannot disable this login provider while it is the only working sign-in path for admins. Enable password authentication or another credentialed SSO provider first."
 msgstr "Impossibile disattivare questo provider di accesso mentre è l'unico metodo di accesso funzionante per gli amministratori. Attiva prima l'autenticazione tramite password o un altro provider SSO con credenziali."
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex:126
-#, elixir-autogen, elixir-format
-msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint — no raw IP is stored. Off by default; review your privacy policy before enabling."
-msgstr "Raccogli statistiche rispettose della privacy per le pagine di prenotazione di questa istanza: visualizzazioni di pagina, sorgente del traffico (UTM/referrer) e conversione. Conta i visitatori unici con un'impronta digitale senza cookie che ruota giornalmente: nessun indirizzo IP grezzo viene memorizzato. Disattivato per impostazione predefinita; rivedi la tua informativa sulla privacy prima di attivarlo."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:112
 #, elixir-autogen, elixir-format
@@ -433,11 +423,6 @@ msgstr "Invia tramite email gli avvisi operativi (errori dei webhook, problemi d
 msgid "Enable generic OAuth 2.0 / OIDC single sign-on (Keycloak, Authentik, Lemonldap, etc.). Requires the OAUTH_* environment variables to be set."
 msgstr "Attiva il single sign-on OAuth 2.0 / OIDC generico (Keycloak, Authentik, Lemonldap, ecc.). Richiede l'impostazione delle variabili d'ambiente OAUTH_*."
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:119
-#, elixir-autogen, elixir-format
-msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment — without them the toggle stays locked."
-msgstr "Consenti agli organizzatori di questa istanza di ricevere pagamenti da chi prenota tramite Stripe Connect. Richiede l'impostazione di STRIPE_SECRET_KEY e STRIPE_CONNECT_WEBHOOK_SECRET nell'ambiente: senza di esse l'interruttore rimane bloccato."
-
 #: lib/tymeslot_web/live/admin_live/formatters.ex:98
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a booking. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
@@ -447,16 +432,6 @@ msgstr "Punteggio minimo reCAPTCHA v3 (0.0–1.0) richiesto per accettare una pr
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a signup. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
 msgstr "Punteggio minimo reCAPTCHA v3 (0.0–1.0) richiesto per accettare una registrazione. I valori più bassi sono più permissivi; 0.3 è il valore predefinito e corrisponde alla raccomandazione di Google per i moduli con basso rischio di abuso."
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex:84
-#, elixir-autogen, elixir-format
-msgid "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
-msgstr "Richiedi un punteggio reCAPTCHA v3 sufficiente sul modulo di prenotazione pubblico. Richiede l'impostazione di RECAPTCHA_SITE_KEY e RECAPTCHA_SECRET_KEY nell'ambiente: quando le chiavi mancano l'interruttore viene rispettato ma la verifica viene saltata silenziosamente."
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex:77
-#, elixir-autogen, elixir-format
-msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
-msgstr "Richiedi un punteggio reCAPTCHA v3 sufficiente sul modulo di registrazione pubblico. Richiede l'impostazione di RECAPTCHA_SITE_KEY e RECAPTCHA_SECRET_KEY nell'ambiente: quando le chiavi mancano l'interruttore viene rispettato ma la verifica viene saltata silenziosamente."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:219
 #, elixir-autogen, elixir-format
@@ -492,3 +467,28 @@ msgstr "Vuoi promuovere %{email} ad amministratore?"
 #, elixir-autogen, elixir-format
 msgid "Admin access required."
 msgstr "È richiesto l'accesso da amministratore."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:208
+#, elixir-autogen, elixir-format
+msgid "Cannot disable password authentication while at least one admin signs in with email and password - doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
+msgstr "Impossibile disattivare l'autenticazione tramite password mentre almeno un amministratore accede con email e password: farlo gli impedirebbe l'accesso. Rimuovi il ruolo a quegli amministratori o fai in modo che passino prima a un accesso OAuth."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:126
+#, elixir-autogen, elixir-format
+msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint - no raw IP is stored. Off by default; review your privacy policy before enabling."
+msgstr "Raccogli statistiche rispettose della privacy per le pagine di prenotazione di questa istanza: visualizzazioni di pagina, sorgente del traffico (UTM/referrer) e conversione. Conta i visitatori unici con un'impronta digitale senza cookie che ruota giornalmente: nessun indirizzo IP grezzo viene memorizzato. Disattivato per impostazione predefinita; rivedi la tua informativa sulla privacy prima di attivarlo."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:119
+#, elixir-autogen, elixir-format
+msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment - without them the toggle stays locked."
+msgstr "Consenti agli organizzatori di questa istanza di ricevere pagamenti da chi prenota tramite Stripe Connect. Richiede l'impostazione di STRIPE_SECRET_KEY e STRIPE_CONNECT_WEBHOOK_SECRET nell'ambiente: senza di esse l'interruttore rimane bloccato."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:84
+#, elixir-autogen, elixir-format
+msgid "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
+msgstr "Richiedi un punteggio reCAPTCHA v3 sufficiente sul modulo di prenotazione pubblico. Richiede l'impostazione di RECAPTCHA_SITE_KEY e RECAPTCHA_SECRET_KEY nell'ambiente: quando le chiavi mancano l'interruttore viene rispettato ma la verifica viene saltata silenziosamente."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:77
+#, elixir-autogen, elixir-format
+msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
+msgstr "Richiedi un punteggio reCAPTCHA v3 sufficiente sul modulo di registrazione pubblico. Richiede l'impostazione di RECAPTCHA_SITE_KEY e RECAPTCHA_SECRET_KEY nell'ambiente: quando le chiavi mancano l'interruttore viene rispettato ma la verifica viene saltata silenziosamente."

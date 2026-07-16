@@ -248,11 +248,6 @@ msgstr ""
 msgid "Create event"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:203
-#, elixir-autogen, elixir-format
-msgid "Create failed — queued to retry on next sync"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:100
 #, elixir-autogen, elixir-format
 msgid "Created by Tymeslot"
@@ -302,11 +297,6 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:425
 #, elixir-autogen, elixir-format
 msgid "Delete event"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:204
-#, elixir-autogen, elixir-format
-msgid "Delete failed — queued to retry on next sync"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:40
@@ -422,22 +412,12 @@ msgstr ""
 msgid "Failed to move event"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:201
-#, elixir-autogen, elixir-format
-msgid "Failed to provision video room — link not updated"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:51
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:74
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex:118
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex:94
 #, elixir-autogen, elixir-format
 msgid "Failed to save preference"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:98
-#, elixir-autogen, elixir-format
-msgid "Failed to update event — changes reverted"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex:29
@@ -980,4 +960,24 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:26
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete %{title}?"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex:203
+#, elixir-autogen, elixir-format
+msgid "Create failed - queued to retry on next sync"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex:204
+#, elixir-autogen, elixir-format
+msgid "Delete failed - queued to retry on next sync"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:201
+#, elixir-autogen, elixir-format
+msgid "Failed to provision video room - link not updated"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:98
+#, elixir-autogen, elixir-format
+msgid "Failed to update event - changes reverted"
 msgstr ""

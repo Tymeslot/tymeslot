@@ -628,11 +628,6 @@ msgstr "Événement mis à jour"
 msgid "Title:"
 msgstr "Titre :"
 
-#: lib/tymeslot/emails/templates/event_update_notification.ex:102
-#, elixir-autogen, elixir-format
-msgid "Updated: %{title} — %{date}"
-msgstr "Mise à jour : %{title} — %{date}"
-
 #: lib/tymeslot/emails/templates/event_update_notification.ex:227
 #, elixir-autogen, elixir-format
 msgid "What Changed"
@@ -749,12 +744,6 @@ msgstr "Confirmez votre nouvelle adresse e-mail"
 msgid "Confirmed"
 msgstr "Confirmé"
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:44
-#: lib/tymeslot/emails/templates/email_change_verification.ex:111
-#, elixir-autogen, elixir-format
-msgid "Didn't request this change? You can safely ignore this email — nothing will happen to your account."
-msgstr "Vous n’avez pas demandé cette modification ? Vous pouvez ignorer cet e-mail en toute sécurité — rien ne changera sur votre compte."
-
 #: lib/tymeslot/emails/shared/meeting/attendee.ex:125
 #, elixir-autogen, elixir-format
 msgid "Email"
@@ -802,16 +791,6 @@ msgstr "vendredi"
 msgid "Heads up"
 msgstr "Avis important"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:55
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} — I've blocked the time on my calendar and I'm looking forward to our meeting."
-msgstr "Bonjour %{name} — j’ai bloqué le créneau dans mon calendrier et je me réjouis de notre réunion."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex:49
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} — our appointment has been cancelled. I'm sorry for the inconvenience."
-msgstr "Bonjour %{name} — notre rendez-vous a été annulé. Je suis désolé(e) pour ce désagrément."
-
 #: lib/tymeslot/emails/templates/reschedule_request.ex:81
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, I need to reschedule our upcoming meeting."
@@ -836,12 +815,6 @@ msgstr "Si la réunion n’a plus lieu, veuillez l’annuler dans Tymeslot afin 
 #, elixir-autogen, elixir-format
 msgid "If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
 msgstr "Si le nouvel horaire est définitif, veuillez mettre à jour ou reporter la réservation dans Tymeslot afin que le participant reçoive les détails actualisés."
-
-#: lib/tymeslot/emails/templates/password_reset.ex:22
-#: lib/tymeslot/emails/templates/password_reset.ex:54
-#, elixir-autogen, elixir-format
-msgid "If you didn't request this change, your account is still secure — you can simply delete this email."
-msgstr "Si vous n’avez pas demandé cette modification, votre compte reste sécurisé — vous pouvez simplement supprimer cet e-mail."
 
 #: lib/tymeslot/emails/templates/password_reset.ex:32
 #, elixir-autogen, elixir-format
@@ -1053,20 +1026,10 @@ msgstr "Le changement ne sera effectif qu’après vérification"
 msgid "The meeting \"%{title}\" was deleted from your external calendar but is still active in Tymeslot."
 msgstr "La réunion « %{title} » a été supprimée de votre calendrier externe mais est toujours active dans Tymeslot."
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:118
-#, elixir-autogen, elixir-format
-msgid "The meeting \"%{title}\" was deleted from your external calendar. Tymeslot still has this booking on record — please review and cancel it here if the meeting is no longer taking place."
-msgstr "La réunion « %{title} » a été supprimée de votre calendrier externe. Tymeslot conserve cette réservation — veuillez la vérifier et l’annuler ici si la réunion n’a plus lieu."
-
 #: lib/tymeslot/emails/templates/external_booking_change.ex:202
 #, elixir-autogen, elixir-format
 msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking shown below."
 msgstr "La réunion « %{title} » a été reportée dans votre calendrier externe. Tymeslot conserve toujours la réservation d’origine indiquée ci-dessous."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex:132
-#, elixir-autogen, elixir-format
-msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking — please review the details and update or cancel it accordingly."
-msgstr "La réunion « %{title} » a été reportée dans votre calendrier externe. Tymeslot conserve toujours la réservation d’origine — veuillez vérifier les détails et la mettre à jour ou l’annuler en conséquence."
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:30
 #: lib/tymeslot/emails/templates/email_change_notification.ex:70
@@ -1192,11 +1155,6 @@ msgstr "CE QUE VOUS DEVEZ SAVOIR :"
 msgid "We're excited to have you on board! To start scheduling meetings and simplify your calendar, please verify your email address."
 msgstr "Nous sommes ravis de vous compter parmi nous ! Pour commencer à planifier des réunions et simplifier votre calendrier, veuillez vérifier votre adresse e-mail."
 
-#: lib/tymeslot/emails/templates/email_verification.ex:17
-#, elixir-autogen, elixir-format
-msgid "We're glad you're here. One quick step and your calendar will be ready to go — please confirm your email below."
-msgstr "Nous sommes heureux de vous voir ici. Encore une étape rapide et votre calendrier sera prêt — veuillez confirmer votre e-mail ci-dessous."
-
 #: lib/tymeslot/emails/templates/email_change_notification.ex:46
 #, elixir-autogen, elixir-format
 msgid "We're letting you know in case it wasn't you."
@@ -1216,11 +1174,6 @@ msgstr "Bienvenue"
 #, elixir-autogen, elixir-format
 msgid "Welcome to Tymeslot"
 msgstr "Bienvenue sur Tymeslot"
-
-#: lib/tymeslot/emails/templates/email_verification.ex:31
-#, elixir-autogen, elixir-format
-msgid "Welcome to Tymeslot — please verify your email."
-msgstr "Bienvenue sur Tymeslot — veuillez vérifier votre adresse e-mail."
 
 #: lib/tymeslot/emails/templates/email_verification.ex:42
 #, elixir-autogen, elixir-format
@@ -1512,16 +1465,6 @@ msgstr "%{amount} remboursés sur votre carte"
 msgid "A partial refund was issued."
 msgstr "Un remboursement partiel a été effectué."
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:145
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} — %{amount} of your %{original} payment has been refunded."
-msgstr "Bonjour %{name}, un montant de %{amount} sur votre paiement initial de %{original} a été remboursé."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:138
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} — your payment of %{amount} has been refunded in full."
-msgstr "Bonjour %{name}, votre paiement de %{amount} a été intégralement remboursé."
-
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex:269
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{amount} of your %{original} payment has been refunded."
@@ -1602,16 +1545,6 @@ msgstr "Votre paiement a été remboursé."
 msgid "your host"
 msgstr "votre organisateur"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:163
-#, elixir-autogen, elixir-format
-msgid "Hi — %{amount} of your %{original} payment has been refunded."
-msgstr "Bonjour — un montant de %{amount} sur votre paiement initial de %{original} a été remboursé."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:157
-#, elixir-autogen, elixir-format
-msgid "Hi — your payment of %{amount} has been refunded in full."
-msgstr "Bonjour — votre paiement de %{amount} a été intégralement remboursé."
-
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex:287
 #, elixir-autogen, elixir-format
 msgid "Hi, %{amount} of your %{original} payment has been refunded."
@@ -1685,11 +1618,6 @@ msgstr "Je ne pourrai pas venir"
 #, elixir-autogen, elixir-format
 msgid "Can't make it: %{url}"
 msgstr "Je ne pourrai pas venir : %{url}"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:144
-#, elixir-autogen, elixir-format
-msgid "Hi %{guest} — %{booker} has invited you as a guest to this meeting with %{organizer}."
-msgstr "Bonjour %{guest} — %{booker} vous convie en tant qu’invité(e) à cette réunion avec %{organizer}."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:297
 #, elixir-autogen, elixir-format
@@ -1782,11 +1710,6 @@ msgstr "Propriétaire du calendrier"
 msgid "Calendar Sync Error"
 msgstr "Erreur de synchronisation du calendrier"
 
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex:104
-#, elixir-autogen, elixir-format
-msgid "Calendar Sync Error — Manual Action Required"
-msgstr "Erreur de synchronisation du calendrier — Action manuelle requise"
-
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:94
 #, elixir-autogen, elixir-format
 msgid "Calendar didn't sync"
@@ -1849,17 +1772,6 @@ msgstr "Détails de la réunion"
 msgid "Network connectivity issues"
 msgstr "Problèmes de connectivité réseau"
 
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex:80
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex:118
-#, elixir-autogen, elixir-format
-msgid "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails — this is purely a technical calendar sync issue that doesn't affect the booking itself."
-msgstr "Veuillez ajouter manuellement cette réunion à votre calendrier pour ne pas la manquer. Vous avez déjà tous les deux reçu vos e-mails de confirmation — il s’agit uniquement d’un problème technique de synchronisation du calendrier qui n’affecte pas la réservation elle-même."
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex:96
-#, elixir-autogen, elixir-format
-msgid "The booking is safe — but please add it to your calendar manually."
-msgstr "La réservation est en sécurité — mais veuillez l’ajouter manuellement à votre calendrier."
-
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:85
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:122
 #, elixir-autogen, elixir-format
@@ -1912,3 +1824,91 @@ msgid "minute"
 msgid_plural "minutes"
 msgstr[0] "minute"
 msgstr[1] "minutes"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex:104
+#, elixir-autogen, elixir-format
+msgid "Calendar Sync Error - Manual Action Required"
+msgstr "Erreur de synchronisation du calendrier - Action manuelle requise"
+
+#: lib/tymeslot/emails/templates/email_change_verification.ex:44
+#: lib/tymeslot/emails/templates/email_change_verification.ex:111
+#, elixir-autogen, elixir-format
+msgid "Didn't request this change? You can safely ignore this email - nothing will happen to your account."
+msgstr "Vous n’avez pas demandé cette modification ? Vous pouvez ignorer cet e-mail en toute sécurité - rien ne changera sur votre compte."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:144
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}."
+msgstr "Bonjour %{guest} - %{booker} vous convie en tant qu’invité(e) à cette réunion avec %{organizer}."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:145
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - %{amount} of your %{original} payment has been refunded."
+msgstr "Bonjour %{name}, un montant de %{amount} sur votre paiement initial de %{original} a été remboursé."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:55
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - I've blocked the time on my calendar and I'm looking forward to our meeting."
+msgstr "Bonjour %{name} - j’ai bloqué le créneau dans mon calendrier et je me réjouis de notre réunion."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex:49
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - our appointment has been cancelled. I'm sorry for the inconvenience."
+msgstr "Bonjour %{name} - notre rendez-vous a été annulé. Je suis désolé(e) pour ce désagrément."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:138
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - your payment of %{amount} has been refunded in full."
+msgstr "Bonjour %{name}, votre paiement de %{amount} a été intégralement remboursé."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:163
+#, elixir-autogen, elixir-format
+msgid "Hi - %{amount} of your %{original} payment has been refunded."
+msgstr "Bonjour - un montant de %{amount} sur votre paiement initial de %{original} a été remboursé."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:157
+#, elixir-autogen, elixir-format
+msgid "Hi - your payment of %{amount} has been refunded in full."
+msgstr "Bonjour - votre paiement de %{amount} a été intégralement remboursé."
+
+#: lib/tymeslot/emails/templates/password_reset.ex:22
+#: lib/tymeslot/emails/templates/password_reset.ex:54
+#, elixir-autogen, elixir-format
+msgid "If you didn't request this change, your account is still secure - you can simply delete this email."
+msgstr "Si vous n’avez pas demandé cette modification, votre compte reste sécurisé - vous pouvez simplement supprimer cet e-mail."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex:80
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex:118
+#, elixir-autogen, elixir-format
+msgid "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails - this is purely a technical calendar sync issue that doesn't affect the booking itself."
+msgstr "Veuillez ajouter manuellement cette réunion à votre calendrier pour ne pas la manquer. Vous avez déjà tous les deux reçu vos e-mails de confirmation - il s’agit uniquement d’un problème technique de synchronisation du calendrier qui n’affecte pas la réservation elle-même."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex:96
+#, elixir-autogen, elixir-format
+msgid "The booking is safe - but please add it to your calendar manually."
+msgstr "La réservation est en sécurité - mais veuillez l’ajouter manuellement à votre calendrier."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex:118
+#, elixir-autogen, elixir-format
+msgid "The meeting \"%{title}\" was deleted from your external calendar. Tymeslot still has this booking on record - please review and cancel it here if the meeting is no longer taking place."
+msgstr "La réunion « %{title} » a été supprimée de votre calendrier externe. Tymeslot conserve cette réservation - veuillez la vérifier et l’annuler ici si la réunion n’a plus lieu."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex:132
+#, elixir-autogen, elixir-format
+msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking - please review the details and update or cancel it accordingly."
+msgstr "La réunion « %{title} » a été reportée dans votre calendrier externe. Tymeslot conserve toujours la réservation d’origine - veuillez vérifier les détails et la mettre à jour ou l’annuler en conséquence."
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex:102
+#, elixir-autogen, elixir-format
+msgid "Updated: %{title} - %{date}"
+msgstr "Mise à jour : %{title} - %{date}"
+
+#: lib/tymeslot/emails/templates/email_verification.ex:17
+#, elixir-autogen, elixir-format
+msgid "We're glad you're here. One quick step and your calendar will be ready to go - please confirm your email below."
+msgstr "Nous sommes heureux de vous voir ici. Encore une étape rapide et votre calendrier sera prêt - veuillez confirmer votre e-mail ci-dessous."
+
+#: lib/tymeslot/emails/templates/email_verification.ex:31
+#, elixir-autogen, elixir-format
+msgid "Welcome to Tymeslot - please verify your email."
+msgstr "Bienvenue sur Tymeslot - veuillez vérifier votre adresse e-mail."

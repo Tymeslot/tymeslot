@@ -326,11 +326,6 @@ msgstr "Potrà scegliere un nuovo orario dalla tua disponibilità"
 msgid "This action cannot be undone. The attendee will be notified of the cancellation."
 msgstr "Questa azione non può essere annullata. Il partecipante verrà informato dell'annullamento."
 
-#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex:121
-#, elixir-autogen, elixir-format
-msgid "This booking was paid. Choose how to handle the refund — the attendee always receives the full amount you refund."
-msgstr "Questa prenotazione è stata pagata. Scegli come gestire il rimborso: il partecipante riceve sempre l'intero importo rimborsato."
-
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex:328
 #, elixir-autogen, elixir-format
 msgid "This meeting's event was deleted from your external calendar."
@@ -402,3 +397,8 @@ msgid "%{duration} minute"
 msgid_plural "%{duration} minutes"
 msgstr[0] "%{duration} minuto"
 msgstr[1] "%{duration} minuti"
+
+#: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex:121
+#, elixir-autogen, elixir-format
+msgid "This booking was paid. Choose how to handle the refund - the attendee always receives the full amount you refund."
+msgstr "Questa prenotazione è stata pagata. Scegli come gestire il rimborso: il partecipante riceve sempre l'intero importo rimborsato."
