@@ -300,7 +300,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
     do: dgettext("onboarding_wizard", "Your page, your brand")
 
   defp caption(%{current_step: :connect_calendar, calendar_connected: true}),
-    do: dgettext("onboarding_wizard", "Your calendar is synced — these slots are live")
+    do: dgettext("onboarding_wizard", "Your calendar is synced - these slots are live")
 
   defp caption(%{current_step: :connect_calendar}),
     do: dgettext("onboarding_wizard", "Connect your calendar to fill these slots")
@@ -324,7 +324,7 @@ defmodule TymeslotWeb.OnboardingLive.LivePreview do
   end
 
   defp caption(%{current_step: :ready} = assigns) do
-    dgettext("onboarding_wizard", "You're all set — %{link} is live",
+    dgettext("onboarding_wizard", "You're all set - %{link} is live",
       link: link_text(assigns.booking_host, assigns.username)
     )
   end

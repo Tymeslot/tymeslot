@@ -77,7 +77,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     #{Text.title_section(dgettext("emails", "Action Required"))}
 
     <mj-text color="#{Styles.ink_soft()}">
-      #{dgettext("emails", "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails — this is purely a technical calendar sync issue that doesn't affect the booking itself.")}
+      #{dgettext("emails", "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails - this is purely a technical calendar sync issue that doesn't affect the booking itself.")}
     </mj-text>
 
     #{Callouts.alert_box(:alert, common_causes_html())}
@@ -93,7 +93,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
       eyebrow: dgettext("emails", "Action required"),
       stage_title: dgettext("emails", "Calendar didn't sync"),
       stage_subtitle:
-        dgettext("emails", "The booking is safe — but please add it to your calendar manually.")
+        dgettext("emails", "The booking is safe - but please add it to your calendar manually.")
     )
   end
 
@@ -101,7 +101,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     locale = Gettext.get_locale(TymeslotWeb.Gettext)
 
     """
-    #{dgettext("emails", "Calendar Sync Error — Manual Action Required")}
+    #{dgettext("emails", "Calendar Sync Error - Manual Action Required")}
 
     #{dgettext("emails", "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar.")}
 
@@ -115,7 +115,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     #{error_details}
 
     #{dgettext("emails", "ACTION REQUIRED:")}
-    #{dgettext("emails", "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails — this is purely a technical calendar sync issue that doesn't affect the booking itself.")}
+    #{dgettext("emails", "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails - this is purely a technical calendar sync issue that doesn't affect the booking itself.")}
 
     #{common_causes_text()}
 

@@ -309,9 +309,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           name="customise[layout]"
           label={dgettext("dashboard_embed", "Layout")}
           options={[
-            {dgettext("dashboard_embed", "Column — wide canvas, fills the container (recommended)"),
+            {dgettext("dashboard_embed", "Column - wide canvas, fills the container (recommended)"),
              "column"},
-            {dgettext("dashboard_embed", "Default — centred with a ~640px cap (standalone-style)"),
+            {dgettext("dashboard_embed", "Default - centred with a ~640px cap (standalone-style)"),
              "default"}
           ]}
           value={@embed_layout}
@@ -331,7 +331,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           name="customise[locale]"
           label={dgettext("dashboard_embed", "Language")}
           options={[
-            {dgettext("dashboard_embed", "Auto — visitor's browser"), ""}
+            {dgettext("dashboard_embed", "Auto - visitor's browser"), ""}
             | Helpers.language_options()
           ]}
           value={@embed_locale}

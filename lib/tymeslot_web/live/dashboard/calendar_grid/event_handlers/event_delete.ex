@@ -201,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
     flash_message =
       case queue_result do
         :ok ->
-          dgettext("dashboard_calendar_events", "Delete failed — queued to retry on next sync")
+          dgettext("dashboard_calendar_events", "Delete failed - queued to retry on next sync")
 
         :ignored ->
           dgettext("dashboard_calendar_events", "Failed to delete event")

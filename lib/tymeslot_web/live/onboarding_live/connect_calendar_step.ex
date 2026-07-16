@@ -178,7 +178,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
   defp google_label(nil), do: dgettext("onboarding_wizard", "Connect via Google")
 
   defp google_label(email),
-    do: dgettext("onboarding_wizard", "One click — connect %{email}", email: email)
+    do: dgettext("onboarding_wizard", "One click - connect %{email}", email: email)
 
   defp caldav_form(assigns) do
     ~H"""

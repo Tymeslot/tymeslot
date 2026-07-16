@@ -86,7 +86,7 @@ defmodule TymeslotWeb.SlackOAuthController do
       conn
       |> put_flash(
         :info,
-        dgettext("dashboard_automation_chat", "Slack connected — pick a channel to finish setup.")
+        dgettext("dashboard_automation_chat", "Slack connected - pick a channel to finish setup.")
       )
       |> redirect(to: ~p"/dashboard/automation?slack_pending=#{integration.id}")
     else

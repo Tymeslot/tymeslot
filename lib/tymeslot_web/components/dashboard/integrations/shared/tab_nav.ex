@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.TabNav do
             aria-hidden="true"
           />
           <span class="sr-only">
-            {dgettext("dashboard_integrations", "%{status} — needs attention",
+            {dgettext("dashboard_integrations", "%{status} - needs attention",
               status: status_label(tab.status)
             )}
           </span>

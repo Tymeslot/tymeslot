@@ -95,7 +95,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
      put_flash(
        socket,
        :error,
-       dgettext("dashboard_calendar_events", "Failed to update event — changes reverted")
+       dgettext("dashboard_calendar_events", "Failed to update event - changes reverted")
      )}
   end
 
@@ -198,7 +198,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
      put_flash(
        socket,
        :error,
-       dgettext("dashboard_calendar_events", "Failed to provision video room — link not updated")
+       dgettext("dashboard_calendar_events", "Failed to provision video room - link not updated")
      )}
   end
 

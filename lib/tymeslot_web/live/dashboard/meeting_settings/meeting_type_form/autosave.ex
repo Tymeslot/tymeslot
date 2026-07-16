@@ -164,7 +164,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
         <% :throttled -> %>
           <.icon name="hero-arrow-path-mini" class="w-4 h-4 text-amber-500 animate-spin" />
           <span class="text-amber-500">
-            {dgettext("dashboard_meeting_form", "Too many changes — saving shortly…")}
+            {dgettext("dashboard_meeting_form", "Too many changes - saving shortly…")}
           </span>
         <% :incomplete -> %>
           <.icon name="hero-information-circle-mini" class="w-4 h-4 text-tymeslot-400" />

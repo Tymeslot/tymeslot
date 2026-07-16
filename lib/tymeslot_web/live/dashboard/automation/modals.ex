@@ -347,7 +347,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
     ~H"""
     <CoreComponents.modal id={@id} show={@show} on_cancel={@on_close} size={:large}>
       <:header>
-        {dgettext("dashboard_automation", "Delivery History — %{name}", name: @integration.name)}
+        {dgettext("dashboard_automation", "Delivery History - %{name}", name: @integration.name)}
       </:header>
 
       <div class="space-y-8">
@@ -434,7 +434,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
     ~H"""
     <CoreComponents.modal id={@id} show={@show} on_cancel={@on_close} size={:large}>
       <:header>
-        {dgettext("dashboard_automation", "Delivery History — %{name}", name: @integration.name)}
+        {dgettext("dashboard_automation", "Delivery History - %{name}", name: @integration.name)}
       </:header>
 
       <div class="space-y-8">

@@ -226,7 +226,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                   icon="hero-hashtag"
                 >
                   <:description>
-                    {dgettext("dashboard_automation_chat", "Display-only label shown in your dashboard. It does not change where messages are delivered — that is set by the webhook URL itself.")}
+                    {dgettext("dashboard_automation_chat", "Display-only label shown in your dashboard. It does not change where messages are delivered - that is set by the webhook URL itself.")}
                   </:description>
                 </.input>
 

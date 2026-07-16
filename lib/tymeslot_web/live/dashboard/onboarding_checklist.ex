@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
             {dgettext("onboarding_wizard", "Finish setting up")}
           </h2>
           <p class="text-token-sm font-bold text-tymeslot-500 mt-1">
-            {dgettext("onboarding_wizard", "A few recommended steps — tick off the ones you don't need.")}
+            {dgettext("onboarding_wizard", "A few recommended steps - tick off the ones you don't need.")}
           </p>
         </div>
         <div class="flex items-center gap-3 shrink-0">
