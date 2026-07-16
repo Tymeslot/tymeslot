@@ -8,6 +8,7 @@ defmodule Tymeslot.Bookings.Cancel do
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Clock
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -20,7 +21,8 @@ defmodule Tymeslot.Bookings.Cancel do
   This includes:
   1. Updating meeting status in database
   2. Cancelling calendar event
-  3. Sending cancellation emails
+  3. Deleting pending reminder email jobs
+  4. Sending cancellation emails
 
   Returns {:ok, meeting} or {:error, reason}
   """
@@ -53,6 +55,7 @@ defmodule Tymeslot.Bookings.Cancel do
 
         with {:ok, updated_meeting} <- update_meeting_status(meeting),
              :ok <- Meetings.cancel_calendar_event(updated_meeting),
+             :ok <- EmailScheduler.cancel_reminder_emails(updated_meeting.id),
              :ok <- delete_provider_video_room(updated_meeting),
              :ok <- send_cancellation_notifications(updated_meeting) do
           {:ok, updated_meeting}
@@ -94,6 +97,7 @@ defmodule Tymeslot.Bookings.Cancel do
     )
 
     with {:ok, updated_meeting} <- update_meeting_status_external(meeting),
+         :ok <- EmailScheduler.cancel_reminder_emails(updated_meeting.id),
          :ok <- delete_provider_video_room(updated_meeting),
          :ok <- send_cancellation_notifications(updated_meeting) do
       {:ok, updated_meeting}

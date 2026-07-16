@@ -10,6 +10,7 @@ defmodule Tymeslot.Bookings.CancelTest do
   import Mox
 
   alias Tymeslot.Bookings.Cancel
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Security.Encryption
@@ -218,6 +219,25 @@ defmodule Tymeslot.Bookings.CancelTest do
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting_by_uid(meeting.uid)
       assert reloaded_meeting.status == "cancelled"
       assert reloaded_meeting.cancelled_at != nil
+    end
+
+    test "deletes pending reminder email jobs" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
+
+      :ok = EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes")
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
+      )
+
+      assert {:ok, _cancelled_meeting} = Cancel.execute(meeting.uid)
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
+      )
     end
   end
 

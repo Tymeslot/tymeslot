@@ -20,6 +20,7 @@ defmodule Tymeslot.Bookings.CancelExternalCascadeTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Bookings.Cancel
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
@@ -86,6 +87,24 @@ defmodule Tymeslot.Bookings.CancelExternalCascadeTest do
       assert {:ok, _cancelled} = Cancel.execute_external(meeting)
 
       assert all_enqueued(worker: CalendarEventWorker) == []
+    end
+
+    test "deletes pending reminder email jobs" do
+      {_user, meeting} = setup_user_meeting_with_automations()
+
+      :ok = EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes")
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
+      )
+
+      assert {:ok, _cancelled} = Cancel.execute_external(meeting)
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
+      )
     end
 
     test "records a cancellation reason distinguishing external origin" do
