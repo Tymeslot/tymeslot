@@ -366,6 +366,14 @@ config :tymeslot, :integration_locks,
   outlook: 60_000,
   teams: 120_000
 
+# Pin the Stripe API version instead of inheriting stripity_stripe's built-in
+# default, which travels with the library: upgrading the dependency would move
+# the wire contract without any change here. Version 3.3 defaults to
+# 2025-11-17.clover, which relocates current_period_start/end off Subscription
+# onto its items. Raise this deliberately, alongside the code that reads the
+# fields it changes.
+config :stripity_stripe, api_version: "2022-11-15"
+
 # Default country code (ISO 3166-1 alpha-2) for Stripe Connect onboarding when
 # the host's profile carries no explicit country. Configurable via the
 # MEETING_PAYMENTS_DEFAULT_COUNTRY env var (read in runtime.exs).
