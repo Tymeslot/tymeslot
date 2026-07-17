@@ -8,6 +8,7 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, Validation}
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Notifications.Events
@@ -52,6 +53,7 @@ defmodule Tymeslot.Bookings.Reschedule do
          :ok <- validate_can_reschedule(original_meeting),
          {:ok, new_times} <- prepare_new_times(new_params, original_meeting.organizer_user_id),
          {:ok, updated_meeting} <- apply_time_update_and_schedule_job(original_meeting, new_times) do
+      AvailabilityCache.invalidate_for_user(updated_meeting.organizer_user_id)
       sync_provider_video_room(updated_meeting)
       send_reschedule_notifications(updated_meeting, original_meeting)
       {:ok, updated_meeting}
@@ -95,6 +97,7 @@ defmodule Tymeslot.Bookings.Reschedule do
          end) do
       {:ok, updated} -> {:ok, updated}
       {:error, :slot_taken} -> {:error, :slot_taken}
+      {:error, :booking_limit_reached} -> {:error, :booking_limit_reached}
       {:error, :failed_to_update_meeting} -> {:error, :failed_to_update_meeting}
       {:error, _reason} -> {:error, :failed_to_update_meeting}
     end
@@ -131,6 +134,7 @@ defmodule Tymeslot.Bookings.Reschedule do
     case Scheduling.update_meeting_with_conflict_check(meeting, attrs) do
       {:ok, updated} -> {:ok, updated}
       {:error, :time_conflict} -> {:error, :slot_taken}
+      {:error, :booking_limit_reached} -> {:error, :booking_limit_reached}
       {:error, _reason} -> {:error, :failed_to_update_meeting}
     end
   end

@@ -8,6 +8,7 @@ defmodule Tymeslot.Bookings.Cancel do
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -150,6 +151,7 @@ defmodule Tymeslot.Bookings.Cancel do
           meeting_id: meeting.id
         )
 
+        AvailabilityCache.invalidate_for_user(updated_meeting.organizer_user_id)
         {:ok, updated_meeting}
 
       {:error, changeset} ->
@@ -175,6 +177,7 @@ defmodule Tymeslot.Bookings.Cancel do
           meeting_id: meeting.id
         )
 
+        AvailabilityCache.invalidate_for_user(updated_meeting.organizer_user_id)
         {:ok, updated_meeting}
 
       {:error, changeset} ->

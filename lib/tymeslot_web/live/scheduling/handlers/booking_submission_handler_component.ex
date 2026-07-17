@@ -439,6 +439,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       {:error, :slot_taken} ->
         handle_slot_taken(socket)
 
+      {:error, :booking_limit_reached} ->
+        handle_booking_limit_reached(socket)
+
       {:error, reason} ->
         handle_booking_error(socket, reason)
     end
@@ -486,6 +489,20 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> assign(:submitting, false)
       |> assign(:submission_processed, false)
       |> Flash.put_flash(:error, BookingErrorMessage.message(:slot_taken))
+
+    {:slot_taken, socket}
+  end
+
+  # A capped day is stale-page territory just like a sniped slot, so reuse
+  # the `:slot_taken` bounce tuple — the flow returns the booker to the
+  # schedule step with refreshed availability, where capped days now render
+  # unavailable. Only the flash copy differs.
+  defp handle_booking_limit_reached(socket) do
+    socket =
+      socket
+      |> assign(:submitting, false)
+      |> assign(:submission_processed, false)
+      |> Flash.put_flash(:error, BookingErrorMessage.message(:booking_limit_reached))
 
     {:slot_taken, socket}
   end

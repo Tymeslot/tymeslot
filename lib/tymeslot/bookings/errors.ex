@@ -21,6 +21,7 @@ defmodule Tymeslot.Bookings.Errors do
           :meeting_type_inactive
           | :meeting_type_not_found
           | :slot_taken
+          | :booking_limit_reached
           | :organizer_required
           | :booking_failed
           | :payments_unavailable
