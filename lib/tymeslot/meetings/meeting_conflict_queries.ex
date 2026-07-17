@@ -63,4 +63,27 @@ defmodule Tymeslot.Meetings.MeetingConflictQueries do
       nil -> {:ok, :no_conflicts}
     end
   end
+
+  # Distinguishes booking-limit locks from any other advisory locks the
+  # application might take. Arbitrary but must stay stable.
+  @booking_limits_lock_class 715_001
+
+  @doc """
+  Serialises booking-limit checks for one organizer within the current
+  transaction via `pg_advisory_xact_lock/2`.
+
+  Row locks cannot guard limit counts: competing bookings occupy different,
+  non-overlapping time windows, so `count_locked_conflicts/4` never sees
+  them. The advisory lock is released automatically on commit or rollback.
+  Must be called inside a transaction.
+  """
+  @spec acquire_booking_limits_lock(integer()) :: :ok
+  def acquire_booking_limits_lock(organizer_user_id) when is_integer(organizer_user_id) do
+    Repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [
+      @booking_limits_lock_class,
+      organizer_user_id
+    ])
+
+    :ok
+  end
 end
