@@ -321,7 +321,8 @@ defmodule Tymeslot.MeetingTypes do
     payment_required = params["payment_required"] == "true"
 
     with {:ok, reminder_config} <- normalize_reminder_config_params(params["reminder_config"]),
-         {:ok, price_cents} <- parse_price_cents(payment_required, params["price"]) do
+         {:ok, price_cents} <- parse_price_cents(payment_required, params["price"]),
+         {:ok, max_participants} <- parse_max_participants(params["max_participants"]) do
       attrs = %{
         name: params["name"],
         duration_minutes: String.to_integer(params["duration"]),
@@ -335,7 +336,8 @@ defmodule Tymeslot.MeetingTypes do
         target_calendar_id: blank_to_nil(params["target_calendar_id"]),
         reminder_config: reminder_config,
         payment_required: payment_required,
-        price_cents: price_cents
+        price_cents: price_cents,
+        max_participants: max_participants
       }
 
       attrs =
@@ -408,6 +410,23 @@ defmodule Tymeslot.MeetingTypes do
   end
 
   defp parse_price_cents(true, _price), do: {:error, :invalid_price}
+
+  # Converts the max-participants form param into an integer participant
+  # limit. Absent or blank means a solo type and stores 1 (the column
+  # default). Bad input yields `{:error, :invalid_max_participants}` so the
+  # form surfaces it the same way an invalid price does; the 1..999 range
+  # itself is enforced by the schema changeset.
+  defp parse_max_participants(nil), do: {:ok, 1}
+  defp parse_max_participants(""), do: {:ok, 1}
+
+  defp parse_max_participants(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {limit, ""} -> {:ok, limit}
+      _invalid -> {:error, :invalid_max_participants}
+    end
+  end
+
+  defp parse_max_participants(_value), do: {:error, :invalid_max_participants}
 
   # Custom booking questions are gated behind the :custom_questions_allowed
   # feature flag. Core's default checker always allows access, so self-hosted
