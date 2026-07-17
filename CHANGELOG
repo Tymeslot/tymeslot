@@ -1,4 +1,13 @@
 
+[1.4.3]
+* core: Clear the reschedule-requested state once the attendee rebooks
+* core: Remove calendar event and reminders when a reschedule is requested
+* core: Show current city names for legacy timezone ids browsers report
+* core: Show cancel and reschedule times in the attendee's timezone
+* core: Accept valid timezones the format check wrongly rejected
+* core: Retry the initial Outlook calendar sync after connecting
+
+
 [1.4.2]
 
 
