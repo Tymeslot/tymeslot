@@ -191,6 +191,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
       on_delete: :delete_all
     )
 
+    has_many(:participants, Tymeslot.Meetings.ParticipantSchema, foreign_key: :meeting_id)
+
     # Source attribution
     field(:utm_source, :string)
     field(:utm_medium, :string)

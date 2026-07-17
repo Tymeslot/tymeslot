@@ -16,6 +16,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Profiles
@@ -99,6 +100,19 @@ defmodule Tymeslot.Factory do
   @spec pending_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def pending_meeting_factory do
     build(:meeting, status: "pending")
+  end
+
+  @spec participant_factory() :: Tymeslot.Meetings.ParticipantSchema.t()
+  def participant_factory do
+    %ParticipantSchema{
+      meeting: build(:meeting),
+      name: sequence(:participant_name, &"Participant #{&1}"),
+      email: sequence(:participant_email, &"participant#{&1}@test.com"),
+      timezone: "Europe/Zurich",
+      locale: "en",
+      custom_field_answers: %{},
+      management_token: ParticipantSchema.generate_token()
+    }
   end
 
   @spec user_factory() :: Tymeslot.Auth.UserSchema.t()
