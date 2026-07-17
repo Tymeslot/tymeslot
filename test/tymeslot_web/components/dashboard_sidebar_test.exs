@@ -200,29 +200,37 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     assert Floki.find(doc, "a[href='/dashboard/integrations'] .dashboard-nav-notification") == []
   end
 
-  test "translates sidebar extension labels through the dashboard_common domain" do
+  test "translates sidebar extension labels through the configured gettext backend" do
+    pin_extension_gettext({TymeslotWeb.Gettext, "dashboard_common"})
+
     assigns = %{
       current_action: :overview,
       integration_status: %{has_calendar: true, has_video: true, has_meeting_types: true},
       profile: %{username: "testuser"},
       sidebar_extensions: [
         %{
-          id: :subscription,
-          label: "Subscription",
-          icon: "hero-credit-card",
-          path: "/dashboard/subscription",
-          action: :subscription
+          id: :calendar_sync,
+          label: "Calendar",
+          icon: "hero-calendar-days",
+          path: "/dashboard/calendar-sync",
+          action: :calendar_sync
         }
       ]
     }
 
     Gettext.put_locale(TymeslotWeb.Gettext, "de")
-    html = render_component(&DashboardSidebar.sidebar/1, assigns)
 
-    assert html =~ "Abonnement"
+    doc =
+      (&DashboardSidebar.sidebar/1)
+      |> render_component(assigns)
+      |> Floki.parse_document!()
+
+    assert doc |> Floki.find("a[href='/dashboard/calendar-sync']") |> Floki.text() =~ "Kalender"
   end
 
   test "falls back to the raw label when an extension has no matching translation" do
+    pin_extension_gettext({TymeslotWeb.Gettext, "dashboard_common"})
+
     assigns = %{
       current_action: :overview,
       integration_status: %{has_calendar: true, has_video: true, has_meeting_types: true},
@@ -242,5 +250,14 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
     html = render_component(&DashboardSidebar.sidebar/1, assigns)
 
     assert html =~ "Some Untranslated Extension"
+  end
+
+  # In the umbrella build the SaaS config repoints :dashboard_extension_gettext at
+  # its own catalogue, so these tests pin the Core default to stay deterministic
+  # in both the standalone and umbrella test runs.
+  defp pin_extension_gettext(backend_and_domain) do
+    original = Application.fetch_env!(:tymeslot, :dashboard_extension_gettext)
+    Application.put_env(:tymeslot, :dashboard_extension_gettext, backend_and_domain)
+    on_exit(fn -> Application.put_env(:tymeslot, :dashboard_extension_gettext, original) end)
   end
 end
