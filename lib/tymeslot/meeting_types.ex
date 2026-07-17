@@ -335,7 +335,10 @@ defmodule Tymeslot.MeetingTypes do
         target_calendar_id: blank_to_nil(params["target_calendar_id"]),
         reminder_config: reminder_config,
         payment_required: payment_required,
-        price_cents: price_cents
+        price_cents: price_cents,
+        max_bookings_per_day: parse_booking_limit(params["max_bookings_per_day"]),
+        max_bookings_per_week: parse_booking_limit(params["max_bookings_per_week"]),
+        max_bookings_per_month: parse_booking_limit(params["max_bookings_per_month"])
       }
 
       attrs =
@@ -354,6 +357,17 @@ defmodule Tymeslot.MeetingTypes do
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
+
+  # Blank means no limit; out-of-range values are left to the changeset.
+  defp parse_booking_limit(nil), do: nil
+  defp parse_booking_limit(value) when is_integer(value), do: value
+
+  defp parse_booking_limit(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {limit, ""} -> limit
+      _other -> nil
+    end
+  end
 
   # Builds the payment-validation opts the schema changeset needs. The
   # schema must not reach into the payments domain itself (layering), so

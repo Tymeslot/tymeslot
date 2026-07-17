@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     GuestsSection,
     HiddenFields,
     Init,
+    LimitsSection,
     PaymentsSection,
     QuestionEditorComponent,
     ShowAsFreeSection,
@@ -30,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   import GuestsSection, only: [guests_section: 1]
+  import LimitsSection, only: [limits_section: 1]
   import ShowAsFreeSection, only: [show_as_free_section: 1]
   import HiddenFields, only: [hidden_fields: 1]
   import PaymentsSection, only: [payments_section: 1]
@@ -76,6 +78,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:payment_price, "")
      |> assign(:allow_guests, false)
      |> assign(:show_as_free, false)
+     |> assign(:booking_limits, Init.get_booking_limits(nil))
      |> assign(:__initialized__, false)}
   end
 
@@ -227,6 +230,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         max_guests={Guests.max_guests()}
         myself={@myself}
       />
+
+      <.limits_section booking_limits={@booking_limits} myself={@myself} />
 
       <.show_as_free_section show_as_free={@show_as_free} myself={@myself} />
 
@@ -473,6 +478,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("update_booking_limits", params, socket) do
+    # The inputs sit inside the meeting-type form, so the event carries the
+    # whole form's params under "meeting_type".
+    type_params = Map.get(params, "meeting_type", %{})
+
+    limits =
+      Map.new(Init.get_booking_limits(nil), fn {key, _default} ->
+        {key, parse_booking_limit(type_params[key])}
+      end)
+
+    {:noreply,
+     socket
+     |> assign(:booking_limits, limits)
+     |> Autosave.maybe_run()}
+  end
+
+  @impl Phoenix.LiveComponent
   def handle_event("toggle_show_as_free", _params, socket) do
     {:noreply,
      socket
@@ -603,5 +625,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     # Edit-mode submit (e.g. pressing Enter) persists current state in place
     # without closing the overlay — there is no separate "save" action.
     {:noreply, Autosave.maybe_run(socket)}
+  end
+
+  # Blank clears the limit; anything unparseable is treated as blank (the
+  # number input constrains typing, and the changeset enforces the range).
+  defp parse_booking_limit(nil), do: nil
+
+  defp parse_booking_limit(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {limit, ""} when limit > 0 -> limit
+      _other -> nil
+    end
   end
 end
