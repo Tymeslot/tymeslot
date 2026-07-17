@@ -35,7 +35,10 @@ defmodule Tymeslot.Profiles do
           timezone: timezone,
           buffer_minutes: non_neg_integer(),
           advance_booking_days: non_neg_integer(),
-          min_advance_hours: non_neg_integer()
+          min_advance_hours: non_neg_integer(),
+          max_bookings_per_day: pos_integer() | nil,
+          max_bookings_per_week: pos_integer() | nil,
+          max_bookings_per_month: pos_integer() | nil
         }
 
   # --- Profile Retrieval ---
@@ -281,7 +284,10 @@ defmodule Tymeslot.Profiles do
           timezone: get_default_timezone(),
           buffer_minutes: 15,
           advance_booking_days: 90,
-          min_advance_hours: 3
+          min_advance_hours: 3,
+          max_bookings_per_day: nil,
+          max_bookings_per_week: nil,
+          max_bookings_per_month: nil
         }
 
       {:ok, profile} ->
@@ -289,7 +295,10 @@ defmodule Tymeslot.Profiles do
           timezone: profile.timezone,
           buffer_minutes: profile.buffer_minutes,
           advance_booking_days: profile.advance_booking_days,
-          min_advance_hours: profile.min_advance_hours
+          min_advance_hours: profile.min_advance_hours,
+          max_bookings_per_day: profile.max_bookings_per_day,
+          max_bookings_per_week: profile.max_bookings_per_week,
+          max_bookings_per_month: profile.max_bookings_per_month
         }
     end
   end
@@ -305,6 +314,10 @@ defmodule Tymeslot.Profiles do
   @spec update_min_advance_hours(profile, non_neg_integer()) :: result(profile)
   def update_min_advance_hours(profile, hours),
     do: Scheduling.update_min_advance_hours(profile, hours)
+
+  @spec update_booking_limit(profile, atom(), String.t() | integer() | nil) :: result(profile)
+  def update_booking_limit(profile, field, value),
+    do: Scheduling.update_booking_limit(profile, field, value)
 
   @doc """
   Validates buffer minutes value.
