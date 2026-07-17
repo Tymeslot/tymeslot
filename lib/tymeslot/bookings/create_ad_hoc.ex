@@ -36,7 +36,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
         }
 
   @spec execute(params()) ::
-          {:ok, Tymeslot.Meetings.MeetingSchema.t()} | {:error, String.t()}
+          {:ok, Tymeslot.Meetings.MeetingSchema.t()} | {:error, String.t() | :time_conflict}
   def execute(params) do
     with :ok <- validate(params) do
       guest_emails = params[:guest_emails] || []
@@ -181,6 +181,9 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
   defp attendees_for(_meeting), do: []
 
   defp map_result({:ok, meeting}), do: {:ok, meeting}
+  # Preserve the time-conflict reason distinctly so callers can tell an occupied
+  # slot apart from a generic booking failure.
+  defp map_result({:error, :time_conflict}), do: {:error, :time_conflict}
   defp map_result({:error, reason}) when is_binary(reason), do: {:error, reason}
   defp map_result({:error, _reason}), do: {:error, "Failed to create meeting"}
 
