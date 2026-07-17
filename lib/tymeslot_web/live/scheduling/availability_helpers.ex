@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.ContextUtils
 
@@ -68,7 +69,9 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
               profile_id: organizer_profile.id,
               max_advance_booking_days: organizer_profile.advance_booking_days,
               min_advance_hours: organizer_profile.min_advance_hours,
-              buffer_minutes: organizer_profile.buffer_minutes
+              buffer_minutes: organizer_profile.buffer_minutes,
+              limit_checker:
+                build_limit_checker(organizer_user_id, organizer_profile, context, date, date)
             }
 
             Calculate.available_slots(
@@ -141,13 +144,16 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
 
       true ->
         with {:ok, owner_timezone} <- get_owner_timezone(organizer_profile) do
+          meeting_type = ContextUtils.get_from_context(context, :meeting_type)
+
           cache_key =
             AvailabilityCache.availability_range_key(
               user_id,
               start_date,
               end_date,
               user_timezone,
-              duration_minutes
+              duration_minutes,
+              meeting_type && meeting_type.id
             )
 
           AvailabilityCache.get_or_compute(cache_key, fn ->
@@ -162,7 +168,9 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
                 max_advance_booking_days: organizer_profile.advance_booking_days,
                 min_advance_hours: organizer_profile.min_advance_hours,
                 buffer_minutes: organizer_profile.buffer_minutes,
-                duration_minutes: duration_minutes
+                duration_minutes: duration_minutes,
+                limit_checker:
+                  build_limit_checker(user_id, organizer_profile, context, start_date, end_date)
               }
 
               Calculate.range_availability(
@@ -188,6 +196,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
     context = %{
       demo_mode: Demo.demo_mode?(socket),
       organizer_profile: socket.assigns.organizer_profile,
+      meeting_type: socket.assigns[:meeting_type],
       debug_calendar_module: socket.private[:debug_calendar_module]
     }
 
@@ -350,6 +359,18 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
 
   defp get_owner_timezone(organizer_profile) do
     {:ok, organizer_profile.timezone || Profiles.get_default_timezone()}
+  end
+
+  # Returns nil when the host has no booking limits configured, keeping the
+  # common path free of extra queries.
+  defp build_limit_checker(organizer_user_id, organizer_profile, context, start_date, end_date) do
+    Checker.build_slot_checker(
+      organizer_user_id,
+      organizer_profile,
+      ContextUtils.get_from_context(context, :meeting_type),
+      start_date,
+      end_date
+    )
   end
 
   defp get_duration_minutes(socket) do

@@ -18,7 +18,8 @@ defmodule Tymeslot.Availability.Calculate do
           optional(:overrides) => list(term()),
           optional(:fallback_availability_fn) => (Date.t() -> term()) | nil,
           optional(:owner_timezone) => String.t(),
-          optional(:min_advance_hours) => non_neg_integer()
+          optional(:min_advance_hours) => non_neg_integer(),
+          optional(:limit_checker) => (DateTime.t() -> boolean()) | nil
         }
 
   @type calendar_day :: %{
