@@ -348,6 +348,47 @@ defmodule TymeslotWeb.AccountLiveTest do
     end
   end
 
+  describe "Admin menu visibility" do
+    setup do
+      original = Application.get_env(:tymeslot, :enable_admin_ui)
+      on_exit(fn -> Application.put_env(:tymeslot, :enable_admin_ui, original) end)
+      :ok
+    end
+
+    test "shows Admin Settings to an admin when the admin UI is enabled",
+         %{conn: conn, user: user} do
+      Application.put_env(:tymeslot, :enable_admin_ui, true)
+      {:ok, _admin} = user |> Changeset.change(%{is_admin: true}) |> Repo.update()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      assert open_user_menu(view) =~ "Admin Settings"
+    end
+
+    test "hides Admin Settings from an admin when the admin UI is disabled",
+         %{conn: conn, user: user} do
+      Application.put_env(:tymeslot, :enable_admin_ui, false)
+      {:ok, _admin} = user |> Changeset.change(%{is_admin: true}) |> Repo.update()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      # The route 404s when the admin UI is off, so the menu entry must not
+      # dangle as a dead end.
+      refute open_user_menu(view) =~ "Admin Settings"
+    end
+
+    test "hides Admin Settings from a non-admin user", %{conn: conn} do
+      Application.put_env(:tymeslot, :enable_admin_ui, true)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      # Sanity check the menu is actually open, so the refute is meaningful.
+      opened = open_user_menu(view)
+      assert opened =~ "Sign Out"
+      refute opened =~ "Admin Settings"
+    end
+  end
+
   describe "Miscellaneous Events" do
     test "ignores validation events", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
@@ -397,5 +438,13 @@ defmodule TymeslotWeb.AccountLiveTest do
       assert ErrorFormatter.format(%{field: "error"}) == %{field: ["error"]}
       assert ErrorFormatter.format(nil) == %{base: ["An unexpected error occurred"]}
     end
+  end
+
+  # The user dropdown renders its panel (Sign Out, Admin Settings, …) only while
+  # open, so tests that assert on menu items must open it first.
+  defp open_user_menu(view) do
+    view
+    |> element("#user-menu button[aria-haspopup='true']")
+    |> render_click()
   end
 end
