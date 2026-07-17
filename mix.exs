@@ -105,12 +105,20 @@ defmodule Tymeslot.MixProject do
       {:meck, "~> 1.1", only: :test},
       {:ex_machina, "~> 2.8", only: :test},
       {:stripity_stripe, "~> 3.3"},
-      # stripity_stripe requires hackney 4.x while caldav_client and tzdata
-      # still declare 1.x requirements. Neither exercises hackney at runtime
-      # (CalDAV sync is a Req implementation and tzdata's auto-update is
-      # disabled), so forcing 4.x is safe. The same override lives in the
-      # umbrella root mix.exs, where it must be repeated because child
-      # overrides do not apply to umbrella-wide resolution.
+      # stripity_stripe requires hackney 4.x, while caldav_client (optional
+      # dependency) and httpoison (pulled in by Wallaby, test-only) still
+      # declare 1.x requirements, so an override is needed to resolve.
+      # hackney 4.x has two real runtime consumers: Swoosh's Postmark
+      # adapter (config :swoosh, :api_client, Swoosh.ApiClient.Hackney,
+      # prod-only) and stripity_stripe itself, which uses hackney as its
+      # non-optional HTTP client for every Stripe API call. CalDAV sync
+      # goes through Req, not hackney, so caldav_client is unaffected.
+      # Neither the email nor the Stripe path is exercised in CI (test
+      # config uses Swoosh.Adapters.Test and Stripe is mocked), so these
+      # need verification in staging after this upgrade.
+      # The same override lives in the umbrella root mix.exs, where it must
+      # be repeated because child overrides do not apply to umbrella-wide
+      # resolution.
       {:hackney, "~> 4.0", override: true},
       {:hammer, "~> 7.1"},
       {:html_sanitize_ex, "~> 1.4"},
