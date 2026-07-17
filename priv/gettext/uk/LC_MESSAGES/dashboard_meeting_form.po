@@ -67,8 +67,8 @@ msgstr "Додати запитання"
 msgid "Add up to three reminder emails for this meeting type. We recommend using only one."
 msgstr "Додайте до трьох електронних листів із нагадуванням про цю зустріч. Рекомендуємо використовувати лише один."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:538
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:569
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:557
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:588
 #, elixir-autogen, elixir-format
 msgid "Added %{label} before"
 msgstr "Додано за %{label} до"
@@ -98,7 +98,7 @@ msgstr "Основний текст"
 msgid "Booking Destination"
 msgstr "Місце збереження бронювань"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:168
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:171
 #, elixir-autogen, elixir-format
 msgid "Brief description of this meeting type"
 msgstr "Короткий опис цього типу зустрічі"
@@ -108,7 +108,7 @@ msgstr "Короткий опис цього типу зустрічі"
 msgid "Calendar availability"
 msgstr "Доступність у календарі"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:289
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:295
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:330
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:351
 #, elixir-autogen, elixir-format
@@ -155,7 +155,7 @@ msgstr "Визначає спосіб введення відповіді під
 msgid "Couldn't save changes"
 msgstr "Не вдалося зберегти зміни"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:318
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:324
 #, elixir-autogen, elixir-format
 msgid "Create Meeting Type"
 msgstr "Створити тип зустрічі"
@@ -191,17 +191,17 @@ msgstr "Дні"
 msgid "Delete"
 msgstr "Видалити"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:165
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:168
 #, elixir-autogen, elixir-format
 msgid "Description (optional)"
 msgstr "Опис (необов’язково)"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:278
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:284
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr "Готово"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:136
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:139
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr "Тривалість (у хвилинах)"
@@ -241,7 +241,7 @@ msgstr "Редагувати"
 msgid "Edit question"
 msgstr "Редагувати запитання"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:153
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:156
 #, elixir-autogen, elixir-format
 msgid "Enter a duration between %{min} and %{max} minutes"
 msgstr "Введіть тривалість від %{min} до %{max} хвилин"
@@ -359,7 +359,7 @@ msgstr "Хвилини"
 msgid "Multiple choice"
 msgstr "Вибір із кількох варіантів"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:117
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:120
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Ім’я"
@@ -487,7 +487,7 @@ msgstr "Обов’язково"
 msgid "Save question"
 msgstr "Зберегти запитання"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:315
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:321
 #, elixir-autogen, elixir-format
 msgid "Saving..."
 msgstr "Збереження..."
@@ -612,7 +612,7 @@ msgstr "Напр., назва компанії"
 msgid "e.g., Enter your company's registered name"
 msgstr "Напр., введіть офіційну назву вашої компанії"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:121
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:124
 #, elixir-autogen, elixir-format
 msgid "e.g., Quick Chat"
 msgstr "Напр., коротка розмова"
@@ -636,3 +636,37 @@ msgstr "Відображається під запитанням - викори�
 #, elixir-autogen, elixir-format
 msgid "Too many changes - saving shortly…"
 msgstr "Забагато змін - збереження за мить…"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:25
+#, elixir-autogen, elixir-format
+msgid "Booking limits"
+msgstr "Ліміти бронювань"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:31
+#, elixir-autogen, elixir-format
+msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
+msgstr ""
+"Обмежте кількість бронювань цього типу, які ви приймаєте. Залиште поле "
+"порожнім, якщо обмеження не потрібні."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:54
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:70
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:86
+#, elixir-autogen, elixir-format
+msgid "No limit"
+msgstr "Без обмежень"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:45
+#, elixir-autogen, elixir-format
+msgid "Per day"
+msgstr "На день"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:77
+#, elixir-autogen, elixir-format
+msgid "Per month"
+msgstr "На місяць"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:61
+#, elixir-autogen, elixir-format
+msgid "Per week"
+msgstr "На тиждень"

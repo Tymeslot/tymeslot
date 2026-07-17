@@ -67,8 +67,8 @@ msgstr "Frage hinzufügen"
 msgid "Add up to three reminder emails for this meeting type. We recommend using only one."
 msgstr "Fügen Sie bis zu drei Erinnerungs-E-Mails für diesen Termintyp hinzu. Wir empfehlen, nur eine zu verwenden."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:538
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:569
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:557
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:588
 #, elixir-autogen, elixir-format
 msgid "Added %{label} before"
 msgstr "%{label} vorher hinzugefügt"
@@ -98,7 +98,7 @@ msgstr "Textinhalt"
 msgid "Booking Destination"
 msgstr "Buchungsziel"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:168
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:171
 #, elixir-autogen, elixir-format
 msgid "Brief description of this meeting type"
 msgstr "Kurze Beschreibung dieses Termintyps"
@@ -108,7 +108,7 @@ msgstr "Kurze Beschreibung dieses Termintyps"
 msgid "Calendar availability"
 msgstr "Kalenderverfügbarkeit"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:289
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:295
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:330
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:351
 #, elixir-autogen, elixir-format
@@ -155,7 +155,7 @@ msgstr "Legt fest, wie Buchende ihre Antwort eingeben."
 msgid "Couldn't save changes"
 msgstr "Änderungen konnten nicht gespeichert werden"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:318
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:324
 #, elixir-autogen, elixir-format
 msgid "Create Meeting Type"
 msgstr "Termintyp erstellen"
@@ -191,17 +191,17 @@ msgstr "Tage"
 msgid "Delete"
 msgstr "Löschen"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:165
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:168
 #, elixir-autogen, elixir-format
 msgid "Description (optional)"
 msgstr "Beschreibung (optional)"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:278
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:284
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr "Fertig"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:136
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:139
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr "Dauer (Minuten)"
@@ -241,7 +241,7 @@ msgstr "Bearbeiten"
 msgid "Edit question"
 msgstr "Frage bearbeiten"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:153
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:156
 #, elixir-autogen, elixir-format
 msgid "Enter a duration between %{min} and %{max} minutes"
 msgstr "Geben Sie eine Dauer zwischen %{min} und %{max} Minuten ein"
@@ -359,7 +359,7 @@ msgstr "Minuten"
 msgid "Multiple choice"
 msgstr "Mehrfachauswahl"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:117
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:120
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Name"
@@ -487,7 +487,7 @@ msgstr "Erforderlich"
 msgid "Save question"
 msgstr "Frage speichern"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:315
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:321
 #, elixir-autogen, elixir-format
 msgid "Saving..."
 msgstr "Wird gespeichert…"
@@ -612,7 +612,7 @@ msgstr "z. B. Firmenname"
 msgid "e.g., Enter your company's registered name"
 msgstr "z. B. Geben Sie den eingetragenen Firmennamen ein"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:121
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:124
 #, elixir-autogen, elixir-format
 msgid "e.g., Quick Chat"
 msgstr "z. B. Kurzes Gespräch"
@@ -636,3 +636,37 @@ msgstr "Wird unter der Frage angezeigt - nutzen Sie ihn, um zu verdeutlichen, wa
 #, elixir-autogen, elixir-format
 msgid "Too many changes - saving shortly…"
 msgstr "Zu viele Änderungen - wird in Kürze gespeichert…"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:25
+#, elixir-autogen, elixir-format
+msgid "Booking limits"
+msgstr "Buchungslimits"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:31
+#, elixir-autogen, elixir-format
+msgid "Cap how many bookings of this type you accept. Leave a field empty for no limit."
+msgstr ""
+"Begrenzen Sie die Anzahl der Buchungen für diesen Termintyp. Lassen Sie ein "
+"Feld leer, wenn es kein Limit geben soll."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:54
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:70
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:86
+#, elixir-autogen, elixir-format
+msgid "No limit"
+msgstr "Kein Limit"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:45
+#, elixir-autogen, elixir-format
+msgid "Per day"
+msgstr "Pro Tag"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:77
+#, elixir-autogen, elixir-format
+msgid "Per month"
+msgstr "Pro Monat"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/limits_section.ex:61
+#, elixir-autogen, elixir-format
+msgid "Per week"
+msgstr "Pro Woche"

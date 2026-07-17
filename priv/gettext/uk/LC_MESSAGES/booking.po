@@ -566,7 +566,7 @@ msgstr "Платіж було скасовано. Будь ласка, спро�
 msgid "Please contact the organizer"
 msgstr "Зв’яжіться з організатором"
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:469
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:472
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below before submitting."
 msgstr "Будь ласка, виправте наведені нижче помилки перед надсиланням."
@@ -1177,7 +1177,7 @@ msgstr "Забронюйте зустріч з %{name}. Оберіть зруч�
 msgid "Pick a time that works for you and book a meeting in seconds."
 msgstr "Оберіть зручний для вас час і забронюйте зустріч за лічені секунди."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:454
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:457
 #, elixir-autogen, elixir-format
 msgid "Preview session expired. Reload the page to continue."
 msgstr "Сеанс попереднього перегляду завершився. Перезавантажте сторінку, щоб продовжити."
@@ -1193,53 +1193,53 @@ msgstr "%{weekday}, %{date}"
 msgid "Add to calendar"
 msgstr "Додати до календаря"
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:68
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:71
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:74
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:77
 #, elixir-autogen, elixir-format
 msgid "Failed to create appointment. Please try again."
 msgstr "Не вдалося створити зустріч. Спробуйте ще раз."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:56
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:62
 #, elixir-autogen, elixir-format
 msgid "Failed to process booking. Please try again."
 msgstr "Не вдалося обробити бронювання. Спробуйте ще раз."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:38
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:44
 #, elixir-autogen, elixir-format
 msgid "Failed to save meeting to database"
 msgstr "Не вдалося зберегти зустріч у базі даних"
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:47
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:53
 #, elixir-autogen, elixir-format
 msgid "Host could not be found. Please refresh and try again."
 msgstr "Організатора не знайдено. Оновіть сторінку та спробуйте ще раз."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:35
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:41
 #, elixir-autogen, elixir-format
 msgid "Organizer is required for booking"
 msgstr "Для бронювання потрібно вказати організатора"
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:41
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:47
 #, elixir-autogen, elixir-format
 msgid "Payments are not available for this booking. Please contact the host."
 msgstr "Оплата для цього бронювання недоступна. Зверніться до організатора."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:50
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:56
 #, elixir-autogen, elixir-format
 msgid "Please fill in all required fields before submitting."
 msgstr "Заповніть усі обов'язкові поля перед надсиланням."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:59
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:65
 #, elixir-autogen, elixir-format
 msgid "This meeting could not be found. Please refresh and try again."
 msgstr "Цю зустріч не знайдено. Оновіть сторінку та спробуйте ще раз."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:29
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:35
 #, elixir-autogen, elixir-format
 msgid "This meeting type is no longer available. Please go back and select another."
 msgstr "Цей тип зустрічі більше недоступний. Поверніться назад і виберіть інший."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:26
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:32
 #, elixir-autogen, elixir-format
 msgid "This meeting type is no longer available. Please refresh the page."
 msgstr "Цей тип зустрічі більше недоступний. Оновіть сторінку."
@@ -1249,7 +1249,7 @@ msgstr "Цей тип зустрічі більше недоступний. Он
 msgid "This time slot is no longer available. Please select a different time."
 msgstr "Цей часовий слот більше недоступний. Виберіть інший час."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:53
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:59
 #, elixir-autogen, elixir-format
 msgid "We couldn't start the payment process. Please try again."
 msgstr "Не вдалося розпочати процес оплати. Спробуйте ще раз."
@@ -1290,3 +1290,9 @@ msgstr "Ваше бронювання вже обробляється. Будь 
 #, elixir-autogen, elixir-format
 msgid "Pick an option below."
 msgstr "Оберіть варіант нижче."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_error_message.ex:26
+#, elixir-autogen, elixir-format
+msgid "The host is no longer accepting bookings for this period. Please pick a different day."
+msgstr ""
+"Організатор більше не приймає бронювання на цей період. Виберіть інший день."
