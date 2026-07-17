@@ -13,10 +13,12 @@ defmodule Tymeslot.Meetings.GuestSchema do
 
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Meetings.ParticipantSchema
 
   @type t :: %__MODULE__{
           id: binary() | nil,
           meeting_id: binary() | nil,
+          participant_id: binary() | nil,
           email: String.t() | nil,
           name: String.t() | nil,
           status: String.t(),
@@ -40,6 +42,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
     field(:confirmation_sent_at, :utc_datetime)
 
     belongs_to(:meeting, MeetingSchema, type: :binary_id)
+    belongs_to(:participant, ParticipantSchema, type: :binary_id)
 
     timestamps(type: :utc_datetime)
   end
@@ -57,7 +60,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
   @spec creation_changeset(t(), map()) :: Ecto.Changeset.t()
   def creation_changeset(guest, attrs) do
     guest
-    |> cast(attrs, [:email, :name, :meeting_id, :status])
+    |> cast(attrs, [:email, :name, :meeting_id, :participant_id, :status])
     |> update_change(:email, &normalize_email/1)
     |> validate_required([:email, :meeting_id])
     |> EmailChangeset.validate_email(:email)
@@ -70,6 +73,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
       message: "has already been added"
     )
     |> foreign_key_constraint(:meeting_id)
+    |> foreign_key_constraint(:participant_id)
   end
 
   @doc """

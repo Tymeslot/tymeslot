@@ -30,6 +30,7 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
           management_token: String.t() | nil,
           cancelled_at: DateTime.t() | nil,
           meeting: MeetingSchema.t() | Ecto.Association.NotLoaded.t() | nil,
+          guests: [Tymeslot.Meetings.GuestSchema.t()] | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -50,6 +51,11 @@ defmodule Tymeslot.Meetings.ParticipantSchema do
     field(:cancelled_at, :utc_datetime)
 
     belongs_to(:meeting, MeetingSchema, type: :binary_id)
+
+    has_many(:guests, Tymeslot.Meetings.GuestSchema,
+      foreign_key: :participant_id,
+      preload_order: [asc: :inserted_at]
+    )
 
     timestamps(type: :utc_datetime)
   end
