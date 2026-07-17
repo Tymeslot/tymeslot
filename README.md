@@ -172,7 +172,18 @@ Optional. Charge attendees through Stripe at booking time. Off by default — se
 
 1. Register a Stripe account for your instance and enable Stripe Connect.
 2. Add Tymeslot as a Connect platform — your instance becomes the platform that hosts' Stripe accounts connect to.
-3. Create a separate webhook endpoint in the Stripe dashboard for Connect events and copy its signing secret.
+3. Create a separate webhook endpoint in the Stripe dashboard for Connect events
+   and copy its signing secret. Point it at
+   `https://<your-domain>/webhooks/stripe/connect`, set it to listen to events
+   on **Connected accounts**, and subscribe it to `checkout.session.completed`,
+   `checkout.session.expired`, `charge.refunded`, `charge.dispute.created`,
+   `charge.dispute.closed`, and `account.updated`.
+
+Tymeslot pins its Stripe API calls to version `2025-11-17.clover`. Create the
+webhook endpoint on that API version (or your account default, if newer);
+endpoints on older versions keep working, as both payload generations are
+read. Upgrading Tymeslot never rotates or invalidates webhook signing
+secrets — existing endpoints and secrets stay valid.
 
 **Environment variables**
 
