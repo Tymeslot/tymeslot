@@ -5,6 +5,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
 
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.ParticipantQueries
 
   describe "sanitize_emails/2" do
     test "trims, downcases and de-duplicates" do
@@ -59,6 +60,48 @@ defmodule Tymeslot.Meetings.GuestsTest do
     test "is a no-op for an empty list" do
       meeting = insert(:meeting)
       assert {:ok, []} = Guests.create_for_meeting(meeting.id, [])
+    end
+  end
+
+  describe "create_for_participant/3" do
+    setup do
+      %{meeting: insert(:meeting)}
+    end
+
+    test "links inserted guests to the participant", %{meeting: meeting} do
+      {:ok, participant} =
+        ParticipantQueries.insert(%{
+          meeting_id: meeting.id,
+          name: "First Booker",
+          email: "first@example.com",
+          timezone: "Etc/UTC",
+          locale: "en"
+        })
+
+      participant_id = participant.id
+
+      assert {:ok, [guest_a, guest_b]} =
+               Guests.create_for_participant(meeting.id, participant_id, [
+                 "guest-a@example.com",
+                 "guest-b@example.com"
+               ])
+
+      assert guest_a.participant_id == participant_id
+      assert guest_b.participant_id == participant_id
+      assert guest_a.meeting_id == meeting.id
+    end
+
+    test "returns {:ok, []} for an empty list", %{meeting: meeting} do
+      {:ok, participant} =
+        ParticipantQueries.insert(%{
+          meeting_id: meeting.id,
+          name: "First Booker",
+          email: "first@example.com",
+          timezone: "Etc/UTC",
+          locale: "en"
+        })
+
+      assert {:ok, []} = Guests.create_for_participant(meeting.id, participant.id, [])
     end
   end
 

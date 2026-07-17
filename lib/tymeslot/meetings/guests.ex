@@ -57,18 +57,23 @@ defmodule Tymeslot.Meetings.Guests do
   def create_for_meeting(_meeting_id, []), do: {:ok, []}
 
   def create_for_meeting(meeting_id, emails) when is_binary(meeting_id) and is_list(emails) do
-    result =
-      Enum.reduce_while(emails, {:ok, []}, fn email, {:ok, acc} ->
-        case GuestQueries.insert_guest(%{meeting_id: meeting_id, email: email}) do
-          {:ok, guest} -> {:cont, {:ok, [guest | acc]}}
-          {:error, changeset} -> {:halt, {:error, changeset}}
-        end
-      end)
+    insert_guests(%{meeting_id: meeting_id}, emails)
+  end
 
-    case result do
-      {:ok, guests} -> {:ok, Enum.reverse(guests)}
-      error -> error
-    end
+  @doc """
+  Inserts sanitised guest emails for a group-booking participant.
+
+  Guests belong to the participant who added them and count towards the
+  meeting's seats. Intended to run inside the seat-booking transaction so a
+  failure rolls the whole seat back.
+  """
+  @spec create_for_participant(binary(), binary(), [String.t()]) ::
+          {:ok, [GuestSchema.t()]} | {:error, Ecto.Changeset.t()}
+  def create_for_participant(_meeting_id, _participant_id, []), do: {:ok, []}
+
+  def create_for_participant(meeting_id, participant_id, emails)
+      when is_binary(meeting_id) and is_binary(participant_id) and is_list(emails) do
+    insert_guests(%{meeting_id: meeting_id, participant_id: participant_id}, emails)
   end
 
   @doc "Looks up a guest by their RSVP token without mutating anything."
@@ -115,6 +120,21 @@ defmodule Tymeslot.Meetings.Guests do
       |> Map.update!(:total, &(&1 + 1))
       |> Map.update!(GuestSchema.status_key(status), &(&1 + 1))
     end)
+  end
+
+  defp insert_guests(base_attrs, emails) do
+    result =
+      Enum.reduce_while(emails, {:ok, []}, fn email, {:ok, acc} ->
+        case GuestQueries.insert_guest(Map.put(base_attrs, :email, email)) do
+          {:ok, guest} -> {:cont, {:ok, [guest | acc]}}
+          {:error, changeset} -> {:halt, {:error, changeset}}
+        end
+      end)
+
+    case result do
+      {:ok, guests} -> {:ok, Enum.reverse(guests)}
+      error -> error
+    end
   end
 
   defp valid_email?(email), do: EmailValidator.validate(email) == :ok
