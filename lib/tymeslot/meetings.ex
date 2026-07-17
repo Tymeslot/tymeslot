@@ -18,6 +18,7 @@ defmodule Tymeslot.Meetings do
     MeetingListQueries,
     MeetingQueries,
     MeetingSchema,
+    MeetingState,
     VideoRooms
   }
 
@@ -378,20 +379,15 @@ defmodule Tymeslot.Meetings do
     MeetingQueries.get_meeting_by_uid_for_organizer(uid, organizer_user_id)
   end
 
-  # Meeting statuses that still represent a live booking, mirroring
-  # `Bookings.Cancel.execute_external/1`'s definition of "still active" —
-  # the closest existing precedent for which statuses represent a meeting a
-  # user should still be able to interact with. "cancelled", "completed",
-  # "awaiting_payment", and "expired" are excluded.
-  @exportable_statuses ["confirmed", "pending", "reschedule_requested"]
-
   @doc """
   Exports a single meeting as iCalendar (`.ics`) content, scoped to its
   organizer via the same IDOR-safe lookup as `get_meeting_by_uid_for_organizer/2`.
 
-  Returns `{:error, :not_found}` for meetings that are no longer active (e.g.
-  cancelled) so the public download URL can't be used to confirm a cancelled
-  booking ever existed.
+  Returns `{:error, :not_found}` for meetings with no live calendar event
+  expected right now — cancelled, completed, or under a pending reschedule
+  request (`MeetingState.expects_calendar_event?/1`) — so the public download
+  URL can't be used to confirm a cancelled booking ever existed, or to
+  produce an .ics for a voided time slot.
 
   Runs the meeting through `ContentBuilder.build_appointment_details/1` — the
   same transformation the confirmation/reminder emails use for timezone
@@ -420,7 +416,7 @@ defmodule Tymeslot.Meetings do
     end
   end
 
-  defp exportable?(%{status: status}), do: status in @exportable_statuses
+  defp exportable?(meeting), do: MeetingState.expects_calendar_event?(meeting)
 
   @doc """
   Updates a meeting for a specific user.

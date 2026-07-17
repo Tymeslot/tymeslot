@@ -29,6 +29,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingState
   require Logger
 
   @doc """
@@ -108,9 +109,24 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
       {:ok, meeting} ->
         Logger.metadata(user_id: meeting.organizer_user_id)
-        Logger.info("Deleting calendar event", meeting_id: meeting_id, uid: meeting.uid)
 
-        delete_event_for_meeting(meeting, meeting_id)
+        if MeetingState.expects_calendar_event?(meeting) do
+          # The meeting has become live again since this deletion was
+          # scheduled (e.g. the attendee rebooked after a reschedule
+          # request). Deleting now would strip the event of a meeting that
+          # currently expects one — skip and let the live state stand.
+          Logger.info(
+            "Meeting now expects a calendar event, skipping stale deletion",
+            meeting_id: meeting_id,
+            uid: meeting.uid
+          )
+
+          :ok
+        else
+          Logger.info("Deleting calendar event", meeting_id: meeting_id, uid: meeting.uid)
+
+          delete_event_for_meeting(meeting, meeting_id)
+        end
 
       {:error, :not_found} ->
         # Meeting doesn't exist, but deletion can still succeed

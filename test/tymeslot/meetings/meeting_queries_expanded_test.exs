@@ -364,6 +364,30 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
                )
     end
 
+    test "excludes confirmed meetings with a pending reschedule request" do
+      user = insert(:user)
+      video_integration = insert(:video_integration, user: user)
+      {start_time, end_time} = future_times(2)
+
+      _voided =
+        insert(:meeting,
+          organizer_user: user,
+          organizer_user_id: user.id,
+          status: "confirmed",
+          reschedule_requested_at: DateTime.utc_now(),
+          video_integration_id: video_integration.id,
+          video_room_id: nil,
+          start_time: start_time,
+          end_time: end_time
+        )
+
+      assert [] =
+               MeetingListQueries.list_user_meetings_missing_video_rooms(
+                 user.id,
+                 DateTime.utc_now()
+               )
+    end
+
     test "honours the limit parameter" do
       user = insert(:user)
       video_integration = insert(:video_integration, user: user)
@@ -389,6 +413,30 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
         MeetingListQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
 
       assert Enum.map(results, & &1.id) == [sooner.id, later.id]
+    end
+  end
+
+  describe "upcoming_meetings/1" do
+    test "returns a plain confirmed upcoming meeting" do
+      {start_time, end_time} = build_meeting_times(1, 60)
+      meeting = insert(:meeting, status: "confirmed", start_time: start_time, end_time: end_time)
+
+      results = MeetingListQueries.upcoming_meetings()
+
+      assert Enum.map(results, & &1.id) == [meeting.id]
+    end
+
+    test "excludes a confirmed meeting with a pending reschedule request" do
+      {start_time, end_time} = build_meeting_times(1, 60)
+
+      insert(:meeting,
+        status: "confirmed",
+        reschedule_requested_at: DateTime.utc_now(),
+        start_time: start_time,
+        end_time: end_time
+      )
+
+      assert MeetingListQueries.upcoming_meetings() == []
     end
   end
 end

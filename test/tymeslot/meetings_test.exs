@@ -329,9 +329,11 @@ defmodule Tymeslot.MeetingsTest do
 
       assert :ok = Meetings.send_reschedule_request(meeting)
 
-      # Verify status updated
+      # `status` is left untouched — only `reschedule_requested_at` marks the
+      # meeting as awaiting a new time (see `Bookings.RescheduleRequest`).
       updated_meeting = Repo.get(MeetingSchema, meeting.id)
-      assert updated_meeting.status == "reschedule_requested"
+      assert updated_meeting.status == "confirmed"
+      assert %DateTime{} = updated_meeting.reschedule_requested_at
     end
 
     test "returns error when policy blocks reschedule" do

@@ -169,7 +169,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   @spec cancel_reminder_emails(term()) :: :ok
   def cancel_reminder_emails(meeting_id) do
     {deleted, _result} =
-      ObanJobQueries.delete_reminder_jobs_for_meeting(meeting_id, to_string(EmailWorker), %{})
+      ObanJobQueries.delete_reminder_jobs_for_meeting(meeting_id, EmailWorker, %{})
 
     Logger.info("Cancelled pending reminder email jobs",
       meeting_id: meeting_id,
@@ -221,7 +221,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   defp delete_existing_reminder_jobs(meeting_id, reminder_value, reminder_unit) do
     ObanJobQueries.delete_reminder_jobs_for_meeting(
       meeting_id,
-      to_string(EmailWorker),
+      EmailWorker,
       %{"reminder_value" => reminder_value, "reminder_unit" => reminder_unit}
     )
   end

@@ -94,6 +94,22 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   @doc """
+  Cancels pending reminder-email jobs for a meeting.
+
+  The inverse of `schedule_reminder_notifications/1` — together the two
+  functions are the only place reminder jobs are created or removed. Every
+  transition that changes whether a meeting has a valid future slot
+  (cancellation, an organizer reschedule request, or rebooking after one)
+  calls whichever of the two it means directly: callers already know which
+  side they want, so there is no reconciling wrapper here.
+  """
+  @spec cancel_reminder_notifications(%{atom() => term()}) :: :ok | {:error, term()}
+  def cancel_reminder_notifications(meeting) do
+    worker_module = get_email_worker_module()
+    worker_module.cancel_reminder_emails(meeting.id)
+  end
+
+  @doc """
   Schedules cancellation notifications via EmailScheduler.
   """
   @spec send_cancellation_notifications(%{atom() => term()}) ::

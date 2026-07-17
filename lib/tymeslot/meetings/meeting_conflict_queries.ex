@@ -6,6 +6,7 @@ defmodule Tymeslot.Meetings.MeetingConflictQueries do
   import Ecto.Query, warn: false
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
 
   @doc """
@@ -16,11 +17,9 @@ defmodule Tymeslot.Meetings.MeetingConflictQueries do
   @spec time_conflict_exists?(DateTime.t(), DateTime.t(), String.t() | nil) :: boolean()
   def time_conflict_exists?(start_time, end_time, exclude_uid \\ nil) do
     query =
-      from(m in Meeting,
-        where:
-          m.status in ["confirmed", "pending", "awaiting_payment"] and
-            (m.start_time < ^end_time and m.end_time > ^start_time)
-      )
+      Meeting
+      |> MeetingState.where_slot_live()
+      |> where([m], m.start_time < ^end_time and m.end_time > ^start_time)
 
     query =
       if exclude_uid do
@@ -42,12 +41,9 @@ defmodule Tymeslot.Meetings.MeetingConflictQueries do
           {:ok, :no_conflicts} | {:error, pos_integer()}
   def count_locked_conflicts(buffered_start, buffered_end, exclude_uid, organizer_user_id) do
     base =
-      from(m in Meeting,
-        where:
-          m.status in ["confirmed", "pending", "awaiting_payment"] and
-            m.start_time < ^buffered_end and
-            m.end_time > ^buffered_start
-      )
+      Meeting
+      |> MeetingState.where_slot_live()
+      |> where([m], m.start_time < ^buffered_end and m.end_time > ^buffered_start)
 
     base =
       if organizer_user_id do

@@ -1,5 +1,6 @@
 defmodule Tymeslot.Integrations.Calendar.SyncTest do
   use Tymeslot.DataCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :integrations
   @moduletag :unit
@@ -10,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
 
@@ -51,7 +53,9 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
       assert :ok = Sync.reconcile(integration.id, "evt-cancelled-1", nil, :deleted)
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
-      assert updated.calendar_sync_status == "externally_deleted"
+      # A cancelled meeting's slot is void: we deleted its provider event
+      # ourselves, so the absence is expected and must not be mislabelled.
+      assert updated.calendar_sync_status == nil
       # Status remains cancelled, no double-cancel
       assert updated.status == "cancelled"
       assert updated.cancelled_at == meeting.cancelled_at
@@ -70,9 +74,54 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
       assert :ok = Sync.reconcile(integration.id, "evt-completed-1", nil, :deleted)
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
-      assert updated.calendar_sync_status == "externally_deleted"
+      # A completed meeting is no longer interactive, so it never expects a
+      # provider event either: nothing is left to flag or act on.
+      assert updated.calendar_sync_status == nil
       # Status remains completed
       assert updated.status == "completed"
+    end
+
+    test "does not cancel a confirmed meeting with a pending reschedule request, and does not mislabel its sync status" do
+      integration = insert(:calendar_integration)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "evt-resched-pending-1",
+          status: "confirmed",
+          reschedule_requested_at: DateTime.utc_now(:second)
+        )
+
+      assert :ok = Sync.reconcile(integration.id, "evt-resched-pending-1", nil, :deleted)
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      # We deleted the provider event ourselves when the reschedule was
+      # requested — its absence is expected, not an external deletion.
+      assert updated.calendar_sync_status == nil
+      assert updated.status == "confirmed"
+      assert updated.cancelled_at == nil
+
+      assert all_enqueued(worker: EmailWorker) == []
+    end
+
+    test "does not cancel a meeting with the legacy reschedule_requested status" do
+      integration = insert(:calendar_integration)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "evt-resched-legacy-1",
+          status: "reschedule_requested"
+        )
+
+      assert :ok = Sync.reconcile(integration.id, "evt-resched-legacy-1", nil, :deleted)
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == nil
+      assert updated.status == "reschedule_requested"
+      assert updated.cancelled_at == nil
+
+      assert all_enqueued(worker: EmailWorker) == []
     end
   end
 
@@ -92,6 +141,28 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
       assert updated.calendar_sync_status == "externally_modified"
       # Meeting status unchanged — :modified does not cancel
       assert updated.status == meeting.status
+    end
+
+    test "does not mislabel a meeting with a pending reschedule request as externally modified" do
+      integration = insert(:calendar_integration)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "evt-resched-pending-modified-1",
+          status: "confirmed",
+          reschedule_requested_at: DateTime.utc_now(:second)
+        )
+
+      assert :ok =
+               Sync.reconcile(integration.id, "evt-resched-pending-modified-1", nil, :modified)
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      # We deleted the provider event ourselves when the reschedule was
+      # requested — a lingering async edit signal for it must not be
+      # mislabelled as an external modification of a live event.
+      assert updated.calendar_sync_status == nil
+      assert updated.status == "confirmed"
     end
   end
 

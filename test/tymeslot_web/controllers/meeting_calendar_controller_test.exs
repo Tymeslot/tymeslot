@@ -94,6 +94,22 @@ defmodule TymeslotWeb.MeetingCalendarControllerTest do
       assert conn.status == 404
     end
 
+    test "404s for a confirmed meeting with a pending reschedule request, since the slot is void",
+         %{conn: conn} do
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: "pendingreschedulehost")
+
+      meeting =
+        confirmed_meeting(
+          organizer_user: user,
+          reschedule_requested_at: DateTime.utc_now(:second)
+        )
+
+      conn = get(conn, ~p"/#{profile.username}/meeting/#{meeting.uid}/calendar.ics")
+
+      assert conn.status == 404
+    end
+
     test "404s for an awaiting-payment meeting that never became a real booking", %{conn: conn} do
       user = insert(:user)
       profile = insert(:profile, user: user, username: "unpaidhost")

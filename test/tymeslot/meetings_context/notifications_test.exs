@@ -72,7 +72,10 @@ defmodule Tymeslot.MeetingsContext.NotificationsTest do
       case result do
         :ok ->
           {:ok, updated} = MeetingQueries.get_meeting_by_uid(meeting.uid)
-          assert updated.status == "reschedule_requested"
+          # `status` is left untouched — only `reschedule_requested_at` marks
+          # the meeting as awaiting a new time (see `Bookings.RescheduleRequest`).
+          assert updated.status == "confirmed"
+          assert %DateTime{} = updated.reschedule_requested_at
 
         {:error, reason} ->
           assert is_binary(reason) or is_atom(reason)

@@ -336,7 +336,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert render(view) =~ "Reschedule request sent to To Reschedule"
 
       updated_meeting = Repo.get(MeetingSchema, meeting.id)
-      assert updated_meeting.status == "reschedule_requested"
+      # The request marks the meeting as awaiting a new time and leaves the
+      # lifecycle status alone, so it survives the round trip to rebooking.
+      assert updated_meeting.status == "confirmed"
+      assert %DateTime{} = updated_meeting.reschedule_requested_at
     end
 
     test "dismissing the reschedule modal does not send a request", %{conn: conn, user: user} do

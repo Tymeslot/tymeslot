@@ -10,6 +10,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
 
   alias Ecto.UUID
   alias Tymeslot.Meetings.CalendarEventSync
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
 
   setup :verify_on_exit!
@@ -103,8 +104,13 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
   end
 
   describe "delete/2" do
+    # Deletion is only ever scheduled once the meeting's slot has already
+    # been voided (cancellation, or a pending reschedule request) — mirror
+    # that here so the guard added below (`expects_calendar_event?/1`)
+    # doesn't skip these as stale.
     test "deletes the event" do
       %{meeting: meeting} = setup_calendar_scenario()
+      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
       uid = meeting.uid
 
       expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _ctx -> :ok end)
@@ -114,6 +120,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
 
     test "treats a not_found event as success (idempotent)" do
       %{meeting: meeting} = setup_calendar_scenario()
+      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
       uid = meeting.uid
 
       expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _ctx -> {:error, :not_found} end)
@@ -130,6 +137,24 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
 
     test "succeeds even if the meeting does not exist (graceful degradation)" do
       assert :ok = CalendarEventSync.delete(UUID.generate(), 1)
+    end
+
+    test "skips deletion when the meeting has become live again since the job was scheduled" do
+      %{meeting: meeting} = setup_calendar_scenario()
+
+      # The reschedule-request flow voids the slot (and schedules this
+      # deletion) by setting reschedule_requested_at.
+      {:ok, meeting} =
+        MeetingQueries.update_meeting(meeting, %{
+          reschedule_requested_at: DateTime.utc_now(:second)
+        })
+
+      # Before the (possibly retried) job executes, the attendee rebooks —
+      # clearing reschedule_requested_at makes the meeting live again.
+      {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{reschedule_requested_at: nil})
+
+      # delete_event must NOT be called — no expectation set, verify_on_exit! enforces it.
+      assert :ok = CalendarEventSync.delete(meeting.id, 1)
     end
   end
 

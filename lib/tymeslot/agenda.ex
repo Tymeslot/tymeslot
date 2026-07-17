@@ -67,7 +67,8 @@ defmodule Tymeslot.Agenda do
   # --- Gathering & merging ---------------------------------------------------
 
   defp gather_entries(user, integration_ids, calendar_names, overrides, now, window_end, tz) do
-    # The `/2` query filters to confirmed bookings; `/1` would include pending
+    # The `/2` query filters to live confirmed bookings, excluding slots
+    # voided by a pending reschedule request; `/1` would include pending
     # and cancelled ones, which have no place on the agenda.
     meetings = Meetings.list_upcoming_meetings_for_user(user.email, @meeting_limit)
 

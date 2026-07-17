@@ -129,6 +129,28 @@ defmodule Tymeslot.Bookings.CancelExternalCascadeTest do
       assert all_enqueued(worker: TelegramWorker) == []
       assert all_enqueued(worker: CalendarEventWorker) == []
     end
+
+    test "returns {:ok, meeting} without side effects for a confirmed meeting with a pending reschedule request" do
+      user = insert(:user)
+
+      meeting =
+        insert(:meeting,
+          organizer_user: user,
+          status: "confirmed",
+          reschedule_requested_at: DateTime.utc_now()
+        )
+
+      insert(:webhook, user: user, events: ["meeting.cancelled"])
+      insert(:telegram_integration, user: user, events: ["meeting.cancelled"])
+
+      assert {:ok, result} = Cancel.execute_external(meeting)
+      assert result.status == "confirmed"
+
+      assert all_enqueued(worker: EmailWorker) == []
+      assert all_enqueued(worker: WebhookWorker) == []
+      assert all_enqueued(worker: TelegramWorker) == []
+      assert all_enqueued(worker: CalendarEventWorker) == []
+    end
   end
 
   describe "parity between execute/1 and execute_external/1" do

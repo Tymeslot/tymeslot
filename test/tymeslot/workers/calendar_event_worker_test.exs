@@ -11,6 +11,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
   alias Ecto.UUID
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Workers.CalendarEventWorker
 
@@ -249,8 +250,13 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
   end
 
   describe "perform/1 - delete action" do
+    # Deletion is only ever scheduled once the meeting's slot has already
+    # been voided (cancellation, or a pending reschedule request) — mirror
+    # that here so `CalendarEventSync.delete/2`'s `expects_calendar_event?/1`
+    # guard doesn't skip these as stale.
     test "deletes event" do
       %{meeting: meeting} = setup_calendar_scenario()
+      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
       uid = meeting.uid
 
       expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _id -> :ok end)
@@ -264,6 +270,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
 
     test "considers not_found as success for deletion (idempotent)" do
       %{integration: integration, meeting: meeting} = setup_calendar_scenario()
+      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
       uid = meeting.uid
 
       expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, meeting ->
@@ -408,6 +415,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
       %{integration: integration, meeting: meeting} =
         setup_calendar_scenario_with_paths()
 
+      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
       uid = meeting.uid
 
       expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _meeting ->

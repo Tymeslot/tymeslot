@@ -53,6 +53,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           status: String.t(),
           cancelled_at: DateTime.t() | nil,
           cancellation_reason: String.t() | nil,
+          reschedule_requested_at: DateTime.t() | nil,
           organizer_email_sent: boolean(),
           attendee_email_sent: boolean(),
           reminder_email_sent: boolean(),
@@ -153,6 +154,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:status, :string, default: "pending")
     field(:cancelled_at, :utc_datetime)
     field(:cancellation_reason, :string)
+    # Set while an organizer reschedule request is pending; independent of
+    # `status` (see `Tymeslot.Meetings.MeetingState`). Cleared once the
+    # attendee books a new time.
+    field(:reschedule_requested_at, :utc_datetime)
 
     # Email tracking
     field(:organizer_email_sent, :boolean, default: false)
@@ -248,6 +253,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :reminder_email_sent,
     :cancelled_at,
     :cancellation_reason,
+    :reschedule_requested_at,
     :calendar_sync_status,
     :calendar_sync_status_dismissed_at,
     :provider_event_id,

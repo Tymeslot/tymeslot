@@ -8,10 +8,10 @@ defmodule Tymeslot.Bookings.Cancel do
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Clock
-  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -55,7 +55,6 @@ defmodule Tymeslot.Bookings.Cancel do
 
         with {:ok, updated_meeting} <- update_meeting_status(meeting),
              :ok <- Meetings.cancel_calendar_event(updated_meeting),
-             :ok <- EmailScheduler.cancel_reminder_emails(updated_meeting.id),
              :ok <- delete_provider_video_room(updated_meeting),
              :ok <- send_cancellation_notifications(updated_meeting) do
           {:ok, updated_meeting}
@@ -84,41 +83,25 @@ defmodule Tymeslot.Bookings.Cancel do
 
   Bypasses policy checks (external deletions may arrive for past meetings)
   and skips calendar event deletion (the event is already gone). Only
-  proceeds if the meeting is still in an active status.
+  proceeds if the meeting still expects a provider event to exist (see
+  `MeetingState.expects_calendar_event?/1`) — a void slot, such as a
+  pending reschedule request, legitimately has no event, so its absence
+  must not trigger an auto-cancel.
 
   Returns {:ok, meeting} or {:error, reason}
   """
   @spec execute_external(Meeting.t()) :: {:ok, Meeting.t()} | {:error, atom() | String.t()}
-  def execute_external(%Meeting{status: status} = meeting)
-      when status in ["confirmed", "pending", "reschedule_requested"] do
-    Logger.info("Auto-cancelling externally deleted meeting",
-      meeting_id: meeting.id,
-      uid: meeting.uid
-    )
-
-    with {:ok, updated_meeting} <- update_meeting_status_external(meeting),
-         :ok <- EmailScheduler.cancel_reminder_emails(updated_meeting.id),
-         :ok <- delete_provider_video_room(updated_meeting),
-         :ok <- send_cancellation_notifications(updated_meeting) do
-      {:ok, updated_meeting}
+  def execute_external(%Meeting{} = meeting) do
+    if MeetingState.expects_calendar_event?(meeting) do
+      auto_cancel_external(meeting)
     else
-      {:error, reason} = error ->
-        Logger.error("Failed to auto-cancel externally deleted meeting",
-          meeting_id: meeting.id,
-          reason: inspect(reason)
-        )
+      Logger.info("Skipping auto-cancel for externally deleted meeting",
+        meeting_id: meeting.id,
+        status: meeting.status
+      )
 
-        error
+      {:ok, meeting}
     end
-  end
-
-  def execute_external(%Meeting{status: status} = meeting) do
-    Logger.info("Skipping auto-cancel for externally deleted meeting",
-      meeting_id: meeting.id,
-      status: status
-    )
-
-    {:ok, meeting}
   end
 
   @doc """
@@ -133,6 +116,27 @@ defmodule Tymeslot.Bookings.Cancel do
   end
 
   # Private functions
+
+  defp auto_cancel_external(meeting) do
+    Logger.info("Auto-cancelling externally deleted meeting",
+      meeting_id: meeting.id,
+      uid: meeting.uid
+    )
+
+    with {:ok, updated_meeting} <- update_meeting_status_external(meeting),
+         :ok <- delete_provider_video_room(updated_meeting),
+         :ok <- send_cancellation_notifications(updated_meeting) do
+      {:ok, updated_meeting}
+    else
+      {:error, reason} = error ->
+        Logger.error("Failed to auto-cancel externally deleted meeting",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        error
+    end
+  end
 
   defp update_meeting_status(meeting) do
     attrs = %{

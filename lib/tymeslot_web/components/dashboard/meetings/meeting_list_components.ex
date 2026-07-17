@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingState
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
 
@@ -343,13 +344,13 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     <span :if={@meeting.status == "cancelled"} class="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-red-100 shadow-sm">
       <CoreComponents.icon name="hero-x-mark" class="w-3 h-3" /> Cancelled
     </span>
-    <span :if={@meeting.status == "reschedule_requested"} class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-amber-100 shadow-sm">
+    <span :if={@meeting.status != "cancelled" and MeetingState.awaiting_new_time?(@meeting)} class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-amber-100 shadow-sm">
       <CoreComponents.icon name="hero-clock" class="w-3 h-3" /> Reschedule Requested
     </span>
-    <span :if={@meeting.status not in ["cancelled", "reschedule_requested"] and Helpers.past_meeting?(@meeting)} class="inline-flex items-center gap-1.5 px-3 py-1 bg-tymeslot-100 text-tymeslot-600 text-token-xs font-black uppercase tracking-wider rounded-full border border-tymeslot-200 shadow-sm">
+    <span :if={@meeting.status != "cancelled" and !MeetingState.awaiting_new_time?(@meeting) and Helpers.past_meeting?(@meeting)} class="inline-flex items-center gap-1.5 px-3 py-1 bg-tymeslot-100 text-tymeslot-600 text-token-xs font-black uppercase tracking-wider rounded-full border border-tymeslot-200 shadow-sm">
       <CoreComponents.icon name="hero-check" class="w-3 h-3" /> Completed
     </span>
-    <span :if={@meeting.status not in ["cancelled", "reschedule_requested"] and !Helpers.past_meeting?(@meeting)} class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-emerald-100 shadow-sm">
+    <span :if={@meeting.status != "cancelled" and !MeetingState.awaiting_new_time?(@meeting) and !Helpers.past_meeting?(@meeting)} class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-emerald-100 shadow-sm">
       <CoreComponents.icon name="hero-calendar-days" class="w-3 h-3" /> Scheduled
     </span>
     """

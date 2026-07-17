@@ -11,6 +11,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Utils.ReminderUtils
 
   @spec handle_confirmation_emails(%{String.t() => term()}) ::
@@ -23,11 +24,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_reminder_emails(%{"meeting_id" => meeting_id} = args) do
     with_meeting(meeting_id, "reminder emails", fn meeting ->
-      # "reschedule_requested" means the original time slot is void until the
-      # attendee books a new one — reminding anyone of it would contradict the
-      # reschedule request email. Pending reminder jobs are deleted when the
-      # request is sent; this guards any job already in flight at that moment.
-      if meeting.status in ["cancelled", "reschedule_requested"] do
+      # A void slot (cancelled, or an organizer reschedule request pending)
+      # means the original time is no longer valid — reminding anyone of it
+      # would contradict the cancellation/reschedule-request email. Pending
+      # reminder jobs are deleted when the slot is voided; this guards any
+      # job already in flight at that moment.
+      if MeetingState.slot_void?(meeting) do
         Logger.info("Skipping reminder emails for inactive meeting",
           meeting_id: meeting_id,
           status: meeting.status

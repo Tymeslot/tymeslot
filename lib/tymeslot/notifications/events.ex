@@ -39,6 +39,11 @@ defmodule Tymeslot.Notifications.Events do
     # Send email notifications
     result = Orchestrator.send_cancellation_notifications(meeting)
 
+    # Cancel pending reminders — a cancellation event already tells us the
+    # slot is void, so call the canceller directly. Failures are logged but
+    # never fail the cancellation itself.
+    cancel_reminders(meeting)
+
     # Dispatch webhooks (don't fail if webhooks fail)
     Dispatcher.dispatch(:meeting_cancelled, meeting)
 
@@ -63,7 +68,7 @@ defmodule Tymeslot.Notifications.Events do
     # still aimed at the old time and recreates the ones deleted when an
     # organizer reschedule request voided the original slot. Failures are
     # logged but never fail the reschedule itself.
-    reschedule_reminders(updated_meeting)
+    schedule_reminders(updated_meeting)
 
     # Dispatch webhooks (don't fail if webhooks fail)
     Dispatcher.dispatch(:meeting_rescheduled, updated_meeting)
@@ -77,7 +82,40 @@ defmodule Tymeslot.Notifications.Events do
     result
   end
 
-  defp reschedule_reminders(meeting) do
+  @doc """
+  Handles an organizer's reschedule request: the current time slot becomes
+  void, so any pending reminder jobs still pointing at it are cancelled.
+  Rebooking (`meeting_rescheduled/2`) recreates them.
+
+  Unlike the other event handlers here, failures are NOT swallowed: voiding
+  the slot is a correctness invariant the caller (`Bookings.RescheduleRequest`)
+  must be able to react to, not a best-effort side notification.
+  """
+  @spec reschedule_requested(term()) :: :ok | {:error, term()}
+  def reschedule_requested(meeting) do
+    cancel_reminders_strict(meeting)
+  end
+
+  defp cancel_reminders_strict(meeting) do
+    Orchestrator.cancel_reminder_notifications(meeting)
+  end
+
+  defp cancel_reminders(meeting) do
+    case Orchestrator.cancel_reminder_notifications(meeting) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to cancel reminder jobs",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
+  end
+
+  defp schedule_reminders(meeting) do
     case Orchestrator.schedule_reminder_notifications(meeting) do
       :ok ->
         :ok
@@ -86,7 +124,7 @@ defmodule Tymeslot.Notifications.Events do
         :ok
 
       {:error, reason} ->
-        Logger.warning("Failed to re-schedule reminders after reschedule",
+        Logger.warning("Failed to schedule reminder jobs",
           meeting_id: meeting.id,
           reason: inspect(reason)
         )

@@ -20,6 +20,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   alias Tymeslot.Emails.EmailService
   alias Tymeslot.Meetings.MeetingCalendarQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingState
 
   @type signal :: :deleted | :modified
 
@@ -74,38 +75,33 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   defp status_for(:deleted), do: "externally_deleted"
   defp status_for(:modified), do: "externally_modified"
 
+  # Both signals share the same conditional-update shape and differ only in
+  # the status literal and what happens on a successful write. A void slot
+  # (e.g. a pending reschedule request) has no live provider event to have
+  # been deleted or modified externally, so both signals are guarded
+  # uniformly by `expects_calendar_event?/1` — otherwise the async-deletion
+  # window around a reschedule request could mislabel our own voiding as an
+  # external change.
   @spec apply_status_change(Meeting.t(), String.t(), signal()) :: :ok | {:error, term()}
-  defp apply_status_change(meeting, "externally_deleted", :deleted) do
-    case MeetingCalendarQueries.update_calendar_sync_status_if_changed(
-           meeting.id,
-           "externally_deleted"
-         ) do
-      {:ok, %{} = updated_meeting} ->
-        Logger.info("Calendar sync status updated",
-          meeting_id: meeting.id,
-          signal: :deleted,
-          new_status: "externally_deleted"
-        )
+  defp apply_status_change(meeting, new_status, signal) do
+    if MeetingState.expects_calendar_event?(meeting) do
+      update_calendar_sync_status(meeting, new_status, signal)
+    else
+      Logger.info(
+        "Ignoring external signal for meeting with no expected calendar event",
+        meeting_id: meeting.id,
+        signal: signal,
+        status: meeting.status
+      )
 
-        auto_cancel(meeting, updated_meeting)
-
-      {:ok, :already_set} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to update calendar sync status",
-          meeting_id: meeting.id,
-          signal: :deleted,
-          error: reason
-        )
-
-        {:error, reason}
+      :ok
     end
   end
 
-  defp apply_status_change(meeting, new_status, signal) do
-    # Use conditional update to prevent duplicate emails when the same
-    # signal arrives twice (e.g., webhook retry or concurrent reconciliation).
+  defp update_calendar_sync_status(meeting, new_status, signal) do
+    # Use conditional update to prevent duplicate emails/cancellations when
+    # the same signal arrives twice (e.g., webhook retry or concurrent
+    # reconciliation).
     case MeetingCalendarQueries.update_calendar_sync_status_if_changed(meeting.id, new_status) do
       {:ok, %{} = updated_meeting} ->
         Logger.info("Calendar sync status updated",
@@ -114,7 +110,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
           new_status: new_status
         )
 
-        notify_host(updated_meeting, signal)
+        apply_signal_continuation(signal, meeting, updated_meeting)
 
       {:ok, :already_set} ->
         :ok
@@ -129,6 +125,13 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
         {:error, reason}
     end
   end
+
+  @spec apply_signal_continuation(signal(), Meeting.t(), Meeting.t()) :: :ok | {:error, term()}
+  defp apply_signal_continuation(:deleted, meeting, updated_meeting),
+    do: auto_cancel(meeting, updated_meeting)
+
+  defp apply_signal_continuation(:modified, _meeting, updated_meeting),
+    do: notify_host(updated_meeting, :modified)
 
   # Auto-cancel triggers full notification to both parties. If cancellation
   # fails, revert the sync status so the next reconciliation attempt retries

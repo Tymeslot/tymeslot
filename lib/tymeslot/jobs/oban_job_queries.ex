@@ -118,13 +118,13 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   Deletes existing reminder email jobs for a meeting to avoid duplicates
   when rescheduling.
   """
-  @spec delete_reminder_jobs_for_meeting(term(), String.t(), map()) ::
+  @spec delete_reminder_jobs_for_meeting(term(), module(), map()) ::
           {non_neg_integer(), nil}
-  def delete_reminder_jobs_for_meeting(meeting_id, worker_name, reminder_params) do
-    # Oban stores worker names without the "Elixir." prefix, but callers passing
-    # `to_string(SomeWorker)` produce the prefixed form. Normalise so the match
-    # can't silently miss every job.
-    worker_name = Worker.to_string(worker_name)
+  def delete_reminder_jobs_for_meeting(meeting_id, worker_module, reminder_params) do
+    # Oban stores worker names without the "Elixir." prefix; `Worker.to_string/1`
+    # normalises the module into that form so the match can't silently miss
+    # every job.
+    worker_name = Worker.to_string(worker_module)
 
     args_match =
       Map.merge(

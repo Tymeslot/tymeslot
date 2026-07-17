@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   import Ecto.Query, warn: false
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
 
   # Cancelled meetings accumulate indefinitely; bound the default read so the
@@ -153,17 +154,18 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   @doc """
   Returns meetings in the reminder window with confirmed status.
   Business logic for determining which meetings need reminders should be in the Meetings context.
+
+  Excludes meetings with a pending reschedule request: their slot is void
+  (see `Tymeslot.Meetings.MeetingState`), so reminding anyone of the old
+  time would contradict the reschedule-request email already sent.
   """
   @spec list_meetings_needing_reminders(DateTime.t(), DateTime.t()) :: [Meeting.t()]
   def list_meetings_needing_reminders(start_time, end_time) do
     base_query =
-      from(m in Meeting,
-        where:
-          m.start_time >= ^start_time and
-            m.start_time <= ^end_time and
-            m.status == "confirmed",
-        order_by: [asc: m.start_time]
-      )
+      Meeting
+      |> where([m], m.start_time >= ^start_time and m.start_time <= ^end_time)
+      |> MeetingState.where_live_booking()
+      |> order_by([m], asc: m.start_time)
 
     Repo.all(base_query)
   end
@@ -196,7 +198,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   defp meetings_missing_video_rooms_base(now) do
     Meeting
-    |> with_status("confirmed")
+    |> MeetingState.where_live_booking()
     |> upcoming(now)
     |> where([m], not is_nil(m.video_integration_id))
     |> where([m], is_nil(m.video_room_id))
@@ -212,7 +214,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     now = DateTime.utc_now()
 
     Meeting
-    |> with_status("confirmed")
+    |> MeetingState.where_live_booking()
     |> upcoming(now)
     |> order_by_start_asc()
     |> apply_limit(limit)
@@ -228,7 +230,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     now = DateTime.utc_now()
 
     Meeting
-    |> with_status("confirmed")
+    |> MeetingState.where_live_booking()
     |> upcoming(now)
     |> for_user_email(user_email)
     |> order_by_start_asc()

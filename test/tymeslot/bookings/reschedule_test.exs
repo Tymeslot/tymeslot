@@ -10,6 +10,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   import Mox
 
   alias Tymeslot.Bookings.Reschedule
+  alias Tymeslot.Bookings.RescheduleRequest
   alias Tymeslot.Bookings.Validation
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.HTTPClientMock
@@ -17,6 +18,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.EmailWorkerHandlers
   alias Tymeslot.Workers.VideoSyncWorker
   alias Tymeslot.ZoomOAuthHelperMock
   import Tymeslot.MeetingTestHelpers
@@ -81,9 +83,15 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       assert updated_meeting.status == "confirmed"
     end
 
-    test "restores confirmed status when settling an organizer reschedule request" do
+    test "clears reschedule_requested_at without altering status when settling a request" do
       %{user: user} = create_user_with_profile()
-      meeting = insert_meeting_for_user(user, %{status: "reschedule_requested"})
+      meeting = insert_meeting_for_user(user, %{status: "confirmed"})
+
+      assert :ok = RescheduleRequest.send_reschedule_request(meeting)
+
+      {:ok, requested} = MeetingQueries.get_meeting(meeting.id)
+      assert requested.status == "confirmed"
+      assert %DateTime{} = requested.reschedule_requested_at
 
       new_params = %{
         date: Date.to_string(Date.add(Date.utc_today(), 2)),
@@ -96,9 +104,51 @@ defmodule Tymeslot.Bookings.RescheduleTest do
                Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
 
       assert updated_meeting.status == "confirmed"
+      assert updated_meeting.reschedule_requested_at == nil
 
       {:ok, reloaded} = MeetingQueries.get_meeting_by_uid(meeting.uid)
       assert reloaded.status == "confirmed"
+      assert reloaded.reschedule_requested_at == nil
+    end
+
+    test "pending meeting: reschedule request then rebook does not silently confirm it" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_meeting_for_user(user, %{status: "pending"})
+
+      assert :ok = RescheduleRequest.send_reschedule_request(meeting)
+
+      new_params = %{
+        date: Date.to_string(Date.add(Date.utc_today(), 2)),
+        time: "2:00 PM",
+        duration: "60min",
+        user_timezone: "America/New_York"
+      }
+
+      assert {:ok, updated_meeting} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+
+      assert updated_meeting.status == "pending"
+      assert updated_meeting.reschedule_requested_at == nil
+    end
+
+    test "awaiting_payment meeting: reschedule request then rebook does not silently confirm an unpaid meeting" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_meeting_for_user(user, %{status: "awaiting_payment"})
+
+      assert :ok = RescheduleRequest.send_reschedule_request(meeting)
+
+      new_params = %{
+        date: Date.to_string(Date.add(Date.utc_today(), 2)),
+        time: "2:00 PM",
+        duration: "60min",
+        user_timezone: "America/New_York"
+      }
+
+      assert {:ok, updated_meeting} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+
+      assert updated_meeting.status == "awaiting_payment"
+      assert updated_meeting.reschedule_requested_at == nil
     end
 
     test "re-pins the reminder email to the new meeting time" do
@@ -121,6 +171,44 @@ defmodule Tymeslot.Bookings.RescheduleTest do
                )
 
       assert DateTime.compare(DateTime.truncate(job.scheduled_at, :second), expected_at) == :eq
+    end
+
+    test "resets reminder sent-tracking so the re-pinned reminder is not silently suppressed" do
+      %{meeting: meeting, new_params: new_params} = setup_reschedule_test()
+
+      # A "30 minutes before" reminder already fired for the old slot.
+      {:ok, meeting} =
+        MeetingQueries.update_meeting(meeting, %{
+          reminders_sent: [%{"value" => 30, "unit" => "minutes"}],
+          reminder_email_sent: true
+        })
+
+      assert {:ok, updated_meeting} =
+               Reschedule.execute(meeting.uid, new_params, %{}, meeting.organizer_user_id)
+
+      assert updated_meeting.reminders_sent == []
+      assert updated_meeting.reminder_email_sent == false
+
+      {:ok, reloaded} = MeetingQueries.get_meeting_by_uid(meeting.uid)
+      assert reloaded.reminders_sent == []
+      assert reloaded.reminder_email_sent == false
+
+      # The re-pinned "30 minutes before" job for the new time must actually
+      # send, not be discarded as already-sent for the old time.
+      assert [job] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
+               )
+
+      expect(Tymeslot.EmailServiceMock, :send_appointment_reminders, fn _details, _time ->
+        {{:ok, "sent"}, {:ok, "sent"}}
+      end)
+
+      assert :ok = EmailWorkerHandlers.execute_email_action(job.args["action"], job.args)
+
+      {:ok, after_send} = MeetingQueries.get_meeting(meeting.id)
+      assert %{"value" => 30, "unit" => "minutes"} in after_send.reminders_sent
     end
   end
 

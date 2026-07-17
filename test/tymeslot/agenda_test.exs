@@ -114,6 +114,21 @@ defmodule Tymeslot.AgendaTest do
 
       assert Day.empty?(Agenda.day_agenda(user, "Etc/UTC"))
     end
+
+    test "excludes a confirmed booking with a pending reschedule request, but keeps a plain confirmed one",
+         %{user: user, tomorrow: tomorrow} do
+      booking(user, at(tomorrow, ~T[12:00:00]),
+        title: "Voided by reschedule request",
+        reschedule_requested_at: DateTime.utc_now()
+      )
+
+      booking(user, at(tomorrow, ~T[13:00:00]), title: "Still confirmed")
+
+      day = Agenda.day_agenda(user, "Etc/UTC")
+
+      refute "Voided by reschedule request" in titles(day)
+      assert "Still confirmed" in titles(day)
+    end
   end
 
   describe "day_agenda/2 all-day events" do
