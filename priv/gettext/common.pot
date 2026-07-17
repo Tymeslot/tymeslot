@@ -183,3 +183,32 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Made with %{heart} by the %{team}"
 msgstr ""
+
+#: lib/tymeslot_web/components/site_components.ex:89
+#: lib/tymeslot_web/components/site_components.ex:151
+#, elixir-autogen, elixir-format
+msgid "Dashboard"
+msgstr ""
+
+#: lib/tymeslot_web/components/site_components.ex:113
+#: lib/tymeslot_web/components/site_components.ex:175
+#, elixir-autogen, elixir-format
+msgid "Get Started"
+msgstr ""
+
+#: lib/tymeslot_web/components/site_components.ex:104
+#: lib/tymeslot_web/components/site_components.ex:165
+#, elixir-autogen, elixir-format
+msgid "Login"
+msgstr ""
+
+#: lib/tymeslot_web/components/site_components.ex:97
+#: lib/tymeslot_web/components/site_components.ex:158
+#, elixir-autogen, elixir-format
+msgid "Logout"
+msgstr ""
+
+#: lib/tymeslot_web/components/site_components.ex:125
+#, elixir-autogen, elixir-format
+msgid "Toggle menu"
+msgstr ""

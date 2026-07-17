@@ -183,3 +183,32 @@ msgstr "pagina di prenotazione"
 #, elixir-autogen, elixir-format
 msgid "Made with %{heart} by the %{team}"
 msgstr "Fatto con %{heart} dal %{team}"
+
+#: lib/tymeslot_web/components/site_components.ex:89
+#: lib/tymeslot_web/components/site_components.ex:151
+#, elixir-autogen, elixir-format
+msgid "Dashboard"
+msgstr "Dashboard"
+
+#: lib/tymeslot_web/components/site_components.ex:113
+#: lib/tymeslot_web/components/site_components.ex:175
+#, elixir-autogen, elixir-format
+msgid "Get Started"
+msgstr "Inizia"
+
+#: lib/tymeslot_web/components/site_components.ex:104
+#: lib/tymeslot_web/components/site_components.ex:165
+#, elixir-autogen, elixir-format
+msgid "Login"
+msgstr "Accedi"
+
+#: lib/tymeslot_web/components/site_components.ex:97
+#: lib/tymeslot_web/components/site_components.ex:158
+#, elixir-autogen, elixir-format
+msgid "Logout"
+msgstr "Esci"
+
+#: lib/tymeslot_web/components/site_components.ex:125
+#, elixir-autogen, elixir-format
+msgid "Toggle menu"
+msgstr "Attiva/disattiva menu"

@@ -183,3 +183,32 @@ msgstr "сторінка планування"
 #, elixir-autogen, elixir-format
 msgid "Made with %{heart} by the %{team}"
 msgstr "Створено з %{heart} %{team}"
+
+#: lib/tymeslot_web/components/site_components.ex:89
+#: lib/tymeslot_web/components/site_components.ex:151
+#, elixir-autogen, elixir-format
+msgid "Dashboard"
+msgstr "Панель керування"
+
+#: lib/tymeslot_web/components/site_components.ex:113
+#: lib/tymeslot_web/components/site_components.ex:175
+#, elixir-autogen, elixir-format
+msgid "Get Started"
+msgstr "Почати"
+
+#: lib/tymeslot_web/components/site_components.ex:104
+#: lib/tymeslot_web/components/site_components.ex:165
+#, elixir-autogen, elixir-format
+msgid "Login"
+msgstr "Увійти"
+
+#: lib/tymeslot_web/components/site_components.ex:97
+#: lib/tymeslot_web/components/site_components.ex:158
+#, elixir-autogen, elixir-format
+msgid "Logout"
+msgstr "Вийти"
+
+#: lib/tymeslot_web/components/site_components.ex:125
+#, elixir-autogen, elixir-format
+msgid "Toggle menu"
+msgstr "Перемкнути меню"

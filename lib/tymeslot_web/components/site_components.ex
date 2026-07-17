@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
   Site-wide components for navigation, footer, and other shared UI elements.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   # Import the route helpers
   use Phoenix.VerifiedRoutes,
@@ -18,6 +19,23 @@ defmodule TymeslotWeb.Components.SiteComponents do
   @doc """
   Main navigation component used across the application.
 
+  ## Marketing menu
+
+  The centre-zone marketing menu is caller-supplied via `menu_sections`, not
+  built here — the menu labels are a SaaS marketing concern and live in SaaS's
+  `marketing_*` gettext catalogues, resolved per request. Core standalone passes
+  nothing, so the default `[]` renders no marketing links. Each entry is either:
+
+    * `%{kind: :link, url:, label:, icon:}` — a flat top-level link.
+    * `%{kind: :menu, key:, label:, icon:, url:, overview:, pages:}` — a grouped
+      menu rendered as a desktop hover dropdown / mobile accordion. `key` is a
+      stable, translation-independent slug used for the mobile accordion's DOM
+      id (the label can't be — a translated label may slug to nothing). `url`
+      is an optional landing page, `overview` an optional highlighted row
+      (`%{label:, icon:, url:}` or `nil`), and `pages` the grouped
+      `%{label:, url:, icon:}` entries. A `:menu` with no `pages` collapses to a
+      plain link to its `url`.
+
   ## Slots
 
     * `end_actions` — optional controls rendered in the desktop right-hand action
@@ -29,13 +47,13 @@ defmodule TymeslotWeb.Components.SiteComponents do
   Both slots are optional; Core standalone renders neither.
   """
   attr :current_user, :map, default: nil
+  attr :menu_sections, :list, default: []
   slot :end_actions, required: false
   slot :mobile_actions, required: false
 
   @spec navigation(map()) :: Phoenix.LiveView.Rendered.t()
   def navigation(assigns) do
     ~H"""
-    <% menu_sections = nav_menu_sections() %>
     <nav class="bg-white border-b-4 border-turquoise-500 shadow-xl relative z-50">
       <div class="container mx-auto flex justify-between items-center px-6 py-5">
         <%= if external_url?(logo_link(@current_user)) do %>
@@ -56,9 +74,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
 
     <%!-- Desktop Navigation: marketing links (centre zone) --%>
         <div class="hidden lg:flex flex-1 items-center justify-center gap-1">
-          <%= if Config.show_marketing_links?() do %>
-            <.nav_section :for={section <- menu_sections} section={section} />
-          <% end %>
+          <.nav_section :for={section <- @menu_sections} section={section} />
         </div>
 
     <%!-- Desktop Navigation: account actions (right zone) --%>
@@ -70,7 +86,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
               data-tymeslot-suppress-lv-disconnect
               class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
             >
-              Dashboard
+              {dgettext("common", "Dashboard")}
             </.link>
             <div class="h-6 w-px bg-tymeslot-200" aria-hidden="true"></div>
             <.link
@@ -78,14 +94,14 @@ defmodule TymeslotWeb.Components.SiteComponents do
               method="delete"
               class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-red-600 hover:bg-red-50 transition-all rounded-2xl"
             >
-              Logout
+              {dgettext("common", "Logout")}
             </.link>
           <% else %>
             <.link
               href={~p"/auth/login"}
               class="px-4 py-2 font-semibold text-tymeslot-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
             >
-              Login
+              {dgettext("common", "Login")}
             </.link>
             <div class="h-6 w-px bg-tymeslot-200" aria-hidden="true"></div>
             <.link
@@ -94,7 +110,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
               data-analytics-props={Jason.encode!(%{source_page: "marketing", cta_location: "nav"})}
               class="px-8 py-3 font-black text-white bg-linear-to-br from-turquoise-600 via-cyan-600 to-blue-600 hover:from-turquoise-500 hover:to-blue-500 rounded-2xl shadow-xl hover:shadow-turquoise-500/40 transition-all duration-300 hover:-translate-y-1"
             >
-              Get Started
+              {dgettext("common", "Get Started")}
             </.link>
           <% end %>
         </div>
@@ -106,7 +122,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
             JS.toggle(to: "#mobile-menu")
             |> JS.toggle_class("mobile-menu-open", to: ".mobile-menu-toggle")
           }
-          aria-label="Toggle menu"
+          aria-label={dgettext("common", "Toggle menu")}
         >
           <svg class="w-7 h-7 text-turquoise-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
             <path
@@ -124,9 +140,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
           class="mobile-menu lg:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-md border-t border-tymeslot-200 shadow-lg hidden"
         >
           <div class="container mx-auto px-4 py-4 space-y-3">
-            <%= if Config.show_marketing_links?() do %>
-              <.nav_section_mobile :for={section <- menu_sections} section={section} />
-            <% end %>
+            <.nav_section_mobile :for={section <- @menu_sections} section={section} />
             {render_slot(@mobile_actions)}
             <%= if @current_user do %>
               <.link
@@ -134,21 +148,21 @@ defmodule TymeslotWeb.Components.SiteComponents do
                 data-tymeslot-suppress-lv-disconnect
                 class="mobile-nav-link block px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
               >
-                Dashboard
+                {dgettext("common", "Dashboard")}
               </.link>
               <.link
                 href={~p"/auth/logout"}
                 method="delete"
                 class="mobile-nav-link block px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
               >
-                Logout
+                {dgettext("common", "Logout")}
               </.link>
             <% else %>
               <.link
                 href={~p"/auth/login"}
                 class="mobile-nav-link block px-4 py-3 text-tymeslot-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
               >
-                Login
+                {dgettext("common", "Login")}
               </.link>
               <.link
                 href={~p"/auth/signup"}
@@ -158,7 +172,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
                 }
                 class="mobile-nav-button block px-4 py-3 bg-turquoise-600 text-white text-center rounded-lg hover:bg-turquoise-700 transition-colors"
               >
-                Get Started
+                {dgettext("common", "Get Started")}
               </.link>
             <% end %>
           </div>
@@ -166,72 +180,6 @@ defmodule TymeslotWeb.Components.SiteComponents do
       </div>
     </nav>
     """
-  end
-
-  # Single source of truth for the top-level marketing navigation. Both the
-  # desktop and mobile menus iterate this list, so a new entry appears in both
-  # without being wired up twice. Each entry is either:
-  #
-  #   * `%{kind: :menu, ...}` — a grouped menu rendered as a desktop hover
-  #     dropdown / mobile accordion. Carries an optional landing `url`, an
-  #     optional `overview` row (a highlighted link to that landing page), and
-  #     the `pages` it groups. A `:menu` with no `pages` collapses to a plain
-  #     link to its `url`.
-  #   * `%{kind: :link, ...}` — a flat top-level link (Pricing, Docs, Contact).
-  @spec nav_menu_sections() :: [map()]
-  defp nav_menu_sections do
-    features_url = Application.get_env(:tymeslot, :features_url)
-    feature_pages = Application.get_env(:tymeslot, :feature_pages, [])
-    resources_pages = Application.get_env(:tymeslot, :resources_pages, [])
-
-    marketing_links =
-      Enum.filter(
-        [
-          %{
-            kind: :link,
-            url: Application.get_env(:tymeslot, :pricing_url),
-            label: "Pricing",
-            icon: "hero-tag"
-          },
-          %{
-            kind: :link,
-            url: Application.get_env(:tymeslot, :docs_url),
-            label: "Docs",
-            icon: "hero-book-open"
-          },
-          %{
-            kind: :link,
-            url: Application.get_env(:tymeslot, :contact_url),
-            label: "Contact",
-            icon: "hero-envelope"
-          }
-        ],
-        & &1.url
-      )
-
-    feature_section =
-      features_url &&
-        %{
-          kind: :menu,
-          label: "Features",
-          icon: "hero-sparkles",
-          url: features_url,
-          overview: %{label: "All features", icon: "hero-squares-2x2-solid", url: features_url},
-          pages: feature_pages
-        }
-
-    resources_section =
-      resources_pages != [] &&
-        %{
-          kind: :menu,
-          label: "Resources",
-          icon: "hero-rectangle-stack",
-          url: nil,
-          overview: nil,
-          pages: resources_pages
-        }
-
-    Enum.filter([feature_section, resources_section | marketing_links], & &1)
   end
 
   # Desktop navigation entry. A `:link` renders as a flat top-level link; a
@@ -355,7 +303,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
   end
 
   defp nav_section_mobile(%{section: %{kind: :menu}} = assigns) do
-    assigns = assign(assigns, :panel_id, "mobile-nav-#{nav_slug(assigns.section.label)}")
+    assigns = assign(assigns, :panel_id, "mobile-nav-#{assigns.section.key}")
 
     ~H"""
     <div>
@@ -418,12 +366,6 @@ defmodule TymeslotWeb.Components.SiteComponents do
       <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
     </svg>
     """
-  end
-
-  # Turns a menu label into a DOM-id-safe slug for the mobile accordion panel.
-  @spec nav_slug(String.t()) :: String.t()
-  defp nav_slug(label) do
-    label |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-")
   end
 
   # Brand "icon tile" for the Features navigation dropdown. `:soft` (default)

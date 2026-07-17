@@ -15,7 +15,6 @@ defmodule TymeslotWeb.Components.SiteComponentsConfigTest do
   @config_keys [
     :show_marketing_links,
     :features_url,
-    :feature_pages,
     :pricing_url,
     :docs_url,
     :contact_url,
@@ -119,30 +118,63 @@ defmodule TymeslotWeb.Components.SiteComponentsConfigTest do
     end
   end
 
-  describe "navigation/1 features menu" do
-    setup do
-      put_config(show_marketing_links: true, features_url: "/features")
-      :ok
-    end
-
-    test "renders a plain Features link when no feature pages are configured" do
-      put_config(feature_pages: [])
-
+  describe "navigation/1 marketing menu" do
+    test "renders no marketing links when no sections are supplied" do
       html = render_component(&SiteComponents.navigation/1, current_user: nil)
 
+      refute html =~ "Features"
+      refute html =~ "Pricing"
+    end
+
+    test "renders a flat link section" do
+      sections = [%{kind: :link, url: "/pricing", label: "Pricing", icon: "hero-tag"}]
+
+      html =
+        render_component(&SiteComponents.navigation/1, current_user: nil, menu_sections: sections)
+
+      assert html =~ "Pricing"
+      assert html =~ ~s(href="/pricing")
+    end
+
+    test "renders a :menu with no pages as a plain link to its landing page" do
+      sections = [
+        %{
+          kind: :menu,
+          key: "features",
+          label: "Features",
+          icon: "hero-sparkles",
+          url: "/features",
+          overview: nil,
+          pages: []
+        }
+      ]
+
+      html =
+        render_component(&SiteComponents.navigation/1, current_user: nil, menu_sections: sections)
+
       assert html =~ "Features"
+      assert html =~ ~s(href="/features")
       refute html =~ "All features"
     end
 
-    test "renders a Features dropdown listing each feature page" do
-      put_config(
-        feature_pages: [
-          %{label: "Calendar Sync", url: "/features/calendar-sync", icon: "hero-calendar"},
-          %{label: "Payments", url: "/features/payments", icon: "hero-credit-card"}
-        ]
-      )
+    test "renders a populated :menu with its overview row and each page" do
+      sections = [
+        %{
+          kind: :menu,
+          key: "features",
+          label: "Features",
+          icon: "hero-sparkles",
+          url: "/features",
+          overview: %{label: "All features", icon: "hero-squares-2x2-solid", url: "/features"},
+          pages: [
+            %{label: "Calendar Sync", url: "/features/calendar-sync", icon: "hero-calendar"},
+            %{label: "Payments", url: "/features/payments", icon: "hero-credit-card"}
+          ]
+        }
+      ]
 
-      html = render_component(&SiteComponents.navigation/1, current_user: nil)
+      html =
+        render_component(&SiteComponents.navigation/1, current_user: nil, menu_sections: sections)
 
       assert html =~ "All features"
       assert html =~ "Calendar Sync"
@@ -151,12 +183,27 @@ defmodule TymeslotWeb.Components.SiteComponentsConfigTest do
       assert html =~ ~s(href="/features/payments")
     end
 
-    test "hides the Features entry entirely when marketing links are disabled" do
-      put_config(show_marketing_links: false, feature_pages: [])
+    test "keys the mobile accordion by the stable key, not the (translatable) label" do
+      # A label that would slug to nothing (e.g. a non-Latin translation) must
+      # not break the mobile accordion's DOM id — the section's `key` does.
+      sections = [
+        %{
+          kind: :menu,
+          key: "features",
+          label: "Можливості",
+          icon: "hero-sparkles",
+          url: "/features",
+          overview: nil,
+          pages: [
+            %{label: "Calendar Sync", url: "/features/calendar-sync", icon: "hero-calendar"}
+          ]
+        }
+      ]
 
-      html = render_component(&SiteComponents.navigation/1, current_user: nil)
+      html =
+        render_component(&SiteComponents.navigation/1, current_user: nil, menu_sections: sections)
 
-      refute html =~ "Features"
+      assert html =~ ~s(id="mobile-nav-features")
     end
   end
 end

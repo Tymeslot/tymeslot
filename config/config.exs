@@ -37,18 +37,6 @@ config :tymeslot,
   contact_url: nil,
   about_url: nil,
   features_url: nil,
-  # Optional sub-pages for a "Features" navigation dropdown. Each entry is a
-  # %{label: string, url: string, icon: string} map; `icon` is an optional
-  # heroicon name (e.g. "hero-calendar-days") shown beside the label — add new
-  # icons to the @source inline safelist in assets/css/app.css. Empty by default —
-  # the nav then renders a plain "Features" link. SaaS populates this with its
-  # single-feature pages.
-  feature_pages: [],
-  # Optional entries for a "Resources" navigation dropdown grouping content
-  # pages (use-case guides, etc.). Same %{label, url, icon} shape as
-  # :feature_pages. Empty by default — the nav then omits the "Resources" group
-  # entirely. SaaS populates this (see config/runtime.exs).
-  resources_pages: [],
   pricing_url: nil,
   # Optional "Enterprise" marketing page, surfaced as a footer link when set.
   # nil by default so Core standalone omits it entirely; a deployment that ships
