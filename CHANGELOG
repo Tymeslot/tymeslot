@@ -1,4 +1,10 @@
 
+[1.4.4]
+* core: Prevent availability crash on days the attendee's clocks change
+* core: Allow the Stripe Connect onboarding redirect through the CSP
+* core: Show the meeting description on meeting type cards
+
+
 [1.4.3]
 * core: Clear the reschedule-requested state once the attendee rebooks
 * core: Remove calendar event and reminders when a reschedule is requested
