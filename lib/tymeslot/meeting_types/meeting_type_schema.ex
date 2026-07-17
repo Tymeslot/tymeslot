@@ -25,6 +25,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           reminder_config: [map()],
           payment_required: boolean(),
           price_cents: integer() | nil,
+          max_participants: integer(),
           is_archived: boolean(),
           custom_fields: [FieldDefinition.t()],
           attachments: [MeetingTypeAttachment.t()],
@@ -52,6 +53,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:reminder_config, {:array, :map}, default: nil)
     field(:payment_required, :boolean, default: false)
     field(:price_cents, :integer)
+    field(:max_participants, :integer, default: 1)
     field(:is_archived, :boolean, default: false)
 
     belongs_to(:user, Tymeslot.Auth.UserSchema)
@@ -124,6 +126,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :reminder_config,
       :payment_required,
       :price_cents,
+      :max_participants,
       :is_archived
     ])
     |> cast_embed(:custom_fields, with: &FieldDefinition.changeset/2)
@@ -133,6 +136,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_length(:description, max: Constraints.description_max_length())
     |> validate_number(:duration_minutes, Constraints.duration_minutes_opts())
     |> validate_number(:sort_order, greater_than_or_equal_to: 0)
+    |> validate_number(:max_participants, Constraints.max_participants_opts())
     |> validate_inclusion(:icon, @valid_icons, message: "must be one of the available icons")
     |> normalize_slug()
     |> validate_slug()
@@ -140,6 +144,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_calendar_destination()
     |> validate_reminder_config()
     |> validate_payment_fields(opts)
+    |> validate_group_payment_exclusivity()
     |> unique_constraint([:user_id, :name],
       message: "You already have a meeting type with this name"
     )
@@ -333,6 +338,28 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   defp format_minimum(cents, currency) do
     "#{String.upcase(currency)} #{:erlang.float_to_binary(cents / 100, decimals: 2)}"
   end
+
+  # Group bookings and paid bookings are mutually exclusive: per-seat
+  # payment is out of scope, so a type accepting more than one participant
+  # must not require payment.
+  defp validate_group_payment_exclusivity(changeset) do
+    payment_required = get_field(changeset, :payment_required)
+
+    case {payment_required, get_field(changeset, :max_participants)} do
+      {true, max} when is_integer(max) and max > 1 ->
+        add_error(changeset, :max_participants, "group bookings cannot require payment")
+
+      _compatible ->
+        changeset
+    end
+  end
+
+  @doc """
+  True when the meeting type accepts more than one participant per slot.
+  """
+  @spec group?(t()) :: boolean()
+  def group?(%__MODULE__{max_participants: max}) when is_integer(max) and max > 1, do: true
+  def group?(%__MODULE__{}), do: false
 
   @doc """
   Returns the list of valid icons for meeting types.
