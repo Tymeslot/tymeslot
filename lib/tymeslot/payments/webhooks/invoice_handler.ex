@@ -42,7 +42,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(event, invoice) do
     event_type = event["type"] || event[:type]
-    subscription_id = invoice["subscription"]
+    subscription_id = subscription_id(invoice)
 
     Logger.info("Processing invoice event",
       event_type: event_type,
@@ -70,6 +70,18 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
 
       _other ->
         {:ok, :ignored}
+    end
+  end
+
+  # Stripe API 2025-03-31.basil moved the invoice's subscription reference
+  # from the top-level field into parent.subscription_details. Read whichever
+  # is present; either may hold an id string or an expanded subscription
+  # object.
+  defp subscription_id(invoice) do
+    case invoice["subscription"] ||
+           get_in(invoice, ["parent", "subscription_details", "subscription"]) do
+      %{"id" => id} -> id
+      id -> id
     end
   end
 

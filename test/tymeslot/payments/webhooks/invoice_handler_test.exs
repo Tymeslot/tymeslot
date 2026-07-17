@@ -174,6 +174,69 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       assert length(transactions) == 2
     end
 
+    test "reads the subscription reference from parent.subscription_details" do
+      user = insert(:user)
+      subscription_id = "sub_parent_ref"
+
+      insert(:payment_transaction,
+        user: user,
+        subscription_id: subscription_id,
+        status: "completed",
+        stripe_id: "sess_parent_ref"
+      )
+
+      # Stripe API 2025-03-31.basil and later: the invoice's subscription
+      # reference lives under parent.subscription_details instead of the
+      # top-level subscription field.
+      invoice = %{
+        "id" => "in_parent_ref",
+        "parent" => %{
+          "type" => "subscription_details",
+          "subscription_details" => %{"subscription" => subscription_id}
+        },
+        "amount_paid" => 1000,
+        "currency" => "eur",
+        "status" => "paid"
+      }
+
+      event = %{"type" => "invoice.paid"}
+
+      assert {:ok, :invoice_processed} = InvoiceHandler.process(event, invoice)
+
+      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status("completed", user.id)
+      assert length(transactions) == 2
+    end
+
+    test "unwraps an expanded subscription object in parent.subscription_details" do
+      user = insert(:user)
+      subscription_id = "sub_parent_expanded"
+
+      insert(:payment_transaction,
+        user: user,
+        subscription_id: subscription_id,
+        status: "completed",
+        stripe_id: "sess_parent_expanded"
+      )
+
+      invoice = %{
+        "id" => "in_parent_expanded",
+        "parent" => %{
+          "type" => "subscription_details",
+          "subscription_details" => %{"subscription" => %{"id" => subscription_id}}
+        },
+        "amount_paid" => 1000,
+        "currency" => "eur",
+        "status" => "paid"
+      }
+
+      event = %{"type" => "invoice.paid"}
+
+      assert {:ok, :invoice_processed} = InvoiceHandler.process(event, invoice)
+
+      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status("completed", user.id)
+      assert length(transactions) == 2
+    end
+
     test "returns error when subscription not found" do
       invoice = %{"id" => "in_123", "subscription" => "nonexistent"}
       event = %{"type" => "invoice.payment_succeeded"}

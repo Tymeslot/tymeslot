@@ -14,15 +14,26 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
   setup do
     original_repo = Application.get_env(:tymeslot, :repo)
     original_provider = Application.get_env(:tymeslot, :stripe_provider)
+    original_manager = Application.get_env(:tymeslot, :subscription_manager)
 
     # Test env defaults :repo to SaasRepo; this suite needs the factory's
     # PaymentTransactionSchema rows, which live in Tymeslot.Repo.
     Application.put_env(:tymeslot, :repo, Tymeslot.Repo)
     Application.put_env(:tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock)
 
+    # Dispute routing for charges without invoice/subscription references
+    # depends on a subscription manager being configured; pin it so earlier
+    # suites that mutate the env cannot leak into these tests.
+    Application.put_env(
+      :tymeslot,
+      :subscription_manager,
+      Tymeslot.Payments.SubscriptionManagerMock
+    )
+
     on_exit(fn ->
       restore(:repo, original_repo)
       restore(:stripe_provider, original_provider)
+      restore(:subscription_manager, original_manager)
     end)
 
     Phoenix.PubSub.subscribe(Tymeslot.PubSub, "payment_events:tymeslot")
@@ -80,6 +91,14 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
     end
 
     test "one-time charge dispute update does not broadcast" do
+      user = insert(:user)
+
+      insert(:payment_transaction,
+        user: user,
+        status: "completed",
+        stripe_customer_id: "cus_one_time"
+      )
+
       d = dispute("under_review")
       event = %{"id" => "evt_upd_2", "type" => "charge.dispute.updated"}
 
@@ -90,6 +109,25 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
       assert {:ok, :dispute_updated} = DisputeHandler.process(event, d)
 
       refute_received %{event: :dispute_updated, data: _}
+    end
+
+    test "subscription dispute without charge linkage fields is still forwarded" do
+      # Stripe API 2025-03-31.basil removed invoice/subscription from the
+      # charge. With a subscription manager configured, a customer without a
+      # one-off transaction routes to the subscription listener.
+      d = dispute("under_review")
+      event = %{"id" => "evt_upd_4", "type" => "charge.dispute.updated"}
+
+      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
+        {:ok, %{"id" => "ch_sub_basil", "customer" => "cus_sub_basil"}}
+      end)
+
+      assert {:ok, :dispute_updated} = DisputeHandler.process(event, d)
+
+      assert_received %{
+        event: :dispute_updated,
+        data: %{event_id: "evt_upd_4", stripe_dispute_id: _, status: "under_review"}
+      }
     end
 
     test "Stripe API error triggers retry_later" do
@@ -180,8 +218,8 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
     end
   end
 
-  describe "process/2 — charge.dispute.created (unlinked one-time)" do
-    test "dispute on one-time charge with no matching transaction is logged" do
+  describe "process/2 — charge.dispute.created (unlinked charge)" do
+    test "unknown-customer dispute is forwarded when a subscription manager is configured" do
       d = dispute("needs_response")
       event = %{"id" => "evt_orphan", "type" => "charge.dispute.created"}
 
@@ -189,8 +227,26 @@ defmodule Tymeslot.Payments.Webhooks.DisputeOutcomesTest do
         {:ok, one_time_charge("cus_orphan_dispute")}
       end)
 
-      # No payment_transaction exists for cus_orphan_dispute — handler logs and
-      # returns the orphan outcome without crashing.
+      # No payment_transaction exists for cus_orphan_dispute and the charge
+      # carries no invoice/subscription reference; with a subscription manager
+      # configured the dispute routes to the subscription listener.
+      assert {:ok, :subscription_dispute_forwarded} = DisputeHandler.process(event, d)
+    end
+
+    test "unknown-customer dispute stays on the local path in standalone mode" do
+      original_manager = Application.get_env(:tymeslot, :subscription_manager)
+      Application.put_env(:tymeslot, :subscription_manager, nil)
+      on_exit(fn -> restore(:subscription_manager, original_manager) end)
+
+      d = dispute("needs_response")
+      event = %{"id" => "evt_orphan_standalone", "type" => "charge.dispute.created"}
+
+      expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
+        {:ok, one_time_charge("cus_orphan_standalone")}
+      end)
+
+      # Without a subscription manager there is nothing to forward to — the
+      # handler logs the orphan dispute and alerts the admin instead.
       assert {:ok, :dispute_logged} = DisputeHandler.process(event, d)
     end
   end

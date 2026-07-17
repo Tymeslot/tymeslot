@@ -233,10 +233,22 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     Map.get(charge, "customer") || Map.get(charge, :customer)
   end
 
+  # Charges from subscription invoices used to carry invoice/subscription
+  # references; Stripe API 2025-03-31.basil removed both from the charge.
+  # When they are absent, fall back to our own records: one-off charges
+  # always have a local transaction for their customer, so a customer
+  # without one can only mean a subscription charge. Without a configured
+  # subscription manager (standalone) there is nothing to forward to, and
+  # every dispute stays on the local path.
   defp subscription_charge?(charge) do
     invoice = Map.get(charge, "invoice") || Map.get(charge, :invoice)
     subscription = Map.get(charge, "subscription") || Map.get(charge, :subscription)
-    not is_nil(invoice) or not is_nil(subscription)
+
+    cond do
+      invoice || subscription -> true
+      is_nil(Config.subscription_manager()) -> false
+      true -> is_nil(find_user_by_customer(get_charge_customer_id(charge)))
+    end
   end
 
   defp find_user_by_customer(nil), do: nil
