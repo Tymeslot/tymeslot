@@ -295,35 +295,55 @@ defmodule TymeslotWeb.AccountLiveTest do
       assert html =~ ~s(phx-value-locale="de")
       assert html =~ "Automatic"
       assert html =~ "Deutsch"
+      # The Automatic button carries a tooltip explaining what it does.
+      assert html =~ "Follow your browser"
       # No saved locale → the Automatic button is the active selection.
       assert html =~ ~r/phx-value-locale=""[^>]*btn-tag-selector-primary--active/s
     end
 
-    test "clicking a language button auto-saves and immediately marks it active",
+    test "switching language persists it and re-renders the whole page in the new locale",
          %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
-      html =
+      {:ok, _view, html} =
         view
         |> element(~s(button[phx-value-locale="de"]))
         |> render_click()
+        |> follow_redirect(conn)
 
       # Persisted immediately, no separate save step.
       assert Repo.get(UserSchema, user.id).locale == "de"
-      # Immediate feedback: confirmation flash + the German button now active.
-      # Selecting German also switches the dashboard locale, so the flash
-      # renders in German.
+
+      # Confirmation flash renders in the newly selected language.
       assert html =~ "Spracheinstellung gespeichert"
+
+      # The remount re-renders every string in German — including ones that
+      # depend on no assign and would otherwise stay frozen by LiveView change
+      # tracking: the card heading and the "Back to Dashboard" link.
+      assert html =~ "Sprache"
+      assert html =~ "Zurück zum Dashboard"
+
+      # The German button is now the active selection.
       assert html =~ ~r/phx-value-locale="de"[^>]*btn-tag-selector-primary--active/s
     end
 
-    test "clicking Automatic clears the persisted locale", %{conn: conn, user: user} do
+    test "switching to Automatic clears the persisted locale", %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
-      view |> element(~s(button[phx-value-locale="de"])) |> render_click()
+      {:ok, view, _html} =
+        view
+        |> element(~s(button[phx-value-locale="de"]))
+        |> render_click()
+        |> follow_redirect(conn)
+
       assert Repo.get(UserSchema, user.id).locale == "de"
 
-      view |> element(~s(button[phx-value-locale=""])) |> render_click()
+      {:ok, _view, _html} =
+        view
+        |> element(~s(button[phx-value-locale=""]))
+        |> render_click()
+        |> follow_redirect(conn)
+
       assert Repo.get(UserSchema, user.id).locale == nil
     end
   end
