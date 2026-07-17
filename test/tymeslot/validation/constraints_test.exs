@@ -21,6 +21,10 @@ defmodule Tymeslot.Validation.ConstraintsTest do
     test "duration_minutes_range returns 1..480" do
       assert Constraints.duration_minutes_range() == 1..480
     end
+
+    test "max_participants_range returns 1..999" do
+      assert Constraints.max_participants_range() == 1..999
+    end
   end
 
   describe "Ecto-ready options" do
@@ -46,6 +50,12 @@ defmodule Tymeslot.Validation.ConstraintsTest do
       opts = Constraints.duration_minutes_opts()
       assert opts[:greater_than_or_equal_to] == 1
       assert opts[:less_than_or_equal_to] == 480
+    end
+
+    test "max_participants_opts" do
+      opts = Constraints.max_participants_opts()
+      assert opts[:greater_than_or_equal_to] == 1
+      assert opts[:less_than_or_equal_to] == 999
     end
   end
 
