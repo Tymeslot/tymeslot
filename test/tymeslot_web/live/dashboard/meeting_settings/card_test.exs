@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
     base = %{
       id: 1,
       name: "Strategy Call",
+      description: nil,
       duration_minutes: 30,
       icon: "hero-bolt",
       is_active: true,
@@ -54,6 +55,49 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
       html = render_card(build_type(%{payment_required: true, price_cents: nil}))
 
       refute html =~ "hero-banknotes-mini"
+    end
+  end
+
+  describe "description" do
+    defp description_paragraphs(html) do
+      html
+      |> Floki.parse_fragment!()
+      |> Floki.find("p")
+    end
+
+    defp description_text(html) do
+      html |> description_paragraphs() |> Floki.text() |> String.trim()
+    end
+
+    test "renders the description below the title and above the duration" do
+      html = render_card(build_type(%{description: "A quick chat about your roadmap."}))
+
+      assert description_text(html) == "A quick chat about your roadmap."
+
+      assert Regex.match?(
+               ~r/Strategy Call.*A quick chat about your roadmap\..*30 min/s,
+               Floki.text(Floki.parse_fragment!(html))
+             )
+    end
+
+    test "escapes HTML in the description" do
+      html = render_card(build_type(%{description: "<script>alert(1)</script>"}))
+
+      refute html =~ "<script>"
+      assert description_text(html) == "<script>alert(1)</script>"
+    end
+
+    test "is omitted when the meeting type has no description" do
+      html = render_card(build_type(%{description: nil}))
+
+      assert html =~ "Strategy Call"
+      assert description_paragraphs(html) == []
+    end
+
+    test "is omitted when the description is only whitespace" do
+      html = render_card(build_type(%{description: "   \n  "}))
+
+      assert description_paragraphs(html) == []
     end
   end
 

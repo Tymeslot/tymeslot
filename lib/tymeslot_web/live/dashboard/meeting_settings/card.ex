@@ -56,6 +56,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               <Icons.icon name="hero-eye-slash-mini" class="w-3 h-3" />{dgettext("dashboard", "Unlisted")}
             </span>
           </div>
+          <p
+            :if={described?(@type)}
+            class="mt-0.5 text-token-xs text-tymeslot-500 leading-relaxed line-clamp-2"
+          >
+            {@type.description}
+          </p>
           <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-token-xs text-tymeslot-600">
             <span class="flex items-center shrink-0">
               <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,6 +194,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
 
   defp paid?(%{payment_required: true, price_cents: cents}) when is_integer(cents), do: true
   defp paid?(_type), do: false
+
+  defp described?(%{description: nil}), do: false
+  defp described?(%{description: description}), do: String.trim(description) != ""
 
   defp custom_question_count(%{custom_fields: fields}) when is_list(fields), do: length(fields)
   defp custom_question_count(_type), do: 0
