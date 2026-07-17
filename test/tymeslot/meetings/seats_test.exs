@@ -64,7 +64,7 @@ defmodule Tymeslot.Meetings.SeatsTest do
     test "returns seats taken keyed by meeting start time" do
       user = insert(:user)
       meeting_type = insert(:meeting_type, user: user)
-      start_time = DateTime.utc_now(:second) |> DateTime.add(1, :day)
+      start_time = DateTime.add(DateTime.utc_now(:second), 1, :day)
 
       meeting =
         insert(:meeting,

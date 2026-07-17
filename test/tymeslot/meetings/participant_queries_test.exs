@@ -79,7 +79,7 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
 
     test "accepts an explicit cancellation time" do
       participant = insert(:participant)
-      cancelled_at = DateTime.utc_now(:second) |> DateTime.add(-3600, :second)
+      cancelled_at = DateTime.add(DateTime.utc_now(:second), -3600, :second)
 
       assert {:ok, %ParticipantSchema{cancelled_at: ^cancelled_at}} =
                ParticipantQueries.cancel(participant, cancelled_at)
@@ -130,7 +130,7 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
       user = insert(:user)
       meeting_type = insert(:meeting_type, user: user)
 
-      slot_one = DateTime.utc_now(:second) |> DateTime.add(1, :day)
+      slot_one = DateTime.add(DateTime.utc_now(:second), 1, :day)
       slot_two = DateTime.add(slot_one, 2, :hour)
 
       meeting_one =
@@ -176,7 +176,7 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
       meeting_type = insert(:meeting_type, user: user)
       other_type = insert(:meeting_type, user: user)
 
-      start_time = DateTime.utc_now(:second) |> DateTime.add(1, :day)
+      start_time = DateTime.add(DateTime.utc_now(:second), 1, :day)
 
       meeting =
         insert(:meeting,
@@ -198,7 +198,7 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
     test "excludes meetings that are not confirmed" do
       user = insert(:user)
       meeting_type = insert(:meeting_type, user: user)
-      start_time = DateTime.utc_now(:second) |> DateTime.add(1, :day)
+      start_time = DateTime.add(DateTime.utc_now(:second), 1, :day)
 
       meeting =
         insert(:meeting,
@@ -221,7 +221,7 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
     test "excludes meetings outside the range" do
       user = insert(:user)
       meeting_type = insert(:meeting_type, user: user)
-      start_time = DateTime.utc_now(:second) |> DateTime.add(10, :day)
+      start_time = DateTime.add(DateTime.utc_now(:second), 10, :day)
 
       meeting =
         insert(:meeting,
