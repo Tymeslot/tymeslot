@@ -368,11 +368,14 @@ config :tymeslot, :integration_locks,
 
 # Pin the Stripe API version instead of inheriting stripity_stripe's built-in
 # default, which travels with the library: upgrading the dependency would move
-# the wire contract without any change here. Version 3.3 defaults to
-# 2025-11-17.clover, which relocates current_period_start/end off Subscription
-# onto its items. Raise this deliberately, alongside the code that reads the
-# fields it changes.
-config :stripity_stripe, api_version: "2022-11-15"
+# the wire contract without any change here. This matches the version the
+# locked stripity_stripe generates its structs from; the consumers of the
+# fields that moved in 2025-03-31.basil (billing periods on subscription
+# items, invoice subscription reference under parent, charges without
+# invoice links) accept both the old and new shapes. Webhook payload shape
+# follows the endpoint version configured in the Stripe dashboard, not this
+# pin — keep the two in step.
+config :stripity_stripe, api_version: "2025-11-17.clover"
 
 # Default country code (ISO 3166-1 alpha-2) for Stripe Connect onboarding when
 # the host's profile carries no explicit country. Configurable via the

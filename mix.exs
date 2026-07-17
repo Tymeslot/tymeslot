@@ -104,7 +104,14 @@ defmodule Tymeslot.MixProject do
       {:mox, "~> 1.0", only: :test},
       {:meck, "~> 1.1", only: :test},
       {:ex_machina, "~> 2.8", only: :test},
-      {:stripity_stripe, "~> 3.2"},
+      {:stripity_stripe, "~> 3.3"},
+      # stripity_stripe requires hackney 4.x while caldav_client and tzdata
+      # still declare 1.x requirements. Neither exercises hackney at runtime
+      # (CalDAV sync is a Req implementation and tzdata's auto-update is
+      # disabled), so forcing 4.x is safe. The same override lives in the
+      # umbrella root mix.exs, where it must be repeated because child
+      # overrides do not apply to umbrella-wide resolution.
+      {:hackney, "~> 4.0", override: true},
       {:hammer, "~> 7.1"},
       {:html_sanitize_ex, "~> 1.4"},
       {:gen_smtp, "~> 1.2"},
