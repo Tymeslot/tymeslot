@@ -18,6 +18,10 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Payments.PaymentTransactionSchema
+  alias Tymeslot.Polls.PollParticipantSchema
+  alias Tymeslot.Polls.PollSchema
+  alias Tymeslot.Polls.PollTimeSlotSchema
+  alias Tymeslot.Polls.PollVoteSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.Encryption
@@ -28,6 +32,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Telegram.TelegramDeliverySchema
   alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
+  alias Tymeslot.Utils.UnguessableToken
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookSchema
 
@@ -377,6 +382,51 @@ defmodule Tymeslot.Factory do
       application_fee_cents: 25,
       status: "pending",
       refunded_amount_cents: 0
+    }
+  end
+
+  @spec poll_factory() :: Tymeslot.Polls.PollSchema.t()
+  def poll_factory do
+    %PollSchema{
+      title: "Team sync",
+      duration_minutes: 30,
+      timezone: "Etc/UTC",
+      status: :open,
+      token: UnguessableToken.generate(),
+      user: build(:user)
+    }
+  end
+
+  @spec poll_time_slot_factory() :: Tymeslot.Polls.PollTimeSlotSchema.t()
+  def poll_time_slot_factory do
+    start_time = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
+    end_time = DateTime.add(start_time, 1, :hour)
+
+    %PollTimeSlotSchema{
+      start_time: start_time,
+      end_time: end_time,
+      position: sequence(:poll_slot_position, & &1),
+      poll: build(:poll)
+    }
+  end
+
+  @spec poll_participant_factory() :: Tymeslot.Polls.PollParticipantSchema.t()
+  def poll_participant_factory do
+    %PollParticipantSchema{
+      name: sequence(:poll_participant_name, &"Participant #{&1}"),
+      email: sequence(:poll_participant_email, &"participant#{&1}@example.com"),
+      token: UnguessableToken.generate(),
+      locale: "en",
+      poll: build(:poll)
+    }
+  end
+
+  @spec poll_vote_factory() :: Tymeslot.Polls.PollVoteSchema.t()
+  def poll_vote_factory do
+    %PollVoteSchema{
+      response: :yes,
+      participant: build(:poll_participant),
+      time_slot: build(:poll_time_slot)
     }
   end
 end
