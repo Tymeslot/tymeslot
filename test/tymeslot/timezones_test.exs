@@ -126,6 +126,34 @@ defmodule Tymeslot.TimezonesTest do
       assert Timezones.normalize("Europe/Kiev") == "Europe/Kyiv"
     end
 
+    test "normalizes legacy renames browsers still report" do
+      # Older ICU/CLDR data reports pre-rename ids from
+      # Intl.DateTimeFormat().resolvedOptions().timeZone.
+      expected = %{
+        "Africa/Asmera" => "Africa/Asmara",
+        "America/Buenos_Aires" => "America/Argentina/Buenos_Aires",
+        "America/Coral_Harbour" => "America/Atikokan",
+        "America/Godthab" => "America/Nuuk",
+        "Asia/Calcutta" => "Asia/Kolkata",
+        "Asia/Dacca" => "Asia/Dhaka",
+        "Asia/Katmandu" => "Asia/Kathmandu",
+        "Asia/Macao" => "Asia/Macau",
+        "Asia/Rangoon" => "Asia/Yangon",
+        "Asia/Saigon" => "Asia/Ho_Chi_Minh",
+        "Asia/Thimbu" => "Asia/Thimphu",
+        "Asia/Ulan_Bator" => "Asia/Ulaanbaatar",
+        "Atlantic/Faeroe" => "Atlantic/Faroe",
+        "Pacific/Enderbury" => "Pacific/Kanton",
+        "Pacific/Ponape" => "Pacific/Pohnpei",
+        "Pacific/Truk" => "Pacific/Chuuk"
+      }
+
+      for {legacy, canonical} <- expected do
+        assert Timezones.normalize(legacy) == canonical
+        assert Timezones.valid?(canonical)
+      end
+    end
+
     test "passes through canonical and link IDs unchanged" do
       assert Timezones.normalize("Europe/Brussels") == "Europe/Brussels"
       assert Timezones.normalize("Europe/Amsterdam") == "Europe/Amsterdam"

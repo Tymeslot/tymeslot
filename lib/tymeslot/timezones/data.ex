@@ -41,9 +41,27 @@ defmodule Tymeslot.Timezones.Data do
 
   # Legacy IANA IDs that should normalize to current canonical IDs.
   # Only genuine renames go here — NOT link IDs like Europe/Amsterdam
-  # (which are their own entries in our city lists).
+  # (which are their own entries in our city lists). Browsers on older
+  # ICU/CLDR data still report many of the old names via
+  # Intl.DateTimeFormat().resolvedOptions().timeZone.
   @legacy_ids %{
-    "Europe/Kiev" => "Europe/Kyiv"
+    "Africa/Asmera" => "Africa/Asmara",
+    "America/Buenos_Aires" => "America/Argentina/Buenos_Aires",
+    "America/Coral_Harbour" => "America/Atikokan",
+    "America/Godthab" => "America/Nuuk",
+    "Asia/Calcutta" => "Asia/Kolkata",
+    "Asia/Dacca" => "Asia/Dhaka",
+    "Asia/Katmandu" => "Asia/Kathmandu",
+    "Asia/Macao" => "Asia/Macau",
+    "Asia/Rangoon" => "Asia/Yangon",
+    "Asia/Saigon" => "Asia/Ho_Chi_Minh",
+    "Asia/Thimbu" => "Asia/Thimphu",
+    "Asia/Ulan_Bator" => "Asia/Ulaanbaatar",
+    "Atlantic/Faeroe" => "Atlantic/Faroe",
+    "Europe/Kiev" => "Europe/Kyiv",
+    "Pacific/Enderbury" => "Pacific/Kanton",
+    "Pacific/Ponape" => "Pacific/Pohnpei",
+    "Pacific/Truk" => "Pacific/Chuuk"
   }
 
   # Aggregate all city entries from continent modules.
