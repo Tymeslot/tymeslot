@@ -39,6 +39,11 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       assert csp =~ "frame-src"
       assert csp =~ "base-uri 'self'"
       assert csp =~ "form-action 'self'"
+
+      # Connect onboarding posts to a controller that redirects to
+      # connect.stripe.com; Chrome enforces form-action on the redirect.
+      assert csp =~
+               "form-action 'self' https://billing.stripe.com https://checkout.stripe.com https://connect.stripe.com"
     end
   end
 
