@@ -64,18 +64,18 @@ defmodule Tymeslot.Availability.TimeSlots do
 
       {:lt, :eq} ->
         # Availability spans from previous day (e.g., late night hours)
-        midnight = DateTime.new!(selected_date, ~T[00:00:00], start_dt.time_zone)
+        midnight = resolve_wall_time(selected_date, ~T[00:00:00], start_dt.time_zone)
         {midnight, end_dt}
 
       {:eq, :gt} ->
         # Availability spans to next day (e.g., early morning hours)
-        end_of_day = DateTime.new!(selected_date, ~T[23:59:59], start_dt.time_zone)
+        end_of_day = resolve_wall_time(selected_date, ~T[23:59:59], start_dt.time_zone)
         {start_dt, end_of_day}
 
       {:lt, :gt} ->
         # Full day availability (extreme timezone difference)
-        midnight = DateTime.new!(selected_date, ~T[00:00:00], start_dt.time_zone)
-        end_of_day = DateTime.new!(selected_date, ~T[23:59:59], start_dt.time_zone)
+        midnight = resolve_wall_time(selected_date, ~T[00:00:00], start_dt.time_zone)
+        end_of_day = resolve_wall_time(selected_date, ~T[23:59:59], start_dt.time_zone)
         {midnight, end_of_day}
 
       _other ->

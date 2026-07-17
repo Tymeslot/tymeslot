@@ -303,6 +303,52 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       assert "11:30 AM" in slots
     end
 
+    # America/Santiago springs forward at 24:00 on 2026-09-05, so wall-clock
+    # 00:00–00:59 never happens on 2026-09-06. An owner far enough east (e.g.
+    # Asia/Macau) pushes availability over the attendee's midnight, so the day
+    # boundary is built at 00:00 — which would crash DateTime.new!/3.
+    test "resolves a midnight start boundary that falls in a spring-forward gap" do
+      date = ~D[2026-09-06]
+      start_dt = DateTime.new!(~D[2026-09-05], ~T[21:00:00], "America/Santiago")
+      end_dt = DateTime.new!(date, ~T[05:00:00], "America/Santiago")
+
+      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
+
+      # The day starts at 01:00, not midnight — the gap is snapped forward.
+      assert List.first(slots) == "1:00 AM"
+      refute "12:00 AM" in slots
+      assert length(slots) == 8
+    end
+
+    # America/Santiago falls back at 24:00 on 2026-04-04, so wall-clock
+    # 23:00–23:59 happens twice and 23:59:59 is ambiguous. DateTime.new!/3
+    # raises on ambiguity just as it does on a gap.
+    test "resolves an end-of-day boundary that is ambiguous on a fall-back day" do
+      date = ~D[2026-04-04]
+      start_dt = DateTime.new!(date, ~T[20:00:00], "America/Santiago")
+      end_dt = DateTime.new!(~D[2026-04-05], ~T[03:00:00], "America/Santiago")
+
+      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
+
+      assert List.first(slots) == "8:00 PM"
+      assert List.last(slots) == "11:00 PM"
+      assert length(slots) == 7
+    end
+
+    # Both boundaries are built when availability covers the attendee's whole
+    # day, so a gap at midnight must not take the end boundary down with it.
+    test "resolves both boundaries when a full day spans a spring-forward gap" do
+      date = ~D[2026-09-06]
+      start_dt = DateTime.new!(~D[2026-09-05], ~T[20:00:00], "America/Santiago")
+      end_dt = DateTime.new!(~D[2026-09-07], ~T[03:00:00], "America/Santiago")
+
+      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, [])
+
+      assert List.first(slots) == "1:00 AM"
+      assert List.last(slots) == "11:00 PM"
+      assert length(slots) == 45
+    end
+
     # Ambiguous breaks are still honoured at the first (earlier UTC) occurrence.
     test "ambiguous break still filters an overlapping slot" do
       date = ~D[2026-10-25]

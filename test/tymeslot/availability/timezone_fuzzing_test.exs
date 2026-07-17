@@ -76,6 +76,24 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
     end
   end
 
+  # The property above only reaches this pair on some seeds. America/Santiago
+  # has no midnight on 2026-09-06 (DST gap), and an owner in Asia/Macau pushes
+  # availability across that boundary, so pin the case deterministically.
+  test "month_availability spans an attendee midnight that DST skips", %{profile: profile} do
+    config = %{
+      duration_minutes: 30,
+      buffer_minutes: 0,
+      min_advance_hours: 0,
+      profile_id: profile.id
+    }
+
+    assert {:ok, availability} =
+             Calculate.month_availability(2026, 9, "Asia/Macau", "America/Santiago", [], config)
+
+    assert map_size(availability) == 30
+    assert is_boolean(availability["2026-09-06"])
+  end
+
   property "available_slots returns valid sorted unique strings for any timezone pair", %{
     profile: profile
   } do
