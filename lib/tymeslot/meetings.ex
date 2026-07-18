@@ -19,6 +19,7 @@ defmodule Tymeslot.Meetings do
     MeetingQueries,
     MeetingSchema,
     MeetingState,
+    Recipient,
     VideoRooms
   }
 
@@ -132,6 +133,21 @@ defmodule Tymeslot.Meetings do
   def cancel_meeting(meeting_or_uid) do
     Cancel.execute(meeting_or_uid)
   end
+
+  @doc """
+  Returns everyone on the meeting who should receive attendee-facing
+  notifications: the attendee for solo meetings, one entry per live
+  participant for group meetings. See `Tymeslot.Meetings.Recipient`.
+  """
+  @spec recipients(MeetingSchema.t()) :: [Recipient.t()]
+  defdelegate recipients(meeting), to: Recipient, as: :for_meeting
+
+  @doc """
+  Returns the meeting as the given recipient sees it, with `attendee_*`
+  fields and management URLs overlaid for participant recipients.
+  """
+  @spec meeting_as_seen_by(MeetingSchema.t(), Recipient.t()) :: MeetingSchema.t()
+  defdelegate meeting_as_seen_by(meeting, recipient), to: Recipient, as: :as_seen_by
 
   @doc """
   Reschedules an existing meeting.
