@@ -1,20 +1,21 @@
 /* Polls — public voting page (Rhythm video-background card).
    Every rule is scoped to html.rhythm-theme so poll styling stays inside the
-   theme. Colours come from the theme's own --theme-* tokens; structure from the
-   shared PollVotingComponents class names. */
+   theme. Colours come from the theme's own --theme-* tokens and spacing/radii
+   from the shared --space-* / --radius-* / --border-width-* tokens (see
+   booking-form.css); structure from the shared PollVotingComponents classes. */
 
 html.rhythm-theme .poll-voting {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.75rem;
+  gap: var(--space-xl);
+  padding: var(--space-lg);
   color: var(--theme-text);
 }
 
 html.rhythm-theme .poll-voting-header {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: var(--space-2xs);
   text-align: center;
 }
 
@@ -47,11 +48,11 @@ html.rhythm-theme .poll-deadline-banner {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1rem;
-  border-radius: 0.75rem;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.15);
   font-size: var(--theme-font-size-sm);
   color: var(--theme-text-secondary);
 }
@@ -66,13 +67,13 @@ html.rhythm-theme .poll-deadline-icon {
 html.rhythm-theme .poll-identity-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-md);
 }
 
 html.rhythm-theme .poll-field {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: var(--space-2xs);
 }
 
 html.rhythm-theme .poll-field-label {
@@ -83,10 +84,10 @@ html.rhythm-theme .poll-field-label {
 
 html.rhythm-theme .poll-field-input {
   width: 100%;
-  padding: 0.625rem 0.875rem;
-  border-radius: 0.75rem;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--input-border-radius);
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.2);
   color: var(--theme-text);
   font-size: var(--theme-font-size-base);
 }
@@ -99,8 +100,8 @@ html.rhythm-theme .poll-field-input:focus {
 
 html.rhythm-theme .poll-submit-button {
   align-self: stretch;
-  padding: 0.75rem 1.25rem;
-  border-radius: 0.75rem;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--button-radius);
   background: var(--theme-primary);
   color: #fff;
   font-size: var(--theme-font-size-base);
@@ -117,23 +118,23 @@ html.rhythm-theme .poll-submit-button:hover {
 html.rhythm-theme .poll-slot-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: var(--space-lg);
 }
 
 html.rhythm-theme .poll-slot-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-sm);
 }
 
 html.rhythm-theme .poll-slot-row {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: var(--space-xs);
   margin: 0;
-  padding: 0.875rem 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 0.875rem;
+  padding: var(--space-md);
+  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -147,13 +148,13 @@ html.rhythm-theme .poll-slot-time {
 html.rhythm-theme .poll-slot-tallies {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: var(--space-md);
 }
 
 html.rhythm-theme .poll-tally {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--space-3xs);
   font-size: var(--theme-font-size-sm);
   color: var(--theme-text-secondary);
 }
@@ -179,16 +180,16 @@ html.rhythm-theme .poll-tally--no .poll-tally-icon {
 html.rhythm-theme .poll-vote-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-xs);
 }
 
 html.rhythm-theme .poll-vote-option {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.22);
   font-size: var(--theme-font-size-sm);
   color: var(--theme-text);
   cursor: pointer;
@@ -213,9 +214,9 @@ html.rhythm-theme .poll-closed {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-sm);
   text-align: center;
-  padding: 1rem 0;
+  padding: var(--space-md) 0;
 }
 
 html.rhythm-theme .poll-closed-icon {
