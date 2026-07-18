@@ -16,6 +16,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails
 
   @spec handle_confirmation_emails(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -157,27 +158,40 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   defp send_cancellation_emails_for_meeting(meeting) do
     Logger.info("Sending cancellation emails", meeting_id: meeting.id, uid: meeting.uid)
 
+    case Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant)) do
+      [] -> send_solo_cancellation_emails(meeting)
+      participants -> GroupMeetingEmails.send_group_cancellation_emails(meeting, participants)
+    end
+  end
+
+  defp send_solo_cancellation_emails(%{attendee_email: email} = meeting)
+       when email in [nil, ""] do
+    # An emptied group meeting being cancelled: every participant already
+    # received their seat-cancellation email when they left; only the
+    # organiser needs the meeting-level cancellation.
+    details = AppointmentBuilder.from_meeting(meeting)
+
+    case Config.email_service_module().send_cancellation_email_to_organizer(
+           details.organizer_email,
+           details
+         ) do
+      {:ok, _organizer} -> :ok
+      {:error, reason} -> {:error, "Failed to send cancellation email: #{inspect(reason)}"}
+    end
+  end
+
+  defp send_solo_cancellation_emails(meeting) do
     appointment_details = AppointmentBuilder.from_meeting(meeting)
 
-    case Config.email_service_module().send_cancellation_emails(appointment_details) do
-      {{:ok, _organizer}, {:ok, _attendee}} ->
-        Logger.info("Cancellation emails sent successfully", meeting_id: meeting.id)
-        :ok
+    {organizer_result, attendee_result} =
+      Config.email_service_module().send_cancellation_emails(appointment_details)
 
-      {organizer_result, attendee_result} ->
-        Logger.warning("Some cancellation emails may have failed",
-          meeting_id: meeting.id,
-          organizer_result: inspect(organizer_result),
-          attendee_result: inspect(attendee_result)
-        )
-
-        if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
-          {:discard,
-           "Partial cancellation email failure: one email succeeded, retry would duplicate"}
-        else
-          {:error, "Failed to send cancellation emails"}
-        end
-    end
+    summarize_dual_send(
+      "cancellation",
+      [meeting_id: meeting.id],
+      organizer_result,
+      attendee_result
+    )
   end
 
   defp find_live_recipient(meeting, participant_id) do
@@ -203,25 +217,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
     send_participant_guest_confirmations(meeting, recipient, details, email_service)
 
-    case {organizer_result, attendee_result} do
-      {{:ok, _organizer}, {:ok, _attendee}} ->
-        :ok
-
-      {organizer_result, attendee_result} ->
-        Logger.warning("Some seat confirmation emails may have failed",
-          meeting_id: meeting.id,
-          participant_id: recipient.participant_id,
-          organizer_result: inspect(organizer_result),
-          attendee_result: inspect(attendee_result)
-        )
-
-        if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
-          {:discard,
-           "Partial seat confirmation failure: one email succeeded, retry would duplicate"}
-        else
-          {:error, "Failed to send seat confirmation emails"}
-        end
-    end
+    summarize_dual_send(
+      "seat confirmation",
+      [meeting_id: meeting.id, participant_id: recipient.participant_id],
+      organizer_result,
+      attendee_result
+    )
   end
 
   # The cancelled participant is looked up by id, not through `recipients/1`,
@@ -249,24 +250,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         {:ok, :skipped}
       end
 
-    case {organizer_result, attendee_result} do
-      {{:ok, _organizer}, {:ok, _attendee}} ->
-        :ok
-
-      {organizer_result, attendee_result} ->
-        Logger.warning("Some seat cancellation emails may have failed",
-          meeting_id: meeting.id,
-          participant_id: participant.id,
-          organizer_result: inspect(organizer_result),
-          attendee_result: inspect(attendee_result)
-        )
-
-        if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
-          {:discard, "Partial seat cancellation failure: retry would duplicate"}
-        else
-          {:error, "Failed to send seat cancellation emails"}
-        end
-    end
+    summarize_dual_send(
+      "seat cancellation",
+      [meeting_id: meeting.id, participant_id: participant.id],
+      organizer_result,
+      attendee_result
+    )
   end
 
   defp parse_old_event(%{
@@ -302,22 +291,36 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     organizer_result =
       email_service.send_appointment_confirmation_to_organizer(details.organizer_email, details)
 
+    summarize_dual_send(
+      "seat reschedule",
+      [meeting_id: meeting.id, participant_id: participant.id],
+      organizer_result,
+      attendee_result
+    )
+  end
+
+  # :ok once both sides succeed, {:discard, _} on a partial send so a retry
+  # can't duplicate the email that already went out, {:error, _} if neither did.
+  defp summarize_dual_send(label, metadata, organizer_result, attendee_result) do
     case {organizer_result, attendee_result} do
       {{:ok, _organizer}, {:ok, _attendee}} ->
         :ok
 
       {organizer_result, attendee_result} ->
-        Logger.warning("Some seat reschedule emails may have failed",
-          meeting_id: meeting.id,
-          participant_id: participant.id,
-          organizer_result: inspect(organizer_result),
-          attendee_result: inspect(attendee_result)
+        Logger.warning(
+          "Some emails may have failed",
+          metadata ++
+            [
+              label: label,
+              organizer_result: inspect(organizer_result),
+              attendee_result: inspect(attendee_result)
+            ]
         )
 
         if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
-          {:discard, "Partial seat reschedule failure: retry would duplicate"}
+          {:discard, "Partial #{label} failure: retry would duplicate"}
         else
-          {:error, "Failed to send seat reschedule emails"}
+          {:error, "Failed to send #{label} emails"}
         end
     end
   end
@@ -497,49 +500,29 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end
   end
 
-  # Confirmation flags are already updated inline in send_confirmation_emails/1
-  # immediately after each email succeeds, so no flag tracking step is needed.
-  defp process_email_results(meeting, organizer_result, attendee_result, :confirmation) do
-    organizer_success = match?({:ok, _result}, organizer_result)
-    attendee_success = match?({:ok, _result}, attendee_result)
-
-    case check_email_errors(organizer_result, attendee_result) do
-      nil ->
-        log_email_results(meeting, :confirmation, organizer_success, attendee_success)
-
-        if organizer_success && attendee_success,
-          do: :ok,
-          else: {:error, "Failed to send all emails"}
-
-      error ->
-        error
-    end
-  end
-
+  # Confirmation flags are updated inline in send_confirmation_emails/1 as
+  # each email succeeds, so update_email_sent_flags/4 no-ops for it below.
   defp process_email_results(meeting, organizer_result, attendee_result, email_type) do
     organizer_success = match?({:ok, _result}, organizer_result)
     attendee_success = match?({:ok, _result}, attendee_result)
 
-    case check_email_errors(organizer_result, attendee_result) do
-      nil ->
-        case update_email_sent_flags(meeting, email_type, organizer_success, attendee_success) do
-          :ok ->
-            log_email_results(meeting, email_type, organizer_success, attendee_success)
+    with nil <- check_email_errors(organizer_result, attendee_result),
+         :ok <- update_email_sent_flags(meeting, email_type, organizer_success, attendee_success) do
+      log_email_results(meeting, email_type, organizer_success, attendee_success)
 
-            if organizer_success || attendee_success do
-              :ok
-            else
-              {:error, "Failed to send all emails"}
-            end
-
-          {:error, _reason} = error ->
-            error
-        end
-
-      error ->
-        error
+      if email_success?(email_type, organizer_success, attendee_success) do
+        :ok
+      else
+        {:error, "Failed to send all emails"}
+      end
     end
   end
+
+  defp email_success?(:confirmation, organizer_success, attendee_success),
+    do: organizer_success && attendee_success
+
+  defp email_success?(_email_type, organizer_success, attendee_success),
+    do: organizer_success || attendee_success
 
   defp check_email_errors(organizer_result, attendee_result) do
     cond do
@@ -561,6 +544,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         end
     end
   end
+
+  defp update_email_sent_flags(_meeting, :confirmation, _organizer_success, _attendee_success),
+    do: :ok
 
   defp update_email_sent_flags(
          meeting,
@@ -592,22 +578,21 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   end
 
   defp log_email_results(meeting, {:reminder, val, unit}, organizer_success, attendee_success) do
+    metadata = [
+      reminder_value: val,
+      reminder_unit: unit,
+      meeting_id: meeting.id,
+      organizer_sent: organizer_success,
+      attendee_sent: attendee_success
+    ]
+
     if organizer_success != attendee_success do
-      Logger.warning("Partial reminder delivery — one recipient did not receive the email",
-        reminder_value: val,
-        reminder_unit: unit,
-        meeting_id: meeting.id,
-        organizer_sent: organizer_success,
-        attendee_sent: attendee_success
+      Logger.warning(
+        "Partial reminder delivery — one recipient did not receive the email",
+        metadata
       )
     else
-      Logger.info("Reminder emails sent",
-        reminder_value: val,
-        reminder_unit: unit,
-        meeting_id: meeting.id,
-        organizer_sent: organizer_success,
-        attendee_sent: attendee_success
-      )
+      Logger.info("Reminder emails sent", metadata)
     end
   end
 

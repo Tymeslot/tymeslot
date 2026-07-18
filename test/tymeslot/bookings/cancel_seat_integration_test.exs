@@ -23,8 +23,9 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
   import Tymeslot.Factory
 
   alias Phoenix.PubSub
-  alias Tymeslot.Bookings.{CancelSeat, Create}
+  alias Tymeslot.Bookings.{Cancel, CancelSeat, Create}
   alias Tymeslot.EmailServiceMock
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.Seats
@@ -132,5 +133,33 @@ defmodule Tymeslot.Bookings.CancelSeatIntegrationTest do
   test "a cancelled seat cannot be cancelled twice", %{leaver: leaver} do
     assert {:ok, :seat_cancelled} = CancelSeat.execute(leaver.management_token)
     assert {:error, :already_cancelled} = CancelSeat.execute(leaver.management_token)
+  end
+
+  test "organiser cancel-all emails every live participant and voids guest RSVPs",
+       %{meeting: meeting} do
+    assert {:ok, cancelled_meeting} = Cancel.execute(meeting)
+    assert cancelled_meeting.status == "cancelled"
+
+    expect(EmailServiceMock, :send_cancellation_email_to_organizer, fn organizer_email, details ->
+      assert organizer_email == "organizer@example.com"
+      assert details.attendee_name == "2 participants"
+      {:ok, "sent"}
+    end)
+
+    expect(EmailServiceMock, :send_cancellation_email_to_attendee, 2, fn attendee_email,
+                                                                         details ->
+      assert attendee_email in ["leaver@example.com", "stayer@example.com"]
+      assert details.attendee_name in ["Leaver", "Stayer"]
+      {:ok, "sent"}
+    end)
+
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_cancellation_emails",
+               "meeting_id" => meeting.id
+             })
+
+    # Guest RSVP links on a cancelled meeting are inert.
+    assert {:error, :not_found} = Meetings.record_guest_rsvp("does-not-matter", "accepted")
   end
 end
