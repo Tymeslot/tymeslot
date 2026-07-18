@@ -12,23 +12,26 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   # Follow project rule: ALWAYS alias nested modules and organize alphabetically within groups
   alias Tymeslot.Meetings.Guests
-  alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.MeetingTypes.InputValidation
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
     Autosave,
     CustomQuestionsSection,
+    GroupBookingsSection,
     GuestsSection,
     HiddenFields,
     Init,
     PaymentsSection,
     QuestionEditorComponent,
+    ReminderHandlers,
     ShowAsFreeSection,
     Validation
   }
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+  import GroupBookingsSection, only: [group_bookings_section: 1]
   import GuestsSection, only: [guests_section: 1]
   import ShowAsFreeSection, only: [show_as_free_section: 1]
   import HiddenFields, only: [hidden_fields: 1]
@@ -76,6 +79,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:payment_price, "")
      |> assign(:allow_guests, false)
      |> assign(:show_as_free, false)
+     |> assign(:group_bookings_enabled, false)
+     |> assign(:max_participants, to_string(Init.default_group_limit()))
      |> assign(:__initialized__, false)}
   end
 
@@ -222,6 +227,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         myself={@myself}
       />
 
+      <.group_bookings_section
+        group_bookings_enabled={@group_bookings_enabled}
+        max_participants={@max_participants}
+        payment_required={@payment_required}
+        form_errors={@form_errors}
+        myself={@myself}
+      />
+
       <.guests_section
         allow_guests={@allow_guests}
         max_guests={Guests.max_guests()}
@@ -260,6 +273,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         payment_price={@payment_price}
         allow_guests={@allow_guests}
         show_as_free={@show_as_free}
+        group_bookings_enabled={@group_bookings_enabled}
+        max_participants={@max_participants}
       />
 
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :base) do %>
@@ -493,109 +508,82 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("update_reminder_input", %{"reminder" => reminder_params}, socket) do
-    reminder_value = Map.get(reminder_params, "value", socket.assigns.new_reminder_value)
-    reminder_unit = Map.get(reminder_params, "unit", socket.assigns.new_reminder_unit)
+  def handle_event("toggle_group_bookings", _params, socket) do
+    # Guard: payments and group bookings are mutually exclusive — the
+    # control renders disabled while payment is required, so a stale or
+    # forged event must not flip the toggle.
+    if socket.assigns.payment_required do
+      {:noreply, socket}
+    else
+      {:noreply,
+       socket
+       |> assign(:group_bookings_enabled, !socket.assigns.group_bookings_enabled)
+       |> assign(
+         :form_errors,
+         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :max_participants)
+       )
+       |> Autosave.maybe_run()}
+    end
+  end
 
-    {:noreply,
-     assign(socket,
-       new_reminder_value: reminder_value,
-       new_reminder_unit: reminder_unit,
-       reminder_error: nil
-     )}
+  @impl Phoenix.LiveComponent
+  def handle_event(
+        "change_max_participants",
+        %{"meeting_type" => %{"max_participants_input" => value}},
+        socket
+      ) do
+    metadata = Helpers.get_security_metadata(socket)
+
+    case InputValidation.validate_field(:max_participants, value, metadata) do
+      {:ok, sanitized} ->
+        {:noreply,
+         socket
+         |> assign(:max_participants, sanitized)
+         |> assign(
+           :form_errors,
+           FormValidationHelpers.delete_field_error(
+             socket.assigns.form_errors,
+             :max_participants
+           )
+         )
+         |> Autosave.maybe_run()}
+
+      {:error, %{max_participants: message}} ->
+        # Keep the raw value so the input shows what was typed; skip the
+        # autosave — persisting a known-invalid limit is pointless.
+        {:noreply,
+         socket
+         |> assign(:max_participants, value)
+         |> assign(
+           :form_errors,
+           Map.put(socket.assigns.form_errors, :max_participants, message)
+         )}
+    end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_reminder_input", %{"reminder" => reminder_params}, socket) do
+    {:noreply, ReminderHandlers.update_reminder_input(reminder_params, socket)}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_custom_reminder", _params, socket) do
-    {:noreply,
-     assign(socket,
-       show_custom_reminder: !socket.assigns.show_custom_reminder,
-       reminder_confirmation: nil
-     )}
+    {:noreply, ReminderHandlers.toggle_custom_reminder(socket)}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("add_quick_reminder", params, socket) do
-    # Handle map from JS.push
-    {amount, unit} =
-      case params do
-        %{"amount" => a, "unit" => u} -> {a, u}
-        _other -> {nil, nil}
-      end
-
-    case Validation.validate_new_reminder(socket.assigns.reminders, amount, unit) do
-      {:ok, reminder} ->
-        reminders = socket.assigns.reminders ++ [reminder]
-
-        # Clear any existing confirmation timer if we had one
-        Process.send_after(self(), {:clear_reminder_confirmation, socket.assigns.id}, 3000)
-
-        {:noreply,
-         socket
-         |> assign(:reminders, reminders)
-         |> assign(
-           :reminder_confirmation,
-           dgettext("dashboard_meeting_form", "Added %{label} before",
-             label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
-           )
-         )
-         |> assign(:reminder_error, nil)
-         |> Autosave.maybe_run()}
-
-      {:error, message} ->
-        {:noreply, assign(socket, reminder_error: message)}
-    end
+    {:noreply, ReminderHandlers.add_quick_reminder(params, socket)}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("add_reminder", _params, socket) do
-    value = socket.assigns.new_reminder_value
-    unit = socket.assigns.new_reminder_unit
-
-    case Validation.validate_new_reminder(socket.assigns.reminders, value, unit) do
-      {:ok, reminder} ->
-        reminders = socket.assigns.reminders ++ [reminder]
-
-        Process.send_after(self(), {:clear_reminder_confirmation, socket.assigns.id}, 3000)
-
-        {:noreply,
-         socket
-         |> assign(
-           reminders: reminders,
-           new_reminder_value: "",
-           reminder_error: nil,
-           show_custom_reminder: false,
-           reminder_confirmation:
-             dgettext("dashboard_meeting_form", "Added %{label} before",
-               label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
-             )
-         )
-         |> Autosave.maybe_run()}
-
-      {:error, message} ->
-        {:noreply, assign(socket, reminder_error: message)}
-    end
+    {:noreply, ReminderHandlers.add_reminder(socket)}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("remove_reminder", params, socket) do
-    # Handle both JS.push map and individual phx-value-params
-    {value, unit} =
-      case params do
-        %{"value" => %{"value" => v, "unit" => u}} -> {v, u}
-        %{"value" => v, "unit" => u} -> {v, u}
-        _other -> {nil, nil}
-      end
-
-    reminders =
-      Enum.reject(socket.assigns.reminders, fn reminder ->
-        reminder.value == ReminderUtils.parse_reminder_value(value) and reminder.unit == unit
-      end)
-
-    {:noreply,
-     socket
-     |> assign(reminders: reminders, reminder_error: nil)
-     |> Autosave.maybe_run()}
+    {:noreply, ReminderHandlers.remove_reminder(params, socket)}
   end
 
   @impl Phoenix.LiveComponent

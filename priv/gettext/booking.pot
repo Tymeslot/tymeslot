@@ -566,7 +566,7 @@ msgstr ""
 msgid "Please contact the organizer"
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:469
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:470
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below before submitting."
 msgstr ""
@@ -1176,7 +1176,7 @@ msgstr ""
 msgid "Pick a time that works for you and book a meeting in seconds."
 msgstr ""
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:454
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:455
 #, elixir-autogen, elixir-format
 msgid "Preview session expired. Reload the page to continue."
 msgstr ""
@@ -1253,7 +1253,7 @@ msgstr ""
 msgid "We couldn't start the payment process. Please try again."
 msgstr ""
 
-#: lib/tymeslot_web/themes/shared/live_helpers.ex:268
+#: lib/tymeslot_web/themes/shared/live_helpers.ex:272
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting type"
 msgstr ""

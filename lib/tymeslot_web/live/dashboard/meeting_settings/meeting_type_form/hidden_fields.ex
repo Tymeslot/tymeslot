@@ -27,6 +27,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
   attr :payment_price, :string, required: true
   attr :allow_guests, :boolean, required: true
   attr :show_as_free, :boolean, required: true
+  attr :group_bookings_enabled, :boolean, required: true
+  attr :max_participants, :string, required: true
 
   @spec hidden_fields(map()) :: Phoenix.LiveView.Rendered.t()
   def hidden_fields(assigns) do
@@ -135,6 +137,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
         type="hidden"
         name="meeting_type[show_as_free]"
         value={to_string(@show_as_free)}
+      />
+      <%!-- The canonical participant-limit param. Mirrors
+           Submission.max_participants_param/1: toggle off posts "1". --%>
+      <input
+        type="hidden"
+        name="meeting_type[max_participants]"
+        value={if @group_bookings_enabled, do: @max_participants, else: "1"}
       />
       <%!-- Payment fields are mirrored from socket state so the section's
            toggle/price controls survive re-render and post on submit. They

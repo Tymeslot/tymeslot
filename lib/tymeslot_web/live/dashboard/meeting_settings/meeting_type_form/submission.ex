@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "calendar_integration_id" => to_param(assigns.selected_calendar_integration_id),
       "target_calendar_id" => to_param(assigns.selected_target_calendar_id),
       "icon" => assigns.selected_icon,
+      "max_participants" => max_participants_param(assigns),
       "allow_guests" => to_string(Map.get(assigns, :allow_guests, false)),
       "show_as_free" => to_string(Map.get(assigns, :show_as_free, false)),
       "reminder_config" => Enum.map(assigns.reminders, &reminder_param/1)
@@ -98,6 +99,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
 
   defp to_param(nil), do: ""
   defp to_param(value), do: to_string(value)
+
+  # Toggle off means a solo type — the canonical param is always "1" then,
+  # regardless of what the (hidden) input last held.
+  defp max_participants_param(%{group_bookings_enabled: true, max_participants: value}),
+    do: value
+
+  defp max_participants_param(_assigns), do: "1"
 
   defp reminder_param(%{value: value, unit: unit}),
     do: %{"value" => to_string(value), "unit" => unit}

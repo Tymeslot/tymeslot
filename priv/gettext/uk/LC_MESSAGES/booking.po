@@ -566,7 +566,7 @@ msgstr "Платіж було скасовано. Будь ласка, спро�
 msgid "Please contact the organizer"
 msgstr "Зв’яжіться з організатором"
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:469
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:470
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below before submitting."
 msgstr "Будь ласка, виправте наведені нижче помилки перед надсиланням."
@@ -1176,7 +1176,7 @@ msgstr "Забронюйте зустріч з %{name}. Оберіть зруч�
 msgid "Pick a time that works for you and book a meeting in seconds."
 msgstr "Оберіть зручний для вас час і забронюйте зустріч за лічені секунди."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:454
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:455
 #, elixir-autogen, elixir-format
 msgid "Preview session expired. Reload the page to continue."
 msgstr "Сеанс попереднього перегляду завершився. Перезавантажте сторінку, щоб продовжити."
@@ -1253,7 +1253,7 @@ msgstr "Цей часовий слот більше недоступний. Ви
 msgid "We couldn't start the payment process. Please try again."
 msgstr "Не вдалося розпочати процес оплати. Спробуйте ще раз."
 
-#: lib/tymeslot_web/themes/shared/live_helpers.ex:268
+#: lib/tymeslot_web/themes/shared/live_helpers.ex:272
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting type"
 msgstr "Некоректний тип зустрічі"

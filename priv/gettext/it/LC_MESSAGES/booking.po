@@ -566,7 +566,7 @@ msgstr "Il pagamento è stato annullato. Riprova a prenotare."
 msgid "Please contact the organizer"
 msgstr "Contatta l'organizzatore"
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:469
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:470
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below before submitting."
 msgstr "Correggi gli errori riportati di seguito prima di inviare."
@@ -1176,7 +1176,7 @@ msgstr "Prenota una riunione con %{name}. Scegli un orario che ti è comodo."
 msgid "Pick a time that works for you and book a meeting in seconds."
 msgstr "Scegli un orario che ti è comodo e prenota una riunione in pochi secondi."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:454
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:455
 #, elixir-autogen, elixir-format
 msgid "Preview session expired. Reload the page to continue."
 msgstr "Sessione di anteprima scaduta. Ricarica la pagina per continuare."
@@ -1253,7 +1253,7 @@ msgstr "Questa fascia oraria non è più disponibile. Seleziona un altro orario.
 msgid "We couldn't start the payment process. Please try again."
 msgstr "Non è stato possibile avviare il processo di pagamento. Riprova."
 
-#: lib/tymeslot_web/themes/shared/live_helpers.ex:268
+#: lib/tymeslot_web/themes/shared/live_helpers.ex:272
 #, elixir-autogen, elixir-format
 msgid "Invalid meeting type"
 msgstr "Tipo di riunione non valido"
