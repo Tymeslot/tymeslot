@@ -11,6 +11,8 @@ defmodule Tymeslot.Polls.PollParticipantSchema do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
+  @type t :: %__MODULE__{}
+
   schema "poll_participants" do
     field(:name, :string)
     field(:email, :string)

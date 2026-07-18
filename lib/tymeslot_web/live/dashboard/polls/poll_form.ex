@@ -521,9 +521,6 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     end)
   end
 
-  defp errors_for(_other),
-    do: %{base: [dgettext("dashboard_common", "Something went wrong. Please try again.")]}
-
   defp too_many_message,
     do: dgettext("dashboard_common", "Up to %{max} times", max: PollSchema.max_slots())
 end
