@@ -6,7 +6,7 @@ defmodule Tymeslot.Bookings.Orchestrator do
   delegating business logic to appropriate domain modules.
   """
 
-  alias Tymeslot.Bookings.{Create, Errors, Validation}
+  alias Tymeslot.Bookings.{Create, Errors, RescheduleSeat, Validation}
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
 
@@ -46,10 +46,12 @@ defmodule Tymeslot.Bookings.Orchestrator do
       meeting_params: meeting_params,
       is_rescheduling: is_rescheduling,
       reschedule_uid: reschedule_uid,
+      reschedule_seat_token: reschedule_seat_token,
       organizer_user_id: organizer_user_id
     } = normalize_params(params, opts)
 
-    case create_or_reschedule_meeting(
+    case submit_action(
+           reschedule_seat_token,
            is_rescheduling,
            reschedule_uid,
            meeting_params,
@@ -108,8 +110,25 @@ defmodule Tymeslot.Bookings.Orchestrator do
       meeting_params: Map.get(params, :meeting_params, %{}),
       is_rescheduling: Keyword.get(opts, :is_rescheduling, false),
       reschedule_uid: Keyword.get(opts, :reschedule_uid),
+      reschedule_seat_token: Keyword.get(opts, :reschedule_seat_token),
       organizer_user_id: Keyword.get(opts, :organizer_user_id)
     }
+  end
+
+  # A seat token takes precedence: the visitor followed a participant
+  # reschedule link, so the submission moves their seat instead of creating
+  # a booking. The token itself authorises the move — no organizer scoping
+  # needed beyond it.
+  defp submit_action(seat_token, _rescheduling?, _uid, meeting_params, _form_data, _org_id)
+       when is_binary(seat_token) do
+    case RescheduleSeat.execute(seat_token, meeting_params) do
+      {:ok, %{meeting: meeting}} -> {:ok, meeting}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp submit_action(_seat_token, rescheduling?, uid, meeting_params, form_data, org_id) do
+    create_or_reschedule_meeting(rescheduling?, uid, meeting_params, form_data, org_id)
   end
 
   defp create_or_reschedule_meeting(

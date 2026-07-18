@@ -71,6 +71,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:language_dropdown_open, false)
     |> assign(:timezone_search, "")
     |> assign(:reschedule_meeting_uid, nil)
+    |> assign(:reschedule_seat_token, nil)
     |> assign(:is_rescheduling, false)
     |> assign(:meeting_uid, nil)
     |> assign(:name, "")

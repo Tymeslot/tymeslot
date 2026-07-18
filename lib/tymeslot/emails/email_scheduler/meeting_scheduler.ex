@@ -147,6 +147,58 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   @doc """
+  Schedules the reschedule emails for a single group-booking seat.
+
+  `old_snapshot` carries the old event's identity (`uid`, `ical_sequence`,
+  `start_time`, `end_time`) so the email job can build the cancel ICS even
+  after the old meeting row changes.
+  """
+  @spec schedule_seat_reschedule_emails(term(), term(), map()) :: :ok | {:error, String.t()}
+  def schedule_seat_reschedule_emails(meeting_id, participant_id, old_snapshot) do
+    result =
+      %{
+        "action" => "send_seat_reschedule_emails",
+        "meeting_id" => meeting_id,
+        "participant_id" => participant_id,
+        "old_uid" => old_snapshot.uid,
+        "old_ical_sequence" => old_snapshot.ical_sequence,
+        "old_start_time" => DateTime.to_iso8601(old_snapshot.start_time),
+        "old_end_time" => DateTime.to_iso8601(old_snapshot.end_time)
+      }
+      |> EmailWorker.new(
+        queue: :emails,
+        priority: 0,
+        unique: [
+          period: 300,
+          fields: [:args, :queue],
+          keys: [:action, :meeting_id, :participant_id]
+        ]
+      )
+      |> Oban.insert()
+
+    case result do
+      {:ok, _job} ->
+        Logger.info("Seat reschedule email job scheduled",
+          meeting_id: meeting_id,
+          participant_id: participant_id
+        )
+
+        :ok
+
+      {:error, %Changeset{errors: [unique: _details]}} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule seat reschedule emails",
+          meeting_id: meeting_id,
+          error: Helpers.format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
+  @doc """
   Schedules cancellation emails to be sent immediately with high priority.
   """
   @spec schedule_cancellation_emails(term()) :: :ok | {:error, String.t()}

@@ -7,6 +7,7 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
 
   alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.Demo
+  alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
 
   @spec resolve_meeting_type_for_duration(pos_integer(), String.t()) :: map() | nil
@@ -44,5 +45,27 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
 
   defp default_booking_form_data do
     %{"name" => "", "email" => "", "message" => ""}
+  end
+
+  @doc """
+  Pre-fills the booking form for a seat reschedule from the participant's
+  own data. The token scopes the lookup, so no organizer id is needed and
+  no other booker's PII can be pre-filled.
+  """
+  @spec build_seat_booking_form_data(String.t() | nil) :: %{String.t() => String.t()}
+  def build_seat_booking_form_data(nil), do: default_booking_form_data()
+
+  def build_seat_booking_form_data(seat_token) when is_binary(seat_token) do
+    case Meetings.get_participant_by_token(seat_token) do
+      {:ok, %{cancelled_at: nil} = participant} ->
+        %{
+          "name" => participant.name,
+          "email" => participant.email,
+          "message" => participant.message || ""
+        }
+
+      _cancelled_or_missing ->
+        default_booking_form_data()
+    end
   end
 end

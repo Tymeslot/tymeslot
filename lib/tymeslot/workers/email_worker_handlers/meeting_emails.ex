@@ -54,6 +54,22 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end)
   end
 
+  @spec handle_seat_reschedule_emails(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_seat_reschedule_emails(
+        %{"meeting_id" => meeting_id, "participant_id" => participant_id} = args
+      ) do
+    with_meeting(meeting_id, "seat reschedule emails", fn meeting ->
+      with {:ok, participant} <- ParticipantQueries.get(participant_id),
+           {:ok, old_event} <- parse_old_event(args) do
+        send_seat_reschedule_emails(meeting, participant, old_event)
+      else
+        {:error, :not_found} -> {:discard, "Participant not found"}
+        {:error, :invalid_snapshot} -> {:discard, "Invalid old-event snapshot"}
+      end
+    end)
+  end
+
   @spec handle_reminder_emails(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_reminder_emails(%{"meeting_id" => meeting_id} = args) do
@@ -249,6 +265,59 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           {:discard, "Partial seat cancellation failure: retry would duplicate"}
         else
           {:error, "Failed to send seat cancellation emails"}
+        end
+    end
+  end
+
+  defp parse_old_event(%{
+         "old_uid" => uid,
+         "old_ical_sequence" => sequence,
+         "old_start_time" => start_iso,
+         "old_end_time" => end_iso
+       })
+       when is_binary(uid) and is_integer(sequence) do
+    with {:ok, start_time, _offset} <- DateTime.from_iso8601(start_iso),
+         {:ok, end_time, _offset} <- DateTime.from_iso8601(end_iso) do
+      {:ok, %{uid: uid, ical_sequence: sequence, start_time: start_time, end_time: end_time}}
+    else
+      _invalid -> {:error, :invalid_snapshot}
+    end
+  end
+
+  defp parse_old_event(_args), do: {:error, :invalid_snapshot}
+
+  defp send_seat_reschedule_emails(meeting, participant, old_event) do
+    recipient = Recipient.from_participant(participant)
+
+    details =
+      meeting
+      |> Meetings.meeting_as_seen_by(recipient)
+      |> AppointmentBuilder.from_meeting()
+
+    email_service = Config.email_service_module()
+
+    attendee_result =
+      email_service.send_seat_reschedule_to_participant(recipient.email, details, old_event)
+
+    organizer_result =
+      email_service.send_appointment_confirmation_to_organizer(details.organizer_email, details)
+
+    case {organizer_result, attendee_result} do
+      {{:ok, _organizer}, {:ok, _attendee}} ->
+        :ok
+
+      {organizer_result, attendee_result} ->
+        Logger.warning("Some seat reschedule emails may have failed",
+          meeting_id: meeting.id,
+          participant_id: participant.id,
+          organizer_result: inspect(organizer_result),
+          attendee_result: inspect(attendee_result)
+        )
+
+        if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
+          {:discard, "Partial seat reschedule failure: retry would duplicate"}
+        else
+          {:error, "Failed to send seat reschedule emails"}
         end
     end
   end

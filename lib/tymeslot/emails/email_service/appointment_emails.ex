@@ -3,7 +3,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
 
   require Logger
 
+  alias Swoosh.Email
   alias Tymeslot.Emails.Delivery
+  alias Tymeslot.Integrations.Calendar.IcsGenerator
 
   alias Tymeslot.Emails.Templates.{
     AppointmentCancellation,
@@ -51,6 +53,46 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
           {:ok, any()} | {:error, any()}
   def send_guest_confirmation(guest_email, appointment_details) do
     Delivery.deliver(AppointmentConfirmation.render(:guest, guest_email, appointment_details))
+  end
+
+  @doc """
+  Sends the move-my-seat confirmation to a group participant.
+
+  The email is the standard attendee confirmation for the new meeting, with
+  one extra attachment: a `STATUS:CANCELLED` ICS for the old meeting's UID
+  at `SEQUENCE: old_ical_sequence + 1`, so the participant's calendar drops
+  the old copy (see `Tymeslot.Meetings.AttendeeNotifications.IcalMethod`:
+  the move is an `:event_deleted` on the old UID plus an `:event_created`
+  on the new one — never an `:event_updated`, because the UID changes).
+
+  `old_event` is `%{uid:, ical_sequence:, start_time:, end_time:}`.
+  """
+  @spec send_seat_reschedule_to_participant(String.t(), map(), map()) ::
+          {:ok, any()} | {:error, any()}
+  def send_seat_reschedule_to_participant(participant_email, appointment_details, old_event) do
+    locale = Map.get(appointment_details, :attendee_locale, "en")
+
+    old_event_details =
+      Map.merge(appointment_details, %{
+        uid: old_event.uid,
+        start_time: old_event.start_time,
+        end_time: old_event.end_time
+      })
+
+    cancel_attachment =
+      IcsGenerator.generate_ics_cancel_attachment(
+        old_event_details,
+        old_event.ical_sequence + 1,
+        locale,
+        "cancelled-#{old_event.uid}.ics"
+      )
+
+    email =
+      :attendee
+      |> AppointmentConfirmation.render(participant_email, appointment_details)
+      |> Email.attachment(cancel_attachment)
+
+    Delivery.deliver(email)
   end
 
   @doc """

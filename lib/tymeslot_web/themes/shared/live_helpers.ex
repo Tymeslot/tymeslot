@@ -201,7 +201,11 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     |> maybe_assign_from_params(:selected_date, params["date"])
     |> maybe_assign_from_params(:selected_time, params["time"])
     |> maybe_assign_from_params(:reschedule_meeting_uid, params["reschedule_meeting_uid"])
-    |> assign(:is_rescheduling, params["reschedule_meeting_uid"] != nil)
+    |> maybe_assign_from_params(:reschedule_seat_token, params["reschedule_seat_token"])
+    |> assign(
+      :is_rescheduling,
+      params["reschedule_meeting_uid"] != nil or params["reschedule_seat_token"] != nil
+    )
     |> handle_confirmation_params(params)
   end
 
@@ -324,7 +328,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     is_reschedule =
       socket.assigns[:reschedule_meeting_uid] != nil ||
-        is_binary(params["reschedule_meeting_uid"])
+        is_binary(params["reschedule_meeting_uid"]) ||
+        socket.assigns[:reschedule_seat_token] != nil ||
+        is_binary(params["reschedule_seat_token"])
 
     if has_selection || is_reschedule do
       do_handle_booking_entry(socket, params)
@@ -347,8 +353,15 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     # Pre-fill form if rescheduling, scoped to the organizer to prevent PII leaks
     reschedule_uid = socket.assigns[:reschedule_meeting_uid]
+    seat_token = socket.assigns[:reschedule_seat_token]
     organizer_user_id = socket.assigns[:organizer_user_id]
-    form_data = ThemeFlow.build_booking_form_data(reschedule_uid, organizer_user_id)
+
+    form_data =
+      if seat_token do
+        ThemeFlow.build_seat_booking_form_data(seat_token)
+      else
+        ThemeFlow.build_booking_form_data(reschedule_uid, organizer_user_id)
+      end
 
     socket
     |> OrganizerHelpers.setup_form_state(form_data, as: :booking)

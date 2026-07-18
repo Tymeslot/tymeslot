@@ -64,6 +64,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     %{"locale" => locale}
     |> maybe_put_query_param("theme", socket.assigns[:theme_id])
     |> maybe_put_query_param("reschedule_meeting_uid", socket.assigns[:reschedule_meeting_uid])
+    |> maybe_put_query_param("reschedule_seat_token", socket.assigns[:reschedule_seat_token])
   end
 
   defp get_slug(socket) do

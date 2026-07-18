@@ -68,6 +68,20 @@ defmodule Tymeslot.Notifications.Events do
   end
 
   @doc """
+  Handles a participant's seat moving to a new slot (move-my-seat).
+
+  Schedules the reschedule email: a confirmation for the new meeting whose
+  attachments also cancel the old meeting's event in the participant's
+  calendar. The old event snapshot is passed through the job args because
+  the old meeting may already be cancelled or mutated by the time the job
+  runs.
+  """
+  @spec seat_rescheduled(term(), term(), map()) :: {:ok, term()} | {:error, term()}
+  def seat_rescheduled(meeting, participant, old_snapshot) do
+    Orchestrator.schedule_seat_reschedule(meeting, participant, old_snapshot)
+  end
+
+  @doc """
   Handles meeting cancellation event.
   """
   @spec meeting_cancelled(term()) :: {:ok, term()} | {:error, term()}
