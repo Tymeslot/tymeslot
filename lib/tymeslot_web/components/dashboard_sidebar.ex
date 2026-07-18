@@ -151,6 +151,11 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 <span>{dgettext("dashboard_common", "Availability")}</span>
               </.nav_link>
 
+              <.nav_link patch={~p"/dashboard/polls"} current={@current_action} action={:polls}>
+                <.icon name="hero-hand-raised" class="w-5 h-5" />
+                <span>{dgettext("dashboard_common", "Polls")}</span>
+              </.nav_link>
+
               <.nav_link
                 patch={~p"/dashboard/theme"}
                 current={if @current_action == :theme_customization, do: :theme, else: @current_action}

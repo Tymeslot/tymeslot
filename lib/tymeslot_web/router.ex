@@ -264,6 +264,7 @@ defmodule TymeslotWeb.Router do
       live "/dashboard/theme", DashboardLive, :theme
       live "/dashboard/theme/customize/:theme_id", DashboardLive, :theme_customization
       live "/dashboard/meetings", DashboardLive, :meetings
+      live "/dashboard/polls", DashboardLive, :polls
       live "/dashboard/embed", DashboardLive, :embed
       live "/dashboard/analytics", Dashboard.AnalyticsLive, :index
       live "/dashboard/payments", DashboardLive, :payments
