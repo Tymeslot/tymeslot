@@ -19,9 +19,10 @@ defmodule Tymeslot.Repo.Migrations.CreateMeetings do
       add :organizer_email, :string, null: false
       add :organizer_title, :string
 
-      # Attendee details
-      add :attendee_name, :string, null: false
-      add :attendee_email, :string, null: false
+      # Attendee details. Nullable: group meetings (max_participants > 1)
+      # hold no attendee here — bookers live in meeting_participants instead.
+      add :attendee_name, :string
+      add :attendee_email, :string
       add :attendee_message, :text
       add :attendee_phone, :string
       add :attendee_company, :string

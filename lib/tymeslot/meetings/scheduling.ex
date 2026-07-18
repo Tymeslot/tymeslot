@@ -39,20 +39,46 @@ defmodule Tymeslot.Meetings.Scheduling do
              | :database_error
              | {:validation_error, Changeset.t()}}
   def create_meeting_with_conflict_check(attrs) do
+    create_with_conflict_check(attrs, &create_meeting_in_transaction/1, "atomic meeting creation")
+  end
+
+  @doc """
+  Atomically creates a group meeting's slot row with conflict checking, using
+  the same buffered `FOR UPDATE` locking as `create_meeting_with_conflict_check/1`.
+
+  Used for the first booker of a group meeting type, where a fresh meeting
+  row is created together with the first seat.
+  """
+  @spec create_group_meeting_with_conflict_check(map()) ::
+          {:ok, Meeting.t()}
+          | {:error,
+             :time_conflict
+             | :invalid_time_range
+             | :database_error
+             | {:validation_error, Changeset.t()}}
+  def create_group_meeting_with_conflict_check(attrs) do
+    create_with_conflict_check(
+      attrs,
+      &create_group_meeting_in_transaction/1,
+      "atomic group meeting creation"
+    )
+  end
+
+  defp create_with_conflict_check(attrs, persist_fn, operation_label) do
     start_time = attrs[:start_time] || attrs["start_time"]
     end_time = attrs[:end_time] || attrs["end_time"]
     organizer_user_id = attrs[:organizer_user_id] || attrs["organizer_user_id"]
 
     if start_time && end_time do
       execute_conflict_checked_transaction(start_time, end_time, organizer_user_id, fn ->
-        create_meeting_in_transaction(attrs)
+        persist_fn.(attrs)
       end)
     else
       {:error, :invalid_time_range}
     end
   rescue
     error ->
-      handle_database_error(error, "atomic meeting creation", __STACKTRACE__)
+      handle_database_error(error, operation_label, __STACKTRACE__)
   end
 
   @doc """
@@ -154,6 +180,13 @@ defmodule Tymeslot.Meetings.Scheduling do
 
   defp create_meeting_in_transaction(attrs) do
     case MeetingQueries.create_meeting(attrs) do
+      {:ok, meeting} -> meeting
+      {:error, changeset} -> Repo.rollback({:validation_error, changeset})
+    end
+  end
+
+  defp create_group_meeting_in_transaction(attrs) do
+    case MeetingQueries.create_group_meeting(attrs) do
       {:ok, meeting} -> meeting
       {:error, changeset} -> Repo.rollback({:validation_error, changeset})
     end

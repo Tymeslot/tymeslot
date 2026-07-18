@@ -23,6 +23,14 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     |> Repo.insert()
   end
 
+  @doc "Creates a group meeting (bookers live in meeting_participants, not attendee_* fields)."
+  @spec create_group_meeting(map()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def create_group_meeting(attrs) when is_map(attrs) do
+    %Meeting{}
+    |> Meeting.group_changeset(attrs)
+    |> Repo.insert()
+  end
+
   @doc "Gets a single meeting by ID."
   @spec get_meeting(String.t()) :: {:ok, Meeting.t()} | {:error, :not_found}
   def get_meeting(id) do

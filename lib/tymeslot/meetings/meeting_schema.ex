@@ -275,6 +275,15 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :visitor_hash
   ]
 
+  @group_required_fields [
+    :uid,
+    :title,
+    :start_time,
+    :end_time,
+    :organizer_name,
+    :organizer_email
+  ]
+
   @valid_statuses [
     "pending",
     "confirmed",
@@ -288,9 +297,24 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   @doc false
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(meeting, attrs) do
+    base_changeset(meeting, attrs, @required_fields)
+  end
+
+  @doc """
+  Changeset for creating a group meeting's slot row.
+
+  Group meetings hold no attendee — bookers live in `meeting_participants` —
+  so `attendee_name`/`attendee_email` are not required.
+  """
+  @spec group_changeset(t(), map()) :: Ecto.Changeset.t()
+  def group_changeset(meeting, attrs) do
+    base_changeset(meeting, attrs, @group_required_fields)
+  end
+
+  defp base_changeset(meeting, attrs, required_fields) do
     meeting
     |> cast(attrs, @required_fields ++ @optional_fields)
-    |> validate_required(@required_fields)
+    |> validate_required(required_fields)
     |> EmailChangeset.validate_email(:organizer_email)
     |> EmailChangeset.validate_email(:attendee_email)
     |> validate_inclusion(:status, @valid_statuses)
