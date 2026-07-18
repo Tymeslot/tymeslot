@@ -17,7 +17,9 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Security.FieldValidators.EmailValidator
+  alias TymeslotWeb.Components.MeetingUtils
 
   @doc "Initial assigns for the guest field, set once at scheduling mount."
   @spec assign_defaults(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
@@ -83,15 +85,51 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
 
   Guests are allowed when the meeting type has `allow_guests: true` and the
   current flow is not a reschedule (adding guests to an existing meeting is
-  not supported).
+  not supported). Hidden outright once the seat cap has been driven to zero
+  (the last seat on a group slot) — there is no room for a guest at all.
   """
   @spec guests_allowed?(map()) :: boolean()
+  def guests_allowed?(%{max_guests: 0}), do: false
+
   def guests_allowed?(assigns) do
     case assigns[:meeting_type] do
       %{allow_guests: true} -> assigns[:is_rescheduling] != true
       _other -> false
     end
   end
+
+  @doc """
+  Recomputes the `:max_guests` assign from the seats left on the selected slot.
+
+  Call whenever the booker commits to a slot (booking-step entry) and after a
+  live seat refresh — the cap must always reflect the seats the booker can
+  actually still claim beyond their own.
+  """
+  @spec assign_seat_cap(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def assign_seat_cap(socket), do: assign(socket, :max_guests, seat_cap(socket.assigns))
+
+  @doc """
+  Effective guest cap: `min(#{Guests.max_guests()}, seats_left - 1)` for group
+  meeting types with a known selected slot, the flat cap otherwise.
+  """
+  @spec seat_cap(map()) :: non_neg_integer()
+  def seat_cap(assigns) do
+    with %{} = meeting_type <- assigns[:meeting_type],
+         true <- MeetingTypeSchema.group?(meeting_type),
+         %{seats_left: seats_left} when is_integer(seats_left) <- selected_slot(assigns) do
+      max(min(Guests.max_guests(), seats_left - 1), 0)
+    else
+      _other -> Guests.max_guests()
+    end
+  end
+
+  defp selected_slot(%{selected_time: time} = assigns) when is_binary(time) do
+    assigns[:available_slots]
+    |> MeetingUtils.normalize_slot_list()
+    |> Enum.find(&(&1.time == time))
+  end
+
+  defp selected_slot(_assigns), do: nil
 
   @doc "Removes a guest email from the in-flight list."
   @spec remove(Phoenix.LiveView.Socket.t(), String.t()) :: Phoenix.LiveView.Socket.t()
@@ -107,10 +145,18 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   defp validate("", _emails, _socket), do: {:error, blank_message()}
 
   defp validate(email, emails, socket) do
+    max_guests = socket.assigns[:max_guests] || Guests.max_guests()
+
     cond do
-      length(emails) >= Guests.max_guests() ->
+      length(emails) >= max_guests ->
         {:error,
-         dgettext("booking", "You can add up to %{count} guests.", count: Guests.max_guests())}
+         dngettext(
+           "booking",
+           "You can add up to %{count} guest.",
+           "You can add up to %{count} guests.",
+           max_guests,
+           count: max_guests
+         )}
 
       email in emails ->
         {:error, dgettext("booking", "%{email} has already been added.", email: email)}

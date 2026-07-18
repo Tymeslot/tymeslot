@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: CustomizationHelpers
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
+  alias TymeslotWeb.Themes.Shared.GuestBooking
 
   @doc """
   Shared mounting logic for scheduling themes.
@@ -348,6 +349,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     socket
     |> OrganizerHelpers.setup_form_state(form_data, as: :booking)
+    |> GuestBooking.assign_seat_cap()
     |> assign(:client_ip, client_ip)
     |> assign(:submission_token, submission_token)
     |> assign(:submission_processed, false)

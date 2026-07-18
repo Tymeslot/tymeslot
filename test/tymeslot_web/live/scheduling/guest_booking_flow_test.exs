@@ -340,4 +340,69 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
       refute has_element?(view, "[data-testid='guest-input']")
     end
   end
+
+  describe "guest field — group meeting type seat cap" do
+    setup %{user: user} do
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          duration_minutes: 30,
+          name: "Group Session",
+          is_active: true,
+          allow_guests: true,
+          max_participants: 3
+        )
+
+      %{meeting_type: meeting_type}
+    end
+
+    @tag :capture_log
+    test "cap is reduced to the seats left beyond the booker's own", %{
+      conn: conn,
+      profile: profile
+    } do
+      view = navigate_to_booking_form(conn, profile, nil)
+
+      # Capacity 3, empty slot: the booker takes one seat, so at most 2 guests.
+      # The counter only renders once the guest field is open.
+      send(view.pid, {:step_event, :booking, :toggle_guests, nil})
+      _drain = :sys.get_state(view.pid)
+      assert render(view) =~ "0/2"
+
+      send(view.pid, {:step_event, :booking, :add_guest, "one@example.com"})
+      send(view.pid, {:step_event, :booking, :add_guest, "two@example.com"})
+      send(view.pid, {:step_event, :booking, :add_guest, "three@example.com"})
+      _drain = :sys.get_state(view.pid)
+
+      html = render(view)
+      assert html =~ "You can add up to 2 guests"
+      assert html =~ "2/2"
+      refute html =~ "three@example.com"
+    end
+
+    @tag :capture_log
+    test "guest field is hidden when only the last seat remains", %{
+      conn: conn,
+      profile: profile
+    } do
+      # First booker takes 2 of 3 seats (themselves plus one guest).
+      first = navigate_to_booking_form(conn, profile, nil)
+      send(first.pid, {:step_event, :booking, :toggle_guests, nil})
+      send(first.pid, {:step_event, :booking, :add_guest, "plusone@example.com"})
+
+      first
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{"name" => "First Booker", "email" => "first@example.com", "message" => ""}
+      })
+      |> render_submit()
+
+      wait_until(fn -> render(first) =~ "first@example.com" end)
+
+      # Second booker sees 1 seat left on that slot — no guest field at all.
+      second = navigate_to_booking_form(build_conn(), profile, nil)
+
+      refute has_element?(second, "[data-testid='guest-toggle']")
+      refute has_element?(second, "[data-testid='guest-field']")
+    end
+  end
 end
