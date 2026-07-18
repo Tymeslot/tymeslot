@@ -519,6 +519,7 @@ msgid "Need to reschedule? Check your confirmation email."
 msgstr "Need to reschedule? Check your confirmation email."
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/yes_no.ex:68
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex:318
 #, elixir-autogen, elixir-format
 msgid "No"
 msgstr "No"
@@ -857,6 +858,7 @@ msgid "Wednesday"
 msgstr "Wednesday"
 
 #: lib/tymeslot_web/themes/shared/custom_questions/inputs/yes_no.ex:44
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex:316
 #, elixir-autogen, elixir-format
 msgid "Yes"
 msgstr "Yes"
@@ -1290,3 +1292,115 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Pick an option below."
 msgstr "Pick an option below."
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex:151
+#, elixir-autogen, elixir-format
+msgid "Continue to vote"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex:317
+#, elixir-autogen, elixir-format
+msgid "If need be"
+msgstr ""
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex:240
+#, elixir-autogen, elixir-format
+msgid "One of the selected times is no longer available. Please refresh and try again."
+msgstr ""
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex:247
+#, elixir-autogen, elixir-format
+msgid "One of your responses wasn't recognised. Please refresh and try again."
+msgstr ""
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex:230
+#, elixir-autogen, elixir-format
+msgid "Please check your name and email, then try again."
+msgstr ""
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex:154
+#, elixir-autogen, elixir-format
+msgid "Please register before voting."
+msgstr ""
+
+#: lib/tymeslot_web/themes/core/mount_helpers.ex:227
+#, elixir-autogen, elixir-format
+msgid "Poll not found"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex:191
+#, elixir-autogen, elixir-format
+msgid "Save my responses"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex:220
+#, elixir-autogen, elixir-format
+msgid "Scheduled for %{time}"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex:234
+#, elixir-autogen, elixir-format
+msgid "This poll has been cancelled and is no longer accepting responses."
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex:222
+#, elixir-autogen, elixir-format
+msgid "This poll has been scheduled."
+msgstr ""
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex:227
+#, elixir-autogen, elixir-format
+msgid "This poll has reached its participant limit."
+msgstr ""
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex:144
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Please wait a moment and try again."
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex:69
+#, elixir-autogen, elixir-format
+msgid "Voting as %{name}"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex:95
+#, elixir-autogen, elixir-format
+msgid "Voting closes %{deadline}"
+msgstr ""
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex:224
+#: lib/tymeslot_web/themes/core/poll_voting.ex:233
+#, elixir-autogen, elixir-format
+msgid "Voting has closed for this poll."
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex:53
+#, elixir-autogen, elixir-format
+msgid "Voting has closed. Here are the final responses."
+msgstr ""
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex:236
+#, elixir-autogen, elixir-format
+msgid "We couldn't find your registration. Please register again."
+msgstr ""
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex:78
+#: lib/tymeslot_web/themes/core/poll_voting.ex:104
+#, elixir-autogen, elixir-format
+msgid "You're registered. Your responses are saved as you vote."
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex:138
+#, elixir-autogen, elixir-format
+msgid "Your email"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/poll_voting_components.ex:125
+#, elixir-autogen, elixir-format
+msgid "Your name"
+msgstr ""
+
+#: lib/tymeslot_web/themes/core/poll_voting.ex:165
+#, elixir-autogen, elixir-format
+msgid "Your responses have been saved."
+msgstr ""
