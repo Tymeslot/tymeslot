@@ -78,26 +78,47 @@ defmodule TymeslotWeb.Components.MeetingUtilsTest do
   end
 
   describe "normalize_slot_list/1" do
-    test "normalizes a list of binary strings" do
-      assert ["09:00", "10:00"] = MeetingUtils.normalize_slot_list(["09:00", "10:00"])
+    test "normalizes legacy string slots to seat-aware maps" do
+      assert [
+               %{time: "09:00", seats_left: nil, capacity: nil},
+               %{time: "10:00", seats_left: nil, capacity: nil}
+             ] = MeetingUtils.normalize_slot_list(["09:00", "10:00"])
     end
 
-    test "drops slots that cannot be normalized" do
-      assert ["09:00"] = MeetingUtils.normalize_slot_list(["09:00", nil, 42])
+    test "preserves seat data on enriched slot maps" do
+      slots = [%{time: "09:00", seats_left: 4, capacity: 10}]
+
+      assert [%{time: "09:00", seats_left: 4, capacity: 10}] =
+               MeetingUtils.normalize_slot_list(slots)
     end
 
-    test "returns empty list for empty input" do
+    test "treats maps without seat keys as solo slots" do
+      assert [%{time: "11:00", seats_left: nil, capacity: nil}] =
+               MeetingUtils.normalize_slot_list([%{start_time: "11:00"}])
+    end
+
+    test "filters out invalid slots" do
+      assert [%{time: "09:00", seats_left: nil, capacity: nil}] =
+               MeetingUtils.normalize_slot_list(["09:00", nil, 42])
+    end
+
+    test "handles empty list" do
       assert [] = MeetingUtils.normalize_slot_list([])
     end
 
-    test "returns empty list for non-list input" do
+    test "handles non-list input" do
       assert [] = MeetingUtils.normalize_slot_list(nil)
       assert [] = MeetingUtils.normalize_slot_list("09:00")
     end
 
-    test "normalizes maps with time keys" do
-      slots = [%{time: "09:00"}, %{start_time: "10:30"}]
-      assert ["09:00", "10:30"] = MeetingUtils.normalize_slot_list(slots)
+    test "handles mixed Time structs and strings" do
+      slots = [~T[09:00:00], "10:30"]
+
+      # `Time` structs are formatted via `Display.format_time_for_display/1`,
+      # which always renders 12h AM/PM regardless of locale — only strings
+      # pass through as-is.
+      assert [%{time: "9:00 AM", seats_left: nil}, %{time: "10:30", seats_left: nil}] =
+               MeetingUtils.normalize_slot_list(slots)
     end
   end
 end

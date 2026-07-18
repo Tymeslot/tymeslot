@@ -281,17 +281,17 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                                 {period}
                               </h4>
                               <div class="time-period-slots">
-                                <%= for slot_value <- slots do %>
+                                <%= for slot <- slots do %>
                                   <button
-                                    class={"time-slot #{if @selected_time == slot_value, do: "selected", else: ""}"}
+                                    class={"time-slot #{if @selected_time == slot.time, do: "selected", else: ""}"}
                                     data-testid="time-slot"
-                                    data-time={slot_value}
+                                    data-time={slot.time}
                                     phx-click="select_time"
-                                    phx-value-time={slot_value}
+                                    phx-value-time={slot.time}
                                     phx-target={@myself}
                                     disabled={@loading_slots}
                                   >
-                                    {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(slot_value))}
+                                    {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(slot.time))}
                                   </button>
                                 <% end %>
                               </div>

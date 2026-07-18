@@ -75,4 +75,28 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
       assert LocalizationHelpers.format_full_date_label("not-a-date") == "not-a-date"
     end
   end
+
+  describe "group_slots_by_period/1 (slot maps)" do
+    test "groups seat-aware slot maps by period and keeps seat data" do
+      slots = [
+        %{time: "14:00", seats_left: 2, capacity: 10},
+        %{time: "09:00", seats_left: nil, capacity: nil}
+      ]
+
+      grouped = LocalizationHelpers.group_slots_by_period(slots)
+
+      assert {_morning, [%{time: "09:00", seats_left: nil}]} = Enum.at(grouped, 1)
+      assert {_afternoon, [%{time: "14:00", seats_left: 2, capacity: 10}]} = Enum.at(grouped, 2)
+    end
+
+    test "sorts slots chronologically inside a period" do
+      slots = [
+        %{time: "11:30", seats_left: nil, capacity: nil},
+        %{time: "07:15", seats_left: nil, capacity: nil}
+      ]
+
+      {_period, morning} = Enum.at(LocalizationHelpers.group_slots_by_period(slots), 1)
+      assert Enum.map(morning, & &1.time) == ["07:15", "11:30"]
+    end
+  end
 end

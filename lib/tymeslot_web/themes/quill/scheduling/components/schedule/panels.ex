@@ -187,13 +187,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                         {period}
                       </div>
                       <div class="time-slots-grid">
-                        <%= for slot_value <- slots do %>
+                        <%= for slot <- slots do %>
                           <.time_slot_button
                             phx-click="select_time"
                             phx-target={@target}
-                            phx-value-time={slot_value}
-                            slot={%{start_time: CalendarHelpers.parse_slot_time(slot_value)}}
-                            selected={@selected_time == slot_value}
+                            phx-value-time={slot.time}
+                            slot={%{start_time: CalendarHelpers.parse_slot_time(slot.time)}}
+                            selected={@selected_time == slot.time}
                             disabled={@loading_slots}
                           />
                         <% end %>

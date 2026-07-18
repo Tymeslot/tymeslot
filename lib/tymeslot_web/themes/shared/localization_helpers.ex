@@ -9,19 +9,31 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   alias Tymeslot.Utils.DateTimeUtils.Display
 
   @doc """
-  Groups time slots by period of day with translated period names.
+  Groups normalised slot maps (`TymeslotWeb.Components.MeetingUtils.slot/0`)
+  by period of day with translated period names.
   """
-  @spec group_slots_by_period([String.t()]) :: [{String.t(), [String.t()]}]
+  @spec group_slots_by_period([map()]) :: [{String.t(), [map()]}]
   def group_slots_by_period(slots) do
-    grouped = Display.group_slots_by_period(slots)
+    grouped = Enum.group_by(slots, &Display.get_time_period(&1.time))
 
     [
-      {dgettext("booking", "Early Morning"), Map.get(grouped, "Early Morning", [])},
-      {dgettext("booking", "Morning"), Map.get(grouped, "Morning", [])},
-      {dgettext("booking", "Afternoon"), Map.get(grouped, "Afternoon", [])},
-      {dgettext("booking", "Evening"), Map.get(grouped, "Evening", [])},
-      {dgettext("booking", "Late Night"), Map.get(grouped, "Late Night", [])}
+      {dgettext("booking", "Early Morning"), sorted_period(grouped, "Early Morning")},
+      {dgettext("booking", "Morning"), sorted_period(grouped, "Morning")},
+      {dgettext("booking", "Afternoon"), sorted_period(grouped, "Afternoon")},
+      {dgettext("booking", "Evening"), sorted_period(grouped, "Evening")},
+      {dgettext("booking", "Late Night"), sorted_period(grouped, "Late Night")}
     ]
+  end
+
+  defp sorted_period(grouped, period) do
+    grouped
+    |> Map.get(period, [])
+    |> Enum.sort_by(fn slot ->
+      case DateTimeUtils.parse_time_string(slot.time) do
+        {:ok, time} -> {time.hour, time.minute, time.second}
+        {:error, _reason} -> {99, 99, 99}
+      end
+    end)
   end
 
   @doc """
