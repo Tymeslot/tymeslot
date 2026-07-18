@@ -16,6 +16,15 @@ defmodule Tymeslot.Polls.PollQueries do
     |> Repo.one()
   end
 
+  @doc "Fetches a poll by id with its host (user and profile) preloaded, for email sending."
+  @spec get_with_host(Ecto.UUID.t()) :: PollSchema.t() | nil
+  def get_with_host(id) do
+    PollSchema
+    |> where([p], p.id == ^id)
+    |> preload(user: :profile)
+    |> Repo.one()
+  end
+
   @spec get_for_user(Ecto.UUID.t(), pos_integer()) :: PollSchema.t() | nil
   def get_for_user(id, user_id) do
     PollSchema

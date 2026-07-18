@@ -4,6 +4,7 @@ defmodule Tymeslot.Polls do
   for the host or for voting, tallying votes, and lifecycle transitions.
   """
 
+  alias Tymeslot.Emails.EmailScheduler.PollScheduler
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls.{PollQueries, PollSchema, PollTimeSlotQueries, PollTimeSlotSchema}
   alias Tymeslot.Repo
@@ -187,7 +188,7 @@ defmodule Tymeslot.Polls do
 
     case transaction do
       {:ok, poll} ->
-        :ok = schedule_deadline_jobs(poll)
+        :ok = PollScheduler.schedule_deadline_jobs(poll)
         {:ok, PollQueries.get_for_user(poll.id, user_id)}
 
       {:error, reason} ->
@@ -215,7 +216,7 @@ defmodule Tymeslot.Polls do
   defp do_cancel(poll) do
     case PollQueries.update(PollSchema.cancel_changeset(poll)) do
       {:ok, cancelled} ->
-        :ok = cancel_deadline_jobs(cancelled)
+        :ok = PollScheduler.cancel_deadline_jobs(cancelled.id)
         broadcast_update(cancelled.id)
         {:ok, cancelled}
 
@@ -242,14 +243,6 @@ defmodule Tymeslot.Polls do
 
     Map.new(@responses, fn response -> {response, Enum.count(responses, &(&1 == response))} end)
   end
-
-  # --- Deadline scheduling (Task 11 will delegate to Tymeslot.Polls.PollScheduler) ---
-
-  # Task 11 replaces this no-op with a delegation to Tymeslot.Polls.PollScheduler.
-  defp schedule_deadline_jobs(_poll), do: :ok
-
-  # Task 11 replaces this no-op with a delegation to Tymeslot.Polls.PollScheduler.
-  defp cancel_deadline_jobs(_poll), do: :ok
 
   defp topic(poll_id), do: "polls:#{poll_id}"
 end

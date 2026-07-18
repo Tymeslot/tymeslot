@@ -9,6 +9,7 @@ defmodule Tymeslot.Polls.Voting do
   than trusting client-supplied ids.
   """
 
+  alias Tymeslot.Emails.EmailScheduler.PollScheduler
   alias Tymeslot.Polls
 
   alias Tymeslot.Polls.{
@@ -231,6 +232,20 @@ defmodule Tymeslot.Polls.Voting do
     |> PollParticipantQueries.update()
   end
 
-  # Task 11 replaces this no-op with the "everyone has voted" host notification.
-  defp maybe_notify_all_voted(_poll), do: :ok
+  # Once every registered participant has voted, nudge the host to pick a time.
+  # The count is re-checked against the database rather than the (now stale)
+  # in-memory poll, since the just-cast vote stamped voted_at inside the
+  # transaction above.
+  defp maybe_notify_all_voted(poll) do
+    if all_participants_voted?(poll) do
+      PollScheduler.schedule_all_voted_nudge(poll)
+    end
+
+    :ok
+  end
+
+  defp all_participants_voted?(poll) do
+    PollParticipantQueries.count_for_poll(poll.id) > 0 and
+      PollParticipantQueries.list_unvoted_for_poll(poll.id) == []
+  end
 end

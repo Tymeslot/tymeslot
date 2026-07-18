@@ -13,6 +13,7 @@ defmodule Tymeslot.Polls.Confirm do
   require Logger
 
   alias Tymeslot.Bookings.CreateAdHoc
+  alias Tymeslot.Emails.EmailScheduler.PollScheduler
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
@@ -141,7 +142,7 @@ defmodule Tymeslot.Polls.Confirm do
 
     case PollQueries.update(PollSchema.confirm_changeset(poll, attrs)) do
       {:ok, _poll} ->
-        cancel_deadline_jobs(poll)
+        PollScheduler.cancel_deadline_jobs(poll.id)
         Polls.broadcast_update(poll.id)
         {:ok, meeting}
 
@@ -158,8 +159,4 @@ defmodule Tymeslot.Polls.Confirm do
         {:error, changeset}
     end
   end
-
-  # Cancels any scheduled deadline reminder / auto-close jobs for the poll.
-  # Filled in by the poll email scheduler work; a no-op until then.
-  defp cancel_deadline_jobs(_poll), do: :ok
 end

@@ -77,6 +77,8 @@ defmodule Tymeslot.Emails.EmailScheduler do
     "send_reschedule_request" => ["meeting_id"],
     "send_email_verification" => ["user_id", "verification_url"],
     "send_password_reset" => ["user_id", "reset_url"],
+    "send_poll_deadline_reminders" => ["poll_id"],
+    "send_poll_host_nudge" => ["poll_id", "variant"],
     "send_email_change_verification" => ["user_id", "new_email", "verification_url"],
     "send_email_change_notification" => ["user_id", "new_email"],
     "send_email_change_confirmations" => ["user_id", "old_email", "new_email"],
