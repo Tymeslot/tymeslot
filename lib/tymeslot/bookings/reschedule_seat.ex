@@ -83,7 +83,7 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
   defp move_seat(old_meeting, participant, new_times) do
     old_snapshot = %{
       uid: old_meeting.uid,
-      ical_sequence: old_meeting.ical_sequence || 0,
+      ical_sequence: old_meeting.ical_sequence,
       start_time: old_meeting.start_time,
       end_time: old_meeting.end_time
     }
