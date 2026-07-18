@@ -392,38 +392,21 @@ defmodule TymeslotWeb.Components.SiteComponents do
   end
 
   @doc """
-  Site footer component with legal links.
+  Site footer component.
 
-  ## Slots
+  ## Attributes
 
-    * `supplemental_nav` — optional extra link columns rendered alongside the built-in
-      Product and Legal columns. Each slot entry should contain a heading and a list of
-      links that match the built-in column style (see the module doc for class conventions).
-
+    * `link_columns` — caller-supplied link columns rendered beside the brand
+      column, each `%{heading: string, links: [%{url:, label:}]}`. The marketing
+      link labels are a caller concern (they live in the caller's gettext
+      catalogues), so Core does not build them here. Core standalone passes none,
+      leaving just the brand column and copyright.
   """
-  slot :supplemental_nav, required: false do
-    attr :class, :string, doc: "Extra CSS classes on the wrapper div (e.g. col-span-2)."
-  end
+  attr :link_columns, :list, default: []
 
   @spec site_footer(map()) :: Phoenix.LiveView.Rendered.t()
   def site_footer(assigns) do
     ~H"""
-    <% product_links =
-      footer_links([
-        {:features_url, "Features"},
-        {:pricing_url, "Pricing"},
-        {:enterprise_url, "Enterprise"},
-        {:docs_url, "Docs"},
-        {:changelog_url, "Changelog"},
-        {:about_url, "About"},
-        {:contact_url, "Contact"}
-      ]) %>
-    <% legal_links =
-      footer_links([
-        {:privacy_policy_url, "Privacy Policy"},
-        {:terms_and_conditions_url, "Terms and Conditions"},
-        {:sitemap_url, "Sitemap"}
-      ]) %>
     <footer class="mt-auto bg-linear-to-r from-tymeslot-900 to-tymeslot-800">
       <div class="container mx-auto px-6 py-16 max-w-7xl">
         <div class="flex flex-col lg:flex-row gap-12 mb-12">
@@ -433,7 +416,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
               <.logo mode={:full} img_class="h-10" />
             </.link>
             <p class="text-tymeslot-400 text-token-sm leading-relaxed mb-6 max-w-xs">
-              Beautiful, on-brand meeting scheduling. No ads, no tracking.
+              {dgettext("common", "Beautiful, on-brand meeting scheduling. No ads, no tracking.")}
             </p>
             <a
               href="https://github.com/tymeslot/tymeslot"
@@ -451,28 +434,22 @@ defmodule TymeslotWeb.Components.SiteComponents do
                 >
                 </path>
               </svg>
-              View on GitHub
+              {dgettext("common", "View on GitHub")}
             </a>
           </div>
 
-          <%!-- Link columns --%>
+          <%!-- Link columns — caller-supplied so the (marketing) labels stay out of Core --%>
           <div class="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8">
-            <%= if Config.show_marketing_links?() do %>
-              <.footer_column heading="Product" links={product_links} />
-              <.footer_column heading="Legal" links={legal_links} />
-            <% end %>
-
-            <%!-- Supplemental nav columns injected by consumers (e.g. SaaS use cases) --%>
-            <div :for={col <- @supplemental_nav} class={col[:class]}>
-              {render_slot(col)}
-            </div>
+            <.footer_column :for={col <- @link_columns} heading={col.heading} links={col.links} />
           </div>
         </div>
 
         <%!-- Bottom bar --%>
         <div class="border-t border-tymeslot-700 pt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
           <p class="text-tymeslot-500 text-token-xs">
-            © {DateTime.utc_now().year} Tymeslot. All rights reserved. · v{to_string(Application.spec(:tymeslot, :vsn))}
+            {dgettext("common", "© %{year} Tymeslot. All rights reserved.",
+              year: DateTime.utc_now().year
+            )} · v{to_string(Application.spec(:tymeslot, :vsn))}
           </p>
         </div>
       </div>
@@ -502,15 +479,6 @@ defmodule TymeslotWeb.Components.SiteComponents do
       </ul>
     </div>
     """
-  end
-
-  # Resolves a list of `{config_key, label}` pairs into `%{url, label}` entries,
-  # dropping any whose URL is not configured.
-  @spec footer_links([{atom(), String.t()}]) :: [%{url: String.t(), label: String.t()}]
-  defp footer_links(specs) do
-    specs
-    |> Enum.map(fn {key, label} -> %{url: Application.get_env(:tymeslot, key), label: label} end)
-    |> Enum.filter(& &1.url)
   end
 
   # Renders a navigation link, choosing `href` for external URLs and `navigate`

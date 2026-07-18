@@ -212,3 +212,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Toggle menu"
 msgstr ""
+
+#: lib/tymeslot_web/components/site_components.ex:419
+#, elixir-autogen, elixir-format
+msgid "Beautiful, on-brand meeting scheduling. No ads, no tracking."
+msgstr ""
+
+#: lib/tymeslot_web/components/site_components.ex:437
+#, elixir-autogen, elixir-format
+msgid "View on GitHub"
+msgstr ""
+
+#: lib/tymeslot_web/components/site_components.ex:450
+#, elixir-autogen, elixir-format
+msgid "© %{year} Tymeslot. All rights reserved."
+msgstr ""
