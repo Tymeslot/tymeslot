@@ -157,6 +157,32 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
     end
   end
 
+  describe "book_seat/2 — status is forced to confirmed" do
+    test "a group meeting is created confirmed even if attrs omit status, preserving the single-row invariant",
+         ctx do
+      attrs_without_status =
+        ctx.user
+        |> meeting_attrs(ctx.meeting_type, ctx.start_time)
+        |> Map.delete(:status)
+
+      assert {:ok, %{meeting: meeting, created_meeting?: true}} =
+               GroupScheduling.book_seat(attrs_without_status, seat_request("one@example.com"))
+
+      assert meeting.status == "confirmed"
+
+      assert {:ok, %{meeting: joined, created_meeting?: false}} =
+               GroupScheduling.book_seat(
+                 ctx.user
+                 |> meeting_attrs(ctx.meeting_type, ctx.start_time)
+                 |> Map.delete(:status),
+                 seat_request("two@example.com")
+               )
+
+      assert joined.id == meeting.id
+      assert length(Repo.all(MeetingSchema)) == 1
+    end
+  end
+
   describe "book_seat/2 — first-booker unique-index retry" do
     test "gives up after one retry when the slot is occupied only at index level", ctx do
       insert(:meeting,

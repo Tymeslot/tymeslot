@@ -304,11 +304,17 @@ defmodule Tymeslot.Meetings.MeetingSchema do
   Changeset for creating a group meeting's slot row.
 
   Group meetings hold no attendee — bookers live in `meeting_participants` —
-  so `attendee_name`/`attendee_email` are not required.
+  so `attendee_name`/`attendee_email` are not required. Status is always
+  forced to `"confirmed"`, regardless of what the caller passes: group
+  meetings never wait on payment, and the single-live-row invariant (backed
+  by `unique_confirmed_meeting_per_organizer_at_time`, which only indexes
+  confirmed rows) depends on every group meeting landing in that status.
   """
   @spec group_changeset(t(), map()) :: Ecto.Changeset.t()
   def group_changeset(meeting, attrs) do
-    base_changeset(meeting, attrs, @group_required_fields)
+    meeting
+    |> base_changeset(attrs, @group_required_fields)
+    |> put_change(:status, "confirmed")
   end
 
   defp base_changeset(meeting, attrs, required_fields) do
