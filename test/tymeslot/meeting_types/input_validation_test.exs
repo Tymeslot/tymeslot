@@ -324,4 +324,69 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
       assert errors.name =~ "at least one letter or number"
     end
   end
+
+  describe "validate_field/3 for :max_participants" do
+    test "accepts a limit inside the range" do
+      assert {:ok, "25"} = InputValidation.validate_field(:max_participants, "25", %{})
+    end
+
+    test "accepts the solo default of 1" do
+      assert {:ok, "1"} = InputValidation.validate_field(:max_participants, "1", %{})
+    end
+
+    test "rejects a limit above 999" do
+      assert {:error, %{max_participants: "Participant limit cannot exceed 999"}} =
+               InputValidation.validate_field(:max_participants, "1500", %{})
+    end
+
+    test "rejects zero" do
+      assert {:error, %{max_participants: "Participant limit must be at least 1"}} =
+               InputValidation.validate_field(:max_participants, "0", %{})
+    end
+
+    test "rejects a non-numeric value" do
+      assert {:error, %{max_participants: "Participant limit must be a valid number"}} =
+               InputValidation.validate_field(:max_participants, "lots", %{})
+    end
+  end
+
+  describe "validate_meeting_type_form/2 with max_participants" do
+    test "sanitises max_participants when present" do
+      params = %{
+        "name" => "Group Demo",
+        "duration" => "30",
+        "icon" => "hero-bolt",
+        "meeting_mode" => "personal",
+        "max_participants" => "10"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
+      assert sanitized["max_participants"] == "10"
+    end
+
+    test "returns an error for an out-of-range max_participants" do
+      params = %{
+        "name" => "Group Demo",
+        "duration" => "30",
+        "icon" => "hero-bolt",
+        "meeting_mode" => "personal",
+        "max_participants" => "1000"
+      }
+
+      assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
+      assert Map.has_key?(errors, :max_participants)
+    end
+
+    test "omits max_participants from sanitised params when absent" do
+      params = %{
+        "name" => "Solo Chat",
+        "duration" => "30",
+        "icon" => "hero-bolt",
+        "meeting_mode" => "personal"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
+      refute Map.has_key?(sanitized, "max_participants")
+    end
+  end
 end

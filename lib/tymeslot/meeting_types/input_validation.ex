@@ -25,16 +25,17 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   def validate_meeting_type_form(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
 
-    validations = [
-      {:name, params["name"]},
-      {:duration, params["duration"]},
-      {:description, params["description"]},
-      {:icon, params["icon"]},
-      {:meeting_mode, params["meeting_mode"]},
-      {:calendar_integration_id, params["calendar_integration_id"]},
-      {:target_calendar_id, params["target_calendar_id"]},
-      {:reminder_config, params["reminder_config"]}
-    ]
+    validations =
+      [
+        {:name, params["name"]},
+        {:duration, params["duration"]},
+        {:description, params["description"]},
+        {:icon, params["icon"]},
+        {:meeting_mode, params["meeting_mode"]},
+        {:calendar_integration_id, params["calendar_integration_id"]},
+        {:target_calendar_id, params["target_calendar_id"]},
+        {:reminder_config, params["reminder_config"]}
+      ] ++ max_participants_validation(params)
 
     case run_validations(validations, metadata) do
       {:ok, sanitized_params} ->
@@ -80,6 +81,9 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
   def validate_field(:reminder_config, value, metadata),
     do: ReminderValidation.validate_reminder_config(value, metadata)
+
+  def validate_field(:max_participants, value, metadata),
+    do: validate_max_participants(value, metadata)
 
   def validate_field(_other_field, _value, _metadata),
     do: {:error, %{base: "Invalid field"}}
@@ -393,6 +397,33 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   defp validate_target_calendar_id(_invalid, _metadata) do
     {:error, %{target_calendar: "Invalid target calendar format"}}
   end
+
+  # Only validated when the form actually posts the key — an absent key means
+  # the sanitised params omit it too, so Ecto's cast leaves the stored value
+  # untouched (same convention as custom_fields and the payment fields).
+  defp max_participants_validation(%{"max_participants" => value}),
+    do: [{:max_participants, value}]
+
+  defp max_participants_validation(_params), do: []
+
+  defp validate_max_participants(value, metadata) when is_binary(value) do
+    range = Constraints.max_participants_range()
+
+    case validate_numeric_setting(
+           value,
+           range.first,
+           range.last,
+           "Participant limit",
+           "max_participants",
+           metadata: metadata
+         ) do
+      {:ok, validated} -> {:ok, to_string(validated)}
+      {:error, message} -> {:error, %{max_participants: message}}
+    end
+  end
+
+  defp validate_max_participants(_invalid, _metadata),
+    do: {:error, %{max_participants: "Participant limit must be a number"}}
 
   defp validate_numeric_range(value_str, min, max, field_name) do
     case Integer.parse(value_str) do
