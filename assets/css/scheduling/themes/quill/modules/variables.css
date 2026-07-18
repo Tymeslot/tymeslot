@@ -206,6 +206,14 @@
   --time-slot-padding-sm: 0.625rem 0.375rem;
   --time-slot-padding-lg: 0.625rem 0.5rem;
 
+  /* Component-Specific Tokens - Seat Availability (group bookings) */
+  --seat-green: var(--theme-success);
+  --seat-amber: var(--theme-warning);
+  --seat-red: var(--theme-danger);
+  --seat-green-bg: rgba(16, 185, 129, 0.18);
+  --seat-amber-bg: rgba(251, 191, 36, 0.18);
+  --seat-red-bg: rgba(239, 68, 68, 0.18);
+
   /* Component-Specific Tokens - Container Widths */
   --container-xs: 280px;
   --container-sm: 360px;

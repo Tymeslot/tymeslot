@@ -89,6 +89,49 @@
   gap: var(--space-xs);
 }
 
+/* ===== Seat Availability (group bookings) ===== */
+/* Group slots stack the time above a seats-left badge; solo slots (no
+   .has-seats) keep the single-line layout untouched. Badge colours are
+   translucent washes of the theme's status palette so the light button
+   text keeps its contrast on the dark glass surface. */
+.time-slot-button.has-seats {
+  flex-direction: column;
+  gap: var(--space-3xs);
+}
+
+.seat-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2xs);
+  border-radius: var(--radius-full);
+  font-size: var(--theme-font-size-3xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.seat-badge.seat-green {
+  background: var(--seat-green-bg);
+  color: var(--seat-green);
+}
+
+.seat-badge.seat-amber {
+  background: var(--seat-amber-bg);
+  color: var(--seat-amber);
+}
+
+.seat-badge.seat-red {
+  background: var(--seat-red-bg);
+  color: var(--seat-red);
+}
+
+/* Selected slots sit on the primary gradient — swap the badge to a dark
+   overlay with white text so it stays readable on the cyan. */
+.time-slot-button--selected .seat-badge {
+  background: var(--surface-dark-light);
+  color: white;
+}
+
 /* ===== Container Queries ===== */
 
 /* Narrow container — compact slots, let page scroll */

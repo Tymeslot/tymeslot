@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
   alias Tymeslot.Timezones
   alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
+  alias TymeslotWeb.Themes.Shared.Components.SeatBadge
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.TimezoneHelpers
 
@@ -192,7 +193,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                             phx-click="select_time"
                             phx-target={@target}
                             phx-value-time={slot.time}
-                            slot={%{start_time: CalendarHelpers.parse_slot_time(slot.time)}}
+                            slot={%{
+                              start_time: CalendarHelpers.parse_slot_time(slot.time),
+                              seats_left: slot.seats_left,
+                              capacity: slot.capacity
+                            }}
                             selected={@selected_time == slot.time}
                             disabled={@loading_slots}
                           />
@@ -261,13 +266,17 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
     <button
       class={[
         "time-slot-button",
+        @slot[:seats_left] && "has-seats",
         @selected && "time-slot-button--selected"
       ]}
       data-testid="time-slot"
       disabled={@disabled}
       {@rest}
     >
-      {LocalizationHelpers.format_time_by_locale(@slot.start_time)}
+      <span class="time-slot-button__time">
+        {LocalizationHelpers.format_time_by_locale(@slot.start_time)}
+      </span>
+      <SeatBadge.seat_badge seats_left={@slot[:seats_left]} capacity={@slot[:capacity]} />
     </button>
     """
   end
