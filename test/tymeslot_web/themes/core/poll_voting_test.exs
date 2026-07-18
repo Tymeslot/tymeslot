@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
 
   @moduletag :unit
 
+  alias Ecto.UUID
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Voting
   alias Tymeslot.Security.RateLimiter
@@ -130,7 +131,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
 
       # Exhaust the register bucket for this IP before the event fires.
       bucket = "poll_register:" <> client_ip
-      for _ <- 1..6, do: RateLimiter.check_rate_limit(bucket, 5, 60_000)
+      for _i <- 1..6, do: RateLimiter.check_rate_limit(bucket, 5, 60_000)
 
       assert {:noreply, updated} =
                PollVoting.handle_poll_event(
@@ -153,7 +154,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       socket = socket(%{poll: loaded, participant: participant})
 
       # Cast a vote out of band, then deliver the broadcast.
-      {:ok, _} = Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
+      {:ok, _vote} = Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
 
       assert {:noreply, updated} =
                PollVoting.handle_poll_info({:poll_updated, poll.id}, socket)
@@ -167,7 +168,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       socket = socket(%{poll: loaded})
 
       assert {:noreply, ^socket} =
-               PollVoting.handle_poll_info({:poll_updated, Ecto.UUID.generate()}, socket)
+               PollVoting.handle_poll_info({:poll_updated, UUID.generate()}, socket)
     end
   end
 end

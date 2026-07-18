@@ -13,7 +13,7 @@ defmodule Tymeslot.Utils.UnguessableTokenTest do
   end
 
   test "tokens are unique" do
-    tokens = for _ <- 1..100, do: UnguessableToken.generate()
+    tokens = for _i <- 1..100, do: UnguessableToken.generate()
     assert Enum.uniq(tokens) == tokens
   end
 end

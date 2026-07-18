@@ -126,7 +126,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       {:ok, alice} = Voting.register_participant(poll, %{name: "Alice", email: "a@example.com"})
       {:ok, bob} = Voting.register_participant(poll, %{name: "Bob", email: "b@example.com"})
 
-      {:ok, _} = Voting.cast_votes(poll, alice.token, %{slot_one.id => :yes})
+      {:ok, _alice_vote} = Voting.cast_votes(poll, alice.token, %{slot_one.id => :yes})
 
       refute_enqueued(
         worker: EmailWorker,
@@ -137,12 +137,12 @@ defmodule Tymeslot.Workers.PollEmailsTest do
         }
       )
 
-      {:ok, _} = Voting.cast_votes(poll, bob.token, %{slot_one.id => :yes})
+      {:ok, _bob_vote} = Voting.cast_votes(poll, bob.token, %{slot_one.id => :yes})
 
       assert enqueued_all_voted_count(poll.id) == 1
 
       # Re-submitting a vote must not enqueue a second nudge.
-      {:ok, _} = Voting.cast_votes(poll, bob.token, %{slot_one.id => :no})
+      {:ok, _resubmit} = Voting.cast_votes(poll, bob.token, %{slot_one.id => :no})
 
       assert enqueued_all_voted_count(poll.id) == 1
     end
@@ -244,13 +244,15 @@ defmodule Tymeslot.Workers.PollEmailsTest do
     future = in_hours(72)
 
     attrs =
-      %{
-        title: "Team sync",
-        duration_minutes: 30,
-        timezone: "Etc/UTC",
-        slots: [%{start_time: future}, %{start_time: DateTime.add(future, 1, :hour)}]
-      }
-      |> maybe_put_deadline(deadline_at)
+      maybe_put_deadline(
+        %{
+          title: "Team sync",
+          duration_minutes: 30,
+          timezone: "Etc/UTC",
+          slots: [%{start_time: future}, %{start_time: DateTime.add(future, 1, :hour)}]
+        },
+        deadline_at
+      )
 
     {:ok, poll} = Polls.create_poll(user.id, attrs)
     poll
@@ -264,11 +266,16 @@ defmodule Tymeslot.Workers.PollEmailsTest do
   end
 
   defp enqueued_all_voted_count(poll_id) do
-    all_enqueued(
-      worker: EmailWorker,
-      args: %{"action" => "send_poll_host_nudge", "poll_id" => poll_id, "variant" => "all_voted"}
+    length(
+      all_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_poll_host_nudge",
+          "poll_id" => poll_id,
+          "variant" => "all_voted"
+        }
+      )
     )
-    |> length()
   end
 
   defp recipients(email), do: Enum.map(email.to, fn {_name, address} -> address end)

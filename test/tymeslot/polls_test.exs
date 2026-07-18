@@ -204,7 +204,7 @@ defmodule Tymeslot.PollsTest do
 
   describe "list_polls/1" do
     test "returns the user's polls newest first", %{user: user} do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      now = DateTime.utc_now(:second)
       older = insert(:poll, user: user, inserted_at: DateTime.add(now, -1, :hour))
       newer = insert(:poll, user: user, inserted_at: now)
 
@@ -234,7 +234,7 @@ defmodule Tymeslot.PollsTest do
       {:ok, poll} = create_basic_poll(user, future)
       :ok = Polls.subscribe(poll.id)
 
-      assert {:ok, _} = Polls.cancel_poll(poll.id, user.id)
+      assert {:ok, _cancelled} = Polls.cancel_poll(poll.id, user.id)
       assert_receive {:poll_updated, poll_id}
       assert poll_id == poll.id
     end

@@ -1,9 +1,10 @@
 defmodule Tymeslot.Polls.ConfirmTest do
-  use Tymeslot.DataCase
+  use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Meetings
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
@@ -162,7 +163,7 @@ defmodule Tymeslot.Polls.ConfirmTest do
     test "returns :not_open for an already-confirmed poll",
          %{user: user, poll: poll, slot: slot} do
       insert(:poll_participant, poll: poll)
-      {:ok, confirmed} = poll |> Ecto.Changeset.change(status: :confirmed) |> Repo.update()
+      {:ok, confirmed} = poll |> Changeset.change(status: :confirmed) |> Repo.update()
 
       assert {:error, :not_open} = Confirm.confirm(confirmed.id, slot.id, user.id)
     end

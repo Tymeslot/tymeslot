@@ -3,6 +3,7 @@ defmodule Tymeslot.Polls.PollSchemasTest do
 
   @moduletag :unit
 
+  alias Ecto.UUID
   alias Tymeslot.Polls.{PollParticipantSchema, PollSchema, PollTimeSlotSchema, PollVoteSchema}
 
   describe "PollSchema.creation_changeset/2" do
@@ -23,7 +24,8 @@ defmodule Tymeslot.Polls.PollSchemasTest do
     test "requires title, duration and timezone" do
       changeset = PollSchema.creation_changeset(%PollSchema{}, %{user_id: 1})
 
-      assert %{title: _, duration_minutes: _, timezone: _} = errors_on(changeset)
+      assert %{title: _title, duration_minutes: _duration_minutes, timezone: _timezone} =
+               errors_on(changeset)
     end
 
     test "rejects non-positive durations" do
@@ -35,7 +37,7 @@ defmodule Tymeslot.Polls.PollSchemasTest do
           timezone: "Etc/UTC"
         })
 
-      assert %{duration_minutes: _} = errors_on(changeset)
+      assert %{duration_minutes: _duration_minutes} = errors_on(changeset)
     end
   end
 
@@ -45,12 +47,12 @@ defmodule Tymeslot.Polls.PollSchemasTest do
 
       changeset =
         PollTimeSlotSchema.changeset(%PollTimeSlotSchema{}, %{
-          poll_id: Ecto.UUID.generate(),
+          poll_id: UUID.generate(),
           start_time: start_time,
           end_time: start_time
         })
 
-      assert %{end_time: _} = errors_on(changeset)
+      assert %{end_time: _end_time} = errors_on(changeset)
     end
   end
 
@@ -58,7 +60,7 @@ defmodule Tymeslot.Polls.PollSchemasTest do
     test "normalises email and generates token" do
       changeset =
         PollParticipantSchema.creation_changeset(%PollParticipantSchema{}, %{
-          poll_id: Ecto.UUID.generate(),
+          poll_id: UUID.generate(),
           name: "Ada",
           email: "  ADA@Example.COM "
         })
@@ -73,8 +75,8 @@ defmodule Tymeslot.Polls.PollSchemasTest do
     test "accepts only known responses" do
       changeset =
         PollVoteSchema.changeset(%PollVoteSchema{}, %{
-          poll_participant_id: Ecto.UUID.generate(),
-          poll_time_slot_id: Ecto.UUID.generate(),
+          poll_participant_id: UUID.generate(),
+          poll_time_slot_id: UUID.generate(),
           response: :maybe
         })
 

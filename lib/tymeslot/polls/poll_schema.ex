@@ -6,8 +6,8 @@ defmodule Tymeslot.Polls.PollSchema do
   import Ecto.Changeset
 
   alias Tymeslot.Auth.UserSchema
-  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Polls.{PollParticipantSchema, PollTimeSlotSchema}
   alias Tymeslot.Utils.UnguessableToken
 
@@ -46,7 +46,10 @@ defmodule Tymeslot.Polls.PollSchema do
     timestamps(type: :utc_datetime)
   end
 
+  @spec max_slots() :: pos_integer()
   def max_slots, do: @max_slots
+
+  @spec max_participants() :: pos_integer()
   def max_participants, do: @max_participants
 
   @spec creation_changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()

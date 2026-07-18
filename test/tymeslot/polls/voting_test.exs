@@ -5,6 +5,7 @@ defmodule Tymeslot.Polls.VotingTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.UUID
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{PollParticipantQueries, PollVoteQueries, Voting}
 
@@ -105,8 +106,10 @@ defmodule Tymeslot.Polls.VotingTest do
     test "replaces an existing vote for the same slot", ctx do
       %{poll: poll, slot_a: slot_a, participant: participant} = ctx
 
-      assert {:ok, _} = Voting.cast_votes(poll, participant.token, %{slot_a.id => "yes"})
-      assert {:ok, _} = Voting.cast_votes(poll, participant.token, %{slot_a.id => "no"})
+      assert {:ok, _first} = Voting.cast_votes(poll, participant.token, %{slot_a.id => "yes"})
+
+      assert {:ok, _replacement} =
+               Voting.cast_votes(poll, participant.token, %{slot_a.id => "no"})
 
       assert [vote] = PollVoteQueries.list_for_participant(participant.id)
       assert vote.poll_time_slot_id == slot_a.id
@@ -116,7 +119,7 @@ defmodule Tymeslot.Polls.VotingTest do
     test "accepts atom responses and the hyphenated if-need-be form", ctx do
       %{poll: poll, slot_a: slot_a, slot_b: slot_b, participant: participant} = ctx
 
-      assert {:ok, _} =
+      assert {:ok, _result} =
                Voting.cast_votes(poll, participant.token, %{
                  slot_a.id => :yes,
                  slot_b.id => "if-need-be"
@@ -135,7 +138,7 @@ defmodule Tymeslot.Polls.VotingTest do
       %{poll: poll, participant: participant} = ctx
 
       assert {:error, :invalid_slot} =
-               Voting.cast_votes(poll, participant.token, %{Ecto.UUID.generate() => "yes"})
+               Voting.cast_votes(poll, participant.token, %{UUID.generate() => "yes"})
 
       assert PollVoteQueries.list_for_participant(participant.id) == []
       assert PollParticipantQueries.get_by_token(participant.token).voted_at == nil

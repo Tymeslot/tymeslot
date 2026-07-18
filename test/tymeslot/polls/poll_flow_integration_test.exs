@@ -46,7 +46,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
   # Registers a participant and casts their votes through the public voting
   # LiveView on a fresh connection, returning the connected view.
   defp vote_via_liveview(username, token, %{name: name, email: email}, votes) do
-    {:ok, view, _} = live(ConnTest.build_conn(), poll_path(username, token))
+    {:ok, view, _html} = live(ConnTest.build_conn(), poll_path(username, token))
 
     view
     |> form("form[data-testid='poll-register-form']", %{"name" => name, "email" => email})
@@ -118,7 +118,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
       )
 
       # The host's poll page is reachable and renders the voting shell.
-      {:ok, _, html} = live(conn, poll_path(profile.username, poll.token))
+      {:ok, _view, html} = live(conn, poll_path(profile.username, poll.token))
       assert html =~ "poll-voting"
       assert html =~ "Team offsite"
 
@@ -134,7 +134,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
 
       # A second participant, on a fresh connection, already sees participant
       # one's tally before casting anything — the tallies are public.
-      {:ok, bob_view, _} =
+      {:ok, bob_view, _html} =
         live(ConnTest.build_conn(), poll_path(profile.username, poll.token))
 
       assert has_element?(bob_view, "span.poll-tally--yes .poll-tally-count", "1")
@@ -208,13 +208,13 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
       {:ok, participant} =
         Voting.register_participant(loaded, %{name: "Cy", email: "cy@example.com"})
 
-      assert {:ok, _} = Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
+      assert {:ok, _yes_vote} = Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
 
       {:ok, after_yes} = Polls.get_poll_for_voting(poll.token)
       assert Polls.tallies(after_yes)[slot.id].yes == 1
       assert vote_count(poll.id) == 1
 
-      assert {:ok, _} = Voting.cast_votes(loaded, participant.token, %{slot.id => "no"})
+      assert {:ok, _no_vote} = Voting.cast_votes(loaded, participant.token, %{slot.id => "no"})
 
       {:ok, after_no} = Polls.get_poll_for_voting(poll.token)
       # A single row still, now flipped to "no".
@@ -243,9 +243,9 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
       {:ok, participant} =
         Voting.register_participant(loaded, %{name: "Di", email: "di@example.com"})
 
-      assert {:ok, _} = Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
+      assert {:ok, _vote} = Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
 
-      assert {:ok, _} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert {:ok, _confirmed} = Confirm.confirm(poll.id, slot.id, user.id)
 
       # Voting is now closed: a further cast is rejected and nothing changes.
       {:ok, closed} = Polls.get_poll_for_voting(poll.token)
@@ -257,7 +257,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
       assert Polls.tallies(closed)[slot.id].yes == 1
 
       # The public page shows the confirmed / scheduled state.
-      {:ok, _, html} = live(conn, poll_path(profile.username, poll.token))
+      {:ok, _view, html} = live(conn, poll_path(profile.username, poll.token))
       assert html =~ "poll-confirmed"
       assert html =~ "Scheduled for"
     end
@@ -278,7 +278,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
       {:ok, participant} =
         Voting.register_participant(loaded, %{name: "Eve", email: "eve@example.com"})
 
-      assert {:ok, _} = Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
+      assert {:ok, _vote} = Voting.cast_votes(loaded, participant.token, %{slot.id => "yes"})
 
       # The host's calendar already holds a confirmed meeting at the winning slot.
       insert(:meeting,
