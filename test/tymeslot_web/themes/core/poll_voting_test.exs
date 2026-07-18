@@ -120,10 +120,16 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
     test "register with a rate-limited IP flashes without registering" do
       poll = insert(:poll)
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)
-      socket = socket(%{poll: poll, participant: nil})
+
+      # A per-test-unique client identifier so this test's register bucket cannot
+      # collide with the shared RateLimiter ETS state other async tests exercise
+      # (they use the default socket IP). Exhausting a private bucket keeps this
+      # assertion deterministic in a combined run.
+      client_ip = "ratelimit-test-#{System.unique_integer([:positive])}"
+      socket = socket(%{poll: poll, participant: nil, client_ip: client_ip})
 
       # Exhaust the register bucket for this IP before the event fires.
-      bucket = "poll_register:" <> socket.assigns.client_ip
+      bucket = "poll_register:" <> client_ip
       for _ <- 1..6, do: RateLimiter.check_rate_limit(bucket, 5, 60_000)
 
       assert {:noreply, updated} =
