@@ -13,9 +13,11 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Locales
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoRoomWorker
   alias UUID
@@ -65,6 +67,7 @@ defmodule Tymeslot.Bookings.Create do
   @spec execute(meeting_params(), form_data(), keyword()) :: execute_result()
   def execute(meeting_params, form_data, opts \\ []) do
     with {:ok, booking_data} <- prepare_booking_data(meeting_params, form_data),
+         booking_data = put_meeting_type_record(booking_data),
          :ok <- validate_custom_field_answers(booking_data),
          {:ok, :validated} <- validate_booking(booking_data, opts) do
       create_meeting_and_all_side_effects_atomically(booking_data, opts)
@@ -84,6 +87,7 @@ defmodule Tymeslot.Bookings.Create do
     opts = Keyword.put(opts, :with_video_room, true)
 
     with {:ok, booking_data} <- prepare_booking_data(meeting_params, form_data),
+         booking_data = put_meeting_type_record(booking_data),
          :ok <- validate_custom_field_answers(booking_data) do
       # Try calendar pre-check for better UX
       case fresh_calendar_check(booking_data) do
@@ -252,11 +256,15 @@ defmodule Tymeslot.Bookings.Create do
 
         case Task.yield(check_task, 5_000) || Task.shutdown(check_task) do
           {:ok, {:ok, events}} ->
-            Validation.validate_no_conflicts(
-              start_datetime,
-              end_datetime,
-              events,
-              Policy.scheduling_config(organizer_user_id)
+            events
+            |> drop_own_group_event(booking_data)
+            |> then(
+              &Validation.validate_no_conflicts(
+                start_datetime,
+                end_datetime,
+                &1,
+                Policy.scheduling_config(organizer_user_id)
+              )
             )
 
           {:ok, {:error, reason}} ->
@@ -274,6 +282,39 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
+  # For group meeting types, the live meeting's own calendar event must not
+  # fail the booking-time conflict check: joining an existing group meeting
+  # adds no new organiser busy time. Only the event whose uid matches the
+  # live meeting at exactly this start time is removed; every other blocking
+  # event (other meetings, external calendars) still refuses the booking,
+  # keeping validation consistent with the seat-aware display. Full slots are
+  # refused later by the seat transaction (`:slot_full` -> `:slot_taken`).
+  defp drop_own_group_event(events, booking_data) do
+    case Map.get(booking_data, :meeting_type) do
+      %MeetingTypeSchema{} = meeting_type ->
+        if MeetingTypeSchema.group?(meeting_type) do
+          reject_joinable_meeting_event(events, meeting_type, booking_data.start_datetime)
+        else
+          events
+        end
+
+      _other ->
+        events
+    end
+  end
+
+  defp reject_joinable_meeting_event(events, meeting_type, start_datetime) do
+    start_utc =
+      start_datetime
+      |> DateTime.shift_zone!("Etc/UTC")
+      |> DateTime.truncate(:second)
+
+    case GroupMeetingQueries.get_live_at(meeting_type.id, start_utc) do
+      nil -> events
+      %{uid: uid} -> Enum.reject(events, &(Map.get(&1, :uid) == uid))
+    end
+  end
+
   defp execute_internal(booking_data, _form_data, opts) do
     case validate_booking(booking_data, opts) do
       {:ok, :validated} ->
@@ -285,7 +326,6 @@ defmodule Tymeslot.Bookings.Create do
   end
 
   defp create_meeting_and_all_side_effects_atomically(booking_data, opts) do
-    booking_data = put_meeting_type_record(booking_data)
     meeting_attrs = Policy.build_meeting_attributes(BuildParams.new(booking_data))
 
     cond do
@@ -302,10 +342,14 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  # Resolves the meeting-type record once up front and stashes it on
-  # `booking_data`, so the paid? and guests-allowed? predicates (the latter
-  # running inside the booking transaction) read it from memory instead of each
-  # issuing its own identical query.
+  # Resolves the meeting-type record once up front, at both `execute/3` and
+  # `execute_with_video_room/3`, and stashes it on `booking_data`. Called
+  # before validation runs so `fresh_calendar_check/1` can see the meeting
+  # type (it needs to know whether this is a group booking, to drop the
+  # meeting's own calendar event — see `drop_own_group_event/2`). The paid?
+  # and guests-allowed? predicates (the latter running inside the booking
+  # transaction) then read the record from memory instead of each issuing
+  # its own identical query.
   defp put_meeting_type_record(%{meeting_type_id: nil} = booking_data) do
     Map.put(booking_data, :meeting_type, nil)
   end
