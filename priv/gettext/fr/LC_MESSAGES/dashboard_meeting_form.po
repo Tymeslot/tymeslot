@@ -67,8 +67,8 @@ msgstr "Ajouter une question"
 msgid "Add up to three reminder emails for this meeting type. We recommend using only one."
 msgstr "Ajoutez jusqu’à trois e-mails de rappel pour ce type de réunion. Nous recommandons de n’en utiliser qu’un seul."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:607
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:638
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/reminder_handlers.ex:59
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/reminder_handlers.ex:89
 #, elixir-autogen, elixir-format
 msgid "Added %{label} before"
 msgstr "Ajouté : %{label} avant"
@@ -108,7 +108,7 @@ msgstr "Brève description de ce type de réunion"
 msgid "Calendar availability"
 msgstr "Disponibilité du calendrier"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:304
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:305
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:330
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:351
 #, elixir-autogen, elixir-format
@@ -155,7 +155,7 @@ msgstr "Détermine comment la personne qui réserve saisit sa réponse."
 msgid "Couldn't save changes"
 msgstr "Impossible d’enregistrer les modifications"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:333
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:334
 #, elixir-autogen, elixir-format
 msgid "Create Meeting Type"
 msgstr "Créer un type de réunion"
@@ -196,7 +196,7 @@ msgstr "Supprimer"
 msgid "Description (optional)"
 msgstr "Description (facultatif)"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:293
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:294
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr "Terminé"
@@ -343,7 +343,7 @@ msgstr "Type de réunion mis à jour"
 msgid "Min"
 msgstr "Min"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:100
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:107
 #, elixir-autogen, elixir-format
 msgid "Minimum %{amount}."
 msgstr "Minimum %{amount}."
@@ -415,8 +415,8 @@ msgstr "Option %{number}"
 msgid "Options"
 msgstr "Options"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:39
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:52
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:42
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:55
 #, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr "Paiements"
@@ -432,7 +432,7 @@ msgstr "Téléphone"
 msgid "Please select a video provider for video meetings"
 msgstr "Veuillez sélectionner un fournisseur vidéo pour les réunions vidéo"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:79
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:86
 #, elixir-autogen, elixir-format
 msgid "Price (%{currency})"
 msgstr "Prix (%{currency})"
@@ -472,7 +472,7 @@ msgstr "Supprimer l’option"
 msgid "Remove reminder"
 msgstr "Supprimer le rappel"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:70
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:77
 #, elixir-autogen, elixir-format
 msgid "Require payment for this meeting type"
 msgstr "Exiger un paiement pour ce type de réunion"
@@ -487,7 +487,7 @@ msgstr "Obligatoire"
 msgid "Save question"
 msgstr "Enregistrer la question"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:330
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:331
 #, elixir-autogen, elixir-format
 msgid "Saving..."
 msgstr "Enregistrement..."
@@ -622,7 +622,7 @@ msgstr "p. ex. Discussion rapide"
 msgid "required"
 msgstr "obligatoire"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:45
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:48
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe on the %{payments_link} page to charge for this meeting type."
 msgstr "Connectez Stripe sur la page %{payments_link} pour facturer ce type de réunion."
@@ -661,3 +661,8 @@ msgstr "Limite de participants"
 #, elixir-autogen, elixir-format
 msgid "Turn off payments to enable group bookings."
 msgstr "Désactivez les paiements pour activer les réservations de groupe."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:61
+#, elixir-autogen, elixir-format
+msgid "Turn off group bookings to require payment."
+msgstr "Désactivez les réservations de groupe pour exiger un paiement."

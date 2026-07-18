@@ -131,7 +131,80 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormGroupBookingsTest do
     end
   end
 
+  describe "Mutual exclusion with payments" do
+    setup %{user: user} do
+      # Force the Core default checker so the runtime feature flag drives
+      # access regardless of any SaaS overlay, then restore afterwards.
+      previous_checker = Application.get_env(:tymeslot, :feature_access_checker)
+      previous_flag = Application.get_env(:tymeslot, :meeting_payments_enabled)
+
+      Application.put_env(
+        :tymeslot,
+        :feature_access_checker,
+        Tymeslot.Features.DefaultAccessChecker
+      )
+
+      Application.put_env(:tymeslot, :meeting_payments_enabled, true)
+      insert(:connect_account, user: user, charges_enabled: true, default_currency: "usd")
+
+      on_exit(fn ->
+        restore_env(:feature_access_checker, previous_checker)
+        restore_env(:meeting_payments_enabled, previous_flag)
+      end)
+
+      :ok
+    end
+
+    test "requiring payment disables the group toggle and blocks the event", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+      view |> element("button", "Add Meeting Type") |> render_click()
+
+      view
+      |> element("input[phx-click='toggle_payment_required']")
+      |> render_click()
+
+      assert has_element?(view, "input[phx-click='toggle_group_bookings'][disabled]")
+      assert render(view) =~ "Turn off payments to enable group bookings."
+
+      # A stale/forged click must not flip the toggle server-side. The
+      # control is disabled, so we drive the component event directly
+      # (mirroring the pattern in payments_settings_test.exs) rather than
+      # clicking the disabled DOM element, which LiveViewTest itself refuses.
+      view
+      |> with_target("#meeting-type-form-wrapper-meeting-type-form-new")
+      |> render_click("toggle_group_bookings", %{})
+
+      refute render(view) =~ "Participant limit"
+    end
+
+    test "enabling group bookings disables the payments toggle and blocks the event",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+      view |> element("button", "Add Meeting Type") |> render_click()
+
+      view
+      |> element("input[phx-click='toggle_group_bookings']")
+      |> render_click()
+
+      assert has_element?(view, "input[phx-click='toggle_payment_required'][disabled]")
+      assert render(view) =~ "Turn off group bookings to require payment."
+
+      # A stale/forged click must not flip the toggle server-side. The
+      # control is disabled, so we drive the component event directly
+      # (mirroring the pattern in payments_settings_test.exs) rather than
+      # clicking the disabled DOM element, which LiveViewTest itself refuses.
+      view
+      |> with_target("#meeting-type-form-wrapper-meeting-type-form-new")
+      |> render_click("toggle_payment_required", %{})
+
+      refute render(view) =~ "Price (USD)"
+    end
+  end
+
   defp reload_type(user, id) do
     Enum.find(MeetingTypes.get_all_meeting_types(user.id), &(&1.id == id))
   end
+
+  defp restore_env(key, nil), do: Application.delete_env(:tymeslot, key)
+  defp restore_env(key, value), do: Application.put_env(:tymeslot, key, value)
 end

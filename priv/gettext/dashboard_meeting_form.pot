@@ -67,8 +67,8 @@ msgstr ""
 msgid "Add up to three reminder emails for this meeting type. We recommend using only one."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:607
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:638
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/reminder_handlers.ex:59
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/reminder_handlers.ex:89
 #, elixir-autogen, elixir-format
 msgid "Added %{label} before"
 msgstr ""
@@ -108,7 +108,7 @@ msgstr ""
 msgid "Calendar availability"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:304
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:305
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:330
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex:351
 #, elixir-autogen, elixir-format
@@ -155,7 +155,7 @@ msgstr ""
 msgid "Couldn't save changes"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:333
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:334
 #, elixir-autogen, elixir-format
 msgid "Create Meeting Type"
 msgstr ""
@@ -196,7 +196,7 @@ msgstr ""
 msgid "Description (optional)"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:293
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:294
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr ""
@@ -343,7 +343,7 @@ msgstr ""
 msgid "Min"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:100
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:107
 #, elixir-autogen, elixir-format
 msgid "Minimum %{amount}."
 msgstr ""
@@ -415,8 +415,8 @@ msgstr ""
 msgid "Options"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:39
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:52
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:42
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:55
 #, elixir-autogen, elixir-format
 msgid "Payments"
 msgstr ""
@@ -432,7 +432,7 @@ msgstr ""
 msgid "Please select a video provider for video meetings"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:79
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:86
 #, elixir-autogen, elixir-format
 msgid "Price (%{currency})"
 msgstr ""
@@ -472,7 +472,7 @@ msgstr ""
 msgid "Remove reminder"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:70
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:77
 #, elixir-autogen, elixir-format
 msgid "Require payment for this meeting type"
 msgstr ""
@@ -487,7 +487,7 @@ msgstr ""
 msgid "Save question"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:330
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex:331
 #, elixir-autogen, elixir-format
 msgid "Saving..."
 msgstr ""
@@ -622,7 +622,7 @@ msgstr ""
 msgid "required"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:45
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:48
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe on the %{payments_link} page to charge for this meeting type."
 msgstr ""
@@ -660,4 +660,9 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/group_bookings_section.ex:46
 #, elixir-autogen, elixir-format
 msgid "Turn off payments to enable group bookings."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex:61
+#, elixir-autogen, elixir-format
+msgid "Turn off group bookings to require payment."
 msgstr ""

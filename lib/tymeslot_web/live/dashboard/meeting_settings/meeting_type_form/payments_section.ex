@@ -6,7 +6,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
   decided by the parent `MeetingTypeForm` (feature flag + Stripe charges
   enabled); this component only reflects the `charges_enabled` flag it is
   given — disabling the toggle and showing a connect-Stripe hint when the
-  host cannot yet accept charges.
+  host cannot yet accept charges. Payments and group bookings are mutually
+  exclusive — while group bookings is enabled the toggle renders disabled
+  with a hint.
 
   The toggle and price input dispatch `toggle_payment_required` and
   `change_payment_price` events back to the parent form component
@@ -22,6 +24,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
   import TymeslotWeb.Components.PaymentHelpers, only: [currency_symbol: 1]
 
   attr :charges_enabled, :boolean, required: true
+  attr :group_bookings_enabled, :boolean, required: true
   attr :payment_required, :boolean, required: true
   attr :payment_price, :string, required: true
   attr :currency, :string, required: true
@@ -54,15 +57,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
         )}
       </.info_box>
 
+      <.info_box :if={@charges_enabled and @group_bookings_enabled} variant={:info}>
+        {dgettext("dashboard_meeting_form", "Turn off group bookings to require payment.")}
+      </.info_box>
+
       <label class={[
         "flex items-center gap-3",
-        not @charges_enabled && "opacity-60 cursor-not-allowed"
+        (not @charges_enabled or @group_bookings_enabled) && "opacity-60 cursor-not-allowed"
       ]}>
         <input
           type="checkbox"
           class="checkbox"
           checked={@payment_required}
-          disabled={not @charges_enabled}
+          disabled={not @charges_enabled or @group_bookings_enabled}
           phx-click="toggle_payment_required"
           phx-target={@myself}
         />
