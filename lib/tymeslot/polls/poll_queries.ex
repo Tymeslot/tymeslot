@@ -8,11 +8,15 @@ defmodule Tymeslot.Polls.PollQueries do
 
   @preloads [time_slots: [], participants: [:votes]]
 
+  # The public voting page additionally needs the confirmed meeting so it can
+  # show the scheduled time once a poll has been confirmed.
+  @voting_preloads [time_slots: [], participants: [:votes], confirmed_meeting: []]
+
   @spec get_by_token(String.t()) :: PollSchema.t() | nil
   def get_by_token(token) when is_binary(token) do
     PollSchema
     |> where([p], p.token == ^token)
-    |> preload(^@preloads)
+    |> preload(^@voting_preloads)
     |> Repo.one()
   end
 

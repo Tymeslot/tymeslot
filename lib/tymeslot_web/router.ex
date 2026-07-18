@@ -378,6 +378,22 @@ defmodule TymeslotWeb.Router do
     get "/:username/meeting/:meeting_uid/calendar.ics", MeetingCalendarController, :show
   end
 
+  # Public poll voting page. Declared before `:username_scheduling` so the
+  # `/:username/poll/:token` route is matched ahead of the `/:username/:slug`
+  # scheduling catch-all, which would otherwise swallow it.
+  scope "/", TymeslotWeb do
+    pipe_through :theme_browser
+
+    live_session :poll_voting,
+      on_mount: [
+        TymeslotWeb.Hooks.LocaleHook,
+        TymeslotWeb.Hooks.ThemeHook,
+        TymeslotWeb.Hooks.ClientInfoHook
+      ] do
+      live "/:username/poll/:token", Themes.Core.Dispatcher, :poll_voting
+    end
+  end
+
   # Username-based scheduling routes (must be before catch-all)
   scope "/", TymeslotWeb do
     pipe_through [:theme_browser, TymeslotWeb.Plugs.CaptureReferrerPlug]

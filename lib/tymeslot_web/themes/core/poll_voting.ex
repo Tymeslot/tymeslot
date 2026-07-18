@@ -68,6 +68,29 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         %{"name" => _name, "email" => _email} = params,
         socket
       ) do
+    if honeypot_tripped?(params) do
+      # A bot filled the hidden field: fake success and register nothing, exactly
+      # as the booking form's honeypot does.
+      {:noreply,
+       put_flash(
+         socket,
+         :info,
+         dgettext("booking", "You're registered. Your responses are saved as you vote.")
+       )}
+    else
+      register_participant(socket, params)
+    end
+  end
+
+  def handle_poll_event("cast_votes", %{"votes" => votes_map}, socket) do
+    with_rate_limit(socket, "poll_vote:", @vote_limit, fn socket ->
+      cast_votes_for(socket, votes_map)
+    end)
+  end
+
+  def handle_poll_event(_event, _params, socket), do: {:noreply, socket}
+
+  defp register_participant(socket, params) do
     with_rate_limit(socket, "poll_register:", @register_limit, fn socket ->
       attrs = Map.take(params, ["name", "email", "timezone", "locale"])
 
@@ -88,13 +111,10 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     end)
   end
 
-  def handle_poll_event("cast_votes", %{"votes" => votes_map}, socket) do
-    with_rate_limit(socket, "poll_vote:", @vote_limit, fn socket ->
-      cast_votes_for(socket, votes_map)
-    end)
-  end
+  defp honeypot_tripped?(%{"website" => value}) when is_binary(value),
+    do: String.trim(value) != ""
 
-  def handle_poll_event(_event, _params, socket), do: {:noreply, socket}
+  defp honeypot_tripped?(_params), do: false
 
   @doc """
   Reloads the poll and tallies when a `{:poll_updated, poll_id}` broadcast is for

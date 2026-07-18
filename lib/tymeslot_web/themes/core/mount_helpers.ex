@@ -6,13 +6,16 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     router: TymeslotWeb.Router,
     statics: TymeslotWeb.static_paths()
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Phoenix.LiveView
+  alias Tymeslot.Polls
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Timezones
-  alias TymeslotWeb.Themes.Core.{Context, EventBus, MeetingManagement, Registry}
+  alias TymeslotWeb.Themes.Core.{Context, EventBus, MeetingManagement, PollVoting, Registry}
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
 
   @doc """
@@ -27,10 +30,15 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   def mount_with_profile(profile, params, session, socket, delegate_fn) do
     action = socket.assigns[:live_action]
 
-    if action in [:reschedule, :cancel, :cancel_confirmed] && params["meeting_uid"] do
-      mount_meeting_management(profile, params, socket, action)
-    else
-      mount_scheduling_flow(profile, params, session, socket, delegate_fn)
+    cond do
+      action in [:reschedule, :cancel, :cancel_confirmed] && params["meeting_uid"] ->
+        mount_meeting_management(profile, params, socket, action)
+
+      action == :poll_voting && params["token"] ->
+        mount_poll_voting(profile, params, socket)
+
+      true ->
+        mount_scheduling_flow(profile, params, session, socket, delegate_fn)
     end
   end
 
@@ -140,6 +148,27 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     end
   end
 
+  @doc """
+  Mounts the public poll voting page for a known organizer profile.
+
+  Applies the same public-readiness gate as the scheduling flow, then loads the
+  poll by its public token. A missing token, or one whose poll belongs to a
+  different host than the resolved username, redirects to `/` exactly as a failed
+  meeting-management load does — a poll must never render under the wrong host's
+  theme.
+  """
+  @spec mount_poll_voting(map(), map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  def mount_poll_voting(profile, params, socket) do
+    case LinkAccessPolicy.check_public_readiness(profile) do
+      {:ok, :ready} ->
+        load_and_mount_poll(profile, params, socket)
+
+      {:error, reason} ->
+        mount_poll_readiness_error(profile, params, socket, reason)
+    end
+  end
+
   @doc "Assigns the validated user timezone from params or socket assigns."
   @spec assign_user_timezone(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_user_timezone(socket, params) do
@@ -180,6 +209,42 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   end
 
   # Private
+
+  defp load_and_mount_poll(profile, params, socket) do
+    case Polls.get_poll_for_voting(params["token"]) do
+      {:ok, %{user_id: user_id} = poll} when user_id == profile.user_id ->
+        case prepare_theme_context(profile, params, socket) do
+          {:ok, _context, socket} ->
+            {:ok, PollVoting.assign_poll_state(socket, poll, params)}
+
+          {:error, error_socket} ->
+            {:ok, error_socket}
+        end
+
+      _not_found_or_wrong_host ->
+        {:ok,
+         socket
+         |> LiveView.put_flash(:error, dgettext("booking", "Poll not found"))
+         |> LiveView.redirect(to: ~p"/")}
+    end
+  end
+
+  defp mount_poll_readiness_error(profile, params, socket, reason) do
+    case prepare_theme_context(profile, params, socket) do
+      {:ok, _context, socket} ->
+        message = LinkAccessPolicy.reason_to_message(reason)
+
+        {:ok,
+         socket
+         |> LiveView.clear_flash()
+         |> LiveView.put_flash(:error, message)
+         |> assign(:scheduling_error_reason, reason)
+         |> assign(:scheduling_error_message, message)}
+
+      {:error, error_socket} ->
+        {:ok, error_socket}
+    end
+  end
 
   defp setup_meeting_management_socket(
          socket,
