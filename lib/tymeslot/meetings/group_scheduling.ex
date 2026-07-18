@@ -156,7 +156,17 @@ defmodule Tymeslot.Meetings.GroupScheduling do
     end
   end
 
-  defp lost_first_booker_race?(%Changeset{errors: errors}) do
+  @doc """
+  True when a changeset's error is the loser's side of the first-booker race
+  on `(organizer_user_id, start_time)` — the partial unique index this module
+  relies on to serialise two concurrent first bookings of the same slot.
+
+  Exposed so callers outside this module (the booking flow's error
+  classification) can recognise the same race without duplicating the
+  constraint name.
+  """
+  @spec lost_first_booker_race?(Changeset.t()) :: boolean()
+  def lost_first_booker_race?(%Changeset{errors: errors}) do
     Enum.any?(errors, fn {_field, {_message, error_opts}} ->
       error_opts[:constraint] == :unique and
         to_string(error_opts[:constraint_name] || "") == @unique_slot_constraint

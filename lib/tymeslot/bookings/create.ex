@@ -7,7 +7,7 @@ defmodule Tymeslot.Bookings.Create do
   require Logger
 
   alias Tymeslot.Availability.TimeSlots
-  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, Errors, Policy, Validation}
+  alias Tymeslot.Bookings.{BuildParams, CalendarJobs, CreateGroup, Errors, Policy, Validation}
   alias Tymeslot.CustomFields
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
@@ -288,12 +288,17 @@ defmodule Tymeslot.Bookings.Create do
     booking_data = put_meeting_type_record(booking_data)
     meeting_attrs = Policy.build_meeting_attributes(BuildParams.new(booking_data))
 
-    if paid_meeting_type?(booking_data) do
-      create_paid_booking(meeting_attrs, booking_data)
-    else
-      meeting_attrs
-      |> run_meeting_transaction(booking_data, opts)
-      |> map_transaction_result()
+    cond do
+      CreateGroup.applicable?(booking_data) ->
+        CreateGroup.create(meeting_attrs, booking_data)
+
+      paid_meeting_type?(booking_data) ->
+        create_paid_booking(meeting_attrs, booking_data)
+
+      true ->
+        meeting_attrs
+        |> run_meeting_transaction(booking_data, opts)
+        |> map_transaction_result()
     end
   end
 
@@ -405,7 +410,7 @@ defmodule Tymeslot.Bookings.Create do
   # here server-side — the client list is never trusted. Runs inside the
   # booking transaction so a guest failure rolls the whole booking back.
   defp create_guests(meeting, booking_data) do
-    if guests_allowed?(booking_data) do
+    if Policy.guests_allowed?(booking_data) do
       booking_data
       |> Map.get(:guest_emails, [])
       |> Guests.sanitize_emails(meeting.attendee_email)
@@ -414,9 +419,6 @@ defmodule Tymeslot.Bookings.Create do
       {:ok, []}
     end
   end
-
-  defp guests_allowed?(%{meeting_type: %{allow_guests: true}}), do: true
-  defp guests_allowed?(_booking_data), do: false
 
   defp create_meeting(meeting_attrs) do
     case Scheduling.create_meeting_with_conflict_check(meeting_attrs) do
@@ -449,7 +451,14 @@ defmodule Tymeslot.Bookings.Create do
   # share one user-facing meaning, so they collapse to a single atom each.
   # Reasons that already arrive as arbitrary changeset/validation text pass
   # through unchanged (`is_binary/1` clause).
-  defp classify_error(reason) do
+  #
+  # Public (not `defp`) so `Tymeslot.Bookings.CreateGroup` — split out to keep
+  # this module under the large-module line limit — can classify the reasons
+  # it shares with the solo/paid paths (e.g. `:time_conflict`) through the
+  # same vocabulary rather than a second copy of this mapping.
+  @doc false
+  @spec classify_error(term()) :: Errors.classified_error() | String.t()
+  def classify_error(reason) do
     case reason do
       :meeting_type_inactive ->
         :meeting_type_inactive
@@ -495,7 +504,9 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  defp emit_booking_created do
+  @doc false
+  @spec emit_booking_created() :: :ok
+  def emit_booking_created do
     :telemetry.execute([:tymeslot, :booking, :created], %{count: 1}, %{})
   end
 

@@ -256,6 +256,17 @@ defmodule Tymeslot.Bookings.Policy do
   end
 
   @doc """
+  True when the booking's meeting type allows the booker to add guests.
+
+  Shared by the solo/paid booking transaction and the group seat-booking
+  pipeline so both re-apply the same rule to the (never-trusted) client-
+  submitted guest list.
+  """
+  @spec guests_allowed?(map()) :: boolean()
+  def guests_allowed?(%{meeting_type: %{allow_guests: true}}), do: true
+  def guests_allowed?(_booking_data), do: false
+
+  @doc """
   Determines if a calendar check failure should block booking.
 
   Some calendar failures are recoverable (network issues),
