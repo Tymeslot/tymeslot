@@ -156,6 +156,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Dashboard.MeetingFormMessages
   alias TymeslotWeb.Dashboard.OnboardingChecklist
   alias TymeslotWeb.Dashboard.PaymentsHandlers
+  alias TymeslotWeb.Dashboard.Polls.PollsComponent
   alias TymeslotWeb.Dashboard.ScheduleSettingsComponent
   alias TymeslotWeb.Dashboard.ServiceSettingsComponent
   alias TymeslotWeb.Dashboard.TourEventHandlers
@@ -477,6 +478,28 @@ defmodule TymeslotWeb.DashboardLive do
   end
 
   # Calendar-specific handle_info clauses — delegated to CalendarEventHandlers.
+
+  # A poll's votes or lifecycle changed. Route it to the Polls component, which
+  # subscribed on the host's behalf and refreshes the on-screen results.
+  @spec handle_info({:poll_updated, Ecto.UUID.t()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:poll_updated, poll_id}, socket) do
+    send_update(PollsComponent, id: ComponentDispatch.component_id(:polls), poll_updated: poll_id)
+    {:noreply, socket}
+  end
+
+  # The Polls component's advisory slot-health check runs in a supervised task
+  # and reports back here; route it to the component.
+  @spec handle_info({:poll_slot_health, Ecto.UUID.t(), map()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:poll_slot_health, poll_id, health}, socket) do
+    send_update(PollsComponent,
+      id: ComponentDispatch.component_id(:polls),
+      poll_slot_health: {poll_id, health}
+    )
+
+    {:noreply, socket}
+  end
 
   def handle_info({:guest_rsvp_updated, _meeting_id}, socket) do
     send_update(

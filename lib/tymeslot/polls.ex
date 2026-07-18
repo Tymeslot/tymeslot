@@ -98,6 +98,10 @@ defmodule Tymeslot.Polls do
   @spec subscribe(Ecto.UUID.t()) :: :ok | {:error, term()}
   def subscribe(poll_id), do: Phoenix.PubSub.subscribe(@pubsub, topic(poll_id))
 
+  @doc "Unsubscribes the calling process from updates for a poll."
+  @spec unsubscribe(Ecto.UUID.t()) :: :ok
+  def unsubscribe(poll_id), do: Phoenix.PubSub.unsubscribe(@pubsub, topic(poll_id))
+
   @doc "Broadcasts that a poll changed to its subscribers."
   @spec broadcast_update(Ecto.UUID.t()) :: :ok | {:error, term()}
   def broadcast_update(poll_id) do
