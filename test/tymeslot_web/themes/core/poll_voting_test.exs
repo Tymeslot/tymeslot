@@ -74,6 +74,21 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
       assert {:noreply, ^socket} = PollVoting.handle_poll_event("nope", %{}, socket)
     end
 
+    test "cast_votes with a non-map votes payload is a no-op and does not crash" do
+      poll = insert(:poll)
+      participant = insert(:poll_participant, poll: poll)
+      {:ok, poll} = Polls.get_poll_for_voting(poll.token)
+      socket = socket(%{poll: poll, participant: participant})
+
+      # A malicious registered visitor can push a list or nil instead of a map;
+      # the guard must reject it rather than reaching Map.keys/1 and raising.
+      assert {:noreply, ^socket} =
+               PollVoting.handle_poll_event("cast_votes", %{"votes" => [1, 2]}, socket)
+
+      assert {:noreply, ^socket} =
+               PollVoting.handle_poll_event("cast_votes", %{"votes" => nil}, socket)
+    end
+
     test "cast_votes without a registered participant flashes and does not crash" do
       poll = insert(:poll)
       {:ok, poll} = Polls.get_poll_for_voting(poll.token)

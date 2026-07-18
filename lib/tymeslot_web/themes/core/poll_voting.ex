@@ -82,7 +82,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     end
   end
 
-  def handle_poll_event("cast_votes", %{"votes" => votes_map}, socket) do
+  def handle_poll_event("cast_votes", %{"votes" => votes_map}, socket) when is_map(votes_map) do
     with_rate_limit(socket, "poll_vote:", @vote_limit, fn socket ->
       cast_votes_for(socket, votes_map)
     end)
