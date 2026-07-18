@@ -8,8 +8,12 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   import Phoenix.LiveView, only: [put_flash: 3]
   require Logger
 
+  alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
+  alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
+  alias TymeslotWeb.Themes.Shared.BookingFlow
+  alias TymeslotWeb.Themes.Shared.GuestBooking
 
   @doc """
   Handles calendar events updated via PubSub.
@@ -124,6 +128,76 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
     case SlotFetchingHandlerComponent.load_slots(socket, date) do
       {:ok, updated_socket} -> {:noreply, updated_socket}
     end
+  end
+
+  # Seat updates only matter while the booker is somewhere between picking a
+  # slot and submitting. On :confirmation the "missing" slot is very likely
+  # the one this booker just took — bouncing there would be absurd.
+  @seat_update_states [:schedule, :questions, :booking]
+
+  @doc """
+  Handles a `{:seat_update, meeting_type_id}` broadcast from the domain layer.
+
+  Refetches slots for the currently displayed date only and updates
+  `available_slots` in place, never clearing the visitor's selection — unless
+  the selected slot has filled up, in which case the visitor bounces back to
+  the schedule step with the same flash and recovery as a lost submit race.
+  """
+  @spec handle_seat_update(
+          Phoenix.LiveView.Socket.t(),
+          term(),
+          (Phoenix.LiveView.Socket.t(), atom(), map() -> Phoenix.LiveView.Socket.t())
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_seat_update(socket, meeting_type_id, transition_fun) do
+    with %{id: ^meeting_type_id} <- socket.assigns[:meeting_type],
+         true <- socket.assigns[:current_state] in @seat_update_states,
+         date when is_binary(date) <- socket.assigns[:selected_date] do
+      refresh_seats_for_date(socket, date, transition_fun)
+    else
+      _other -> {:noreply, socket}
+    end
+  end
+
+  defp refresh_seats_for_date(socket, date, transition_fun) do
+    duration = socket.assigns[:duration] || socket.assigns[:selected_duration]
+    timezone = socket.assigns[:user_timezone]
+
+    case SlotFetchingHandlerComponent.fetch_available_slots(socket, date, duration, timezone) do
+      {:ok, socket} ->
+        apply_refreshed_seats(socket, transition_fun)
+
+      # Transient fetch failure: the error state is already assigned; never
+      # bounce the booker over a hiccup — their selection stands until a
+      # successful refresh (or the submit-time check) says otherwise.
+      {:error, socket} ->
+        {:noreply, socket}
+    end
+  end
+
+  defp apply_refreshed_seats(socket, transition_fun) do
+    selected_time = socket.assigns[:selected_time]
+
+    cond do
+      is_nil(selected_time) ->
+        {:noreply, socket}
+
+      slot_still_available?(socket.assigns[:available_slots], selected_time) ->
+        {:noreply, GuestBooking.assign_seat_cap(socket)}
+
+      true ->
+        socket =
+          socket
+          |> put_flash(:error, BookingErrorMessage.message(:slot_taken))
+          |> BookingFlow.return_to_schedule_for_new_slot(transition_fun)
+
+        {:noreply, socket}
+    end
+  end
+
+  defp slot_still_available?(slots, time) do
+    slots
+    |> MeetingUtils.normalize_slot_list()
+    |> Enum.any?(&(&1.time == time))
   end
 
   @doc """

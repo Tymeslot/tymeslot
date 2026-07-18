@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   alias Tymeslot.Bookings.SubmissionToken
   alias Tymeslot.CustomFields
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.ThemeFlow
   alias TymeslotWeb.Helpers.ClientIP
@@ -182,6 +183,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
           socket
           |> assign(:meeting_type, meeting_type)
           |> assign(:engine, QEngine.init(defs))
+          |> maybe_subscribe_to_group_seats()
       end
     else
       socket
@@ -272,6 +274,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
         socket
         |> assign(:meeting_type, meeting_type)
         |> assign(:engine, QEngine.init(defs))
+        |> maybe_subscribe_to_group_seats()
         |> do_handle_schedule_entry(params)
 
       _other ->
@@ -440,4 +443,32 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       socket
     end
   end
+
+  @doc """
+  Subscribes the booking page to live seat updates for the resolved meeting
+  type. Group types only; mirrors `maybe_subscribe_to_calendar_events/1`.
+
+  Re-invoked whenever a meeting type is assigned. Switching between group
+  types adds a subscription per type without unsubscribing — the
+  `{:seat_update, id}` handler matches on the current meeting type's id, so
+  broadcasts for a previously viewed type are no-ops.
+  """
+  @spec maybe_subscribe_to_group_seats(Phoenix.LiveView.Socket.t()) ::
+          Phoenix.LiveView.Socket.t()
+  def maybe_subscribe_to_group_seats(socket) do
+    meeting_type = socket.assigns[:meeting_type]
+
+    if connected?(socket) && group_type?(meeting_type) &&
+         socket.assigns[:group_seats_subscribed_id] != meeting_type.id do
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "group_seats:#{meeting_type.id}")
+      assign(socket, :group_seats_subscribed_id, meeting_type.id)
+    else
+      socket
+    end
+  end
+
+  defp group_type?(%MeetingTypeSchema{} = meeting_type),
+    do: MeetingTypeSchema.group?(meeting_type)
+
+  defp group_type?(_other), do: false
 end

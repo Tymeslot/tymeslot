@@ -131,6 +131,11 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       end
 
       @impl Phoenix.LiveView
+      def handle_info({:seat_update, meeting_type_id}, socket) do
+        InfoHandlers.handle_seat_update(socket, meeting_type_id, &transition_to/3)
+      end
+
+      @impl Phoenix.LiveView
       def handle_info({ref, {:ok, availability_map}}, socket) when is_reference(ref) do
         InfoHandlers.handle_availability_ok(socket, ref, availability_map)
       end
