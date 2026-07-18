@@ -13,6 +13,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantSchema
   alias Tymeslot.Repo
 
   # Cancelled meetings accumulate indefinitely; bound the default read so the
@@ -68,6 +69,16 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   defp order_by_start_desc_id_desc(query),
     do: from(m in query, order_by: [desc: m.start_time, desc: m.id])
+
+  # Live (non-cancelled) participants only, oldest booking first — mirrors
+  # the guests preload_order and keeps the dashboard from ever rendering a
+  # cancelled participant.
+  defp live_participants_preload do
+    from(p in ParticipantSchema,
+      where: is_nil(p.cancelled_at),
+      order_by: [asc: p.inserted_at]
+    )
+  end
 
   @doc """
   Returns the list of all meetings.
@@ -349,7 +360,7 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> order_by_start_desc_id_desc()
     |> cursor_after(after_start, after_id)
     |> apply_limit(limit)
-    |> preload(:guests)
+    |> preload([:guests, :meeting_type_ref, participants: ^live_participants_preload()])
     |> Repo.all()
   end
 end

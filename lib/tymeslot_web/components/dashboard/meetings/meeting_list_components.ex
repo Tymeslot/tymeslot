@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
 
@@ -130,6 +131,16 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               {@meeting.attendee_company}
             </span>
             <.status_badges meeting={@meeting} />
+            <span
+              :if={group_meeting?(@meeting)}
+              class="inline-flex items-center gap-1.5 px-3 py-1 bg-turquoise-50 text-turquoise-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-turquoise-100 shadow-sm"
+            >
+              <CoreComponents.icon name="hero-users" class="w-3.5 h-3.5" />
+              {dgettext("dashboard_bookings", "%{count}/%{capacity} participants",
+                count: length(participant_list(@meeting)),
+                capacity: @meeting.meeting_type_ref.max_participants
+              )}
+            </span>
             <span :if={@meeting.meeting_url} class="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-50 text-cyan-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-cyan-100 shadow-sm">
               <CoreComponents.icon name="hero-video-camera" class="w-3.5 h-3.5" />
               {dgettext("dashboard_bookings", "Video Call")}
@@ -178,6 +189,43 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             </div>
           </div>
 
+          <%!-- Participants panel — group meetings only; the preload already
+               filters to live (non-cancelled) participants. --%>
+          <div
+            :if={participant_list(@meeting) != []}
+            class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50"
+          >
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-tymeslot-100">
+                <CoreComponents.icon name="hero-users" class="w-4 h-4 text-tymeslot-400" />
+              </div>
+              <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest">
+                {dgettext("dashboard_bookings", "Participants")}
+              </p>
+            </div>
+            <ul class="space-y-2.5">
+              <li
+                :for={participant <- participant_list(@meeting)}
+                class="flex items-center justify-between gap-3"
+              >
+                <span class="flex items-center gap-2.5 min-w-0">
+                  <span class="flex h-7 w-7 flex-none items-center justify-center rounded-token-full bg-turquoise-100 text-token-xs font-bold uppercase text-turquoise-700">
+                    {person_initial(participant)}
+                  </span>
+                  <span class="truncate text-token-sm font-medium text-tymeslot-700">
+                    {participant.name}
+                  </span>
+                </span>
+                <a
+                  href={"mailto:#{participant.email}"}
+                  class="truncate text-token-sm font-medium text-tymeslot-500 hover:text-turquoise-600 transition-colors"
+                >
+                  {participant.email}
+                </a>
+              </li>
+            </ul>
+          </div>
+
           <div
             :if={guest_list(@meeting) != []}
             class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50"
@@ -202,7 +250,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               >
                 <span class="flex items-center gap-2.5 min-w-0">
                   <span class="flex h-7 w-7 flex-none items-center justify-center rounded-token-full bg-turquoise-100 text-token-xs font-bold uppercase text-turquoise-700">
-                    {guest_initial(guest)}
+                    {person_initial(guest)}
                   </span>
                   <span class="truncate text-token-sm font-medium text-tymeslot-700">
                     {guest.name || guest.email}
@@ -535,13 +583,28 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   defp guest_list(%{guests: guests}) when is_list(guests), do: guests
   defp guest_list(_meeting), do: []
 
-  defp guest_initial(%{name: name}) when is_binary(name) and name != "",
+  # A meeting is a group meeting when its (preloaded) type allows more than
+  # one participant. Falls through for solo types, meetings without a type,
+  # and callers that did not preload the association.
+  defp group_meeting?(%{meeting_type_ref: %MeetingTypeSchema{} = type}),
+    do: MeetingTypeSchema.group?(type)
+
+  defp group_meeting?(_meeting), do: false
+
+  # The is_list guard doubles as a NotLoaded guard for callers that render
+  # meeting_card without the participants preload.
+  defp participant_list(%{participants: participants}) when is_list(participants),
+    do: participants
+
+  defp participant_list(_meeting), do: []
+
+  defp person_initial(%{name: name}) when is_binary(name) and name != "",
     do: name |> String.first() |> String.upcase()
 
-  defp guest_initial(%{email: email}) when is_binary(email) and email != "",
+  defp person_initial(%{email: email}) when is_binary(email) and email != "",
     do: email |> String.first() |> String.upcase()
 
-  defp guest_initial(_guest), do: "?"
+  defp person_initial(_person), do: "?"
 
   defp guest_summary_label(meeting) do
     summary = Meetings.guest_rsvp_summary(guest_list(meeting))
