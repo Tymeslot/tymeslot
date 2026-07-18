@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
@@ -18,6 +19,20 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_confirmation_emails(%{"meeting_id" => meeting_id}) do
     with_meeting(meeting_id, "confirmation emails", &send_confirmation_emails/1)
+  end
+
+  @spec handle_seat_confirmation_emails(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_seat_confirmation_emails(%{
+        "meeting_id" => meeting_id,
+        "participant_id" => participant_id
+      }) do
+    with_meeting(meeting_id, "seat confirmation emails", fn meeting ->
+      case find_live_recipient(meeting, participant_id) do
+        nil -> {:discard, "Participant not found or cancelled"}
+        recipient -> send_seat_confirmation_emails(meeting, recipient)
+      end
+    end)
   end
 
   @spec handle_reminder_emails(%{String.t() => term()}) ::
@@ -128,6 +143,73 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           {:error, "Failed to send cancellation emails"}
         end
     end
+  end
+
+  defp find_live_recipient(meeting, participant_id) do
+    meeting
+    |> Meetings.recipients()
+    |> Enum.find(&(&1.participant_id == participant_id))
+  end
+
+  # One participant's confirmation plus the organiser's per-seat notification.
+  # Idempotency is job-level (no sent flags on participants): a full failure
+  # retries, a partial failure discards so the retry cannot duplicate the
+  # email that already went out — mirroring the cancellation-email semantics.
+  defp send_seat_confirmation_emails(meeting, recipient) do
+    seat_meeting = Meetings.meeting_as_seen_by(meeting, recipient)
+    details = AppointmentBuilder.from_meeting(seat_meeting)
+    email_service = Config.email_service_module()
+
+    organizer_result =
+      email_service.send_appointment_confirmation_to_organizer(details.organizer_email, details)
+
+    attendee_result =
+      email_service.send_appointment_confirmation_to_attendee(recipient.email, details)
+
+    send_participant_guest_confirmations(meeting, recipient, details, email_service)
+
+    case {organizer_result, attendee_result} do
+      {{:ok, _organizer}, {:ok, _attendee}} ->
+        :ok
+
+      {organizer_result, attendee_result} ->
+        Logger.warning("Some seat confirmation emails may have failed",
+          meeting_id: meeting.id,
+          participant_id: recipient.participant_id,
+          organizer_result: inspect(organizer_result),
+          attendee_result: inspect(attendee_result)
+        )
+
+        if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
+          {:discard,
+           "Partial seat confirmation failure: one email succeeded, retry would duplicate"}
+        else
+          {:error, "Failed to send seat confirmation emails"}
+        end
+    end
+  end
+
+  # Same mechanics as send_guest_confirmations/3, scoped to one participant's
+  # guests. Guests are stamped after a successful send so Oban retries only
+  # re-attempt unsent guests.
+  defp send_participant_guest_confirmations(meeting, recipient, details, email_service) do
+    recipient.participant_id
+    |> GuestQueries.list_unsent_for_participant()
+    |> Enum.each(fn guest ->
+      guest_details = guest_appointment_details(details, guest)
+
+      case email_service.send_guest_confirmation(guest.email, guest_details) do
+        {:ok, _result} ->
+          GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
+
+        other ->
+          Logger.error("Guest confirmation email failed",
+            meeting_id: meeting.id,
+            guest_email: guest.email,
+            result: inspect(other)
+          )
+      end
+    end)
   end
 
   defp send_confirmation_emails(meeting) do

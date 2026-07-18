@@ -32,6 +32,29 @@ defmodule Tymeslot.Notifications.Events do
   end
 
   @doc """
+  Handles a seat being booked on a group meeting.
+
+  Every seat schedules its own confirmation email job (participant plus a
+  per-seat organiser notification). `created_meeting?` marks the first seat:
+  reminder jobs are meeting-level, so they are scheduled exactly once here,
+  and the integration dispatchers (webhooks, Telegram, Slack) fire once with
+  their existing one-event-per-meeting semantics.
+  """
+  @spec seat_booked(term(), term(), boolean()) :: {:ok, term()} | {:error, term()}
+  def seat_booked(meeting, participant, created_meeting?) do
+    result = Orchestrator.schedule_seat_confirmation(meeting, participant)
+
+    if created_meeting? do
+      schedule_reminders(meeting)
+      Dispatcher.dispatch(:meeting_created, meeting)
+      TelegramDispatcher.dispatch(:meeting_created, meeting)
+      SlackDispatcher.dispatch(:meeting_created, meeting)
+    end
+
+    result
+  end
+
+  @doc """
   Handles meeting cancellation event.
   """
   @spec meeting_cancelled(term()) :: {:ok, term()} | {:error, term()}

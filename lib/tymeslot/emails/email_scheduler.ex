@@ -25,6 +25,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
   # Meeting emails
 
   defdelegate schedule_confirmation_emails(meeting_id), to: MeetingScheduler
+  defdelegate schedule_seat_confirmation_emails(meeting_id, participant_id), to: MeetingScheduler
   defdelegate schedule_cancellation_emails(meeting_id), to: MeetingScheduler
 
   defdelegate schedule_reminder_emails(meeting_id, reminder_value, reminder_unit),
@@ -72,6 +73,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
 
   @fields_by_action %{
     "send_confirmation_emails" => ["meeting_id"],
+    "send_seat_confirmation_emails" => ["meeting_id", "participant_id"],
     "send_cancellation_emails" => ["meeting_id"],
     "send_reminder_emails" => ["meeting_id", "reminder_value", "reminder_unit"],
     "send_reschedule_request" => ["meeting_id"],

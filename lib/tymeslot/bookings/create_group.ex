@@ -18,6 +18,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.SeatBroadcast
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.Notifications.Events
 
   @doc "True when the booking's meeting type holds more than one seat."
   @spec applicable?(map()) :: boolean()
@@ -59,9 +60,12 @@ defmodule Tymeslot.Bookings.CreateGroup do
     |> map_result()
   end
 
-  defp map_result({:ok, %{meeting: meeting}}) do
+  defp map_result(
+         {:ok, %{meeting: meeting, participant: participant, created_meeting?: created?}}
+       ) do
     Create.emit_booking_created()
     publish_seat_change(meeting)
+    Events.seat_booked(meeting, participant, created?)
     {:ok, meeting}
   end
 

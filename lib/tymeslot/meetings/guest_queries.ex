@@ -58,6 +58,27 @@ defmodule Tymeslot.Meetings.GuestQueries do
     |> Repo.all()
   end
 
+  @doc "Lists the guests belonging to one participant, oldest first."
+  @spec list_for_participant(binary()) :: [Guest.t()]
+  def list_for_participant(participant_id) do
+    Guest
+    |> where([g], g.participant_id == ^participant_id)
+    |> order_by([g], asc: g.inserted_at)
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists the guests belonging to one participant whose confirmation email has
+  not yet been sent.
+  """
+  @spec list_unsent_for_participant(binary()) :: [Guest.t()]
+  def list_unsent_for_participant(participant_id) do
+    Guest
+    |> where([g], g.participant_id == ^participant_id and is_nil(g.confirmation_sent_at))
+    |> order_by([g], asc: g.inserted_at)
+    |> Repo.all()
+  end
+
   @doc "Stamps `confirmation_sent_at` on the given guest."
   @spec mark_confirmation_sent(Guest.t(), DateTime.t()) ::
           {:ok, Guest.t()} | {:error, Changeset.t()}

@@ -54,6 +54,53 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   @doc """
+  Schedules the confirmation emails for a single group-booking seat.
+
+  One job per participant; uniqueness on (action, meeting_id, participant_id)
+  makes double-submission idempotent within the 5-minute window.
+  """
+  @spec schedule_seat_confirmation_emails(term(), term()) :: :ok | {:error, String.t()}
+  def schedule_seat_confirmation_emails(meeting_id, participant_id) do
+    result =
+      %{
+        "action" => "send_seat_confirmation_emails",
+        "meeting_id" => meeting_id,
+        "participant_id" => participant_id
+      }
+      |> EmailWorker.new(
+        queue: :emails,
+        priority: 0,
+        unique: [
+          period: 300,
+          fields: [:args, :queue],
+          keys: [:action, :meeting_id, :participant_id]
+        ]
+      )
+      |> Oban.insert()
+
+    case result do
+      {:ok, _job} ->
+        Logger.info("Seat confirmation email job scheduled",
+          meeting_id: meeting_id,
+          participant_id: participant_id
+        )
+
+        :ok
+
+      {:error, %Changeset{errors: [unique: _details]}} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule seat confirmation emails",
+          meeting_id: meeting_id,
+          error: Helpers.format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
+  @doc """
   Schedules cancellation emails to be sent immediately with high priority.
   """
   @spec schedule_cancellation_emails(term()) :: :ok | {:error, String.t()}
