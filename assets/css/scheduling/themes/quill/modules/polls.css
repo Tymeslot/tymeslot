@@ -1,0 +1,236 @@
+/* Polls — public voting page (Quill glass-morphism).
+   Every rule is scoped to html.quill-theme so poll styling stays inside the
+   theme. Colours come from the theme's own --theme-* tokens; structure from the
+   shared PollVotingComponents class names. */
+
+html.quill-theme .poll-voting {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  color: var(--theme-text);
+}
+
+html.quill-theme .poll-voting-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  text-align: center;
+}
+
+html.quill-theme .poll-voting-title {
+  font-size: var(--theme-font-size-2xl);
+  font-weight: 700;
+  line-height: var(--theme-line-height-snug);
+  color: var(--theme-text);
+}
+
+html.quill-theme .poll-voting-description {
+  font-size: var(--theme-font-size-base);
+  color: var(--theme-text-secondary);
+}
+
+html.quill-theme .poll-voting-greeting {
+  font-size: var(--theme-font-size-sm);
+  font-weight: 600;
+  color: var(--theme-primary);
+}
+
+html.quill-theme .poll-voting-notice {
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+  text-align: center;
+}
+
+/* Deadline banner */
+html.quill-theme .poll-deadline-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+html.quill-theme .poll-deadline-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--theme-warning);
+}
+
+/* Registration form */
+html.quill-theme .poll-identity-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+html.quill-theme .poll-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+html.quill-theme .poll-field-label {
+  font-size: var(--theme-font-size-sm);
+  font-weight: 600;
+  color: var(--theme-text);
+}
+
+html.quill-theme .poll-field-input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-base);
+}
+
+html.quill-theme .poll-field-input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 3px var(--theme-primary-focus);
+}
+
+html.quill-theme .poll-submit-button {
+  align-self: stretch;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  background: var(--theme-primary);
+  color: #fff;
+  font-size: var(--theme-font-size-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+html.quill-theme .poll-submit-button:hover {
+  background: var(--theme-primary-hover);
+}
+
+/* Slot grid */
+html.quill-theme .poll-slot-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+html.quill-theme .poll-slot-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+html.quill-theme .poll-slot-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0.875rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.875rem;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html.quill-theme .poll-slot-time {
+  padding: 0;
+  font-size: var(--theme-font-size-base);
+  font-weight: 600;
+  color: var(--theme-text);
+}
+
+html.quill-theme .poll-slot-tallies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+html.quill-theme .poll-tally {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+
+html.quill-theme .poll-tally-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+html.quill-theme .poll-tally--yes .poll-tally-icon {
+  color: var(--theme-accent);
+}
+
+html.quill-theme .poll-tally--if_need_be .poll-tally-icon {
+  color: var(--theme-warning);
+}
+
+html.quill-theme .poll-tally--no .poll-tally-icon {
+  color: var(--theme-danger);
+}
+
+/* Vote controls (three-state) */
+html.quill-theme .poll-vote-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+html.quill-theme .poll-vote-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text);
+  cursor: pointer;
+}
+
+html.quill-theme .poll-vote-option:has(input:checked) {
+  border-color: var(--theme-primary);
+  background: var(--theme-primary-focus);
+  font-weight: 600;
+}
+
+html.quill-theme .poll-vote-option--yes:has(input:checked) {
+  border-color: var(--theme-accent);
+}
+
+html.quill-theme .poll-vote-option--no:has(input:checked) {
+  border-color: var(--theme-danger);
+}
+
+/* Closed states */
+html.quill-theme .poll-closed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+html.quill-theme .poll-closed-icon {
+  width: 3rem;
+  height: 3rem;
+}
+
+html.quill-theme .poll-closed-icon--success {
+  color: var(--theme-accent);
+}
+
+html.quill-theme .poll-closed-icon--danger {
+  color: var(--theme-danger);
+}
+
+html.quill-theme .poll-closed-message {
+  font-size: var(--theme-font-size-md);
+  color: var(--theme-text);
+}
