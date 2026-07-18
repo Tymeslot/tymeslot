@@ -9,6 +9,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   """
 
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingSchema
   alias TymeslotWeb.Endpoint
 
   @doc """
@@ -135,5 +137,26 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
     end
   end
 
+  # Group meetings carry no attendee_* fields; list the live participants so
+  # the organiser can see who is booked from inside their calendar app. The
+  # event description is rebuilt on every "update" sync, so seat changes keep
+  # this list current. Plain maps (used by some sync paths and tests) fall
+  # through to the nil clause unchanged.
+  defp attendee_identity_line(%MeetingSchema{} = meeting) do
+    case Meetings.recipients(meeting) do
+      [] ->
+        nil
+
+      recipients ->
+        "Attendees (#{length(recipients)}):\n" <>
+          Enum.map_join(recipients, "\n", &participant_line/1) <> "\n\n"
+    end
+  end
+
   defp attendee_identity_line(_meeting), do: nil
+
+  defp participant_line(%{name: name, email: email}) when is_binary(name) and name != "",
+    do: "#{name} <#{email}>"
+
+  defp participant_line(%{email: email}), do: email
 end
