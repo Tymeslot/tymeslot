@@ -317,6 +317,26 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> put_change(:status, "confirmed")
   end
 
+  @status_transition_fields [:status, :cancelled_at, :cancellation_reason]
+
+  @doc """
+  Changeset for a bare status transition (cancel, external auto-cancel).
+
+  Deliberately narrower than `changeset/2`: it casts and validates only the
+  fields a status transition ever touches, so it works identically for solo
+  meetings (attendee fields already set) and group meetings (which
+  legitimately carry no `attendee_name`/`attendee_email` — see
+  `group_changeset/2`). Reusing the full `changeset/2` here would wrongly
+  demand attendee data the transition never changes; reusing
+  `group_changeset/2` would silently force `status` back to `"confirmed"`.
+  """
+  @spec status_changeset(t(), map()) :: Ecto.Changeset.t()
+  def status_changeset(meeting, attrs) do
+    meeting
+    |> cast(attrs, @status_transition_fields)
+    |> validate_inclusion(:status, @valid_statuses)
+  end
+
   defp base_changeset(meeting, attrs, required_fields) do
     meeting
     |> cast(attrs, @required_fields ++ @optional_fields)

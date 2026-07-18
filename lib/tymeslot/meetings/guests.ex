@@ -13,6 +13,8 @@ defmodule Tymeslot.Meetings.Guests do
 
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.GuestSchema
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Security.FieldValidators.EmailValidator
 
   @max_guests 10
@@ -90,12 +92,41 @@ defmodule Tymeslot.Meetings.Guests do
   @spec record_rsvp(String.t(), String.t()) ::
           {:ok, GuestSchema.t()} | {:error, :not_found | :invalid_response | Ecto.Changeset.t()}
   def record_rsvp(token, response) when response in ["accepted", "declined"] do
-    with {:ok, guest} <- GuestQueries.get_by_token(token) do
+    with {:ok, guest} <- GuestQueries.get_by_token(token),
+         :ok <- ensure_rsvp_open(guest) do
       GuestQueries.update_rsvp(guest, %{status: response, responded_at: now()})
     end
   end
 
   def record_rsvp(_token, _response), do: {:error, :invalid_response}
+
+  # An RSVP is only meaningful while the invitation stands: a cancelled
+  # meeting, or (group bookings) a cancelled owning participant, voids the
+  # link. Voided links answer :not_found so the public page shows the same
+  # invalid-link screen as a bad token.
+  defp ensure_rsvp_open(guest) do
+    with :ok <- ensure_meeting_open(guest) do
+      ensure_participant_open(guest)
+    end
+  end
+
+  defp ensure_meeting_open(guest) do
+    case MeetingQueries.get_meeting(guest.meeting_id) do
+      {:ok, %{status: "cancelled"}} -> {:error, :not_found}
+      {:ok, _meeting} -> :ok
+      {:error, :not_found} -> {:error, :not_found}
+    end
+  end
+
+  defp ensure_participant_open(%{participant_id: nil}), do: :ok
+
+  defp ensure_participant_open(%{participant_id: participant_id}) do
+    case ParticipantQueries.get(participant_id) do
+      {:ok, %{cancelled_at: nil}} -> :ok
+      {:ok, _cancelled} -> {:error, :not_found}
+      {:error, :not_found} -> {:error, :not_found}
+    end
+  end
 
   @doc "Lists the guests attached to a meeting, oldest first."
   @spec list_for_meeting(binary()) :: [GuestSchema.t()]

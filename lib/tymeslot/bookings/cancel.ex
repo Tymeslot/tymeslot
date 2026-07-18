@@ -144,7 +144,7 @@ defmodule Tymeslot.Bookings.Cancel do
       cancelled_at: DateTime.truncate(Clock.utc_now(), :second)
     }
 
-    case MeetingQueries.update_meeting(meeting, attrs) do
+    case MeetingQueries.update_meeting_status(meeting, attrs) do
       {:ok, updated_meeting} ->
         Logger.info("Meeting status updated to cancelled",
           meeting_id: meeting.id
@@ -169,7 +169,7 @@ defmodule Tymeslot.Bookings.Cancel do
       cancellation_reason: "Cancelled externally via calendar sync"
     }
 
-    case MeetingQueries.update_meeting(meeting, attrs) do
+    case MeetingQueries.update_meeting_status(meeting, attrs) do
       {:ok, updated_meeting} ->
         Logger.info("Meeting auto-cancelled via external calendar deletion",
           meeting_id: meeting.id

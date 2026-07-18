@@ -7,7 +7,7 @@ defmodule Tymeslot.Meetings do
 
   require Logger
 
-  alias Tymeslot.Bookings.{Cancel, Create, Errors, Reschedule, RescheduleRequest}
+  alias Tymeslot.Bookings.{Cancel, CancelSeat, Create, Errors, Reschedule, RescheduleRequest}
 
   alias Tymeslot.Meetings.{
     CalendarEvents,
@@ -148,6 +148,23 @@ defmodule Tymeslot.Meetings do
   """
   @spec meeting_as_seen_by(MeetingSchema.t(), Recipient.t()) :: MeetingSchema.t()
   defdelegate meeting_as_seen_by(meeting, recipient), to: Recipient, as: :as_seen_by
+
+  @doc "Looks up a group-booking participant by their management token."
+  @spec get_participant_by_token(String.t()) ::
+          {:ok, Tymeslot.Meetings.ParticipantSchema.t()} | {:error, :not_found}
+  defdelegate get_participant_by_token(token),
+    to: Tymeslot.Meetings.ParticipantQueries,
+    as: :get_by_token
+
+  @doc """
+  Cancels a participant's seat from their management token.
+
+  Delegates to Bookings.CancelSeat; the last leaver cancels the whole
+  meeting.
+  """
+  @spec cancel_seat(String.t()) ::
+          {:ok, :seat_cancelled | :meeting_cancelled} | {:error, term()}
+  def cancel_seat(management_token), do: CancelSeat.execute(management_token)
 
   @doc """
   Reschedules an existing meeting.

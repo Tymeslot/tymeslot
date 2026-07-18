@@ -105,6 +105,22 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Updates a meeting's status transition fields only (`status`,
+  `cancelled_at`, `cancellation_reason`).
+
+  Used by cancellation flows instead of `update_meeting/2`: those touch
+  only these fields, and group meetings legitimately carry no
+  `attendee_name`/`attendee_email` — fields `Meeting.changeset/2` would
+  otherwise demand.
+  """
+  @spec update_meeting_status(Meeting.t(), map()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def update_meeting_status(%Meeting{} = meeting, attrs) when is_map(attrs) do
+    meeting
+    |> Meeting.status_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
   Writes a new attendee-notification baseline for a meeting, updating both the
   serialised `last_notified_state` snapshot and `ical_sequence` atomically.
   """

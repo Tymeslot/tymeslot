@@ -13,6 +13,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Meetings.ParticipantQueries
+  alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Utils.ReminderUtils
 
   @spec handle_confirmation_emails(%{String.t() => term()}) ::
@@ -31,6 +33,23 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
       case find_live_recipient(meeting, participant_id) do
         nil -> {:discard, "Participant not found or cancelled"}
         recipient -> send_seat_confirmation_emails(meeting, recipient)
+      end
+    end)
+  end
+
+  @spec handle_seat_cancellation_emails(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_seat_cancellation_emails(
+        %{"meeting_id" => meeting_id, "participant_id" => participant_id} = args
+      ) do
+    with_meeting(meeting_id, "seat cancellation emails", fn meeting ->
+      case ParticipantQueries.get(participant_id) do
+        {:ok, participant} ->
+          notify_organizer? = Map.get(args, "notify_organizer", true)
+          send_seat_cancellation_emails(meeting, participant, notify_organizer?)
+
+        {:error, :not_found} ->
+          {:discard, "Participant not found"}
       end
     end)
   end
@@ -185,6 +204,51 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
            "Partial seat confirmation failure: one email succeeded, retry would duplicate"}
         else
           {:error, "Failed to send seat confirmation emails"}
+        end
+    end
+  end
+
+  # The cancelled participant is looked up by id, not through `recipients/1`,
+  # precisely because they are no longer live. The attendee email is the
+  # existing `AppointmentCancellation` template, whose cancel ICS already
+  # bumps `ical_sequence + 1` on the meeting UID, removing the event from
+  # that participant's calendar copy only.
+  defp send_seat_cancellation_emails(meeting, participant, notify_organizer?) do
+    recipient = Recipient.from_participant(participant)
+
+    details =
+      meeting
+      |> Meetings.meeting_as_seen_by(recipient)
+      |> AppointmentBuilder.from_meeting()
+
+    email_service = Config.email_service_module()
+
+    attendee_result =
+      email_service.send_cancellation_email_to_attendee(recipient.email, details)
+
+    organizer_result =
+      if notify_organizer? do
+        email_service.send_cancellation_email_to_organizer(details.organizer_email, details)
+      else
+        {:ok, :skipped}
+      end
+
+    case {organizer_result, attendee_result} do
+      {{:ok, _organizer}, {:ok, _attendee}} ->
+        :ok
+
+      {organizer_result, attendee_result} ->
+        Logger.warning("Some seat cancellation emails may have failed",
+          meeting_id: meeting.id,
+          participant_id: participant.id,
+          organizer_result: inspect(organizer_result),
+          attendee_result: inspect(attendee_result)
+        )
+
+        if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
+          {:discard, "Partial seat cancellation failure: retry would duplicate"}
+        else
+          {:error, "Failed to send seat cancellation emails"}
         end
     end
   end

@@ -31,6 +31,15 @@ defmodule Tymeslot.Meetings.ParticipantQueries do
     end
   end
 
+  @doc "Fetches a participant by primary key."
+  @spec get(binary()) :: {:ok, Participant.t()} | {:error, :not_found}
+  def get(id) do
+    case Repo.get(Participant, id) do
+      nil -> {:error, :not_found}
+      participant -> {:ok, participant}
+    end
+  end
+
   @doc "Lists the live (not cancelled) participants of a meeting, oldest first."
   @spec list_live_for_meeting(binary()) :: [Participant.t()]
   def list_live_for_meeting(meeting_id) do

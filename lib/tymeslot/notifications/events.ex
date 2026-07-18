@@ -55,6 +55,19 @@ defmodule Tymeslot.Notifications.Events do
   end
 
   @doc """
+  Handles a participant cancelling their seat on a group meeting.
+
+  Schedules the seat-cancellation emails. `notify_organizer: false` is used
+  by the last-leaver path, where the meeting-level cancellation flow already
+  emails the organiser.
+  """
+  @spec seat_cancelled(term(), term(), keyword()) :: {:ok, term()} | {:error, term()}
+  def seat_cancelled(meeting, participant, opts \\ []) do
+    notify_organizer? = Keyword.get(opts, :notify_organizer, true)
+    Orchestrator.schedule_seat_cancellation(meeting, participant, notify_organizer?)
+  end
+
+  @doc """
   Handles meeting cancellation event.
   """
   @spec meeting_cancelled(term()) :: {:ok, term()} | {:error, term()}

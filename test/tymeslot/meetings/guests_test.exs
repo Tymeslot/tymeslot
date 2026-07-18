@@ -132,6 +132,54 @@ defmodule Tymeslot.Meetings.GuestsTest do
     end
   end
 
+  describe "record_rsvp/2 voids the link when the invitation is no longer live" do
+    test "rejects an RSVP once the meeting has been cancelled" do
+      meeting = insert(:cancelled_meeting)
+      {:ok, [guest]} = Guests.create_for_meeting(meeting.id, ["guest@example.com"])
+
+      assert {:error, :not_found} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+    end
+
+    test "rejects an RSVP for a guest whose owning participant has cancelled their seat" do
+      meeting = insert(:meeting)
+
+      {:ok, participant} =
+        ParticipantQueries.insert(%{
+          meeting_id: meeting.id,
+          name: "Booker",
+          email: "booker@example.com",
+          timezone: "Etc/UTC",
+          locale: "en"
+        })
+
+      {:ok, [guest]} =
+        Guests.create_for_participant(meeting.id, participant.id, ["guest@example.com"])
+
+      {:ok, _cancelled} = ParticipantQueries.cancel(participant)
+
+      assert {:error, :not_found} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+    end
+
+    test "accepts an RSVP for a guest whose owning participant is still live" do
+      meeting = insert(:meeting)
+
+      {:ok, participant} =
+        ParticipantQueries.insert(%{
+          meeting_id: meeting.id,
+          name: "Booker",
+          email: "booker@example.com",
+          timezone: "Etc/UTC",
+          locale: "en"
+        })
+
+      {:ok, [guest]} =
+        Guests.create_for_participant(meeting.id, participant.id, ["guest@example.com"])
+
+      assert {:ok, updated} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+      assert updated.status == "accepted"
+    end
+  end
+
   describe "summarize/1" do
     test "aggregates RSVP counts" do
       meeting = insert(:meeting)

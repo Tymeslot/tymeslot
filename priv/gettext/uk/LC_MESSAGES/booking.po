@@ -1088,11 +1088,13 @@ msgstr "Гості"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:56
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:117
+#: lib/tymeslot_web/controllers/seat_html.ex:150
 #, elixir-autogen, elixir-format
 msgid "Hosted by %{name}"
 msgstr "Організатор: %{name}"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:161
+#: lib/tymeslot_web/controllers/seat_html.ex:131
 #, elixir-autogen, elixir-format
 msgid "Please wait a moment and try again."
 msgstr "Зачекайте мить і спробуйте ще раз."
@@ -1108,11 +1110,13 @@ msgid "The invitation link may have expired or already been used. Please contact
 msgstr "Термін дії посилання на запрошення міг закінчитися, або його вже використали. Зверніться до організатора зустрічі."
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:140
+#: lib/tymeslot_web/controllers/seat_html.ex:107
 #, elixir-autogen, elixir-format
 msgid "This link is no longer valid"
 msgstr "Це посилання більше не дійсне"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex:158
+#: lib/tymeslot_web/controllers/seat_html.ex:128
 #, elixir-autogen, elixir-format
 msgid "Too many attempts"
 msgstr "Забагато спроб"
@@ -1301,3 +1305,43 @@ msgid_plural "You can add up to %{count} guests."
 msgstr[0] "Ви можете додати до %{count} гостя."
 msgstr[1] "Ви можете додати до %{count} гостей."
 msgstr[2] "Ви можете додати до %{count} гостей."
+
+#: lib/tymeslot_web/controllers/seat_html.ex:26
+#, elixir-autogen, elixir-format
+msgid "Cancel your spot?"
+msgstr "Скасувати ваше місце?"
+
+#: lib/tymeslot_web/controllers/seat_html.ex:30
+#, elixir-autogen, elixir-format
+msgid "Confirm to give up your spot in this meeting with %{name}."
+msgstr "Підтвердіть, щоб відмовитися від свого місця на цій зустрічі з %{name}."
+
+#: lib/tymeslot_web/controllers/seat_html.ex:110
+#, elixir-autogen, elixir-format
+msgid "The link may have expired or already been used. Please contact the meeting host."
+msgstr "Термін дії посилання на запрошення міг закінчитися, або його вже використали. Зверніться до організатора зустрічі."
+
+#: lib/tymeslot_web/controllers/seat_html.ex:89
+#, elixir-autogen, elixir-format
+msgid "The meeting is too close to its start time. Please contact the host directly."
+msgstr "До початку зустрічі залишилося занадто мало часу. Будь ласка, зверніться безпосередньо до організатора."
+
+#: lib/tymeslot_web/controllers/seat_html.ex:86
+#, elixir-autogen, elixir-format
+msgid "This spot can no longer be cancelled online"
+msgstr "Це місце більше не можна скасувати онлайн"
+
+#: lib/tymeslot_web/controllers/seat_html.ex:67
+#, elixir-autogen, elixir-format
+msgid "We've let %{name} know. A confirmation email is on its way."
+msgstr "Ми повідомили %{name}. Лист-підтвердження вже надсилається."
+
+#: lib/tymeslot_web/controllers/seat_html.ex:43
+#, elixir-autogen, elixir-format
+msgid "Yes, cancel my spot"
+msgstr "Так, скасувати моє місце"
+
+#: lib/tymeslot_web/controllers/seat_html.ex:63
+#, elixir-autogen, elixir-format
+msgid "Your spot has been cancelled"
+msgstr "Ваше місце скасовано"

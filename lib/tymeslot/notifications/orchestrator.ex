@@ -142,6 +142,24 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   @doc """
+  Schedules the cancellation email job for one seat on a group meeting.
+  """
+  @spec schedule_seat_cancellation(%{atom() => term()}, %{atom() => term()}, boolean()) ::
+          {:ok, atom()} | {:error, term()}
+  def schedule_seat_cancellation(meeting, participant, notify_organizer?) do
+    worker_module = get_email_worker_module()
+
+    case worker_module.schedule_seat_cancellation_emails(
+           meeting.id,
+           participant.id,
+           notify_organizer?
+         ) do
+      :ok -> {:ok, :seat_cancellation_scheduled}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
   Sends reschedule notifications immediately.
   """
   @spec send_reschedule_notifications(%{atom() => term()}, %{atom() => term()}) ::

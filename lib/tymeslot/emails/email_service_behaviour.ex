@@ -26,6 +26,10 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               {:ok, any()} | {:error, any()}
   @callback send_cancellation_emails(appointment_details()) ::
               {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
+  @callback send_cancellation_email_to_attendee(String.t(), appointment_details()) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_cancellation_email_to_organizer(String.t(), appointment_details()) ::
+              {:ok, any()} | {:error, any()}
   @callback send_calendar_sync_error(map(), any()) :: {:ok, any()} | {:error, any()}
 
   @callback send_email_verification(user_map(), String.t()) :: {:ok, any()} | {:error, any()}
