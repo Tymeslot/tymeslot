@@ -461,6 +461,29 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   defp send_reminder_emails(meeting, reminder_value, reminder_unit) do
     Logger.info("Sending reminder emails", meeting_id: meeting.id, uid: meeting.uid)
 
+    case Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant)) do
+      [] ->
+        send_solo_reminder_emails(meeting, reminder_value, reminder_unit)
+
+      participants ->
+        {organizer_result, attendee_result} =
+          GroupMeetingEmails.send_group_reminder_emails(
+            meeting,
+            participants,
+            reminder_value,
+            reminder_unit
+          )
+
+        process_email_results(
+          meeting,
+          organizer_result,
+          attendee_result,
+          {:reminder, reminder_value, reminder_unit}
+        )
+    end
+  end
+
+  defp send_solo_reminder_emails(meeting, reminder_value, reminder_unit) do
     appointment_details =
       AppointmentBuilder.from_meeting(meeting, %{value: reminder_value, unit: reminder_unit})
 

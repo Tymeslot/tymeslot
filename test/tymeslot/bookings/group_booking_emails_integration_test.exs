@@ -145,4 +145,32 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
       args: %{"action" => "update", "meeting_id" => meeting.id}
     )
   end
+
+  test "reminder job sends one reminder per live participant plus one organiser reminder",
+       %{meeting_params: meeting_params} do
+    meeting = book_seat!(meeting_params, "First Booker", "first@example.com")
+    _same = book_seat!(meeting_params, "Second Booker", "second@example.com")
+
+    expect(EmailServiceMock, :send_appointment_reminder_to_organizer, fn organizer_email,
+                                                                         details ->
+      assert organizer_email == "organizer@example.com"
+      assert details.attendee_name == "2 participants"
+      {:ok, "sent"}
+    end)
+
+    expect(EmailServiceMock, :send_appointment_reminder_to_attendee, 2, fn attendee_email,
+                                                                           details ->
+      assert attendee_email in ["first@example.com", "second@example.com"]
+      assert details.attendee_name in ["First Booker", "Second Booker"]
+      {:ok, "sent"}
+    end)
+
+    assert :ok =
+             perform_job(EmailWorker, %{
+               "action" => "send_reminder_emails",
+               "meeting_id" => meeting.id,
+               "reminder_value" => 30,
+               "reminder_unit" => "minutes"
+             })
+  end
 end
