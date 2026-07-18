@@ -122,4 +122,35 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
       refute html =~ "has-seats"
     end
   end
+
+  describe "Rhythm (theme 2)" do
+    @tag :capture_log
+    test "group slots show a seat badge", %{user: user} do
+      {profile, _meeting_type} =
+        setup_booking_page(user, "2", "Group Beat", max_participants: 10)
+
+      {view, _date} = open_schedule_and_pick_tomorrow(profile, "group-beat")
+
+      wait_until(fn -> has_element?(view, "button.time-slot") end)
+
+      html = render(view)
+      assert html =~ ~s(data-testid="seat-badge")
+      assert html =~ "seat-green"
+      assert html =~ "10 seats left"
+    end
+
+    @tag :capture_log
+    test "solo slots render without any badge markup", %{user: user} do
+      {profile, _meeting_type} =
+        setup_booking_page(user, "2", "Solo Beat", max_participants: 1)
+
+      {view, _date} = open_schedule_and_pick_tomorrow(profile, "solo-beat")
+
+      wait_until(fn -> has_element?(view, "button.time-slot") end)
+
+      html = render(view)
+      refute html =~ "seat-badge"
+      refute html =~ "seats left"
+    end
+  end
 end

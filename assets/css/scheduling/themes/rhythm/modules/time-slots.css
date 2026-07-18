@@ -83,6 +83,42 @@
     inset 0 1px 0 var(--border-subtle);
 }
 
+/* ===== Seat availability (group bookings) ===== */
+/* Group slots stack the time above a seats-left badge; solo slots (no
+   .has-seats) keep the single-line layout untouched. */
+.time-slot.has-seats {
+  flex-direction: column;
+  gap: var(--space-hairline);
+  padding-top: var(--space-2xs);
+  padding-bottom: var(--space-2xs);
+}
+
+.seat-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2xs);
+  border-radius: var(--radius-full);
+  font-size: var(--theme-font-size-3xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.seat-badge.seat-green {
+  background: var(--seat-green-bg);
+  color: var(--seat-green);
+}
+
+.seat-badge.seat-amber {
+  background: var(--seat-amber-bg);
+  color: var(--seat-amber);
+}
+
+.seat-badge.seat-red {
+  background: var(--seat-red-bg);
+  color: var(--seat-red);
+}
+
 /* ============================================================================
    CONTAINER QUERY OVERRIDES
    Replaces width-based @media queries from responsive.css.

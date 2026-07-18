@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
+  alias TymeslotWeb.Themes.Shared.Components.SeatBadge
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @impl Phoenix.LiveComponent
@@ -283,7 +284,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                               <div class="time-period-slots">
                                 <%= for slot <- slots do %>
                                   <button
-                                    class={"time-slot #{if @selected_time == slot.time, do: "selected", else: ""}"}
+                                    class={[
+                                      "time-slot",
+                                      slot.seats_left && "has-seats",
+                                      @selected_time == slot.time && "selected"
+                                    ]}
                                     data-testid="time-slot"
                                     data-time={slot.time}
                                     phx-click="select_time"
@@ -291,7 +296,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                                     phx-target={@myself}
                                     disabled={@loading_slots}
                                   >
-                                    {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(slot.time))}
+                                    <span class="time-slot__time">
+                                      {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(slot.time))}
+                                    </span>
+                                    <SeatBadge.seat_badge seats_left={slot.seats_left} capacity={slot.capacity} />
                                   </button>
                                 <% end %>
                               </div>
