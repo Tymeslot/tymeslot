@@ -320,7 +320,7 @@ defmodule TymeslotWeb.AccountLiveTest do
       # The remount re-renders every string in German — including ones that
       # depend on no assign and would otherwise stay frozen by LiveView change
       # tracking: the card heading and the "Back to Dashboard" link.
-      assert html =~ "Sprache"
+      assert html =~ ~r/>Sprache</
       assert html =~ "Zurück zum Dashboard"
 
       # The German button is now the active selection.
