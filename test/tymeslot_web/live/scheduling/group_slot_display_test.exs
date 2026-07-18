@@ -121,6 +121,49 @@ defmodule TymeslotWeb.Live.Scheduling.GroupSlotDisplayTest do
       refute html =~ "seats left"
       refute html =~ "has-seats"
     end
+
+    @tag :capture_log
+    test "a full group slot is absent for the next visitor", %{user: user} do
+      {profile, _meeting_type} =
+        setup_booking_page(user, "1", "Tiny Group", max_participants: 2, allow_guests: true)
+
+      # First booker fills the slot: capacity 2 as themselves plus one guest.
+      {first, _date} = open_schedule_and_pick_tomorrow(profile, "tiny-group")
+      wait_until(fn -> has_element?(first, "button.time-slot-button") end)
+
+      taken_time =
+        first
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.attribute("button.time-slot-button", "phx-value-time")
+        |> List.first()
+
+      first
+      |> element("button.time-slot-button[phx-value-time='#{taken_time}']")
+      |> render_click()
+
+      first |> element("button[phx-click='next_step']") |> render_click()
+
+      send(first.pid, {:step_event, :booking, :toggle_guests, nil})
+      send(first.pid, {:step_event, :booking, :add_guest, "guest@example.com"})
+
+      first
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{"name" => "Filler", "email" => "filler@example.com", "message" => ""}
+      })
+      |> render_submit()
+
+      wait_until(fn -> render(first) =~ "filler@example.com" end)
+
+      # A fresh visitor no longer sees that slot; the rest of the day remains.
+      {second, _date} = open_schedule_and_pick_tomorrow(profile, "tiny-group")
+      wait_until(fn -> has_element?(second, "button.time-slot-button") end)
+
+      refute has_element?(
+               second,
+               "button.time-slot-button[phx-value-time='#{taken_time}']"
+             )
+    end
   end
 
   describe "Rhythm (theme 2)" do
