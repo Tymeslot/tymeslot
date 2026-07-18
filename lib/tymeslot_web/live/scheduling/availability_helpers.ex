@@ -7,12 +7,13 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   """
 
   alias Phoenix.Component
-  alias Tymeslot.Availability.{Calculate, TimeSlots}
+  alias Tymeslot.Availability.{Calculate, GroupSlots, TimeSlots}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.ContextUtils
+  alias TymeslotWeb.Components.MeetingUtils
 
   require Logger
 
@@ -46,41 +47,75 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
         # Check if this is a demo user
         if Demo.demo_profile?(organizer_profile) ||
              ContextUtils.get_from_context(context, :demo_mode) do
-          # Use demo provider for availability generation
-          Demo.get_available_slots(
-            date_string,
+          # Use demo provider for availability generation. Demo providers may
+          # return raw time strings or `%{time: t, ...}` maps (e.g. the SaaS
+          # demo resolver); normalize to plain strings before wrapping so the
+          # seat-aware shape doesn't nest a map inside `:time`.
+          with {:ok, slots} <-
+                 Demo.get_available_slots(
+                   date_string,
+                   duration,
+                   user_timezone,
+                   organizer_user_id,
+                   organizer_profile,
+                   context
+                 ) do
+            {:ok, GroupSlots.solo_slots(MeetingUtils.normalize_slot_list(slots))}
+          end
+        else
+          fetch_real_available_slots(
+            date,
             duration,
             user_timezone,
+            owner_timezone,
             organizer_user_id,
             organizer_profile,
             context
           )
-        else
-          # Regular flow for real users
-          with {:ok, events} <-
-                 CalendarEvents.get_calendar_events_from_context(
-                   date,
-                   organizer_user_id,
-                   context
-                 ),
-               duration_minutes <- parse_duration_minutes(duration) do
-            config = %{
-              profile_id: organizer_profile.id,
-              max_advance_booking_days: organizer_profile.advance_booking_days,
-              min_advance_hours: organizer_profile.min_advance_hours,
-              buffer_minutes: organizer_profile.buffer_minutes
-            }
-
-            Calculate.available_slots(
-              date,
-              duration_minutes,
-              user_timezone,
-              owner_timezone,
-              events,
-              config
-            )
-          end
         end
+      end
+    end
+  end
+
+  # Regular (non-demo) flow: fetches calendar events, runs the seat-agnostic
+  # slot calculation, then overlays seat counts for group meeting types.
+  defp fetch_real_available_slots(
+         date,
+         duration,
+         user_timezone,
+         owner_timezone,
+         organizer_user_id,
+         organizer_profile,
+         context
+       ) do
+    with {:ok, events} <-
+           CalendarEvents.get_calendar_events_from_context(date, organizer_user_id, context),
+         duration_minutes <- parse_duration_minutes(duration) do
+      config = %{
+        profile_id: organizer_profile.id,
+        max_advance_booking_days: organizer_profile.advance_booking_days,
+        min_advance_hours: organizer_profile.min_advance_hours,
+        buffer_minutes: organizer_profile.buffer_minutes
+      }
+
+      meeting_type = ContextUtils.get_from_context(context, :meeting_type)
+
+      with {:ok, slots} <-
+             Calculate.available_slots(
+               date,
+               duration_minutes,
+               user_timezone,
+               owner_timezone,
+               events,
+               config
+             ) do
+        {:ok,
+         GroupSlots.enrich_day_slots(slots, meeting_type, date, %{
+           user_timezone: user_timezone,
+           owner_timezone: owner_timezone,
+           events: events,
+           config: config
+         })}
       end
     end
   end
@@ -141,41 +176,74 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
 
       true ->
         with {:ok, owner_timezone} <- get_owner_timezone(organizer_profile) do
+          meeting_type = ContextUtils.get_from_context(context, :meeting_type)
+
           cache_key =
             AvailabilityCache.availability_range_key(
               user_id,
               start_date,
               end_date,
               user_timezone,
-              duration_minutes
+              duration_minutes,
+              meeting_type && meeting_type.id
             )
 
-          AvailabilityCache.get_or_compute(cache_key, fn ->
-            with {:ok, events} <-
-                   CalendarEvents.get_calendar_events_from_context(
-                     start_date,
-                     user_id,
-                     context
-                   ) do
-              config = %{
-                profile_id: organizer_profile.id,
-                max_advance_booking_days: organizer_profile.advance_booking_days,
-                min_advance_hours: organizer_profile.min_advance_hours,
-                buffer_minutes: organizer_profile.buffer_minutes,
-                duration_minutes: duration_minutes
-              }
+          request = %{user_id: user_id, organizer_profile: organizer_profile, context: context}
 
-              Calculate.range_availability(
-                start_date,
-                end_date,
-                owner_timezone,
-                user_timezone,
-                events,
-                config
-              )
-            end
+          AvailabilityCache.get_or_compute(cache_key, fn ->
+            compute_real_range_availability(
+              start_date,
+              end_date,
+              owner_timezone,
+              user_timezone,
+              request,
+              duration_minutes,
+              meeting_type
+            )
           end)
         end
+    end
+  end
+
+  # Regular (non-demo) range flow: fetches calendar events, runs the
+  # seat-agnostic range calculation, then overlays joinable-day availability
+  # for group meeting types. Cached by `get_range_availability/7` above.
+  defp compute_real_range_availability(
+         start_date,
+         end_date,
+         owner_timezone,
+         user_timezone,
+         %{user_id: user_id, organizer_profile: organizer_profile, context: context},
+         duration_minutes,
+         meeting_type
+       ) do
+    with {:ok, events} <-
+           CalendarEvents.get_calendar_events_from_context(start_date, user_id, context) do
+      config = %{
+        profile_id: organizer_profile.id,
+        max_advance_booking_days: organizer_profile.advance_booking_days,
+        min_advance_hours: organizer_profile.min_advance_hours,
+        buffer_minutes: organizer_profile.buffer_minutes,
+        duration_minutes: duration_minutes
+      }
+
+      with {:ok, base_map} <-
+             Calculate.range_availability(
+               start_date,
+               end_date,
+               owner_timezone,
+               user_timezone,
+               events,
+               config
+             ) do
+        {:ok,
+         GroupSlots.overlay_range(base_map, meeting_type, start_date, end_date, %{
+           user_timezone: user_timezone,
+           owner_timezone: owner_timezone,
+           events: events,
+           config: config
+         })}
+      end
     end
   end
 
@@ -188,6 +256,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
     context = %{
       demo_mode: Demo.demo_mode?(socket),
       organizer_profile: socket.assigns.organizer_profile,
+      meeting_type: socket.assigns[:meeting_type],
       debug_calendar_module: socket.private[:debug_calendar_module]
     }
 

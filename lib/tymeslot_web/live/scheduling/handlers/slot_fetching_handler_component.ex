@@ -54,6 +54,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
     context = %{
       demo_mode: socket.assigns[:demo_mode],
       organizer_profile: socket.assigns.organizer_profile,
+      meeting_type: socket.assigns[:meeting_type],
       debug_calendar_module: socket.private[:debug_calendar_module]
     }
 
