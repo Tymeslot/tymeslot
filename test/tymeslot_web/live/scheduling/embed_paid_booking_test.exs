@@ -47,6 +47,7 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
 
     setup_config(:tymeslot,
       feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
+      meeting_payments_enabled: true,
       payment_application_fee_bp: 50
     )
 
