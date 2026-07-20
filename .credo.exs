@@ -1,8 +1,7 @@
-# This file contains the configuration for Credo for the Tymeslot core application.
-# This config is specific to the core app and runs when executing credo from apps/tymeslot/
+# Credo configuration for the Tymeslot Core repository.
 #
-# For umbrella-level analysis, use the root .credo.exs which scans all apps.
-
+# This is the canonical config for the standalone Core repo: the custom checks
+# live under dev_support/credo_checks/ and are loaded via `requires` below.
 %{
   configs: [
     %{
@@ -19,19 +18,7 @@
       requires: [
         # Tag taxonomy must be loaded first so the check can call TagTaxonomy.all()
         "test/support/tag_taxonomy.ex",
-        "dev_support/credo_checks/empty_files.ex",
-        "dev_support/credo_checks/large_modules.ex",
-        "dev_support/credo_checks/no_map_metadata_in_logger.ex",
-        "dev_support/credo_checks/no_string_interpolation_in_logger.ex",
-        "dev_support/credo_checks/require_dashboard_section_header.ex",
-        "dev_support/credo_checks/thin_wrapper_functions.ex",
-        "dev_support/credo_checks/use_core_inputs.ex",
-        "dev_support/credo_checks/use_core_modal.ex",
-        "dev_support/credo_checks/use_p_sigil.ex",
-        "dev_support/credo_checks/test_module_tag_required.ex",
-        "dev_support/credo_checks/migration_constraint_safety.ex",
-        "dev_support/credo_checks/repo_call_boundary.ex",
-        "dev_support/credo_checks/attendee_notifications_boundary.ex"
+        "dev_support/credo_checks/**/*.ex"
       ],
       strict: false,
       parse_timeout: 5000,
@@ -109,10 +96,14 @@
           {CredoChecks.ThinWrapperFunctions, [priority: :low]},
           {CredoChecks.EmptyFiles, [priority: :low]},
           {CredoChecks.LargeModules, [priority: :low]},
+          # Suggest ~p/url(~p) in appropriate contexts (conservative by default)
           {CredoChecks.Phoenix.UsePSigil, [priority: :low, mode: :moderate, ignore_tests?: true]},
           {CredoChecks.UseCoreInputs, []},
           {CredoChecks.UseCoreModal, []},
+          {CredoChecks.UseColorScale, [priority: :low]},
+          {CredoChecks.NoArbitraryHexColors, [priority: :low]},
           {CredoChecks.RequireDashboardSectionHeader, [priority: :low]},
+          {CredoChecks.Phoenix.RequireComponentAttrs, [priority: :high]},
           {CredoChecks.TestModuleTagRequired, [priority: :high]},
           # Logger hygiene: violations are :low while being cleared; raise to :high after Phase 3-4
           {CredoChecks.NoStringInterpolationInLogger, [priority: :high]},
@@ -121,6 +112,8 @@
           {CredoChecks.RepoCallBoundary, [priority: :normal]},
           {CredoChecks.ClockUsage, [priority: :normal]},
           {CredoChecks.GettextDomainBoundary, [priority: :high]},
+          {CredoChecks.NoUnsafeSanitizeMerge, [priority: :normal]},
+          {CredoChecks.NoInlineCaldavList, [priority: :normal]},
           {CredoChecks.AttendeeNotificationsBoundary, []},
 
           #
@@ -141,8 +134,8 @@
           {Credo.Check.Warning.ExpensiveEmptyEnumCheck, []},
           {Credo.Check.Warning.IExPry, []},
           {Credo.Check.Warning.IoInspect, []},
-          # Disabled: inline Logger.info(msg, key: val) is the project standard; domain-specific
-          # keys are passed at call sites, not registered in the formatter metadata list.
+          # Disabled: we intentionally use inline Logger.info(msg, key: val) for domain-specific
+          # data instead of global metadata. Global metadata is kept minimal (request_id, user_id, etc).
           # {Credo.Check.Warning.MissedMetadataKeyInLoggerConfig, []},
           {Credo.Check.Warning.OperationOnSameValues, []},
           {Credo.Check.Warning.OperationWithConstantResult, []},
