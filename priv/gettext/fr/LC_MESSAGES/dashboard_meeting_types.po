@@ -57,13 +57,13 @@ msgstr "Non répertorié"
 msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessable link."
 msgstr "Utilisez des lettres minuscules, des chiffres et des tirets. « Générer aléatoirement » crée un lien impossible à deviner."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:69
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:75
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:47
 #, elixir-autogen, elixir-format
 msgid "%{minutes} min"
 msgstr "%{minutes} min"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:198
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:207
 #, elixir-autogen, elixir-format
 msgid "+%{count} custom question"
 msgid_plural "+%{count} custom questions"
@@ -151,7 +151,7 @@ msgstr "Marge définie sur une valeur personnalisée"
 msgid "Buffer time updated to %{minutes} minutes"
 msgstr "Marge mise à jour à %{minutes} minutes"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:217
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:226
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Calendrier"
@@ -168,7 +168,7 @@ msgstr "Créez des types de réunion pour proposer différentes options de rende
 msgid "Custom"
 msgstr "Personnalisé"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:161
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:167
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Supprimer"
@@ -179,7 +179,7 @@ msgstr "Supprimer"
 msgid "Delete Meeting Type"
 msgstr "Supprimer le type de réunion"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:144
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:150
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr "Modifier"
@@ -189,7 +189,7 @@ msgstr "Modifier"
 msgid "How Far in Advance Can People Book"
 msgstr "Jusqu’à combien de temps à l’avance peut-on réserver"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:109
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:115
 #, elixir-autogen, elixir-format
 msgid "In-person"
 msgstr "En personne"
@@ -249,12 +249,12 @@ msgstr "Cette action est irréversible et supprimera définitivement ce type de 
 msgid "Time to block after each appointment for preparation, travel, or breaks."
 msgstr "Temps à bloquer après chaque rendez-vous pour la préparation, les déplacements ou les pauses."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:180
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:186
 #, elixir-autogen, elixir-format
 msgid "Toggle %{name} availability"
 msgstr "Activer/désactiver la disponibilité de %{name}"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:103
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:109
 #, elixir-autogen, elixir-format
 msgid "Video"
 msgstr "Vidéo"

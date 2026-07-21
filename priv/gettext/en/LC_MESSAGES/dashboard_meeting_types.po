@@ -57,13 +57,13 @@ msgstr ""
 msgid "Use lowercase letters, numbers and hyphens. Randomise creates an unguessable link."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:69
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:75
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:47
 #, elixir-autogen, elixir-format
 msgid "%{minutes} min"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:198
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:207
 #, elixir-autogen, elixir-format
 msgid "+%{count} custom question"
 msgid_plural "+%{count} custom questions"
@@ -151,7 +151,7 @@ msgstr ""
 msgid "Buffer time updated to %{minutes} minutes"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:217
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:226
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr ""
@@ -168,7 +168,7 @@ msgstr ""
 msgid "Custom"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:161
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:167
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr ""
@@ -179,7 +179,7 @@ msgstr ""
 msgid "Delete Meeting Type"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:144
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:150
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr ""
@@ -189,7 +189,7 @@ msgstr ""
 msgid "How Far in Advance Can People Book"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:109
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:115
 #, elixir-autogen, elixir-format
 msgid "In-person"
 msgstr ""
@@ -249,12 +249,12 @@ msgstr ""
 msgid "Time to block after each appointment for preparation, travel, or breaks."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:180
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:186
 #, elixir-autogen, elixir-format
 msgid "Toggle %{name} availability"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:103
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:109
 #, elixir-autogen, elixir-format
 msgid "Video"
 msgstr ""
