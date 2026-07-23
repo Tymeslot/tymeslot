@@ -6,7 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
     docker run -d --name baikal-test -p 8800:80 ckulka/baikal:latest
 
   Run with:
-    mix test apps/tymeslot/test/tymeslot/integrations/calendar/baikal_integration_test.exs
+    mix test test/tymeslot/integrations/calendar/baikal_integration_test.exs
   """
   use ExUnit.Case, async: false
   @moduletag :calendar_integration

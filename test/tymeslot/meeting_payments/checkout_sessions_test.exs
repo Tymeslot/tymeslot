@@ -18,9 +18,10 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
 
   setup do
     # Checkout enforces server-side :meeting_payments access. Pin Core's default
-    # checker (the umbrella test env otherwise merges in the SaaS subscription
-    # checker, which returns :pro_required for a bare user) and enable the Core
-    # opt-in flag so the host is permitted to take payments in these tests.
+    # checker (a downstream overlay's test env otherwise merges in a
+    # subscription checker, which returns :pro_required for a bare user) and
+    # enable the Core opt-in flag so the host is permitted to take payments in
+    # these tests.
     previous_checker = Application.get_env(:tymeslot, :feature_access_checker)
 
     Application.put_env(
