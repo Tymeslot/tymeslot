@@ -123,6 +123,16 @@ defmodule TymeslotWeb.Endpoint do
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
+    # `:phoenix_live_reload` is declared `only: :dev`, and Mix discards a
+    # dependency's dev-only dependencies, so the module is invisible while this
+    # endpoint is compiled from inside a parent application's build. It is
+    # still present at boot there, supplied by that application's own dev
+    # dependency, and `:plug_init_mode` is `:runtime` in dev, so the plug
+    # resolves fine. Only the compiler cannot see it, hence the suppression
+    # rather than a `Code.ensure_loaded?/1` guard, which would silently compile
+    # live reloading out of every such build.
+    @compile {:no_warn_undefined, Phoenix.LiveReloader}
+
     socket "/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket
     plug Phoenix.LiveReloader
     plug Phoenix.CodeReloader
