@@ -117,7 +117,7 @@ Compose reads your `.env`, builds the image, and starts the container with the `
 **Method 2 — Build script:**
 
 ```bash
-# Run from apps/tymeslot/
+# Run from the repository root
 ./build-docker.sh
 ```
 
