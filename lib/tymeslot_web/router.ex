@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Router do
   # Dev-Only Routes
   # =============================================================================
 
-  if Mix.env() == :dev do
+  if Application.compile_env(:tymeslot, :dev_routes, false) do
     scope "/dev", TymeslotWeb.Dev do
       pipe_through :browser
 

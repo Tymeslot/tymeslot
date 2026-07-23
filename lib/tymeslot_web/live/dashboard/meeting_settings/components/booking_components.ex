@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   import TymeslotWeb.Components.Icons.ProviderIcon
@@ -59,16 +60,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                 />
               </svg>
             <% else %>
-              <span
-                class={[
-                  icon_value,
-                  "block",
-                  if(@selected_icon == icon_value,
-                    do: "text-teal-600",
-                    else: "text-tymeslot-500 group-hover:text-teal-500"
-                  )
-                ]}
-                style="width: 32px; height: 32px; min-width: 32px; min-height: 32px;"
+              <Icons.icon
+                name={icon_value}
+                class={
+                  "w-8 h-8 block " <>
+                    if(@selected_icon == icon_value,
+                      do: "text-teal-600",
+                      else: "text-tymeslot-500 group-hover:text-teal-500"
+                    )
+                }
               />
             <% end %>
           </button>
@@ -111,10 +111,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
           ]}
         >
           <div class="flex items-center justify-center">
-            <span class={[
-              "hero-user selector-icon",
-              if(@meeting_mode == "personal", do: "text-white!")
-            ]} />
+            <Icons.icon name="hero-user" class="selector-icon" />
             <span class="font-medium">In-Person</span>
           </div>
         </button>
@@ -128,10 +125,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
           ]}
         >
           <div class="flex items-center justify-center">
-            <span class={[
-              "hero-video-camera selector-icon",
-              if(@meeting_mode == "video", do: "text-white!")
-            ]} />
+            <Icons.icon name="hero-video-camera" class="selector-icon" />
             <span class="font-medium">Video Meeting</span>
           </div>
         </button>

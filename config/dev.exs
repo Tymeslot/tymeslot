@@ -145,3 +145,8 @@ cond do
   true ->
     :ok
 end
+
+# Compile-time gate for the /dev/* routes in TymeslotWeb.Router. A config flag
+# rather than Mix.env(): when Core is consumed as a path dependency, Mix.env()
+# inside the dep evaluates to the dep's own environment, not the parent's.
+config :tymeslot, dev_routes: true

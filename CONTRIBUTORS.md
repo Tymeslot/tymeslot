@@ -1,8 +1,9 @@
 # Contributors
 
 Tymeslot is built in the open, and it is better because of the people below.
-Development happens on our own Git server and is mirrored to GitHub, so the
-GitHub "contributors" graph doesn't tell the full story — this file does.
+Much of the project's history predates this repository becoming its native
+development home, so the GitHub "contributors" graph doesn't tell the full
+story — this file does.
 
 A heartfelt thank-you to everyone who has written code, translated the app,
 reported a bug, or pushed us to build something better.

@@ -1,0 +1,10 @@
+#!/bin/bash
+# Reject commits carrying AI/assistant attribution trailers on the public Core repo.
+# This replaces sync-core.sh's after-the-fact stripping: we prevent the trailer at
+# authorship time instead of rewriting history at push time.
+msg_file="$1"
+if grep -qiE '^(Co-[Aa]uthored-[Bb]y:.*(Claude|Cursor|<noreply@anthropic\.com>|<cursoragent@cursor\.com>))|^🤖 Generated with' "$msg_file"; then
+  echo "Error: commit message contains an AI/assistant attribution trailer." >&2
+  echo "Remove it before committing to the public Core repository." >&2
+  exit 1
+fi
