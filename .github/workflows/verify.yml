@@ -22,18 +22,20 @@ jobs:
     env:
       MIX_ENV: test
       TEST_DB_POOL_SIZE: "10"
+      ELIXIR_VERSION: "1.20.1"
+      OTP_VERSION: "28.3.3"
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          elixir-version: "1.20.1"
-          otp-version: "28.3.3"
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
       - uses: actions/cache@v4
         with:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-mix-${{ hashFiles('mix.lock') }}
+          key: ${{ runner.os }}-elixir-${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-mix-${{ hashFiles('mix.lock') }}
       - run: mix deps.get
       - run: mix format --check-formatted
       - run: mix compile --warnings-as-errors
