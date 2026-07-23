@@ -1,0 +1,12 @@
+#!/bin/bash
+# Append a DCO Signed-off-by trailer, matching the committer identity. Skips merge
+# commits and does not duplicate an existing sign-off. (No TYMESLOT_SKIP_SIGNOFF
+# branch is needed anymore: there is no sync process rebuilding others' commits.)
+commit_msg_file="$1"
+commit_source="$2"
+[ "$commit_source" = "merge" ] && exit 0
+name="$(git config user.name)"
+email="$(git config user.email)"
+trailer="Signed-off-by: ${name} <${email}>"
+grep -qF "$trailer" "$commit_msg_file" && exit 0
+git interpret-trailers --if-exists doNothing --trailer "$trailer" --in-place "$commit_msg_file"

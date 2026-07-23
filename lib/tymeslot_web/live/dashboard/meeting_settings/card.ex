@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
         </div>
 
         <%= if @type.icon && @type.icon != "none" do %>
-          <span class={[@type.icon, "w-5 h-5 text-tymeslot-600 shrink-0"]} />
+          <Icons.icon name={@type.icon} class="w-5 h-5 text-tymeslot-600 shrink-0" />
         <% end %>
 
         <%!-- Name + details --%>

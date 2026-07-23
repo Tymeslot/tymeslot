@@ -1,0 +1,30 @@
+#!/bin/bash
+# Pre-push gate: compile with warnings-as-errors before publishing, but only
+# when the outgoing commits actually touch Elixir code. Docs-only pushes go
+# straight through. CI remains the authoritative gate; this is the fast local
+# safety net.
+set -euo pipefail
+
+zero=0000000000000000000000000000000000000000
+needs_compile=0
+
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  # Deleting a remote ref: nothing to verify.
+  [ "$local_sha" = "$zero" ] && continue
+
+  if [ "$remote_sha" = "$zero" ]; then
+    # New branch on the remote: compare against main.
+    range="origin/main..$local_sha"
+  else
+    range="$remote_sha..$local_sha"
+  fi
+
+  if git diff --name-only "$range" 2>/dev/null | grep -qE '\.(ex|exs|heex)$|^mix\.lock$'; then
+    needs_compile=1
+  fi
+done
+
+if [ "$needs_compile" -eq 1 ]; then
+  echo "pre-push: outgoing commits touch code, compiling with --warnings-as-errors..."
+  mix compile --warnings-as-errors
+fi
