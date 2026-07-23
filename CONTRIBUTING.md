@@ -212,10 +212,10 @@ mix test
 mix test --cover
 
 # Run specific test file
-mix test apps/tymeslot/test/tymeslot/auth/auth_test.exs
+mix test test/tymeslot/auth/auth_test.exs
 
 # Run a single test by line number
-mix test apps/tymeslot/test/tymeslot/auth/auth_test.exs:42
+mix test test/tymeslot/auth/auth_test.exs:42
 
 # Run Elixir tests only (skip JS)
 mix test.elixir
@@ -426,22 +426,14 @@ We use these labels to organise issues:
 
 ### Project Structure
 
-Tymeslot is an **umbrella project** with two independently deployable OTP applications:
+This repository contains **Core**: the complete, self-contained scheduling product and the open-source codebase for self-hosters. It owns all domain logic, database schemas, migrations, the HTTP endpoint, and the full web UI, under the `Tymeslot.*` and `TymeslotWeb.*` namespaces. Development happens natively here on GitHub — issues, pull requests, and releases all live in this repository.
 
-| App | Path | Namespaces |
-|-----|------|------------|
-| `:tymeslot` (Core) | `apps/tymeslot` | `Tymeslot.*`, `TymeslotWeb.*` |
-| `:tymeslot_saas` (SaaS) | `apps/tymeslot_saas` | `TymeslotSaasWeb.*` |
-
-**Core** is the complete, self-contained scheduling product — the open-source codebase for self-hosters. It owns all domain logic, database schemas, migrations, the HTTP endpoint, and the full web UI.
-
-**SaaS** is a thin routing overlay for the managed cloud offering. It adds marketing pages, billing, legal agreements, and subscription management. SaaS depends on Core; Core has zero knowledge of SaaS.
+The managed cloud offering (tymeslot.app) is built in a separate, private repository as a thin overlay that depends on this one. It adds marketing pages, billing, legal agreements, and subscription management. That split shapes a few rules for code in this repository:
 
 ### Core/SaaS Boundary
 
-- **Core never references SaaS.** No imports, calls, or checks for SaaS presence anywhere in Core.
-- **Feature flags bridge behavioural differences.** Define flags in Core with safe defaults; override in SaaS config.
-- **Commits are separated.** Core and SaaS changes always go in separate commits.
+- **Core never references SaaS.** No imports, calls, or checks for SaaS presence anywhere in this codebase. Core behaves identically whether or not the SaaS overlay is deployed on top of it.
+- **Feature flags bridge behavioural differences.** When the managed offering needs Core to behave differently, define a config flag here with a safe default (for example `config :tymeslot, :enforce_legal_agreements, false`); the overlay overrides it in its own config.
 
 ### Domain-Driven Design
 
