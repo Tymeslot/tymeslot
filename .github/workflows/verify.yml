@@ -21,6 +21,7 @@ jobs:
           --health-timeout 5s --health-retries 5
     env:
       MIX_ENV: test
+      TEST_DB_POOL_SIZE: 10
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
