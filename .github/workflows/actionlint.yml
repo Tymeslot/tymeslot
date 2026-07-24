@@ -7,6 +7,10 @@ on:
   pull_request:
     paths: [".github/workflows/**"]
 
+# The linter only reads the checkout; never hand it a writable token.
+permissions:
+  contents: read
+
 jobs:
   actionlint:
     runs-on: ubuntu-latest
@@ -14,12 +18,16 @@ jobs:
     if: github.server_url == 'https://github.com'
     env:
       ACTIONLINT_VERSION: "1.7.7"
+      # sha256 of actionlint_1.7.7_linux_amd64.tar.gz, from the release's
+      # actionlint_1.7.7_checksums.txt.
+      ACTIONLINT_SHA256: "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757"
     steps:
       - uses: actions/checkout@v4
       - name: Install actionlint
         run: |
           curl -sSfL -o /tmp/actionlint.tar.gz \
             "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  /tmp/actionlint.tar.gz" | sha256sum -c -
           mkdir -p "$HOME/.local/bin"
           tar -xzf /tmp/actionlint.tar.gz -C "$HOME/.local/bin" actionlint
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"

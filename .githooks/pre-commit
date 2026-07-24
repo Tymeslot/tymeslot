@@ -21,11 +21,36 @@ if ! command -v gitleaks >/dev/null 2>&1; then
   exit 0
 fi
 
-if ! gitleaks git --staged --no-banner --redact; then
+# The `git --staged` subcommand only exists from gitleaks 8.19; an older binary
+# rejects it with exit 1, the same code as "leak found", which would print the
+# credential guidance below for what is really a version problem. Treat a
+# too-old (or unparseable) version like a missing binary: say so loudly, skip.
+min_version="8.19.0"
+gitleaks_version="$(gitleaks version 2>/dev/null || true)"
+gitleaks_version="${gitleaks_version#v}"
+if [ "$(printf '%s\n' "$min_version" "$gitleaks_version" | sort -V | head -n1)" != "$min_version" ]; then
+  echo "pre-commit: gitleaks ${gitleaks_version:-unknown} is older than the ${min_version} this hook needs, so the secret scan was SKIPPED." >&2
+  echo "pre-commit: upgrade it from https://github.com/gitleaks/gitleaks/releases to enable this gate." >&2
+  exit 0
+fi
+
+# A non-zero exit is not always a credential: a malformed .gitleaks.toml (a bad
+# regex, for instance) makes gitleaks itself fail, which exits 2, not 1. Only
+# exit 1 means "leak found"; anything else means the tool couldn't run, and
+# printing credential-rotation advice for that would be misleading. `|| gitleaks_status=$?`
+# captures the status without tripping `set -e` on the gitleaks invocation itself.
+gitleaks_status=0
+gitleaks git --staged --no-banner --redact || gitleaks_status=$?
+
+if [ "$gitleaks_status" -eq 1 ]; then
   echo "" >&2
   echo "pre-commit: the staged changes contain what looks like a credential." >&2
   echo "pre-commit: rotate it if it is real. If it is a false positive, either add an" >&2
   echo "pre-commit: allowlist entry to .gitleaks.toml (preferred, it documents the class" >&2
   echo "pre-commit: of noise) or append a 'gitleaks:allow' comment to the offending line." >&2
   exit 1
+elif [ "$gitleaks_status" -ne 0 ]; then
+  echo "" >&2
+  echo "pre-commit: gitleaks failed to run (exit ${gitleaks_status}); fix the tool/config problem above." >&2
+  exit "$gitleaks_status"
 fi

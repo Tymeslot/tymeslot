@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# The scan only reads the checkout; never hand it a writable token.
+permissions:
+  contents: read
+
 jobs:
   gitleaks:
     runs-on: ubuntu-latest
@@ -12,6 +16,9 @@ jobs:
     if: github.server_url == 'https://github.com'
     env:
       GITLEAKS_VERSION: "8.30.0"
+      # sha256 of gitleaks_8.30.0_linux_x64.tar.gz, from the release's
+      # gitleaks_8.30.0_checksums.txt.
+      GITLEAKS_SHA256: "79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e"
     steps:
       # Full history: the scan works over the range of incoming commits, which
       # needs their parents present.
@@ -22,6 +29,7 @@ jobs:
         run: |
           curl -sSfL -o /tmp/gitleaks.tar.gz \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c -
           mkdir -p "$HOME/.local/bin"
           tar -xzf /tmp/gitleaks.tar.gz -C "$HOME/.local/bin" gitleaks
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"

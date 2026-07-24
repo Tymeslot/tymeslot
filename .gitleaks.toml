@@ -22,8 +22,10 @@ regexes = [
 ]
 
 [[allowlists]]
-description = "Placeholder credentials in test fixtures. Scoped to generic-api-key only, so a genuine provider key pasted into a test is still caught."
+description = "Placeholder credentials in test fixtures. Scoped to generic-api-key only, and to values that are themselves obviously synthetic (built from words like test/valid/invalid/fake/secret/new/long, or a literal ascending 0-9 digit run) rather than every string under test/, so a genuine provider key pasted into a test is still caught."
 targetRules = ["generic-api-key"]
-paths = [
-  '''(^|/)test/''',
+regexTarget = "match"
+regexes = [
+  '''(?:api[_.-]?key|hex[_.-]?key|secret|token|key)"?\s*(?:=>|:|=|,)\s*"(?:[a-z0-9_-]*(?:valid|invalid|long|new|test|secret)[a-z0-9_-]*|0123456789[a-f0-9]*|[a-z]+123456(?:78)?9?)"''',
+  '''fake[a-z0-9_]*"?\s*(?:=>|:|=|,)\s*"[^"]*"''',
 ]
