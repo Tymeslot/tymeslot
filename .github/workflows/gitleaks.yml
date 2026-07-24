@@ -1,0 +1,63 @@
+name: Secret scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# The scan only reads the checkout; never hand it a writable token.
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    # Only run on GitHub, not Gitea
+    if: github.server_url == 'https://github.com'
+    env:
+      GITLEAKS_VERSION: "8.30.0"
+      # sha256 of gitleaks_8.30.0_linux_x64.tar.gz, from the release's
+      # gitleaks_8.30.0_checksums.txt.
+      GITLEAKS_SHA256: "79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e"
+    steps:
+      # Full history: the scan works over the range of incoming commits, which
+      # needs their parents present.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        run: |
+          curl -sSfL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c -
+          mkdir -p "$HOME/.local/bin"
+          tar -xzf /tmp/gitleaks.tar.gz -C "$HOME/.local/bin" gitleaks
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      # Scanning the incoming commits rather than the working tree is what
+      # catches a secret that was added and then deleted within the same
+      # branch: the file is gone from the tip, but the blob is still in the
+      # history this push would publish.
+      - name: Scan the incoming commits
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="$BASE_SHA"
+          else
+            base="$BEFORE_SHA"
+          fi
+
+          # A new branch reports an all-zero "before", and a force-pushed or
+          # unfetched base will not resolve. Rather than skip the gate, fall
+          # back to scanning the checked-out tree: less thorough, never silent.
+          if [ -n "$base" ] && [ "$base" != "0000000000000000000000000000000000000000" ] &&
+             git rev-parse --quiet --verify "$base^{commit}" >/dev/null; then
+            echo "Scanning commits in ${base}..${HEAD_SHA}"
+            gitleaks git --log-opts="${base}..${HEAD_SHA}" --no-banner --redact
+          else
+            echo "Could not resolve an incoming-commit range; scanning the working tree instead."
+            gitleaks dir . --no-banner --redact
+          fi

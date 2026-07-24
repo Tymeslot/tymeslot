@@ -442,5 +442,13 @@ config :tymeslot, :booking_analytics_launch_date, nil
 # Required in production; dev/test override with fixed values for repeatability.
 config :tymeslot, :analytics_salt_secret, nil
 
+# Migration safety analysis (excellent_migrations, run as its own gate step
+# rather than a Credo check: migrations are deliberately outside .credo.exs's
+# included paths, so that they do not attract ModuleDoc, Specs and the rest).
+# The 178 migrations written before it was adopted are grandfathered: they have
+# already shipped and run against real databases, so re-litigating them would
+# be noise rather than safety. Anything strictly after this timestamp is checked.
+config :excellent_migrations, start_after: "20260716094322"
+
 # Import environment specific config
 import_config "#{config_env()}.exs"

@@ -125,6 +125,18 @@ defmodule Tymeslot.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
+      # Matches mix.lock against the Elixir security advisory database. Sobelow
+      # analyses this codebase; this covers the dependencies it pulls in.
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
+      # Migration safety: locks, downtime, and rewrites. Runs as its own gate
+      # step (`mix excellent_migrations.check_safety`), deliberately outside
+      # .credo.exs's included paths. Complements
+      # CredoChecks.MigrationConstraintSafety, which covers data safety.
+      {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
+      # Test-quality Credo checks: tests that assert nothing, assert weakly, or
+      # never reach application code. Introduced at :low priority, so they are
+      # visible under --strict without gating until the backlog is triaged.
+      {:jump_credo_checks, "~> 0.4", only: [:dev, :test], runtime: false},
       {:flagpack, "~> 0.6"},
       # Plug for setting conn.remote_ip from proxy headers
       {:remote_ip, "~> 1.1"},
@@ -142,6 +154,9 @@ defmodule Tymeslot.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
+      # `mix precommit` is a task (lib/mix/tasks/precommit.ex), not an alias:
+      # an alias aborts at the first failing step, and the gate is more useful
+      # when one run reports everything that needs fixing.
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],

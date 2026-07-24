@@ -1,0 +1,20 @@
+[
+  verbose: true,
+  private: false,
+  # Honour .sobelow-skips. Without a conf file sobelow ignores it entirely,
+  # which is why previously-triaged findings kept reappearing.
+  skip: true,
+  router: "",
+  # Fail only on high confidence. Everything below is heuristic: the low band
+  # is almost entirely Traversal.FileModule on internally constructed paths,
+  # and gating there buys nothing but a skip file nobody reads.
+  exit: "high",
+  format: "txt",
+  out: "",
+  # Print medium and above, so a new medium finding is visible in the output
+  # even though it does not fail the build. Run with --threshold low to triage
+  # the full set.
+  threshold: "medium",
+  ignore: [],
+  ignore_files: []
+]
