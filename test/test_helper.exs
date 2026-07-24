@@ -26,7 +26,7 @@ end
 Ecto.Adapters.SQL.Sandbox.mode(Tymeslot.Repo, :manual)
 
 # Mox mocks are defined once, at compile time, in
-# apps/tymeslot/test/support/mocks/defmocks.ex (shared across the umbrella).
+# test/support/mocks/defmocks.ex.
 
 # Analytics: collect emitted events across the suite; assert completeness only
 # under ANALYTICS_COMPLETENESS=1 (see Tymeslot.Test.SuiteConfig).

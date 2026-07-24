@@ -8,7 +8,7 @@ defmodule Tymeslot.MixProject do
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      build_path: build_path(),
+      build_path: "_build",
       aliases: aliases(),
       deps: deps(),
       listeners: [Phoenix.CodeReloader],
@@ -55,18 +55,6 @@ defmodule Tymeslot.MixProject do
   end
 
   # Specifies which paths to compile per environment.
-  # Use the umbrella root's _build when running inside the umbrella,
-  # fall back to the local _build for standalone (self-hosted) deployments.
-  defp build_path do
-    umbrella_root = Path.join(__DIR__, "../..")
-
-    if File.exists?(Path.join(umbrella_root, "mix.exs")) do
-      Path.join(umbrella_root, "_build")
-    else
-      "_build"
-    end
-  end
-
   defp elixirc_paths(:dev), do: ["lib", "dev/support"]
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(:prod), do: ["lib"]
@@ -80,7 +68,7 @@ defmodule Tymeslot.MixProject do
       {:phoenix, "~> 1.8"},
       {:phoenix_html, "~> 4.3"},
       {:phoenix_live_reload, "~> 1.6", only: :dev},
-      {:tidewave, "~> 0.5", only: :dev},
+      {:tidewave, "~> 0.8", only: :dev},
       {:phoenix_live_view, "~> 1.1"},
       {:floki, ">= 0.30.0", only: :test},
       {:lazy_html, "~> 0.1.8", only: :test},
@@ -116,9 +104,9 @@ defmodule Tymeslot.MixProject do
       # Neither the email nor the Stripe path is exercised in CI (test
       # config uses Swoosh.Adapters.Test and Stripe is mocked), so these
       # need verification in staging after this upgrade.
-      # The same override lives in the umbrella root mix.exs, where it must
-      # be repeated because child overrides do not apply to umbrella-wide
-      # resolution.
+      # The same override must be repeated in any project that depends on
+      # this one as a path dependency, because overrides declared by a
+      # dependency do not apply to the parent project's resolution.
       {:hackney, "~> 4.0", override: true},
       {:hammer, "~> 7.1"},
       {:html_sanitize_ex, "~> 1.4"},

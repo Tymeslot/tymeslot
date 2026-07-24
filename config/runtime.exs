@@ -858,7 +858,7 @@ config :tymeslot, :recaptcha,
   expected_hostnames: recaptcha_expected_hostnames
 
 # The enabled flags are seeded from env in non-test environments only — test
-# config sets them explicitly in apps/tymeslot/config/test.exs so the
+# config sets them explicitly in config/test.exs so the
 # developer shell can't accidentally enable reCAPTCHA for tests by exporting
 # RECAPTCHA_SIGNUP_ENABLED.
 if config_env() != :test do

@@ -9,8 +9,8 @@ defmodule TymeslotWeb.Plugs.ExtraStaticTest do
   @fixture_dir Path.expand("../../support/fixtures/extra_static", __DIR__)
 
   test "serves nothing when no extra sources are configured", %{conn: conn} do
-    # Pinned explicitly: when the suite runs from the umbrella root, the SaaS
-    # config sets this key, so the default cannot be relied upon here.
+    # Pinned explicitly: when the suite runs under a downstream overlay, that
+    # overlay's config sets this key, so the default cannot be relied upon here.
     setup_config(:tymeslot, :extra_static_sources, [])
 
     # Unserved paths fall through to the /:username catch-all, which raises a

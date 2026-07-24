@@ -32,7 +32,7 @@ ENV MIX_ENV=prod \
     NODE_ENV=production \
     DEPLOYMENT_TYPE=docker
 
-# Copy mix files and config from tymeslot app (build context is apps/tymeslot/)
+# Copy mix files and config (build context is the repository root)
 COPY mix.exs mix.lock ./
 COPY config ./config
 
@@ -63,10 +63,9 @@ RUN npm ci --prefix assets
 # Compile assets
 RUN mix assets.deploy
 
-# Create the release, then copy runtime config into it
-RUN mix release tymeslot && \
-    mkdir -p _build/prod/rel/tymeslot/apps/tymeslot/config && \
-    cp config/runtime.exs _build/prod/rel/tymeslot/apps/tymeslot/config/
+# Create the release. mix release embeds config/runtime.exs in the release
+# itself, so no extra copy is needed.
+RUN mix release tymeslot
 
 # Production stage — debian only, no Elixir SDK. The release bundles its own ERTS.
 FROM debian:trixie-slim AS release

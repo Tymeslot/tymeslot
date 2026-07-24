@@ -64,7 +64,17 @@ defmodule TymeslotWeb.Endpoint do
     plug Phoenix.Ecto.SQL.Sandbox
   end
 
-  if code_reloading? and Code.ensure_loaded?(Tidewave) do
+  # Tidewave's MCP plug, dev only, and deliberately gated on `code_reloading?`
+  # alone. A `Code.ensure_loaded?(Tidewave)` guard looks safer but silently
+  # drops the plug whenever this app is compiled as a path dependency of another
+  # project: Tidewave is an `only: :dev` dependency, and Mix does not put the
+  # parent's dev dependencies on the code path while this module compiles, so
+  # the check always fails there. For the same reason the compiler cannot
+  # resolve the reference in that build, hence `:no_warn_undefined`; the module
+  # is on the code path at runtime, which is what the plug call needs.
+  @compile {:no_warn_undefined, Tidewave}
+
+  if code_reloading? do
     plug Tidewave
   end
 
@@ -123,6 +133,16 @@ defmodule TymeslotWeb.Endpoint do
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
+    # `:phoenix_live_reload` is declared `only: :dev`, and Mix discards a
+    # dependency's dev-only dependencies, so the module is invisible while this
+    # endpoint is compiled from inside a parent application's build. It is
+    # still present at boot there, supplied by that application's own dev
+    # dependency, and `:plug_init_mode` is `:runtime` in dev, so the plug
+    # resolves fine. Only the compiler cannot see it, hence the suppression
+    # rather than a `Code.ensure_loaded?/1` guard, which would silently compile
+    # live reloading out of every such build.
+    @compile {:no_warn_undefined, Phoenix.LiveReloader}
+
     socket "/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket
     plug Phoenix.LiveReloader
     plug Phoenix.CodeReloader

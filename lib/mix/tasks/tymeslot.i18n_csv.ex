@@ -54,10 +54,13 @@ defmodule Mix.Tasks.Tymeslot.I18nCsv do
   end
 
   defp resolve_gettext_dir do
-    candidates = ["apps/tymeslot/priv/gettext", "priv/gettext"]
+    dir = "priv/gettext"
 
-    Enum.find(candidates, &File.dir?/1) ||
+    if File.dir?(dir) do
+      dir
+    else
       Mix.raise("Could not locate Tymeslot gettext directory")
+    end
   end
 
   defp list_domains(gettext_dir) do

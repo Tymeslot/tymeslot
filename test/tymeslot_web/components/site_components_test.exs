@@ -70,9 +70,9 @@ defmodule TymeslotWeb.Components.SiteComponentsTest do
       html = render_component(&SiteComponents.site_footer/1, %{})
 
       # The Product and Legal columns are rendered from a data-driven list, so
-      # each entry should appear whenever its URL is configured. In the umbrella
-      # test environment the SaaS config enables them; in standalone Core they
-      # are nil and the loop simply drops them.
+      # each entry should appear whenever its URL is configured. A downstream
+      # overlay's test config enables them; in standalone Core they are nil and
+      # the loop simply drops them.
       for {key, label} <- [
             {:features_url, "Features"},
             {:pricing_url, "Pricing"},
