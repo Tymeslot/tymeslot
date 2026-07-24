@@ -1,5 +1,11 @@
 # Build stage
-FROM elixir:1.20.1 AS build
+#
+# Pinned to the same Erlang the rest of the project builds on. The floating
+# `elixir:1.20.1` tag tracks whichever OTP the image is rebuilt against, which
+# silently moved this image a major release ahead of every other target. The
+# Debian release is pinned to trixie to match the runtime stage below, so the
+# bundled ERTS links against the same OpenSSL and ncurses it will find there.
+FROM hexpm/elixir:1.20.1-erlang-28.3.3-debian-trixie-20260610-slim AS build
 
 # Avoid prompts from apt and configure debconf
 ENV DEBIAN_FRONTEND=noninteractive
