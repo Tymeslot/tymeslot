@@ -47,15 +47,20 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
   end
 
   def build("docker", env) do
+    url = blank_to_nil(env["DATABASE_URL"])
+
     [
       hostname: Map.get(env, "DATABASE_HOST", "localhost"),
       port: parse_int!(env, "DATABASE_PORT", 5432),
       database: Map.get(env, "POSTGRES_DB", "tymeslot"),
       username: Map.get(env, "POSTGRES_USER", "tymeslot"),
-      password: password!(env),
+      password: password!(env, url),
       pool_size: parse_int!(env, "DATABASE_POOL_SIZE", @default_pool_size)
-    ] ++ tuning_opts()
+    ] ++ url_opts(url) ++ tuning_opts()
   end
+
+  defp url_opts(nil), do: []
+  defp url_opts(url), do: [url: url]
 
   # Connection-pool tuning shared by every deployment type. The defaults suit
   # Oban's concurrency (~47 concurrent workers); ensure PostgreSQL's
@@ -64,9 +69,28 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
     [idle_interval: 60_000, queue_target: 5000, queue_interval: 10_000]
   end
 
-  defp password!(env) do
+  # With DATABASE_URL set, the password rides along inside it and Ecto merges it
+  # over this nil. Without either, there is no way to reach any database, so fail
+  # at boot with a message naming both escape hatches.
+  defp password!(_env, url) when is_binary(url), do: nil
+
+  defp password!(env, nil) do
     Map.get(env, "POSTGRES_PASSWORD") ||
-      raise "POSTGRES_PASSWORD environment variable is missing"
+      raise """
+      No database password configured.
+
+      Set POSTGRES_PASSWORD, or set DATABASE_URL to a full connection string
+      such as postgres://user:password@host:5432/database
+      """
+  end
+
+  defp blank_to_nil(nil), do: nil
+
+  defp blank_to_nil(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
+    end
   end
 
   defp parse_int!(env, var, default) do

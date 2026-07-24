@@ -57,6 +57,47 @@ defmodule Tymeslot.Infrastructure.DatabaseConfigTest do
     end
   end
 
+  describe "build/2 DATABASE_URL handling" do
+    test "passes DATABASE_URL through for Ecto to parse" do
+      config =
+        DatabaseConfig.build("docker", %{
+          "DATABASE_URL" => "postgres://app:secret@db.example.com:5432/bookings"
+        })
+
+      assert config[:url] == "postgres://app:secret@db.example.com:5432/bookings"
+    end
+
+    test "does not require POSTGRES_PASSWORD when DATABASE_URL is set" do
+      config = DatabaseConfig.build("docker", %{"DATABASE_URL" => "postgres://a:b@h:5432/d"})
+
+      assert config[:password] == nil
+    end
+
+    test "still keeps the discrete values as the fallback layer" do
+      config =
+        DatabaseConfig.build("docker", %{
+          "DATABASE_URL" => "postgres://a:b@h:5432/d",
+          "DATABASE_POOL_SIZE" => "12"
+        })
+
+      assert config[:pool_size] == 12
+      assert config[:hostname] == "localhost"
+    end
+
+    test "treats an empty DATABASE_URL as unset" do
+      config = DatabaseConfig.build("docker", %{"DATABASE_URL" => "", "POSTGRES_PASSWORD" => "s"})
+
+      refute Keyword.has_key?(config, :url)
+      assert config[:password] == "s"
+    end
+
+    test "raises when neither DATABASE_URL nor POSTGRES_PASSWORD is set" do
+      assert_raise RuntimeError, ~r/POSTGRES_PASSWORD.*DATABASE_URL/s, fn ->
+        DatabaseConfig.build("docker", %{})
+      end
+    end
+  end
+
   describe "build/2 for cloudron" do
     test "reads the Cloudron-provided variables" do
       config =
