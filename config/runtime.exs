@@ -290,48 +290,12 @@ if config_env() == :prod do
     secret_key_base: secret_key_base,
     check_origin: check_origin_config
 
-  # Database configuration helper
-  get_database_config = fn deployment_type, overrides ->
-    base_config =
-      case deployment_type do
-        "cloudron" ->
-          [
-            url: System.get_env("CLOUDRON_POSTGRESQL_URL"),
-            username: System.get_env("CLOUDRON_POSTGRESQL_USERNAME"),
-            password: System.get_env("CLOUDRON_POSTGRESQL_PASSWORD"),
-            hostname: System.get_env("CLOUDRON_POSTGRESQL_HOST"),
-            port: System.get_env("CLOUDRON_POSTGRESQL_PORT"),
-            database: System.get_env("CLOUDRON_POSTGRESQL_DATABASE"),
-            pool_size: parse_int.("DATABASE_POOL_SIZE", 60),
-            idle_interval: 60_000,
-            queue_target: 5000,
-            queue_interval: 10000
-          ]
-
-        "docker" ->
-          # Docker deployment with embedded or external PostgreSQL
-          # Default pool_size=60 supports high Oban concurrency (~47 max concurrent workers)
-          # Note: Ensure PostgreSQL max_connections >= 100 (Docker embedded Postgres default)
-          # To increase: Add `-c max_connections=150` to postgres command in docker-compose.yml
-          [
-            hostname: System.get_env("DATABASE_HOST", "localhost"),
-            port: parse_int.("DATABASE_PORT", 5432),
-            database: System.get_env("POSTGRES_DB", "tymeslot"),
-            username: System.get_env("POSTGRES_USER", "tymeslot"),
-            password:
-              System.get_env("POSTGRES_PASSWORD") ||
-                raise("POSTGRES_PASSWORD environment variable is missing"),
-            pool_size: parse_int.("DATABASE_POOL_SIZE", 60),
-            idle_interval: 60_000,
-            queue_target: 5000,
-            queue_interval: 10000
-          ]
-      end
-
-    Keyword.merge(base_config, overrides)
-  end
-
-  config :tymeslot, Tymeslot.Repo, get_database_config.(deployment_type, [])
+  # Database configuration. The mapping from environment to Repo options lives
+  # in a module so it can be unit-tested; this file is never evaluated by
+  # `mix test`.
+  config :tymeslot,
+         Tymeslot.Repo,
+         Tymeslot.Infrastructure.DatabaseConfig.build(deployment_type, System.get_env())
 
   # Remote IP handling: trust private/loopback proxies and read proxy headers
   # Cloudron uses x-forwarded-for header from its reverse proxy
