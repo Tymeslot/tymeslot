@@ -49,10 +49,11 @@ config :tymeslot, Tymeslot.Security.Encryption,
       "RsxoYoIVSu/K+QDV2yukDwTFD3wDyDSFxuGmoauNAX0FcXJF58dAz5LhEyiNqhFP"
 
 # Configure the database.
-# The pool follows the scheduler count, floored at 5 and capped at 10;
-# TEST_DB_POOL_SIZE overrides it so CI can pin a value regardless of how many
-# cores the runner reports.
-default_pool_size = min(max(System.schedulers_online() * 2, 5), 10)
+# The pool is a fixed 10 rather than derived from the scheduler count: the old
+# formula capped at 10 anyway, so scaling only ever produced smaller pools on
+# smaller machines, making suite parallelism (see Tymeslot.Test.SuiteConfig)
+# depend on the host. TEST_DB_POOL_SIZE overrides it.
+default_pool_size = 10
 
 test_pool_size =
   case System.get_env("TEST_DB_POOL_SIZE") do
