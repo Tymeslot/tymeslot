@@ -125,6 +125,9 @@ defmodule Tymeslot.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
+      # Matches mix.lock against the Elixir security advisory database. Sobelow
+      # analyses this codebase; this covers the dependencies it pulls in.
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:flagpack, "~> 0.6"},
       # Plug for setting conn.remote_ip from proxy headers
       {:remote_ip, "~> 1.1"},
@@ -155,6 +158,8 @@ defmodule Tymeslot.MixProject do
         "deps.unlock --check-unused",
         "compile --warnings-as-errors",
         "credo --strict",
+        "sobelow",
+        "deps.audit",
         "cmd env MIX_ENV=test mix test",
         "dialyzer"
       ],
