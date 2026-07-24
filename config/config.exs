@@ -447,7 +447,7 @@ config :tymeslot, :analytics_salt_secret, nil
 # included paths, so that they do not attract ModuleDoc, Specs and the rest).
 # The 178 migrations written before it was adopted are grandfathered: they have
 # already shipped and run against real databases, so re-litigating them would
-# be noise rather than safety. Anything from this timestamp onward is checked.
+# be noise rather than safety. Anything strictly after this timestamp is checked.
 config :excellent_migrations, start_after: "20260716094322"
 
 # Import environment specific config

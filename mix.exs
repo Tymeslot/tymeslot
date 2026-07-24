@@ -128,8 +128,9 @@ defmodule Tymeslot.MixProject do
       # Matches mix.lock against the Elixir security advisory database. Sobelow
       # analyses this codebase; this covers the dependencies it pulls in.
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
-      # Migration safety: locks, downtime, and rewrites. Runs as a Credo check,
-      # so it lands in the existing `mix credo --strict` step. Complements
+      # Migration safety: locks, downtime, and rewrites. Runs as its own gate
+      # step (`mix excellent_migrations.check_safety`), deliberately outside
+      # .credo.exs's included paths. Complements
       # CredoChecks.MigrationConstraintSafety, which covers data safety.
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
       # Test-quality Credo checks: tests that assert nothing, assert weakly, or
