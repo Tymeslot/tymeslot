@@ -42,6 +42,7 @@ jobs:
       - run: mix credo --strict
       - run: mix sobelow
       - run: mix deps.audit
+      - run: mix excellent_migrations.check_safety
       - run: mix test
       # dialyxir is only: [:dev], so this step needs its own environment. The
       # job-wide MIX_ENV=test above would make the task unresolvable, and the

@@ -43,6 +43,7 @@ defmodule Mix.Tasks.Precommit do
     {"credo", ~w[credo --strict], :dev},
     {"sobelow", ~w[sobelow], :dev},
     {"deps.audit", ~w[deps.audit], :dev},
+    {"migrations", ~w[excellent_migrations.check_safety], :dev},
     {"xref", ~w[xref graph --label compile-connected --fail-above 25], :dev},
     {"test", ~w[test], :test},
     {"dialyzer", ~w[dialyzer], :dev}

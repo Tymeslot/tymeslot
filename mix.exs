@@ -128,6 +128,10 @@ defmodule Tymeslot.MixProject do
       # Matches mix.lock against the Elixir security advisory database. Sobelow
       # analyses this codebase; this covers the dependencies it pulls in.
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
+      # Migration safety: locks, downtime, and rewrites. Runs as a Credo check,
+      # so it lands in the existing `mix credo --strict` step. Complements
+      # CredoChecks.MigrationConstraintSafety, which covers data safety.
+      {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
       {:flagpack, "~> 0.6"},
       # Plug for setting conn.remote_ip from proxy headers
       {:remote_ip, "~> 1.1"},
