@@ -93,6 +93,13 @@ defmodule TymeslotWeb.Endpoint do
     at: "/",
     from: :tymeslot,
     gzip: Application.compile_env(:tymeslot, :environment) == :prod,
+    # Files requested without a `?vsn=` fingerprint (esbuild's code-split
+    # chunks, and anything referenced by a literal path) otherwise answer with
+    # a bare `public`, which browsers treat as "revalidate every time". An
+    # hour of freshness plus the ETag revalidation Plug.Static already sends
+    # keeps them out of the critical path on repeat visits without risking a
+    # stale asset for long.
+    cache_control_for_etags: "public, max-age=3600, must-revalidate",
     only: TymeslotWeb.static_paths() ++ ["embed.js"],
     # embed.js is a standalone file at the root (not under /assets/).
     # `only` handles the canonical /embed.js path.

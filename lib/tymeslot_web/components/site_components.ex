@@ -531,9 +531,11 @@ defmodule TymeslotWeb.Components.SiteComponents do
   defp footer_column(assigns) do
     ~H"""
     <div>
-      <h4 class="text-white font-bold text-token-sm mb-4 uppercase tracking-widest">
+      <%!-- h3, not h4: the last heading before the footer on every page is an
+           h2, so an h4 here skips a level and fails the heading-order check. --%>
+      <h3 class="text-white font-bold text-token-sm mb-4 uppercase tracking-widest">
         {@heading}
-      </h4>
+      </h3>
       <ul class="space-y-3">
         <li :for={link <- @links}>
           <.nav_sublink
