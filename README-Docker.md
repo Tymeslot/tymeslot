@@ -63,9 +63,68 @@ The embedded PostgreSQL listens only on `localhost` inside the container and is 
 
 ### Option B — Build from source (Docker Compose)
 
-Clone the repository, configure `.env`, then build and run with Docker Compose.
+Build the image yourself instead of pulling the published one. Docker builds
+straight from the repository URL, so cloning is only necessary if you want to
+modify the source.
 
-#### 1. Clone Repository
+#### 1. Get the source
+
+**Without cloning (quickest).** Create an empty directory and put this
+`compose.yaml` in it. Docker does the checkout itself as part of the build:
+
+```yaml
+services:
+  tymeslot:
+    build:
+      # Docker clones the repository itself. The fragment after `#` selects
+      # which branch or tag to build.
+      context: https://github.com/Tymeslot/tymeslot.git#${TYMESLOT_VERSION:-main}
+      dockerfile: Dockerfile.docker
+    image: tymeslot:${TYMESLOT_VERSION:-main}
+    container_name: tymeslot
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    # Forward every variable from .env into the container, so SMTP, OAuth and
+    # DATA_ENCRYPTION_KEY settings reach Tymeslot as well.
+    env_file:
+      - .env
+    environment:
+      DEPLOYMENT_TYPE: docker
+      # Same value .env already supplies. It is repeated here only so Compose
+      # refuses to start with this message rather than booting a broken
+      # container when the secret is missing.
+      SECRET_KEY_BASE: "${SECRET_KEY_BASE:?required, generate one with: openssl rand -base64 64}"
+    volumes:
+      - tymeslot_data:/app/data
+      - tymeslot_pg:/var/lib/postgresql/data
+
+# Volume names are pinned with `name:` so they match the `docker run`
+# quick-start above instead of being prefixed with the Compose project name.
+volumes:
+  tymeslot_data:
+    name: tymeslot_data
+  tymeslot_pg:
+    name: tymeslot_pg
+
+networks:
+  default:
+    name: tymeslot_network
+```
+
+`TYMESLOT_VERSION` decides what gets built. Leave it unset to track `main`, or
+set it in `.env` to a release tag for a reproducible build:
+
+```bash
+TYMESLOT_VERSION=v1.4.4
+```
+
+The published tags are listed on the [releases page](https://github.com/Tymeslot/tymeslot/releases).
+Building from a git URL needs BuildKit, which is the default from Docker 23.0
+onwards.
+
+**With a clone.** Take this path if you intend to modify the source, or to use
+the build script and the repository's own `docker-compose.yml`:
 
 ```bash
 git clone https://github.com/Tymeslot/tymeslot.git
@@ -74,9 +133,12 @@ cd tymeslot
 
 #### 2. Configure Environment
 
+Both paths read the same `.env` file, sitting next to your Compose file.
+
 ```bash
-# Copy environment template
-cp .env.example .env
+# Start from the environment template
+cp .env.example .env                # in a clone
+curl -o .env https://raw.githubusercontent.com/Tymeslot/tymeslot/main/.env.example   # without one
 
 # Generate required secrets
 openssl rand -base64 64 | tr -d '\n'  # For SECRET_KEY_BASE
@@ -106,15 +168,21 @@ PORT=4000
 
 #### 3. Build and run
 
-**Method 1 — Docker Compose (recommended):**
+**Method 1 — Docker Compose (recommended, works for both paths):**
 
 ```bash
 docker compose up -d --build
 ```
 
-Compose reads your `.env`, builds the image, and starts the container with the `tymeslot_data` and `tymeslot_pg` volumes.
+Compose reads your `.env`, builds the image, and starts the container with the `tymeslot_data` and `tymeslot_pg` volumes. It reads `.env` twice over: once to fill in the `${...}` placeholders in the Compose file, and once through `env_file` to forward every variable into the container. The second part is what carries your SMTP, OAuth and `DATA_ENCRYPTION_KEY` settings through, so keep `env_file` in place if you adapt the file.
 
-**Method 2 — Build script:**
+To move to a newer release later, set the new tag and rebuild:
+
+```bash
+TYMESLOT_VERSION=v1.5.0 docker compose up -d --build
+```
+
+**Method 2 — Build script (clone only):**
 
 ```bash
 # Run from the repository root
@@ -123,7 +191,7 @@ Compose reads your `.env`, builds the image, and starts the container with the `
 
 The script validates your `.env`, builds the image, and offers to start the container.
 
-**Method 3 — Manual Docker commands:**
+**Method 3 — Manual Docker commands (clone only):**
 
 ```bash
 # Build image
