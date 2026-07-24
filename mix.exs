@@ -132,6 +132,10 @@ defmodule Tymeslot.MixProject do
       # so it lands in the existing `mix credo --strict` step. Complements
       # CredoChecks.MigrationConstraintSafety, which covers data safety.
       {:excellent_migrations, "~> 0.1", only: [:dev, :test], runtime: false},
+      # Test-quality Credo checks: tests that assert nothing, assert weakly, or
+      # never reach application code. Introduced at :low priority, so they are
+      # visible under --strict without gating until the backlog is triaged.
+      {:jump_credo_checks, "~> 0.4", only: [:dev, :test], runtime: false},
       {:flagpack, "~> 0.6"},
       # Plug for setting conn.remote_ip from proxy headers
       {:remote_ip, "~> 1.1"},

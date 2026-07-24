@@ -117,6 +117,26 @@
           {CredoChecks.AttendeeNotificationsBoundary, []},
 
           #
+          ## Test Quality Checks (jump_credo_checks)
+          #
+          # A suite stays green whether or not its tests assert anything, so
+          # these are the checks least likely to be noticed missing.
+          #
+          # exit_status: 0 means they report without failing the build. The
+          # first run found 1000 findings across 283 files, which is a backlog
+          # to work through deliberately, not something to fix under a red
+          # gate. Drop exit_status per check as each one reaches zero; that
+          # ratchet is the point, and a check left reporting forever is just
+          # noise nobody reads.
+          {Jump.CredoChecks.VacuousTest, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.TestHasNoAssertions, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.WeakAssertion, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.ConditionalAssertion, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.AssertElementSelectorCanNeverFail, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.UnusedLiveViewAssign, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.AvoidSocketAssignsInTest, [priority: :low, exit_status: 0]},
+
+          #
           ## Additional Maintainability Checks (low priority, only visible with --strict)
           #
           {Credo.Check.Refactor.ABCSize, [priority: :low, max_size: 50]},
