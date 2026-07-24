@@ -1,0 +1,31 @@
+#!/bin/bash
+# Pre-commit gate: refuse to record a secret. This is the only point at which a
+# leak costs nothing to fix. Once a credential reaches a published history,
+# deleting the file does not un-publish the credential, and the only real
+# remedy is rotation.
+#
+# The sibling repository carries a byte-identical copy of this hook. Each repo
+# must be self-contained (Core is cloned standalone by contributors, so it
+# cannot source a shared file from the workspace root), so keep the two in sync
+# by hand when editing either.
+#
+# gitleaks is an external binary rather than a Mix dependency. When it is
+# absent the hook says so loudly instead of passing quietly: a gate that
+# disappears without announcing itself is worse than no gate, because it still
+# reads as coverage.
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks is not installed, so the secret scan was SKIPPED." >&2
+  echo "pre-commit: install it from https://github.com/gitleaks/gitleaks/releases to enable this gate." >&2
+  exit 0
+fi
+
+if ! gitleaks git --staged --no-banner --redact; then
+  echo "" >&2
+  echo "pre-commit: the staged changes contain what looks like a credential." >&2
+  echo "pre-commit: rotate it if it is real. If it is a false positive, either add an" >&2
+  echo "pre-commit: allowlist entry to .gitleaks.toml (preferred, it documents the class" >&2
+  echo "pre-commit: of noise) or append a 'gitleaks:allow' comment to the offending line." >&2
+  exit 1
+fi

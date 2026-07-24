@@ -1,0 +1,29 @@
+# Gitleaks configuration for the Tymeslot repositories.
+#
+# The sibling repository carries a byte-identical copy of this file. Each repo
+# must be self-contained (Core is cloned standalone by contributors, so it
+# cannot source a shared file from the workspace root), so keep the two in sync
+# by hand when editing either.
+#
+# Only the entropy-based `generic-api-key` rule is relaxed below, and only for
+# two well-understood sources of noise. Every provider-specific rule (Stripe,
+# AWS, GitHub, Postmark, private keys, and the rest of the default set) stays
+# active everywhere, including in the paths allowlisted here.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Tailwind utility strings. A long class list carries enough entropy to trip generic-api-key, but a variant prefix such as hover: or focus: never appears inside a real credential."
+targetRules = ["generic-api-key"]
+regexTarget = "match"
+regexes = [
+  '''(?:hover|focus|focus-within|focus-visible|active|group-hover|group-focus|peer-focus|peer-checked|disabled|first|last|odd|even|dark|print|sm|md|lg|xl|2xl|max-sm|max-md|max-lg|container|has-\[[^\]]+\]|aria-\[[^\]]+\]|data-\[[^\]]+\]):[a-z0-9:\[\]_-]+''',
+]
+
+[[allowlists]]
+description = "Placeholder credentials in test fixtures. Scoped to generic-api-key only, so a genuine provider key pasted into a test is still caught."
+targetRules = ["generic-api-key"]
+paths = [
+  '''(^|/)test/''',
+]
