@@ -98,6 +98,75 @@ defmodule Tymeslot.Infrastructure.DatabaseConfigTest do
     end
   end
 
+  describe "build/2 TLS handling" do
+    test "omits :ssl entirely when DATABASE_SSL is unset" do
+      config = DatabaseConfig.build("docker", %{"POSTGRES_PASSWORD" => "s"})
+
+      refute Keyword.has_key?(config, :ssl)
+    end
+
+    for value <- ["false", "disable", "FALSE"] do
+      test "omits :ssl when DATABASE_SSL is #{value}" do
+        config =
+          DatabaseConfig.build("docker", %{
+            "POSTGRES_PASSWORD" => "s",
+            "DATABASE_SSL" => unquote(value)
+          })
+
+        refute Keyword.has_key?(config, :ssl)
+      end
+    end
+
+    for value <- ["true", "verify-full", "TRUE"] do
+      test "enables verifying TLS when DATABASE_SSL is #{value}" do
+        config =
+          DatabaseConfig.build("docker", %{
+            "POSTGRES_PASSWORD" => "s",
+            "DATABASE_SSL" => unquote(value)
+          })
+
+        assert config[:ssl] == true
+      end
+    end
+
+    test "disables verification when DATABASE_SSL is verify-none" do
+      config =
+        DatabaseConfig.build("docker", %{
+          "POSTGRES_PASSWORD" => "s",
+          "DATABASE_SSL" => "verify-none"
+        })
+
+      assert config[:ssl] == [verify: :verify_none]
+    end
+
+    test "uses a custom CA bundle when DATABASE_SSL_CACERT_FILE is set" do
+      config =
+        DatabaseConfig.build("docker", %{
+          "POSTGRES_PASSWORD" => "s",
+          "DATABASE_SSL" => "true",
+          "DATABASE_SSL_CACERT_FILE" => "/app/data/rds-ca.pem"
+        })
+
+      assert config[:ssl] == [cacertfile: "/app/data/rds-ca.pem"]
+    end
+
+    test "ignores DATABASE_SSL_CACERT_FILE when TLS is off" do
+      config =
+        DatabaseConfig.build("docker", %{
+          "POSTGRES_PASSWORD" => "s",
+          "DATABASE_SSL_CACERT_FILE" => "/app/data/rds-ca.pem"
+        })
+
+      refute Keyword.has_key?(config, :ssl)
+    end
+
+    test "raises on an unrecognised DATABASE_SSL value" do
+      assert_raise RuntimeError, ~r/DATABASE_SSL/, fn ->
+        DatabaseConfig.build("docker", %{"POSTGRES_PASSWORD" => "s", "DATABASE_SSL" => "maybe"})
+      end
+    end
+  end
+
   describe "build/2 for cloudron" do
     test "reads the Cloudron-provided variables" do
       config =

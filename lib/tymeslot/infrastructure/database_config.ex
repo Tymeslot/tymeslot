@@ -56,11 +56,48 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
       username: Map.get(env, "POSTGRES_USER", "tymeslot"),
       password: password!(env, url),
       pool_size: parse_int!(env, "DATABASE_POOL_SIZE", @default_pool_size)
-    ] ++ url_opts(url) ++ tuning_opts()
+    ] ++ url_opts(url) ++ ssl_opts(env) ++ tuning_opts()
   end
 
   defp url_opts(nil), do: []
   defp url_opts(url), do: [url: url]
+
+  # Postgrex treats `ssl: true` as "secure defaults" (peer verification plus
+  # hostname checking) and merges a keyword list on top of those same defaults,
+  # so we never assemble :ssl options by hand.
+  defp ssl_opts(env) do
+    case env |> Map.get("DATABASE_SSL") |> blank_to_nil() |> normalise_ssl_mode() do
+      :off -> []
+      :verify -> [ssl: cacert_opts(env)]
+      :no_verify -> [ssl: [verify: :verify_none]]
+    end
+  end
+
+  defp normalise_ssl_mode(nil), do: :off
+
+  defp normalise_ssl_mode(value) do
+    case String.downcase(value) do
+      mode when mode in ~w(false disable) ->
+        :off
+
+      mode when mode in ~w(true verify-full) ->
+        :verify
+
+      "verify-none" ->
+        :no_verify
+
+      other ->
+        raise "Invalid DATABASE_SSL: #{inspect(other)}. " <>
+                "Use true, verify-full, verify-none, or false."
+    end
+  end
+
+  defp cacert_opts(env) do
+    case blank_to_nil(env["DATABASE_SSL_CACERT_FILE"]) do
+      nil -> true
+      path -> [cacertfile: path]
+    end
+  end
 
   # Connection-pool tuning shared by every deployment type. The defaults suit
   # Oban's concurrency (~47 concurrent workers); ensure PostgreSQL's
