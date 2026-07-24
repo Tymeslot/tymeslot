@@ -2,12 +2,16 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   @moduledoc """
   Unified provider icon component for both calendar and video providers.
 
-  Renders logos for all supported providers in different sizes by referencing external SVG files.
+  Renders logos for all supported providers in different sizes by referencing external image files.
   Used across dashboard components for consistent branding.
+
+  Paths resolve through `Endpoint.static_path/1`, so production serves the
+  digested filename and `Plug.Static` answers with immutable cache headers.
   """
   use Phoenix.Component
 
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
+  alias TymeslotWeb.Endpoint
 
   @video_meta_providers ~w(in_person local none)
   @oauth_only_providers ~w(github oauth)
@@ -36,14 +40,27 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   attr :size, :string, default: "large", values: ["compact", "medium", "large", "mini"]
   attr :class, :string, default: ""
   attr :icon_class, :string, default: ""
+  attr :loading, :string, default: "lazy", values: ["lazy", "eager"]
 
   @spec provider_icon(map()) :: Phoenix.LiveView.Rendered.t()
   def provider_icon(assigns) do
     icon_path = build_icon_path(assigns.provider, assigns.type, assigns.size)
-    assigns = assign(assigns, :icon_path, icon_path)
+
+    assigns =
+      assigns
+      |> assign(:icon_path, icon_path && Endpoint.static_path(icon_path))
+      |> assign(:icon_px, icon_pixels(assigns.size))
 
     ~H"""
-    <img src={@icon_path} class={build_icon_classes(@size, @class)} alt={"#{@provider} icon"} />
+    <img
+      src={@icon_path}
+      class={build_icon_classes(@size, @class)}
+      alt={"#{@provider} icon"}
+      width={@icon_px}
+      height={@icon_px}
+      loading={@loading}
+      decoding="async"
+    />
     """
   end
 
@@ -67,9 +84,9 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
 
     # Ensure we have all required parameters
     if provider && provider_type && actual_size do
-      # Build the path to the PNG file
+      # Build the path to the WebP file
       filename = normalize_provider_filename(provider)
-      "/icons/providers/#{provider_type}/#{actual_size}/#{filename}.png"
+      "/icons/providers/#{provider_type}/#{actual_size}/#{filename}.webp"
     else
       # Return nil if any parameter is missing
       nil
@@ -113,6 +130,14 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
 
     "#{base_classes} #{additional_class}"
   end
+
+  # Intrinsic `width`/`height` matching the rendered box, so the icon reserves
+  # its space before the stylesheet lands. The files themselves are exported at
+  # twice these dimensions for retina displays.
+  defp icon_pixels("large"), do: 32
+  defp icon_pixels("medium"), do: 28
+  defp icon_pixels("compact"), do: 24
+  defp icon_pixels("mini"), do: 16
 
   @doc """
   Legacy video provider logo function for backwards compatibility.
