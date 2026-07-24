@@ -61,7 +61,7 @@ services:
     volumes:
       - tymeslot_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tymeslot} -d ${POSTGRES_DB:-tymeslot}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U ${POSTGRES_USER:-tymeslot} -d ${POSTGRES_DB:-tymeslot}"]
       interval: 5s
       timeout: 5s
       retries: 12
