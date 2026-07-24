@@ -145,24 +145,9 @@ defmodule Tymeslot.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      # The Definition of Done as one command. Every step remains individually
-      # runnable (`mix credo --strict`, `mix test`, ...); bundling them only
-      # removes the chance of applying the gate by halves. Cheap checks run
-      # first so a formatting slip fails in seconds rather than after dialyzer.
-      #
-      # The test step shells out because Mix resolves MIX_ENV once, from the
-      # invoked task: everything here runs in :dev, where dialyxir lives and
-      # where the PLT is cached, so only `test` needs its own environment.
-      precommit: [
-        "format --check-formatted",
-        "deps.unlock --check-unused",
-        "compile --warnings-as-errors",
-        "credo --strict",
-        "sobelow",
-        "deps.audit",
-        "cmd env MIX_ENV=test mix test",
-        "dialyzer"
-      ],
+      # `mix precommit` is a task (lib/mix/tasks/precommit.ex), not an alias:
+      # an alias aborts at the first failing step, and the gate is more useful
+      # when one run reports everything that needs fixing.
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
