@@ -1,0 +1,82 @@
+# Tymeslot with PostgreSQL as its own container.
+#
+# Use this instead of docker-compose.yml when you want the database separate
+# from the application — for independent backups, an existing backup routine,
+# or simply cleaner separation of concerns. The image used here (the `slim`
+# tag) carries no PostgreSQL server at all.
+#
+# IMPORTANT: Create a .env file before starting:
+#   cp .env.example .env
+#
+# Then generate the required secrets:
+#   openssl rand -base64 64 | tr -d '\n'  # SECRET_KEY_BASE
+#   openssl rand -base64 32 | tr -d '\n'  # POSTGRES_PASSWORD  (required here)
+#
+# Recommended (decouples data-at-rest encryption from SECRET_KEY_BASE):
+#   openssl rand -base64 48 | tr -d '\n'  # DATA_ENCRYPTION_KEY
+# Once set it must stay stable across restarts — losing it makes stored
+# credentials undecryptable. See README-Docker.md, "Data-at-rest encryption".
+#
+# Then:
+#   docker compose -f docker-compose.with-postgres.yml up -d
+#
+# To point at a database you already run elsewhere instead, delete the
+# `postgres` service and the `depends_on` block below, and set DATABASE_URL
+# (or DATABASE_HOST and friends) in your .env.
+
+services:
+  tymeslot:
+    build:
+      context: .
+      dockerfile: Dockerfile.docker
+      target: release-slim
+    image: luka1thb/tymeslot:slim
+    container_name: tymeslot
+    restart: unless-stopped
+    # PORT is the listen port; it is published on the host and inside the
+    # container so changing it in .env works end-to-end.
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    env_file:
+      - .env
+    environment:
+      DEPLOYMENT_TYPE: docker
+      # Overrides any DATABASE_HOST in .env: the database is the sidecar below.
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - tymeslot_data:/app/data
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: tymeslot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tymeslot}
+      POSTGRES_USER: ${POSTGRES_USER:-tymeslot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    volumes:
+      - tymeslot_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U ${POSTGRES_USER:-tymeslot} -d ${POSTGRES_DB:-tymeslot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+# A distinct volume name from docker-compose.yml's `tymeslot_pg`, which holds a
+# cluster created by the embedded database. Mixing the two would hand a
+# postgres:17-alpine container a data directory initialised by a different
+# packaging, which it will refuse to open.
+volumes:
+  tymeslot_data:
+    name: tymeslot_data
+  tymeslot_pgdata:
+    name: tymeslot_pgdata
+
+networks:
+  default:
+    name: tymeslot_network
