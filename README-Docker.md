@@ -334,7 +334,11 @@ DATABASE_SSL=true
 
 **TLS.** Set `DATABASE_SSL=true` for managed databases. It verifies the server certificate and hostname against the system trust store. If your provider uses a private CA, download its bundle onto the `/app/data` volume and set `DATABASE_SSL_CACERT_FILE=/app/data/your-ca.pem`. For a self-signed certificate on a network you already trust, `DATABASE_SSL=verify-none` encrypts the connection without verifying it. Omit the variable entirely for a database on the same host or a private Docker network.
 
-**Detection.** The container switches to external mode when `DATABASE_URL` is set, or when `DATABASE_HOST` is anything other than `localhost`/`127.0.0.1`. In external mode it never initialises or starts the bundled PostgreSQL.
+**Detection.** The container switches to external mode when `DATABASE_URL` names a remote host, or when `DATABASE_HOST` is anything other than `localhost`/`127.0.0.1`. In external mode it never initialises or starts the bundled PostgreSQL.
+
+A `DATABASE_URL` pointing at `localhost`, `127.0.0.1` or `::1` is treated as the bundled database on images that ship one: the container logs a warning, ignores the variable, and connects with the discrete `POSTGRES_*` credentials the bundled cluster is created with. The slim image bundles no server, so there a local URL is honoured as given and expected to reach a PostgreSQL you run yourself.
+
+**Upgrading from 1.4.4 or earlier.** Those releases ignored `DATABASE_URL` on this image and always used the bundled PostgreSQL. If you have a `DATABASE_URL` left over from another deployment and want to keep using the bundled database, remove it before upgrading, or confirm it points at `localhost` so the guard above applies. A `DATABASE_URL` naming a remote host now takes effect and the bundled PostgreSQL is left unused.
 
 ### Running PostgreSQL as its own container
 

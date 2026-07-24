@@ -95,12 +95,35 @@ echo ""
 
 # ==================== SECTION 2B: Detect Database Configuration ====================
 # External mode is selected by either:
-#   - DATABASE_URL being set (a full connection string, what most managed
-#     providers hand you), or
+#   - DATABASE_URL naming a host other than this container (a full connection
+#     string is what most managed providers hand you), or
 #   - DATABASE_HOST pointing somewhere other than this container.
 # config/runtime.exs reads both; DATABASE_URL wins because Ecto merges
 # URL-derived options over the discrete ones.
 USING_EXTERNAL_DB=false
+
+# A DATABASE_URL naming localhost keeps the bundled database on images that
+# ship one. Earlier releases ignored DATABASE_URL here entirely, so without this
+# guard an operator upgrading with a stale variable left over from another
+# deployment would find the bundled PostgreSQL silently skipped. Dropping the
+# variable makes the app fall back to the discrete POSTGRES_* credentials the
+# bundled cluster is actually created with. The slim image ships no server, so
+# there a local URL is honoured as given.
+if [ -n "${DATABASE_URL:-}" ] && [ "${TYMESLOT_EMBEDDED_DB:-true}" != "false" ]; then
+    # Strip the scheme, then any user:password@, then the path, then the port.
+    # The bracket rule unwraps an IPv6 literal such as postgres://[::1]:5432/db.
+    DATABASE_URL_HOST=$(printf '%s' "$DATABASE_URL" |
+        sed -E 's#^[^:]+://##; s#^[^@/]*@##; s#[/?].*$##; s#:[0-9]*$##; s#^\[([^]]*)\]$#\1#')
+
+    case "$DATABASE_URL_HOST" in
+        localhost | 127.0.0.1 | ::1)
+            echo "⚠ DATABASE_URL points at $DATABASE_URL_HOST, which is this container."
+            echo "  Using the bundled PostgreSQL and ignoring DATABASE_URL."
+            echo "  For an external database, give DATABASE_URL a remote host or set DATABASE_HOST."
+            unset DATABASE_URL
+            ;;
+    esac
+fi
 
 if [ -n "${DATABASE_URL:-}" ]; then
     USING_EXTERNAL_DB=true
