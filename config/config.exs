@@ -309,6 +309,15 @@ config :tailwind,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Precompressed siblings written by `mix phx.digest`, replacing the stock
+# [Phoenix.Digester.Gzip]. Order is irrelevant here; what a client is offered
+# is decided by the endpoint's :encodings list. See the module for why both
+# variants are worth writing.
+config :phoenix, :static_compressors, [
+  Tymeslot.Infrastructure.StaticCompressors.Zstd,
+  Tymeslot.Infrastructure.StaticCompressors.Gzip
+]
+
 # Configure timezone database
 config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 

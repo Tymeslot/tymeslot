@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :tymeslot
 
+  alias Tymeslot.Infrastructure.StaticCompressors
+
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
@@ -84,15 +86,14 @@ defmodule TymeslotWeb.Endpoint do
   # when deploying your static files in production.
   plug :serve_robots
 
-  # gzip serves precompiled `*.gz` files (written by `mix phx.digest`) in
-  # preference to the plain asset. In dev the Tailwind/esbuild watchers rebuild
-  # the plain file but never the `.gz`, so a stale `.gz` from a prior
-  # `assets.deploy` would be served instead of fresh CSS. Only enable where
-  # phx.digest runs — production.
+  # Precompiled `*.zst` and `*.gz` siblings (written by `mix phx.digest`) are
+  # served in preference to the plain asset, best-first. The list is empty
+  # outside production, where the watchers rebuild the plain file but never its
+  # siblings and a stale one would be served instead of fresh CSS.
   plug Plug.Static,
     at: "/",
     from: :tymeslot,
-    gzip: Application.compile_env(:tymeslot, :environment) == :prod,
+    encodings: StaticCompressors.encodings(Application.compile_env(:tymeslot, :environment)),
     # Files requested without a `?vsn=` fingerprint (esbuild's code-split
     # chunks, and anything referenced by a literal path) otherwise answer with
     # a bare `public`, which browsers treat as "revalidate every time". An
