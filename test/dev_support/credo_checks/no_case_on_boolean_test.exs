@@ -98,5 +98,21 @@ defmodule CredoChecks.NoCaseOnBooleanTest do
       |> run_check(NoCaseOnBoolean)
       |> refute_issues()
     end
+
+    test "accepts a boolean case where the true clause carries a guard" do
+      """
+      defmodule Tymeslot.Meetings do
+        def start(enabled?, admin?) do
+          case enabled? do
+            true when admin? -> :started
+            false -> :ok
+          end
+        end
+      end
+      """
+      |> to_source_file("lib/tymeslot/meetings.ex")
+      |> run_check(NoCaseOnBoolean)
+      |> refute_issues()
+    end
   end
 end

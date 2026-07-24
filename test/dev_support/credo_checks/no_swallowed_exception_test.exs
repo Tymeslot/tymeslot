@@ -64,6 +64,45 @@ defmodule CredoChecks.NoSwallowedExceptionTest do
       |> run_check(NoSwallowedException)
       |> assert_issue()
     end
+
+    test "flags a defp-level rescue" do
+      """
+      defmodule Tymeslot.Integrations.Sync do
+        defp run do
+          fetch()
+        rescue
+          _error -> :error
+        end
+      end
+      """
+      |> to_source_file("lib/tymeslot/integrations/sync.ex")
+      |> run_check(NoSwallowedException)
+      |> assert_issue()
+    end
+
+    test "flags the swallowing clause in a multi-clause rescue" do
+      """
+      defmodule Tymeslot.Integrations.Sync do
+        require Logger
+
+        def run do
+          try do
+            fetch()
+          rescue
+            error in [ArgumentError] ->
+              Logger.warning("bad args", error: inspect(error))
+              {:error, :bad_args}
+
+            _error ->
+              :error
+          end
+        end
+      end
+      """
+      |> to_source_file("lib/tymeslot/integrations/sync.ex")
+      |> run_check(NoSwallowedException)
+      |> assert_issue(fn issue -> assert issue.line_no == 12 end)
+    end
   end
 
   describe "accepted rescues" do
@@ -96,6 +135,91 @@ defmodule CredoChecks.NoSwallowedExceptionTest do
             fetch()
           rescue
             error -> reraise(error, __STACKTRACE__)
+          end
+        end
+      end
+      """
+      |> to_source_file("lib/tymeslot/integrations/sync.ex")
+      |> run_check(NoSwallowedException)
+      |> refute_issues()
+    end
+
+    test "accepts a rescue that raises a new exception" do
+      """
+      defmodule Tymeslot.Integrations.Sync do
+        def run do
+          try do
+            fetch()
+          rescue
+            _error -> raise "sync failed"
+          end
+        end
+      end
+      """
+      |> to_source_file("lib/tymeslot/integrations/sync.ex")
+      |> run_check(NoSwallowedException)
+      |> refute_issues()
+    end
+
+    test "accepts a rescue that throws" do
+      """
+      defmodule Tymeslot.Integrations.Sync do
+        def run do
+          try do
+            fetch()
+          rescue
+            _error -> throw(:sync_failed)
+          end
+        end
+      end
+      """
+      |> to_source_file("lib/tymeslot/integrations/sync.ex")
+      |> run_check(NoSwallowedException)
+      |> refute_issues()
+    end
+
+    test "accepts a rescue that exits" do
+      """
+      defmodule Tymeslot.Integrations.Sync do
+        def run do
+          try do
+            fetch()
+          rescue
+            _error -> exit(:sync_failed)
+          end
+        end
+      end
+      """
+      |> to_source_file("lib/tymeslot/integrations/sync.ex")
+      |> run_check(NoSwallowedException)
+      |> refute_issues()
+    end
+
+    test "accepts a rescue that passes the exception binding to a helper" do
+      """
+      defmodule Tymeslot.Integrations.Sync do
+        def run do
+          try do
+            fetch()
+          rescue
+            error -> handle_integration_error(error, :provider)
+          end
+        end
+      end
+      """
+      |> to_source_file("lib/tymeslot/integrations/sync.ex")
+      |> run_check(NoSwallowedException)
+      |> refute_issues()
+    end
+
+    test "accepts a rescue that re-raises via the remote Kernel.reraise/2 form" do
+      """
+      defmodule Tymeslot.Integrations.Sync do
+        def run do
+          try do
+            fetch()
+          rescue
+            error -> Kernel.reraise(error, __STACKTRACE__)
           end
         end
       end

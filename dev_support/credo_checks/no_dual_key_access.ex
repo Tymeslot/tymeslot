@@ -8,7 +8,7 @@ defmodule CredoChecks.NoDualKeyAccess do
   forget on the next access added, and the bug it produces (silently reading
   `nil` because the key was a string this time) is invisible until it
   reaches a user. Normalise once at the boundary that produced the map, then
-  read it plainly everywhere else.
+  read it plainly everywhere else. `or` is matched the same way as `||`.
 
   ## Examples
 
@@ -19,6 +19,9 @@ defmodule CredoChecks.NoDualKeyAccess do
       # Good — normalise at the boundary, then read one way
       params = normalize_keys(params)
       params[:email]
+
+  Only `lib/` files are scanned; tests and migrations are excluded, since
+  the intent is production diagnosability.
   """
 
   use Credo.Check,
@@ -34,15 +37,29 @@ defmodule CredoChecks.NoDualKeyAccess do
 
   alias Credo.IssueMeta
 
+  @excluded_paths ["/test/", "/migrations/", "/deps/"]
+
   @doc false
   @impl Credo.Check
   @spec run(Credo.SourceFile.t(), keyword()) :: list()
   def run(%Credo.SourceFile{} = source_file, params) do
-    issue_meta = IssueMeta.for(source_file, params)
-    Credo.Code.prewalk(source_file, &traverse(&1, &2, issue_meta))
+    if excluded?(source_file.filename) do
+      []
+    else
+      issue_meta = IssueMeta.for(source_file, params)
+      Credo.Code.prewalk(source_file, &traverse(&1, &2, issue_meta))
+    end
   end
 
-  defp traverse({:||, meta, [left, right]} = ast, issues, issue_meta) do
+  defp excluded?(filename) do
+    not lib_file?(filename) or Enum.any?(@excluded_paths, &String.contains?(filename, &1))
+  end
+
+  defp lib_file?(filename) do
+    String.contains?(filename, "/lib/") or String.starts_with?(filename, "lib/")
+  end
+
+  defp traverse({op, meta, [left, right]} = ast, issues, issue_meta) when op in [:||, :or] do
     case dual_access(left, right) do
       nil -> {ast, issues}
       key -> {ast, [issue_for(issue_meta, meta, key) | issues]}

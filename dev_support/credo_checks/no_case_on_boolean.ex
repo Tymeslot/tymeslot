@@ -11,6 +11,9 @@ defmodule CredoChecks.NoCaseOnBoolean do
   prefer dispatching on shape in function heads, per the prefer/avoid table
   in CLAUDE.md.
 
+  Only `lib/` files are scanned; tests and migrations are excluded, since
+  the intent is production diagnosability.
+
   ## Examples
 
       # Bad
@@ -41,12 +44,26 @@ defmodule CredoChecks.NoCaseOnBoolean do
 
   alias Credo.IssueMeta
 
+  @excluded_paths ["/test/", "/migrations/", "/deps/"]
+
   @doc false
   @impl Credo.Check
   @spec run(Credo.SourceFile.t(), keyword()) :: list()
   def run(%Credo.SourceFile{} = source_file, params) do
-    issue_meta = IssueMeta.for(source_file, params)
-    Credo.Code.prewalk(source_file, &traverse(&1, &2, issue_meta))
+    if excluded?(source_file.filename) do
+      []
+    else
+      issue_meta = IssueMeta.for(source_file, params)
+      Credo.Code.prewalk(source_file, &traverse(&1, &2, issue_meta))
+    end
+  end
+
+  defp excluded?(filename) do
+    not lib_file?(filename) or Enum.any?(@excluded_paths, &String.contains?(filename, &1))
+  end
+
+  defp lib_file?(filename) do
+    String.contains?(filename, "/lib/") or String.starts_with?(filename, "lib/")
   end
 
   defp traverse({:case, meta, [_subject, [do: clauses]]} = ast, issues, issue_meta)

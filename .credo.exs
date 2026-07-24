@@ -119,10 +119,13 @@
           # to this codebase's conventions and lives beside the other checks.
           #
           # exit_status: 0 for the same reason as the Jump checks below: the
-          # first run found 106 dual-key reads, 116 silent rescues and 9
+          # current run finds 105 dual-key reads, 56 silent rescues and 8
           # boolean cases. That is a backlog to work through deliberately,
           # not something to fix under a red gate. Drop exit_status per check
-          # as each reaches zero.
+          # as each reaches zero. (NoSwallowedException's count dropped from
+          # its original 116 once the heuristic learned that passing the
+          # rescued exception on to a helper counts as handling it, not
+          # swallowing it; the residual count is genuine silent rescues.)
           {CredoChecks.NoDualKeyAccess, [priority: :normal, exit_status: 0]},
           {CredoChecks.NoCaseOnBoolean, [priority: :low, exit_status: 0]},
           {CredoChecks.NoSwallowedException, [priority: :normal, exit_status: 0]},

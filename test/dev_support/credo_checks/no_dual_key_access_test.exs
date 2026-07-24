@@ -82,5 +82,18 @@ defmodule CredoChecks.NoDualKeyAccessTest do
       |> run_check(NoDualKeyAccess)
       |> refute_issues()
     end
+
+    test "accepts identical same-type keys on both sides" do
+      """
+      defmodule Tymeslot.Bookings do
+        def email(params) do
+          params[:email] || params[:email]
+        end
+      end
+      """
+      |> to_source_file("lib/tymeslot/bookings.ex")
+      |> run_check(NoDualKeyAccess)
+      |> refute_issues()
+    end
   end
 end
