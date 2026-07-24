@@ -41,4 +41,10 @@ jobs:
       - run: mix compile --warnings-as-errors
       - run: mix credo --strict
       - run: mix test
+      # dialyxir is only: [:dev], so this step needs its own environment. The
+      # job-wide MIX_ENV=test above would make the task unresolvable, and the
+      # step has been silently failing that way. Dev also matches where
+      # `mix precommit` runs dialyzer locally, so both analyse the same build.
       - run: mix dialyzer
+        env:
+          MIX_ENV: dev
