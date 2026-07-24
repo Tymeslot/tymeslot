@@ -366,7 +366,7 @@
   }
   
   .dashboard-sidebar.dashboard-sidebar-open {
-    transform: translateX(0);
+    translate: 0 0;
   }
   
   /* The nudge being cancelled here is `hover:translate-x-1`, which Tailwind v4
