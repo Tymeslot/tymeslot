@@ -67,13 +67,13 @@ RUN mix assets.deploy
 # itself, so no extra copy is needed.
 RUN mix release tymeslot
 
-# Production stage — debian only, no Elixir SDK. The release bundles its own ERTS.
-FROM debian:trixie-slim AS release
+# Slim production stage — debian only, no Elixir SDK, no PostgreSQL server.
+# The release bundles its own ERTS. postgresql-client is kept for pg_isready,
+# which the entrypoint uses to wait for the external database.
+FROM debian:trixie-slim AS release-slim
 
-# Install only what the ERTS and PostgreSQL need at runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    postgresql \
-    postgresql-contrib \
+    postgresql-client \
     libssl3 \
     libncurses6 \
     ca-certificates \
@@ -88,13 +88,10 @@ RUN locale-gen C.UTF-8 && update-locale LANG=C.UTF-8 LC_ALL=C.UTF-8
 RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 
-# App user, data directories, and PostgreSQL data directory in one layer
+# App user and data directories
 RUN useradd --create-home --shell /bin/bash app && \
     mkdir -p /app /app/data /app/data/uploads && \
-    chown -R app:app /app && \
-    mkdir -p /var/lib/postgresql/data && \
-    chown -R postgres:postgres /var/lib/postgresql && \
-    chmod 700 /var/lib/postgresql/data
+    chown -R app:app /app
 
 WORKDIR /app
 
@@ -110,14 +107,34 @@ ENV LANG=C.UTF-8 \
     MIX_ENV=prod \
     DEPLOYMENT_TYPE=docker \
     PHX_SERVER=true \
-    PORT=4000
+    PORT=4000 \
+    TYMESLOT_EMBEDDED_DB=false
 
 EXPOSE 4000
 
-VOLUME ["/app/data", "/var/lib/postgresql/data"]
+VOLUME ["/app/data"]
 
-# start-docker.sh runs as root to start PostgreSQL,
-# then drops to the app user for the Elixir process.
+# The entrypoint runs as root to set up /app/data, then drops to the app user
+# for the Elixir process.
 USER root
 
 CMD ["/app/start-docker.sh"]
+
+# Default production stage — the slim image plus an embedded PostgreSQL server.
+# This stage is last, so `docker build` without --target still produces the
+# batteries-included image every existing self-hoster runs.
+FROM release-slim AS release
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql \
+    postgresql-contrib \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /var/lib/postgresql/data && \
+    chown -R postgres:postgres /var/lib/postgresql && \
+    chmod 700 /var/lib/postgresql/data
+
+ENV TYMESLOT_EMBEDDED_DB=true
+
+VOLUME ["/app/data", "/var/lib/postgresql/data"]
