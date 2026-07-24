@@ -305,25 +305,98 @@ All outbound HTTP/HTTPS requests including:
 
 ### Using an External Database
 
-By default, Tymeslot uses an embedded PostgreSQL database in the Docker container. To use an external database (e.g., from a cloud provider like AWS RDS, Azure Database, or DigitalOcean), set the **discrete** connection variables below. Tymeslot's Docker deployment does **not** read a single `DATABASE_URL` — use `DATABASE_HOST` and friends instead:
+Tymeslot's default image bundles PostgreSQL for a one-command start, but nothing requires you to use it. Point it at any PostgreSQL 14 or newer: another container, another host, or a managed service.
+
+**With a connection string** (what managed providers hand you):
 
 ```bash
-DATABASE_HOST=your-db-host.example.com
-DATABASE_PORT=5432
-POSTGRES_DB=tymeslot
-POSTGRES_USER=your_db_user
-POSTGRES_PASSWORD=your_db_password
+DATABASE_URL=postgres://user:password@db.example.com:5432/tymeslot
+DATABASE_SSL=true
 ```
 
-**Important**: When using an external database:
-- The database and user must already exist
-- Tymeslot will NOT create them automatically
-- Ensure the database accepts connections from your Docker container's IP/network
-- Network/firewall rules must allow the connection
+**With discrete variables:**
 
-The database detection is automatic:
-- If `DATABASE_HOST` is `localhost` or `127.0.0.1`, uses embedded PostgreSQL
-- If `DATABASE_HOST` is any other value, uses external database
+```bash
+DATABASE_HOST=db.example.com
+DATABASE_PORT=5432
+POSTGRES_DB=tymeslot
+POSTGRES_USER=tymeslot
+POSTGRES_PASSWORD=your_db_password
+DATABASE_SSL=true
+```
+
+`DATABASE_URL` wins where the two overlap, so there is no need to set both.
+
+**Important**: When using an external database:
+- The database and user must already exist; Tymeslot creates neither.
+- The database must accept connections from your container's network, and firewall rules must allow it.
+- Migrations run automatically on every start, so the user needs schema privileges on that database.
+
+**TLS.** Set `DATABASE_SSL=true` for managed databases. It verifies the server certificate and hostname against the system trust store. If your provider uses a private CA, download its bundle onto the `/app/data` volume and set `DATABASE_SSL_CACERT_FILE=/app/data/your-ca.pem`. For a self-signed certificate on a network you already trust, `DATABASE_SSL=verify-none` encrypts the connection without verifying it. Omit the variable entirely for a database on the same host or a private Docker network.
+
+**Detection.** The container switches to external mode when `DATABASE_URL` is set, or when `DATABASE_HOST` is anything other than `localhost`/`127.0.0.1`. In external mode it never initialises or starts the bundled PostgreSQL.
+
+### Running PostgreSQL as its own container
+
+If you would rather keep the database separate, for independent backups, an existing backup routine, or plain separation of concerns, use the dedicated Compose file:
+
+```bash
+cp .env.example .env
+# fill in SECRET_KEY_BASE, PHX_HOST and POSTGRES_PASSWORD
+docker compose -f docker-compose.with-postgres.yml up -d
+```
+
+This runs two containers: `tymeslot` (using the slim image described below) and `tymeslot-postgres` (`postgres:17-alpine`), with the app waiting on the database's health check before it starts. The database lives in its own `tymeslot_pgdata` volume, so `docker exec tymeslot-postgres pg_dump …` is all a backup takes.
+
+To use a database you already run elsewhere, delete the `postgres` service and the `depends_on` block from that file and set `DATABASE_URL` in your `.env`.
+
+### The slim image
+
+`luka1thb/tymeslot:slim` (and `luka1thb/tymeslot:X.Y.Z-slim`) is the same application without the bundled PostgreSQL server: 1.05 GB against 1.22 GB, so roughly 170 MB smaller. It requires an external database and exits immediately with instructions if none is configured.
+
+```bash
+docker run -d --name tymeslot \
+  -p 4000:4000 \
+  -e SECRET_KEY_BASE=... \
+  -e PHX_HOST=tymeslot.example.com \
+  -e DATABASE_URL=postgres://user:password@db.example.com:5432/tymeslot \
+  -e DATABASE_SSL=true \
+  -v tymeslot_data:/app/data \
+  luka1thb/tymeslot:slim
+```
+
+**Migrating from the bundled database to an external one:**
+
+```bash
+# 1. Dump from the running container's embedded database
+docker exec tymeslot su - postgres -c "pg_dump -Fc tymeslot" > tymeslot.dump
+
+# 2. Restore into the new database
+pg_restore -d "postgres://user:password@db.example.com:5432/tymeslot" tymeslot.dump
+
+# 3. Add DATABASE_URL to your .env, switch the image tag to :slim, and recreate
+docker compose down && docker compose up -d
+```
+
+Keep `DATA_ENCRYPTION_KEY` (and `SECRET_KEY_BASE`, if you never set a separate encryption key) identical across the move, or stored credentials become undecryptable.
+
+### Podman
+
+Everything above works with Podman; `podman` is a drop-in for `docker`, and `podman compose` for `docker compose`. Two things to know:
+
+- **Rootless Podman and the bundled database.** The default image initialises its PostgreSQL cluster inside a named volume as root *within the container's user namespace*, so rootless Podman handles it. Bind-mounting a host path over `/var/lib/postgresql/data` will not work, exactly as with rootless Docker. Use a named volume, or prefer the slim image with a separate database container, which side-steps the question entirely.
+- **SELinux.** On Fedora, RHEL, and derivatives, add `:Z` to bind mounts so they are relabelled: `-v ./data:/app/data:Z`. Named volumes need no such flag.
+
+```bash
+podman compose -f docker-compose.with-postgres.yml up -d
+```
+
+To run it as a system service, generate a systemd unit from the running containers:
+
+```bash
+podman generate systemd --new --name tymeslot > ~/.config/systemd/user/tymeslot.service
+systemctl --user enable --now tymeslot
+```
 
 ### Optional Environment Variables
 
@@ -332,8 +405,11 @@ The database detection is automatic:
 ```bash
 # Application
 PORT=4000                    # HTTP port (default: 4000)
+DATABASE_URL=                # Full connection string (default: unset; wins over the variables below)
 DATABASE_HOST=localhost      # Database host (default: localhost)
 DATABASE_PORT=5432          # Database port (default: 5432)
+DATABASE_SSL=                # TLS: true / verify-full / verify-none / false (default: unset, no TLS)
+DATABASE_SSL_CACERT_FILE=    # CA bundle for certificate verification (default: system trust store)
 DATABASE_POOL_SIZE=10        # DB pool size (default: 10)
 
 # HTTP Proxy (for environments with restricted outbound access)
@@ -557,7 +633,7 @@ This appears on first start when the PostgreSQL volume lands in the container wi
 Fixes, in order of preference:
 
 1. **Use the named volume from the quick-start** (`-v tymeslot_pg:/var/lib/postgresql/data`). Named volumes live inside Docker's own storage and are immune to host filesystem quirks.
-2. **If you need the data on a specific host path**, run PostgreSQL in its own container (or managed externally) and point Tymeslot at it with `DATABASE_HOST` — see [Using an External Database](#using-an-external-database).
+2. **If you need the data on a specific host path**, run PostgreSQL in its own container (or managed externally) and point Tymeslot at it — see [Running PostgreSQL as its own container](#running-postgresql-as-its-own-container), which does exactly that with a ready-made Compose file.
 3. **If you previously attempted a first run that crashed**, remove the partially-initialised volume before retrying: `docker volume rm tymeslot_pg`.
 
 ### Port Already in Use
