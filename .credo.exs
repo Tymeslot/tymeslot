@@ -113,6 +113,19 @@
           {CredoChecks.ClockUsage, [priority: :normal]},
           {CredoChecks.GettextDomainBoundary, [priority: :high]},
           {CredoChecks.NoUnsafeSanitizeMerge, [priority: :normal]},
+          # The three below mechanise rules that CLAUDE.md's prefer/avoid table
+          # already states in prose. Ported from ex_slop and oeditus_credo
+          # (both MIT) rather than taking the dependencies, so each is scoped
+          # to this codebase's conventions and lives beside the other checks.
+          #
+          # exit_status: 0 for the same reason as the Jump checks below: the
+          # first run found 106 dual-key reads, 116 silent rescues and 9
+          # boolean cases. That is a backlog to work through deliberately,
+          # not something to fix under a red gate. Drop exit_status per check
+          # as each reaches zero.
+          {CredoChecks.NoDualKeyAccess, [priority: :normal, exit_status: 0]},
+          {CredoChecks.NoCaseOnBoolean, [priority: :low, exit_status: 0]},
+          {CredoChecks.NoSwallowedException, [priority: :normal, exit_status: 0]},
           {CredoChecks.NoInlineCaldavList, [priority: :normal]},
           {CredoChecks.AttendeeNotificationsBoundary, []},
 
