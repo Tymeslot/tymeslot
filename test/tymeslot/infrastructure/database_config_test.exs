@@ -55,6 +55,33 @@ defmodule Tymeslot.Infrastructure.DatabaseConfigTest do
         DatabaseConfig.build("docker", %{"POSTGRES_PASSWORD" => "s", "DATABASE_PORT" => "abc"})
       end
     end
+
+    test "raises on a port above 65535" do
+      assert_raise RuntimeError, ~r/DATABASE_PORT.*between 1 and 65535/s, fn ->
+        DatabaseConfig.build("docker", %{"POSTGRES_PASSWORD" => "s", "DATABASE_PORT" => "70000"})
+      end
+    end
+
+    test "raises on a port of 0" do
+      assert_raise RuntimeError, ~r/DATABASE_PORT.*between 1 and 65535/s, fn ->
+        DatabaseConfig.build("docker", %{"POSTGRES_PASSWORD" => "s", "DATABASE_PORT" => "0"})
+      end
+    end
+
+    test "raises on a pool size of 0" do
+      assert_raise RuntimeError, ~r/DATABASE_POOL_SIZE.*or greater/s, fn ->
+        DatabaseConfig.build("docker", %{"POSTGRES_PASSWORD" => "s", "DATABASE_POOL_SIZE" => "0"})
+      end
+    end
+
+    test "raises on a negative pool size" do
+      assert_raise RuntimeError, ~r/DATABASE_POOL_SIZE.*or greater/s, fn ->
+        DatabaseConfig.build("docker", %{
+          "POSTGRES_PASSWORD" => "s",
+          "DATABASE_POOL_SIZE" => "-5"
+        })
+      end
+    end
   end
 
   describe "build/2 DATABASE_URL handling" do
@@ -140,14 +167,26 @@ defmodule Tymeslot.Infrastructure.DatabaseConfigTest do
     end
 
     test "uses a custom CA bundle when DATABASE_SSL_CACERT_FILE is set" do
+      cacert_path = write_temp_cacert!()
+
       config =
+        DatabaseConfig.build("docker", %{
+          "POSTGRES_PASSWORD" => "s",
+          "DATABASE_SSL" => "true",
+          "DATABASE_SSL_CACERT_FILE" => cacert_path
+        })
+
+      assert config[:ssl] == [cacertfile: cacert_path]
+    end
+
+    test "raises when DATABASE_SSL_CACERT_FILE does not point at a readable file" do
+      assert_raise RuntimeError, ~r/DATABASE_SSL_CACERT_FILE/, fn ->
         DatabaseConfig.build("docker", %{
           "POSTGRES_PASSWORD" => "s",
           "DATABASE_SSL" => "true",
           "DATABASE_SSL_CACERT_FILE" => "/app/data/rds-ca.pem"
         })
-
-      assert config[:ssl] == [cacertfile: "/app/data/rds-ca.pem"]
+      end
     end
 
     test "ignores DATABASE_SSL_CACERT_FILE when TLS is off" do
@@ -196,5 +235,24 @@ defmodule Tymeslot.Infrastructure.DatabaseConfigTest do
 
       assert config[:port] == "5432"
     end
+
+    test "raises on a pool size of 0" do
+      assert_raise RuntimeError, ~r/DATABASE_POOL_SIZE.*or greater/s, fn ->
+        DatabaseConfig.build("cloudron", %{"DATABASE_POOL_SIZE" => "0"})
+      end
+    end
+  end
+
+  defp write_temp_cacert! do
+    path =
+      Path.join(
+        System.tmp_dir!(),
+        "database_config_test_cacert_#{System.unique_integer([:positive])}.pem"
+      )
+
+    File.write!(path, "-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\n")
+    on_exit(fn -> File.rm(path) end)
+
+    path
   end
 end

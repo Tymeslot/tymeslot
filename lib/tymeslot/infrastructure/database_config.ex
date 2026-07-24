@@ -21,6 +21,11 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
   variables — which is what an operator pasting a provider-issued URL expects.
   """
 
+  # Used directly by "cloudron", whose start.sh never exports DATABASE_POOL_SIZE.
+  # "docker" never actually falls back to it: start-docker.sh always exports
+  # DATABASE_POOL_SIZE (defaulting to 10) before invoking the release, so this
+  # value is dead for that deployment type but kept as the documented default
+  # should that export ever be dropped.
   @default_pool_size 60
 
   @type env :: %{optional(String.t()) => String.t()}
@@ -42,7 +47,7 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
       hostname: env["CLOUDRON_POSTGRESQL_HOST"],
       port: env["CLOUDRON_POSTGRESQL_PORT"],
       database: env["CLOUDRON_POSTGRESQL_DATABASE"],
-      pool_size: parse_int!(env, "DATABASE_POOL_SIZE", @default_pool_size)
+      pool_size: parse_int!(env, "DATABASE_POOL_SIZE", @default_pool_size, 1)
     ] ++ tuning_opts()
   end
 
@@ -51,11 +56,11 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
 
     [
       hostname: Map.get(env, "DATABASE_HOST", "localhost"),
-      port: parse_int!(env, "DATABASE_PORT", 5432),
+      port: parse_int!(env, "DATABASE_PORT", 5432, 1, 65_535),
       database: Map.get(env, "POSTGRES_DB", "tymeslot"),
       username: Map.get(env, "POSTGRES_USER", "tymeslot"),
       password: password!(env, url),
-      pool_size: parse_int!(env, "DATABASE_POOL_SIZE", @default_pool_size)
+      pool_size: parse_int!(env, "DATABASE_POOL_SIZE", @default_pool_size, 1)
     ] ++ url_opts(url) ++ ssl_opts(env) ++ tuning_opts()
   end
 
@@ -94,14 +99,21 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
 
   defp cacert_opts(env) do
     case blank_to_nil(env["DATABASE_SSL_CACERT_FILE"]) do
-      nil -> true
-      path -> [cacertfile: path]
+      nil ->
+        true
+
+      path ->
+        unless File.regular?(path) do
+          raise "Invalid DATABASE_SSL_CACERT_FILE: #{inspect(path)} does not exist or is not a readable file."
+        end
+
+        [cacertfile: path]
     end
   end
 
-  # Connection-pool tuning shared by every deployment type. The defaults suit
-  # Oban's concurrency (~47 concurrent workers); ensure PostgreSQL's
-  # max_connections stays above :pool_size.
+  # Connection-pool tuning shared by every deployment type. The :oban_queues
+  # concurrencies in config/config.exs currently sum to 68 concurrent workers;
+  # ensure PostgreSQL's max_connections stays above :pool_size.
   defp tuning_opts do
     [idle_interval: 60_000, queue_target: 5000, queue_interval: 10_000]
   end
@@ -130,16 +142,29 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
     end
   end
 
-  defp parse_int!(env, var, default) do
+  # Shared by every bounded env-var integer (port, pool size) so each caller
+  # only states its own valid range instead of re-implementing the parsing.
+  defp parse_int!(env, var, default, min, max \\ nil) do
     case Map.get(env, var) do
       nil ->
         default
 
       value ->
         case Integer.parse(value) do
-          {int, ""} -> int
+          {int, ""} -> validate_int_range!(var, int, min, max)
           _other -> raise "Invalid #{var}: #{inspect(value)}. Must be a valid integer."
         end
     end
+  end
+
+  defp validate_int_range!(_var, int, min, max) when int >= min and (is_nil(max) or int <= max),
+    do: int
+
+  defp validate_int_range!(var, int, min, nil) do
+    raise "Invalid #{var}: #{int}. Must be #{min} or greater."
+  end
+
+  defp validate_int_range!(var, int, min, max) do
+    raise "Invalid #{var}: #{int}. Must be between #{min} and #{max}."
   end
 end
