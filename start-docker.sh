@@ -258,10 +258,20 @@ else
     RETRY_COUNT=0
     MAX_RETRIES=30
 
-    # pg_isready accepts a full connection string via -d, so no URL parsing here.
+    # pg_isready needs no credentials to probe reachability, and passing the
+    # full URL via -d would leave it — password included — visible in the
+    # container's process list for every poll. Probe with host and port only.
     if [ -n "${DATABASE_URL:-}" ]; then
-        PG_ISREADY_ARGS="-d $DATABASE_URL"
-        PG_TARGET="DATABASE_URL"
+        # Strip the scheme, any user:password@, then the path and query; keep
+        # host[:port]. The bracket rule unwraps an IPv6 literal like [::1].
+        PG_PROBE_HOSTPORT=$(printf '%s' "$DATABASE_URL" |
+            sed -E 's#^[^:]+://##; s#^[^@/]*@##; s#[/?].*$##')
+        PG_PROBE_HOST=$(printf '%s' "$PG_PROBE_HOSTPORT" |
+            sed -E 's#:[0-9]*$##; s#^\[([^]]*)\]$#\1#')
+        PG_PROBE_PORT=$(printf '%s' "$PG_PROBE_HOSTPORT" |
+            sed -nE 's#.*:([0-9]+)$#\1#p')
+        PG_ISREADY_ARGS="-h $PG_PROBE_HOST -p ${PG_PROBE_PORT:-5432}"
+        PG_TARGET="$PG_PROBE_HOST:${PG_PROBE_PORT:-5432}"
     else
         PG_ISREADY_ARGS="-h $DATABASE_HOST -p $DATABASE_PORT"
         PG_TARGET="$DATABASE_HOST:$DATABASE_PORT"
