@@ -1,6 +1,7 @@
 
 [1.5.0]
 * [BREAKING] core: Select an external database only when DATABASE_URL is remote
+* core: Recover calendar sync when a provider event no longer exists
 * core: Accept calendar event ids up to Google's documented maximum
 * core: Keep database credentials out of the process list at startup
 * core: Honour the sslmode parameter in DATABASE_URL

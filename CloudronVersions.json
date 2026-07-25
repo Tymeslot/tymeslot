@@ -2520,7 +2520,7 @@
       "ts": "Fri, 17 Jul 2026 12:52:48 GMT"
     },
     "1.5.0": {
-      "creationDate": "Sat, 25 Jul 2026 06:08:34 GMT",
+      "creationDate": "Sat, 25 Jul 2026 06:17:51 GMT",
       "manifest": {
         "addons": {
           "localstorage": {},
@@ -2564,7 +2564,7 @@
         "website": "https://tymeslot.app"
       },
       "publishState": "published",
-      "ts": "Sat, 25 Jul 2026 06:08:34 GMT"
+      "ts": "Sat, 25 Jul 2026 06:17:51 GMT"
     }
   }
 }
