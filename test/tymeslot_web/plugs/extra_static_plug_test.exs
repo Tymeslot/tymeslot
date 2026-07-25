@@ -51,6 +51,77 @@ defmodule TymeslotWeb.Plugs.ExtraStaticTest do
     assert conn.status == 200
   end
 
+  describe "content-encoding negotiation" do
+    # Mirrors the production encodings list built in the overlay's config;
+    # test env deliberately leaves encodings off elsewhere, so the matrix is
+    # exercised here against pre-built .zst/.gz fixture siblings.
+    setup do
+      setup_config(:tymeslot, :extra_static_sources, [
+        [
+          at: "/",
+          from: @fixture_dir,
+          only: ["extra-fixture"],
+          encodings: [{"zstd", ".zst"}, {"gzip", ".gz"}]
+        ]
+      ])
+
+      :ok
+    end
+
+    test "serves the zstd variant to a client accepting zstd", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("accept-encoding", "zstd, gzip")
+        |> get("/extra-fixture/hello.txt")
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "content-encoding") == ["zstd"]
+      assert "Accept-Encoding" in get_resp_header(conn, "vary")
+      assert conn.resp_body == File.read!("#{@fixture_dir}/extra-fixture/hello.txt.zst")
+    end
+
+    test "serves the gzip variant to a client without zstd support", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("accept-encoding", "gzip")
+        |> get("/extra-fixture/hello.txt")
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "content-encoding") == ["gzip"]
+      assert conn.resp_body == File.read!("#{@fixture_dir}/extra-fixture/hello.txt.gz")
+    end
+
+    test "serves the plain file when the client sends no accept-encoding", %{conn: conn} do
+      conn = get(conn, "/extra-fixture/hello.txt")
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "content-encoding") == []
+      assert "Accept-Encoding" in get_resp_header(conn, "vary")
+      assert conn.resp_body =~ "hello from an extra static source"
+    end
+
+    test "falls back to gzip when the zstd sibling is missing", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("accept-encoding", "zstd, gzip")
+        |> get("/extra-fixture/gzip-only.txt")
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "content-encoding") == ["gzip"]
+    end
+
+    test "serves the plain file when no accepted sibling exists", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("accept-encoding", "zstd")
+        |> get("/extra-fixture/gzip-only.txt")
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "content-encoding") == []
+      assert conn.resp_body =~ "gzip-only fixture body"
+    end
+  end
+
   test "skips a source naming an absent application without crashing", %{conn: conn} do
     setup_config(:tymeslot, :extra_static_sources, [
       [at: "/", from: {:no_such_app_xyz, "priv/static"}, only: ["extra-fixture"]],
