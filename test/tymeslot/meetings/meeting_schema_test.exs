@@ -46,6 +46,25 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
     end
   end
 
+  describe "provider_event_id" do
+    test "accepts an id at Google's 1024-character maximum" do
+      attrs = Map.put(@valid_base_attrs, :provider_event_id, String.duplicate("a", 1024))
+
+      cs = Meeting.changeset(%Meeting{}, attrs)
+
+      assert cs.valid?
+    end
+
+    test "rejects an id longer than 1024 characters with a changeset error" do
+      attrs = Map.put(@valid_base_attrs, :provider_event_id, String.duplicate("a", 1025))
+
+      cs = Meeting.changeset(%Meeting{}, attrs)
+
+      refute cs.valid?
+      assert %{provider_event_id: [_message]} = errors_on(cs)
+    end
+  end
+
   describe "business logic" do
     test "prevents meetings with end time before start time" do
       attrs = %{
