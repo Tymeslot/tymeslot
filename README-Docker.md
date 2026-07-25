@@ -402,6 +402,8 @@ DATABASE_SSL=true
 
 **TLS.** Set `DATABASE_SSL=true` for managed databases. It verifies the server certificate and hostname against the system trust store. If your provider uses a private CA, download its bundle onto the `/app/data` volume and set `DATABASE_SSL_CACERT_FILE=/app/data/your-ca.pem`. For a self-signed certificate on a network you already trust, `DATABASE_SSL=verify-none` encrypts the connection without verifying it. Omit the variable entirely for a database on the same host or a private Docker network.
 
+An `sslmode` query parameter in `DATABASE_URL` (as issued by most managed providers) is honoured when `DATABASE_SSL` is unset: `require` encrypts without verification, matching its libpq meaning, while `verify-ca` and `verify-full` verify the certificate like `DATABASE_SSL=true`. An explicit `DATABASE_SSL` always wins over the URL parameter.
+
 **Detection.** The container switches to external mode when `DATABASE_URL` names a remote host, or when `DATABASE_HOST` is anything other than `localhost`/`127.0.0.1`. In external mode it never initialises or starts the bundled PostgreSQL.
 
 A `DATABASE_URL` pointing at `localhost`, `127.0.0.1` or `::1` is treated as the bundled database on images that ship one: the container logs a warning, ignores the variable, and connects with the discrete `POSTGRES_*` credentials the bundled cluster is created with. The slim image bundles no server, so there a local URL is honoured as given and expected to reach a PostgreSQL you run yourself.

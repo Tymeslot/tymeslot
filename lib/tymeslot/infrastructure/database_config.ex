@@ -19,6 +19,8 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
   options (`Ecto.Repo.Supervisor.init_config/4`). So when `DATABASE_URL` is set,
   its host, port, database, username, and password win over the discrete
   variables — which is what an operator pasting a provider-issued URL expects.
+  An `sslmode` query parameter in the URL is mapped onto the TLS options too,
+  though an explicit `DATABASE_SSL` always takes precedence over it.
   """
 
   # Used directly by "cloudron", whose start.sh never exports DATABASE_POOL_SIZE.
@@ -61,7 +63,7 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
       username: Map.get(env, "POSTGRES_USER", "tymeslot"),
       password: password!(env, url),
       pool_size: parse_int!(env, "DATABASE_POOL_SIZE", @default_pool_size, 1)
-    ] ++ url_opts(url) ++ ssl_opts(env) ++ tuning_opts()
+    ] ++ url_opts(url) ++ ssl_opts(env, url) ++ tuning_opts()
   end
 
   defp url_opts(nil), do: []
@@ -69,16 +71,55 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
 
   # Postgrex treats `ssl: true` as "secure defaults" (peer verification plus
   # hostname checking) and merges a keyword list on top of those same defaults,
-  # so we never assemble :ssl options by hand.
-  defp ssl_opts(env) do
-    case env |> Map.get("DATABASE_SSL") |> blank_to_nil() |> normalise_ssl_mode() do
+  # so we never assemble :ssl options by hand. DATABASE_SSL is explicit operator
+  # intent and wins; without it, an sslmode query parameter in DATABASE_URL is
+  # honoured, because Ecto forwards that parameter to Postgrex, which ignores
+  # it — so a pasted provider URL carrying sslmode=require would otherwise
+  # connect in plaintext.
+  defp ssl_opts(env, url) do
+    mode =
+      case env |> Map.get("DATABASE_SSL") |> blank_to_nil() do
+        nil -> url_ssl_mode(url)
+        value -> normalise_ssl_mode(value)
+      end
+
+    case mode do
       :off -> []
       :verify -> [ssl: cacert_opts(env)]
       :no_verify -> [ssl: [verify: :verify_none]]
     end
   end
 
-  defp normalise_ssl_mode(nil), do: :off
+  # libpq's sslmode, as carried by provider-issued URLs. There `require` means
+  # "encrypt, don't verify", so it maps to :no_verify; both verify-* modes get
+  # Postgrex's secure defaults (verify-ca thereby gains hostname checking,
+  # erring towards more verification, and DATABASE_SSL_CACERT_FILE still
+  # applies). `allow` and `prefer` mean opportunistic TLS, which Postgrex
+  # cannot express, so they keep the unset behaviour.
+  defp url_ssl_mode(nil), do: :off
+
+  defp url_ssl_mode(url) do
+    case url |> URI.parse() |> Map.get(:query) |> decode_query() |> Map.get("sslmode") do
+      nil ->
+        :off
+
+      mode when mode in ~w(disable allow prefer) ->
+        :off
+
+      "require" ->
+        :no_verify
+
+      mode when mode in ~w(verify-ca verify-full) ->
+        :verify
+
+      other ->
+        raise "Invalid sslmode in DATABASE_URL: #{inspect(other)}. " <>
+                "Use disable, allow, prefer, require, verify-ca, or verify-full."
+    end
+  end
+
+  defp decode_query(nil), do: %{}
+  defp decode_query(query), do: URI.decode_query(query)
 
   defp normalise_ssl_mode(value) do
     case String.downcase(value) do

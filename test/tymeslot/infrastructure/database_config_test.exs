@@ -206,6 +206,86 @@ defmodule Tymeslot.Infrastructure.DatabaseConfigTest do
     end
   end
 
+  describe "build/2 sslmode in DATABASE_URL" do
+    test "sslmode=require enables TLS without verification, matching libpq" do
+      config =
+        DatabaseConfig.build("docker", %{
+          "DATABASE_URL" => "postgres://a:b@h:5432/d?sslmode=require"
+        })
+
+      assert config[:ssl] == [verify: :verify_none]
+    end
+
+    for mode <- ["verify-ca", "verify-full"] do
+      test "sslmode=#{mode} enables verifying TLS" do
+        config =
+          DatabaseConfig.build("docker", %{
+            "DATABASE_URL" => "postgres://a:b@h:5432/d?sslmode=#{unquote(mode)}"
+          })
+
+        assert config[:ssl] == true
+      end
+    end
+
+    test "sslmode=verify-full uses a configured CA bundle" do
+      cacert_path = write_temp_cacert!()
+
+      config =
+        DatabaseConfig.build("docker", %{
+          "DATABASE_URL" => "postgres://a:b@h:5432/d?sslmode=verify-full",
+          "DATABASE_SSL_CACERT_FILE" => cacert_path
+        })
+
+      assert config[:ssl] == [cacertfile: cacert_path]
+    end
+
+    for mode <- ["disable", "allow", "prefer"] do
+      test "sslmode=#{mode} leaves TLS off" do
+        config =
+          DatabaseConfig.build("docker", %{
+            "DATABASE_URL" => "postgres://a:b@h:5432/d?sslmode=#{unquote(mode)}"
+          })
+
+        refute Keyword.has_key?(config, :ssl)
+      end
+    end
+
+    test "a URL without an sslmode parameter leaves TLS off" do
+      config =
+        DatabaseConfig.build("docker", %{
+          "DATABASE_URL" => "postgres://a:b@h:5432/d?timeout=5000"
+        })
+
+      refute Keyword.has_key?(config, :ssl)
+    end
+
+    test "an explicit DATABASE_SSL wins over the URL's sslmode" do
+      config =
+        DatabaseConfig.build("docker", %{
+          "DATABASE_URL" => "postgres://a:b@h:5432/d?sslmode=require",
+          "DATABASE_SSL" => "false"
+        })
+
+      refute Keyword.has_key?(config, :ssl)
+
+      config =
+        DatabaseConfig.build("docker", %{
+          "DATABASE_URL" => "postgres://a:b@h:5432/d?sslmode=disable",
+          "DATABASE_SSL" => "true"
+        })
+
+      assert config[:ssl] == true
+    end
+
+    test "raises on an unrecognised sslmode value" do
+      assert_raise RuntimeError, ~r/sslmode in DATABASE_URL/, fn ->
+        DatabaseConfig.build("docker", %{
+          "DATABASE_URL" => "postgres://a:b@h:5432/d?sslmode=maybe"
+        })
+      end
+    end
+  end
+
   describe "build/2 for cloudron" do
     test "reads the Cloudron-provided variables" do
       config =
