@@ -51,6 +51,7 @@ defmodule Mix.Tasks.Precommit do
     {"sobelow", ~w[sobelow], :dev},
     {"deps.audit", ~w[deps.audit], :dev},
     {"migrations", ~w[excellent_migrations.check_safety], :dev},
+    {"workflows", ~w[actionlint], :dev},
     {"xref", ~w[xref graph --label compile-connected --fail-above 25], :dev},
     {"test", ~w[test], :test},
     {"dialyzer", ~w[dialyzer], :dev}
