@@ -1,4 +1,21 @@
 
+[1.5.0]
+* [BREAKING] core: Select an external database only when DATABASE_URL is remote
+* core: Accept calendar event ids up to Google's documented maximum
+* core: Keep database credentials out of the process list at startup
+* core: Honour the sslmode parameter in DATABASE_URL
+* core: Open the mobile dashboard sidebar
+* core: Stop the setup checklist crushing its rows on narrow screens
+* core: Name the calendar selection dialog by its heading alone
+* core: Give footer column headings a sequential level
+* ci: Align test DB pool with Oban concurrency
+* calendar: Use provider event IDs for OAuth events
+* core: Show the saved icon on meeting type cards
+* core: Show the meeting type icon picker and mode-toggle icons
+* core: Run PostgreSQL as its own container with the slim image
+* core: Connect to an external PostgreSQL with DATABASE_URL and TLS
+
+
 [1.4.4]
 * core: Prevent availability crash on days the attendee's clocks change
 * core: Allow the Stripe Connect onboarding redirect through the CSP
@@ -26,19 +43,19 @@
 * core: Stop an empty CalDAV fetch from wrongly cancelling booked meetings
 * core: Stop CalDAV colour change from reverting a server-side event edit
 * core: Restore the setup step in the first-visit dashboard tour
-* core: Prevent calendar sync failure on very large initial imports
 * core: Make the booking calendar accessible to keyboard and screen readers
 * core: Make modals and form errors accessible to keyboard and screen readers
 * core: Preserve reschedule context on Choose New Time
 * core: Return booker to schedule step when a slot is taken mid-submit
 * core: Show progress during onboarding CalDAV calendar discovery
+* core: Prevent calendar sync failure on very large initial imports
 * core: Render rounded-token-full pills and badges as circles
 * core: Gate admin feature announcements by signup date
 * core: Show the Analytics Pro badge across all dashboard pages
 * core: Redesign integrations with a provider picker and inline actions
 * core: Decouple and make rotatable the data-at-rest encryption key
-* core: Colour calendar events from the dashboard agenda
 * core: Add calendar (.ics) download to the booking confirmation screen
+* core: Colour calendar events from the dashboard agenda
 * core: Nudge users to reconnect before skipping calendar in onboarding
 * core: Open appointment details in a modal from the dashboard agenda
 * core: Add a live "Your day" agenda to the dashboard overview
@@ -100,16 +117,16 @@
 [1.2.2]
 * core: Give the analytics dashboard refresh visible feedback
 * core: Add one-click Google Calendar connect to onboarding
+* core: Refine and gate the booking analytics dashboard
+* core: Exclude an organizer's own page visits from booking analytics
 
 
 [1.2.1]
 * core: Only require ANALYTICS_SALT_SECRET when booking analytics is enabled
 * core: Stop button icons wrapping onto their own line
-* core: Keep Quill booking content readable over image backgrounds
 * core: Show hamburger nav on tablets, not just phones
 * core: Match mobile nav menu structure to desktop
-* core: Rate-limit booking confirmations per recipient to curb email abuse
-* core: Block SSRF to internal hosts on CalDAV and video integrations
+* core: Keep Quill booking content readable over image backgrounds
 * core: Present booking-analytics visitors and conversion as estimates
 * core: Suppress false booking-analytics anomaly alerts on small samples
 * core: Stop capturing arbitrary query parameters in booking analytics
@@ -117,10 +134,10 @@
 * core: Trust forwarded IP headers only from known proxies on live connections
 * core: Resolve the real client IP on live connections behind a proxy
 * core: Prevent scheduling page crash when booking analytics is enabled
+* core: Rate-limit booking confirmations per recipient to curb email abuse
+* core: Block SSRF to internal hosts on CalDAV and video integrations
 * core: Base booking-analytics conversion on actual converting visitors
 * core: Count a booking-page visitor once across meeting types
-* core: Refine and gate the booking analytics dashboard
-* core: Exclude an organizer's own page visits from booking analytics
 * core: Show custom question answers in synced calendar events
 * core: Add device-type breakdown to booking analytics
 * core: Add admin toggle for booking analytics
@@ -160,7 +177,6 @@
 
 [1.1.0]
 * [BREAKING] core: Correct Docker Compose env forwarding, volumes, and DB config
-* [BREAKING] core: Correct Docker Compose env forwarding, volumes, and DB config
 * core: Correct sender identity in host operational alert emails
 * core: Treat unfinished Stripe onboarding as incomplete, not restricted
 * core: Distinguish superseded from expired email verification links
@@ -168,13 +184,11 @@
 * core: Keep verification and reset links valid after a resend
 * core: Prevent Google Calendar sync crash on token-refresh failure
 * core: Prevent admin-alert floods from repeated crashes and job failures
-* core: Update final onboarding step CTA to go to dashboard
 * core: Stop endless sync retries when a calendar is deleted on the provider side
 * core: Auto-deselect Google calendars deleted on the provider side
 * core: Make POSTGRES_PASSWORD optional when building the Docker image
 * core: Prevent admin alert email floods when many jobs fail at once
 * core: Keep password-reset and verification links out of job logs
-* core: Update final onboarding step CTA to go to dashboard
 * core: Reject theme video uploads when transcoding is unavailable
 * core: Give dropdown dialogs accessible names
 * core: Improve the dashboard tour on small screens
@@ -188,6 +202,7 @@
 * core: Improve paid booking reliability and payment errors
 * core: Keep video meeting links in sync when bookings change
 * core: Protect Slack webhook secrets and handle rate limits
+* core: Update final onboarding step CTA to go to dashboard
 * core: Keep dashboard sidebar fixed while only the content scrolls
 * core: Preserve typed answers when navigating booking questions
 * core: Reject overly long phone numbers in booking questions
@@ -205,27 +220,27 @@
 * core: Prevent embedded booking from flickering and lurching on resize
 * core: Apply all Stripe Connect account updates, not just the first
 * core: Translate booker-facing booking and payment strings for de/fr/uk/it
+* core: Show booker-facing emails in the recipient's language for de/fr/uk
 * core: Show payment confirmation time in the attendee's timezone
 * core: Let attendees return to booking after a cancelled payment
 * core: Record disputes and refunds that arrive before payment confirmation
 * core: Allow refunds when no reason is supplied
 * core: Record Stripe charge id to enable refunds and disputes
 * core: Fix checkout failure for paid bookings
+* core: Show calendar reconnect prompt when event creation needs reauth
 * core: Allow disconnecting a Slack OAuth integration
 * core: Harden DashboardTour hook against scroll-jack and resize
 * core: Persist dashboard tour completion across all dismissal paths
 * core: Accept both yes and no as valid answers to a yes/no question
 * core: Keep edit button visible on each custom-question list row
-* core: Note acknowledgement not accepted in custom questions wizard
-* core: Persist custom_fields through the meeting type save path
-* core: Show Zoom as an OAuth provider in the video integration list
-* core: Repair Zoom meeting creation and harden the OAuth flow
-* core: Tighten Slack integration lifecycle and error reporting
-* core: Correct Slack worker retry handling and rate-limit backoff
 * core: Allow disabling password auth when no admin auth path is currently active
 * core: Redirect non-admins to dashboard from admin page
 * core: Show Baikal in the dashboard calendar integration list
 * core: Remove jumping hover effect on action buttons
+* core: Note acknowledgement not accepted in custom questions wizard
+* core: Persist custom_fields through the meeting type save path
+* core: Tighten Slack integration lifecycle and error reporting
+* core: Correct Slack worker retry handling and rate-limit backoff
 * core: Enforce refund window in cancel-meeting modal
 * core: Correct refund and disconnect flow in host payments dashboard
 * core: Show Pro and Stripe-required automation gates as user flashes
@@ -240,23 +255,8 @@
 * core: Preserve booking payments past host deletion with nil attendee data
 * core: Use integer arithmetic for payment money math
 * core: Drop the literal "there" salutation on anonymous refund emails
-* core: Fix pixelated Cloudron dashboard icon
-* core: Show booker-facing emails in the recipient's language for de/fr/uk
-* core: Show calendar reconnect prompt when event creation needs reauth
-* core: Allow disconnecting a Slack OAuth integration
-* core: Harden DashboardTour hook against scroll-jack and resize
-* core: Persist dashboard tour completion across all dismissal paths
-* core: Accept both yes and no as valid answers to a yes/no question
-* core: Keep edit button visible on each custom-question list row
-* core: Note acknowledgement not accepted in custom questions wizard
-* core: Persist custom_fields through the meeting type save path
-* core: Tighten Slack integration lifecycle and error reporting
-* core: Correct Slack worker retry handling and rate-limit backoff
-* core: Allow disabling password auth when no admin auth path is currently active
-* core: Redirect non-admins to dashboard from admin page
-* core: Show Baikal in the dashboard calendar integration list
-* core: Remove jumping hover effect on action buttons
 * core: Show Zoom as an OAuth provider in the video integration list
+* core: Fix pixelated Cloudron dashboard icon
 * core: Repair Zoom meeting creation and harden the OAuth flow
 * core: Show a loading spinner while opening Stripe Connect onboarding
 * core: Auto-save meeting type edits as you change them
@@ -274,9 +274,16 @@
 * core: Default new embed snippets to column layout
 * core: Auto-fit embed height and add column layout option
 * core: Add Reconnect button to pending Slack OAuth integrations
-* core: Add post-onboarding dashboard tour
 * core: Redesign custom questions step with in-brand answer controls
+* core: Add post-onboarding dashboard tour
 * core: Edit custom question options as individual fields
+* core: Add SSO, reCAPTCHA, and admin alert toggles to admin settings
+* core: Disable password-auth toggle when lockout would apply
+* core: Show display name and booking slug in admin users table
+* core: Protect admin panel from auth lockout and allow self-demotion
+* core: Add admin control panel for self-hosted installs
+* core: Group calendar providers into OAuth and CalDAV sections
+* core: Show what's-new modal on dashboard for unseen feature announcements
 * core: Show custom-field answers on host booking cards
 * core: Include custom-field answers in ICS event description
 * core: Include custom-field answers in appointment emails
@@ -285,24 +292,15 @@
 * core: Confirm before clearing type-specific config on type change
 * core: Add custom questions builder to meeting type form
 * core: Persist custom-field snapshot and answers on booking submission
-* core: Sync Zoom meetings when bookings are rescheduled or cancelled
-* core: Remove Zoom integration automatically when uninstalled from Zoom
-* core: Add Zoom as a video meeting provider
 * core: Allow refreshing Slack channel list without reopening the form
 * core: Notify Slack when meetings are booked, cancelled, or rescheduled
 * core: Add Slack dashboard UI
+* core: Add Baikal CalDAV calendar integration
 * core: Add SlackDeliverySchema and slack_integration factory
 * core: Add SlackIntegrationSchema with OAuth + webhook URL modes
 * core: Add slack_deliveries table
 * core: Add slack_integrations table
-* core: Add SSO, reCAPTCHA, and admin alert toggles to admin settings
-* core: Disable password-auth toggle when lockout would apply
-* core: Show display name and booking slug in admin users table
-* core: Protect admin panel from auth lockout and allow self-demotion
-* core: Add admin control panel for self-hosted installs
-* core: Group calendar providers into OAuth and CalDAV sections
-* core: Add Baikal CalDAV calendar integration
-* core: Show what's-new modal on dashboard for unseen feature announcements
+* core: Sync Zoom meetings when bookings are rescheduled or cancelled
 * core: Cancel in-flight bookings when host disconnects Stripe
 * core: Translate meeting payments into de/fr/it/uk
 * core: Retain payment records past user deletion for tax compliance
@@ -313,37 +311,6 @@
 * core: Add receipt block to attendee confirmation email
 * core: Add refunds context and host dashboard refund flow
 * core: Retain payment_transactions past user deletion for tax compliance
-* core: Show reconnect prompt for revoked video integrations
-* core: Default new embed snippets to column layout
-* core: Auto-fit embed height and add column layout option
-* core: Add Reconnect button to pending Slack OAuth integrations
-* core: Add post-onboarding dashboard tour
-* core: Redesign custom questions step with in-brand answer controls
-* core: Edit custom question options as individual fields
-* core: Show custom-field answers on host booking cards
-* core: Include custom-field answers in ICS event description
-* core: Include custom-field answers in appointment emails
-* core: Show custom-field answers on Rhythm confirmation step
-* core: Show custom-field answers on Quill confirmation step
-* core: Confirm before clearing type-specific config on type change
-* core: Add custom questions builder to meeting type form
-* core: Persist custom-field snapshot and answers on booking submission
-* core: Allow refreshing Slack channel list without reopening the form
-* core: Notify Slack when meetings are booked, cancelled, or rescheduled
-* core: Add Slack dashboard UI
-* core: Add SlackDeliverySchema and slack_integration factory
-* core: Add SlackIntegrationSchema with OAuth + webhook URL modes
-* core: Add slack_deliveries table
-* core: Add slack_integrations table
-* core: Add SSO, reCAPTCHA, and admin alert toggles to admin settings
-* core: Disable password-auth toggle when lockout would apply
-* core: Show display name and booking slug in admin users table
-* core: Protect admin panel from auth lockout and allow self-demotion
-* core: Add admin control panel for self-hosted installs
-* core: Group calendar providers into OAuth and CalDAV sections
-* core: Add Baikal CalDAV calendar integration
-* core: Show what's-new modal on dashboard for unseen feature announcements
-* core: Sync Zoom meetings when bookings are rescheduled or cancelled
 * core: Remove Zoom integration automatically when uninstalled from Zoom
 * core: Add Zoom as a video meeting provider
 
@@ -392,7 +359,6 @@
 [0.100.15]
 * core: Translate reCAPTCHA notice text so it localises with the booking form
 * core: Translate location placeholder in booking confirmation emails
-* core: Translate location placeholder in booking confirmation emails
 * core: Fix invisible reply text in Thunderbird dark mode
 * core: Restore CalDAV booking creation when discovery omits path
 
@@ -406,17 +372,17 @@
 [0.100.13]
 * core: Fix mailbox.org calendar discovery failing with unsupported provider error
 * core: Prevent crash when clicking mailbox.org calendar provider
+* core: Reject blank CalDAV credentials before connecting
+* core: Keep Radicale auth failures flagged for reauth after 403 mapping change
 * core: Auto-discover calendars during CalDAV onboarding
+* core: Finish wiring mailbox.org through onboarding and runtime client paths
 * core: Keep signup form responsive when the email field is missing
 * core: Downgrade webhook redirects from POST to GET on 301/302/303
 * core: Make Outlook delta sync resilient to expired and partial responses
 * core: Align booking integration selection across meeting schemas
-* core: Stop duplicating attendee message in calendar events
-* core: Reject blank CalDAV credentials before connecting
-* core: Keep Radicale auth failures flagged for reauth after 403 mapping change
-* core: Finish wiring mailbox.org through onboarding and runtime client paths
 * core: Enable mailbox.org in the runtime calendar-provider toggle list
 * core: Include mailbox.org in remaining CalDAV provider lists
+* core: Stop duplicating attendee message in calendar events
 * core: Hide task-only CalDAV calendars from event calendar pickers
 * core: Prevent CalDAV permission errors from disconnecting calendars
 * core: Pre-fill and lock server URL in mailbox.org calendar setup
@@ -519,7 +485,6 @@
 * core: Refresh scheduling page availability on calendar sync
 * core: Make CalDAV full-fetch reconciliation atomic
 * core: Centralise attendee notifications with change detection and ICS sequencing
-* core: Centralise attendee notifications with change detection and ICS sequencing
 * core: Handle move_event_async failures via offline queue
 * core: Wire dashboard direct edit into CalDAV offline queue
 * core: Wire dashboard create/delete into CalDAV offline queue
@@ -539,7 +504,6 @@
 * core: Harden security module against edge-case bypasses
 * core: Honour configured meeting type order on public booking page
 * core: Normalise provider to atom in CalDAV health check client
-* Resolve umbrella root from RELEASE_ROOT in runtime config
 * core: Stop entity-encoding plain-text fields in UniversalSanitizer
 * core: Prevent Quick Actions card overflow on mobile dashboard
 * core: Prevent logo and user dropdown overlap on mobile dashboard
@@ -573,9 +537,9 @@
 * core: Add periodic forced full re-sync for CalDAV integrations
 * core: Fingerprint calendar events created by Tymeslot
 * core: Add og-image.png social card for Open Graph meta tags
-* core: Enrich admin alerts with structured reason and PII scrubbing
 * core: Normalise all calendar providers through canonical CalendarEvent
 * core: Add canonical CalendarEvent struct and provider_calendar_events table
+* core: Enrich admin alerts with structured reason and PII scrubbing
 * core: Add standardised admin alerts infrastructure
 
 
@@ -591,11 +555,19 @@
 * core: Add TLD validation to domain validator
 * core: Add TLD validation to email validator
 * core: Add TLD list module with typo suggestions
-* core: Add TLD data file for domain ending validation
 * core: Add calendar invitation emails with attendee management
+* core: Add TLD data file for domain ending validation
 * core: Add multi-attendee support to calendar events
 * core: Add ad-hoc meeting invitations from dashboard calendar
 * core: Show empty state banner when no calendars are connected
+
+
+[0.99.39]
+
+
+[0.99.38]
+
+
 [0.99.37]
 
 
@@ -616,6 +588,8 @@
 * core: Add calendar grid UI with inline title editing
 * core: Add calendar event sync engine
 * core: Rename integration routes and add scheduling/calendar mode tab bar
+
+
 [0.99.35]
 
 
@@ -626,9 +600,7 @@
 * core: Fix timezone dropdown height, width, and popular ordering
 * core: Improve Quill overview duration card visibility and avatar alignment
 * core: Prevent time slots from stretching when period has few slots
-* core: Harden workers against edge cases and security gaps
 * core: I18n organizer reminder email and sanitize error output in CalDAV sync
-* Preserve existing versions when adding new entry in set_version
 * core: Replace TzExtra with curated continent city modules
 * core: Multi-account integration support
 * core: Multi-account integration support with per-account uniqueness
@@ -636,6 +608,10 @@
 
 [0.99.33]
 * core: Add tzdata and logger config to core runtime.exs
+* core: Resolve WebSocket and OAuth failures on Cloudron deployment
+
+
+[0.99.32]
 * core: Resolve WebSocket and OAuth failures on Cloudron deployment
 * themes: Scope container margin removal to modal embed mode only
 * core: Harden availability edge cases — IDOR protection, cache invalidation, input guards
@@ -667,10 +643,10 @@
 [0.99.29]
 * core: Fix dashboard headline position on automation and profile pages
 * core: Use check_all_queues in healthcheck to handle test mode
-* core: Fix stale modal retry interval and digested filename error handler
-* core: Harden embed edge cases found in audit
 * core: Calendar integration edge cases — stale refs, timezone boundaries, error reporting
 * core: Harden video integration edge cases — upsert on OAuth, unique constraint, graceful JSON handling
+* core: Fix stale modal retry interval and digested filename error handler
+* core: Harden embed edge cases found in audit
 * core: Harden theme customisation — error tuples, browsing_type guard, image size limit
 * core: Discard permanent meeting errors and log confirmation step failures
 * core: Guard booking step against double-submission and direct URL access
@@ -710,6 +686,8 @@
 
 [0.99.26]
 * core: Show booking validation errors per-field based on touched state
+
+
 [0.99.25]
 
 
@@ -720,7 +698,6 @@
 
 
 [0.99.23]
-* core: Sync version tags to gitea-core after each push
 
 
 [0.99.22]
@@ -770,7 +747,6 @@
 * Request meetings.space.created scope in Google Meet OAuth flow
 * Use hexpm bookworm builder to satisfy cloudron/base OpenSSL 3.0
 * Use debian:trixie-slim runtime to satisfy OpenSSL 3.4 requirement
-* Make "Your link" box fully responsive on homepage
 * core: Add changelog link to site footer
 * Add Docs link to site footer
 
@@ -809,12 +785,10 @@
 * core: Gate OAuth registration paths on REGISTRATION_ENABLED flag
 * core: Deduplicate registration-disabled message and gate complete-registration route
 * core: Build embed.js via esbuild and bump version to 0.99.12
-* core: Add REGISTRATION_ENABLED feature flag
 * core: Add REGISTRATION_ENABLED flag to gate all registration paths
 
 
 [0.99.11]
-* core: Suppress gettext opaque-type Dialyzer false positives in umbrella ignore file
 * core: Name unused variable consistently in calendar workflows
 * core: Add missing in_person provider icon assets
 * core: Correct broken calendar link in meeting settings empty state
@@ -826,7 +800,6 @@
 * health_check: Name unused pattern variables consistently
 * onboarding: Persist browser-detected timezone to DB on mount
 * health_check: Normalize orchestrate_health_check return to match spec
-* test: Configure stripe_provider in cancel_subscription test setup
 * test: Configure google_oauth state secret in VideoOAuthController test setup
 * test: Fix FunctionClauseError in webhook worker timeout test
 
@@ -835,7 +808,6 @@
 * dialyzer: Suppress false-positive call_without_opaque in gettext.ex
 * core: Harden worker logging — safe error formatting, early discard on missing meeting
 * payments: Expire superseded Stripe checkout sessions on retry
-* tzdata: Disable autoupdate to prevent crashes on read-only container filesystem
 * db: Cascade delete meetings when user is deleted
 * structured_logger: Suppress unused variable warning in log_by_phase/2
 * core: Add ObanLogger telemetry handler for job process tracing
@@ -844,9 +816,7 @@
 
 
 [0.99.8]
-* logging: Clear all remaining SaaS Logger violations (Phase 5)
 * logging: Raise Credo checks to :high and clear all remaining Core violations (Phase 5)
-* logging: Fix SaaS app Logger violations (Phase 4)
 * logging: Fix workers and web layer Logger violations (Phase 3)
 * logging: Fix infrastructure and security domain Logger violations (Phase 3)
 * logging: Fix integrations domain Logger violations (Phase 3, integrations)
@@ -860,6 +830,8 @@
 [0.99.7]
 * Correctly preserve meeting duration through the booking flow (closes #17)
 * video-oauth: Use provider-specific state secrets for Google Meet and Teams
+
+
 [0.99.6]
 
 
@@ -868,12 +840,10 @@
 * caldav: Harden percent-encoding fix for reliability and completeness
 * caldav: Handle percent-encoded calendar IDs in validation and matching
 * dev: Increase Oban stage_interval to avoid crash during code reload
-* tests: Rename inline mock to avoid false Credo TestModuleTagRequired warning
 * tests: Resolve ambiguous selectors and async assertion in VideoSettingsComponentTest
 * dialyzer: Suppress false contract_with_opaque on valid_ids/0
 * caldav: Suppress retries on guessed discovery path
 * ui: Move integration card action buttons next to toggle on desktop
-* ui: Stack contact form response message and button vertically on mobile
 * ui: Improve theme customization toolbar and background tabs on mobile
 * ui: Improve webhook card layout on mobile
 * ui: Improve calendar integration card layout on mobile
@@ -916,17 +886,13 @@
 * railway: Use absolute path for release binary in railway_start.sh
 * railway: Use shell script for start cmd to avoid eval escaping issues
 * railway: Move nixpacks.toml to apps/tymeslot (Railway root directory)
-* railway: Build Mix release in Nixpacks and use binary for migrations
 
 
 [0.99.1]
 * microsoft-oauth: Surface admin consent required error to users
-* credo: Alias Tymeslot.Repo at module top in onboarding email worker test
 * docker: Remove redundant hex/rebar install step
-* config: Align upload_directory dev path with core app location
 * csp: Resolve Credo warnings in SecurityHeadersPlug
 * csp: Add analytics provider origins to script-src
-* test: Add @moduletag to inline MockSubManagerForSaaSTest module
 * test: Rename bare _ to _i in for comprehension to satisfy Credo consistency check
 * test: Pre-exhaust rate limit via API to prevent clear_all race in embed settings test
 * core: Resolve compiler warnings and Credo violations
@@ -936,7 +902,6 @@
 * core: Fix scheduling box overflow when time slots list is too long
 * core: Remove duplicate Tymeslot suffix from page titles
 * core: Harden password DoS guard and sanitize backslash redirects
-* railway: Add Nixpacks config for Railway deployment
 * auth: Add regenerate_verification_token/1 to Auth context
 * core: Add integration_unhealthy email template tests and fix strong tag rendering
 * core: Persist integration health state and notify users on sustained failures
@@ -973,7 +938,6 @@
 * core: Resolve Credo warnings for nested module aliases and line length
 * core: Handle empty string meeting_id in custom video provider
 * core: Add rate limiting to all dashboard write operations
-* core: Add rate limiting to all dashboard write operations
 * core: Implement structured logging with logger_json
 * security: Add spam protection to booking forms with honeypot and reCAPTCHA v3
 * security: Add rate limiting to theme customization and meeting operations
@@ -1007,59 +971,45 @@
 [0.97.1]
 * Resize caldav, local, and custom icons to match other provider icons
 * Remove vertical jump on brand-card hover
-* Contact form emails not being sent
 * Remove false positive logging in universal sanitizer
 * Restore spillover functionality in availability tests
-* Preserve rewritten author email in incremental sync
 * Sync video circuit breaker providers with actual video integrations
-* Restore original branch after core sync completes
 * Add fallback for unsupported Flagpack country codes in timezone selector
-* Avoid null-byte parsing issues in commit metadata extraction
 * Correctly parse castore CA certificates from PEM file
-* Correct incremental sync detection to compare unfiltered histories
 * Improve CalDAV server detection accuracy and legacy support
 * Correct Docker build context and use committed dependency versions
 * Correct Microsoft OAuth redirect URIs and add missing details in .env.example
-* Remove overly strict uncommitted changes check in sync-core.sh
 * Correct Google Meet provider name from google_calendar to google_meet
 * Support slug format in duration formatting
-* Add critical validation and correctness fixes to sync-core.sh
 * Move custom_input_mode_helper.ex to match module name convention
 * Use consistent provider icons across all integration UI surfaces
 * Update test assertions after component and locale changes
 * Update locale plug tests after adding French support
 * Auto-detect CalDAV server types for proper authentication
 * Add missing translation strings to English locale
-* Alias Mix.Dep.Lock at module top in mix_lock_alignment_test.exs
-* Align postgrex version in core mix.lock with root
-* Use dynamic app URL instead of hardcoded domain in onboarding
-* Use standard ports for Docker URL generation in production
-* Move Umami analytics configuration to runtime for SaaS deployment
-* Use --force-with-lease for tymeslot-core sync to handle diverged history
-* Improve test infrastructure and eliminate warnings
-* Contact support validation now always runs on blur
-* Add nil-safe fallbacks to pricing and fix zero-duration parsing
 * Add configurable LISTEN_IP with robust validation
 * Enhance custom video provider support
 * Add template variable support for custom video URLs with fragment validation
 * Add complete French (fr) translation support
-* Rewrite author email to GitHub no-reply for tymeslot-core sync
+
+
+[0.96.2]
+* Align postgrex version in core mix.lock with root
+* Use dynamic app URL instead of hardcoded domain in onboarding
+* Use standard ports for Docker URL generation in production
+* Add nil-safe fallbacks to pricing and fix zero-duration parsing
 
 
 [0.96.1]
 * Explicitly block auth routes in robots.txt
-* Resolve unused variable warning in mix lock alignment test
-* Exclude /legal/accept from sitemap to prevent indexing
 * Remove unused variable in ensure_calendar_list
 * Resolve code quality warnings
-* Improve code readability in SaaS overlay
 * Improve code readability and performance in core
 * Resolve race condition and improve queue monitoring infrastructure
 * Remove Core deps symlink and align dependency versions
 * Enable standalone core deployment and make Stripe optional
 * Skip empty blur validation and extract avatar modal
 * Unify form input spacing for leading icons and prefixes
-* Clarify legal acceptance tracking
 * Streamline video room creation and theme tests
 * Import flash_group in auth layout
 * embed: Build safe URLs and restore overflow
@@ -1075,14 +1025,12 @@
 * Improve video room worker robustness and fix test assertions
 * Allow localhost and 127.0.0.1 for embedding in development
 * Restore QuillVideo hook and add theme hook tests
-* Remove invalid tailwind_scheduling watcher from dev config
 * Remove unused scheduling.css from tailwind build config
 * quill: Prevent duration tag from stretching with multi-line titles
 * Ensure custom credo checks are loaded in core app
 * Expand Stripe webhook handling and idempotency
 * Enhance payment reconciliation and subscription persistence reliability
 * Improve payment system robustness and configuration consistency
-* Remove unreachable error pattern in AdminAlerts rate limit check
 * Resolve credo and logger warnings in admin alerts and email service
 * Resolve credo issues and warnings across umbrella project
 * Resolve unreachable patterns and high complexity in webhook handlers
@@ -1096,104 +1044,6 @@
 * Handle DST gaps in business hours and harden OAuth token validation
 * availability: Respect business days in fallback logic and harden tests
 * email-testing: Update testers with missing fields for template rendering
-* Update password reset validation error message in tests
-* Alias nested modules at top of test modules
-* Resolve dialyzer issues in mirotalk_prod_smoke and recaptcha modules
-* mirotalk: Resolve invalid token errors for participant join URLs
-* auth: Simplify login validation to essentials
-* health_check: Prevent GenServer crash on missing Calendar module
-* Fetch events for entire booking window, not just current month
-* Remove catch-all clauses and fix type issues
-* Resolve Dialyzer type safety issues
-* live: Remove Mix.env from BookingsManagementComponent event handlers to prevent release-time crash\n\nMix is not available at runtime in releases, which caused an UndefinedFunctionError when clicking cancel/reschedule. Replace dev-only logging guards with Logger.debug calls (filtered by log level in prod).
-* calendar: Tolerate {:ok, _} return values for update/delete in ProviderAdapter and behaviour
-* calendar: Always update calendar event after video room/link is attached so Google and other calendar descriptions/location include the video URL; ensures correct link synchronization
-* meetings,video,health: Only auto-create meeting video rooms for supported providers; delay emails only when API room creation is available; harden provider health checks to avoid crash on missing modules (correct Elixir rescue syntax); fixes missing Google Meet links and health checker GenServer crash
-* Properly encode MiroTalk participant names in URLs
-* Add proper cleanup for video elements in LiveView hooks
-* Update provider icons with corrected visuals
-* Resolve Nextcloud/CalDAV integration issues and optimize performance
-* Correct function arity warnings in integration test connections
-* Use attendee-specific video URL in email confirmation templates
-* Calendar integration form validation and field persistence
-* Handle nil provider field in account settings to prevent crashes
-* Fix timezone display in meetings dashboard and enhance UI
-* Fix Google Calendar event deletion with UUID conversion
-* Resolve credo warnings for code quality improvements
-* Remove unnecessary Map.from_struct call in Google Meet provider
-* Resolve credo --strict issues in meeting settings components
-* Improve multi-user support with username-based URLs and timezone handling
-* Add cache invalidation for OAuth integrations to update dashboard sidebar
-* Resolve GenServer deadlock in DataConsistency scheduled checks
-* Replace "Personal Meeting Scheduler" fallback with "Tymeslot" across email templates
-* Update email footer to use Tymeslot branding instead of personal reference
-* Update GitHub repository URL to organization account
-* Add runtime configuration for social auth environment variables
-* Resolve Dialyzer pattern matching warnings in scheduling helpers
-* Update demo theme references for consolidated demo system
-* Add flash message to Quill theme demo booking confirmation
-* Change Tailwind imports to directive syntax in scheduling utilities
-* Remove Tailwind imports from Rhythm theme CSS
-* Create upload directory at runtime in start.sh to handle volume mounts
-* Rename Dockerfile.cloudron to prevent auto-detection, keep DEPLOYMENT_TYPE=main
-* Force complete rebuild and add debug logging for upload directory
-* Standardize tzdata directory to /app/data/tzdata across all deployments
-* Standardize upload directory to /app/data/uploads across all deployments
-* Update Quill theme wrapper function call consistency
-* Replace step navigation links with buttons for better Phoenix LiveView integration
-* Adjust confirmation slide CSS layout for better mobile compatibility
-* Update theme customization helpers to use Demo.Resolver
-* Update demo theme controller redirect paths
-* Support both today and is_today fields in calendar day highlighting
-* Improve user query error handling consistency
-* Disable email and password changes for social login users
-* Improve dropdown option text visibility in calendar manager
-* Enable video backgrounds in Quill theme
-* Fix error handling in video integration config components
-* Resolve avatar upload stuck at 0% progress issue
-* Update profile schema username validation to allow underscores
-* Correct authentication URLs and error handling
-* Improve username validation and security rules
-* Show 'Back to Website' link only on main deployment
-* Resolve dual scrollbar issue in authentication pages
-* Make timezone selector more compact on mobile devices
-* Mobile optimization for Rhythm theme
-* Fix homepage hero section responsive layout and vertical centering
-* Correct field names in meetings dashboard component
-* Improve mobile responsiveness for availability dashboard
-* Fix mobile navigation z-index issues on legal pages
-* Preserve theme customization state in Rhythm theme
-* Update component templates and improve separation of concerns
-* Ensure overview page content is vertically centered
-* Preserve form state when changing icons in meeting settings
-* Apply theme color customizations to buttons and UI elements
-* Handle string error messages in meeting settings form
-* Code style improvements for auth modules
-* Email verification process and add IP-based auto-login
-* Disable scheduling page link and copy button when username not set
-* Clean up database migration and add static assets
-* Improve avatar path resolution for static assets
-* Handle double tuple wrapping in calendar provider registry
-* Improve availability management form handling
-* Update configurations and enhance security features
-* Update meeting type schema to default allow_video to false
-* Remove automatic onboarding completion for OAuth users
-* Minor UI and code quality improvements
-* Fix auth test failures and improve test quality
-* Resolve all database schema test failures and enhance test coverage
-* Remove cloudron_env_set.txt from git tracking
-* Update Google Meet HTTP response pattern matching
-* Pass user context properly in MiroTalk video provider
-* Resolve Dialyzer warnings and improve type specs
-* Correct OAuth token refresh return value format
-* Update dashboard_live module references after infrastructure refactor
-* Resolve OAuth state validation issues
-* Clean up video integrations migration to remove duplicate field
-* Add migration to fix default booking theme
-* Remove unused update_timezone function that conflicts with import
-* Resolve worker test issues and prevent real email sending
-* Use owner's timezone in calendar sync error emails
-* Remove sensitive data from application logs
 * email: Add comprehensive SMTP configuration and startup validation
 * Add external database support for Docker deployment
 * Restore marketing screenshots and update gitignore rules
@@ -1204,7 +1054,6 @@
 * Enhance datetime utils with more robust parsing and testing
 * Add user agent to LiveView connect_info and improve extraction
 * Add generic analytics provider support with Umami implementation
-* Implement SEO meta tags for SaaS marketing pages
 * Dynamic robots.txt serving based on deployment type
 * Implement sitemap.xml for SaaS marketing site
 * Suppress LiveView disconnect toast during OAuth navigation
@@ -1215,7 +1064,6 @@
 * Add show_branding feature flag to control "Powered by Tymeslot" visibility
 * Rename notification settings to automation and add bolt icon
 * Implement integrated branding footer for scheduling pages
-* Add separate asset pipeline and layouts for SaaS app
 * Background subscription event processing and cancellation persistence
 * Replace native confirmation with themed modal for subscription cancellation
 * Add support for customer.updated webhook event
@@ -1224,13 +1072,10 @@
 * Implement Phase 4 - payment system feature completeness
 * Make add break form collapsible in availability settings
 * Implement robust Stripe webhook handlers for disputes, refunds, and trials
-* Add dev support for testing new SaaS email templates
 * Implement SaaS-specific payment email templates and tests
-* Add trial support and dispute tracking to SaaS subscriptions
 * Log unhandled stripe events and update env template
 * Enhance embed widget security and customization
 * Implement drag-and-drop reordering for meeting types
-* Integrate screenshot gallery into homepage
 * Implement Stripe payments and SaaS subscription management
 * Enhance SaaS email infrastructure and dashboard integration
 * Add default reminder settings and transition to slug-based meeting types
@@ -1252,164 +1097,4 @@
 * Implement booking widget embedding with security controls
 * Complete app redesign and modernization
 * Refactor webhooks into a unified notifications dashboard
-* Enhance email worker and improve test coverage
-* time: Handle flexible input formats
-* auth: Block duplicate registrations before insert
-* oauth: Share microsoft token exchange flow
-* auth: Add shared oauth authenticator module
-* Improve Rhythm theme scheduling flow with better state orchestration
-* Enhance booking creation with calendar validation and video room detection
-* Improve calendar operations resilience with timeout management
-* Add calendar sync error notifications
-* typespecs: Add comprehensive @specs and type aliases across codebase; harden theme background normalization
-* Add pagination system and shared scheduling modules
-* Enhance account management security for email and password changes
-* Implement comprehensive theme customization system
-* Enhance email testing module with comprehensive template coverage
-* Enhance development tooling with Credo checks and improved Outlook script
-* Enhance application architecture with task supervision
-* Add calendar connection validation and UI loading states
-* Improve dashboard UI state management and calendar integration
-* Enhance meeting data structure and email templates
-* Enhance custom video provider security and reliability
-* Optimize calendar provider performance with skip validation option
-* Enhance calendar UI with primary calendar and Radicale support
-* Add credential manager and enhance calendar security validation
-* Add primary calendar selection and management
-* Add Radicale calendar provider support
-* Implement secure email change functionality with two-step verification
-* Add auto-upload functionality to dashboard file inputs
-* Add centralized policy enforcement for meeting cancellation and rescheduling
-* Enhance upload system with enterprise-grade security and reliability
-* Enhance authentication security and error handling
-* Add helper modules for page management
-* Improve theme customization system
-* Add new WebP theme background images
-* Add logo icon to navigation across all pages
-* Simplify Docker deployment with enhanced build process and Docker Compose support
-* Add configurable social authentication with environment variables
-* Add demo username plug for deployment-specific demo access
-* Enhance Quill theme UX and responsiveness
-* Add dedicated auth CSS modules and enhance social auth buttons
-* Optimize demo meeting types and remove unused consultation type
-* Enhance Rhythm theme booking flow with full validation and orchestration
-* Add comprehensive demo system with synthetic data generation
-* Auto-select primary calendar as default booking calendar for OAuth providers
-* Implement video backgrounds for Quill theme and improve step navigation
-* Add theme preview functionality and enhance Quill theme
-* Implement comprehensive mobile video optimization and responsive design
-* Enhance core business logic with improved reliability and performance
-* Enhance integration system with improved reliability and error handling
-* Add database query optimization and comprehensive test coverage
-* Add deployment-specific route protection
-* Add Umami analytics support in security headers
-* Add email verification resend functionality
-* Add self-hosted deployment routing
-* Add Umami analytics integration
-* Add reschedule request functionality
-* Implement comprehensive demo system
-* Add deployment detection system
-* Add calendar tracking to meetings
-* Add Umami analytics tracking for main deployment
-* Improve homepage design with provider icons and enhanced UI
-* Add main cloud deployment configuration
-* Add video background system with optimized assets
-* Enhance theme customization system
-* Add core theme infrastructure and architecture
-* Add theme infrastructure components
-* Add video and image background presets
-* Enhance theme customization UI with preview and presets
-* Implement centralized theme registry system
-* Enhance scheduling theme components
-* Add theme wrapper architecture for better isolation
-* Enhance theme customization system with CSS variables
-* Enhance onboarding flow with better form handling
-* Add theme customization system
-* Add multi-deployment strategy with Docker and Cloudron support
-* Make domain configuration dynamic using PHX_HOST environment variable
-* Add flexible email adapter configuration supporting SMTP and Postmark
-* Enhance homepage with improved features section and styling
-* Add environment variables example file and update gitignore
-* Add GitHub open source link to homepage
-* Enhance Rhythm theme responsiveness and usability
-* Add dashboard component directories
-* Replace default video provider text badge with star icon
-* Add multi-calendar support with selective sync and booking destination
-* Add video provider icons and meeting type modal component
-* Add theme preview support via URL parameters
-* Add clipboard copy functionality for scheduling link
-* Add modal-based deletion for meeting types
-* Add support for local video provider icon
-* Enhance settings component with auto-save, modal for avatar deletion, and improved validation
-* Add comprehensive input validation and sanitization system
-* Add comprehensive input validation and sanitization system
-* Add new domain modules and utilities
-* Add interactive hero component and footer branding
-* Add modal component and styling system
-* Add standalone timezone dropdown component
-* Enhance payment dashboard UI with improved design and readability
-* Add video integration support to meeting types
-* Add new meeting settings component replacing meeting types
-* Add dashboard navigation notification badges
-* Add theme selection component to dashboard
-* Add refined glassmorphism styling for dashboard sidebar
-* Add Oban maintenance worker for background job cleanup
-* Add video crossfade functionality for auth and rhythm themes
-* Add comprehensive integration monitoring and reliability system
-* Add comprehensive database indexes for performance optimization
-* Add new infrastructure and utility modules
-* Add account type warning for Microsoft Teams integration
-* Implement Microsoft Teams OAuth integration for video provider
-* Add support for full URLs in CalDAV integration
-* Add debug utilities and database migration
-* Add calendar event management (CRUD operations)
-* Make CalDAV provider universally compatible with all CalDAV servers
-* Add Nextcloud Calendar integration with user-controlled calendar selection
-* Add Outlook Calendar OAuth integration with comprehensive testing
-* Add Google Calendar integration with comprehensive testing
-* Enhance OAuth authentication with improved error handling and validation
-* Enhanced video provider UI with comprehensive integration options
-* Extend video integration schema for multi-provider support
-* Add database migrations for Zoom and Teams video integration support
-* Add availability management to dashboard
-* Implement weekly availability and breaks management system
-* Add weekly availability database schemas and migrations
-* Add local file serving for uploaded avatars
-* Implement custom avatar upload system
-* Enhance UI components with theme selection and safety improvements
-* Update LiveView pages and scheduling components
-* Enhance database queries and email service
-* Update UI components for enhanced authentication flow
-* Enhance security and logging infrastructure
-* Enhance OAuth implementation with transactional safety
-* Add database migrations for enhanced authentication
-* Add infrastructure improvements for better observability
-* Add routing and styling for new authentication system
-* Enhance profile system and dashboard integration
-* Modernize authentication components for LiveView
-* Add user onboarding system
-* Enhance authentication core system
-* Add comprehensive authentication security system
-* Update core components with icon support
-* Enhance dashboard with meeting type icon management
-* Add Rhythm theme glass morphism styling
-* Implement theme dispatcher architecture
-* Add specialized handler system for theme functionality
-* Add meeting type icons with heroicon support
-* Implement Rhythm theme slide-based UI system
-* Add timezone country code mapping and flag support
-* Implement independent theme architecture with unified LiveView system
-* Add EnsureLocalAccessPlug for localhost-only routes
-* Add Microsoft Teams video conferencing integration
-* Add Zoom video conferencing integration
-* Add Google Meet video conferencing integration
-* Add Apple Calendar integration with OAuth support
-* Add Outlook Calendar integration with OAuth support
-* Add Google Calendar integration with OAuth support
-* Update application configuration and dependencies
-* Add security, utilities, and helper modules
-* Add comprehensive dashboard and scheduling LiveView system
-* Add user profiles, integrations, and meeting types schemas
-* Comprehensive authentication system with OAuth integration
-* Extend calendar retry duration to 12 minutes
 
