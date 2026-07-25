@@ -8,6 +8,23 @@ defmodule Tymeslot.Integrations.Calendar.HTTP do
 
   alias Tymeslot.Infrastructure.Config
 
+  @doc """
+  Human-readable detail for a provider 404, derived from the request path.
+
+  Google and Outlook both answer a missing calendar and a missing event with a
+  bare 404, so only the path tells them apart. Event-scoped paths end in an
+  event id (`…/events/<id>`); Google's `…/events/watch` is the push-channel
+  subscription endpoint and is calendar-scoped, as is a request against the
+  event collection itself (`…/events`).
+  """
+  @spec not_found_message(String.t()) :: String.t()
+  def not_found_message(path) do
+    case path |> String.split("/") |> Enum.take(-2) do
+      ["events", id] when id != "watch" -> "Event not found"
+      _calendar_scoped -> "Calendar not found"
+    end
+  end
+
   @spec request(atom() | String.t(), String.t(), String.t(), String.t(), keyword()) :: any()
   def request(method, base_url, path, token, opts \\ []) do
     case normalize_method(method) do

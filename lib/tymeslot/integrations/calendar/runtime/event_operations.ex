@@ -8,6 +8,13 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   - Delete events by UID
   - Get single events by UID
   - Context-aware routing (integration_id vs Meeting context)
+
+  Failures surface as `{:error, type}`, where `type` is the provider's
+  classification atom (`:not_found`, `:unauthorized`, `:rate_limited`, …).
+  Callers dispatch on that atom — `CalendarEventSync` recreates a missing
+  event, `CalendarEventWorker` maps it to a retry outcome — so a provider's
+  `{:error, type, message}` is reduced to its type here and the message is
+  logged rather than returned.
   """
 
   require Logger
@@ -62,7 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
             reason: inspect(reason)
           )
 
-          {:error, reason}
+          {:error, type}
 
         {:error, reason} = error ->
           Logger.error("Failed to create calendar event", reason: inspect(reason))
@@ -97,7 +104,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
             reason: inspect(reason)
           )
 
-          {:error, reason}
+          {:error, type}
 
         {:error, reason} = error ->
           Logger.error("Failed to update calendar event", uid: uid, reason: inspect(reason))
@@ -136,7 +143,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
             reason: inspect(reason)
           )
 
-          {:error, reason}
+          {:error, type}
 
         {:error, reason} = error ->
           Logger.error("Failed to delete calendar event",

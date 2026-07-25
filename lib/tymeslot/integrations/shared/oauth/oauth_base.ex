@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   that are common across different OAuth-based calendar providers like Google and Outlook.
   """
 
+  require Logger
+
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.PrimarySelection
   alias Tymeslot.Integrations.Common.ConfigManager
@@ -88,7 +90,15 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   @doc """
   Wraps API calls with standardized error handling.
 
-  Converts provider-specific error tuples to normalized format.
+  Provider API modules classify a failure as `{:error, type, message}`: an atom
+  the caller can act on, plus a human-readable detail. Everything above this
+  layer dispatches on the atom — `CalendarEventSync` recreates an event on
+  `{:error, :not_found}`, and `CalendarEventWorker` classifies `:unauthorized`,
+  `:rate_limited` and `:not_found` into discard/snooze/success outcomes — so
+  the atom is what propagates. The message would be indistinguishable from any
+  other opaque string at those call sites, so it is logged here rather than
+  returned. CalDAV providers already answer with `{:error, atom}`; this keeps
+  both families speaking the same contract.
   """
   @spec handle_api_call((-> any()), (any() -> any())) :: {:ok, any()} | {:error, any()} | :ok
   def handle_api_call(api_call_fn, conversion_fn \\ &Function.identity/1)
@@ -96,9 +106,18 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
     case api_call_fn.() do
       {:ok, result} -> {:ok, conversion_fn.(result)}
       :ok -> :ok
-      {:error, _type, reason} -> {:error, reason}
+      {:error, type, message} -> log_typed_error(type, message)
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  defp log_typed_error(type, message) do
+    Logger.warning("Calendar provider API call failed",
+      error_type: type,
+      reason: inspect(message)
+    )
+
+    {:error, type}
   end
 
   @doc """
