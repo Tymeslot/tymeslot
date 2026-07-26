@@ -27,7 +27,21 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.OAuthTokenManager
+  alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+
+  @capabilities Capabilities.new!(
+                  recording: true,
+                  screen_sharing: true,
+                  waiting_room: false,
+                  max_participants: 250,
+                  requires_download: false,
+                  dial_in: true,
+                  chat: true,
+                  breakout_rooms: true,
+                  end_to_end_encryption: true,
+                  live_streaming: true
+                )
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def provider_type, do: :google_meet
@@ -54,21 +68,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def capabilities do
-    %{
-      recording: true,
-      screen_sharing: true,
-      waiting_room: false,
-      max_participants: 250,
-      requires_download: false,
-      supports_phone_dial_in: true,
-      supports_chat: true,
-      supports_breakout_rooms: true,
-      end_to_end_encryption: true,
-      supports_live_streaming: true,
-      supports_recording: true
-    }
-  end
+  def capabilities, do: @capabilities
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_meeting_room(config) do

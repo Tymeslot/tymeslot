@@ -32,18 +32,18 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
     test "returns correct capabilities for custom provider" do
       capabilities = CustomProvider.capabilities()
 
-      assert capabilities[:supports_instant_meetings] == true
-      assert capabilities[:supports_scheduled_meetings] == true
-      assert capabilities[:supports_recurring_meetings] == true
-      assert capabilities[:supports_waiting_room] == false
-      assert capabilities[:supports_recording] == false
-      assert capabilities[:supports_dial_in] == false
+      assert capabilities[:instant_meetings] == true
+      assert capabilities[:scheduled_meetings] == true
+      assert capabilities[:recurring_meetings] == true
+      assert capabilities[:waiting_room] == false
+      assert capabilities[:recording] == false
+      assert capabilities[:dial_in] == false
       assert capabilities[:max_participants] == nil
       assert capabilities[:requires_account] == false
-      assert capabilities[:supports_custom_branding] == true
-      assert capabilities[:supports_breakout_rooms] == false
-      assert capabilities[:supports_screen_sharing] == false
-      assert capabilities[:supports_chat] == false
+      assert capabilities[:custom_branding] == true
+      assert capabilities[:breakout_rooms] == false
+      assert capabilities[:screen_sharing] == false
+      assert capabilities[:chat] == false
       assert capabilities[:requires_work_account] == false
       assert capabilities[:is_custom_provider] == true
     end

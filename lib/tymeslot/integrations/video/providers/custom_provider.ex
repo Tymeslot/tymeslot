@@ -44,12 +44,30 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   """
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.TemplateConfig
 
   require Logger
 
   @behaviour ProviderBehaviour
+
+  @capabilities Capabilities.new!(
+                  instant_meetings: true,
+                  scheduled_meetings: true,
+                  recurring_meetings: true,
+                  waiting_room: false,
+                  recording: false,
+                  dial_in: false,
+                  max_participants: nil,
+                  requires_account: false,
+                  custom_branding: true,
+                  breakout_rooms: false,
+                  screen_sharing: false,
+                  chat: false,
+                  requires_work_account: false,
+                  is_custom_provider: true
+                )
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_meeting_room(config) do
@@ -265,24 +283,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def capabilities do
-    %{
-      supports_instant_meetings: true,
-      supports_scheduled_meetings: true,
-      supports_recurring_meetings: true,
-      supports_waiting_room: false,
-      supports_recording: false,
-      supports_dial_in: false,
-      max_participants: nil,
-      requires_account: false,
-      supports_custom_branding: true,
-      supports_breakout_rooms: false,
-      supports_screen_sharing: false,
-      supports_chat: false,
-      requires_work_account: false,
-      is_custom_provider: true
-    }
-  end
+  def capabilities, do: @capabilities
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def handle_meeting_event(_event, _room_data, _additional_data), do: :ok

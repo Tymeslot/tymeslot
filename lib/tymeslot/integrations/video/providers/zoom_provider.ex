@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.OAuthTokenManager
+  alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -23,6 +24,22 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   @api_base_url "https://api.zoom.us/v2"
   @zoom_url_pattern ~r/zoom\.us\/(j|my|w)\//
+
+  @capabilities Capabilities.new!(
+                  instant_meetings: true,
+                  scheduled_meetings: true,
+                  recurring_meetings: true,
+                  waiting_room: true,
+                  recording: true,
+                  dial_in: true,
+                  max_participants: 100,
+                  requires_account: true,
+                  custom_branding: false,
+                  breakout_rooms: true,
+                  screen_sharing: true,
+                  chat: true,
+                  requires_work_account: false
+                )
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_meeting_room(config) do
@@ -126,23 +143,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def capabilities do
-    %{
-      supports_instant_meetings: true,
-      supports_scheduled_meetings: true,
-      supports_recurring_meetings: true,
-      supports_waiting_room: true,
-      supports_recording: true,
-      supports_dial_in: true,
-      max_participants: 100,
-      requires_account: true,
-      supports_custom_branding: false,
-      supports_breakout_rooms: true,
-      supports_screen_sharing: true,
-      supports_chat: true,
-      requires_work_account: false
-    }
-  end
+  def capabilities, do: @capabilities
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def handle_meeting_event(:meeting_ended, room_data, _additional_data) do

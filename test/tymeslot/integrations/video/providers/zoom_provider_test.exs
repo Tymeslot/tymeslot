@@ -35,9 +35,9 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
     test "returns correct capabilities for Zoom" do
       capabilities = ZoomProvider.capabilities()
 
-      assert capabilities[:supports_scheduled_meetings] == true
-      assert capabilities[:supports_recurring_meetings] == true
-      assert capabilities[:supports_waiting_room] == true
+      assert capabilities[:scheduled_meetings] == true
+      assert capabilities[:recurring_meetings] == true
+      assert capabilities[:waiting_room] == true
       assert capabilities[:max_participants] == 100
       assert capabilities[:requires_account] == true
       assert capabilities[:requires_work_account] == false

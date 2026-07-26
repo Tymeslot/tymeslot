@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   seamless switching between different video conferencing platforms.
   """
 
+  alias Tymeslot.Integrations.Video.Providers.Capabilities
+
   @doc """
   Creates a new meeting room.
 
@@ -83,8 +85,15 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
 
   This helps the system understand what features the provider supports
   (e.g., recording, screen sharing, waiting rooms, etc.).
+
+  The keys are a closed vocabulary declared by
+  `Tymeslot.Integrations.Video.Providers.Capabilities`. Build the map with
+  `Capabilities.new!/1` from a module attribute so an unknown or missing key
+  fails at compile time: `ProviderRegistry.providers_with_capability/1` reads
+  the map with `Map.get/3`, so a misspelt key is indistinguishable from an
+  unsupported feature.
   """
-  @callback capabilities() :: map()
+  @callback capabilities() :: Capabilities.t()
 
   @doc """
   Handles provider-specific meeting lifecycle events.

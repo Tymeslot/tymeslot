@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.OAuthTokenManager
+  alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -18,6 +19,22 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   require Logger
 
   @behaviour ProviderBehaviour
+
+  @capabilities Capabilities.new!(
+                  instant_meetings: false,
+                  scheduled_meetings: true,
+                  recurring_meetings: false,
+                  waiting_room: true,
+                  recording: true,
+                  dial_in: true,
+                  max_participants: 300,
+                  requires_account: true,
+                  custom_branding: false,
+                  breakout_rooms: true,
+                  screen_sharing: true,
+                  chat: true,
+                  requires_work_account: true
+                )
 
   @graph_api_base_url "https://graph.microsoft.com/v1.0"
   @teams_url_pattern ~r/teams\.microsoft\.com\/l\/meetup-join\//
@@ -123,23 +140,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def capabilities do
-    %{
-      supports_instant_meetings: false,
-      supports_scheduled_meetings: true,
-      supports_recurring_meetings: false,
-      supports_waiting_room: true,
-      supports_recording: true,
-      supports_dial_in: true,
-      max_participants: 300,
-      requires_account: true,
-      supports_custom_branding: false,
-      supports_breakout_rooms: true,
-      supports_screen_sharing: true,
-      supports_chat: true,
-      requires_work_account: true
-    }
-  end
+  def capabilities, do: @capabilities
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def handle_meeting_event(:meeting_ended, room_data, _additional_data) do
