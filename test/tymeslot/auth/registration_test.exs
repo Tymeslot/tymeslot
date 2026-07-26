@@ -95,14 +95,10 @@ defmodule Tymeslot.Auth.RegistrationTest do
       # Email trimmed
       assert user.email == "safe@example.com"
 
-      # Script should be removed/sanitized
-      if user.name do
-        refute user.name =~ "<script>"
-        assert user.name =~ "Safe Name"
-      else
-        # Completely sanitized to nil is also acceptable security behavior
-        assert true
-      end
+      # Signup persists the email, the password and the terms acceptance, and
+      # nothing else. A hostile "name" in the payload is dropped outright
+      # rather than sanitised onto the record.
+      assert is_nil(user.name)
     end
   end
 

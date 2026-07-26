@@ -44,10 +44,11 @@ defmodule Tymeslot.Auth.Registration do
     end
   end
 
+  # The signup form collects an email, a password and the terms checkbox, and
+  # `create_user/1` persists nothing else. There is no name field to validate.
   @signup_field_spec [
     {"email", :email},
-    {"password", :password},
-    {"full_name", :full_name}
+    {"password", :password}
   ]
 
   defp validate_input(params) do

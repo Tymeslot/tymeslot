@@ -146,14 +146,11 @@ defmodule Tymeslot.Auth.SecurityTest do
 
       {:ok, user, _session} = Auth.register_user(params, %Plug.Conn{})
 
-      # Script tags should be removed, name should be sanitized
-      if user.name do
-        refute user.name =~ "<script>"
-        assert user.name =~ "Safe Name"
-      else
-        # Completely sanitized to nil/empty is also acceptable
-        assert true
-      end
+      # Signup persists the email, the password and the terms acceptance, and
+      # nothing else. A hostile "name" in the payload is dropped outright
+      # rather than sanitised onto the record.
+      assert user.email == "safe@example.com"
+      assert is_nil(user.name)
     end
 
     test "new accounts require email verification" do

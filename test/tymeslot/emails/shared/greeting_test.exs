@@ -67,6 +67,51 @@ defmodule Tymeslot.Emails.Shared.GreetingTest do
     end
   end
 
+  describe "name resolution" do
+    test "greets an email/password user by the name they set during onboarding" do
+      # Email/password signup never writes `user.name` — the signup form has no
+      # name field — so the profile is the only place the name ever lands.
+      user = with_profile(build(:user, name: nil), full_name: "Ada Lovelace")
+
+      assert Greeting.text(user) == "Hi Ada Lovelace,"
+      assert Greeting.html(user) == "Hi Ada Lovelace,"
+    end
+
+    test "prefers the profile's full name over the name captured at signup" do
+      user = with_profile(build(:user, name: "ada-from-github"), full_name: "Ada Lovelace")
+
+      assert Greeting.text(user) == "Hi Ada Lovelace,"
+    end
+
+    test "falls back to the signup name before onboarding sets a full name" do
+      user = with_profile(build(:user, name: "Ada from GitHub"), full_name: nil)
+
+      assert Greeting.text(user) == "Hi Ada from GitHub,"
+    end
+
+    test "falls back to the signup name when the profile is not loaded" do
+      assert Greeting.text(build(:user, name: "Ada from GitHub")) == "Hi Ada from GitHub,"
+    end
+
+    test "stays neutral when neither the profile nor the user carries a name" do
+      user = with_profile(build(:user, name: nil), full_name: "   ")
+
+      assert Greeting.text(user) == "Hi there,"
+      assert Greeting.html(user) == "Hi there,"
+    end
+
+    test "never falls back to the email address once a profile is loaded" do
+      user = with_profile(build(:user, name: nil, email: "ada@example.com"), full_name: nil)
+
+      assert Greeting.text(user) == "Hi there,"
+      refute Greeting.text(user) =~ "ada@example.com"
+    end
+  end
+
+  defp with_profile(user, attrs) do
+    %{user | profile: build(:profile, Keyword.put(attrs, :user, user))}
+  end
+
   defp with_locale(locale, fun) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fun)
   end

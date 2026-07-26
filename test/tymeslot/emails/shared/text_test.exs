@@ -4,6 +4,26 @@ defmodule Tymeslot.Emails.Shared.TextTest do
 
   alias Tymeslot.Emails.Shared.Text
 
+  describe "centered_text/2 and centered_html/2" do
+    test "centered_text/2 escapes its input" do
+      html = Text.centered_text("O'Brien & Sons")
+
+      assert html =~ "O&#39;Brien &amp; Sons"
+    end
+
+    test "centered_html/2 leaves already-escaped content alone" do
+      html = Text.centered_html("O&#39;Brien &amp; Sons")
+
+      assert html =~ "O&#39;Brien &amp; Sons"
+      refute html =~ "&amp;#39;"
+      refute html =~ "&amp;amp;"
+    end
+
+    test "both render the same section markup" do
+      assert Text.centered_text("Plain") == Text.centered_html("Plain")
+    end
+  end
+
   describe "troubleshooting_link/1" do
     test "sanitizes URL for safe display" do
       malicious_url = "https://example.com/<script>alert('xss')</script>"
