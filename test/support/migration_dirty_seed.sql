@@ -10,10 +10,15 @@
 --    the INSERTs here to include that column (with a valid value).
 -- 3. Every INSERT must use explicit column lists — never INSERT INTO t VALUES.
 -- 4. Comments explain WHY each row is adversarial, not what it contains.
+-- 5. When the migration a row was written for drops out of the tested window,
+--    delete the row. The window slides (the test takes the last N migrations)
+--    and this file is loaded *after* the database has already been migrated up
+--    to just before that window, so a row targeting an older migration cannot
+--    exercise it any more — and the schema may by then refuse the row outright,
+--    which fails the seed rather than the migration under test.
 --
 -- Tables seeded: users, profiles, user_sessions, calendar_integrations,
---                video_integrations, calendar_events (renamed to
---                provider_calendar_events by migration), connect_accounts,
+--                video_integrations, connect_accounts, payment_transactions,
 --                booking_payments, meetings
 
 -- ============================================================================
@@ -67,14 +72,15 @@ FROM users WHERE email = 'seed-user-1@example.com';
 -- CALENDAR INTEGRATIONS
 -- ============================================================================
 
--- Regression: duplicate active CalDAV integrations for the same user+provider
--- (caused unique_active_calendar_null_account_per_user failure in v0.99.x)
+-- Active CalDAV integration for user 1.
+--
+-- This used to be a pair of duplicate active rows, kept as a regression case
+-- for 20260323000001, which replaced the old uniqueness rule with the partial
+-- index unique_active_calendar_null_account_per_user. That migration is long
+-- out of the tested window, so by the time this file is loaded the index
+-- already exists and rejects the duplicate outright (see maintenance rule 5).
 INSERT INTO calendar_integrations (user_id, provider, base_url, name, is_active, verify_ssl, calendar_paths, calendar_list, inserted_at, updated_at)
 SELECT id, 'caldav', 'https://dav.example.com', 'CalDAV Server 1', true, true, '{}', ARRAY[]::jsonb[], NOW(), NOW()
-FROM users WHERE email = 'seed-user-1@example.com';
-
-INSERT INTO calendar_integrations (user_id, provider, base_url, name, is_active, verify_ssl, calendar_paths, calendar_list, inserted_at, updated_at)
-SELECT id, 'caldav', 'https://dav.example.com', 'CalDAV Server 2', true, true, '{}', ARRAY[]::jsonb[], NOW(), NOW()
 FROM users WHERE email = 'seed-user-1@example.com';
 
 -- Different provider, same user (should not collide with the CalDAV rows)
@@ -96,13 +102,15 @@ FROM users WHERE email = 'seed-user-2@example.com';
 -- VIDEO INTEGRATIONS
 -- ============================================================================
 
--- Two active MiroTalk integrations for the same user (duplicate provider)
+-- Active MiroTalk integration for user 1.
+--
+-- The duplicate-provider twin this row used to have was the regression case
+-- for 20260317000003 / 20260323000001, which added
+-- unique_active_video_null_account_per_user. Both are out of the tested window
+-- now, so the index exists before this file is loaded and rejects the twin
+-- (see maintenance rule 5).
 INSERT INTO video_integrations (user_id, provider, base_url, name, is_active, settings, inserted_at, updated_at)
 SELECT id, 'mirotalk', 'https://meet1.example.com', 'MiroTalk 1', true, '{}'::jsonb, NOW(), NOW()
-FROM users WHERE email = 'seed-user-1@example.com';
-
-INSERT INTO video_integrations (user_id, provider, base_url, name, is_active, settings, inserted_at, updated_at)
-SELECT id, 'mirotalk', 'https://meet2.example.com', 'MiroTalk 2', true, '{}'::jsonb, NOW(), NOW()
 FROM users WHERE email = 'seed-user-1@example.com';
 
 -- Custom video integration with a URL (different provider, same user)
@@ -116,101 +124,22 @@ SELECT id, 'mirotalk', 'https://old-meet.example.com', 'Old MiroTalk', false, '{
 FROM users WHERE email = 'seed-user-2@example.com';
 
 -- ============================================================================
--- CALENDAR EVENTS (legacy shape)
+-- CALENDAR EVENTS (legacy shape) — REMOVED
 -- ============================================================================
 --
--- Released v0.99.x shipped a `calendar_events` table; the
--- 20260408110831_recreate_provider_calendar_events migration renames it to
--- `provider_calendar_events` and adds four new NOT NULL constraints
--- (provider, synced_at, transparency, status). These rows exercise the
--- backfill and catch-all NULL guards in that migration.
+-- This section held six rows in the legacy `calendar_events` table, written as
+-- regression cases for 20260408110831_recreate_provider_calendar_events (which
+-- renames the table to `provider_calendar_events` and adds four NOT NULL
+-- columns) and 20260415185057_add_sync_state_to_provider_calendar_events.
 --
--- Note: inserts target the legacy `calendar_events` table — this seed
--- runs after `create_calendar_events` but before `recreate_provider_calendar_events`.
+-- Both migrations are long out of the tested window. This file is loaded after
+-- the database has been migrated up to just before that window, so by then the
+-- rename has already happened, `calendar_events` does not exist, and every one
+-- of those INSERTs fails with undefined_table. They could not exercise those
+-- migrations either way (see maintenance rule 5), so they are gone.
 --
--- 20260408110831_recreate_provider_calendar_events adds a NOT NULL `created_by_tymeslot`
--- column with `default: false`. No explicit value is included here because the column
--- does not exist in `calendar_events` at insert time; the column default backfills all
--- pre-existing rows automatically when the migration runs.
-
--- Baseline legacy row: title set, synced_at populated — happy path.
-INSERT INTO calendar_events (uid, calendar_integration_id, calendar_path, title, start_at, end_at, all_day, status, synced_at, inserted_at, updated_at)
-SELECT 'seed-evt-baseline@example.com',
-       (SELECT id FROM calendar_integrations WHERE name = 'CalDAV Server 1' LIMIT 1),
-       '/calendars/user1/default/',
-       'Baseline event',
-       NOW() + INTERVAL '1 day',
-       NOW() + INTERVAL '1 day 1 hour',
-       false,
-       'confirmed',
-       NOW(),
-       NOW(),
-       NOW();
-
--- Regression: synced_at IS NULL — migration must backfill from inserted_at
--- before applying the NOT NULL constraint.
-INSERT INTO calendar_events (uid, calendar_integration_id, calendar_path, title, start_at, end_at, all_day, status, synced_at, inserted_at, updated_at)
-SELECT 'seed-evt-null-synced@example.com',
-       (SELECT id FROM calendar_integrations WHERE name = 'CalDAV Server 1' LIMIT 1),
-       '/calendars/user1/default/',
-       'Never-synced legacy row',
-       NOW() + INTERVAL '2 days',
-       NOW() + INTERVAL '2 days 30 minutes',
-       false,
-       NULL,
-       NULL,
-       NOW(),
-       NOW();
-
--- Regression: calendar_path IS NULL — provider_calendar_id backfill must
--- fall through to 'primary' rather than leaving the column NULL.
-INSERT INTO calendar_events (uid, calendar_integration_id, calendar_path, title, start_at, end_at, all_day, status, synced_at, inserted_at, updated_at)
-SELECT 'seed-evt-null-path@example.com',
-       (SELECT id FROM calendar_integrations WHERE name = 'Nextcloud' LIMIT 1),
-       NULL,
-       'No calendar_path',
-       NOW() + INTERVAL '3 days',
-       NOW() + INTERVAL '3 days 45 minutes',
-       false,
-       'tentative',
-       NOW(),
-       NOW(),
-       NOW();
-
--- Regression: title IS NULL — summary backfill must tolerate it.
-INSERT INTO calendar_events (uid, calendar_integration_id, calendar_path, title, start_at, end_at, all_day, status, synced_at, inserted_at, updated_at)
-SELECT 'seed-evt-null-title@example.com',
-       (SELECT id FROM calendar_integrations WHERE name = 'Radicale' LIMIT 1),
-       '/cal/default/',
-       NULL,
-       NOW() + INTERVAL '4 days',
-       NOW() + INTERVAL '4 days 1 hour',
-       true,
-       'confirmed',
-       NOW(),
-       NOW(),
-       NOW();
-
--- 20260415185057_add_sync_state_to_provider_calendar_events adds four columns
--- to provider_calendar_events: sync_state NOT NULL DEFAULT 'synced',
--- sync_attempts NOT NULL DEFAULT 0, sync_last_attempt_at (nullable), and
--- sync_last_error (nullable). All have constant or nullable defaults — no
--- explicit values are required in the seed INSERTs, and the column defaults
--- backfill all pre-existing rows automatically when the migration runs.
-
--- Regression: status IS NULL — existing UPDATE must default to 'confirmed'.
-INSERT INTO calendar_events (uid, calendar_integration_id, calendar_path, title, start_at, end_at, all_day, status, synced_at, inserted_at, updated_at)
-SELECT 'seed-evt-null-status@example.com',
-       (SELECT id FROM calendar_integrations WHERE name = 'CalDAV Server 2' LIMIT 1),
-       '/calendars/user1/other/',
-       'Null status',
-       NOW() + INTERVAL '5 days',
-       NOW() + INTERVAL '5 days 20 minutes',
-       false,
-       NULL,
-       NOW(),
-       NOW(),
-       NOW();
+-- If a future migration touches `provider_calendar_events`, add fresh rows here
+-- against the current table and columns rather than restoring these.
 
 -- ============================================================================
 -- PAYMENT TRANSACTIONS (pre-retention-migration shape)
@@ -257,30 +186,12 @@ DELETE FROM users WHERE id = 999999999;
 SET session_replication_role = DEFAULT;
 
 -- ============================================================================
-
--- Regression: add_attendee_notification_tracking backfill must survive rows
--- where every field the backfill references is NULL or degenerate. title,
--- description, location are all NULL (so the rename migration leaves summary
--- NULL too); start_at equals end_at (zero-duration); attendees contains one
--- entry with whitespace-padded email to prove to_jsonb(attendees) copes with
--- any valid jsonb array content. The backfill uses COALESCE(to_jsonb(col),
--- 'null'::jsonb) on every scalar column, so NULLs must become JSON null and
--- not raise.
-INSERT INTO calendar_events (uid, calendar_integration_id, calendar_path, title, description, location, start_at, end_at, all_day, attendees, status, synced_at, inserted_at, updated_at)
-SELECT 'seed-evt-attnotif-adversarial@example.com',
-       (SELECT id FROM calendar_integrations WHERE name = 'CalDAV Server 1' LIMIT 1),
-       '/calendars/user1/default/',
-       NULL,
-       NULL,
-       NULL,
-       TIMESTAMP '2099-12-31 23:59:59',
-       TIMESTAMP '2099-12-31 23:59:59',
-       false,
-       ARRAY['{"email":"  dirty@example.com  ","name":null}'::jsonb],
-       'confirmed',
-       NOW(),
-       NOW(),
-       NOW();
+--
+-- A seventh legacy `calendar_events` row lived here, covering the
+-- add_attendee_notification_tracking backfill against a row whose every
+-- referenced field is NULL or degenerate. Removed for the same reason as the
+-- block above: the table is already `provider_calendar_events` by the time
+-- this file is loaded, and that migration is out of the tested window.
 
 -- ============================================================================
 -- CONNECT ACCOUNTS
