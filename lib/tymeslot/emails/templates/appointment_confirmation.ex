@@ -38,7 +38,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     locale = Map.get(appointment_details, :attendee_locale, "en")
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      attendee_video_url = Map.get(appointment_details, :attendee_video_url)
+      attendee_video_url = join_url(:attendee, appointment_details)
 
       meeting_details = %{
         date: appointment_details.date,
@@ -46,9 +46,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         duration: appointment_details.duration,
         location: appointment_details.location,
         location_type: Map.get(appointment_details, :location_type),
-        meeting_type: appointment_details.meeting_type,
-        video_url: attendee_video_url,
-        video_url_role: "attendee"
+        meeting_type: appointment_details.meeting_type
       }
 
       intro_copy =
@@ -130,6 +128,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       guest_name = Map.get(appointment_details, :guest_name) || guest_email
+      guest_video_url = join_url(:guest, appointment_details)
 
       meeting_details = %{
         date: appointment_details.date,
@@ -153,6 +152,12 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       #{Text.centered_text(intro_copy, padding: "8px 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
+
+      #{if guest_video_url do
+        MeetingComponents.video_meeting_section(@intent, guest_video_url,
+        title: dgettext("emails", "Join when you're ready"),
+        button_text: dgettext("emails", "Join Meeting"))
+      end}
 
       #{Text.section_title(dgettext("emails", "Will you be there?"))}
 
@@ -198,13 +203,20 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   def render(:organizer, organizer_email, appointment_details) do
     Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(appointment_details), fn ->
       organiser_payment = build_organizer_payment(appointment_details)
+      organizer_video_url = join_url(:organizer, appointment_details)
 
       mjml_content = """
       #{MeetingComponents.attendee_info_section(@intent, %{name: appointment_details.attendee_name, email: appointment_details.attendee_email})}
 
       #{MeetingComponents.attendee_message_box(@intent, appointment_details[:attendee_message])}
 
-      #{MeetingComponents.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time_owner_tz, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type, video_url: Map.get(appointment_details, :meeting_url), video_url_role: "host"}, organizer_locale(appointment_details))}
+      #{MeetingComponents.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time_owner_tz, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type}, organizer_locale(appointment_details))}
+
+      #{if organizer_video_url do
+        MeetingComponents.video_meeting_section(@intent, organizer_video_url,
+        title: dgettext("emails", "Host video call"),
+        button_text: dgettext("emails", "Start Meeting"))
+      end}
 
       #{MeetingComponents.custom_answers_section(appointment_details)}
       #{if organiser_payment, do: organizer_payment_block_html(organiser_payment)}
@@ -256,10 +268,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
 
     video_section =
-      TextBodyHelper.format_video_section(
-        Map.get(appointment_details, :attendee_video_url),
-        locale
-      )
+      TextBodyHelper.format_video_section(join_url(:attendee, appointment_details), locale)
 
     action_links = TextBodyHelper.format_action_links(appointment_details, locale)
     custom_answers = TextBodyHelper.format_custom_answers(appointment_details, locale)
@@ -291,6 +300,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   defp build_guest_text_body(appointment_details, guest_name, locale) do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
 
+    video_section =
+      TextBodyHelper.format_video_section(join_url(:guest, appointment_details), locale)
+
     """
     #{dgettext("emails", "You're invited!")}
 
@@ -299,7 +311,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     #{dgettext("emails", "%{booker} has invited you as a guest to this meeting with %{organizer}.", booker: appointment_details.attendee_name, organizer: appointment_details.organizer_name)}
 
     #{dgettext("emails", "MEETING DETAILS:")}
-    #{meeting_details}
+    #{meeting_details}#{video_section}
 
     #{dgettext("emails", "WILL YOU BE THERE?")}
     #{dgettext("emails", "Yes, I'll attend: %{url}", url: Map.get(appointment_details, :guest_accept_url, "#"))}
@@ -324,7 +336,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
     video_section =
       TextBodyHelper.format_video_section(
-        Map.get(appointment_details, :meeting_url),
+        join_url(:organizer, appointment_details),
         organizer_locale(appointment_details)
       )
 
@@ -391,6 +403,34 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   defp reminder_to_minutes(value, "hours"), do: value * 60
   defp reminder_to_minutes(value, "days"), do: value * 60 * 24
   defp reminder_to_minutes(value, _unit), do: value
+
+  # Which video join URL each recipient is given.
+  #
+  # `Meetings.VideoRooms` mints two per-role join URLs when it provisions a
+  # room: `organizer_video_url` (provider role "organizer") and
+  # `attendee_video_url` (provider role "participant"). Each is built from that
+  # one person's name and email, so it identifies them in the room.
+  # `meeting_url` is the shared, identity-free room URL.
+  #
+  #   * the organiser hosts the call, so they get the host URL;
+  #   * the booker gets the participant URL minted for them;
+  #   * guests are third parties with no URL of their own. Handing them the
+  #     booker's URL would put them in the room under the booker's identity,
+  #     so they get the shared room URL, the same link the ICS attachment on
+  #     this very email already advertises.
+  #
+  # The organiser URL falls back to the room URL: a meeting can carry
+  # `meeting_url` without the per-role pair (its presence is also what marks a
+  # booking as a video meeting; `AppointmentBuilder` derives
+  # `location_type: :video` from it), and the host reaching the room beats no
+  # join link at all.
+  defp join_url(:organizer, details) do
+    Map.get(details, :organizer_video_url) || Map.get(details, :meeting_url)
+  end
+
+  defp join_url(:attendee, details), do: Map.get(details, :attendee_video_url)
+
+  defp join_url(:guest, details), do: Map.get(details, :meeting_url)
 
   defp organizer_locale(_appointment_details), do: Locales.default_locale()
 

@@ -129,7 +129,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       assert email.html_body =~ "Cancel"
     end
 
-    test "generates email successfully when video meeting URL is present" do
+    # Regression: the organiser HTML body carried no join link at all. The
+    # URL was passed to the hero details table as `video_url`, a key that
+    # module never reads, so the only copy of the link lived in the plain-text
+    # body. An organiser reading the HTML email had no way into the room.
+    test "HTML body includes a join button for a video meeting" do
       details =
         build_appointment_details(%{
           meeting_url: "https://meet.example.com/room-123",
@@ -139,9 +143,60 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       email =
         AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
 
-      assert email.html_body != nil
-      assert is_binary(email.html_body)
-      assert String.length(email.html_body) > 1000
+      assert email.html_body =~ "https://meet.example.com/room-123?role=host"
+      assert email.html_body =~ "Host video call"
+      assert email.html_body =~ "Start Meeting"
+    end
+
+    # The organiser is the host: they must receive the host-scoped join URL,
+    # not the identity-free room URL. `organizer_video_url` is minted with the
+    # organiser's name and email and the "organizer" provider role.
+    test "join link uses the host URL rather than the plain room URL" do
+      details =
+        build_appointment_details(%{
+          meeting_url: "https://meet.example.com/PLAIN-ROOM",
+          organizer_video_url: "https://meet.example.com/HOST-TOKEN",
+          attendee_video_url: "https://meet.example.com/PARTICIPANT-TOKEN"
+        })
+
+      email =
+        AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
+
+      assert email.html_body =~ "HOST-TOKEN"
+      assert email.text_body =~ "HOST-TOKEN"
+      refute email.html_body =~ "PARTICIPANT-TOKEN"
+      refute email.text_body =~ "PARTICIPANT-TOKEN"
+    end
+
+    test "join link falls back to the room URL when no host URL was minted" do
+      details =
+        build_appointment_details(%{
+          meeting_url: "https://meet.example.com/PLAIN-ROOM",
+          organizer_video_url: nil
+        })
+
+      email =
+        AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
+
+      assert email.html_body =~ "PLAIN-ROOM"
+      assert email.text_body =~ "PLAIN-ROOM"
+    end
+
+    test "no join section is rendered for a non-video meeting" do
+      details =
+        build_appointment_details(%{
+          meeting_url: nil,
+          organizer_video_url: nil,
+          attendee_video_url: nil,
+          location: "Conference Room A"
+        })
+
+      email =
+        AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
+
+      refute email.html_body =~ "Host video call"
+      refute email.html_body =~ "Start Meeting"
+      refute email.text_body =~ "JOIN VIDEO MEETING"
     end
 
     test "text body contains key information" do
