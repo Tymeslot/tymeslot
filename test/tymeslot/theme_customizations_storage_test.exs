@@ -33,7 +33,6 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
     test "get_upload_base_directory/0 returns configured directory", %{upload_root: upload_root} do
       base_dir = Storage.get_upload_base_directory()
 
-      assert is_binary(base_dir)
       assert base_dir == upload_root
     end
 

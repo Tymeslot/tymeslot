@@ -373,7 +373,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       # Value should revert to Custom button since 168 is not in onboarding presets
       # (onboarding presets: [0, 1, 3, 6, 12, 24, 48])
       html = render(view)
-      assert html =~ ~s(name="min_advance_hours") or html =~ "Custom"
+      assert html =~ ~s(name="min_advance_hours")
 
       # minimum_notice → ready
       view |> element("button[phx-click='next_step']") |> render_click()

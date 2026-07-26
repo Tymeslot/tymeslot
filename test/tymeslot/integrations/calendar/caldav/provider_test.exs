@@ -44,11 +44,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
     import Tymeslot.CalendarProviderValidationCases
 
     test "validates basic required fields" do
-      test_basic_validation(Provider, "https://caldav.example.com")
+      assert test_basic_validation(Provider, "https://caldav.example.com") == :ok
     end
 
     test "attempts connection when all required fields present" do
-      test_validation_attempts_connection(Provider, "https://caldav.example.com")
+      assert test_validation_attempts_connection(Provider, "https://caldav.example.com") == :ok
     end
   end
 
@@ -176,8 +176,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
       client = Provider.new(config)
 
       # URL should be normalized (trailing slash removed)
-      assert is_binary(client.base_url)
-      assert String.contains?(client.base_url, "caldav.example.com")
+      assert client.base_url == "https://caldav.example.com/dav"
     end
 
     test "sets empty calendar_paths when not provided" do
@@ -207,9 +206,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
       end_time = DateTime.add(start_time, 3600, :second)
 
       capture_log(fn ->
-        result = Provider.list_events(client, start_time: start_time, end_time: end_time)
-        # Should fail immediately with econnrefused or similar
-        assert match?({:error, _}, result) or match?({:ok, []}, result)
+        # Port 1 is closed, so the delegated request fails immediately rather
+        # than being rejected up front for a missing time range.
+        assert {:error, _reason} =
+                 Provider.list_events(client, start_time: start_time, end_time: end_time)
       end)
     end
 

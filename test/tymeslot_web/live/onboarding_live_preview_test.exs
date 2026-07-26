@@ -232,7 +232,7 @@ defmodule TymeslotWeb.OnboardingLivePreviewTest do
       {:ok, profile} = Profiles.get_or_create_profile(user.id)
 
       customization = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
-      assert is_nil(customization) or customization.background_type != "video"
+      assert is_nil(customization)
     end
 
     test "does not overwrite a pre-existing video background on re-seed", %{conn: _conn} do

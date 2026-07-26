@@ -2,16 +2,19 @@ defmodule TymeslotWeb.Themes.Rhythm.ThemeTest do
   use TymeslotWeb.ConnCase, async: true
   @moduletag :utils
 
+  # The `ThemeCommonTestCases` case blocks raise on the first failed
+  # expectation, so asserting their result makes "ran to completion" an
+  # explicit expectation at each call site.
   alias TymeslotWeb.ThemeCommonTestCases
   alias TymeslotWeb.Themes.Rhythm.Theme
 
   describe "states/0" do
     test "returns a 4-step flow state machine" do
-      ThemeCommonTestCases.test_states_structure(Theme)
+      assert ThemeCommonTestCases.test_states_structure(Theme)
     end
 
     test "state flow configuration" do
-      ThemeCommonTestCases.test_state_flow(Theme, :booking)
+      assert ThemeCommonTestCases.test_state_flow(Theme, :booking)
     end
   end
 
@@ -23,13 +26,13 @@ defmodule TymeslotWeb.Themes.Rhythm.ThemeTest do
 
   describe "components/0" do
     test "maps all scheduling states to their component modules" do
-      ThemeCommonTestCases.test_components_mapping(
-        Theme,
-        TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent,
-        TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent,
-        TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent,
-        TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent
-      )
+      assert ThemeCommonTestCases.test_components_mapping(
+               Theme,
+               TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent,
+               TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent,
+               TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent,
+               TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent
+             )
     end
   end
 
@@ -61,7 +64,7 @@ defmodule TymeslotWeb.Themes.Rhythm.ThemeTest do
 
   describe "initial_state_for_action/1" do
     test "behaves according to common theme contract" do
-      ThemeCommonTestCases.test_initial_state_for_action(Theme)
+      assert ThemeCommonTestCases.test_initial_state_for_action(Theme)
     end
   end
 
@@ -86,7 +89,7 @@ defmodule TymeslotWeb.Themes.Rhythm.ThemeTest do
 
   describe "render_meeting_action/2" do
     test "behaves according to common theme contract" do
-      ThemeCommonTestCases.test_render_meeting_action(Theme, &build_meeting_assigns/0)
+      assert ThemeCommonTestCases.test_render_meeting_action(Theme, &build_meeting_assigns/0)
     end
   end
 

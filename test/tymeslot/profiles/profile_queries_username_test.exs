@@ -73,7 +73,8 @@ defmodule Tymeslot.Profiles.ProfileQueriesUsernameTest do
 
       # Invalid format
       assert {:error, changeset} = ProfileQueries.update_username(profile, "Invalid_Username")
-      assert changeset.errors[:username] != nil
+      assert {message, _opts} = changeset.errors[:username]
+      assert message =~ "only lowercase letters"
     end
   end
 end

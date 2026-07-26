@@ -31,7 +31,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
         assert decoded["timezone"] == "UTC"
         # Default valid_config uses a 30-minute window
         assert decoded["duration"] == 30
-        assert is_binary(decoded["start_time"])
+        assert decoded["start_time"] == DateTime.to_iso8601(config.meeting_start_time)
 
         {:ok, %Req.Response{status: 204, body: ""}}
       end)

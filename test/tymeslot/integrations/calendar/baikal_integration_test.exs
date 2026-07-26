@@ -46,7 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
   describe "test_connection/2 against Baikal" do
     test "successfully connects to Baikal" do
       assert {:ok, message} = Discovery.test_connection(@client, @local_opts)
-      assert is_binary(message)
+      assert byte_size(message) > 0
     end
 
     test "returns :unauthorized for wrong password" do
@@ -72,9 +72,9 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
       assert {:ok, calendars} = CaldavCommon.discover_calendars(@client, @local_opts)
 
       Enum.each(calendars, fn cal ->
-        assert is_binary(cal.name)
-        assert is_binary(cal.href)
-        assert is_binary(cal.id)
+        assert byte_size(cal.name) > 0
+        assert byte_size(cal.href) > 0
+        assert byte_size(cal.id) > 0
       end)
     end
   end

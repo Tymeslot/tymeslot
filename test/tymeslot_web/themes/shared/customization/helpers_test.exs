@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.HelpersTest do
   import Tymeslot.Factory
 
   alias Phoenix.LiveView.Socket
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias TymeslotWeb.Themes.Shared.Customization.Helpers
 
   defp socket, do: %Socket{assigns: %{__changed__: %{}}}
@@ -26,13 +27,16 @@ defmodule TymeslotWeb.Themes.Shared.Customization.HelpersTest do
 
       assert updated.assigns.has_custom_theme == false
 
-      assert is_struct(updated.assigns.theme_customization) or
-               is_map(updated.assigns.theme_customization)
+      assert %ThemeCustomizationSchema{
+               profile_id: nil,
+               theme_id: "1",
+               color_scheme: "default",
+               background_type: "gradient",
+               background_value: "gradient_1"
+             } = updated.assigns.theme_customization
 
-      assert is_binary(updated.assigns.custom_css)
-
-      assert is_map(updated.assigns.customization_options) or
-               is_list(updated.assigns.customization_options)
+      assert updated.assigns.custom_css =~ "--theme-background: linear-gradient("
+      assert %{color: _color, background: _background} = updated.assigns.customization_options
     end
   end
 
@@ -100,10 +104,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.HelpersTest do
 
       style = Helpers.get_background_style(customization)
 
-      # We don't pin to a specific gradient definition — just confirm a style
-      # string emerged (anything from `background:` / `linear-gradient(...)`).
-      assert is_binary(style)
-      assert style != ""
+      assert style == "background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"
     end
   end
 end

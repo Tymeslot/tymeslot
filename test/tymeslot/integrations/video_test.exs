@@ -239,7 +239,6 @@ defmodule Tymeslot.Integrations.VideoTest do
       end)
 
       assert {:error, message} = Video.oauth_authorization_url(user.id, :zoom)
-      assert is_binary(message)
       assert String.contains?(message, "Zoom")
     end
 

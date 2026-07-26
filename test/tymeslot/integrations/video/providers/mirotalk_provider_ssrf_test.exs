@@ -57,7 +57,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderSsrfTest do
       # then fires at the HTTP layer, returning SsrfBlockedError — which
       # handle_http_error maps to a generic connection failure message.
       assert {:error, message} = MiroTalkProvider.test_connection(@config)
-      assert is_binary(message)
+      assert message =~ "Connection failed:"
     end
   end
 

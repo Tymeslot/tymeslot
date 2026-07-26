@@ -43,7 +43,8 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
 
       # The token is generated automatically on insert
       webhook = WebhookSchema.decrypt_token(webhook)
-      assert webhook.webhook_token != nil
+      # Generated tokens carry a "ts_" prefix and 24 random bytes in base64.
+      assert webhook.webhook_token =~ ~r"\Ats_[A-Za-z0-9+/]{32}\z"
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, headers, _opts ->
         # Verify token header is present and correct

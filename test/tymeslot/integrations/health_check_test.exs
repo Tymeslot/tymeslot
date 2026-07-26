@@ -286,7 +286,11 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       assert length(report.video_integrations) == 1
       assert Enum.any?(report.video_integrations, &(&1.id == v1.id))
 
-      assert is_map(report.summary)
+      # Every integration in the report is counted exactly once in the summary.
+      # The per-integration verdict is not pinned here: it depends on the probe
+      # outcome, which the health-check tests above cover directly.
+      assert report.summary.healthy_count + report.summary.degraded_count +
+               report.summary.unhealthy_count == 2
     end
   end
 

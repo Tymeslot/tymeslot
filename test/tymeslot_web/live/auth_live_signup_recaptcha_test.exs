@@ -18,8 +18,14 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
     old_site_key = System.get_env("RECAPTCHA_SITE_KEY")
     old_secret_key = System.get_env("RECAPTCHA_SECRET_KEY")
 
+    # The signup form only renders the terms checkbox when legal agreements are
+    # enforced, and every test here submits that field.
+    old_legal = Application.get_env(:tymeslot, :enforce_legal_agreements)
+    Application.put_env(:tymeslot, :enforce_legal_agreements, true)
+
     on_exit(fn ->
       Application.put_env(:tymeslot, :recaptcha, old_cfg)
+      Application.put_env(:tymeslot, :enforce_legal_agreements, old_legal)
 
       if old_site_key,
         do: System.put_env("RECAPTCHA_SITE_KEY", old_site_key),
@@ -178,7 +184,7 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
 
     # Should show rate limit message, not reCAPTCHA message
     rendered = render(view)
-    assert rendered =~ "Too many" or rendered =~ "try again later"
+    assert rendered =~ "Too many signup attempts. Please try again later."
   end
 
   describe "Edge cases - Token and data handling" do
@@ -237,15 +243,13 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
       # Create a token exactly 5KB (at the boundary, should not be rejected by size check)
       max_token = String.duplicate("X", 5_000)
 
-      # This will fail on Google API verification (invalid token format),
-      # but should NOT be rejected with :invalid_token due to size limit alone
-      result = Recaptcha.verify(max_token)
+      # The size check allows up to and including 5KB, so the token must reach
+      # the Google request rather than being rejected up front as :invalid_token.
+      Mox.stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:error, %Req.TransportError{reason: :timeout}}
+      end)
 
-      # If we get :invalid_token, it's from Google rejecting the format, not from size check.
-      # The size check allows up to and including 5KB.
-      assert result == {:error, :recaptcha_request_failed} or
-               result == {:error, :recaptcha_network_error} or
-               result == {:error, :recaptcha_verification_failed}
+      assert Recaptcha.verify(max_token) == {:error, :recaptcha_network_error}
     end
 
     test "empty token is properly rejected with clear error" do
@@ -308,7 +312,7 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
 
     test "non-numeric score is properly rejected" do
       result = Recaptcha.validate_min_score("not_a_number", 0.3)
-      assert result == {:error, :recaptcha_invalid_score} or result == :ok
+      assert result == {:error, :recaptcha_invalid_score}
     end
 
     test "non-numeric min_score configuration is rejected (prevents bypass)" do
@@ -383,10 +387,7 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
 
   describe "Edge cases - IP address handling" do
     test "valid IPv4 addresses are accepted" do
-      _params = Recaptcha.__info__(:functions)
-      # Verify IPv4 address is properly handled (through recaptcha module)
-      # Behavior verified through integration tests
-      assert true
+      assert Recaptcha.maybe_put_remote_ip(%{}, "203.0.113.5") == %{"remoteip" => "203.0.113.5"}
     end
 
     test "IPv6 with scope ID is rejected (security boundary)" do

@@ -191,7 +191,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
       end)
 
       assert {:ok, response} = CalendarAPI.create_event(integration, "primary", event_data)
-      assert get_in(response, ["conferenceData", "entryPoints"]) != nil
+
+      assert get_in(response, ["conferenceData", "entryPoints"]) == [
+               %{"entryPointType" => "video", "uri" => "https://meet.google.com/abc-defg"}
+             ]
     end
 
     test "issues a follow-up GET when createRequest is pending and returns populated entryPoints" do
@@ -249,9 +252,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
       end)
 
       assert {:ok, response} = CalendarAPI.create_event(integration, "primary", event_data)
-      entry_points = get_in(response, ["conferenceData", "entryPoints"])
-      assert entry_points != nil
-      assert Enum.any?(entry_points, &(&1["uri"] == "https://meet.google.com/pending-resolved"))
+
+      assert get_in(response, ["conferenceData", "entryPoints"]) == [
+               %{
+                 "entryPointType" => "video",
+                 "uri" => "https://meet.google.com/pending-resolved"
+               }
+             ]
     end
 
     test "returns the original pending response when follow-up GET is still pending" do

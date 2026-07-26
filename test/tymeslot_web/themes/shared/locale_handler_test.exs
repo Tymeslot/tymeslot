@@ -142,7 +142,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
     test "returns list of supported locale codes" do
       locales = LocaleHandler.supported_locales()
 
-      assert is_list(locales)
+      assert length(locales) == 5
       assert "en" in locales
       assert "de" in locales
       assert "uk" in locales
@@ -163,7 +163,6 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
     test "returns list of locale metadata maps" do
       locales = LocaleHandler.get_locales_with_metadata()
 
-      assert is_list(locales)
       assert length(locales) == 5
 
       Enum.each(locales, fn locale ->

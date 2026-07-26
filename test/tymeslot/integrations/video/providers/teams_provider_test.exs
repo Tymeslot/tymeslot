@@ -435,8 +435,8 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
       room_id = TeamsProvider.extract_room_id(meeting_url)
 
-      assert is_binary(room_id)
-      assert String.length(room_id) == 20
+      # The extractor caps the encoded join id at 20 characters.
+      assert room_id == "19%3ameeting_abcdefg"
     end
   end
 

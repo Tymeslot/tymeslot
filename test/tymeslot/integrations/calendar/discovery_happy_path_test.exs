@@ -65,9 +65,7 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryHappyPathTest do
       }
 
       assert {:ok, %{calendar_paths: paths} = result} = Discovery.maybe_discover_calendars(attrs)
-      assert is_list(paths)
-      assert paths != []
-      assert Enum.all?(paths, &is_binary/1)
+      assert Enum.sort(paths) == ["/calendars/user/personal/", "/calendars/user/work/"]
       # Other fields are preserved unchanged.
       assert result.provider == "caldav"
       assert result.username == "user"
@@ -103,8 +101,12 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryHappyPathTest do
       }
 
       assert {:ok, integration} = CalendarManagement.create_calendar_integration(attrs)
-      assert is_list(integration.calendar_paths)
-      assert integration.calendar_paths != []
+
+      assert Enum.sort(integration.calendar_paths) == [
+               "/calendars/user/personal/",
+               "/calendars/user/work/"
+             ]
+
       assert integration.provider == "caldav"
       assert integration.user_id == user.id
     end

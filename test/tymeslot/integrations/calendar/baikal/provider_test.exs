@@ -47,7 +47,7 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
     import Tymeslot.CalendarProviderValidationCases
 
     test "validates basic required fields" do
-      test_basic_validation(Provider, "https://baikal.example.com/dav.php")
+      assert :ok = test_basic_validation(Provider, "https://baikal.example.com/dav.php")
     end
 
     test "accepts a valid config (connection fails without live server)" do
@@ -194,7 +194,8 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
       end)
 
       assert {:error, message} = Provider.test_connection(integration)
-      assert message =~ "not found" or message =~ "not accessible" or message =~ "/dav.php"
+      assert message =~ "Baikal server not found"
+      assert message =~ "/dav.php"
     end
 
     test "accepts IP metadata option" do

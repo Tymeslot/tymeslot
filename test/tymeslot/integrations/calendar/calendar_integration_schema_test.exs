@@ -175,7 +175,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
 
       assert changeset.valid?
-      assert changeset.changes.username_encrypted != nil
+      assert Encryption.decrypt(changeset.changes.username_encrypted) == "testuser"
       refute Map.has_key?(changeset.changes, :username)
     end
 
@@ -193,7 +193,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
 
       assert changeset.valid?
-      assert changeset.changes.password_encrypted != nil
+      assert Encryption.decrypt(changeset.changes.password_encrypted) == "secretpass"
       refute Map.has_key?(changeset.changes, :password)
     end
 
@@ -212,8 +212,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
 
       assert changeset.valid?
-      assert changeset.changes.access_token_encrypted != nil
-      assert changeset.changes.refresh_token_encrypted != nil
+      assert Encryption.decrypt(changeset.changes.access_token_encrypted) == "access_token_123"
+      assert Encryption.decrypt(changeset.changes.refresh_token_encrypted) == "refresh_token_456"
       refute Map.has_key?(changeset.changes, :access_token)
       refute Map.has_key?(changeset.changes, :refresh_token)
     end

@@ -42,10 +42,15 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
           details
         )
 
-      assert email.html_body != nil
-      assert email.text_body != nil
-      assert is_binary(email.html_body)
-      assert is_binary(email.text_body)
+      assert email.html_body =~ "</html>"
+
+      assert email.html_body =~
+               "The appointment with #{details.attendee_name} has been cancelled."
+
+      assert email.text_body =~
+               "The appointment with #{details.attendee_name} has been cancelled."
+
+      refute email.text_body =~ "</html>"
     end
 
     test "HTML body contains attendee information" do
@@ -108,8 +113,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
         )
 
       assert %Swoosh.Email{} = email
-      assert email.subject != nil
-      assert email.to != []
+      assert email.subject =~ "Meeting Cancelled"
+      assert email.to == [{details.organizer_name, "organizer@example.com"}]
     end
 
     test "HTML body contains cancellation notification" do
@@ -122,7 +127,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
           details
         )
 
-      assert email.html_body =~ "cancelled" || email.html_body =~ "Cancelled"
+      assert email.html_body =~ "Meeting cancelled"
+      assert email.html_body =~ "The attendee has been notified of the cancellation."
     end
 
     test "text body contains meeting cancellation notice" do
@@ -193,10 +199,13 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
           details
         )
 
-      assert email.html_body != nil
-      assert email.text_body != nil
-      assert is_binary(email.html_body)
-      assert is_binary(email.text_body)
+      assert email.html_body =~ "</html>"
+      assert email.html_body =~ "our appointment has been cancelled"
+
+      assert email.text_body =~
+               "We're writing to confirm that your appointment has been cancelled."
+
+      refute email.text_body =~ "</html>"
     end
 
     test "HTML body contains organizer information" do
@@ -248,7 +257,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       assert String.length(email.text_body) > 100
     end
 
-    test "HTML body may include reschedule option" do
+    test "HTML body invites the attendee to book a new appointment" do
       details = build_appointment_details()
 
       email =
@@ -258,8 +267,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
           details
         )
 
-      # Cancellation emails may or may not include reschedule links
-      assert is_binary(email.html_body)
+      assert email.html_body =~ "Would you like to schedule a new appointment?"
+      assert email.html_body =~ "Schedule New Appointment"
     end
 
     test "email structure is valid Swoosh email" do
@@ -273,8 +282,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
         )
 
       assert %Swoosh.Email{} = email
-      assert email.subject != nil
-      assert email.to != []
+      assert email.subject =~ "Meeting Cancelled"
+      assert email.to == [{details.attendee_name, "attendee@example.com"}]
     end
 
     test "HTML body contains cancellation message" do
@@ -287,7 +296,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
           details
         )
 
-      assert email.html_body =~ "cancelled" || email.html_body =~ "Cancelled"
+      assert email.html_body =~ "Meeting cancelled"
+      assert email.html_body =~ "This time slot is now available for booking again."
     end
 
     test "text body contains greeting and cancellation notice" do
@@ -562,10 +572,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
 
       for email <- [organizer_email, attendee_email] do
         assert %Swoosh.Email{} = email
-        assert email.subject != nil
+        assert email.subject =~ "Meeting Cancelled"
         assert length(email.to) == 1
-        assert email.html_body != nil
-        assert email.text_body != nil
+        assert email.html_body =~ "Meeting cancelled"
+        assert email.text_body =~ "Meeting Cancelled"
         assert String.length(email.html_body) > 100
         assert String.length(email.text_body) > 50
       end

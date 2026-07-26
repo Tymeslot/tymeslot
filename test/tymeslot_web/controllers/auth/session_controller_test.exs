@@ -211,9 +211,8 @@ defmodule TymeslotWeb.SessionControllerTest do
 
       assert redirected_to(conn) == "/auth/login"
       # AccountLockout throttle kicks in at 10 attempts; message differs from normal auth failure
-      error = Flash.get(conn.assigns.flash, :error)
-      refute error == "Invalid email or password."
-      assert error =~ "Too many" or error =~ "limit" or error =~ "locked"
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Too many failed attempts. Please wait before trying again"
     end
 
     test "blocks login after 50 attempts from the same IP across different emails", %{conn: conn} do
@@ -237,10 +236,10 @@ defmodule TymeslotWeb.SessionControllerTest do
         })
 
       assert redirected_to(conn) == "/auth/login"
-      # IP Hammer bucket triggers; message contains "limit"
-      error = Flash.get(conn.assigns.flash, :error)
-      refute error == "Invalid email or password."
-      assert error =~ "Too many" or error =~ "limit" or error =~ "locked"
+      # IP Hammer bucket triggers, naming the per-IP budget rather than the account.
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "You've reached the limit of 50 authentication (ip) actions per 30 minutes. " <>
+                 "Please wait a few minutes before trying again."
     end
   end
 

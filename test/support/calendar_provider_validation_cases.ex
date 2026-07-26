@@ -35,7 +35,7 @@ defmodule Tymeslot.CalendarProviderValidationCases do
     }
 
     assert {:error, message} = provider_module.validate_config(config)
-    assert String.contains?(message, "URL") or String.contains?(message, "url")
+    assert String.contains?(message, "URL")
 
     :ok
   end

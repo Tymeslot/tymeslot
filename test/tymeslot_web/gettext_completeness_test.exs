@@ -53,7 +53,11 @@ defmodule TymeslotWeb.GettextCompletenessTest do
     end
 
     test "all .po files have proper headers" do
-      for_each_locale_and_file(@content_files, &assert_proper_headers/2)
+      checked = for_each_locale_and_file(@content_files, &assert_proper_headers/2)
+
+      # Guards against the loop silently checking nothing.
+      assert length(checked) ==
+               length(LocaleHandler.supported_locales()) * length(@content_files)
     end
   end
 
@@ -67,7 +71,11 @@ defmodule TymeslotWeb.GettextCompletenessTest do
 
   describe "translation completeness" do
     test "no empty translations (msgstr) in fully-translated domains" do
-      for_each_locale_and_file(@translated_files, &assert_no_empty_translations/2)
+      checked = for_each_locale_and_file(@translated_files, &assert_no_empty_translations/2)
+
+      # Guards against the loop silently checking nothing.
+      assert length(checked) ==
+               length(LocaleHandler.supported_locales()) * length(@translated_files)
     end
 
     test "translation file sizes are reasonable" do

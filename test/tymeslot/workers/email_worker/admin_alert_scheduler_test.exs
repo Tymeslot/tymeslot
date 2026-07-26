@@ -56,7 +56,6 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertSchedulerTest do
                )
 
       [job] = all_enqueued(worker: EmailWorker)
-      assert is_binary(job.args["alert_hash"])
       assert String.length(job.args["alert_hash"]) == 64
     end
 

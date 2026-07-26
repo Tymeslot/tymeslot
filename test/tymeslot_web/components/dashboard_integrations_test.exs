@@ -328,10 +328,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
       )
 
     assert socket.assigns.is_saving == false
-    assert is_map(socket.assigns.form_errors)
-
-    assert Map.has_key?(socket.assigns.form_errors, :username) or
-             Map.has_key?(socket.assigns.form_errors, :password)
+    assert socket.assigns.form_errors == %{username: "Username is required"}
   end
 
   test "renders calendar provider config headers and provider hidden fields" do
@@ -412,7 +409,17 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
     [{compiled, _bin}] = Code.compile_string(code)
     assert compiled == module_name
-    assert function_exported?(module_name, :assign_config_defaults, 1)
+
+    # The macro must inject working defaults, not merely define the function.
+    assert %{
+             show_calendar_selection: false,
+             discovered_calendars: [],
+             discovery_credentials: %{},
+             form_values: %{},
+             form_errors: %{},
+             saving: false,
+             metadata: %{}
+           } = module_name.assign_config_defaults(%{__changed__: %{}})
   end
 
   describe "refresh_all_calendars" do

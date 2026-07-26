@@ -10,13 +10,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
 
   describe "list_providers/0" do
     test "returns list of all registered video providers" do
-      providers = ProviderRegistry.list_providers()
-
-      assert is_list(providers)
-      assert :mirotalk in providers
-      assert :google_meet in providers
-      assert :custom in providers
-      # Teams provider may not be available in all environments
+      assert Enum.sort(ProviderRegistry.list_providers()) ==
+               [:custom, :google_meet, :mirotalk, :teams, :zoom]
     end
   end
 
@@ -109,13 +104,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
 
   describe "valid_providers/0" do
     test "returns list of all valid video provider atoms" do
-      providers = ProviderRegistry.valid_providers()
-
-      assert is_list(providers)
-      assert :mirotalk in providers
-      assert :google_meet in providers
-      assert :custom in providers
-      # Teams provider may not be available in all environments
+      assert Enum.sort(ProviderRegistry.valid_providers()) ==
+               [:custom, :google_meet, :mirotalk, :teams, :zoom]
     end
   end
 
@@ -154,15 +144,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
     test "returns metadata for all video providers" do
       providers = ProviderRegistry.list_providers_with_metadata()
 
-      assert is_list(providers)
-      assert providers != []
-
       # Check metadata structure
-      mirotalk = Enum.find(providers, fn p -> p.type == :mirotalk end)
-      assert mirotalk.type == :mirotalk
+      assert mirotalk = Enum.find(providers, fn p -> p.type == :mirotalk end)
       assert mirotalk.module == Tymeslot.Integrations.Video.Providers.MiroTalkProvider
       assert mirotalk.display_name == "MiroTalk P2P"
-      assert is_map(mirotalk.config_schema)
+      assert Enum.sort(Map.keys(mirotalk.config_schema)) == [:api_key, :base_url]
     end
 
     test "includes capabilities metadata for video providers" do
@@ -205,21 +191,14 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
 
   describe "providers_with_capability/1" do
     test "filters providers by specific capability" do
-      # Example: find providers that support screen sharing
-      providers = ProviderRegistry.providers_with_capability(:screen_sharing)
-
-      assert is_list(providers)
-      # MiroTalk supports screen sharing
-      if :mirotalk in ProviderRegistry.list_providers() do
-        # Only assert if provider exists in this environment
-        :ok
-      end
+      # MiroTalk and Google Meet declare screen_sharing; Zoom, Teams and the
+      # custom provider do not.
+      assert Enum.sort(ProviderRegistry.providers_with_capability(:screen_sharing)) ==
+               [:google_meet, :mirotalk]
     end
 
     test "returns empty list for non-existent capability" do
-      providers = ProviderRegistry.providers_with_capability(:nonexistent_feature)
-
-      assert is_list(providers)
+      assert ProviderRegistry.providers_with_capability(:nonexistent_feature) == []
     end
   end
 

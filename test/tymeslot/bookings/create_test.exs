@@ -10,6 +10,9 @@ defmodule Tymeslot.Bookings.CreateTest do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
 
+  # Create assigns the meeting's public identifier with UUID.uuid4/0.
+  @uuid_v4 ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+
   # Shared test setup helper
   defp setup_booking_test do
     user = insert(:user)
@@ -149,7 +152,7 @@ defmodule Tymeslot.Bookings.CreateTest do
       set_calendar_empty()
 
       assert {:ok, meeting} = Create.execute(meeting_params, form_data)
-      assert meeting.uid != nil
+      assert meeting.uid =~ @uuid_v4
       assert meeting.attendee_name == "Test Attendee"
       assert meeting.attendee_email == "attendee@test.com"
     end
@@ -186,7 +189,7 @@ defmodule Tymeslot.Bookings.CreateTest do
       assert {:ok, meeting} =
                Create.execute(meeting_params, form_data, skip_calendar_check: false)
 
-      assert meeting.uid != nil
+      assert meeting.uid =~ @uuid_v4
     end
 
     test "succeeds when the only overlapping event is cancelled", %{
@@ -203,7 +206,7 @@ defmodule Tymeslot.Bookings.CreateTest do
       assert {:ok, meeting} =
                Create.execute(meeting_params, form_data, skip_calendar_check: false)
 
-      assert meeting.uid != nil
+      assert meeting.uid =~ @uuid_v4
     end
 
     test "succeeds when calendar check times out (transport error)", %{
@@ -215,7 +218,7 @@ defmodule Tymeslot.Bookings.CreateTest do
 
       # Should succeed despite calendar error - booking proceeds
       assert {:ok, meeting} = Create.execute(meeting_params, form_data)
-      assert meeting.uid != nil
+      assert meeting.uid =~ @uuid_v4
       assert meeting.attendee_name == "Test Attendee"
     end
 
@@ -228,7 +231,7 @@ defmodule Tymeslot.Bookings.CreateTest do
 
       # Should succeed despite calendar error
       assert {:ok, meeting} = Create.execute(meeting_params, form_data)
-      assert meeting.uid != nil
+      assert meeting.uid =~ @uuid_v4
     end
 
     test "succeeds when calendar check returns connection error", %{
@@ -240,7 +243,7 @@ defmodule Tymeslot.Bookings.CreateTest do
 
       # Should succeed despite calendar error
       assert {:ok, meeting} = Create.execute(meeting_params, form_data)
-      assert meeting.uid != nil
+      assert meeting.uid =~ @uuid_v4
     end
 
     test "succeeds when calendar check returns server error", %{
@@ -252,7 +255,7 @@ defmodule Tymeslot.Bookings.CreateTest do
 
       # Should succeed despite calendar error
       assert {:ok, meeting} = Create.execute(meeting_params, form_data)
-      assert meeting.uid != nil
+      assert meeting.uid =~ @uuid_v4
     end
 
     test "inherits calendar and video settings from meeting type", %{
@@ -414,7 +417,7 @@ defmodule Tymeslot.Bookings.CreateTest do
 
       # Should succeed despite calendar error
       assert {:ok, meeting} = Create.execute_with_video_room(meeting_params, form_data)
-      assert meeting.uid != nil
+      assert meeting.uid =~ @uuid_v4
     end
 
     test "fails fast when calendar check detects conflict", %{
@@ -528,7 +531,7 @@ defmodule Tymeslot.Bookings.CreateTest do
       }
 
       assert {:ok, meeting} = Create.execute(meeting_params, form_data)
-      assert meeting.uid != nil
+      assert meeting.uid =~ @uuid_v4
     end
 
     test "accepts booking when there are no custom fields in the snapshot", %{
@@ -541,7 +544,7 @@ defmodule Tymeslot.Bookings.CreateTest do
       params = Map.merge(meeting_params, %{custom_fields_snapshot: [], custom_field_answers: %{}})
 
       assert {:ok, meeting} = Create.execute(params, form_data)
-      assert meeting.uid != nil
+      assert meeting.uid =~ @uuid_v4
     end
   end
 end

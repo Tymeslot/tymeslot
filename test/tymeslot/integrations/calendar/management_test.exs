@@ -196,8 +196,7 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
       on_exit(fn -> :telemetry.detach("test-calendar-connected") end)
 
       assert {:ok, _integration} = CalendarManagement.create_calendar_integration(attrs)
-      assert_received {:telemetry, %{count: 1}, %{provider: provider}}
-      assert is_binary(provider)
+      assert_received {:telemetry, %{count: 1}, %{provider: "caldav"}}
     end
   end
 end

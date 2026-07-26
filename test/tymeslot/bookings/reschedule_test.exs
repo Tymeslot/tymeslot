@@ -523,7 +523,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
         assert decoded["topic"] == "Customer call"
         # The job re-reads the meeting, so the PATCH carries the *new* duration.
         assert decoded["duration"] == 60
-        assert is_binary(decoded["start_time"])
+        assert decoded["start_time"] == DateTime.to_iso8601(updated.start_time)
 
         {:ok, %Req.Response{status: 204, body: ""}}
       end)

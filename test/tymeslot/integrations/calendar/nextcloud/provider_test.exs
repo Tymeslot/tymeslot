@@ -74,11 +74,9 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         password: "pass"
       }
 
-      assert {:error, message} = Provider.validate_config(config)
-
-      # Scheme is auto-added, so URL becomes valid but connection fails
-      # Message can be atom or string representing connection failure
-      assert is_binary(message) or is_atom(message)
+      # The scheme is auto-added, so the URL passes structural validation and the
+      # failure comes from the connection probe instead (the MockCase stub times out).
+      assert Provider.validate_config(config) == {:error, :timeout}
     end
 
     test "accepts calendar URL format" do
@@ -152,11 +150,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       client = Provider.new(config)
 
       # Calendar paths should be formatted for Nextcloud
-      assert is_list(client.calendar_paths)
-
-      assert Enum.any?(client.calendar_paths, fn path ->
-               String.contains?(path, "/calendars/testuser/")
-             end)
+      assert client.calendar_paths == ["/calendars/testuser/personal/"]
     end
 
     test "defaults to personal calendar when no paths provided" do
@@ -168,8 +162,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
 
       client = Provider.new(config)
 
-      assert is_list(client.calendar_paths)
-      assert client.calendar_paths != []
+      assert client.calendar_paths == ["/calendars/user/personal/"]
     end
 
     test "extracts username from calendar URL when not provided" do
@@ -181,7 +174,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       client = Provider.new(config)
 
       # Username should be extracted from URL
-      assert is_binary(client.username)
+      assert client.username == "john"
     end
   end
 
@@ -277,8 +270,9 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         {:ok, %Req.Response{status: 404, body: ""}}
       end)
 
-      assert {:error, message} = Provider.test_connection(integration)
-      assert message =~ "server not found" or message =~ "CalDAV endpoint not accessible"
+      assert Provider.test_connection(integration) ==
+               {:error,
+                "Nextcloud server not found or CalDAV endpoint not accessible. Check your server URL."}
     end
 
     test "passes transport errors through unchanged via catch-all clause" do
@@ -343,9 +337,14 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       end_time = DateTime.add(start_time, 86_400, :second)
 
       capture_log(fn ->
-        result = Provider.list_events(client, start_time: start_time, end_time: end_time)
-        # May return error or empty list depending on circuit breaker state
-        assert match?({:error, _reason}, result) or match?({:ok, []}, result)
+        # The CalDAV REPORT is issued from the circuit breaker's own task, outside
+        # the Mox-owned process, so the response cannot be stubbed here. What this
+        # asserts is the delegation itself: the time range was accepted and a
+        # request attempted, rather than short-circuiting on :missing_time_range.
+        assert {:error, reason} =
+                 Provider.list_events(client, start_time: start_time, end_time: end_time)
+
+        refute reason == :missing_time_range
       end)
     end
 

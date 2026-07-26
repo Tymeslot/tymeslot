@@ -13,7 +13,6 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
       payload = PayloadBuilder.build_payload("meeting.created", meeting, "42")
 
       assert payload.event == "meeting.created"
-      assert is_binary(payload.timestamp)
       assert {:ok, _dt, _offset} = DateTime.from_iso8601(payload.timestamp)
       assert payload.webhook_id == "42"
     end
@@ -22,7 +21,6 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
       meeting = build(:meeting)
       payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
 
-      assert is_map(payload.data.meeting)
       assert payload.data.meeting.id == meeting.id
       assert payload.data.meeting.title == meeting.title
       assert payload.data.meeting.status == meeting.status
@@ -108,8 +106,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
 
       cancellation = payload.data.meeting.cancellation
       assert cancellation.reason == "Schedule conflict"
-      assert is_binary(cancellation.cancelled_at)
-      assert String.contains?(cancellation.cancelled_at, "2026-01-15")
+      assert cancellation.cancelled_at == "2026-01-15T10:00:00Z"
     end
 
     test "does not include cancellation data for non-cancelled meetings" do
@@ -162,7 +159,6 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
     test "includes a timestamp in ISO8601 format" do
       payload = PayloadBuilder.build_test_payload()
 
-      assert is_binary(payload.timestamp)
       assert {:ok, _dt, _offset} = DateTime.from_iso8601(payload.timestamp)
     end
 
@@ -170,7 +166,10 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
       payload = PayloadBuilder.build_test_payload()
 
       assert payload.data.test == true
-      assert is_binary(payload.data.message)
+
+      assert payload.data.message ==
+               "This is a test webhook from Tymeslot. " <>
+                 "If you receive this, your webhook is configured correctly!"
     end
   end
 end

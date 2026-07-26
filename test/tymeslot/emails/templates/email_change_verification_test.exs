@@ -14,8 +14,9 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerificationTest do
 
       html = EmailChangeVerification.render(user, new_email, verification_url)
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      assert String.starts_with?(html, "<!doctype html>")
+      assert html =~ "Hi Carol White"
+      assert html =~ "Confirm your new email"
     end
 
     test "includes user name in greeting" do
@@ -66,7 +67,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerificationTest do
 
       html = EmailChangeVerification.render(user, new_email, verification_url)
 
-      assert html =~ "didn't request" || html =~ "ignore"
+      assert html =~ "You can safely ignore this email"
     end
   end
 
@@ -93,8 +94,8 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerificationTest do
 
       html = EmailChangeVerification.render(user, new_email, verification_url)
 
-      assert is_binary(html)
       assert html =~ new_email
+      assert html =~ verification_url
     end
   end
 
@@ -109,7 +110,9 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerificationTest do
       url = "https://example.com/verify/token"
       text = EmailChangeVerification.render_text(user, "new@example.com", url)
 
-      assert is_binary(text)
+      # Plain text is not HTML: the tags survive as literal characters without
+      # displacing the verification URL.
+      assert text =~ "<b>Bold</b>"
       assert text =~ url
     end
   end

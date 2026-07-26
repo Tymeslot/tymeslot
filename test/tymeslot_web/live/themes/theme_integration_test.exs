@@ -43,11 +43,10 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
     } do
       {:ok, _result} = update_theme(profile, "1")
 
-      {:ok, view, html} = live(conn, ~p"/#{profile.username}")
+      {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
 
       # Core requirement: visitors must see meeting types
       assert html =~ meeting_type.name, "Theme must show meeting types"
-      assert view
     end
 
     test "visitor can see meeting types with rhythm theme", %{
@@ -57,11 +56,10 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
     } do
       {:ok, _result} = update_theme(profile, "2")
 
-      {:ok, view, html} = live(conn, ~p"/#{profile.username}")
+      {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
 
-      # Theme loads with booking interface
-      assert html =~ profile.username or html =~ meeting_type.name
-      assert view
+      # Theme loads with the booking interface, same core requirement as Quill
+      assert html =~ meeting_type.name, "Theme must show meeting types"
     end
   end
 
@@ -81,11 +79,10 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
       # Add calendar integration to pass readiness check
       insert(:calendar_integration, user: user, is_active: true)
 
-      {:ok, view, html} = live(conn, ~p"/#{profile.username}")
+      {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
 
       # Should not crash, should show something
-      assert view
-      assert html =~ profile.username or has_element?(view, "[data-testid='duration-option']")
+      assert html =~ profile.username
     end
 
     test "invalid theme falls back gracefully", %{conn: conn} do

@@ -164,7 +164,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
         AppointmentConfirmation.render(:organizer, details.organizer_email, details)
 
       assert %Swoosh.Email{} = org_email
-      assert org_email.subject != nil
+      assert org_email.subject == "New Appointment: Jane Attendee - Jan 15"
     end
 
     test "attendee confirmation template creates a valid Swoosh email" do
@@ -174,7 +174,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
         AppointmentConfirmation.render(:attendee, details.attendee_email, details)
 
       assert %Swoosh.Email{} = att_email
-      assert att_email.subject != nil
+      assert att_email.subject == "Appointment Confirmed - Jan 15 with John Organizer"
     end
 
     test "reminder templates create valid Swoosh emails" do

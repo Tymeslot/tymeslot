@@ -20,7 +20,6 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
 
       html = MjmlEmail.compile_mjml(mjml)
 
-      assert is_binary(html)
       assert html =~ "Hello World"
       assert html =~ "<!doctype html>"
     end
@@ -39,10 +38,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       email = MjmlEmail.base_email()
 
       assert %Swoosh.Email{} = email
-      assert email.from != nil
-      {name, address} = email.from
-      assert is_binary(name)
-      assert is_binary(address)
+      assert email.from == {configured(:from_name), configured(:from_email)}
     end
 
     test "defaults to :transactional — no tracking, outbound stream" do
@@ -82,8 +78,8 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
     test "returns a valid email address" do
       email = MjmlEmail.fetch_from_email()
 
-      assert is_binary(email)
-      assert email =~ ~r/@/
+      assert email == configured(:from_email)
+      assert email =~ ~r/^[^@\s]+@[^@\s]+\.[^@\s]+$/
     end
   end
 
@@ -91,7 +87,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
     test "returns a non-empty string" do
       name = MjmlEmail.fetch_from_name()
 
-      assert is_binary(name)
+      assert name == configured(:from_name)
       assert String.length(name) > 0
     end
   end
@@ -107,7 +103,6 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
 
       mjml = MjmlEmail.base_mjml_template(content, organizer_details)
 
-      assert is_binary(mjml)
       assert mjml =~ "<mjml>"
       assert mjml =~ "</mjml>"
       assert mjml =~ "Test Content"
@@ -223,4 +218,8 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       refute mjml =~ "R&amp;amp;D"
     end
   end
+
+  # Reads the sender identity from config rather than the module under test, so
+  # the assertions stay independent of MjmlEmail's own accessors.
+  defp configured(key), do: Application.get_env(:tymeslot, :email)[key]
 end

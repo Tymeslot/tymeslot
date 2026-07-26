@@ -98,6 +98,11 @@ defmodule TymeslotWeb.Helpers.LocaleCompletenessTest do
 
         assert File.exists?(po_path),
                "Missing Gettext PO file for #{unquote(locale)} at #{po_path}"
+
+        # A PO file that was never compiled into the backend fails silently at
+        # runtime, so the on-disk file is only half the story.
+        assert unquote(locale) in Gettext.known_locales(TymeslotWeb.Gettext),
+               "#{unquote(locale)} is not compiled into TymeslotWeb.Gettext"
       end
 
       test "emails Gettext PO file exists" do
@@ -112,6 +117,16 @@ defmodule TymeslotWeb.Helpers.LocaleCompletenessTest do
 
         assert File.exists?(po_path),
                "Missing emails Gettext PO file for #{unquote(locale)} at #{po_path}"
+
+        # The "emails" domain must resolve through the backend for this locale,
+        # otherwise every email silently renders in the source language.
+        translated =
+          Gettext.with_locale(TymeslotWeb.Gettext, unquote(locale), fn ->
+            Gettext.dgettext(TymeslotWeb.Gettext, "emails", "Video call")
+          end)
+
+        assert translated != "",
+               "emails domain resolved to an empty string for #{unquote(locale)}"
       end
     end
   end

@@ -4,6 +4,8 @@ defmodule Tymeslot.Security.UrlValidationTest do
 
   alias Tymeslot.Security.UrlValidation
 
+  @invalid_url_message "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
+
   describe "validate_http_url/2" do
     test "accepts valid http and https URLs" do
       assert :ok = UrlValidation.validate_http_url("https://example.com")
@@ -11,16 +13,12 @@ defmodule Tymeslot.Security.UrlValidationTest do
     end
 
     test "rejects non-binary input" do
-      assert {:error, msg} = UrlValidation.validate_http_url(nil)
-      assert is_binary(msg)
+      assert UrlValidation.validate_http_url(nil) == {:error, @invalid_url_message}
     end
 
     test "rejects missing host or malformed URLs" do
-      assert {:error, msg1} = UrlValidation.validate_http_url("https://")
-      assert is_binary(msg1)
-
-      assert {:error, msg2} = UrlValidation.validate_http_url("https:///path")
-      assert is_binary(msg2)
+      assert UrlValidation.validate_http_url("https://") == {:error, @invalid_url_message}
+      assert UrlValidation.validate_http_url("https:///path") == {:error, @invalid_url_message}
     end
 
     test "rejects unsupported schemes with a scheme-specific error" do
@@ -233,24 +231,24 @@ defmodule Tymeslot.Security.UrlValidationTest do
     end
 
     test "handles IPv6 addresses with zone IDs (URI parser limitation)" do
-      # Zone IDs (e.g., %eth0) are used for link-local addresses
-      # Note: Elixir's URI parser doesn't correctly parse IPv6 with zone IDs
-      # It extracts only partial host info, which may cause validation issues
-      # This test documents the current behavior rather than ideal behavior
+      # Zone IDs (e.g., %eth0) are used for link-local addresses. Elixir's URI
+      # parser truncates "[fe80::1%eth0]" to the host "fe80", so the zone-stripping
+      # in ipv6_local_or_private?/1 never sees the address and it is not recognised
+      # as link-local. Under enforce_https_for_public that fails closed: HTTP is
+      # rejected rather than silently allowed.
       result =
         UrlValidation.validate_http_url("http://[fe80::1%eth0]",
           enforce_https_for_public: true,
           https_error_message: "https required"
         )
 
-      # Due to URI parser limitations, this may not be recognized as local
-      # We accept either outcome (proper parsing would recognize as local)
-      assert result == :ok or result == {:error, "https required"}
+      assert result == {:error, "https required"}
     end
 
     test "rejects IPv6 addresses without brackets in HTTP URLs" do
-      # IPv6 addresses must be bracketed in URLs
-      # Without brackets, the URI parser should fail or misparse
+      # IPv6 addresses must be bracketed in URLs. Unbracketed, the URI parser
+      # reads "fe80" as the host and "::1" as a port, so the address is not
+      # recognised as link-local and HTTP is refused for what looks public.
       result =
         UrlValidation.validate_http_url("http://fe80::1",
           enforce_https_for_public: true,
@@ -258,8 +256,7 @@ defmodule Tymeslot.Security.UrlValidationTest do
           invalid_message: "invalid url"
         )
 
-      # Should either fail validation or be rejected by URI parser
-      assert match?({:error, _}, result) or result == :ok
+      assert result == {:error, "https required"}
     end
 
     test "handles IPv6 compressed zeros in different positions" do
@@ -303,8 +300,8 @@ defmodule Tymeslot.Security.UrlValidationTest do
     end
 
     test "validates IPv4 octets in IPv4-mapped IPv6 addresses (edge case)" do
-      # Test with invalid IPv4 octets (>255)
-      # The URI parser should handle this, but we verify behavior
+      # Octets above 255 make the address unparseable, so it is not classified as
+      # private and HTTP is refused under enforce_https_for_public.
       result =
         UrlValidation.validate_http_url("http://[::ffff:999.999.999.999]",
           enforce_https_for_public: true,
@@ -312,9 +309,7 @@ defmodule Tymeslot.Security.UrlValidationTest do
           invalid_message: "invalid url"
         )
 
-      # URI parser should reject or the connection would fail anyway
-      # Just verify we don't crash
-      assert result == :ok or match?({:error, _}, result)
+      assert result == {:error, "https required"}
     end
   end
 

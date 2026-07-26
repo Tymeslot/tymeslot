@@ -207,8 +207,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerMultiCalendarTest do
                })
 
       cached = Repo.get_by(ProviderCalendarEventSchema, provider_event_id: "work-event-mixed-1")
-      assert cached != nil
-      assert cached.provider_calendar_id == "work@example.com"
+      assert %{provider_calendar_id: "work@example.com"} = cached
 
       {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
 
@@ -283,8 +282,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerMultiCalendarTest do
                })
 
       cached = Repo.get_by(ProviderCalendarEventSchema, provider_event_id: "work-event-1")
-      assert cached != nil
-      assert cached.provider_calendar_id == "work@example.com"
+      assert %{provider_calendar_id: "work@example.com"} = cached
     end
   end
 end

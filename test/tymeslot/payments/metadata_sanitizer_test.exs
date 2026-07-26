@@ -114,7 +114,6 @@ defmodule Tymeslot.Payments.MetadataSanitizerTest do
   describe "allowed_keys/0" do
     test "returns list of allowed user keys" do
       keys = MetadataSanitizer.allowed_keys()
-      assert is_list(keys)
       assert "billing_interval" in keys
       assert "referral_code" in keys
       assert "utm_source" in keys
