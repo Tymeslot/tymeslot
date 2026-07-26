@@ -12,9 +12,22 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder
   alias Tymeslot.Security.{RateLimiter, UrlValidation}
+
+  @capabilities Capabilities.new!(
+                  recording: false,
+                  screen_sharing: true,
+                  waiting_room: false,
+                  max_participants: 100,
+                  requires_download: false,
+                  dial_in: false,
+                  chat: true,
+                  breakout_rooms: false,
+                  end_to_end_encryption: true
+                )
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def provider_type, do: :mirotalk
@@ -47,19 +60,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def capabilities do
-    %{
-      recording: false,
-      screen_sharing: true,
-      waiting_room: false,
-      max_participants: 100,
-      requires_download: false,
-      supports_phone_dial_in: false,
-      supports_chat: true,
-      supports_breakout_rooms: false,
-      end_to_end_encryption: true
-    }
-  end
+  def capabilities, do: @capabilities
 
   @doc """
   Tests the connection to the MiroTalk API.
@@ -209,13 +210,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       {:ok, %Req.Response{status: 200, body: body}} ->
         case Jason.decode(body) do
           {:ok, response} ->
-            {:ok,
-             %{
-               room_id: response["room_id"] || response["meeting"],
-               meeting_url: response["meeting_url"] || response["meeting"],
-               provider_data: response,
-               provider_config: config
-             }}
+            build_room_data(response, config)
 
           {:error, _decode_error} ->
             Logger.error("Invalid JSON response from MiroTalk API")
@@ -234,6 +229,39 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
         {:error, reason}
     end
   end
+
+  # A 200 response that carries neither a room id nor a meeting URL is not a
+  # usable room: persisting it would attach an empty room to the booking. Treat
+  # it as a failed creation so the caller can retry or surface the failure.
+  defp build_room_data(response, config) when is_map(response) do
+    room_id = presence(response["room_id"] || response["meeting"])
+    meeting_url = presence(response["meeting_url"] || response["meeting"])
+
+    if is_nil(room_id) and is_nil(meeting_url) do
+      Logger.error("MiroTalk API returned no room identifier",
+        response_keys: response |> Map.keys() |> Enum.sort()
+      )
+
+      {:error, :invalid_room_response}
+    else
+      {:ok,
+       %{
+         room_id: room_id,
+         meeting_url: meeting_url,
+         provider_data: response,
+         provider_config: config
+       }}
+    end
+  end
+
+  defp build_room_data(_response, _config) do
+    Logger.error("MiroTalk API returned a non-object JSON body")
+    {:error, :invalid_room_response}
+  end
+
+  defp presence(nil), do: nil
+  defp presence(""), do: nil
+  defp presence(value), do: value
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, participant_email, role, meeting_time) do

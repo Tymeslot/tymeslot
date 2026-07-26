@@ -100,14 +100,13 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       assert {:error, _reason} = perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
     end
 
-    test "handles malformed API response (missing expected field)" do
+    test "fails and attaches nothing when the API response is missing the expected field" do
       %{meeting: meeting} = setup_video_scenario()
 
-      # MiroTalk provider tries HTTPS, then HTTP, then tries to create join URLs (4 total calls)
-      # First 2 calls: room creation attempts that return malformed responses
-      # Next 2 calls: join URL creation attempts (if room creation somehow "succeeds")
-      expect(Tymeslot.HTTPClientMock, :post, 4, fn _url, _body, _headers, _opts ->
-        # Valid JSON but missing the "meeting" field that MiroTalk expects
+      # Two calls: the config connection check, then room creation. The job must
+      # fail rather than attach a room the attendees cannot join, so creation
+      # stops there and no join-URL calls follow.
+      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
         {:ok,
          %Req.Response{
            status: 200,
@@ -115,17 +114,19 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
          }}
       end)
 
-      # Even with malformed response, MiroTalk might partially succeed
-      # This test documents that the provider is resilient
-      # In reality, missing "meeting" field causes :invalid_json error
-      result = perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
+      # {:error, _} keeps the job retryable within max_attempts rather than
+      # burying the failure behind a successful-looking :ok.
+      assert {:error, :invalid_room_response} =
+               perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
 
-      # Can be either :ok (if provider is very resilient) or {:error, reason}
-      case result do
-        :ok -> assert true
-        {:error, _reason} -> assert true
-        other -> flunk("Unexpected result: #{inspect(other)}")
-      end
+      updated_meeting = Repo.get(MeetingSchema, meeting.id)
+      refute updated_meeting.video_room_enabled
+      assert is_nil(updated_meeting.video_room_id)
+      assert is_nil(updated_meeting.meeting_url)
+      assert is_nil(updated_meeting.organizer_video_url)
+      assert is_nil(updated_meeting.attendee_video_url)
+
+      refute_enqueued(worker: CalendarEventWorker)
     end
 
     test "handles empty API response" do

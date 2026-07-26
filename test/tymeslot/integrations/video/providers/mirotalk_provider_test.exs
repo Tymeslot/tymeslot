@@ -39,9 +39,9 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert capabilities[:waiting_room] == false
       assert capabilities[:max_participants] == 100
       assert capabilities[:requires_download] == false
-      assert capabilities[:supports_phone_dial_in] == false
-      assert capabilities[:supports_chat] == true
-      assert capabilities[:supports_breakout_rooms] == false
+      assert capabilities[:dial_in] == false
+      assert capabilities[:chat] == true
+      assert capabilities[:breakout_rooms] == false
       assert capabilities[:end_to_end_encryption] == true
     end
   end
@@ -346,6 +346,36 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       end)
 
       assert {:error, :invalid_json} = MiroTalkProvider.create_meeting_room(config)
+    end
+
+    test "returns error when a 200 response carries no room identifier" do
+      config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"unexpected" => "data"})}}
+      end)
+
+      assert {:error, :invalid_room_response} = MiroTalkProvider.create_meeting_room(config)
+    end
+
+    test "returns error when the room identifier is an empty string" do
+      config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"meeting" => ""})}}
+      end)
+
+      assert {:error, :invalid_room_response} = MiroTalkProvider.create_meeting_room(config)
+    end
+
+    test "returns error when the JSON body is not an object" do
+      config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(["room123"])}}
+      end)
+
+      assert {:error, :invalid_room_response} = MiroTalkProvider.create_meeting_room(config)
     end
 
     test "handles API errors gracefully" do
