@@ -456,7 +456,15 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
             try do
               ReminderUtils.reminder_interval_seconds(val, unit)
             rescue
-              _exception -> 0
+              exception ->
+                Logger.warning("Ignoring unreadable reminder interval",
+                  meeting_id: meeting.id,
+                  value: inspect(val),
+                  unit: inspect(unit),
+                  error: Exception.message(exception)
+                )
+
+                0
             end
           end)
           |> Enum.max()

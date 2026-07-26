@@ -176,8 +176,8 @@ defmodule Tymeslot.Integrations.Calendar do
   def toggle_calendar_selection(integration, calendar_id) do
     current_selection =
       Enum.reduce(integration.calendar_list || [], [], fn cal, acc ->
-        cid = cal["id"] || cal[:id]
-        is_selected = cal["selected"] || cal[:selected] || false
+        cid = calendar_field(cal, :id)
+        is_selected = calendar_field(cal, :selected) || false
 
         is_now_selected =
           if to_string(cid) == to_string(calendar_id), do: !is_selected, else: is_selected
@@ -529,4 +529,11 @@ defmodule Tymeslot.Integrations.Calendar do
       reason: inspect(reason)
     )
   end
+
+  # `calendar_list` entries are string-keyed once they have been through the
+  # JSONB column and atom-keyed while they are still fresh from provider
+  # discovery, so every read goes through this one accessor rather than each
+  # call site defending for itself.
+  defp calendar_field(calendar, key) when is_atom(key),
+    do: calendar[Atom.to_string(key)] || calendar[key]
 end

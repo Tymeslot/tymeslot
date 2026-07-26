@@ -314,24 +314,18 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   end
 
   @valid_statuses ~w(healthy degraded unhealthy)a
+  @statuses_by_name Map.new(@valid_statuses, &{Atom.to_string(&1), &1})
 
-  defp safe_to_status(str) when is_binary(str) do
-    atom = String.to_existing_atom(str)
-    if atom in @valid_statuses, do: atom, else: :degraded
-  rescue
-    ArgumentError -> :degraded
-  end
+  defp safe_to_status(str) when is_binary(str),
+    do: Map.get(@statuses_by_name, str, :degraded)
 
   @valid_error_classes ~w(transient hard)a
+  @error_classes_by_name Map.new(@valid_error_classes, &{Atom.to_string(&1), &1})
 
   defp safe_to_error_class(nil), do: nil
 
-  defp safe_to_error_class(str) when is_binary(str) do
-    atom = String.to_existing_atom(str)
-    if atom in @valid_error_classes, do: atom, else: :hard
-  rescue
-    ArgumentError -> :hard
-  end
+  defp safe_to_error_class(str) when is_binary(str),
+    do: Map.get(@error_classes_by_name, str, :hard)
 
   defp count_by_status(integration_lists, status) do
     integration_lists

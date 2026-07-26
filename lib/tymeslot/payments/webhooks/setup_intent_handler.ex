@@ -22,14 +22,17 @@ defmodule Tymeslot.Payments.Webhooks.SetupIntentHandler do
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(event, setup_intent) do
-    event_type = event["type"] || event[:type]
     setup_intent_id = setup_intent["id"]
 
     Logger.info("Processing setup_intent event",
-      event_type: event_type,
+      event_type: event_type(event),
       setup_intent_id: setup_intent_id
     )
 
     {:ok, :setup_intent_processed}
   end
+
+  # Stripe events arrive JSON-decoded, so string-keyed; the webhook processor
+  # additionally stamps an atom `:type` before dispatching. Read both here, once.
+  defp event_type(event), do: Map.get(event, "type") || Map.get(event, :type)
 end

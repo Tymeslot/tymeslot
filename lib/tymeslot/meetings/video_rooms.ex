@@ -326,11 +326,14 @@ defmodule Tymeslot.Meetings.VideoRooms do
   end
 
   defp get_meeting_url_from_context(meeting_context) do
-    meeting_context.room_data[:meeting_url] ||
-      meeting_context.room_data["meeting_url"] ||
-      meeting_context.room_data[:room_id] ||
-      meeting_context.room_data["room_id"]
+    room_data = meeting_context.room_data || %{}
+    room_field(room_data, :meeting_url) || room_field(room_data, :room_id)
   end
+
+  # `room_data` is atom-keyed when a provider has just built it and string-keyed
+  # once it has been through the meeting's JSONB column.
+  defp room_field(room_data, key),
+    do: Map.get(room_data, key) || Map.get(room_data, Atom.to_string(key))
 
   defp check_video_provider_type(meeting, user_id) do
     integration_result =

@@ -150,7 +150,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
         provider: :caldav,
         calendar_integration_id: context.calendar_integration_id,
         provider_calendar_id: context.provider_calendar_id,
-        provider_event_id: raw[:href] || raw["href"] || raw[:uid],
+        provider_event_id: raw[:href] || raw[:uid],
         synced_at: context.synced_at,
         summary: raw[:summary],
         description: raw[:description],
@@ -282,7 +282,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
 
   defp map_organiser(organiser) when is_map(organiser) do
     %{
-      email: organiser["email"] || organiser[:email],
+      email: person_field(organiser, :email),
       display_name: organiser["CN"] || organiser["name"] || organiser[:display_name]
     }
   end
@@ -305,7 +305,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
 
   defp map_attendee(a) when is_map(a) do
     %{
-      email: a["email"] || a[:email],
+      email: person_field(a, :email),
       display_name: a["name"] || a["CN"] || a[:display_name],
       response_status: map_partstat(a["status"] || a["PARTSTAT"] || a[:response_status]),
       optional: false
@@ -314,6 +314,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
 
   defp map_attendee(_other),
     do: %{email: nil, display_name: nil, response_status: nil, optional: false}
+
+  # `ICalParser` emits attendee maps with string keys, while an organiser
+  # supplied by a caller may already be in the canonical atom-keyed shape.
+  # One accessor answers "which key type is this?" for both.
+  defp person_field(person, key) when is_atom(key),
+    do: person[Atom.to_string(key)] || person[key]
 
   defp map_partstat("accepted"), do: :accepted
   defp map_partstat("ACCEPTED"), do: :accepted

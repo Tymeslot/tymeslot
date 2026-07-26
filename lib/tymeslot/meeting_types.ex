@@ -313,11 +313,12 @@ defmodule Tymeslot.MeetingTypes do
 
     payment_required = params["payment_required"] == "true"
 
-    with {:ok, reminder_config} <- normalize_reminder_config_params(params["reminder_config"]),
+    with {:ok, duration_minutes} <- parse_duration(params["duration"]),
+         {:ok, reminder_config} <- normalize_reminder_config_params(params["reminder_config"]),
          {:ok, price_cents} <- parse_price_cents(payment_required, params["price"]) do
       attrs = %{
         name: params["name"],
-        duration_minutes: String.to_integer(params["duration"]),
+        duration_minutes: duration_minutes,
         description: params["description"],
         icon: ui_state.selected_icon,
         is_active: params["is_active"] == "true",
@@ -340,10 +341,16 @@ defmodule Tymeslot.MeetingTypes do
 
       {:ok, attrs}
     end
-  rescue
-    ArgumentError ->
-      {:error, :invalid_duration}
   end
+
+  defp parse_duration(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {duration, ""} -> {:ok, duration}
+      _other -> {:error, :invalid_duration}
+    end
+  end
+
+  defp parse_duration(_value), do: {:error, :invalid_duration}
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
@@ -510,7 +517,7 @@ defmodule Tymeslot.MeetingTypes do
     else
       found? =
         Enum.any?(calendar_list, fn cal ->
-          UriUtils.uri_safe_match?(cal["id"] || cal[:id], target_calendar_id)
+          UriUtils.uri_safe_match?(calendar_entry_id(cal), target_calendar_id)
         end)
 
       if found? do
@@ -520,6 +527,10 @@ defmodule Tymeslot.MeetingTypes do
       end
     end
   end
+
+  # `calendar_list` entries are string-keyed once they have been through the
+  # JSONB column, but arrive atom-keyed straight from discovery.
+  defp calendar_entry_id(cal), do: Map.get(cal, "id") || Map.get(cal, :id)
 
   defp normalize_reminder_config_params(nil), do: {:ok, nil}
   defp normalize_reminder_config_params(""), do: {:ok, nil}

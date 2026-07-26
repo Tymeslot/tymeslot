@@ -210,7 +210,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   defp build_create_success(created, creating, user_id, start_at, end_at, video_context) do
-    uid = if is_binary(created), do: created, else: created[:uid] || created["uid"]
+    uid = created_uid(created)
 
     {provider, default_booking_calendar_id, reauth_required?} =
       lookup_integration_metadata(creating.integration_id)
@@ -278,6 +278,14 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
         %{}
     end
   end
+
+  # Providers return the created event either as a bare uid string, as an
+  # atom-keyed map (the converted shape), or as a string-keyed map (a raw
+  # payload). All three are answered here once.
+  defp created_uid(created) when is_binary(created), do: created
+  defp created_uid(%{uid: uid}) when is_binary(uid), do: uid
+  defp created_uid(%{"uid" => uid}) when is_binary(uid), do: uid
+  defp created_uid(_created), do: nil
 
   defp build_description(existing, video_context) do
     case video_context[:meeting_url] do

@@ -97,14 +97,11 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   def auto_select_primary_calendar(integration, calendars) do
     alias Tymeslot.Integrations.Calendar.ProviderConfig
 
-    provider_atom =
-      try do
-        String.to_existing_atom(integration.provider)
-      rescue
-        ArgumentError -> :unknown
+    oauth? =
+      case ProviderConfig.parse_known(integration.provider) do
+        {:ok, provider_atom} -> ProviderConfig.oauth_provider?(provider_atom)
+        {:error, :unknown} -> false
       end
-
-    oauth? = ProviderConfig.oauth_provider?(provider_atom)
 
     # Find the default booking calendar
     default_calendar_id =

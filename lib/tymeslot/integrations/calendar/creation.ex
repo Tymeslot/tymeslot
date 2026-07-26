@@ -57,11 +57,14 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
     end
   end
 
+  # Keys are strings throughout: the params come from the form, and
+  # `InputValidation.validate_calendar_integration_form/2` returns a
+  # string-keyed map that `SanitizeMerge.merge/2` folds back into them.
   defp check_no_duplicate_calendar(user_id, params) do
-    provider = params["provider"] || params[:provider]
-    url = params["url"] || params[:url]
-    username = params["username"] || params[:username]
-    calendar_paths = params["calendar_paths"] || params[:calendar_paths]
+    provider = params["provider"]
+    url = params["url"]
+    username = params["username"]
+    calendar_paths = params["calendar_paths"]
 
     if is_binary(url) and url != "" and is_binary(username) and username != "" and
          is_binary(provider) do

@@ -71,10 +71,8 @@ defmodule Mix.Tasks.MirotalkProdSmoke do
 
     {:ok, meeting_context} = ProviderAdapter.create_meeting_room(:mirotalk, config)
 
-    room_id =
-      meeting_context.room_data[:room_id] ||
-        meeting_context.room_data["room_id"] ||
-        "unknown"
+    # Provider modules always build `room_data` with atom keys.
+    room_id = meeting_context.room_data[:room_id] || "unknown"
 
     IO.puts("\nCreated room:")
     IO.puts("room_id: #{room_id}")
@@ -234,7 +232,9 @@ defmodule Mix.Tasks.MirotalkProdSmoke do
   defp decode_query(query) when is_binary(query) do
     URI.decode_query(query)
   rescue
-    _error -> %{}
+    error ->
+      IO.puts("  warning: could not decode query string: #{Exception.message(error)}")
+      %{}
   end
 
   defp header_value(headers, name) when is_map(headers) and is_binary(name) do

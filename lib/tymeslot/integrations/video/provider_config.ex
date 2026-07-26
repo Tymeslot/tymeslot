@@ -14,6 +14,13 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   @oauth_providers [:google_meet, :teams, :zoom]
   @dev_only_providers []
 
+  # Compile-time lookup from the provider's string form to its atom, covering
+  # every statically known provider regardless of runtime toggles. Parsing
+  # through this table keeps the string entry points total: no
+  # `String.to_existing_atom/1` raise to rescue, and no dependence on whether
+  # the atom happens to have been loaded yet.
+  @provider_atoms Map.new(@providers ++ @dev_only_providers, &{Atom.to_string(&1), &1})
+
   # Provider metadata - single source of truth for all provider information
   @provider_metadata %{
     mirotalk: %{
@@ -162,12 +169,10 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   """
   @spec validate_provider(atom() | String.t()) :: {:ok, atom()} | {:error, String.t()}
   def validate_provider(provider) when is_binary(provider) do
-    provider
-    |> String.to_existing_atom()
-    |> validate_provider()
-  rescue
-    ArgumentError ->
-      {:error, format_invalid_provider_error(provider)}
+    case Map.fetch(@provider_atoms, provider) do
+      {:ok, atom} -> validate_provider(atom)
+      :error -> {:error, format_invalid_provider_error(provider)}
+    end
   end
 
   def validate_provider(provider) when is_atom(provider) do
@@ -206,9 +211,10 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   def parse("none"), do: {:ok, :none}
 
   def parse(provider) when is_binary(provider) do
-    parse(String.to_existing_atom(provider))
-  rescue
-    ArgumentError -> {:error, :unknown}
+    case Map.fetch(@provider_atoms, provider) do
+      {:ok, atom} -> parse(atom)
+      :error -> {:error, :unknown}
+    end
   end
 
   def parse(_other), do: {:error, :unknown}
@@ -235,9 +241,10 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   def parse_known("none"), do: {:ok, :none}
 
   def parse_known(provider) when is_binary(provider) do
-    parse_known(String.to_existing_atom(provider))
-  rescue
-    ArgumentError -> {:error, :unknown}
+    case Map.fetch(@provider_atoms, provider) do
+      {:ok, atom} -> parse_known(atom)
+      :error -> {:error, :unknown}
+    end
   end
 
   def parse_known(_other), do: {:error, :unknown}

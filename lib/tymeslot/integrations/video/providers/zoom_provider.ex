@@ -85,8 +85,9 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     end
   end
 
-  def extract_room_id(%{room_data: room_data}),
-    do: room_data[:room_id] || room_data["room_id"]
+  # `create_meeting_room/1` above is the only producer of Zoom room data, and
+  # it always builds it with atom keys.
+  def extract_room_id(%{room_data: room_data}), do: room_data[:room_id]
 
   def extract_room_id(_other), do: nil
 
@@ -158,8 +159,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       provider: "zoom",
       meeting_id: room_data.room_id,
       join_url: room_data.meeting_url,
-      passcode: room_data.provider_data[:passcode] || room_data.provider_data["passcode"],
-      host_url: room_data.provider_data[:start_url] || room_data.provider_data["start_url"]
+      passcode: room_data.provider_data[:passcode],
+      host_url: room_data.provider_data[:start_url]
     }
   end
 

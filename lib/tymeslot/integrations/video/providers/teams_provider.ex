@@ -72,9 +72,8 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     end
   end
 
-  def extract_room_id(%{room_data: room_data}) do
-    room_data[:room_id] || room_data["room_id"]
-  end
+  def extract_room_id(%{room_data: %{room_id: room_id}}), do: room_id
+  def extract_room_id(%{room_data: %{"room_id" => room_id}}), do: room_id
 
   def extract_room_id(_other), do: nil
 

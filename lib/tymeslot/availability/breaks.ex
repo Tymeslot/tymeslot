@@ -3,6 +3,8 @@ defmodule Tymeslot.Availability.Breaks do
   Context for managing availability breaks.
   """
 
+  require Logger
+
   alias Ecto.Changeset
   alias Tymeslot.Availability.AvailabilityBreakQueries
   alias Tymeslot.Availability.AvailabilityBreakSchema
@@ -105,7 +107,13 @@ defmodule Tymeslot.Availability.Breaks do
       add_break(weekly_availability_id, start_time, end_time, label)
     end
   rescue
-    _other ->
+    exception ->
+      Logger.warning("Quick break time calculation failed",
+        weekly_availability_id: weekly_availability_id,
+        duration_minutes: duration_minutes,
+        error: Exception.message(exception)
+      )
+
       {:error, "Invalid time calculation"}
   end
 

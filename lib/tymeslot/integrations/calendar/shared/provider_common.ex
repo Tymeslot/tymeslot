@@ -205,15 +205,25 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   defp caldav_selected_paths(integration) do
     if integration.calendar_list && integration.calendar_list != [] do
       integration.calendar_list
-      |> Enum.filter(fn cal ->
-        (cal["selected"] == true || cal[:selected] == true) &&
-          not (Map.get(cal, "read_only", false) || Map.get(cal, :read_only, false))
-      end)
-      |> Enum.map(fn cal -> cal["path"] || cal[:path] || cal["id"] || cal[:id] end)
+      |> Enum.map(&normalize_calendar/1)
+      |> Enum.filter(&(&1.selected == true and &1.read_only == false))
+      |> Enum.map(&(&1.path || &1.id))
       |> Enum.reject(&is_nil/1)
     else
       integration.calendar_paths || []
     end
+  end
+
+  # `calendar_list` entries are string-keyed once they have been through the
+  # JSONB column, but arrive atom-keyed straight from discovery. This is the one
+  # place that answers "which key type?"; callers read atoms.
+  defp normalize_calendar(cal) do
+    %{
+      id: Map.get(cal, "id") || Map.get(cal, :id),
+      path: Map.get(cal, "path") || Map.get(cal, :path),
+      selected: Map.get(cal, "selected") || Map.get(cal, :selected),
+      read_only: Map.get(cal, "read_only") || Map.get(cal, :read_only) || false
+    }
   end
 
   defp caldav_path_config(integration, path) do

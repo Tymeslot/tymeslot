@@ -568,7 +568,13 @@ defmodule Tymeslot.Bookings.Create do
           try do
             String.to_existing_atom(integration.provider)
           rescue
-            ArgumentError -> :unknown
+            ArgumentError ->
+              Logger.warning("Video integration has an unrecognised provider",
+                video_integration_id: meeting.video_integration_id,
+                provider: integration.provider
+              )
+
+              :unknown
           end
 
         provider = if raw_provider in [:unknown, :none], do: :none, else: raw_provider

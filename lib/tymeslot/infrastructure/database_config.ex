@@ -99,7 +99,7 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
   defp url_ssl_mode(nil), do: :off
 
   defp url_ssl_mode(url) do
-    case url |> URI.parse() |> Map.get(:query) |> decode_query() |> Map.get("sslmode") do
+    case url |> URI.parse() |> Map.get(:query) |> query_params() |> Map.get("sslmode") do
       nil ->
         :off
 
@@ -118,8 +118,10 @@ defmodule Tymeslot.Infrastructure.DatabaseConfig do
     end
   end
 
-  defp decode_query(nil), do: %{}
-  defp decode_query(query), do: URI.decode_query(query)
+  # A URL with no query string parses to a nil query, which `URI.decode_query/1`
+  # cannot take.
+  defp query_params(nil), do: %{}
+  defp query_params(query), do: URI.decode_query(query)
 
   defp normalise_ssl_mode(value) do
     case String.downcase(value) do

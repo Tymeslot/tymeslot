@@ -210,9 +210,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
 
   defp calendar_display_name(%{calendar_integration: integration} = type) do
     calendar =
-      Enum.find(integration.calendar_list || [], fn cal ->
-        (cal["id"] || cal[:id]) == type.target_calendar_id
-      end)
+      Enum.find(integration.calendar_list || [], &(calendar_id(&1) == type.target_calendar_id))
 
     name =
       if calendar do
@@ -223,6 +221,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
 
     truncate_calendar_name(name)
   end
+
+  # `calendar_list` entries are string-keyed when read back from the JSONB
+  # column and atom-keyed when built in memory. Dispatch on shape rather than
+  # probing both key types at the call site.
+  defp calendar_id(%{"id" => id}), do: id
+  defp calendar_id(%{id: id}), do: id
+  defp calendar_id(_calendar), do: nil
 
   defp truncate_calendar_name(name) when is_binary(name) do
     max_length = 15

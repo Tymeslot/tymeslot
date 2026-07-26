@@ -238,8 +238,11 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   end
 
   # Private helpers
+  # `room_data` is atom-keyed when a provider has just built it and string-keyed
+  # once it has been through the meeting's JSONB column.
   defp extract_room_id(meeting_context) do
-    meeting_context.room_data[:room_id] || meeting_context.room_data["room_id"] || "unknown"
+    room_data = meeting_context.room_data || %{}
+    Map.get(room_data, :room_id) || Map.get(room_data, "room_id") || "unknown"
   end
 
   defp get_provider_config(user_id, opts) do

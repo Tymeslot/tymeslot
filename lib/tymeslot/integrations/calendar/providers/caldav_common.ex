@@ -306,7 +306,13 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   # Helpers
-  defp get_calendar_paths(client), do: client[:calendar_paths] || client["calendar_paths"] || []
+
+  # Client configs are built atom-keyed in this application but arrive
+  # string-keyed when they have been round-tripped through JSON, so both
+  # shapes are answered here once.
+  defp get_calendar_paths(%{calendar_paths: paths}) when is_list(paths), do: paths
+  defp get_calendar_paths(%{"calendar_paths" => paths}) when is_list(paths), do: paths
+  defp get_calendar_paths(_client), do: []
 
   defp primary_calendar_path(client) do
     client

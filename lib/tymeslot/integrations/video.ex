@@ -140,15 +140,23 @@ defmodule Tymeslot.Integrations.Video do
         {:error, :unknown} -> :unknown
       end
 
-    # Ensure all keys are atoms to avoid mixed keys error in Ecto.cast
-    # We use try/rescue to safely handle unknown atom strings
+    # Ensure all keys are atoms to avoid mixed keys error in Ecto.cast.
+    # A key with no existing atom cannot name a schema field, so it is dropped —
+    # logged (name only, never the value) so a mistyped attribute leaves
+    # evidence instead of vanishing.
     attrs =
       Enum.reduce(attrs, %{}, fn
         {k, v}, acc when is_binary(k) ->
           try do
             Map.put(acc, String.to_existing_atom(k), v)
           rescue
-            ArgumentError -> acc
+            error in ArgumentError ->
+              Logger.warning("Dropping unrecognised video integration attribute",
+                attribute: k,
+                error: Exception.message(error)
+              )
+
+              acc
           end
 
         {k, v}, acc when is_atom(k) ->
@@ -161,14 +169,16 @@ defmodule Tymeslot.Integrations.Video do
     do_create_integration(provider, attrs)
   end
 
+  # `create_integration/3` has already atomised every key by the time these
+  # clauses run, so the attrs are read one way here.
   defp do_create_integration(:mirotalk, attrs) do
     # Set provider_account_id for dedup
-    base_url = attrs[:base_url] || attrs["base_url"]
+    base_url = attrs[:base_url]
     attrs = Map.put(attrs, :provider_account_id, base_url)
 
     # Pre-test the connection prior to creation for better UX
     config = %{
-      api_key: attrs[:api_key] || attrs["api_key"],
+      api_key: attrs[:api_key],
       base_url: base_url
     }
 
@@ -180,7 +190,7 @@ defmodule Tymeslot.Integrations.Video do
 
   defp do_create_integration(:custom, attrs) do
     # Set provider_account_id from custom_meeting_url for dedup
-    custom_url = attrs[:custom_meeting_url] || attrs["custom_meeting_url"]
+    custom_url = attrs[:custom_meeting_url]
     attrs = Map.put(attrs, :provider_account_id, custom_url)
 
     with :ok <- check_no_duplicate(attrs) do

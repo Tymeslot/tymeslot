@@ -23,6 +23,10 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
     invalid_token
   )a
 
+  # String forms of the same list, so a URL segment can be checked without
+  # converting attacker-supplied text into an atom.
+  @auth_state_names Enum.map(@auth_states, &Atom.to_string/1)
+
   @doc """
   Determine authentication state from URI and params.
   """
@@ -119,9 +123,7 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
   """
   @spec valid_state?(String.t()) :: boolean()
   def valid_state?(state) when is_binary(state) do
-    String.to_existing_atom(state) in @auth_states
-  rescue
-    ArgumentError -> false
+    state in @auth_state_names
   end
 
   @doc """
