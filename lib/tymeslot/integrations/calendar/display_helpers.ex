@@ -42,9 +42,9 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
         }) ::
           String.t()
   def extract_calendar_display_name(calendar) do
-    raw_name = calendar["name"] || calendar[:name]
-    path = calendar["path"] || calendar[:path] || calendar["href"] || calendar[:href]
-    id = calendar["id"] || calendar[:id]
+    raw_name = calendar_field(calendar, :name)
+    path = calendar_field(calendar, :path) || calendar_field(calendar, :href)
+    id = calendar_field(calendar, :id)
 
     cond do
       # If name exists and doesn't look like a UUID, use it
@@ -112,4 +112,10 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
   end
 
   defp extract_name_from_path(_arg), do: "Calendar"
+
+  # Calendar entries reach this module string-keyed from the persisted
+  # `calendar_list` and atom-keyed straight from provider discovery, so both
+  # shapes are reconciled in this one accessor.
+  defp calendar_field(calendar, key) when is_atom(key),
+    do: calendar[Atom.to_string(key)] || calendar[key]
 end

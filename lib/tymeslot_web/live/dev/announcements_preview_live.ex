@@ -16,6 +16,8 @@ defmodule TymeslotWeb.Dev.AnnouncementsPreviewLive do
 
   alias TymeslotWeb.Components.AnnouncementModalComponent
 
+  require Logger
+
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
     {:ok,
@@ -95,6 +97,12 @@ defmodule TymeslotWeb.Dev.AnnouncementsPreviewLive do
   defp safe_list(catalog) do
     catalog.list()
   rescue
-    _error -> []
+    error ->
+      Logger.warning("Announcement catalog failed to list its entries",
+        catalog: inspect(catalog),
+        error: inspect(error)
+      )
+
+      []
   end
 end

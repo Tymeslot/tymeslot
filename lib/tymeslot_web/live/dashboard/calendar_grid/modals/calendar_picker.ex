@@ -97,10 +97,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
     derived || EditWorkflow.default_calendar_id_for(integration)
   end
 
+  # `calendar_list` entries come back from the JSONB column string-keyed, but
+  # provider discovery and in-memory fixtures build them atom-keyed. This is the
+  # one place that answers which, so every read below names its key once.
+  @key_atoms Map.new(~w(id path selected read_only primary)a, &{Atom.to_string(&1), &1})
+
+  defp field(cal, key) do
+    case Map.fetch(cal, key) do
+      {:ok, value} -> value
+      :error -> fetch_atom(cal, Map.get(@key_atoms, key))
+    end
+  end
+
+  defp fetch_atom(_cal, nil), do: nil
+  defp fetch_atom(cal, key), do: Map.get(cal, key)
+
   defp selected_calendars(integration) do
     Enum.filter(integration.calendar_list || [], fn cal ->
-      (cal["selected"] || cal[:selected]) &&
-        not (Map.get(cal, "read_only", false) || Map.get(cal, :read_only, false))
+      field(cal, "selected") && not (field(cal, "read_only") || false)
     end)
   end
 
@@ -111,23 +125,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
   defp default_calendar_id([]), do: nil
 
   defp default_calendar_id(calendars) do
-    primary = Enum.find(calendars, &(&1["primary"] || &1[:primary]))
+    primary = Enum.find(calendars, &field(&1, "primary"))
     cal = primary || List.first(calendars)
-    cal["id"] || cal[:id]
+    field(cal, "id")
   end
 
   defp find_google_calendar_id(calendars, organizer_email) do
-    match = Enum.find(calendars, fn c -> (c["id"] || c[:id]) == organizer_email end)
-    if match, do: match["id"] || match[:id]
+    match = Enum.find(calendars, fn c -> field(c, "id") == organizer_email end)
+    if match, do: field(match, "id")
   end
 
   defp find_caldav_calendar_id(calendars, provider_event_id) do
     match =
       Enum.find(calendars, fn c ->
-        path = c["path"] || c[:path] || c["id"] || c[:id]
+        path = field(c, "path") || field(c, "id")
         is_binary(path) and String.starts_with?(provider_event_id, path)
       end)
 
-    if match, do: match["id"] || match[:id]
+    if match, do: field(match, "id")
   end
 end

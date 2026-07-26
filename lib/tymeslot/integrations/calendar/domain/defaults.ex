@@ -49,9 +49,9 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
   """
   @spec primary_id(list()) :: String.t() | nil
   def primary_id(calendars) when is_list(calendars) do
-    case Enum.find(calendars, fn cal -> cal["primary"] == true || cal[:primary] == true end) do
+    case Enum.find(calendars, fn cal -> calendar_field(cal, :primary) == true end) do
       nil -> nil
-      cal -> cal["id"] || cal[:id] || cal["path"] || cal[:path]
+      cal -> calendar_id(cal)
     end
   end
 
@@ -62,9 +62,9 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
   """
   @spec selected_id(list()) :: String.t() | nil
   def selected_id(calendars) when is_list(calendars) do
-    case Enum.find(calendars, fn cal -> cal["selected"] == true || cal[:selected] == true end) do
+    case Enum.find(calendars, fn cal -> calendar_field(cal, :selected) == true end) do
       nil -> nil
-      cal -> cal["id"] || cal[:id] || cal["path"] || cal[:path]
+      cal -> calendar_id(cal)
     end
   end
 
@@ -77,9 +77,17 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
   def first_id_from_list(calendars) when is_list(calendars) do
     case List.first(calendars) do
       nil -> nil
-      cal -> cal["id"] || cal[:id] || cal["path"] || cal[:path]
+      cal -> calendar_id(cal)
     end
   end
 
   def first_id_from_list(_calendars), do: nil
+
+  defp calendar_id(calendar), do: calendar_field(calendar, :id) || calendar_field(calendar, :path)
+
+  # `calendar_list` entries are string-keyed once they have been through the
+  # JSONB column and atom-keyed while they are still fresh from provider
+  # discovery, so both shapes are reconciled in this one accessor.
+  defp calendar_field(calendar, key) when is_atom(key),
+    do: calendar[Atom.to_string(key)] || calendar[key]
 end

@@ -237,8 +237,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, participant_email, role, meeting_time) do
-    room_id = room_data[:room_id] || room_data["room_id"]
-    config = room_data[:provider_config] || room_data["provider_config"]
+    room_id = room_field(room_data, :room_id)
+    config = room_field(room_data, :provider_config)
 
     if room_id != "" and participant_name != "" and config do
       # MiroTalk API returns the full meeting URL, but the 'room' parameter
@@ -350,8 +350,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   def generate_meeting_metadata(room_data) do
     %{
       provider: "mirotalk",
-      meeting_id: room_data[:room_id] || room_data["room_id"],
-      join_url: room_data[:meeting_url] || room_data["meeting_url"]
+      meeting_id: room_field(room_data, :room_id),
+      join_url: room_field(room_data, :meeting_url)
     }
   end
 
@@ -379,4 +379,10 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       {:error, :rate_limited, message} -> {:error, message}
     end
   end
+
+  # `create_meeting_room/1` builds atom-keyed room data, but callers may hand
+  # back a string-keyed map (a room description that has been through JSON),
+  # so both shapes are reconciled in this one accessor.
+  defp room_field(room_data, key) when is_atom(key),
+    do: room_data[key] || room_data[Atom.to_string(key)]
 end

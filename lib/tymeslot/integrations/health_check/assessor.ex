@@ -12,6 +12,8 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
+  require Logger
+
   @type integration_type :: :calendar | :video
   @type check_result :: {:ok, any()} | {:error, any()}
   @type integration ::
@@ -46,18 +48,39 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
     decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
     Diagnostics.test_connection(decrypted)
   rescue
-    _e in [UndefinedFunctionError] -> {:error, :module_unavailable}
-    e -> {:error, {:exception, Exception.message(e)}}
+    e in [UndefinedFunctionError] ->
+      log_module_unavailable(:calendar, integration, e)
+      {:error, :module_unavailable}
+
+    e ->
+      {:error, {:exception, Exception.message(e)}}
   end
 
   def test_integration(:video, integration) do
     Connection.test_integration(integration)
   rescue
-    _e in [UndefinedFunctionError] -> {:error, :module_unavailable}
-    e -> {:error, {:exception, Exception.message(e)}}
+    e in [UndefinedFunctionError] ->
+      log_module_unavailable(:video, integration, e)
+      {:error, :module_unavailable}
+
+    e ->
+      {:error, {:exception, Exception.message(e)}}
   end
 
   # Private Functions
+
+  # A missing provider module turns every health check for that integration
+  # into a generic failure, so record which provider lost its module rather
+  # than letting the reason disappear into the `:module_unavailable` atom.
+  defp log_module_unavailable(type, integration, exception) do
+    Logger.warning("Integration health check module unavailable",
+      type: type,
+      provider: integration.provider,
+      integration_id: integration.id,
+      user_id: integration.user_id,
+      error: Exception.message(exception)
+    )
+  end
 
   defp record_telemetry(type, integration, result, duration) do
     :telemetry.execute(

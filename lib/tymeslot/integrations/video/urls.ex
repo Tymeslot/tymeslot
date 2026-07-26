@@ -10,7 +10,7 @@ defmodule Tymeslot.Integrations.Video.Urls do
 
   @spec extract_room_id(String.t() | map()) :: String.t() | nil
   def extract_room_id(%{room_data: room_data}) when is_map(room_data) do
-    room_data[:room_id] || room_data["room_id"] || "unknown"
+    room_id(room_data)
   end
 
   def extract_room_id(meeting_url) when is_binary(meeting_url) do
@@ -25,4 +25,11 @@ defmodule Tymeslot.Integrations.Video.Urls do
   end
 
   def valid_meeting_url?(_url), do: false
+
+  # `room_data` comes back atom-keyed from the provider adapters and
+  # string-keyed when it has been round-tripped through the database, so both
+  # shapes are answered here once rather than at each call site.
+  defp room_id(%{room_id: room_id}) when is_binary(room_id), do: room_id
+  defp room_id(%{"room_id" => room_id}) when is_binary(room_id), do: room_id
+  defp room_id(_room_data), do: "unknown"
 end

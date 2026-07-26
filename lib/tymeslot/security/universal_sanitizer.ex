@@ -212,7 +212,14 @@ defmodule Tymeslot.Security.UniversalSanitizer do
       decoded -> decode_url_recursive(decoded, remaining - 1)
     end
   rescue
-    _exception -> input
+    exception ->
+      # Debug rather than warning: the input is attacker-controlled, so a louder
+      # level would let anyone flood the log with malformed percent-encoding.
+      Logger.debug("Percent-decoding failed, sanitising the raw input instead",
+        error: Exception.message(exception)
+      )
+
+      input
   end
 
   defp sanitize_html(input, true) do

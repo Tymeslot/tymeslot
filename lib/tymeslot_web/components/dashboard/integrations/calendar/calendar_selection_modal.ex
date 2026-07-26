@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
     assigns =
       assigns
       |> assign(:calendar_list, calendar_list)
-      |> assign(:selected_count, Enum.count(calendar_list, &(&1["selected"] || &1[:selected])))
+      |> assign(:selected_count, Enum.count(calendar_list, &calendar_selected?/1))
 
     ~H"""
     <div id={@id}>
@@ -112,4 +112,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
     </div>
     """
   end
+
+  # `calendar_list` entries are string-keyed once they have been through the
+  # JSONB column, but arrive atom-keyed straight from discovery.
+  defp calendar_selected?(calendar),
+    do: Map.get(calendar, "selected") || Map.get(calendar, :selected)
 end

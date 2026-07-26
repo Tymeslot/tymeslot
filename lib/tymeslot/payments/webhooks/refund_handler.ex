@@ -180,7 +180,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @spec calculate_total_refunded(map()) :: non_neg_integer()
   def calculate_total_refunded(charge) do
     # First try to get from amount_refunded (most reliable)
-    case Map.get(charge, "amount_refunded") || Map.get(charge, :amount_refunded) do
+    case stripe_field(charge, :amount_refunded) do
       amount when is_integer(amount) and amount > 0 ->
         amount
 
@@ -189,9 +189,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
         refunds = get_in(charge, ["refunds", "data"]) || get_in(charge, [:refunds, :data]) || []
 
         refunds
-        |> Enum.map(fn refund ->
-          refund["amount"] || refund[:amount] || 0
-        end)
+        |> Enum.map(&(stripe_field(&1, :amount) || 0))
         |> Enum.sum()
     end
   end
@@ -201,8 +199,13 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @doc false
   @spec get_charge_amount(map()) :: non_neg_integer()
   def get_charge_amount(charge) do
-    Map.get(charge, "amount") || Map.get(charge, :amount) || 0
+    stripe_field(charge, :amount) || 0
   end
+
+  # Stripe payloads arrive JSON-decoded, so string-keyed, but the test suite and
+  # some internal call sites build them atom-keyed. Answer "which key type?"
+  # here rather than at each access site.
+  defp stripe_field(map, key), do: Map.get(map, Atom.to_string(key)) || Map.get(map, key)
 
   # Calculates the refund percentage.
   # Made public for testing purposes but should be considered internal API.

@@ -9,6 +9,8 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   alias Tymeslot.Integrations.Calendar.Shared.DiscoveryService
   alias Tymeslot.Integrations.Calendar.Tokens
 
+  require Logger
+
   @type user_id :: pos_integer()
 
   @caldav_provider_strings ProviderConfig.caldav_based_provider_strings()
@@ -67,7 +69,15 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
       {:error, _msg} -> {:error, :network_error}
     end
   rescue
-    _other -> {:error, :network_error}
+    error ->
+      # `client_config` carries the CalDAV password; never include it here.
+      Logger.warning("CalDAV calendar discovery raised during connection validation",
+        provider: provider,
+        integration_id: integration.id,
+        error: inspect(error)
+      )
+
+      {:error, :network_error}
   end
 
   def validate_connection(_integration, _user_id), do: {:error, :unsupported_provider}

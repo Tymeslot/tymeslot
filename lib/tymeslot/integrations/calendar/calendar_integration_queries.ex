@@ -276,7 +276,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
 
     updated_list =
       Enum.map(integration.calendar_list, fn cal ->
-        if MapSet.member?(ids, cal["id"] || cal[:id]) do
+        if MapSet.member?(ids, calendar_id(cal)) do
           Map.put(cal, "selected", false)
         else
           cal
@@ -287,6 +287,12 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
     |> CalendarIntegrationSchema.changeset(%{calendar_list: updated_list})
     |> Repo.update()
   end
+
+  # `calendar_list` is loaded from JSONB so entries carry string keys; in-memory
+  # callers still hand over atom keys. Both shapes are answered here once.
+  defp calendar_id(%{"id" => id}) when is_binary(id), do: id
+  defp calendar_id(%{id: id}) when is_binary(id), do: id
+  defp calendar_id(_calendar), do: nil
 
   @doc """
   Removes the given paths from an integration's `calendar_paths`.

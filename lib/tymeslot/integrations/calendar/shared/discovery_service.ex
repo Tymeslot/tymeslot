@@ -7,6 +7,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
   `Tymeslot.Integrations.Calendar.Shared.DiscoveryCache`.
   """
 
+  require Logger
+
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.DiscoveryCache
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
@@ -75,7 +77,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
       try do
         String.to_existing_atom(integration.provider)
       rescue
-        ArgumentError -> :unknown
+        ArgumentError ->
+          Logger.warning("Calendar integration has an unrecognised provider",
+            integration_id: integration.id,
+            provider: integration.provider
+          )
+
+          :unknown
       end
 
     config = build_config_from_integration(integration)

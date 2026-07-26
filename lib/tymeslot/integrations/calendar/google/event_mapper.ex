@@ -118,8 +118,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     if is_list(attendees) and attendees != [] do
       Enum.map(attendees, fn attendee ->
         remove_nil_values(%{
-          "email" => attendee["email"] || attendee[:email],
-          "displayName" => attendee["name"] || attendee[:name]
+          "email" => get_field_value(attendee, :email),
+          "displayName" => get_field_value(attendee, :name)
         })
       end)
     else

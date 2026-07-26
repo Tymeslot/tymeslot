@@ -119,7 +119,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves do
   defp finish_successful_move(ctx, created) do
     CalendarGrid.delete_cached_event(ctx.event.calendar_integration_id, ctx.event.uid)
 
-    uid = if is_binary(created), do: created, else: created[:uid] || created["uid"] || ctx.new_uid
+    uid = created_uid(created) || ctx.new_uid
 
     timing =
       if ctx.event.all_day do
@@ -144,6 +144,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves do
       {:event_move_result, {:ok, uid: uid, integration_id: ctx.new_integration_id}}
     )
   end
+
+  # Providers return the created event either as a bare uid string, as an
+  # atom-keyed map (the converted shape), or as a string-keyed map (a raw
+  # payload). All three are answered here once; `nil` falls back to the uid
+  # this move generated.
+  defp created_uid(created) when is_binary(created), do: created
+  defp created_uid(%{uid: uid}) when is_binary(uid), do: uid
+  defp created_uid(%{"uid" => uid}) when is_binary(uid), do: uid
+  defp created_uid(_created), do: nil
 
   defp tag_move_create_for_offline_retry(ctx) do
     meeting = %{

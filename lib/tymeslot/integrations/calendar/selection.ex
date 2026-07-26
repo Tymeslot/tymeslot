@@ -33,12 +33,12 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
         path = fetch(cal, "path") || fetch(cal, "href") || fetch(cal, "id")
 
         %{
-          "id" => fetch(cal, "id") || fetch(cal, :id) || path,
+          "id" => fetch(cal, "id") || path,
           "path" => path,
           "name" => fetch(cal, "name") || "Calendar",
           "type" => fetch(cal, "type") || "calendar",
           "selected" => true,
-          "read_only" => fetch(cal, "read_only") || Map.get(cal, :read_only, false)
+          "read_only" => fetch(cal, "read_only") || false
         }
       end)
 
@@ -75,7 +75,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
       path = fetch(cal, "path") || fetch(cal, "href") || fetch(cal, "id")
       id = fetch(cal, "id") || path
       selected = lookup_selection(existing_map, [path, id])
-      read_only = fetch(cal, "read_only") || Map.get(cal, :read_only, false)
+      read_only = fetch(cal, "read_only") || false
 
       %{
         "id" => id,
@@ -102,25 +102,21 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     end)
   end
 
+  # Calendar payloads reach this module with either string or atom keys:
+  # provider discovery adapters differ, and persisted `calendar_list` rows come
+  # back from JSON as strings. `fetch/2` is the single place that answers which,
+  # so every call site below reads a key one way.
+  @key_atoms Map.new(~w(id path href name type selected read_only)a, &{Atom.to_string(&1), &1})
+
   defp fetch(map, key) when is_binary(key) do
-    cond do
-      Map.has_key?(map, key) -> Map.get(map, key)
-      key == "id" -> Map.get(map, :id)
-      key == "path" -> Map.get(map, :path)
-      key == "name" -> Map.get(map, :name)
-      key == "type" -> Map.get(map, :type)
-      key == "selected" -> Map.get(map, :selected)
-      true -> nil
+    case Map.fetch(map, key) do
+      {:ok, value} -> value
+      :error -> fetch_atom(map, Map.get(@key_atoms, key))
     end
   end
 
-  defp fetch(map, key) when is_atom(key) do
-    if Map.has_key?(map, key) do
-      Map.get(map, key)
-    else
-      Map.get(map, Atom.to_string(key))
-    end
-  end
+  defp fetch_atom(_map, nil), do: nil
+  defp fetch_atom(map, key), do: Map.get(map, key)
 
   defp path_in_selected?(path, selected_paths) do
     Enum.any?(selected_paths, &UriUtils.uri_safe_match?(path, &1))
@@ -163,18 +159,18 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
 
     calendar_list =
       Enum.map(integration.calendar_list || [], fn cal ->
-        cal_id = cal["id"] || cal[:id]
-        is_selected = Enum.any?(selected_calendar_ids, &UriUtils.uri_safe_match?(cal_id, &1))
         base_map = Enum.into(cal, %{})
+        cal_id = fetch(base_map, "id")
+        is_selected = Enum.any?(selected_calendar_ids, &UriUtils.uri_safe_match?(cal_id, &1))
 
         Map.merge(
           %{
             "id" => cal_id,
             "selected" => is_selected,
-            "name" => base_map["name"] || base_map[:name],
-            "type" => base_map["type"] || base_map[:type] || "calendar",
-            "path" => base_map["path"] || base_map[:path] || cal_id,
-            "read_only" => base_map["read_only"] || base_map[:read_only] || false
+            "name" => fetch(base_map, "name"),
+            "type" => fetch(base_map, "type") || "calendar",
+            "path" => fetch(base_map, "path") || cal_id,
+            "read_only" => fetch(base_map, "read_only") || false
           },
           Map.drop(base_map, ["selected", :selected])
         )
@@ -297,7 +293,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
 
   defp matches_selected_calendar_id?(%{provider_calendar_id: pcid}, selected)
        when is_binary(pcid) do
-    Enum.any?(selected, fn cal -> (cal["id"] || cal[:id]) == pcid end)
+    Enum.any?(selected, fn cal -> fetch(cal, "id") == pcid end)
   end
 
   defp matches_selected_calendar_id?(_event, _selected), do: false
@@ -305,7 +301,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   defp matches_selected_calendar_path?(%{provider_event_id: peid}, selected)
        when is_binary(peid) do
     Enum.any?(selected, fn cal ->
-      path = cal["path"] || cal[:path]
+      path = fetch(cal, "path")
       is_binary(path) and String.starts_with?(peid, path)
     end)
   end

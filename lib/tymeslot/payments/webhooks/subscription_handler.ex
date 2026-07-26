@@ -31,7 +31,7 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandler do
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(event, subscription) do
-    event_type = event["type"] || event[:type]
+    event_type = event_type(event)
     subscription_id = subscription["id"]
 
     Logger.info("Processing subscription event",
@@ -50,6 +50,13 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandler do
 
     {:ok, :event_processed}
   end
+
+  # Stripe delivers string-keyed payloads; in-process replays and tests hand
+  # over atom-keyed ones. Both shapes are answered here so the rest of the
+  # module reads a plain string.
+  defp event_type(%{"type" => type}) when is_binary(type), do: type
+  defp event_type(%{type: type}) when is_binary(type), do: type
+  defp event_type(_event), do: nil
 
   defp normalize_event_name("customer.subscription.created"), do: :subscription_created
   defp normalize_event_name("customer.subscription.updated"), do: :subscription_updated

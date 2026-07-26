@@ -293,12 +293,25 @@ defmodule Tymeslot.Availability.InputValidation do
   end
 
   defp parse_day_selections(day_selections) do
+    day_selections
+    |> String.split(",")
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.reduce_while({:ok, []}, fn segment, {:ok, acc} ->
+      case Integer.parse(segment) do
+        {day, ""} -> {:cont, {:ok, [day | acc]}}
+        _unparsable -> {:halt, {:error, "Invalid day selection format"}}
+      end
+    end)
+    |> filter_selected_days()
+  end
+
+  defp filter_selected_days({:error, _reason} = error), do: error
+
+  defp filter_selected_days({:ok, parsed_days}) do
     days =
-      day_selections
-      |> String.split(",")
-      |> Enum.map(&String.trim/1)
-      |> Enum.reject(&(&1 == ""))
-      |> Enum.map(&String.to_integer/1)
+      parsed_days
+      |> Enum.reverse()
       |> Enum.filter(&(&1 >= 1 and &1 <= 7))
       |> Enum.uniq()
 
@@ -307,8 +320,5 @@ defmodule Tymeslot.Availability.InputValidation do
     else
       {:ok, days}
     end
-  rescue
-    ArgumentError ->
-      {:error, "Invalid day selection format"}
   end
 end

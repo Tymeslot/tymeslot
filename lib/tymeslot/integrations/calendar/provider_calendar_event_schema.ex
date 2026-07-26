@@ -17,6 +17,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Reminder
 
+  require Logger
+
   @timestamps_opts [type: :utc_datetime_usec]
 
   @type t :: %__MODULE__{
@@ -304,10 +306,20 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
   defp safe_to_atom(nil), do: nil
   defp safe_to_atom(value) when is_atom(value), do: value
 
+  # Provider, visibility, transparency, and status are stored as strings drawn
+  # from a fixed set. A value with no existing atom means the stored data has
+  # drifted from what this application knows about, so record it before
+  # falling back.
   defp safe_to_atom(value) when is_binary(value) do
     String.to_existing_atom(value)
   rescue
-    ArgumentError -> nil
+    error in ArgumentError ->
+      Logger.debug("Stored calendar event value is not a known atom",
+        value: value,
+        error: Exception.message(error)
+      )
+
+      nil
   end
 
   defp safe_to_string(nil), do: nil

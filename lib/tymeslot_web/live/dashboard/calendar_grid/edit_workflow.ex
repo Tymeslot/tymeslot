@@ -37,11 +37,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   defp find_primary_calendar_id([]), do: nil
 
   defp find_primary_calendar_id(calendar_list) do
-    primary = Enum.find(calendar_list, &(&1["primary"] || &1[:primary]))
-    selected = primary || Enum.find(calendar_list, &(&1["selected"] || &1[:selected]))
+    primary = Enum.find(calendar_list, &calendar_field(&1, :primary))
+    selected = primary || Enum.find(calendar_list, &calendar_field(&1, :selected))
     cal = selected || List.first(calendar_list)
-    cal["id"] || cal[:id]
+    calendar_field(cal, :id)
   end
+
+  # `calendar_list` entries are string-keyed once they have been through the
+  # JSONB column and atom-keyed while they are still fresh from provider
+  # discovery, so both shapes are reconciled in this one accessor.
+  defp calendar_field(calendar, key) when is_atom(key),
+    do: calendar[Atom.to_string(key)] || calendar[key]
 
   @spec format_create_time(map()) :: String.t()
   def format_create_time(creating) do

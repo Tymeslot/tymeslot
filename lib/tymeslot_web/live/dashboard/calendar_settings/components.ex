@@ -404,7 +404,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   end
 
   defp conflict_segment(%{is_active: true}, calendar_list) when calendar_list != [] do
-    selected = Enum.count(calendar_list, &(&1["selected"] || &1[:selected]))
+    selected = Enum.count(calendar_list, &calendar_field(&1, :selected))
     "conflict-checks #{selected} of #{length(calendar_list)} calendars"
   end
 
@@ -420,9 +420,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   defp booking_calendar(integration, calendar_list) do
     booking_id = Map.get(integration, :default_booking_calendar_id)
 
-    Enum.find(calendar_list, &(booking_id && (&1["id"] || &1[:id]) == booking_id)) ||
-      Enum.find(calendar_list, &(&1["primary"] || &1[:primary]))
+    Enum.find(calendar_list, &(booking_id && calendar_field(&1, :id) == booking_id)) ||
+      Enum.find(calendar_list, &calendar_field(&1, :primary))
   end
+
+  # `calendar_list` entries are string-keyed once they have been through the
+  # JSONB column and atom-keyed while they are still fresh from provider
+  # discovery, so both shapes are reconciled in this one accessor.
+  defp calendar_field(calendar, key) when is_atom(key),
+    do: calendar[Atom.to_string(key)] || calendar[key]
 
   defp sync_segment(%{last_sync_at: %DateTime{} = synced_at}),
     do: "synced #{TokenUtils.relative_time(synced_at)}"
