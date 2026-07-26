@@ -120,6 +120,13 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   in-app badge can lag the truth by up to an hour while waiting for the next
   scheduled probe.
 
+  `successes` counts consecutive successful probes, and a reset has run none,
+  so it starts at zero like every other counter here. It needs no head start
+  towards the recovery threshold: the row is written as healthy, and
+  `Monitor.determine_status/3` keeps a healthy row healthy on its next
+  success. Any probe that does leave the row non-healthy zeroes the counter on
+  its way, so a seeded value could never be read.
+
   Safe to call when no row exists (no-op).
   """
   @spec reset(String.t() | atom(), integer()) :: {non_neg_integer(), nil}
@@ -128,7 +135,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       status: "healthy",
       failures: 0,
       consecutive_hard_failures: 0,
-      successes: 2,
+      successes: 0,
       backoff_ms: 1_800_000,
       last_check_at: DateTime.utc_now(),
       last_error_class: nil,
