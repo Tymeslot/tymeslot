@@ -210,7 +210,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   defp build_create_success(created, creating, user_id, start_at, end_at, video_context) do
-    uid = created_uid(created)
+    uid = if is_binary(created), do: created, else: created_uid(created)
 
     {provider, default_booking_calendar_id, reauth_required?} =
       lookup_integration_metadata(creating.integration_id)
@@ -279,10 +279,11 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     end
   end
 
-  # Providers return the created event either as a bare uid string, as an
-  # atom-keyed map (the converted shape), or as a string-keyed map (a raw
-  # payload). All three are answered here once.
-  defp created_uid(created) when is_binary(created), do: created
+  # The created event arrives as an atom-keyed map (the converted shape) or a
+  # string-keyed map (a raw payload); both are answered here once. The bare-uid
+  # string case stays an `if` at the call site: every real provider returns a
+  # map, so as a guarded clause here Dialyzer proves it unreachable, but the
+  # test doubles in event_creation_test.exs do return a bare string.
   defp created_uid(%{uid: uid}) when is_binary(uid), do: uid
   defp created_uid(%{"uid" => uid}) when is_binary(uid), do: uid
   defp created_uid(_created), do: nil

@@ -24,18 +24,21 @@ defmodule Tymeslot.ThemeCustomizationsCssGenerationTest do
 
       css = ThemeCustomizations.generate_theme_css("1", customization)
 
-      assert is_binary(css)
       assert css =~ "--theme-background:"
     end
 
     test "get_defaults/1 returns theme-specific defaults" do
-      defaults_quill = ThemeCustomizations.get_defaults("1")
-      defaults_rhythm = ThemeCustomizations.get_defaults("2")
+      assert ThemeCustomizations.get_defaults("1") == %{
+               "background_type" => "gradient",
+               "background_value" => "gradient_1",
+               "color_scheme" => "default"
+             }
 
-      assert is_map(defaults_quill)
-      assert is_map(defaults_rhythm)
-      assert defaults_quill["background_type"] == "gradient"
-      assert defaults_quill["color_scheme"] == "default"
+      assert ThemeCustomizations.get_defaults("2") == %{
+               "background_type" => "gradient",
+               "background_value" => "gradient_1",
+               "color_scheme" => "default"
+             }
     end
 
     test "capability options include backgrounds and colors" do

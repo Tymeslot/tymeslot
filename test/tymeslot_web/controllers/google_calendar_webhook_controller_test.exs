@@ -52,7 +52,7 @@ defmodule TymeslotWeb.GoogleCalendarWebhookControllerTest do
       |> post("/webhooks/google-calendar")
 
       updated = Repo.get!(CalendarIntegrationSchema, integration.id)
-      assert updated.last_google_notification_at != nil
+      assert %DateTime{} = updated.last_google_notification_at
     end
   end
 

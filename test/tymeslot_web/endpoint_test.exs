@@ -34,8 +34,8 @@ defmodule TymeslotWeb.EndpointTest do
       conn = get(conn, ~p"/auth/login")
 
       assert [id] = get_resp_header(conn, "x-correlation-id")
-      assert is_binary(id)
-      assert byte_size(id) > 0
+      # CorrelationId.generate/0 hands out a v4 UUID.
+      assert id =~ ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
     end
 
     test "incoming x-correlation-id header is used for tracing", %{conn: conn} do
@@ -80,10 +80,12 @@ defmodule TymeslotWeb.EndpointTest do
     test "response sets _tymeslot_key cookie", %{conn: conn} do
       conn = get(conn, ~p"/auth/login")
 
-      cookie =
-        Enum.find(conn.resp_cookies, fn {key, _val} -> key == "_tymeslot_key" end)
+      assert %{"_tymeslot_key" => cookie} = conn.resp_cookies
 
-      assert cookie != nil
+      # The session cookie must stay unreadable to scripts and same-site.
+      assert cookie.http_only
+      assert cookie.same_site == "Lax"
+      assert byte_size(cookie.value) > 0
     end
   end
 end

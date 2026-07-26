@@ -69,7 +69,7 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
       for _i <- 1..5, do: SignupSecurity.gate(params, @meta)
 
       assert {:error, :rate_limited, message} = SignupSecurity.gate(params, @meta)
-      assert is_binary(message)
+      assert message == "Too many signup attempts. Please try again later."
     end
 
     test "rate limit error message is a non-empty string" do
@@ -90,13 +90,13 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
       # An empty token is rejected by RecaptchaHelpers.maybe_verify_signup_token/2
       params = %{"email" => "recaptcha-fail@example.com", "g-recaptcha-response" => ""}
       assert {:error, :recaptcha_failed, message} = SignupSecurity.gate(params, @meta)
-      assert is_binary(message)
+      assert message == "Security verification failed. Please try again."
     end
 
     test "returns recaptcha_failed when reCAPTCHA is enabled and token is missing" do
       params = %{"email" => "no-token@example.com"}
       assert {:error, :recaptcha_failed, message} = SignupSecurity.gate(params, @meta)
-      assert is_binary(message)
+      assert message == "Security verification failed. Please try again."
     end
   end
 
@@ -110,7 +110,7 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
       }
 
       assert {:error, :recaptcha_script_blocked, message} = SignupSecurity.gate(params, @meta)
-      assert is_binary(message)
+      assert message =~ "Security verification unavailable."
     end
 
     test "recaptcha_script_blocked message mentions JavaScript" do
@@ -128,25 +128,25 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
     test "returns a fail-closed error when email is nil — does not crash" do
       params = %{"email" => nil}
       assert {:error, :rate_limited, message} = SignupSecurity.gate(params, @meta)
-      assert is_binary(message)
+      assert message == "Too many signup attempts. Please try again later."
     end
 
     test "returns a fail-closed error when email key is absent — does not crash" do
       params = %{}
       assert {:error, :rate_limited, message} = SignupSecurity.gate(params, @meta)
-      assert is_binary(message)
+      assert message == "Too many signup attempts. Please try again later."
     end
 
     test "returns a fail-closed error when email is an empty string — does not crash" do
       params = %{"email" => ""}
       assert {:error, :rate_limited, message} = SignupSecurity.gate(params, @meta)
-      assert is_binary(message)
+      assert message == "Too many signup attempts. Please try again later."
     end
 
     test "returns a fail-closed error when email is a non-string type — does not crash" do
       params = %{"email" => 12_345}
       assert {:error, :rate_limited, message} = SignupSecurity.gate(params, @meta)
-      assert is_binary(message)
+      assert message == "Too many signup attempts. Please try again later."
     end
   end
 

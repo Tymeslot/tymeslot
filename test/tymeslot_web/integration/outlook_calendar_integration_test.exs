@@ -13,6 +13,16 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
 
   @moduletag :calendar_integration
 
+  # The reasons CalendarAPIBehaviour.api_error/0 declares for Outlook. Asserting
+  # against the whole set still catches an undeclared reason atom leaking out.
+  @declared_error_reasons [
+    :unauthorized,
+    :not_found,
+    :rate_limited,
+    :network_error,
+    :authentication_error
+  ]
+
   describe "Outlook Token Management" do
     setup do
       user = insert(:user)
@@ -47,7 +57,7 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
       case CalendarAPI.refresh_token(expired) do
         {:ok, {_access, _refresh, _expires_at}} ->
           # Success only if real tokens are configured
-          assert System.get_env("TEST_OUTLOOK_REFRESH_TOKEN") != nil
+          assert byte_size(System.get_env("TEST_OUTLOOK_REFRESH_TOKEN") || "") > 0
 
         {:error, error_reason, _error_message} ->
           # Expected when tokens are invalid
@@ -77,17 +87,13 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
       case CalendarAPI.list_primary_events(integration, start_time, end_time) do
         {:ok, events} ->
           # Verify events are properly structured
-          assert is_list(events)
-
           Enum.each(events, fn event ->
-            assert Map.has_key?(event, :id)
-            assert Map.has_key?(event, :start)
-            assert Map.has_key?(event, :end)
+            assert %{id: _id, start: _start, end: _end} = event
           end)
 
-        {:error, _error_reason, _error_message} ->
+        {:error, error_reason, _error_message} ->
           # Expected without real tokens
-          assert true
+          assert error_reason in @declared_error_reasons
       end
     end
 
@@ -172,12 +178,15 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
       case CalendarAPI.list_primary_events(integration, start_time, end_time) do
         {:ok, events} ->
           # Only succeeds with real tokens
-          assert System.get_env("TEST_OUTLOOK_ACCESS_TOKEN") != nil
-          assert is_list(events)
+          assert byte_size(System.get_env("TEST_OUTLOOK_ACCESS_TOKEN") || "") > 0
 
-        {:error, _error_reason, _error_message} ->
+          Enum.each(events, fn event ->
+            assert %{id: _id, start: _start, end: _end} = event
+          end)
+
+        {:error, error_reason, _error_message} ->
           # Expected failure without real tokens
-          assert true
+          assert error_reason in @declared_error_reasons
       end
     end
 

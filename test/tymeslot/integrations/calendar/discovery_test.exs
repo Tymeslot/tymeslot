@@ -79,9 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
       end)
 
       assert {:ok, calendars} = Discovery.discover_calendars_for_integration(integration)
-      assert is_list(calendars)
-      assert calendars != []
-      assert Enum.all?(calendars, fn cal -> is_binary(cal.name) end)
+      assert Enum.map(calendars, & &1.name) == ["Personal"]
     end
   end
 
@@ -123,15 +121,6 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
       # Invalid URL causes discovery to fail silently — returns attrs unchanged.
       attrs = %{provider: "nextcloud", base_url: "http://invalid"}
       assert {:ok, ^attrs} = Discovery.maybe_discover_calendars(attrs)
-    end
-  end
-
-  describe "private helpers" do
-    test "extract_calendar_paths/1 handles various formats" do
-      # We can't call private functions directly, but we can test them through
-      # functions that use them if we find a way.
-      # Or we can just trust that they are tested elsewhere if they are moved.
-      # Actually, they are used in maybe_discover_calendars.
     end
   end
 end

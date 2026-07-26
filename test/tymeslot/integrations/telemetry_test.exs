@@ -3,6 +3,8 @@ defmodule Tymeslot.Integrations.TelemetryTest do
 
   @moduletag :integrations
 
+  import ExUnit.CaptureLog
+
   alias Tymeslot.Integrations.Telemetry
 
   setup do
@@ -14,7 +16,6 @@ defmodule Tymeslot.Integrations.TelemetryTest do
     test "returns the full list of event name lists" do
       events = Telemetry.events()
 
-      assert is_list(events)
       refute Enum.empty?(events)
 
       # Verify some expected events are present
@@ -126,40 +127,66 @@ defmodule Tymeslot.Integrations.TelemetryTest do
 
   describe "handle_event/4 log levels" do
     test "exception events use :error level" do
-      # Verify handler doesn't raise for exception events
-      Telemetry.handle_event(
-        [:tymeslot, :integration, :operation, :exception],
-        %{duration: 100},
-        %{operation: :test, reason: "boom", kind: :error, stacktrace: []},
-        nil
-      )
+      log =
+        capture_log([level: :debug], fn ->
+          Telemetry.handle_event(
+            [:tymeslot, :integration, :operation, :exception],
+            %{duration: 100},
+            %{operation: :test, reason: "boom", kind: :error, stacktrace: []},
+            nil
+          )
+        end)
+
+      assert log =~ "[error] Integration operation failed: test - boom"
     end
 
     test "unhealthy health check uses :warning level" do
-      Telemetry.handle_event(
-        [:tymeslot, :integration, :health_check],
-        %{duration: 50},
-        %{provider: :test, success: false},
-        nil
-      )
+      log =
+        capture_log([level: :debug], fn ->
+          Telemetry.handle_event(
+            [:tymeslot, :integration, :health_check],
+            %{duration: 50},
+            %{provider: :test, success: false},
+            nil
+          )
+        end)
+
+      assert log =~ "[warning] Health check: test - unhealthy (50ms)"
     end
 
     test "circuit breaker open uses :error level" do
-      Telemetry.handle_event(
-        [:tymeslot, :integration, :circuit_breaker, :state_change],
-        %{},
-        %{to: :open, from: :closed, provider: :test},
-        nil
-      )
+      log =
+        capture_log([level: :debug], fn ->
+          Telemetry.handle_event(
+            [:tymeslot, :integration, :circuit_breaker, :state_change],
+            %{},
+            %{to: :open, from: :closed, provider: :test},
+            nil
+          )
+        end)
+
+      assert log =~ "[error] Event: tymeslot.integration.circuit_breaker.state_change"
     end
 
     test "default events use :debug level" do
-      Telemetry.handle_event(
-        [:tymeslot, :cache, :hit],
-        %{},
-        %{cache: :test_cache},
-        nil
-      )
+      # The suite runs at :warning and the primary level filters messages before
+      # they reach capture_log's handler, so it has to be lowered here. Safe
+      # because this module is async: false and runs in ExUnit's sync phase.
+      previous_level = Logger.level()
+      Logger.configure(level: :debug)
+      on_exit(fn -> Logger.configure(level: previous_level) end)
+
+      log =
+        capture_log([level: :debug], fn ->
+          Telemetry.handle_event(
+            [:tymeslot, :cache, :hit],
+            %{},
+            %{cache: :test_cache},
+            nil
+          )
+        end)
+
+      assert log =~ "[debug] Cache hit: test_cache"
     end
   end
 end

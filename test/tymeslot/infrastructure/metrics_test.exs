@@ -94,7 +94,7 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
 
       assert_receive {:telemetry, ^ref, measurements, metadata}
       assert metadata.status == :error
-      assert is_binary(metadata.error)
+      assert metadata.error =~ ~s(%RuntimeError{message: "test error"})
       assert is_number(measurements.duration)
     end
   end

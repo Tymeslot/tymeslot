@@ -57,13 +57,8 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       schedule = AvailabilityActions.ensure_complete_schedule(existing_schedule, profile.id)
 
       # Weekend days should now exist
-      saturday = Enum.find(schedule, &(&1.day_of_week == 6))
-      sunday = Enum.find(schedule, &(&1.day_of_week == 7))
-
-      assert saturday != nil
-      assert sunday != nil
-      assert saturday.is_available == false
-      assert sunday.is_available == false
+      assert %{is_available: false} = Enum.find(schedule, &(&1.day_of_week == 6))
+      assert %{is_available: false} = Enum.find(schedule, &(&1.day_of_week == 7))
     end
 
     test "is idempotent when all 7 days already exist" do
@@ -121,11 +116,11 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       # Day 3 (Wednesday) doesn't exist — toggle should create it via upsert
       assert {:ok, _result} = AvailabilityActions.toggle_day_availability(profile.id, 3, false)
 
-      wednesday = WeeklySchedule.get_day_availability(profile.id, 3)
-      assert wednesday != nil
-      assert wednesday.is_available == true
-      assert wednesday.start_time == ~T[11:00:00]
-      assert wednesday.end_time == ~T[19:30:00]
+      assert %{
+               is_available: true,
+               start_time: ~T[11:00:00],
+               end_time: ~T[19:30:00]
+             } = WeeklySchedule.get_day_availability(profile.id, 3)
     end
   end
 

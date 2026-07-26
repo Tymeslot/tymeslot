@@ -223,7 +223,9 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert payload["user"] == user_name
       assert payload["role"] == role
       assert payload["exp"] == DateTime.to_unix(meeting_time)
-      assert is_binary(payload["jti"])
+      # jti is a UUID v4, making each issued token individually revocable.
+      assert payload["jti"] =~
+               ~r/\A[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/
     end
 
     test "sanitizes user name in token payload" do

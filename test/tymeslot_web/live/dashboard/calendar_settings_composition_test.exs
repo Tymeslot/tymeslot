@@ -266,11 +266,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
         assert added =~ "My #{@label}"
 
         # Persisted with the discovered paths under the right provider.
-        integration =
-          Repo.get_by(CalendarIntegrationSchema, user_id: user.id, provider: @provider)
+        assert %{calendar_paths: calendar_paths} =
+                 Repo.get_by(CalendarIntegrationSchema, user_id: user.id, provider: @provider)
 
-        assert integration
-        assert integration.calendar_paths != []
+        refute calendar_paths == []
       end
     end
 

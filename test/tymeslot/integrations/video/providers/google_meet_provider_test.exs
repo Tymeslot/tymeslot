@@ -352,12 +352,16 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       assert metadata[:supports_dial_in] == true
       assert metadata[:supports_recording] == true
       assert metadata[:max_participants] == 250
-      assert is_binary(metadata[:meeting_instructions])
-      assert is_binary(metadata[:technical_requirements])
-      assert is_list(metadata[:additional_features])
-      assert "Recording available" in metadata[:additional_features]
-      assert "Screen sharing" in metadata[:additional_features]
-      assert "Phone dial-in available" in metadata[:additional_features]
+      assert metadata[:meeting_instructions] =~ "join the Google Meet video conference"
+      assert metadata[:technical_requirements] =~ "Modern web browser or Google Meet mobile app"
+
+      assert metadata[:additional_features] == [
+               "Recording available",
+               "Screen sharing",
+               "Live captions",
+               "Breakout rooms",
+               "Phone dial-in available"
+             ]
     end
 
     test "supports string-keyed room data in metadata generation" do

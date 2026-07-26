@@ -35,10 +35,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueriesTest do
       raw_integration =
         Repo.get(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
 
-      assert raw_integration.username_encrypted != nil
-      assert raw_integration.password_encrypted != nil
-      refute raw_integration.username_encrypted == "secretuser"
-      refute raw_integration.password_encrypted == "secretpass"
+      assert byte_size(raw_integration.username_encrypted) > 0
+      assert byte_size(raw_integration.password_encrypted) > 0
+      refute String.contains?(raw_integration.username_encrypted, "secretuser")
+      refute String.contains?(raw_integration.password_encrypted, "secretpass")
 
       # But decrypted when retrieved through queries
       {:ok, retrieved} = CalendarIntegrationQueries.get(integration.id)

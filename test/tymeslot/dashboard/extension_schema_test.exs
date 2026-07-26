@@ -228,8 +228,8 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
     test "returns a list of hero-* icon name strings" do
       icons = ExtensionSchema.available_icons()
 
-      assert is_list(icons)
-      assert Enum.all?(icons, &is_binary/1)
+      assert Enum.all?(icons, &(is_binary(&1) and String.starts_with?(&1, "hero-")))
+      assert icons == Enum.uniq(icons)
       assert "hero-home" in icons
       assert "hero-credit-card" in icons
       assert "hero-chat-bubble-left-right" in icons

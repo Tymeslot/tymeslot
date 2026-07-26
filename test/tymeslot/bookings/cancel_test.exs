@@ -35,7 +35,7 @@ defmodule Tymeslot.Bookings.CancelTest do
 
       assert {:ok, cancelled_meeting} = Cancel.execute(meeting.uid)
       assert cancelled_meeting.status == "cancelled"
-      assert cancelled_meeting.cancelled_at != nil
+      assert %DateTime{} = cancelled_meeting.cancelled_at
     end
 
     test "returns error when meeting is not found" do
@@ -101,7 +101,7 @@ defmodule Tymeslot.Bookings.CancelTest do
 
       assert {:ok, cancelled_meeting} = Cancel.execute(loaded_meeting)
       assert cancelled_meeting.status == "cancelled"
-      assert cancelled_meeting.cancelled_at != nil
+      assert %DateTime{} = cancelled_meeting.cancelled_at
     end
 
     test "returns error when meeting is already cancelled" do
@@ -218,7 +218,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       # Reload from database to verify persistence
       {:ok, reloaded_meeting} = MeetingQueries.get_meeting_by_uid(meeting.uid)
       assert reloaded_meeting.status == "cancelled"
-      assert reloaded_meeting.cancelled_at != nil
+      assert %DateTime{} = reloaded_meeting.cancelled_at
     end
 
     test "deletes pending reminder email jobs" do

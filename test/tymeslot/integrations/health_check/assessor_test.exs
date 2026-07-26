@@ -112,15 +112,15 @@ defmodule Tymeslot.Integrations.HealthCheck.AssessorTest do
           base_url: "https://mirotalk.example.com"
         )
 
-      # Note: test_connection might be called more than once due to internal retries
-      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      # The provider probes more than once (internal retries), so stub rather
+      # than expecting an exact call count.
+      stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200, body: "OK"}}
       end)
 
       {result, duration} = Assessor.assess(:video, integration)
 
-      # Result could be success or error depending on provider implementation
-      assert is_tuple(result)
+      assert {:ok, _details} = result
       assert is_integer(duration)
     end
 

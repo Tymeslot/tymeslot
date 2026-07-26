@@ -35,7 +35,6 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
       assert {:error, :rate_limited, message} =
                RateLimiter.check_theme_customization_rate_limit(user_id)
 
-      assert is_binary(message)
       assert message =~ "150"
       assert message =~ "5 minutes"
     end
@@ -197,6 +196,12 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
         100,
         &RateLimiter.check_theme_customization_rate_limit/1
       )
+
+      # Each user spent 100 of their own 150, so nobody was pushed over by the
+      # others' concurrent traffic and every bucket still has headroom.
+      for user_id <- user_ids do
+        assert :ok = RateLimiter.check_theme_customization_rate_limit(user_id)
+      end
     end
   end
 

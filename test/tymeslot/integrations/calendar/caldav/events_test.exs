@@ -175,7 +175,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
                  skip_breaker: true
                )
 
-      assert is_binary(uid)
+      # Server-generated UID: 16 random bytes in lowercase hex, plus the domain.
+      assert uid =~ ~r/\A[0-9a-f]{32}@tymeslot\.com\z/
     end
 
     test "sends PUT to server-root path when base_url contains a CalDAV path — no path doubling" do

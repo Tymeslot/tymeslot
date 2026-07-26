@@ -41,7 +41,7 @@ defmodule Tymeslot.Infrastructure.ObanLoggerTest do
 
       {process_id, logger_id} = result
 
-      assert is_binary(process_id)
+      assert {:ok, _uuid_info} = UUID.info(process_id)
       assert process_id == logger_id
     end
 

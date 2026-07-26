@@ -36,7 +36,6 @@ defmodule Tymeslot.Security.RateLimiterDashboardTest do
       assert {:error, :rate_limited, message} =
                RateLimiter.check_webhook_write_rate_limit(user_id)
 
-      assert is_binary(message)
       assert message =~ "30"
       assert message =~ "30 minutes"
       assert message =~ "webhook write"
@@ -70,7 +69,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardTest do
     end
 
     test "multiple users operate independently" do
-      test_multiple_users_operate_independently(
+      assert_independent_buckets(
         [11_011, 11_012, 11_013, 11_014, 11_015],
         20,
         &RateLimiter.check_webhook_write_rate_limit/1
@@ -272,7 +271,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardTest do
     end
 
     test "multiple users operate independently" do
-      test_multiple_users_operate_independently(
+      assert_independent_buckets(
         [11_411, 11_412, 11_413, 11_414, 11_415],
         20,
         &RateLimiter.check_integration_write_rate_limit/1
@@ -485,7 +484,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardTest do
     end
 
     test "multiple users operate independently" do
-      test_multiple_users_operate_independently(
+      assert_independent_buckets(
         [11_711, 11_712, 11_713, 11_714, 11_715],
         15,
         &RateLimiter.check_dashboard_cancel_rate_limit/1
@@ -579,35 +578,25 @@ defmodule Tymeslot.Security.RateLimiterDashboardTest do
     ]
 
     test "rejects nil user_id" do
-      for fun <- @functions do
-        assert {:error, :invalid_user_id} = fun.(nil)
-      end
+      assert_all_limiters_return(nil, {:error, :invalid_user_id})
     end
 
     test "rejects zero user_id" do
-      for fun <- @functions do
-        assert {:error, :invalid_user_id} = fun.(0)
-      end
+      assert_all_limiters_return(0, {:error, :invalid_user_id})
     end
 
     test "rejects negative user_id" do
-      for fun <- @functions do
-        assert {:error, :invalid_user_id} = fun.(-1)
-      end
+      assert_all_limiters_return(-1, {:error, :invalid_user_id})
     end
 
     test "rejects non-integer user_id" do
-      for fun <- @functions do
-        assert {:error, :invalid_user_id} = fun.("123")
-        assert {:error, :invalid_user_id} = fun.(123.45)
-      end
+      assert_all_limiters_return("123", {:error, :invalid_user_id})
+      assert_all_limiters_return(123.45, {:error, :invalid_user_id})
     end
 
     test "accepts valid positive integer user_ids" do
-      for fun <- @functions do
-        assert :ok = fun.(1)
-        assert :ok = fun.(999_999)
-      end
+      assert_all_limiters_return(1, :ok)
+      assert_all_limiters_return(999_999, :ok)
     end
   end
 
@@ -642,5 +631,17 @@ defmodule Tymeslot.Security.RateLimiterDashboardTest do
                "#{bucket_prefix} message should suggest waiting: #{message}"
       end
     end
+  end
+
+  defp assert_independent_buckets(user_ids, requests_per_user, check_fun) do
+    test_multiple_users_operate_independently(user_ids, requests_per_user, check_fun)
+
+    # Each burst stayed under the limit, so every user still has headroom.
+    for user_id <- user_ids, do: assert(:ok = check_fun.(user_id))
+  end
+
+  # Every dashboard limiter shares the same user_id validation contract.
+  defp assert_all_limiters_return(user_id, expected) do
+    for fun <- @functions, do: assert(fun.(user_id) == expected)
   end
 end

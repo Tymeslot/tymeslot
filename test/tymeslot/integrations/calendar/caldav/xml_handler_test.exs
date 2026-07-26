@@ -260,7 +260,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandlerTest do
       assert {:ok, [cal]} = XmlHandler.parse_calendar_discovery(@no_displayname_xml)
 
       # Name is derived from the last path segment, underscores replaced with spaces
-      assert cal.name =~ "Work calendar" or cal.name =~ "Work Calendar"
+      assert cal.name == "Work calendar"
     end
 
     test "each calendar has required keys" do

@@ -221,12 +221,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
   describe "analyze/1 with empty or nil input" do
     test "returns empty state for empty string" do
       assert {:ok, :empty, "", message} = TemplateAnalyzer.analyze("")
-      assert is_binary(message)
+      assert message == "Enter a URL to see a preview"
     end
 
     test "returns empty state for nil" do
       assert {:ok, :empty, "", message} = TemplateAnalyzer.analyze(nil)
-      assert is_binary(message)
+      assert message == "Enter a URL to see a preview"
     end
   end
 

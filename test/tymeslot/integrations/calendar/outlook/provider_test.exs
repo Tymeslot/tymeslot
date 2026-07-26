@@ -477,8 +477,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
 
   describe "check_connectivity/1" do
     test "returns skipped status for any input" do
-      assert {:ok, %{status: :skipped, reason: reason}} = Provider.check_connectivity(%{})
-      assert is_binary(reason)
+      assert {:ok, %{status: :skipped, reason: "OAuth providers use token-based auth"}} =
+               Provider.check_connectivity(%{})
     end
 
     test "returns skipped status when called with an integration struct" do

@@ -93,7 +93,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       reloaded = Repo.reload!(row)
       assert reloaded.sync_state == "locally_modified"
       assert reloaded.sync_attempts == 1
-      assert reloaded.sync_last_error != nil
+      assert reloaded.sync_last_error == ":server_error"
     end
 
     test "force-overwrites on 412 for a Tymeslot-owned event (keep_local)",

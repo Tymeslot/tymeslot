@@ -42,7 +42,8 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperTest do
       assert query["redirect_uri"] == "https://example.com/cb"
       assert query["response_type"] == "code"
       assert query["scope"] =~ "meeting:write:meeting"
-      assert is_binary(query["state"])
+      # Signed state: base64url payload and HMAC, separated by a dot.
+      assert [_payload, _signature] = String.split(query["state"], ".")
     end
   end
 

@@ -136,13 +136,4 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
       assert updated.calendar_paths == ["cal_1"]
     end
   end
-
-  describe "discover_and_filter_calendars/4" do
-    test "filters out calendars without paths" do
-      # Mocking CalDAV discovery is complex, but we can test the filtering logic
-      # by mocking the Discovery module if it were a mock.
-      # Since it's not, we'd need to mock the underlying HTTP/XML.
-      # For now, we've covered the most critical async workflows.
-    end
-  end
 end

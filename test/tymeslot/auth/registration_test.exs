@@ -81,7 +81,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
   end
 
   describe "input sanitization" do
-    test "sanitizes malicious input" do
+    test "trims the email and never persists a name from the signup params" do
       params = %{
         "email" => "  safe@example.com  ",
         "password" => "ValidPassword123!",
@@ -92,17 +92,11 @@ defmodule Tymeslot.Auth.RegistrationTest do
 
       {:ok, user, _session} = Registration.register_user(params, %Plug.Conn{})
 
-      # Email trimmed
       assert user.email == "safe@example.com"
 
-      # Script should be removed/sanitized
-      if user.name do
-        refute user.name =~ "<script>"
-        assert user.name =~ "Safe Name"
-      else
-        # Completely sanitized to nil is also acceptable security behavior
-        assert true
-      end
+      # Signup only accepts email, password and full_name, so an unrecognised
+      # "name" key cannot smuggle markup onto the record.
+      assert user.name == nil
     end
   end
 

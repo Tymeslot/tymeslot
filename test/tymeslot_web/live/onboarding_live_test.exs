@@ -91,7 +91,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
 
       # Verify onboarding_completed_at is set
       user = Repo.reload!(user)
-      assert user.onboarding_completed_at != nil
+      assert %DateTime{} = user.onboarding_completed_at
 
       # Verify profile was created and updated with all fields
       profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
@@ -218,7 +218,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
 
       # Verify user completed onboarding
       user = Repo.reload!(user)
-      assert user.onboarding_completed_at != nil
+      assert %DateTime{} = user.onboarding_completed_at
     end
 
     test "user name is pre-filled in profile step", %{conn: conn} do

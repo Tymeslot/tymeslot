@@ -273,15 +273,11 @@ defmodule Tymeslot.PaymentsTest do
                  %{success: "https://s", cancel: "https://c"}
                )
 
-      pending_tx =
-        Repo.get_by(PaymentTransactionSchema,
-          user_id: user.id,
-          status: "pending"
-        )
-
-      assert pending_tx
-      assert is_nil(pending_tx.stripe_id)
-      assert pending_tx.status == "pending"
+      assert %{status: "pending", stripe_id: nil} =
+               Repo.get_by(PaymentTransactionSchema,
+                 user_id: user.id,
+                 status: "pending"
+               )
     end
   end
 

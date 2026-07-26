@@ -4,15 +4,17 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.UUID
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.Meetings.MeetingSchema
+  alias TymeslotWeb.Endpoint
 
   @moduletag :bookings
 
   describe "execute/1" do
     setup do
       user = insert(:user)
-      _profile = insert(:profile, user: user)
+      profile = insert(:profile, user: user, username: "adhoc-host", full_name: "Ada Host")
 
       base_params = %{
         title: "Quick sync",
@@ -31,7 +33,7 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
         video_integration_id: nil
       }
 
-      %{user: user, base_params: base_params}
+      %{user: user, profile: profile, base_params: base_params}
     end
 
     test "creates meeting with nil meeting_type_id", %{base_params: params} do
@@ -44,11 +46,15 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       assert meeting.status == "confirmed"
     end
 
-    test "populates organizer fields from profile", %{base_params: params, user: user} do
+    test "populates organizer fields from profile", %{
+      base_params: params,
+      user: user,
+      profile: profile
+    } do
       assert {:ok, meeting} = CreateAdHoc.execute(params)
       assert meeting.organizer_user_id == user.id
-      assert is_binary(meeting.organizer_name)
-      assert is_binary(meeting.organizer_email)
+      assert meeting.organizer_name == profile.full_name
+      assert meeting.organizer_email == user.email
     end
 
     test "computes duration from start/end times", %{base_params: params} do
@@ -56,12 +62,14 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       assert meeting.duration == 120
     end
 
-    test "generates uid and action URLs", %{base_params: params} do
+    test "generates uid and action URLs", %{base_params: params, profile: profile} do
       assert {:ok, meeting} = CreateAdHoc.execute(params)
-      assert is_binary(meeting.uid)
-      assert is_binary(meeting.view_url)
-      assert is_binary(meeting.reschedule_url)
-      assert is_binary(meeting.cancel_url)
+      assert {:ok, _uuid} = UUID.cast(meeting.uid)
+
+      base = "#{Endpoint.url()}/#{profile.username}/meeting/#{meeting.uid}"
+      assert meeting.view_url == base
+      assert meeting.reschedule_url == base <> "/reschedule"
+      assert meeting.cancel_url == base <> "/cancel"
     end
 
     test "schedules calendar event job when calendar_integration_id is set", %{

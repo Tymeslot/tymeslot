@@ -217,8 +217,6 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       date_before = ~D[2026-03-28]
       date_after = ~D[2026-03-29]
 
-      assert is_binary(LocaleFormat.format_date(date_before, "en"))
-      assert is_binary(LocaleFormat.format_date(date_after, "en"))
       assert LocaleFormat.format_date(date_before, "en") == "March 28, 2026"
       assert LocaleFormat.format_date(date_after, "en") == "March 29, 2026"
     end
@@ -228,8 +226,6 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       date_before = ~D[2026-10-24]
       date_after = ~D[2026-10-25]
 
-      assert is_binary(LocaleFormat.format_date(date_before, "en"))
-      assert is_binary(LocaleFormat.format_date(date_after, "en"))
       assert LocaleFormat.format_date(date_before, "en") == "October 24, 2026"
       assert LocaleFormat.format_date(date_after, "en") == "October 25, 2026"
     end
@@ -255,11 +251,11 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       date_after = DateTime.to_date(dt_after)
       time_after = DateTime.to_time(dt_after)
 
-      # Both should format without errors
-      assert is_binary(LocaleFormat.format_date(date_before, "en"))
-      assert is_binary(LocaleFormat.format_time(time_before, "en"))
-      assert is_binary(LocaleFormat.format_date(date_after, "en"))
-      assert is_binary(LocaleFormat.format_time(time_after, "en"))
+      # The transition does not shift the rendered wall-clock components
+      assert LocaleFormat.format_date(date_before, "en") == "March 08, 2026"
+      assert LocaleFormat.format_time(time_before, "en") == "06:59 AM"
+      assert LocaleFormat.format_date(date_after, "en") == "March 08, 2026"
+      assert LocaleFormat.format_time(time_after, "en") == "07:01 AM"
     end
 
     test "handles DateTime during fall DST transition" do
@@ -271,10 +267,10 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       date_after = DateTime.to_date(dt_after)
       time_after = DateTime.to_time(dt_after)
 
-      assert is_binary(LocaleFormat.format_date(date_before, "en"))
-      assert is_binary(LocaleFormat.format_time(time_before, "en"))
-      assert is_binary(LocaleFormat.format_date(date_after, "en"))
-      assert is_binary(LocaleFormat.format_time(time_after, "en"))
+      assert LocaleFormat.format_date(date_before, "en") == "November 01, 2026"
+      assert LocaleFormat.format_time(time_before, "en") == "05:59 AM"
+      assert LocaleFormat.format_date(date_after, "en") == "November 01, 2026"
+      assert LocaleFormat.format_time(time_after, "en") == "06:01 AM"
     end
 
     test "month names remain consistent across DST transitions" do
@@ -372,19 +368,19 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       time = ~T[14:30:00]
 
       # Should fall back to English
-      assert is_binary(LocaleFormat.format_date(date, nil))
-      assert is_binary(LocaleFormat.format_time(time, nil))
+      assert LocaleFormat.format_date(date, nil) == "March 15, 2026"
+      assert LocaleFormat.format_time(time, nil) == "02:30 PM"
     end
 
     test "handles empty string locale" do
       date = ~D[2026-03-15]
-      assert is_binary(LocaleFormat.format_date(date, ""))
+      assert LocaleFormat.format_date(date, "") == "March 15, 2026"
     end
 
     test "handles unusual but valid dates" do
       # Leap year
       leap_date = ~D[2024-02-29]
-      assert is_binary(LocaleFormat.format_date(leap_date, "en"))
+      assert LocaleFormat.format_date(leap_date, "en") == "February 29, 2024"
 
       # New Year
       new_year = ~D[2026-01-01]
