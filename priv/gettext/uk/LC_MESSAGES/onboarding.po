@@ -57,11 +57,6 @@ msgstr "Тривалість"
 msgid "Finish"
 msgstr "Завершити"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:83
-#, elixir-autogen, elixir-format
-msgid "Go create your first event type — and let people book you."
-msgstr "Створіть свій перший тип події — і дайте людям змогу бронювати у вас зустрічі."
-
 #: lib/tymeslot_web/components/announcement_modal_component.ex:117
 #: lib/tymeslot_web/components/announcement_modal_component.ex:121
 #, elixir-autogen, elixir-format
@@ -79,11 +74,6 @@ msgstr "Нова функція"
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr "Далі"
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex:55
-#, elixir-autogen, elixir-format
-msgid "Profile, availability, integrations, and automation — all one click away."
-msgstr "Профіль, доступність, інтеграції та автоматизація — усе за один клік."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:66
 #, elixir-autogen, elixir-format
@@ -134,3 +124,13 @@ msgstr "Ваш обліковий запис"
 #, elixir-autogen, elixir-format
 msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
 msgstr "Перемикайтеся між Плануванням (ваші типи подій) та Календарем (повний огляд ваших бронювань і синхронізованих подій)."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:83
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Go create your first event type - and let people book you."
+msgstr "Створіть свій перший тип події — і дайте людям змогу бронювати у вас зустрічі."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:55
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Profile, availability, integrations, and automation - all one click away."
+msgstr "Профіль, доступність, інтеграції та автоматизація — усе за один клік."

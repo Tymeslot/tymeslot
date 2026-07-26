@@ -57,11 +57,6 @@ msgstr "Dauer"
 msgid "Finish"
 msgstr "Fertig"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:83
-#, elixir-autogen, elixir-format
-msgid "Go create your first event type — and let people book you."
-msgstr "Legen Sie jetzt Ihren ersten Termintyp an — und lassen Sie sich buchen."
-
 #: lib/tymeslot_web/components/announcement_modal_component.ex:117
 #: lib/tymeslot_web/components/announcement_modal_component.ex:121
 #, elixir-autogen, elixir-format
@@ -79,11 +74,6 @@ msgstr "Neue Funktion"
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr "Weiter"
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex:55
-#, elixir-autogen, elixir-format
-msgid "Profile, availability, integrations, and automation — all one click away."
-msgstr "Profil, Verfügbarkeit, Integrationen und Automatisierung — alles nur einen Klick entfernt."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:66
 #, elixir-autogen, elixir-format
@@ -134,3 +124,13 @@ msgstr "Ihr Konto"
 #, elixir-autogen, elixir-format
 msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
 msgstr "Wechseln Sie zwischen Planung (Ihre Termintypen) und Kalender (eine vollständige Ansicht Ihrer Buchungen und synchronisierten Termine)."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:83
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Go create your first event type - and let people book you."
+msgstr "Legen Sie jetzt Ihren ersten Termintyp an — und lassen Sie sich buchen."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:55
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Profile, availability, integrations, and automation - all one click away."
+msgstr "Profil, Verfügbarkeit, Integrationen und Automatisierung — alles nur einen Klick entfernt."
