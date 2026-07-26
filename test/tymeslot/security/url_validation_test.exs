@@ -232,34 +232,26 @@ defmodule Tymeslot.Security.UrlValidationTest do
                )
     end
 
-    test "handles IPv6 addresses with zone IDs (URI parser limitation)" do
-      # Zone IDs (e.g., %eth0) are used for link-local addresses
-      # Note: Elixir's URI parser doesn't correctly parse IPv6 with zone IDs
-      # It extracts only partial host info, which may cause validation issues
-      # This test documents the current behavior rather than ideal behavior
-      result =
-        UrlValidation.validate_http_url("http://[fe80::1%eth0]",
-          enforce_https_for_public: true,
-          https_error_message: "https required"
-        )
-
-      # Due to URI parser limitations, this may not be recognized as local
-      # We accept either outcome (proper parsing would recognize as local)
-      assert result == :ok or result == {:error, "https required"}
+    test "recognises IPv6 addresses with zone IDs as local" do
+      # Zone IDs (e.g. %eth0) scope an address to one local interface, so the
+      # host is local and exempt from the HTTPS requirement. `URI.parse/1`
+      # truncates the authority here, so the host is re-derived from it.
+      assert :ok =
+               UrlValidation.validate_http_url("http://[fe80::1%eth0]",
+                 enforce_https_for_public: true,
+                 https_error_message: "https required"
+               )
     end
 
     test "rejects IPv6 addresses without brackets in HTTP URLs" do
-      # IPv6 addresses must be bracketed in URLs
-      # Without brackets, the URI parser should fail or misparse
-      result =
-        UrlValidation.validate_http_url("http://fe80::1",
-          enforce_https_for_public: true,
-          https_error_message: "https required",
-          invalid_message: "invalid url"
-        )
-
-      # Should either fail validation or be rejected by URI parser
-      assert match?({:error, _}, result) or result == :ok
+      # IPv6 addresses must be bracketed in URLs. Unbracketed, the authority is
+      # ambiguous (`URI.parse/1` reads `::1` as a port), so it is rejected.
+      assert {:error, "invalid url"} =
+               UrlValidation.validate_http_url("http://fe80::1",
+                 enforce_https_for_public: true,
+                 https_error_message: "https required",
+                 invalid_message: "invalid url"
+               )
     end
 
     test "handles IPv6 compressed zeros in different positions" do
@@ -303,18 +295,15 @@ defmodule Tymeslot.Security.UrlValidationTest do
     end
 
     test "validates IPv4 octets in IPv4-mapped IPv6 addresses (edge case)" do
-      # Test with invalid IPv4 octets (>255)
-      # The URI parser should handle this, but we verify behavior
-      result =
-        UrlValidation.validate_http_url("http://[::ffff:999.999.999.999]",
-          enforce_https_for_public: true,
-          https_error_message: "https required",
-          invalid_message: "invalid url"
-        )
-
-      # URI parser should reject or the connection would fail anyway
-      # Just verify we don't crash
-      assert result == :ok or match?({:error, _}, result)
+      # Invalid IPv4 octets (>255) make the literal unparseable. A bracketed
+      # host that is not a valid IPv6 address cannot be classified, so it is
+      # rejected rather than assumed public.
+      assert {:error, "invalid url"} =
+               UrlValidation.validate_http_url("http://[::ffff:999.999.999.999]",
+                 enforce_https_for_public: true,
+                 https_error_message: "https required",
+                 invalid_message: "invalid url"
+               )
     end
   end
 
@@ -473,6 +462,98 @@ defmodule Tymeslot.Security.UrlValidationTest do
       # These are valid public domain names, not private IPs
       assert :ok = UrlValidation.validate_http_url("http://10.com/", @private_ip_opts)
       assert :ok = UrlValidation.validate_http_url("http://127.net/", @private_ip_opts)
+    end
+  end
+
+  describe "validate_http_url/2 IPv6 authority parsing" do
+    @private_ip_opts [block_private_ips: true]
+    @https_opts [enforce_https_for_public: true, https_error_message: "https required"]
+    @invalid_message "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
+    @private_ip_message "Private or local network addresses are not allowed"
+
+    # `URI.parse/1` truncates `[fe80::1%eth0]` to the host "fe80", so the
+    # zone-stripping in the IPv6 check never saw the address and the host was
+    # allowed through under block_private_ips.
+    test "blocks zoned link-local literals when private IPs are blocked" do
+      for url <- [
+            "http://[fe80::1%eth0]/",
+            "https://[fe80::1%eth0]/hook",
+            "https://[fe80::1%25eth0]/hook",
+            "https://[FE80::1%eth0]/hook"
+          ] do
+        assert {:error, @private_ip_message} =
+                 UrlValidation.validate_http_url(url, @private_ip_opts),
+               "expected #{url} to be rejected as private"
+      end
+    end
+
+    test "treats zoned link-local literals as local under enforce_https_for_public" do
+      # Scoped addresses are never publicly routable, so HTTPS is not enforced.
+      assert :ok = UrlValidation.validate_http_url("http://[fe80::1%eth0]/", @https_opts)
+    end
+
+    # `URI.parse/1` read `fe80::1` as host "fe80" with port `:1`.
+    test "rejects unbracketed IPv6 literals as malformed" do
+      for url <- [
+            "http://fe80::1",
+            "https://fe80::1/hook",
+            "http://::1",
+            "https://::ffff:10.0.0.1/"
+          ] do
+        assert {:error, @invalid_message} =
+                 UrlValidation.validate_http_url(url, @private_ip_opts),
+               "expected #{url} to be rejected as malformed"
+
+        assert {:error, _reason} = UrlValidation.validate_http_url(url, @https_opts),
+               "expected #{url} to be rejected as malformed"
+      end
+    end
+
+    # Anything bracketed must be an IPv6 literal; unclassifiable hosts fail closed.
+    test "rejects bracketed hosts that are not valid IPv6 literals" do
+      for url <- [
+            "http://[::ffff:999.999.999.999]/",
+            "https://[::ffff:999.999.999.999]/hook",
+            "https://[::ffff:127.1]/hook",
+            "https://[not-an-address]/hook",
+            "https://[fe80::1/hook"
+          ] do
+        assert {:error, @invalid_message} =
+                 UrlValidation.validate_http_url(url, @private_ip_opts),
+               "expected #{url} to be rejected as malformed"
+
+        assert {:error, _reason} = UrlValidation.validate_http_url(url, @https_opts),
+               "expected #{url} to be rejected as malformed"
+      end
+    end
+
+    test "blocks private IPv6 literals that carry a port or userinfo" do
+      for url <- [
+            "https://[::1]:8443/hook",
+            "https://[fe80::1]:443/hook",
+            "https://[fc00::1]:8080/hook",
+            "https://[::ffff:127.0.0.1]:9000/hook",
+            "https://[::ffff:10.0.0.1]:9000/hook",
+            "https://user:pass@[::1]/hook",
+            "https://user:pass@[fe80::1]:8443/hook"
+          ] do
+        assert {:error, @private_ip_message} =
+                 UrlValidation.validate_http_url(url, @private_ip_opts),
+               "expected #{url} to be rejected as private"
+      end
+    end
+
+    test "still allows public IPv6 literals when private IPs are blocked" do
+      assert :ok = UrlValidation.validate_http_url("https://[2001:db8::1]/hook", @private_ip_opts)
+
+      assert :ok =
+               UrlValidation.validate_http_url("https://[::ffff:8.8.8.8]/hook", @private_ip_opts)
+
+      assert :ok =
+               UrlValidation.validate_http_url(
+                 "https://[2606:4700::1]:8443/hook",
+                 @private_ip_opts
+               )
     end
   end
 end
