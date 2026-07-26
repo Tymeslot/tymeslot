@@ -18,25 +18,30 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     end
   end
 
-  describe "determine_status/2" do
+  describe "determine_status/3" do
     test "returns :unhealthy when failures reach threshold (3)" do
-      assert Monitor.determine_status(3, 0) == :unhealthy
-      assert Monitor.determine_status(4, 0) == :unhealthy
+      assert Monitor.determine_status(3, 0, :healthy) == :unhealthy
+      assert Monitor.determine_status(4, 0, :healthy) == :unhealthy
     end
 
     test "returns :degraded when failures are between 1 and 2" do
-      assert Monitor.determine_status(1, 0) == :degraded
-      assert Monitor.determine_status(2, 0) == :degraded
+      assert Monitor.determine_status(1, 0, :healthy) == :degraded
+      assert Monitor.determine_status(2, 0, :healthy) == :degraded
     end
 
-    test "returns :healthy when successes reach recovery threshold (2)" do
-      assert Monitor.determine_status(0, 2) == :healthy
-      assert Monitor.determine_status(0, 3) == :healthy
+    test "returns :healthy when a recovering integration reaches the threshold (2)" do
+      assert Monitor.determine_status(0, 2, :unhealthy) == :healthy
+      assert Monitor.determine_status(0, 2, :degraded) == :healthy
     end
 
-    test "returns :degraded when successes are below recovery threshold" do
-      assert Monitor.determine_status(0, 0) == :degraded
-      assert Monitor.determine_status(0, 1) == :degraded
+    test "keeps a recovering integration below the threshold out of :healthy" do
+      assert Monitor.determine_status(0, 0, :unhealthy) == :degraded
+      assert Monitor.determine_status(0, 1, :unhealthy) == :degraded
+      assert Monitor.determine_status(0, 1, :degraded) == :degraded
+    end
+
+    test "does not apply the threshold to an integration that has never failed" do
+      assert Monitor.determine_status(0, 1, :healthy) == :healthy
     end
   end
 
@@ -81,6 +86,44 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
 
       assert new_state.successes == 2
       assert new_state.status == :healthy
+    end
+  end
+
+  describe "recovery threshold" do
+    test "a fresh integration is healthy from its first successful probe onwards" do
+      state = Monitor.initial_state()
+      after_first = Monitor.update_health(state, {:ok, :result})
+
+      assert after_first.successes == 1
+      assert after_first.status == :healthy
+
+      after_second = Monitor.update_health(after_first, {:ok, :result})
+
+      assert after_second.status == :healthy
+
+      # The threshold used to apply here too, dropping a new integration to
+      # :degraded and then reporting a recovery from a failure that never was.
+      assert Monitor.detect_transition(after_first, after_second) ==
+               {:no_change, :healthy, :healthy}
+    end
+
+    test "a failed integration still needs two consecutive successes to be healthy" do
+      unhealthy =
+        Enum.reduce(1..3, Monitor.initial_state(), fn _attempt, state ->
+          Monitor.update_health(state, {:error, :boom, :hard})
+        end)
+
+      assert unhealthy.status == :unhealthy
+
+      after_first = Monitor.update_health(unhealthy, {:ok, :result})
+
+      assert after_first.successes == 1
+      assert after_first.status == :degraded
+
+      after_second = Monitor.update_health(after_first, {:ok, :result})
+
+      assert after_second.successes == 2
+      assert after_second.status == :healthy
     end
   end
 
