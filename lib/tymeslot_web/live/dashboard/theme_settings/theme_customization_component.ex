@@ -10,7 +10,6 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   - Provided/managed by this component (do not pass these in):
     - customization: map with current customization state (see customization_t())
     - presets: preset collections for color schemes and backgrounds (see presets_t())
-    - defaults: map of default values for the theme
     - browsing_type: String.t() – which background category is currently browsed ("gradient" | "color" | "image" | "video")
     - uploads: map() | nil – upload entries (managed by this component)
     - parent_component: term() – reference to parent component for close actions (optional)
@@ -68,7 +67,6 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
           required(:theme_id) => String.t(),
           required(:customization) => customization_t(),
           required(:presets) => presets_t(),
-          required(:defaults) => map(),
           required(:browsing_type) => String.t(),
           optional(:uploads) => map() | nil,
           optional(:parent_component) => term()
@@ -77,10 +75,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   @impl Phoenix.LiveComponent
   @spec mount(Socket.t()) :: {:ok, Socket.t()}
   def mount(socket) do
-    socket =
-      socket
-      |> assign(:uploading, false)
-      |> maybe_configure_uploads()
+    socket = maybe_configure_uploads(socket)
 
     {:ok, socket}
   end
@@ -105,8 +100,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
     %{
       customization: customization,
       original: _original_state,
-      presets: presets,
-      defaults: defaults
+      presets: presets
     } = ThemeCustomizations.initialize_customization(assigns.profile.id, theme_id)
 
     # Narrow assigns surface: expose a small, consistent contract
@@ -118,7 +112,6 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
      |> assign(:theme_id, theme_id)
      |> assign(:customization, customization)
      |> assign(:presets, presets)
-     |> assign(:defaults, defaults)
      |> assign_new(:browsing_type, fn -> customization.background_type end)
      |> assign_new(:custom_picker_open, fn -> false end)
      |> assign_new(:palette_picker_open, fn ->

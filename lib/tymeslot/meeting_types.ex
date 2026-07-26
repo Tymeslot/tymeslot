@@ -21,15 +21,7 @@ defmodule Tymeslot.MeetingTypes do
   """
   @spec get_active_meeting_types(integer()) :: [Ecto.Schema.t()]
   def get_active_meeting_types(user_id) do
-    case MeetingTypeQueries.has_meeting_types?(user_id) do
-      false ->
-        Logger.info("Creating default meeting types for user", user_id: user_id)
-        create_default_meeting_types(user_id)
-        MeetingTypeQueries.list_active_meeting_types(user_id)
-
-      true ->
-        MeetingTypeQueries.list_active_meeting_types(user_id)
-    end
+    list_seeding_defaults(user_id, &MeetingTypeQueries.list_active_meeting_types/1)
   end
 
   @doc """
@@ -37,15 +29,7 @@ defmodule Tymeslot.MeetingTypes do
   """
   @spec get_all_meeting_types(integer()) :: [Ecto.Schema.t()]
   def get_all_meeting_types(user_id) do
-    case MeetingTypeQueries.has_meeting_types?(user_id) do
-      false ->
-        Logger.info("Creating default meeting types for user", user_id: user_id)
-        create_default_meeting_types(user_id)
-        MeetingTypeQueries.list_all_meeting_types(user_id)
-
-      true ->
-        MeetingTypeQueries.list_all_meeting_types(user_id)
-    end
+    list_seeding_defaults(user_id, &MeetingTypeQueries.list_all_meeting_types/1)
   end
 
   @doc """
@@ -55,14 +39,23 @@ defmodule Tymeslot.MeetingTypes do
   """
   @spec get_public_meeting_types(integer()) :: [Ecto.Schema.t()]
   def get_public_meeting_types(user_id) do
-    case MeetingTypeQueries.has_meeting_types?(user_id) do
-      false ->
-        Logger.info("Creating default meeting types for user", user_id: user_id)
-        create_default_meeting_types(user_id)
-        MeetingTypeQueries.list_public_meeting_types(user_id)
+    list_seeding_defaults(user_id, &MeetingTypeQueries.list_public_meeting_types/1)
+  end
 
-      true ->
-        MeetingTypeQueries.list_public_meeting_types(user_id)
+  # The three public listings above differ only in which query they run; each
+  # seeds the user's default meeting types first if they have none yet.
+  defp list_seeding_defaults(user_id, list_fun) do
+    ensure_default_meeting_types(user_id)
+    list_fun.(user_id)
+  end
+
+  defp ensure_default_meeting_types(user_id) do
+    if MeetingTypeQueries.has_meeting_types?(user_id) do
+      :ok
+    else
+      Logger.info("Creating default meeting types for user", user_id: user_id)
+      create_default_meeting_types(user_id)
+      :ok
     end
   end
 
