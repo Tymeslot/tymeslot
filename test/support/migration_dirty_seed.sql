@@ -1,21 +1,33 @@
 -- migration_dirty_seed.sql
 --
--- Adversarial data for migration testing. This file is loaded before running
--- pending migrations to verify they handle real-world data shapes.
+-- Adversarial data for migration testing. dirty_seed_migration_test.exs
+-- migrates a scratch database to the pinned version below, loads this file, and
+-- then runs every remaining migration, to verify they handle real-world data
+-- shapes rather than only an empty database.
+--
+-- SEED SCHEMA VERSION: 20260702180350
+--
+-- That line is the schema this file is written against, and it is fixed. The
+-- test module's @seed_schema_version is the authority and asserts the two
+-- match; treat this copy as a note to whoever is editing the SQL.
 --
 -- MAINTENANCE RULES:
 -- 1. When a migration bug is found in production, add the offending data
 --    pattern here as a regression case.
--- 2. When a migration adds a NOT NULL column to an existing table, update
---    the INSERTs here to include that column (with a valid value).
+-- 2. Write every INSERT against the schema as of the pinned version above, not
+--    against today's schema. A later migration adding a NOT NULL column or a
+--    constraint needs no change here — having to cope with rows that predate it
+--    is exactly what it is being tested for.
 -- 3. Every INSERT must use explicit column lists — never INSERT INTO t VALUES.
 -- 4. Comments explain WHY each row is adversarial, not what it contains.
--- 5. When the migration a row was written for drops out of the tested window,
---    delete the row. The window slides (the test takes the last N migrations)
---    and this file is loaded *after* the database has already been migrated up
---    to just before that window, so a row targeting an older migration cannot
---    exercise it any more — and the schema may by then refuse the row outright,
---    which fails the seed rather than the migration under test.
+-- 5. Rows are never retired for age. A row written for a migration that has
+--    long since shipped still gives every later migration touching that table a
+--    populated table to run against, which is the failure this file exists to
+--    catch. Delete a row only when it is genuinely unreachable.
+-- 6. Moving the pin forward is the one change that can invalidate rows here,
+--    and it is needed only to seed a table or column that did not exist at the
+--    pin. When you move it, run the test and repair whatever the newer schema
+--    rejects — deliberately, checking what each rejected row covered.
 --
 -- Tables seeded: users, profiles, user_sessions, calendar_integrations,
 --                video_integrations, connect_accounts, payment_transactions,
@@ -76,9 +88,10 @@ FROM users WHERE email = 'seed-user-1@example.com';
 --
 -- This used to be a pair of duplicate active rows, kept as a regression case
 -- for 20260323000001, which replaced the old uniqueness rule with the partial
--- index unique_active_calendar_null_account_per_user. That migration is long
--- out of the tested window, so by the time this file is loaded the index
--- already exists and rejects the duplicate outright (see maintenance rule 5).
+-- index unique_active_calendar_null_account_per_user. That migration is before
+-- the pinned version, so the index already exists when this file loads and
+-- rejects the duplicate outright. The surviving row stays: it is what any later
+-- migration touching calendar_integrations runs against.
 INSERT INTO calendar_integrations (user_id, provider, base_url, name, is_active, verify_ssl, calendar_paths, calendar_list, inserted_at, updated_at)
 SELECT id, 'caldav', 'https://dav.example.com', 'CalDAV Server 1', true, true, '{}', ARRAY[]::jsonb[], NOW(), NOW()
 FROM users WHERE email = 'seed-user-1@example.com';
@@ -106,9 +119,9 @@ FROM users WHERE email = 'seed-user-2@example.com';
 --
 -- The duplicate-provider twin this row used to have was the regression case
 -- for 20260317000003 / 20260323000001, which added
--- unique_active_video_null_account_per_user. Both are out of the tested window
--- now, so the index exists before this file is loaded and rejects the twin
--- (see maintenance rule 5).
+-- unique_active_video_null_account_per_user. Both are before the pinned
+-- version, so the index exists when this file loads and rejects the twin. The
+-- surviving row stays as populated data for later migrations.
 INSERT INTO video_integrations (user_id, provider, base_url, name, is_active, settings, inserted_at, updated_at)
 SELECT id, 'mirotalk', 'https://meet1.example.com', 'MiroTalk 1', true, '{}'::jsonb, NOW(), NOW()
 FROM users WHERE email = 'seed-user-1@example.com';
@@ -132,20 +145,26 @@ FROM users WHERE email = 'seed-user-2@example.com';
 -- renames the table to `provider_calendar_events` and adds four NOT NULL
 -- columns) and 20260415185057_add_sync_state_to_provider_calendar_events.
 --
--- Both migrations are long out of the tested window. This file is loaded after
--- the database has been migrated up to just before that window, so by then the
--- rename has already happened, `calendar_events` does not exist, and every one
--- of those INSERTs fails with undefined_table. They could not exercise those
--- migrations either way (see maintenance rule 5), so they are gone.
+-- Both migrations are before the pinned version, so by the time this file is
+-- loaded the rename has already happened, `calendar_events` does not exist, and
+-- every one of those INSERTs fails with undefined_table.
 --
--- If a future migration touches `provider_calendar_events`, add fresh rows here
--- against the current table and columns rather than restoring these.
+-- `provider_calendar_events` is worth seeding again — it is a table later
+-- migrations do touch. Add fresh rows here against the post-rename table and
+-- its NOT NULL columns; the pin is well past the rename, so nothing needs to
+-- move to do it.
 
 -- ============================================================================
 -- PAYMENT TRANSACTIONS (pre-retention-migration shape)
 -- ============================================================================
 --
--- The 20260508164247_add_retention_columns_to_payment_transactions migration:
+-- Written for 20260508164247_add_retention_columns_to_payment_transactions,
+-- which is now before the pin, so these rows no longer exercise it. They are
+-- kept under maintenance rule 5: they are what a later migration touching
+-- payment_transactions will meet. The original rationale, still the reason each
+-- row has the shape it has:
+--
+-- The migration:
 --   1. Drops the NOT NULL FK on user_id and re-adds it as :nilify_all
 --   2. Adds host_email, host_name, host_deleted_at columns
 --   3. Backfills host_email/host_name via UPDATE ... FROM users WHERE pt.user_id = u.id
@@ -190,14 +209,16 @@ SET session_replication_role = DEFAULT;
 -- A seventh legacy `calendar_events` row lived here, covering the
 -- add_attendee_notification_tracking backfill against a row whose every
 -- referenced field is NULL or degenerate. Removed for the same reason as the
--- block above: the table is already `provider_calendar_events` by the time
--- this file is loaded, and that migration is out of the tested window.
+-- block above: the table is already `provider_calendar_events` by the time this
+-- file is loaded, so the INSERT could not resolve its table.
 
 -- ============================================================================
 -- CONNECT ACCOUNTS
 -- ============================================================================
 --
--- These rows are present before:
+-- Written for the two migrations below, both now before the pin, so these rows
+-- no longer exercise them; they are kept under maintenance rule 5 as populated
+-- data for later migrations. The shapes they were chosen for:
 --   * 20260508170000_add_connect_accounts_user_id_unique_index — adds a partial
 --     unique index on user_id WHERE deleted_at IS NULL. The soft-deleted row
 --     below verifies the index build tolerates non-live rows without treating
@@ -242,7 +263,9 @@ VALUES (gen_random_uuid(),
 -- BOOKING PAYMENTS
 -- ============================================================================
 --
--- These rows are present before:
+-- Written for the migration below, now before the pin, so these rows no longer
+-- exercise it; they are kept under maintenance rule 5 as populated data for
+-- later migrations. The shapes they were chosen for:
 --   * 20260511084157_add_stale_pending_index_to_booking_payments — adds a
 --     partial composite index on (status, inserted_at) WHERE status = 'pending'
 --     AND stripe_checkout_session_id IS NOT NULL. The pending row below
@@ -348,7 +371,9 @@ VALUES (gen_random_uuid(),
 -- MEETINGS
 -- ============================================================================
 --
--- These rows are present before:
+-- Written for the migration below, now before the pin, so these rows no longer
+-- exercise it; they are kept under maintenance rule 5, and meetings is a table
+-- migrations touch often. The shapes they were chosen for:
 --   * 20260616144719_add_meetings_utm_source_index — builds a partial composite
 --     index on (organizer_user_id, utm_source) WHERE utm_source IS NOT NULL,
 --     CONCURRENTLY. The rows below exercise the index predicate against a
