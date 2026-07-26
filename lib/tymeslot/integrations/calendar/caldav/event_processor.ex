@@ -67,6 +67,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
              required(:summary) => String.t() | nil,
              required(:description) => String.t() | nil,
              required(:location) => String.t() | nil,
+             required(:organizer) => %{String.t() => String.t() | nil} | nil,
              required(:attendees) => list(%{String.t() => String.t() | nil}),
              required(:recurrence_rule) => String.t() | nil,
              required(:recurrence_id) => String.t() | nil,
