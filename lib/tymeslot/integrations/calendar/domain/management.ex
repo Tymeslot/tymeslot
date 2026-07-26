@@ -219,14 +219,18 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   worker or caller that receives `{:error, :requires_reencryption, integration}`
   from `CalendarIntegrationQueries.get/1`.
 
+  Pass `cause: cause` (see `t:Tymeslot.Integrations.Shared.ReauthHandling.cause/0`)
+  when the integration needs reconnecting for a different reason, so the message
+  recorded on `sync_error` describes what actually failed.
+
   Returns an Oban return value: `{:discard, _}` on success (retrying won't
   recover the credentials), or `{:error, _}` if the flag couldn't be persisted —
   which causes Oban to retry the job and take another shot at recording the flag.
   """
-  @spec handle_reauth_required(CalendarIntegrationSchema.t()) ::
+  @spec handle_reauth_required(CalendarIntegrationSchema.t(), keyword()) ::
           {:discard, String.t()} | {:error, String.t()}
-  def handle_reauth_required(%CalendarIntegrationSchema{} = integration) do
-    case flag_for_reauth(integration) do
+  def handle_reauth_required(%CalendarIntegrationSchema{} = integration, opts \\ []) do
+    case flag_for_reauth(integration, opts) do
       :ok -> {:discard, "Credentials require reauthentication"}
       {:error, _changeset} -> {:error, "Failed to flag integration for reauth"}
     end
@@ -257,10 +261,13 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   end
 
   # Shared helper: delegates to ReauthHandling.flag/2 with calendar-specific opts.
-  defp flag_for_reauth(integration) do
-    ReauthHandling.flag(integration,
-      mark_needs_reauth: &mark_needs_reauth/2,
-      log_prefix: "Calendar"
+  defp flag_for_reauth(integration, opts \\ []) do
+    ReauthHandling.flag(
+      integration,
+      Keyword.merge(
+        [mark_needs_reauth: &mark_needs_reauth/2, log_prefix: "Calendar"],
+        opts
+      )
     )
   end
 

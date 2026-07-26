@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       {:ok, updated} = VideoIntegrationQueries.get(integration.id)
       assert updated.needs_reauth == true
       assert updated.is_active == true
-      assert is_binary(updated.sync_error)
+      assert updated.sync_error =~ "expired or been revoked"
 
       assert_enqueued(
         worker: EmailWorker,
@@ -74,6 +74,48 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       {:ok, updated} = CalendarIntegrationQueries.get(integration.id)
       assert updated.needs_reauth == true
       assert_enqueued(worker: EmailWorker)
+    end
+
+    # An expired or revoked OAuth grant has nothing to do with encryption keys.
+    # Storing the decryption diagnosis for it sends the user, and support, down
+    # the wrong path entirely.
+    test "records an expired-grant message rather than a decryption diagnosis on invalid_grant" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration, user: user, is_active: true, needs_reauth: false)
+
+      assert ResponseHandler.handle_permanent_auth_failure(
+               :calendar,
+               integration,
+               {:error, "Token refresh failed: invalid_grant"}
+             ) == :ok
+
+      {:ok, updated} = CalendarIntegrationQueries.get(integration.id)
+
+      assert updated.sync_error ==
+               "Access to the connected account has expired or been revoked. Please reconnect the integration."
+
+      refute updated.sync_error =~ "decrypted"
+      refute updated.sync_error =~ "encryption key"
+    end
+
+    test "records a rejected-credentials message for permanent auth failures other than invalid_grant" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
+
+      assert ResponseHandler.handle_permanent_auth_failure(
+               :video,
+               integration,
+               {:error, :unauthorized}
+             ) == :ok
+
+      {:ok, updated} = VideoIntegrationQueries.get(integration.id)
+
+      assert updated.sync_error ==
+               "The provider rejected the stored credentials for this integration. Please reconnect the integration."
+
+      refute updated.sync_error =~ "decrypted"
     end
 
     test "ignores transient errors" do

@@ -55,6 +55,25 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandlingTest do
       assert log =~ "Failed to persist needs_reauth flag"
     end
 
+    # The decryption message above is the default because `flag/2` was built for
+    # the "credentials no longer decrypt" path. Callers on the OAuth-grant path
+    # must be able to record what actually went wrong instead.
+    test "records the cause-specific message when :cause is given" do
+      integration = insert(:calendar_integration, provider: "google")
+
+      assert :ok =
+               ReauthHandling.flag(integration,
+                 mark_needs_reauth: &CalendarIntegrationQueries.mark_needs_reauth/2,
+                 cause: :expired_grant
+               )
+
+      reloaded = Repo.reload!(integration)
+      assert reloaded.needs_reauth == true
+      refute reloaded.sync_error =~ "decrypted"
+      assert reloaded.sync_error =~ "expired or been revoked"
+      assert reloaded.sync_error =~ "reconnect the integration"
+    end
+
     test "uses the default provider_label when no override is given" do
       integration = insert(:calendar_integration, provider: "google")
 

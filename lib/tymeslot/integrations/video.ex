@@ -55,14 +55,18 @@ defmodule Tymeslot.Integrations.Video do
   worker or caller that receives `{:error, :requires_reencryption, integration}`
   from `VideoIntegrationQueries.get/1` or `VideoIntegrationQueries.get_for_user/2`.
 
+  Pass `cause: cause` (see `t:Tymeslot.Integrations.Shared.ReauthHandling.cause/0`)
+  when the integration needs reconnecting for a different reason, so the message
+  recorded on `sync_error` describes what actually failed.
+
   Returns an Oban return value: `{:discard, _}` on success (retrying won't
   recover the credentials), or `{:error, _}` if the flag couldn't be persisted —
   which causes Oban to retry the job and take another shot at recording the flag.
   """
-  @spec handle_reauth_required(VideoIntegrationSchema.t()) ::
+  @spec handle_reauth_required(VideoIntegrationSchema.t(), keyword()) ::
           {:discard, String.t()} | {:error, String.t()}
-  def handle_reauth_required(%VideoIntegrationSchema{} = integration) do
-    case flag_for_reauth(integration) do
+  def handle_reauth_required(%VideoIntegrationSchema{} = integration, opts \\ []) do
+    case flag_for_reauth(integration, opts) do
       :ok -> {:discard, "Credentials require reauthentication"}
       {:error, _changeset} -> {:error, "Failed to flag integration for reauth"}
     end
@@ -117,10 +121,13 @@ defmodule Tymeslot.Integrations.Video do
   end
 
   # Shared helper: delegates to ReauthHandling.flag/2 with video-specific opts.
-  defp flag_for_reauth(integration) do
-    ReauthHandling.flag(integration,
-      mark_needs_reauth: &VideoIntegrationQueries.mark_needs_reauth/2,
-      log_prefix: "Video"
+  defp flag_for_reauth(integration, opts \\ []) do
+    ReauthHandling.flag(
+      integration,
+      Keyword.merge(
+        [mark_needs_reauth: &VideoIntegrationQueries.mark_needs_reauth/2, log_prefix: "Video"],
+        opts
+      )
     )
   end
 
