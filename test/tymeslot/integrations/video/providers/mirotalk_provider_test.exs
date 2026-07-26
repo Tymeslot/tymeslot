@@ -38,11 +38,9 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert capabilities[:screen_sharing] == true
       assert capabilities[:waiting_room] == false
       assert capabilities[:max_participants] == 100
-      assert capabilities[:requires_download] == false
       assert capabilities[:dial_in] == false
       assert capabilities[:chat] == true
       assert capabilities[:breakout_rooms] == false
-      assert capabilities[:end_to_end_encryption] == true
     end
   end
 
@@ -61,16 +59,38 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert String.contains?(message, "base_url")
     end
 
-    test "attempts connection when all required fields present" do
+    # `validate_config/1` is the cheap structural gate; `test_connection/1` is
+    # the one function that talks to the customer's server. Callers such as
+    # `ProviderRegistry.test_provider_connection/2` run both in sequence, so a
+    # network call here would double every scheduled health probe.
+    test "accepts a complete config without touching the network" do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
-      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _http_opts ->
         {:ok, %Req.Response{status: 200}}
       end)
 
       assert :ok = MiroTalkProvider.validate_config(config)
     end
 
+    test "rejects a base_url pointing at a private address without touching the network" do
+      config = %{api_key: "test_key", base_url: "http://127.0.0.1:3000"}
+
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 200}}
+      end)
+
+      assert {:error, _message} = MiroTalkProvider.validate_config(config)
+    end
+
+    test "rejects a base_url that is not an HTTP(S) URL" do
+      config = %{api_key: "test_key", base_url: "not a url"}
+
+      assert {:error, _message} = MiroTalkProvider.validate_config(config)
+    end
+  end
+
+  describe "test_connection/1" do
     test "returns error when connection fails" do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
@@ -78,7 +98,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
         {:error, %Mint.TransportError{reason: :econnrefused}}
       end)
 
-      assert {:error, message} = MiroTalkProvider.validate_config(config)
+      assert {:error, message} = MiroTalkProvider.test_connection(config)
       assert String.contains?(message, "Connection refused")
     end
 

@@ -44,8 +44,9 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
           api_key: "test-key"
         })
 
-      # Mock MiroTalk API call
-      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      # One MiroTalk API call: booking a room no longer pays for a pre-flight
+      # connection test inside `validate_config/1` on top of the real request.
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok,
          %Req.Response{
            status: 200,

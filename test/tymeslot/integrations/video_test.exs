@@ -36,8 +36,8 @@ defmodule Tymeslot.Integrations.VideoTest do
         "api_key" => "test-key"
       }
 
-      # Mock connection test - called twice
-      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      # Adding an integration still tests the connection, but exactly once.
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200}}
       end)
 

@@ -174,11 +174,14 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
       assert result == :ok or match?({:ok, _result}, result) or match?({:error, _reason}, result)
     end
 
-    test "mirotalk provider requires HTTP mock for validation" do
+    # Every video provider's `validate_config/1` is a structural check only;
+    # reaching the network is `test_connection/1`'s job. MiroTalk is the one
+    # provider with a network-capable config, so it is the one worth pinning.
+    test "mirotalk provider validates configuration without network access" do
       {:ok, mirotalk} = ProviderRegistry.get_provider(:mirotalk)
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
-      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200}}
       end)
 

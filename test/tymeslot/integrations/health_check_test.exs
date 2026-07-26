@@ -273,13 +273,12 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
         {:ok, []}
       end)
 
-      # Each MiroTalk probe issues two POSTs: `ProviderRegistry` calls
-      # `validate_config/1`, which already runs a full `test_connection/1`, and
-      # then calls `test_connection/1` again itself. Expecting one call per
-      # probe left the second raising inside the job, which the pipeline
-      # swallowed as a transient failure — so the probe never registered as
-      # healthy at all.
-      expect(Tymeslot.HTTPClientMock, :post, 4, fn _url, _body, _headers, _opts ->
+      # One POST per MiroTalk probe, so two across the two rounds. The count is
+      # load-bearing: it once stood at four, because `validate_config/1` ran a
+      # full `test_connection/1` of its own before `ProviderRegistry` ran the
+      # real one, doubling the traffic this probe sends to the customer's
+      # self-hosted server.
+      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200}}
       end)
 
