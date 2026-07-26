@@ -266,27 +266,41 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       c1 = insert(:calendar_integration, user: user, provider: "google")
       v1 = insert(:video_integration, user: user, provider: "mirotalk")
 
-      # Mock success for both
-      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _int, _start, _end ->
+      # Mock success for both, across two probe rounds: `@recovery_threshold`
+      # is 2, so a single success leaves an integration :degraded and the
+      # summary would say nothing about the success path working.
+      expect(GoogleCalendarAPIMock, :list_primary_events, 2, fn _int, _start, _end ->
         {:ok, []}
       end)
 
-      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
+      # Each MiroTalk probe issues two POSTs: `ProviderRegistry` calls
+      # `validate_config/1`, which already runs a full `test_connection/1`, and
+      # then calls `test_connection/1` again itself. Expecting one call per
+      # probe left the second raising inside the job, which the pipeline
+      # swallowed as a transient failure — so the probe never registered as
+      # healthy at all.
+      expect(Tymeslot.HTTPClientMock, :post, 4, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200}}
       end)
 
       run_health_checks()
       sync_with_server()
+      run_health_checks()
+      sync_with_server()
 
       report = HealthCheck.get_user_health_report(user.id)
 
-      assert length(report.calendar_integrations) == 1
-      assert Enum.any?(report.calendar_integrations, &(&1.id == c1.id))
+      assert [%{id: calendar_id, provider: "google", health: %{status: :healthy, successes: 2}}] =
+               report.calendar_integrations
 
-      assert length(report.video_integrations) == 1
-      assert Enum.any?(report.video_integrations, &(&1.id == v1.id))
+      assert calendar_id == c1.id
 
-      assert is_map(report.summary)
+      assert [%{id: video_id, provider: "mirotalk", health: %{status: :healthy, successes: 2}}] =
+               report.video_integrations
+
+      assert video_id == v1.id
+
+      assert report.summary == %{healthy_count: 2, degraded_count: 0, unhealthy_count: 0}
     end
   end
 
