@@ -66,6 +66,6 @@ defmodule Tymeslot.Migrations.DirtySeedMigrationTest do
   end
 
   defp migrations_path do
-    Path.join(["apps/tymeslot", "priv/repo/migrations"])
+    "priv/repo/migrations"
   end
 end

@@ -1,10 +1,10 @@
-# Mox mock definitions for the whole umbrella.
+# Mox mock definitions, shared by every suite that runs against Core.
 #
 # These live in a compiled support file (not in test_helper.exs) so they are
-# defined exactly once, at compile time, and are available to every app that
-# depends on :tymeslot in the :test env — including :tymeslot_saas. Previously
-# the same defmocks were hand-maintained in both apps' test_helper.exs behind
-# `Code.ensure_loaded?/1` guards, which was a standing drift hazard.
+# defined exactly once, at compile time, and are available to every project
+# that depends on :tymeslot in the :test env. Hand-maintaining the same
+# defmocks in each project's test_helper.exs behind `Code.ensure_loaded?/1`
+# guards was a standing drift hazard.
 #
 # A file with bare top-level `Mox.defmock/2` calls is the idiomatic Mox pattern:
 # each call generates its mock module as compiled output.

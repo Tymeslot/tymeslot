@@ -113,8 +113,44 @@
           {CredoChecks.ClockUsage, [priority: :normal]},
           {CredoChecks.GettextDomainBoundary, [priority: :high]},
           {CredoChecks.NoUnsafeSanitizeMerge, [priority: :normal]},
+          # The three below mechanise rules that CLAUDE.md's prefer/avoid table
+          # already states in prose. Ported from ex_slop and oeditus_credo
+          # (both MIT) rather than taking the dependencies, so each is scoped
+          # to this codebase's conventions and lives beside the other checks.
+          #
+          # exit_status: 0 for the same reason as the Jump checks below: the
+          # current run finds 105 dual-key reads, 56 silent rescues and 8
+          # boolean cases. That is a backlog to work through deliberately,
+          # not something to fix under a red gate. Drop exit_status per check
+          # as each reaches zero. (NoSwallowedException's count dropped from
+          # its original 116 once the heuristic learned that passing the
+          # rescued exception on to a helper counts as handling it, not
+          # swallowing it; the residual count is genuine silent rescues.)
+          {CredoChecks.NoDualKeyAccess, [priority: :normal, exit_status: 0]},
+          {CredoChecks.NoCaseOnBoolean, [priority: :low, exit_status: 0]},
+          {CredoChecks.NoSwallowedException, [priority: :normal, exit_status: 0]},
           {CredoChecks.NoInlineCaldavList, [priority: :normal]},
           {CredoChecks.AttendeeNotificationsBoundary, []},
+
+          #
+          ## Test Quality Checks (jump_credo_checks)
+          #
+          # A suite stays green whether or not its tests assert anything, so
+          # these are the checks least likely to be noticed missing.
+          #
+          # exit_status: 0 means they report without failing the build. The
+          # first run found 1000 findings across 283 files, which is a backlog
+          # to work through deliberately, not something to fix under a red
+          # gate. Drop exit_status per check as each one reaches zero; that
+          # ratchet is the point, and a check left reporting forever is just
+          # noise nobody reads.
+          {Jump.CredoChecks.VacuousTest, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.TestHasNoAssertions, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.WeakAssertion, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.ConditionalAssertion, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.AssertElementSelectorCanNeverFail, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.UnusedLiveViewAssign, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.AvoidSocketAssignsInTest, [priority: :low, exit_status: 0]},
 
           #
           ## Additional Maintainability Checks (low priority, only visible with --strict)

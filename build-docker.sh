@@ -15,12 +15,12 @@
 #   - POSTGRES_PASSWORD (only needed for an external database — the embedded
 #     one defaults this internally)
 #
-# Run this script from apps/tymeslot/ or from anywhere — it always operates
-# relative to its own directory.
+# Run this script from anywhere — it always operates relative to its own
+# directory.
 
 set -e  # Exit on any error
 
-# Always run from the apps/tymeslot/ directory (where this script lives)
+# Always run from the repository root (where this script lives)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
@@ -120,7 +120,7 @@ echo "========================================"
 echo ""
 
 # Build the Docker image from Dockerfile.docker and tag it as 'tymeslot'
-# Build context is the current directory (apps/tymeslot/)
+# Build context is the current directory (the repository root)
 docker build -f Dockerfile.docker -t tymeslot .
 
 echo ""

@@ -169,7 +169,7 @@ msgstr "Eine Verschnaufpause zwischen Terminen (%{minutes} Min.)"
 msgid "A friendly face helps invitees recognise who they're booking with."
 msgstr "Ein freundliches Gesicht hilft Gästen dabei zu erkennen, bei wem sie buchen."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:274
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:288
 #, elixir-autogen, elixir-format
 msgid "Add a video provider"
 msgstr "Videoanbieter hinzufügen"
@@ -194,7 +194,7 @@ msgstr "App-Passwort oder Token"
 msgid "Are you sure you want to skip the quick start? You can always configure these settings later in your dashboard."
 msgstr "Möchten Sie den Schnellstart wirklich überspringen? Sie können diese Einstellungen jederzeit später in Ihrem Dashboard vornehmen."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:275
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:289
 #, elixir-autogen, elixir-format
 msgid "Auto-add links to online meetings"
 msgstr "Links zu Online-Meetings automatisch hinzufügen"
@@ -214,7 +214,7 @@ msgstr "Buchen"
 msgid "Bookable up to %{days}"
 msgstr "Buchbar bis zu %{days} im Voraus"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:189
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:203
 #, elixir-autogen, elixir-format
 msgid "Booking link copied to clipboard!"
 msgstr "Buchungslink in die Zwischenablage kopiert!"
@@ -274,8 +274,8 @@ msgstr "Wählen Sie Ihr Design"
 msgid "Colour scheme"
 msgstr "Farbschema"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:267
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:276
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:281
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:290
 #, elixir-autogen, elixir-format
 msgid "Connect"
 msgstr "Verbinden"
@@ -285,7 +285,7 @@ msgstr "Verbinden"
 msgid "Connect Google, Outlook, or CalDAV calendars to prevent double-bookings automatically."
 msgstr "Verbinden Sie Google-, Outlook- oder CalDAV-Kalender, um Doppelbuchungen automatisch zu verhindern."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:265
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:279
 #: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex:67
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar"
@@ -336,7 +336,7 @@ msgstr "Ohne Kalender fortfahren"
 msgid "Copy booking link"
 msgstr "Buchungslink kopieren"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:304
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:318
 #, elixir-autogen, elixir-format
 msgid "Copy link"
 msgstr "Link kopieren"
@@ -376,12 +376,12 @@ msgstr "Ihr Foto konnte nicht aktualisiert werden. Bitte versuchen Sie ein ander
 msgid "Custom"
 msgstr "Benutzerdefiniert"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:285
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:299
 #, elixir-autogen, elixir-format
 msgid "Customise"
 msgstr "Anpassen"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:283
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:297
 #, elixir-autogen, elixir-format
 msgid "Customise your theme"
 msgstr "Ihr Design anpassen"
@@ -411,7 +411,7 @@ msgstr "Wird gesucht…"
 msgid "Dismiss setup checklist"
 msgstr "Einrichtungs-Checkliste ausblenden"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:177
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:191
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr "Erledigt"
@@ -466,7 +466,7 @@ msgstr "In nur wenigen Schritten sind Sie startklar."
 msgid "Let's go"
 msgstr "Los geht's"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:284
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:298
 #, elixir-autogen, elixir-format
 msgid "Make your booking page yours"
 msgstr "Machen Sie Ihre Buchungsseite zu Ihrer eigenen"
@@ -567,12 +567,12 @@ msgstr "Profil nicht gefunden. Bitte versuchen Sie es erneut."
 msgid "Recommended"
 msgstr "Empfohlen"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:294
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:308
 #, elixir-autogen, elixir-format
 msgid "Review"
 msgstr "Prüfen"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:292
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:306
 #, elixir-autogen, elixir-format
 msgid "Review your meeting types"
 msgstr "Ihre Termintypen prüfen"
@@ -582,7 +582,7 @@ msgstr "Ihre Termintypen prüfen"
 msgid "Scheduling rules"
 msgstr "Planungsregeln"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:303
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:317
 #, elixir-autogen, elixir-format
 msgid "Send guests your booking link"
 msgstr "Senden Sie Gästen Ihren Buchungslink"
@@ -622,7 +622,7 @@ msgstr "Einrichtungs-Checkliste"
 msgid "Share this link so people can book time with you. Choose something short and memorable."
 msgstr "Teilen Sie diesen Link, damit andere Zeit bei Ihnen buchen können. Wählen Sie etwas Kurzes und Einprägsames."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:302
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:316
 #, elixir-autogen, elixir-format
 msgid "Share your booking page"
 msgstr "Teilen Sie Ihre Buchungsseite"
@@ -657,7 +657,7 @@ msgstr "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
 msgid "Step %{current} of %{total}"
 msgstr "Schritt %{current} von %{total}"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:266
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:280
 #, elixir-autogen, elixir-format
 msgid "Sync to avoid double-bookings"
 msgstr "Synchronisieren, um Doppelbuchungen zu vermeiden"
@@ -688,7 +688,7 @@ msgstr "Dieser Nutzername ist reserviert"
 msgid "Timezone must be a string"
 msgstr "Zeitzone muss eine Zeichenkette sein"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:293
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:307
 #, elixir-autogen, elixir-format
 msgid "Tune durations and questions"
 msgstr "Dauer und Fragen anpassen"

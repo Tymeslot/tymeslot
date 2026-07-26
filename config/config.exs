@@ -19,7 +19,7 @@ config :tymeslot,
   enforce_legal_agreements: false,
   # Whether meeting payments (booker pays at booking time) is enabled.
   # Self-hosters opt in by setting :meeting_payments_enabled to true.
-  # SaaS overrides this in apps/tymeslot_saas/config/config.exs.
+  # A downstream overlay may override this in its own config.
   meeting_payments_enabled: false,
   # Application fee charged on top of meeting payments, in basis points
   # (1 bp = 0.01%). 0 = no fee. SaaS may override per environment.
@@ -95,7 +95,7 @@ config :tymeslot,
 
   # Admin alerts — disabled by default. Self-hosters can enable via the
   # ADMIN_ALERTS_ENABLED env var (set true) plus a valid ADMIN_ALERT_EMAIL.
-  # SaaS overrides admin_alerts_enabled to true in apps/tymeslot_saas/config/config.exs.
+  # A downstream overlay may override admin_alerts_enabled in its own config.
   admin_alerts_impl: Tymeslot.Infrastructure.AdminAlerts.EmailNotifier,
   admin_alerts_enabled: false,
   admin_alert_email: nil,
@@ -254,14 +254,8 @@ config :tymeslot, Tymeslot.Mailer, adapter: Swoosh.Adapters.Local
 config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 
 # Resolve the deps directory for esbuild's NODE_PATH.
-# In standalone Core: config/ is at project_root/config/, deps at project_root/deps/ → ../deps
-# In umbrella:        config/ is at umbrella/apps/tymeslot/config/, deps at umbrella/deps/ → ../../../deps
-esbuild_node_path =
-  if File.dir?(Path.expand("../../../deps", __DIR__)) do
-    Path.expand("../../../deps", __DIR__)
-  else
-    Path.expand("../deps", __DIR__)
-  end
+# config/ is at project_root/config/ and deps at project_root/deps/ → ../deps
+esbuild_node_path = Path.expand("../deps", __DIR__)
 
 # Configure esbuild
 config :esbuild,
@@ -318,6 +312,15 @@ config :tailwind,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Precompressed siblings written by `mix phx.digest`, replacing the stock
+# [Phoenix.Digester.Gzip]. Order is irrelevant here; what a client is offered
+# is decided by the endpoint's :encodings list. See the module for why both
+# variants are worth writing.
+config :phoenix, :static_compressors, [
+  Tymeslot.Infrastructure.StaticCompressors.Zstd,
+  Tymeslot.Infrastructure.StaticCompressors.Gzip
+]
 
 # Configure timezone database
 config :elixir, :time_zone_database, Tz.TimeZoneDatabase
@@ -451,6 +454,14 @@ config :tymeslot, :booking_analytics_launch_date, nil
 # Analytics — secret used to derive the daily-rotated visitor fingerprint salt.
 # Required in production; dev/test override with fixed values for repeatability.
 config :tymeslot, :analytics_salt_secret, nil
+
+# Migration safety analysis (excellent_migrations, run as its own gate step
+# rather than a Credo check: migrations are deliberately outside .credo.exs's
+# included paths, so that they do not attract ModuleDoc, Specs and the rest).
+# The 178 migrations written before it was adopted are grandfathered: they have
+# already shipped and run against real databases, so re-litigating them would
+# be noise rather than safety. Anything strictly after this timestamp is checked.
+config :excellent_migrations, start_after: "20260716094322"
 
 # Import environment specific config
 import_config "#{config_env()}.exs"

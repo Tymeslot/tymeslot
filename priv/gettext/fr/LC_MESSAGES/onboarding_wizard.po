@@ -169,7 +169,7 @@ msgstr "Une pause entre les réunions (%{minutes} min)"
 msgid "A friendly face helps invitees recognise who they're booking with."
 msgstr "Un visage sympathique aide vos invités à savoir avec qui ils prennent rendez-vous."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:274
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:288
 #, elixir-autogen, elixir-format
 msgid "Add a video provider"
 msgstr "Ajouter un service de visioconférence"
@@ -194,7 +194,7 @@ msgstr "Mot de passe d’application ou jeton"
 msgid "Are you sure you want to skip the quick start? You can always configure these settings later in your dashboard."
 msgstr "Voulez-vous vraiment passer le démarrage rapide ? Vous pourrez toujours configurer ces paramètres plus tard dans votre tableau de bord."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:275
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:289
 #, elixir-autogen, elixir-format
 msgid "Auto-add links to online meetings"
 msgstr "Ajouter automatiquement des liens aux réunions en ligne"
@@ -214,7 +214,7 @@ msgstr "Réserver"
 msgid "Bookable up to %{days}"
 msgstr "Réservable jusqu’à %{days}"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:189
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:203
 #, elixir-autogen, elixir-format
 msgid "Booking link copied to clipboard!"
 msgstr "Lien de réservation copié dans le presse-papiers !"
@@ -274,8 +274,8 @@ msgstr "Choisissez votre thème"
 msgid "Colour scheme"
 msgstr "Palette de couleurs"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:267
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:276
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:281
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:290
 #, elixir-autogen, elixir-format
 msgid "Connect"
 msgstr "Connecter"
@@ -285,7 +285,7 @@ msgstr "Connecter"
 msgid "Connect Google, Outlook, or CalDAV calendars to prevent double-bookings automatically."
 msgstr "Connectez vos calendriers Google, Outlook ou CalDAV pour éviter automatiquement les doubles réservations."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:265
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:279
 #: lib/tymeslot_web/live/onboarding_live/skip_calendar_modal.ex:67
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar"
@@ -336,7 +336,7 @@ msgstr "Continuer sans"
 msgid "Copy booking link"
 msgstr "Copier le lien de réservation"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:304
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:318
 #, elixir-autogen, elixir-format
 msgid "Copy link"
 msgstr "Copier le lien"
@@ -376,12 +376,12 @@ msgstr "Impossible de mettre à jour votre photo. Veuillez essayer une autre ima
 msgid "Custom"
 msgstr "Personnalisé"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:285
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:299
 #, elixir-autogen, elixir-format
 msgid "Customise"
 msgstr "Personnaliser"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:283
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:297
 #, elixir-autogen, elixir-format
 msgid "Customise your theme"
 msgstr "Personnalisez votre thème"
@@ -411,7 +411,7 @@ msgstr "Découverte en cours…"
 msgid "Dismiss setup checklist"
 msgstr "Ignorer la liste de configuration"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:177
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:191
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr "Terminé"
@@ -466,7 +466,7 @@ msgstr "Voyons comment vous mettre en route en quelques étapes seulement."
 msgid "Let's go"
 msgstr "C’est parti"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:284
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:298
 #, elixir-autogen, elixir-format
 msgid "Make your booking page yours"
 msgstr "Personnalisez votre page de réservation"
@@ -567,12 +567,12 @@ msgstr "Profil introuvable. Veuillez réessayer."
 msgid "Recommended"
 msgstr "Recommandé"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:294
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:308
 #, elixir-autogen, elixir-format
 msgid "Review"
 msgstr "Vérifier"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:292
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:306
 #, elixir-autogen, elixir-format
 msgid "Review your meeting types"
 msgstr "Vérifiez vos types de réunion"
@@ -582,7 +582,7 @@ msgstr "Vérifiez vos types de réunion"
 msgid "Scheduling rules"
 msgstr "Règles de planification"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:303
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:317
 #, elixir-autogen, elixir-format
 msgid "Send guests your booking link"
 msgstr "Envoyez votre lien de réservation à vos invités"
@@ -622,7 +622,7 @@ msgstr "Liste de configuration"
 msgid "Share this link so people can book time with you. Choose something short and memorable."
 msgstr "Partagez ce lien pour que les autres puissent réserver du temps avec vous. Choisissez quelque chose de court et facile à retenir."
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:302
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:316
 #, elixir-autogen, elixir-format
 msgid "Share your booking page"
 msgstr "Partagez votre page de réservation"
@@ -657,7 +657,7 @@ msgstr "Une erreur s’est produite. Veuillez réessayer."
 msgid "Step %{current} of %{total}"
 msgstr "Étape %{current} sur %{total}"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:266
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:280
 #, elixir-autogen, elixir-format
 msgid "Sync to avoid double-bookings"
 msgstr "Synchroniser pour éviter les doubles réservations"
@@ -688,7 +688,7 @@ msgstr "Ce nom d’utilisateur est réservé"
 msgid "Timezone must be a string"
 msgstr "Le fuseau horaire doit être une chaîne de caractères"
 
-#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:293
+#: lib/tymeslot_web/live/dashboard/onboarding_checklist.ex:307
 #, elixir-autogen, elixir-format
 msgid "Tune durations and questions"
 msgstr "Ajustez les durées et les questions"

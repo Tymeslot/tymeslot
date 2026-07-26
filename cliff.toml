@@ -25,10 +25,16 @@ topo_order = false
 sort_commits = "newest"
 
 commit_parsers = [
-  # Skip commits explicitly marked as changelog-internal
-  { footer = "^Changelog: skip", skip = true },
-  # Breaking changes — must come before feat/fix to avoid duplication
-  { breaking = true, group = "Breaking Changes" },
+  # Skip commits explicitly marked as changelog-internal.
+  # git-cliff reconstructs a footer as "token:value" with no space after the
+  # separator, so a "^Changelog: skip" pattern (with a space) never matches and
+  # the skip silently does nothing. Match the spaceless form.
+  { footer = "^Changelog:\\s*skip", skip = true },
+  # Breaking changes — must come before feat/fix to avoid duplication.
+  # Match on the resolved `breaking` field, not the `breaking = true` parser key:
+  # git-cliff finalises the breaking flag after parser-key matching, so the key
+  # form never fires and breaking commits silently fall through to Features/Fixes.
+  { field = "breaking", pattern = "true", group = "Breaking Changes" },
   # Skip test, refactor, style, chore, docs commits
   { message = "^test", skip = true },
   { message = "^refactor", skip = true },

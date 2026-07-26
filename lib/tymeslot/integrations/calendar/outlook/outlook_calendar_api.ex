@@ -360,7 +360,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     HTTP.request(method, @base_url, path, token,
       params: params,
       headers: headers,
-      response_handler: &handle_response/1
+      response_handler: &handle_response(&1, path)
     )
   end
 
@@ -374,11 +374,20 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
       path,
       token,
       body,
-      Keyword.merge([response_handler: &handle_response/1], opts)
+      Keyword.merge([response_handler: &handle_response(&1, path)], opts)
     )
   end
 
   # Response handling and error classification
+
+  # A bare 404 means "calendar" on a calendar-scoped path and "event" on an
+  # event-scoped one; only the request path, in scope here, can tell them apart.
+  defp handle_response(response, path) do
+    case handle_response(response) do
+      {:error, :not_found, _generic} -> {:error, :not_found, HTTP.not_found_message(path)}
+      result -> result
+    end
+  end
 
   defp handle_response({:ok, %{status: status, body: body}})
        when status in [200, 201, 204] do
@@ -412,6 +421,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     end
   end
 
+  # Generic fallback: every request routed through `make_request/4` and
+  # `make_request_with_body/5` has its message refined by `handle_response/2`.
   defp handle_response({:ok, %{status: 404}}) do
     {:error, :not_found, "Calendar not found"}
   end

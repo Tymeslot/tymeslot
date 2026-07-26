@@ -461,7 +461,6 @@ msgstr ""
 msgid "Meeting will start at the scheduled time"
 msgstr ""
 
-#: dev_support/email_testing/helpers.ex:76
 #: lib/tymeslot/emails/shared/formatting.ex:239
 #: lib/tymeslot/emails/shared/formatting.ex:240
 #: lib/tymeslot/emails/shared/formatting.ex:244
@@ -1567,11 +1566,6 @@ msgstr ""
 msgid "Hi there,"
 msgstr ""
 
-#: dev_support/email_testing/helpers.ex:80
-#, elixir-autogen, elixir-format
-msgid "I'll send you a reminder 24 hours before our appointment."
-msgstr ""
-
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:28
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:85
 #, elixir-autogen, elixir-format
@@ -1582,11 +1576,6 @@ msgstr ""
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:80
 #, elixir-autogen, elixir-format
 msgid "Your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened."
-msgstr ""
-
-#: dev_support/email_testing/helpers.ex:77
-#, elixir-autogen, elixir-format
-msgid "in %{time_until}"
 msgstr ""
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:170

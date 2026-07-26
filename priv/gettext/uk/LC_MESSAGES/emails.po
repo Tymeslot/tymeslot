@@ -462,7 +462,6 @@ msgstr "Не працює кнопка? Скопіюйте та вставте �
 msgid "Meeting will start at the scheduled time"
 msgstr "Зустріч розпочнеться у запланований час"
 
-#: dev_support/email_testing/helpers.ex:76
 #: lib/tymeslot/emails/shared/formatting.ex:239
 #: lib/tymeslot/emails/shared/formatting.ex:240
 #: lib/tymeslot/emails/shared/formatting.ex:244
@@ -1569,11 +1568,6 @@ msgstr "Надійшов запит на зміну адреси електро�
 msgid "Hi there,"
 msgstr "Вітаю!"
 
-#: dev_support/email_testing/helpers.ex:80
-#, elixir-autogen, elixir-format
-msgid "I'll send you a reminder 24 hours before our appointment."
-msgstr "Я надішлю вам нагадування за 24 години до нашої зустрічі."
-
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:28
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:85
 #, elixir-autogen, elixir-format
@@ -1585,11 +1579,6 @@ msgstr "Адресу електронної пошти вашого обліко
 #, elixir-autogen, elixir-format
 msgid "Your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened."
 msgstr "Адресу електронної пошти вашого облікового запису Tymeslot успішно змінено. Це підтвердження надсилається на вашу попередню адресу, щоб ви знали, що зміна відбулася."
-
-#: dev_support/email_testing/helpers.ex:77
-#, elixir-autogen, elixir-format
-msgid "in %{time_until}"
-msgstr "через %{time_until}"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:170
 #, elixir-autogen, elixir-format

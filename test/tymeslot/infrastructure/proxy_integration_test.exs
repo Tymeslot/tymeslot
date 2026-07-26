@@ -8,7 +8,7 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
 
   # This test requires real proxy credentials to be configured
   # Run with: mix test --only integration
-  # Or: HTTPS_PROXY=http://user:pass@proxy:port mix test apps/tymeslot/test/tymeslot/infrastructure/proxy_integration_test.exs
+  # Or: HTTPS_PROXY=http://user:pass@proxy:port mix test test/tymeslot/infrastructure/proxy_integration_test.exs
 
   setup_all do
     # Save original proxy config

@@ -22,7 +22,7 @@ msgstr "Calendario riconnesso"
 msgid "Cancel"
 msgstr "Annulla"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:50
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:51
 #, elixir-autogen, elixir-format
 msgid "Choose which calendars we check to prevent double bookings."
 msgstr "Scegli quali calendari controlliamo per evitare doppie prenotazioni."
@@ -47,7 +47,7 @@ msgstr "Impossibile salvare: %{reason}"
 msgid "Could not sign in with those credentials"
 msgstr "Impossibile accedere con quelle credenziali"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:118
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:119
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr "Fine"
@@ -161,7 +161,7 @@ msgstr "Il mio mailbox.org"
 msgid "My mailbox.org Calendar"
 msgstr "Il mio calendario mailbox.org"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:106
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:107
 #, elixir-autogen, elixir-format
 msgid "No calendars found. Try refreshing the integration."
 msgstr "Nessun calendario trovato. Prova ad aggiornare l'integrazione."
@@ -188,7 +188,7 @@ msgstr "Password / Password per app"
 msgid "Please select at least one calendar to sync."
 msgstr "Seleziona almeno un calendario da sincronizzare."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:94
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:95
 #, elixir-autogen, elixir-format
 msgid "Primary"
 msgstr "Principale"
@@ -263,7 +263,7 @@ msgstr "Accesso e sicurezza → Password specifiche per app"
 msgid "Something went wrong. Please try again."
 msgstr "Si è verificato un problema. Riprova."
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:117
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:116
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:41
 #, elixir-autogen, elixir-format
 msgid "Sync calendars from your Apple iCloud account"
@@ -279,13 +279,13 @@ msgstr "Sincronizza i calendari dal tuo server Nextcloud"
 msgid "Sync calendars from your Zimbra server"
 msgstr "Sincronizza i calendari dal tuo server Zimbra"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:106
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:105
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:41
 #, elixir-autogen, elixir-format
 msgid "Sync calendars from your mailbox.org account"
 msgstr "Sincronizza i calendari dal tuo account mailbox.org"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:58
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:59
 #, elixir-autogen, elixir-format
 msgid "Syncing %{selected} of %{count} calendar"
 msgid_plural "Syncing %{selected} of %{count} calendars"
@@ -381,42 +381,42 @@ msgstr "https://mail.example.com"
 msgid "https://radicale.example.com:5232"
 msgstr "https://radicale.example.com:5232"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:98
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:97
 #, elixir-autogen, elixir-format
 msgid "Enterprise Zimbra calendar integration"
 msgstr "Integrazione del calendario Zimbra per aziende"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:139
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:138
 #, elixir-autogen, elixir-format
 msgid "Full OAuth integration with Google Meet support"
 msgstr "Integrazione OAuth completa con supporto per Google Meet"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:157
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:156
 #, elixir-autogen, elixir-format
 msgid "Homepage demo provider"
 msgstr "Provider demo per la homepage"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:82
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:81
 #, elixir-autogen, elixir-format
 msgid "Lightweight self-hosted calendar server"
 msgstr "Server di calendario self-hosted e leggero"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:150
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:149
 #, elixir-autogen, elixir-format
 msgid "Microsoft 365 and Outlook.com integration"
 msgstr "Integrazione con Microsoft 365 e Outlook.com"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:128
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:127
 #, elixir-autogen, elixir-format
 msgid "PHP-based CalDAV/CardDAV server integration"
 msgstr "Integrazione con server CalDAV/CardDAV basato su PHP"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:90
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:89
 #, elixir-autogen, elixir-format
 msgid "Self-hosted Nextcloud calendar sync"
 msgstr "Sincronizzazione del calendario Nextcloud self-hosted"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:74
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:73
 #, elixir-autogen, elixir-format
 msgid "Universal CalDAV server support"
 msgstr "Supporto universale per server CalDAV"

@@ -119,7 +119,7 @@ msgstr "E-Mail-Adresse"
 msgid "Email Change Pending"
 msgstr "E-Mail-Änderung ausstehend"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex:213
+#: lib/tymeslot_web/live/account_live/handlers.ex:215
 #, elixir-autogen, elixir-format
 msgid "Email changes are managed through your %{provider} account"
 msgstr "E-Mail-Änderungen werden über Ihr %{provider}-Konto verwaltet"
@@ -150,7 +150,7 @@ msgstr "Neue E-Mail-Adresse"
 msgid "New Password"
 msgstr "Neues Passwort"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex:254
+#: lib/tymeslot_web/live/account_live/handlers.ex:256
 #, elixir-autogen, elixir-format
 msgid "New password must be different from current password"
 msgstr "Das neue Passwort muss sich vom aktuellen Passwort unterscheiden"
@@ -160,7 +160,7 @@ msgstr "Das neue Passwort muss sich vom aktuellen Passwort unterscheiden"
 msgid "Password"
 msgstr "Passwort"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex:218
+#: lib/tymeslot_web/live/account_live/handlers.ex:220
 #, elixir-autogen, elixir-format
 msgid "Password authentication is not available for %{provider} login"
 msgstr "Die Passwort-Authentifizierung ist für die Anmeldung über %{provider} nicht verfügbar"
@@ -205,7 +205,7 @@ msgstr "E-Mail wird aktualisiert"
 msgid "Updating Password"
 msgstr "Passwort wird aktualisiert"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex:169
+#: lib/tymeslot_web/live/account_live/handlers.ex:171
 #, elixir-autogen, elixir-format
 msgid "Your password has been changed. Please sign in again with your new password."
 msgstr "Ihr Passwort wurde geändert. Bitte melden Sie sich mit Ihrem neuen Passwort erneut an."
@@ -230,7 +230,7 @@ msgstr "Nie"
 msgid "Choose the language for your dashboard. Automatic follows your browser's preference."
 msgstr "Wählen Sie die Sprache für Ihr Dashboard. „Automatisch“ folgt der Einstellung Ihres Browsers."
 
-#: lib/tymeslot_web/live/account_live/handlers.ex:92
+#: lib/tymeslot_web/live/account_live/handlers.ex:94
 #, elixir-autogen, elixir-format
 msgid "Could not save language preference."
 msgstr "Spracheinstellung konnte nicht gespeichert werden."
@@ -245,7 +245,7 @@ msgstr "Oberflächensprache"
 msgid "Language"
 msgstr "Sprache"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex:84
+#: lib/tymeslot_web/live/account_live/handlers.ex:86
 #, elixir-autogen, elixir-format
 msgid "Language preference saved."
 msgstr "Spracheinstellung gespeichert."

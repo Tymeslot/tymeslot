@@ -41,18 +41,19 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
         on_cancel={@on_cancel}
         size={:medium}
       >
-        <:header>
-          <div>
-            <h2 class="text-token-lg font-semibold text-tymeslot-800">
-              {dgettext("dashboard_calendar_providers", "Manage calendars")}
-            </h2>
-            <p class="mt-1 text-token-sm text-tymeslot-500">
-              {dgettext("dashboard_calendar_providers", "Choose which calendars we check to prevent double bookings.")}
-            </p>
-          </div>
-        </:header>
+        <%!-- The modal wraps this slot in its own heading, so it takes the
+             title text alone: a nested heading is invalid, and the subtitle
+             would otherwise land inside the dialog's accessible name. --%>
+        <:header>{dgettext("dashboard_calendar_providers", "Manage calendars")}</:header>
 
         <div :if={@integration}>
+          <p class="mb-4 text-token-sm text-tymeslot-500">
+            {dgettext(
+              "dashboard_calendar_providers",
+              "Choose which calendars we check to prevent double bookings."
+            )}
+          </p>
+
           <div class="mb-3 flex items-center gap-2">
             <span class="text-token-2xs font-black uppercase tracking-widest text-tymeslot-400">
               {dngettext(
