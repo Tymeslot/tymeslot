@@ -118,7 +118,7 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
   @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def test_connection(integration, opts \\ []) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      metadata: opts[:metadata],
+      rate_limit_scope: opts[:rate_limit_scope],
       success_message: "Apple iCloud connection successful",
       unauthorized_message:
         "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security, and use it instead of your Apple ID password.",

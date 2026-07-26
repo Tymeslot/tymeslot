@@ -33,18 +33,32 @@ defmodule Tymeslot.Integrations.Video.Connection do
   the user-facing `test_connection/2` wraps it with loading and telemetry, and the
   background health check (`HealthCheck.Assessor`) calls it directly, so both
   exercise an identical pipeline and stay in lockstep as providers change.
+
+  `:scope` says which of the two is calling. It decides the rate-limit bucket a
+  provider charges the test to, and keeping the two apart is the point: a busy
+  instance's scheduled probing must never be able to exhaust the budget a real
+  user's "Test connection" button draws from.
   """
-  @spec test_integration(VideoIntegrationSchema.t()) :: {:ok, String.t()} | {:error, any()}
-  def test_integration(%VideoIntegrationSchema{} = integration) do
+  @type scope :: :interactive | :background
+
+  @spec test_integration(VideoIntegrationSchema.t(), keyword()) ::
+          {:ok, String.t()} | {:error, any()}
+  def test_integration(%VideoIntegrationSchema{} = integration, opts \\ []) do
     with {:ok, provider_atom} <- ProviderConfig.parse_known(integration.provider),
          module when module != nil <- ProviderConfig.get_provider_module(provider_atom) do
       decrypted = VideoIntegrationSchema.decrypt_credentials(integration)
       config = module.build_config(integration, decrypted, [])
-      ProviderAdapter.test_connection(provider_atom, config)
+
+      ProviderAdapter.test_connection(provider_atom, config,
+        rate_limit_scope: rate_limit_scope(integration, Keyword.get(opts, :scope, :interactive))
+      )
     else
       _other -> {:error, :unsupported_provider}
     end
   end
+
+  defp rate_limit_scope(integration, :interactive), do: {:user, integration.user_id}
+  defp rate_limit_scope(integration, :background), do: {:integration, integration.id}
 
   defp run_connection_test(integration) do
     start_time = System.monotonic_time(:millisecond)

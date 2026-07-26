@@ -44,14 +44,16 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
 
   def test_integration(:calendar, integration) do
     decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
-    Diagnostics.test_connection(decrypted)
+    Diagnostics.test_connection(decrypted, scope: :background)
   rescue
     _e in [UndefinedFunctionError] -> {:error, :module_unavailable}
     e -> {:error, {:exception, Exception.message(e)}}
   end
 
   def test_integration(:video, integration) do
-    Connection.test_integration(integration)
+    # Scheduled probing is charged to the integration, not to its owner, so it
+    # cannot consume the budget behind the user's own "Test connection" button.
+    Connection.test_integration(integration, scope: :background)
   rescue
     _e in [UndefinedFunctionError] -> {:error, :module_unavailable}
     e -> {:error, {:exception, Exception.message(e)}}

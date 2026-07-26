@@ -105,7 +105,7 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
   @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def test_connection(integration, opts \\ []) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      metadata: opts[:metadata],
+      rate_limit_scope: opts[:rate_limit_scope],
       success_message: "Baikal connection successful",
       unauthorized_message: "Authentication failed. Check your Baikal username and password.",
       not_found_message:

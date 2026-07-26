@@ -115,7 +115,7 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
   @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def test_connection(integration, opts \\ []) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      metadata: opts[:metadata],
+      rate_limit_scope: opts[:rate_limit_scope],
       success_message: "mailbox.org connection successful",
       unauthorized_message:
         "Authentication failed. If 2FA is enabled, generate an application-specific password in mailbox.org Settings → Security.",

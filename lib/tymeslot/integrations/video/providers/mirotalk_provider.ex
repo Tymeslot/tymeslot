@@ -60,6 +60,11 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   @doc """
   Tests the connection to the MiroTalk API.
+
+  Accepts a `:rate_limit_scope` option naming who the test is charged to —
+  `{:user, user_id}` for an interactive test, `{:integration, id}` for a
+  scheduled health probe. Callers with no actor context fall back to the target
+  host, so the bucket is never shared instance-wide.
   """
   @spec test_connection(
           %{required(:api_key) => String.t(), required(:base_url) => String.t()},
@@ -67,18 +72,22 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
         ) :: {:ok, String.t()} | {:error, term()}
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def test_connection(config, opts \\ []) do
-    # Extract IP address for rate limiting
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
-
     # For MiroTalk, we can test by checking if the API endpoint is reachable
     base_url = Map.get(config, :base_url)
     api_key = Map.get(config, :api_key)
 
-    with :ok <- check_rate_limit(ip_address),
-         :ok <- validate_base_url(base_url) do
+    # Structural URL validation runs first: it is local and cheap, so a
+    # malformed URL keeps its own error message instead of being masked by a
+    # rate-limit rejection, and tokens are only spent on tests that reach out.
+    with :ok <- validate_base_url(base_url),
+         :ok <- check_rate_limit(rate_limit_scope(opts, base_url)) do
       # Proceed with API connection test
       test_api_connection(base_url, api_key)
     end
+  end
+
+  defp rate_limit_scope(opts, base_url) do
+    Keyword.get(opts, :rate_limit_scope) || {:host, URI.parse(base_url).host}
   end
 
   defp validate_base_url(nil), do: {:error, "Base URL is required"}
@@ -397,8 +406,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   def url_patterns, do: ["mirotalk", "talk."]
 
   # Rate limit helper
-  defp check_rate_limit(ip) do
-    case RateLimiter.check_mirotalk_connection_rate_limit(ip) do
+  defp check_rate_limit(scope) do
+    case RateLimiter.check_mirotalk_connection_rate_limit(scope) do
       :ok -> :ok
       {:error, :rate_limited, message} -> {:error, message}
     end

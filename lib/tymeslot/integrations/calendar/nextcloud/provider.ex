@@ -143,12 +143,15 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
   — still resolves to a valid CalDAV principal URL. Without this the discovery
   probe targets `\#{base_url}/calendars/\#{username}/`, which Nextcloud answers
   with HTTP 405 because that path is not WebDAV-mounted.
+
+  `:rate_limit_scope` names who the test is charged to — `{:user, user_id}` for
+  an interactive test, `{:integration, id}` for a scheduled health probe.
   """
   @spec test_connection(map(), Keyword.t()) :: {:ok, String.t()} | {:error, term()}
   def test_connection(integration, opts \\ []) do
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
+    scope = rate_limit_scope(integration, opts)
 
-    with :ok <- check_rate_limit(ip_address) do
+    with :ok <- check_rate_limit(scope) do
       client = %{
         base_url:
           PathUtils.normalize_url(integration.base_url || "",
@@ -162,7 +165,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
         provider: :nextcloud
       }
 
-      case CaldavCommon.test_connection(client) do
+      case CaldavCommon.test_connection(client, rate_limit_scope: scope) do
         {:ok, _message} ->
           {:ok, "Nextcloud connection successful"}
 
@@ -337,8 +340,13 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
   end
 
   # Rate limiting helpers
-  defp check_rate_limit(ip_address) do
-    case RateLimiter.check_nextcloud_connection_rate_limit(ip_address) do
+  defp rate_limit_scope(integration, opts) do
+    Keyword.get(opts, :rate_limit_scope) ||
+      {:host, URI.parse(integration.base_url || "").host}
+  end
+
+  defp check_rate_limit(scope) do
+    case RateLimiter.check_nextcloud_connection_rate_limit(scope) do
       :ok -> :ok
       {:error, :rate_limited, message} -> {:error, message}
     end

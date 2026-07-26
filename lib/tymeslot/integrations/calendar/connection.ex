@@ -74,14 +74,50 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
 
   @doc """
   Test provider connectivity via registry.
+
+  `:scope` says who is asking: `:interactive` (the default, a user pressing
+  "Test connection") or `:background` (a scheduled health probe). It decides the
+  rate-limit bucket the provider charges the test to, and keeping the two apart
+  is the point: an instance's scheduled probing must never be able to exhaust
+  the budget a real user's button draws from, nor one user another's.
   """
-  @spec test_connection(CalendarIntegrationSchema.t()) :: {:ok, String.t()} | {:error, term()}
-  def test_connection(%{provider: provider} = integration) do
+  @type scope :: :interactive | :background
+
+  @spec test_connection(CalendarIntegrationSchema.t(), keyword()) ::
+          {:ok, String.t()} | {:error, term()}
+  def test_connection(%{provider: provider} = integration, opts \\ []) do
     with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
          {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom) do
-      provider_module.test_connection(integration)
+      scope = rate_limit_scope(integration, Keyword.get(opts, :scope, :interactive))
+
+      run_connection_test(provider_module, integration, rate_limit_scope: scope)
     else
       _other -> {:error, :unsupported_provider}
+    end
+  end
+
+  defp rate_limit_scope(integration, :interactive),
+    do: actor_scope({:user, Map.get(integration, :user_id)}, integration)
+
+  defp rate_limit_scope(integration, :background),
+    do: actor_scope({:integration, Map.get(integration, :id)}, integration)
+
+  # Unsaved or partially built integrations (the connection-validation path
+  # tests credentials before anything is persisted) carry no actor id yet, so
+  # fall back to the target host rather than to one shared bucket.
+  defp actor_scope({_kind, nil}, integration),
+    do: {:host, URI.parse(Map.get(integration, :base_url) || "").host}
+
+  defp actor_scope(scope, _integration), do: scope
+
+  # Only the CalDAV-family providers rate-limit their connection test and so
+  # accept caller context; the OAuth ones (Google, Outlook) expose arity 1 only.
+  defp run_connection_test(provider_module, integration, opts) do
+    if Code.ensure_loaded?(provider_module) and
+         function_exported?(provider_module, :test_connection, 2) do
+      provider_module.test_connection(integration, opts)
+    else
+      provider_module.test_connection(integration)
     end
   end
 end

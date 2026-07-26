@@ -150,12 +150,16 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
 
   @doc """
   Tests connection to a video provider.
+
+  `opts` is forwarded to the provider (see
+  `ProviderRegistry.test_provider_connection/3`); `:rate_limit_scope` names who
+  a rate-limited connection test is charged to.
   """
-  @spec test_connection(atom(), map()) :: {:ok, String.t()} | {:error, term()}
-  def test_connection(provider_type, config) do
+  @spec test_connection(atom(), map(), keyword()) :: {:ok, String.t()} | {:error, term()}
+  def test_connection(provider_type, config, opts \\ []) do
     Logger.info("Testing connection to provider", provider: provider_type)
 
-    case ProviderRegistry.test_provider_connection(provider_type, config) do
+    case ProviderRegistry.test_provider_connection(provider_type, config, opts) do
       {:ok, message} ->
         Logger.info("Connection test successful", provider: provider_type)
         {:ok, message}

@@ -61,6 +61,19 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   @callback test_connection(config :: map()) :: {:ok, String.t()} | {:error, any()}
 
   @doc """
+  Tests the connection, given caller context.
+
+  Optional. Providers that rate-limit their connection test implement this so
+  the limiter can be keyed on whoever asked (`:rate_limit_scope`) rather than on
+  a single instance-wide bucket. `ProviderRegistry.test_provider_connection/3`
+  prefers this over `test_connection/1` when a provider exports it.
+  """
+  @callback test_connection(config :: map(), opts :: keyword()) ::
+              {:ok, String.t()} | {:error, any()}
+
+  @optional_callbacks test_connection: 2
+
+  @doc """
   Returns the provider type identifier.
   """
   @callback provider_type() :: atom()

@@ -167,13 +167,16 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
 
   @doc """
   Tests the connection and returns display-friendly message.
-  Delegates to Connection.test_connection/1 to centralize provider resolution.
+  Delegates to Connection.test_connection/2 to centralize provider resolution.
+
+  `:scope` distinguishes an interactive test from a scheduled background probe;
+  see `Tymeslot.Integrations.Calendar.Connection.test_connection/2`.
   """
-  @spec test_connection(integration()) :: {:ok, String.t()} | {:error, any()}
-  def test_connection(integration) do
+  @spec test_connection(integration(), keyword()) :: {:ok, String.t()} | {:error, any()}
+  def test_connection(integration, opts \\ []) do
     start_time = System.monotonic_time(:millisecond)
 
-    result = Connection.test_connection(integration)
+    result = Connection.test_connection(integration, opts)
 
     duration = System.monotonic_time(:millisecond) - start_time
 

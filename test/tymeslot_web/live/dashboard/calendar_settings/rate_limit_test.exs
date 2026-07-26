@@ -58,12 +58,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.RateLimitTest do
 
       # Exhaust the per-user connection test limit (20 per 10 minutes)
       for _i <- 1..20 do
-        assert :ok = RateLimiter.check_caldav_connection_rate_limit(user.id)
+        assert :ok = RateLimiter.check_caldav_connection_rate_limit({:user, user.id})
       end
 
       # The next call must be rejected
       assert {:error, :rate_limited, message} =
-               RateLimiter.check_caldav_connection_rate_limit(user.id)
+               RateLimiter.check_caldav_connection_rate_limit({:user, user.id})
 
       assert message =~ "reached the limit"
     end

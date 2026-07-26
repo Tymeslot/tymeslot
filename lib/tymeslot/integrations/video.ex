@@ -179,7 +179,10 @@ defmodule Tymeslot.Integrations.Video do
       base_url: base_url
     }
 
-    with {:ok, _msg} <- ProviderRegistry.test_provider_connection(:mirotalk, config),
+    with {:ok, _msg} <-
+           ProviderRegistry.test_provider_connection(:mirotalk, config,
+             rate_limit_scope: {:user, attrs[:user_id]}
+           ),
          :ok <- check_no_duplicate(attrs) do
       VideoIntegrationQueries.create(attrs)
     end

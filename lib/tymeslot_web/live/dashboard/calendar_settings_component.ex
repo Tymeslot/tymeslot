@@ -260,7 +260,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   def handle_event("test_connection", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check_caldav_connection_rate_limit(user_id) do
+    case RateLimiter.check_caldav_connection_rate_limit({:user, user_id}) do
       {:error, :rate_limited, message} ->
         Flash.error(message)
         {:noreply, socket}

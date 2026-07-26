@@ -63,14 +63,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   `current-user-principal` probe which verifies credentials are valid even
   when the guessed path is wrong (e.g., Zimbra).
 
-  Rate-limited per IP to prevent connection-testing abuse.
+  Rate-limited per `:rate_limit_scope` — the user or integration the test is
+  charged to — to prevent connection-testing abuse. Callers with no actor
+  context fall back to the target host, so the bucket is never shared
+  instance-wide.
   """
   @spec test_connection(Base.client(), keyword()) ::
           {:ok, String.t()} | {:error, Base.error_reason()}
   def test_connection(client, opts \\ []) do
-    ip_address = Keyword.get(opts, :ip_address, "127.0.0.1")
-
-    with :ok <- check_rate_limit(:connection, ip_address),
+    with :ok <- check_rate_limit(:connection, rate_limit_scope(opts, client.base_url)),
          :ok <- UrlValidation.validate_http_url(client.base_url, url_validation_opts(opts)) do
       discovery_url = UrlBuilder.build_discovery_url(client)
 
@@ -199,8 +200,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
     CalendarCircuitBreaker.with_breaker(provider, opts, fun)
   end
 
-  defp check_rate_limit(:connection, ip_address) do
-    case RateLimiter.check_caldav_connection_rate_limit(ip_address) do
+  defp rate_limit_scope(opts, base_url) when is_binary(base_url) do
+    Keyword.get(opts, :rate_limit_scope) || {:host, URI.parse(base_url).host}
+  end
+
+  defp rate_limit_scope(opts, _base_url), do: Keyword.get(opts, :rate_limit_scope)
+
+  defp check_rate_limit(:connection, scope) do
+    case RateLimiter.check_caldav_connection_rate_limit(scope) do
       :ok -> :ok
       {:error, :rate_limited, message} -> {:error, message}
     end

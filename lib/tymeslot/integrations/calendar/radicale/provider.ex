@@ -104,7 +104,7 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
   @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def test_connection(integration, opts \\ []) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      metadata: opts[:metadata],
+      rate_limit_scope: opts[:rate_limit_scope],
       success_message: "Radicale connection successful",
       unauthorized_message: "Authentication failed. Check your Radicale username and password.",
       not_found_message: "Radicale server not found. Check your server URL and port if needed.",

@@ -115,7 +115,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
         ) ::
           {:ok, String.t()} | {:error, String.t()}
   def test_caldav_provider_connection(integration, opts \\ []) do
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
     success_msg = Keyword.fetch!(opts, :success_message)
     unauthorized_msg = Keyword.fetch!(opts, :unauthorized_message)
     not_found_msg = Keyword.fetch!(opts, :not_found_message)
@@ -130,7 +129,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       provider: normalize_provider(integration.provider)
     }
 
-    case CaldavCommon.test_connection(client, ip_address: ip_address) do
+    case CaldavCommon.test_connection(client, rate_limit_scope: opts[:rate_limit_scope]) do
       {:ok, _response} ->
         {:ok, success_msg}
 

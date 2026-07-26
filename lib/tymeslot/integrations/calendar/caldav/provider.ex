@@ -107,15 +107,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
 
   @doc """
   Tests connection to the CalDAV server.
+
+  `:rate_limit_scope` names who the test is charged to — `{:user, user_id}` for
+  an interactive test, `{:integration, id}` for a scheduled health probe.
   """
   @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, atom() | String.t()}
   def test_connection(integration, opts \\ []) do
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
-
-    with :ok <- check_rate_limit(ip_address) do
-      client = build_client(integration)
-      CaldavCommon.test_connection(client, ip_address: ip_address)
-    end
+    client = build_client(integration)
+    CaldavCommon.test_connection(client, rate_limit_scope: opts[:rate_limit_scope])
   end
 
   @doc """
@@ -185,13 +184,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
 
   defp format_error({:error, message}) when is_binary(message), do: message
   defp format_error(error), do: "Connection failed: #{inspect(error)}"
-
-  defp check_rate_limit(ip_address) do
-    case RateLimiter.check_caldav_connection_rate_limit(ip_address) do
-      :ok -> :ok
-      {:error, :rate_limited, message} -> {:error, message}
-    end
-  end
 
   defp check_discovery_rate_limit(ip_address) do
     case RateLimiter.check_calendar_discovery_rate_limit(ip_address) do

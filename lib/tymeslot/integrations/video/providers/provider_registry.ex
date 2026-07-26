@@ -18,18 +18,31 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistry do
   Tests provider connection.
 
   This is a video-specific function that validates configuration and tests connectivity.
+
+  `opts` carries caller context to providers that implement the optional
+  `test_connection/2` callback — notably `:rate_limit_scope`, which names the
+  user or integration a rate-limited connection test is charged to.
   """
-  @spec test_provider_connection(atom(), map()) :: :ok | {:ok, term()} | {:error, term()}
-  def test_provider_connection(provider_type, config) do
+  @spec test_provider_connection(atom(), map(), keyword()) ::
+          :ok | {:ok, term()} | {:error, term()}
+  def test_provider_connection(provider_type, config, opts \\ []) do
     case get_provider(provider_type) do
       {:ok, module} ->
         case module.validate_config(config) do
-          :ok -> module.test_connection(config)
+          :ok -> run_connection_test(module, config, opts)
           {:error, _reason} = error -> error
         end
 
       {:error, _reason} = error ->
         error
+    end
+  end
+
+  defp run_connection_test(module, config, opts) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :test_connection, 2) do
+      module.test_connection(config, opts)
+    else
+      module.test_connection(config)
     end
   end
 

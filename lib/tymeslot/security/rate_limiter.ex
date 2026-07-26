@@ -134,30 +134,46 @@ defmodule Tymeslot.Security.RateLimiter do
 
   @doc """
   Rate limit CalDAV connection testing attempts.
+
+  Limit: 20 tests per 10 minutes per scope. See
+  `check_mirotalk_connection_rate_limit/1` for the scope contract.
+
   Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
   """
-  @spec check_caldav_connection_rate_limit(String.t()) ::
+  @spec check_caldav_connection_rate_limit(Integrations.connection_scope() | term()) ::
           :ok | {:error, :rate_limited, String.t()}
-  def check_caldav_connection_rate_limit(ip_address),
-    do: Integrations.check_caldav_connection(ip_address)
+  def check_caldav_connection_rate_limit(scope),
+    do: Integrations.check_caldav_connection(scope)
 
   @doc """
   Rate limit MiroTalk connection testing attempts.
+
+  Limit: 20 tests per 10 minutes per scope. The scope names who the test is
+  charged to and must partition callers that have nothing to do with each other:
+
+  - `{:user, user_id}` — an interactive "Test connection" or integration setup
+  - `{:integration, id}` — a scheduled background health probe
+  - `{:host, host}` — fallback for callers with no actor context
+
   Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
   """
-  @spec check_mirotalk_connection_rate_limit(String.t()) ::
+  @spec check_mirotalk_connection_rate_limit(Integrations.connection_scope() | term()) ::
           :ok | {:error, :rate_limited, String.t()}
-  def check_mirotalk_connection_rate_limit(ip_address),
-    do: Integrations.check_mirotalk_connection(ip_address)
+  def check_mirotalk_connection_rate_limit(scope),
+    do: Integrations.check_mirotalk_connection(scope)
 
   @doc """
   Rate limit Nextcloud connection testing attempts.
+
+  Limit: 20 tests per 10 minutes per scope. See
+  `check_mirotalk_connection_rate_limit/1` for the scope contract.
+
   Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
   """
-  @spec check_nextcloud_connection_rate_limit(String.t()) ::
+  @spec check_nextcloud_connection_rate_limit(Integrations.connection_scope() | term()) ::
           :ok | {:error, :rate_limited, String.t()}
-  def check_nextcloud_connection_rate_limit(ip_address),
-    do: Integrations.check_nextcloud_connection(ip_address)
+  def check_nextcloud_connection_rate_limit(scope),
+    do: Integrations.check_nextcloud_connection(scope)
 
   @doc """
   Rate limit calendar discovery attempts.
