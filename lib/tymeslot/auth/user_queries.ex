@@ -473,9 +473,10 @@ defmodule Tymeslot.Auth.UserQueries do
           |> where([u], u.email == ^email or u.pending_email == ^email)
           |> lock("FOR UPDATE")
 
-        case Repo.exists?(query) do
-          true -> {:error, :taken}
-          false -> {:ok, :available}
+        if Repo.exists?(query) do
+          {:error, :taken}
+        else
+          {:ok, :available}
         end
       end)
 

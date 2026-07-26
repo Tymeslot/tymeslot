@@ -50,9 +50,10 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   def validate(refund_object) when is_map(refund_object) do
     required_fields = ["id"]
 
-    case Enum.all?(required_fields, &Map.has_key?(refund_object, &1)) do
-      true -> :ok
-      false -> {:error, :missing_fields, "Missing required fields in refund object"}
+    if Enum.all?(required_fields, &Map.has_key?(refund_object, &1)) do
+      :ok
+    else
+      {:error, :missing_fields, "Missing required fields in refund object"}
     end
   end
 
