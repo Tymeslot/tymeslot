@@ -90,6 +90,46 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
           | :timeout
           | String.t()
 
+  # One sentence per `error_reason/0` member, written for the account owner
+  # rather than for an operator. Anything that surfaces a CalDAV failure to a
+  # user (the offline queue's `sync_last_error`, for instance) routes through
+  # `describe_error/1` so an inspected atom can never leak into the product.
+  # Raw terms stay in the logs, which is where diagnostics belong.
+  @error_descriptions %{
+    unauthorized:
+      "The calendar server rejected the stored credentials. Please reconnect the calendar.",
+    forbidden: "The calendar server refused access to this calendar.",
+    not_found: "The event no longer exists on the calendar server.",
+    precondition_failed:
+      "The event changed on the calendar server since Tymeslot last synced it.",
+    rate_limited:
+      "The calendar server is rate-limiting Tymeslot. Tymeslot will retry automatically.",
+    network_error:
+      "Tymeslot could not reach the calendar server. Tymeslot will retry automatically.",
+    invalid_response: "The calendar server returned a response Tymeslot could not understand.",
+    server_error: "The calendar server reported an error. Tymeslot will retry automatically.",
+    server_unresponsive:
+      "The calendar server did not respond. Tymeslot will retry automatically.",
+    timeout: "The calendar server took too long to respond. Tymeslot will retry automatically."
+  }
+
+  @unknown_error_description "Tymeslot could not complete the request against the calendar server."
+
+  @doc """
+  Turns an `t:error_reason/0` into a sentence safe to show the account owner.
+
+  String reasons (e.g. `"Unexpected status: 418"`) pass through unchanged;
+  unrecognised terms collapse to a generic sentence rather than being
+  inspected, so internal representations never reach the UI.
+  """
+  @spec describe_error(error_reason() | term()) :: String.t()
+  def describe_error(reason) when is_binary(reason), do: reason
+
+  def describe_error(reason) when is_atom(reason),
+    do: Map.get(@error_descriptions, reason, @unknown_error_description)
+
+  def describe_error(_other), do: @unknown_error_description
+
   # ---------------------------------------------------------------------------
   # HTTP transport delegates
   #
