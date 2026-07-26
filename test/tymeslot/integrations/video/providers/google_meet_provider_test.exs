@@ -47,12 +47,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       assert capabilities[:screen_sharing] == true
       assert capabilities[:waiting_room] == false
       assert capabilities[:max_participants] == 250
-      assert capabilities[:requires_download] == false
       assert capabilities[:dial_in] == true
       assert capabilities[:chat] == true
       assert capabilities[:breakout_rooms] == true
-      assert capabilities[:end_to_end_encryption] == true
-      assert capabilities[:live_streaming] == true
     end
   end
 

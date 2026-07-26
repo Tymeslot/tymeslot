@@ -43,19 +43,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
     test "returns correct capabilities for Teams" do
       capabilities = TeamsProvider.capabilities()
 
-      assert capabilities[:instant_meetings] == false
-      assert capabilities[:scheduled_meetings] == true
-      assert capabilities[:recurring_meetings] == false
       assert capabilities[:waiting_room] == true
       assert capabilities[:recording] == true
       assert capabilities[:dial_in] == true
       assert capabilities[:max_participants] == 300
-      assert capabilities[:requires_account] == true
-      assert capabilities[:custom_branding] == false
       assert capabilities[:breakout_rooms] == true
       assert capabilities[:screen_sharing] == true
       assert capabilities[:chat] == true
-      assert capabilities[:requires_work_account] == true
     end
   end
 

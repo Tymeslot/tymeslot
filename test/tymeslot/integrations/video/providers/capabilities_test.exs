@@ -17,13 +17,24 @@ defmodule Tymeslot.Integrations.Video.Providers.CapabilitiesTest do
       end
     end
 
-    test "every provider answers all universal capability keys" do
+    test "every provider answers every capability key" do
       for {type, module} <- ProviderConfig.providers_map() do
-        missing = Capabilities.universal_keys() -- Map.keys(module.capabilities())
+        missing = Capabilities.known_keys() -- Map.keys(module.capabilities())
 
         assert missing == [],
-               "#{type} does not declare universal capability keys: #{inspect(missing)}"
+               "#{type} does not declare capability keys: #{inspect(missing)}"
       end
+    end
+
+    # A key only some providers answer under-reports exactly like a misspelt
+    # one: the lookup cannot tell "no" from "never said". There is no optional
+    # tier, so this holds by construction rather than by convention.
+    test "no provider declares a key its siblings omit" do
+      key_sets =
+        for {_type, module} <- ProviderConfig.providers_map(),
+            do: module.capabilities() |> Map.keys() |> Enum.sort()
+
+      assert Enum.uniq(key_sets) == [Enum.sort(Capabilities.known_keys())]
     end
 
     test "no provider declares a supports_-prefixed variant of a vocabulary key" do
@@ -46,7 +57,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CapabilitiesTest do
       end
     end
 
-    test "raises when a universal key is missing" do
+    test "raises when a key is missing" do
       assert_raise ArgumentError, ~r/missing video capability keys.*waiting_room/, fn ->
         Capabilities.new!(Keyword.delete(universal_attrs(), :waiting_room))
       end

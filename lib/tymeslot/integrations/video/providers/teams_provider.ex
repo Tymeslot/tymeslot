@@ -21,19 +21,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   @behaviour ProviderBehaviour
 
   @capabilities Capabilities.new!(
-                  instant_meetings: false,
-                  scheduled_meetings: true,
-                  recurring_meetings: false,
                   waiting_room: true,
                   recording: true,
                   dial_in: true,
                   max_participants: 300,
-                  requires_account: true,
-                  custom_branding: false,
                   breakout_rooms: true,
                   screen_sharing: true,
-                  chat: true,
-                  requires_work_account: true
+                  chat: true
                 )
 
   @graph_api_base_url "https://graph.microsoft.com/v1.0"

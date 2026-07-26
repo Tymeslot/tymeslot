@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder
@@ -22,11 +23,9 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
                   screen_sharing: true,
                   waiting_room: false,
                   max_participants: 100,
-                  requires_download: false,
                   dial_in: false,
                   chat: true,
-                  breakout_rooms: false,
-                  end_to_end_encryption: true
+                  breakout_rooms: false
                 )
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
@@ -43,19 +42,16 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     }
   end
 
+  # Structural validation only, in line with every other video provider: the
+  # callers that need connectivity (`ProviderRegistry.test_provider_connection/2`,
+  # `ProviderAdapter.create_meeting_room/2`) invoke `validate_config/1` first and
+  # then the function that talks to the server. Reaching the network from here
+  # doubled every scheduled health probe against the customer's self-hosted
+  # MiroTalk instance, and burned two rate-limiter tokens for one probe.
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def validate_config(config) do
-    required_fields = [:api_key, :base_url]
-    missing_fields = required_fields -- Map.keys(config)
-
-    if Enum.empty?(missing_fields) do
-      # All required fields present, now test the actual connection
-      case test_connection(config) do
-        {:ok, _message} -> :ok
-        {:error, reason} -> {:error, reason}
-      end
-    else
-      {:error, "Missing required fields: #{Enum.join(missing_fields, ", ")}"}
+    with :ok <- ProviderConfigHelper.validate_required_fields(config, [:api_key, :base_url]) do
+      validate_base_url(Map.get(config, :base_url))
     end
   end
 

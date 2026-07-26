@@ -53,20 +53,13 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   @behaviour ProviderBehaviour
 
   @capabilities Capabilities.new!(
-                  instant_meetings: true,
-                  scheduled_meetings: true,
-                  recurring_meetings: true,
                   waiting_room: false,
                   recording: false,
                   dial_in: false,
                   max_participants: nil,
-                  requires_account: false,
-                  custom_branding: true,
                   breakout_rooms: false,
                   screen_sharing: false,
-                  chat: false,
-                  requires_work_account: false,
-                  is_custom_provider: true
+                  chat: false
                 )
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour

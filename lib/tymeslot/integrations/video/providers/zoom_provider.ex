@@ -26,19 +26,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   @zoom_url_pattern ~r/zoom\.us\/(j|my|w)\//
 
   @capabilities Capabilities.new!(
-                  instant_meetings: true,
-                  scheduled_meetings: true,
-                  recurring_meetings: true,
                   waiting_room: true,
                   recording: true,
                   dial_in: true,
                   max_participants: 100,
-                  requires_account: true,
-                  custom_branding: false,
                   breakout_rooms: true,
                   screen_sharing: true,
-                  chat: true,
-                  requires_work_account: false
+                  chat: true
                 )
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour

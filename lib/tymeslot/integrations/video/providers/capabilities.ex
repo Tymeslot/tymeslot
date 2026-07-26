@@ -17,19 +17,23 @@ defmodule Tymeslot.Integrations.Video.Providers.Capabilities do
   lookup reads as `providers_with_capability(:recording)`; the prefix only
   repeats the word "capability" already present at every call site. Keys that
   are genuinely not "does it support X" questions keep their natural name
-  (`:max_participants`, `:requires_account`).
+  (`:max_participants`).
 
-  ## Universal versus optional keys
+  ## Every key is answered by every provider
 
-  `universal_keys/0` must be answered by every provider — these are the ones
-  that drive provider selection, and an absent key there is the drift bug this
-  module exists to prevent. `optional_keys/0` are declared by some providers
-  only; they are part of the closed vocabulary (so they cannot be misspelt) but
-  are not required, because filling them in for the remaining providers is a
-  product question rather than a mechanical one.
+  There is deliberately no optional tier. A key only some providers declare
+  under-reports exactly like a misspelt one: `providers_with_capability/1`
+  cannot tell "this provider says no" from "this provider never said", so the
+  drift this module exists to prevent would simply move from spelling to
+  coverage. Requiring every key of every provider makes both impossible.
+
+  The practical consequence is that adding a capability means answering it for
+  all five providers. That is the point: if a fact cannot be established for
+  every provider, a lookup over it cannot give a trustworthy answer, and the
+  key should wait until it can.
   """
 
-  @universal_keys [
+  @known_keys [
     :breakout_rooms,
     :chat,
     :dial_in,
@@ -39,39 +43,12 @@ defmodule Tymeslot.Integrations.Video.Providers.Capabilities do
     :waiting_room
   ]
 
-  @optional_keys [
-    :custom_branding,
-    :end_to_end_encryption,
-    :instant_meetings,
-    :is_custom_provider,
-    :live_streaming,
-    :recurring_meetings,
-    :requires_account,
-    :requires_download,
-    :requires_work_account,
-    :scheduled_meetings
-  ]
-
-  @known_keys Enum.sort(@universal_keys ++ @optional_keys)
-
   @type key :: atom()
   @type value :: boolean() | non_neg_integer() | nil
   @type t :: %{optional(key()) => value()}
 
   @doc """
-  Keys every provider must declare.
-  """
-  @spec universal_keys() :: [key()]
-  def universal_keys, do: @universal_keys
-
-  @doc """
-  Keys a provider may declare in addition to `universal_keys/0`.
-  """
-  @spec optional_keys() :: [key()]
-  def optional_keys, do: @optional_keys
-
-  @doc """
-  The whole permitted vocabulary, sorted.
+  The whole vocabulary. Every provider must answer every one of these.
   """
   @spec known_keys() :: [key()]
   def known_keys, do: @known_keys
@@ -80,7 +57,7 @@ defmodule Tymeslot.Integrations.Video.Providers.Capabilities do
   Builds a provider capability map, raising on anything outside the contract.
 
   Raises `ArgumentError` when a key is repeated, when a key is not in
-  `known_keys/0`, or when one of `universal_keys/0` is missing.
+  `known_keys/0`, or when one of them is missing.
   """
   @spec new!(keyword()) :: t()
   def new!(attrs) when is_list(attrs) do
@@ -113,7 +90,7 @@ defmodule Tymeslot.Integrations.Video.Providers.Capabilities do
   end
 
   defp check_missing(attrs, keys) do
-    case @universal_keys -- keys do
+    case @known_keys -- keys do
       [] -> attrs
       missing -> raise ArgumentError, "missing video capability keys: #{inspect(missing)}"
     end

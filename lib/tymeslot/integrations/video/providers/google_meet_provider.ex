@@ -35,12 +35,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
                   screen_sharing: true,
                   waiting_room: false,
                   max_participants: 250,
-                  requires_download: false,
                   dial_in: true,
                   chat: true,
-                  breakout_rooms: true,
-                  end_to_end_encryption: true,
-                  live_streaming: true
+                  breakout_rooms: true
                 )
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
