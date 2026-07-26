@@ -92,8 +92,8 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
     test "handles malformed API response (invalid JSON)" do
       %{meeting: meeting} = setup_video_scenario()
 
-      # MiroTalk provider tries both HTTPS and HTTP, so expect 2 calls
-      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      # One call: room creation. validate_config/1 no longer pre-flights it.
+      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200, body: "not valid json"}}
       end)
 
@@ -103,10 +103,10 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
     test "fails and attaches nothing when the API response is missing the expected field" do
       %{meeting: meeting} = setup_video_scenario()
 
-      # Two calls: the config connection check, then room creation. The job must
-      # fail rather than attach a room the attendees cannot join, so creation
-      # stops there and no join-URL calls follow.
-      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      # One call: room creation. The job must fail rather than attach a room the
+      # attendees cannot join, so creation stops there and no join-URL calls
+      # follow.
+      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
         {:ok,
          %Req.Response{
            status: 200,
@@ -132,8 +132,8 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
     test "handles empty API response" do
       %{meeting: meeting} = setup_video_scenario()
 
-      # MiroTalk provider tries both HTTPS and HTTP, so expect 2 calls
-      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      # One call: room creation. validate_config/1 no longer pre-flights it.
+      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200, body: ""}}
       end)
 
@@ -147,8 +147,13 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
         {:ok, %Req.Response{status: 429, body: "Too Many Requests"}}
       end)
 
-      assert {:error, reason} = perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
-      assert reason =~ "status 429"
+      # The 429 now surfaces from the room-creation request itself, as a
+      # structured error, rather than from the connection test that used to
+      # pre-flight it and reported a string.
+      assert {:error, {:http_error, 429, message}} =
+               perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
+
+      assert message =~ "MiroTalk API error"
     end
 
     test "sends fallback emails on final failure and enters long-term recovery with distributed snooze" do
