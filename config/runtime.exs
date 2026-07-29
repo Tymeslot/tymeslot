@@ -15,32 +15,6 @@ if config_env() != :test do
   Tymeslot.Infrastructure.DotenvLoader.load([dotenv_path])
 end
 
-# Helper to safely parse integers from environment variables with validation
-parse_int = fn var, default ->
-  case System.get_env(var) do
-    nil ->
-      default
-
-    value ->
-      case Integer.parse(value) do
-        {int, _} when int >= 1 and int <= 65535 ->
-          int
-
-        {int, _} ->
-          raise """
-          Invalid #{var}: #{int}
-          Port must be between 1-65535
-          """
-
-        :error ->
-          raise """
-          Invalid #{var}: #{inspect(value)}
-          Must be a valid integer
-          """
-      end
-  end
-end
-
 # Helper to parse IP addresses using Erlang's built-in parser
 # Supports both IPv4 and IPv6 addresses in all standard notations
 parse_ip = fn ip_string ->
@@ -349,57 +323,28 @@ if config_env() == :prod do
        ]}
     ]
 
-  # Configure mailer based on EMAIL_ADAPTER setting
-  # Default to smtp for self-hosted deployments
+  # Configure mailer based on EMAIL_ADAPTER setting. `Tymeslot.Mailer.Providers`
+  # owns the list of supported values and the variables each one reads; an
+  # unrecognised value raises rather than silently discarding every email.
+  # Default to smtp for self-hosted deployments.
   # On Cloudron: auto-detect sendmail addon when EMAIL_ADAPTER is not explicitly set
   email_adapter_explicit = System.get_env("EMAIL_ADAPTER")
-
-  # Helper: build standard SMTP config from SMTP_* env vars
-  build_smtp_config = fn ->
-    smtp_host = System.get_env("SMTP_HOST")
-    smtp_username = System.get_env("SMTP_USERNAME")
-    smtp_password = System.get_env("SMTP_PASSWORD")
-
-    if smtp_host != nil and String.trim(smtp_host) == "" do
-      raise "SMTP_HOST cannot be empty or whitespace-only"
-    end
-
-    if smtp_username != nil and String.trim(smtp_username) == "" do
-      raise "SMTP_USERNAME cannot be empty or whitespace-only"
-    end
-
-    if smtp_password != nil and String.trim(smtp_password) == "" do
-      raise "SMTP_PASSWORD cannot be empty or whitespace-only"
-    end
-
-    Tymeslot.Mailer.SMTPConfig.build(
-      host: smtp_host,
-      port: parse_int.("SMTP_PORT", 587),
-      username: smtp_username,
-      password: smtp_password
-    )
-  end
 
   mailer_config =
     cond do
       # Explicit adapter always wins — user knows what they want
       email_adapter_explicit != nil ->
-        case email_adapter_explicit do
-          "smtp" ->
-            build_smtp_config.()
+        if Tymeslot.Mailer.Providers.dev_only?(email_adapter_explicit) do
+          raise """
+          EMAIL_ADAPTER=#{String.trim(email_adapter_explicit)} is a development-only adapter.
 
-          "postmark" ->
-            [adapter: Swoosh.Adapters.Postmark, api_key: System.get_env("POSTMARK_API_KEY")]
-
-          "test" ->
-            [adapter: Swoosh.Adapters.Test]
-
-          "local" ->
-            [adapter: Swoosh.Adapters.Test]
-
-          _ ->
-            [adapter: Swoosh.Adapters.Test]
+          Swoosh's in-memory mailbox is disabled in production, so it cannot
+          deliver anything. Configure a real provider, or set EMAIL_ADAPTER=test
+          if you deliberately want every email discarded.
+          """
         end
+
+        Tymeslot.Mailer.Providers.build!(email_adapter_explicit)
 
       # Cloudron sendmail addon auto-detection (no explicit EMAIL_ADAPTER set)
       deployment_type == "cloudron" and System.get_env("CLOUDRON_MAIL_SMTP_SERVER") != nil ->
@@ -412,7 +357,7 @@ if config_env() == :prod do
 
       # Default: standard SMTP from SMTP_* env vars
       true ->
-        build_smtp_config.()
+        Tymeslot.Mailer.Providers.build!("smtp")
     end
 
   config :tymeslot, Tymeslot.Mailer, mailer_config
@@ -453,58 +398,22 @@ if config_env() != :prod do
   email_adapter_default = Application.get_env(:tymeslot, :email_adapter_default, "smtp")
   email_adapter = System.get_env("EMAIL_ADAPTER", email_adapter_default)
 
+  # A provider whose credentials are absent falls back to the local mailbox at
+  # /dev/mailbox rather than failing to boot: an unconfigured development
+  # machine should still start. Credentials that are present but malformed
+  # still raise, here as in production.
   mailer_config =
-    case email_adapter do
-      "smtp" ->
-        # In non-production, only configure SMTP if SMTP_HOST is set and non-empty
-        # Otherwise fall back to Local adapter for development
-        smtp_host = System.get_env("SMTP_HOST")
+    case Tymeslot.Mailer.Providers.build(email_adapter) do
+      {:ok, config} ->
+        config
 
-        if smtp_host != nil and String.trim(smtp_host) != "" do
-          smtp_username = System.get_env("SMTP_USERNAME")
-          smtp_password = System.get_env("SMTP_PASSWORD")
+      {:error, reason} ->
+        Logger.info(
+          "EMAIL_ADAPTER=#{String.trim(email_adapter)} is not configured (#{reason}); " <>
+            "delivering to the local mailbox instead"
+        )
 
-          # Check for empty strings
-          if smtp_username != nil and String.trim(smtp_username) == "" do
-            raise "SMTP_USERNAME cannot be empty or whitespace-only"
-          end
-
-          if smtp_password != nil and String.trim(smtp_password) == "" do
-            raise "SMTP_PASSWORD cannot be empty or whitespace-only"
-          end
-
-          # Use shared SMTP configuration module
-          # This validates all required fields and handles SSL/TLS/STARTTLS setup
-          # It also trims whitespace from host and validates all input types
-          Tymeslot.Mailer.SMTPConfig.build(
-            host: smtp_host,
-            port: parse_int.("SMTP_PORT", 587),
-            username: smtp_username,
-            password: smtp_password
-          )
-        else
-          [adapter: Swoosh.Adapters.Local]
-        end
-
-      "postmark" ->
-        if System.get_env("POSTMARK_API_KEY") do
-          [
-            adapter: Swoosh.Adapters.Postmark,
-            api_key: System.get_env("POSTMARK_API_KEY")
-          ]
-        else
-          [adapter: Swoosh.Adapters.Local]
-        end
-
-      _ ->
-        if System.get_env("POSTMARK_API_KEY") do
-          [
-            adapter: Swoosh.Adapters.Postmark,
-            api_key: System.get_env("POSTMARK_API_KEY")
-          ]
-        else
-          [adapter: Swoosh.Adapters.Local]
-        end
+        [adapter: Swoosh.Adapters.Local]
     end
 
   config :tymeslot, Tymeslot.Mailer, mailer_config
