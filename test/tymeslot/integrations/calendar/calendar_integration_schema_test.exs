@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
 
   import Ecto.Changeset
   import Tymeslot.Factory
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Security.Encryption
 
@@ -253,7 +254,35 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
 
       assert changeset.valid?
-      assert changeset.changes.calendar_list == calendar_list
+
+      assert changeset.changes.calendar_list == [
+               %CalendarEntry{id: "cal1", name: "Personal", selected: true}
+             ]
+    end
+  end
+
+  describe "CalendarEntry.cast/1 and dump/1" do
+    test "round-trips unrecognised keys losslessly" do
+      input = %{
+        "id" => "cal1",
+        "path" => "/cal1",
+        "name" => "Personal",
+        "type" => "calendar",
+        "selected" => true,
+        "read_only" => false,
+        "primary" => true,
+        "color" => "#123456",
+        "description" => "Team calendar",
+        "access_role" => "owner",
+        "can_edit" => true,
+        "owner" => "user@example.com",
+        "metadata" => %{"source" => "discovery"}
+      }
+
+      {:ok, entry} = CalendarEntry.cast(input)
+      {:ok, dumped} = CalendarEntry.dump(entry)
+
+      assert dumped == input
     end
   end
 

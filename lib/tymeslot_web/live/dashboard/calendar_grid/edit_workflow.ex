@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
@@ -27,27 +28,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     end
   end
 
+  @doc """
+  Resolves the calendar to pre-select for `integration`, restricted to the
+  same subset `CalendarPicker` renders as chips (`Calendar.writable_calendars/1`
+  — selected and not read-only). Resolving against a wider set here than the
+  picker offers would default to a calendar the user is never shown, and the
+  event would be created there with no chip highlighted to explain it.
+  """
   @spec default_calendar_id_for(map()) :: String.t() | nil
   def default_calendar_id_for(integration) do
-    integration.default_booking_calendar_id ||
-      find_primary_calendar_id(integration.calendar_list)
+    booking_id = Map.get(integration, :default_booking_calendar_id)
+    calendars = Calendar.writable_calendars(integration.calendar_list)
+
+    case Calendar.default_booking_calendar(calendars, booking_id) do
+      nil -> nil
+      entry -> entry.id
+    end
   end
-
-  defp find_primary_calendar_id(nil), do: nil
-  defp find_primary_calendar_id([]), do: nil
-
-  defp find_primary_calendar_id(calendar_list) do
-    primary = Enum.find(calendar_list, &calendar_field(&1, :primary))
-    selected = primary || Enum.find(calendar_list, &calendar_field(&1, :selected))
-    cal = selected || List.first(calendar_list)
-    calendar_field(cal, :id)
-  end
-
-  # `calendar_list` entries are string-keyed once they have been through the
-  # JSONB column and atom-keyed while they are still fresh from provider
-  # discovery, so both shapes are reconciled in this one accessor.
-  defp calendar_field(calendar, key) when is_atom(key),
-    do: calendar[Atom.to_string(key)] || calendar[key]
 
   @spec format_create_time(map()) :: String.t()
   def format_create_time(creating) do

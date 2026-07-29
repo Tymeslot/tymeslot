@@ -237,7 +237,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ZimbraCrudTest do
       }
 
       assert {:ok, [calendar]} = Discovery.discover_calendars(client, skip_breaker: true)
-      assert calendar.href == "/dav/user%40example.com/Calendar/"
+      assert calendar.path == "/dav/user%40example.com/Calendar/"
       assert calendar.name == "Calendar"
     end
   end

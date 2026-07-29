@@ -78,6 +78,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
   import Tymeslot.Factory
   import Tymeslot.TestHelpers.Eventually
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Profiles.ProfileQueries
@@ -408,7 +409,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       )
       |> render_click()
 
-      [%{"id" => "cal-primary", "selected" => selected}] =
+      [%CalendarEntry{id: "cal-primary", selected: selected}] =
         Repo.get!(CalendarIntegrationSchema, integration.id).calendar_list
 
       refute selected

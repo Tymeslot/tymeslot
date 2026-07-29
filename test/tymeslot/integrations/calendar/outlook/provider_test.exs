@@ -586,4 +586,25 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
       assert {:error, :unauthorized} = Provider.test_connection(integration)
     end
   end
+
+  describe "discover_calendars/1 read_only mapping" do
+    test "marks non-editable calendars as read_only" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "outlook")
+
+      expect(OutlookCalendarAPIMock, :list_calendars, fn _client ->
+        {:ok,
+         [
+           %{"id" => "editable-cal", "name" => "Editable", "canEdit" => true},
+           %{"id" => "shared-cal", "name" => "Shared", "canEdit" => false}
+         ]}
+      end)
+
+      assert {:ok, calendars} = Provider.discover_calendars(integration)
+
+      by_id = Map.new(calendars, &{&1.id, &1})
+      refute by_id["editable-cal"].read_only
+      assert by_id["shared-cal"].read_only
+    end
+  end
 end

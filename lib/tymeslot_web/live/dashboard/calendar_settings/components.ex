@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   """
   use TymeslotWeb, :html
 
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.HealthCheck
@@ -384,7 +385,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     [
       integration.provider_account_email,
       conflict_segment(integration, calendar_list),
-      booking_segment(integration, calendar_list),
+      booking_segment(integration),
       sync_segment(integration)
     ]
     |> Enum.reject(&is_nil/1)
@@ -404,31 +405,38 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   end
 
   defp conflict_segment(%{is_active: true}, calendar_list) when calendar_list != [] do
-    selected = Enum.count(calendar_list, &calendar_field(&1, :selected))
+    selected = Enum.count(calendar_list, & &1.selected)
     "conflict-checks #{selected} of #{length(calendar_list)} calendars"
   end
 
   defp conflict_segment(_integration, _calendar_list), do: nil
 
-  defp booking_segment(integration, calendar_list) do
-    case booking_calendar(integration, calendar_list) do
-      nil -> nil
+  # This is a display-only summary, so it only names a booking target once
+  # one is confirmed — see `Calendar.confirmed_booking_calendar/1`. When the
+  # configured target exists but is read-only (no longer eligible), that
+  # helper returns nil like the unconfigured case would; surface a warning
+  # instead of silently dropping the segment, since a read-only target is a
+  # problem the user needs to fix, not an absent one.
+  defp booking_segment(integration) do
+    case Calendar.confirmed_booking_calendar(integration) do
+      nil -> read_only_booking_target_warning(integration)
       calendar -> "books into #{DisplayHelpers.extract_calendar_display_name(calendar)}"
     end
   end
 
-  defp booking_calendar(integration, calendar_list) do
+  defp read_only_booking_target_warning(integration) do
+    calendar_list = integration.calendar_list || []
     booking_id = Map.get(integration, :default_booking_calendar_id)
 
-    Enum.find(calendar_list, &(booking_id && calendar_field(&1, :id) == booking_id)) ||
-      Enum.find(calendar_list, &calendar_field(&1, :primary))
-  end
+    target =
+      (booking_id && Enum.find(calendar_list, &(&1.id == booking_id))) ||
+        Enum.find(calendar_list, & &1.primary)
 
-  # `calendar_list` entries are string-keyed once they have been through the
-  # JSONB column and atom-keyed while they are still fresh from provider
-  # discovery, so both shapes are reconciled in this one accessor.
-  defp calendar_field(calendar, key) when is_atom(key),
-    do: calendar[Atom.to_string(key)] || calendar[key]
+    case target do
+      %{read_only: true} -> "booking target can no longer accept bookings"
+      _not_read_only_or_absent -> nil
+    end
+  end
 
   defp sync_segment(%{last_sync_at: %DateTime{} = synced_at}),
     do: "synced #{TokenUtils.relative_time(synced_at)}"

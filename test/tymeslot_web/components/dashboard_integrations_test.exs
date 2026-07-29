@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
   import TymeslotWeb.Components.CoreComponents
   alias Floki
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.MailboxOrgConfig
@@ -30,7 +31,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         name: "My Calendar",
         provider: "google",
         is_active: true,
-        calendar_list: [%{"id" => "cal1", "name" => "Work", "selected" => true}],
+        calendar_list: [%CalendarEntry{id: "cal1", name: "Work", selected: true}],
         default_booking_calendar_id: "cal1",
         provider_account_email: nil,
         needs_reauth: false

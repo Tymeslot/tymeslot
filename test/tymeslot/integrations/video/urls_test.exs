@@ -7,8 +7,11 @@ defmodule Tymeslot.Integrations.Video.UrlsTest do
   describe "extract_room_id/1" do
     test "extracts room_id from map" do
       assert Urls.extract_room_id(%{room_data: %{room_id: "room123"}}) == "room123"
-      assert Urls.extract_room_id(%{room_data: %{"room_id" => "room456"}}) == "room456"
       assert Urls.extract_room_id(%{room_data: %{}}) == "unknown"
+    end
+
+    test "returns \"unknown\" when room_id is not a binary" do
+      assert Urls.extract_room_id(%{room_data: %{room_id: nil}}) == "unknown"
     end
 
     test "extracts room_id from binary URL" do

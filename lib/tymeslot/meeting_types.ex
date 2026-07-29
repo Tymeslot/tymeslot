@@ -4,6 +4,7 @@ defmodule Tymeslot.MeetingTypes do
   """
   alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Features
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Video
@@ -503,11 +504,9 @@ defmodule Tymeslot.MeetingTypes do
 
   defp validate_calendar_integration(_other_attrs, _user_id), do: :ok
 
-  defp validate_target_calendar(nil, _calendar_integration),
-    do: {:error, :target_calendar_required}
+  defp validate_target_calendar(nil, integration), do: target_calendar_missing_error(integration)
 
-  defp validate_target_calendar("", _calendar_integration),
-    do: {:error, :target_calendar_required}
+  defp validate_target_calendar("", integration), do: target_calendar_missing_error(integration)
 
   defp validate_target_calendar(target_calendar_id, integration) do
     calendar_list = integration.calendar_list
@@ -515,9 +514,15 @@ defmodule Tymeslot.MeetingTypes do
     if calendar_list == [] do
       :ok
     else
+      # Only writable calendars are valid save targets — the same set the
+      # picker offers (`Tymeslot.Integrations.Calendar.writable_calendars/1`).
+      # A deselected or read-only id must be rejected here even though it is
+      # still present in the full `calendar_list`, otherwise a stored
+      # `target_calendar_id` that became read-only after a refresh would
+      # keep saving successfully while every booking against it fails later.
       found? =
-        Enum.any?(calendar_list, fn cal ->
-          UriUtils.uri_safe_match?(calendar_entry_id(cal), target_calendar_id)
+        Enum.any?(Calendar.writable_calendars(calendar_list), fn cal ->
+          UriUtils.uri_safe_match?(cal.id, target_calendar_id)
         end)
 
       if found? do
@@ -528,9 +533,18 @@ defmodule Tymeslot.MeetingTypes do
     end
   end
 
-  # `calendar_list` entries are string-keyed once they have been through the
-  # JSONB column, but arrive atom-keyed straight from discovery.
-  defp calendar_entry_id(cal), do: Map.get(cal, "id") || Map.get(cal, :id)
+  # No target chosen yet. Distinguishes the ordinary "not selected yet" state
+  # from the dead end where every calendar the user selected for this
+  # integration is read-only, so the picker has nothing to offer and
+  # `:target_calendar_required` would leave the user stuck with no way to
+  # comply.
+  defp target_calendar_missing_error(integration) do
+    if Calendar.all_selected_read_only?(integration.calendar_list) do
+      {:error, :no_writable_calendars}
+    else
+      {:error, :target_calendar_required}
+    end
+  end
 
   defp normalize_reminder_config_params(nil), do: {:ok, nil}
   defp normalize_reminder_config_params(""), do: {:ok, nil}

@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   """
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
   alias Tymeslot.Integrations.Calendar.ProviderConfig
@@ -113,7 +114,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
              required(:calendar_paths) => [String.t()],
              required(:provider_account_id) => String.t() | nil,
              required(:is_active) => boolean(),
-             optional(:calendar_list) => [%{String.t() => term()}]
+             optional(:calendar_list) => [CalendarEntry.t()]
            }}
   def prepare_attrs(params, user_id) when is_map(params) and is_integer(user_id) do
     %{
@@ -159,37 +160,8 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   end
 
   defp format_calendar_item(calendar) do
-    id = derive_id(calendar)
-    path = derive_path(calendar, id)
-    name = derive_name(calendar, path)
-    type = derive_type(calendar)
-    read_only = Map.get(calendar, :read_only, Map.get(calendar, "read_only", false))
-
-    %{
-      "id" => id || path,
-      "path" => path,
-      "name" => name,
-      "type" => type,
-      "selected" => true,
-      "read_only" => read_only
-    }
-  end
-
-  defp derive_id(calendar) do
-    Map.get(calendar, :id) || Map.get(calendar, "id") || Map.get(calendar, :path) ||
-      Map.get(calendar, "path")
-  end
-
-  defp derive_path(calendar, id) do
-    Map.get(calendar, :path) || Map.get(calendar, "path") || id
-  end
-
-  defp derive_name(calendar, path) do
-    Map.get(calendar, :name) || Map.get(calendar, "name") || path || "Calendar"
-  end
-
-  defp derive_type(calendar) do
-    Map.get(calendar, :type) || Map.get(calendar, "type") || "calendar"
+    entry = calendar |> CalendarEntry.normalize() |> CalendarEntry.with_defaults()
+    %{entry | selected: true}
   end
 
   defp ensure_calendar_list(attrs, calendar_paths_list) do
@@ -207,15 +179,11 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
 
   defp build_calendar_list_from_paths(paths) do
     Enum.map(paths, fn path ->
-      name = extract_calendar_name_from_path(path)
-
-      %{
-        "id" => path,
-        "path" => path,
-        "name" => name,
-        "type" => "calendar",
-        "selected" => true,
-        "read_only" => false
+      %CalendarEntry{
+        id: path,
+        path: path,
+        name: extract_calendar_name_from_path(path),
+        selected: true
       }
     end)
   end

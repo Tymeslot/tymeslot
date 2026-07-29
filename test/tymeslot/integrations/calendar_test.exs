@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
   import Mox
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Diagnostics
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Workers.ColourWriteBackWorker
@@ -149,6 +150,183 @@ defmodule Tymeslot.Integrations.CalendarTest do
       assert {:ok, events} = CalendarEvents.list_events(user.id)
       assert length(events) == 1
       assert Enum.at(events, 0).uid == "event1"
+    end
+  end
+
+  describe "selected_calendars/1" do
+    test "includes selected read-only calendars, for conflict-checking visibility" do
+      calendars =
+        Enum.map(
+          [
+            %{id: "cal-1", selected: true, read_only: false},
+            %{id: "cal-2", selected: true, read_only: true},
+            %{id: "cal-3", selected: false, read_only: false}
+          ],
+          &CalendarEntry.normalize/1
+        )
+
+      assert Enum.map(Calendar.selected_calendars(calendars), & &1.id) == ["cal-1", "cal-2"]
+    end
+  end
+
+  describe "writable_calendars/1" do
+    test "excludes selected calendars that are read-only" do
+      calendars =
+        Enum.map(
+          [
+            %{id: "cal-1", selected: true, read_only: false},
+            %{id: "cal-2", selected: true, read_only: true},
+            %{id: "cal-3", selected: false, read_only: false}
+          ],
+          &CalendarEntry.normalize/1
+        )
+
+      assert Enum.map(Calendar.writable_calendars(calendars), & &1.id) == ["cal-1"]
+    end
+  end
+
+  describe "all_selected_read_only?/1" do
+    test "is true when every selected calendar is read-only" do
+      calendars =
+        Enum.map(
+          [
+            %{id: "cal-1", selected: true, read_only: true},
+            %{id: "cal-2", selected: false, read_only: false}
+          ],
+          &CalendarEntry.normalize/1
+        )
+
+      assert Calendar.all_selected_read_only?(calendars)
+    end
+
+    test "is false when at least one selected calendar is writable" do
+      calendars =
+        Enum.map(
+          [
+            %{id: "cal-1", selected: true, read_only: true},
+            %{id: "cal-2", selected: true, read_only: false}
+          ],
+          &CalendarEntry.normalize/1
+        )
+
+      refute Calendar.all_selected_read_only?(calendars)
+    end
+
+    test "is false when nothing is selected yet" do
+      calendars =
+        Enum.map(
+          [%{id: "cal-1", selected: false, read_only: false}],
+          &CalendarEntry.normalize/1
+        )
+
+      refute Calendar.all_selected_read_only?(calendars)
+    end
+  end
+
+  describe "default_booking_calendar/2" do
+    test "falls back to a selected calendar when none is marked primary" do
+      calendars =
+        Enum.map(
+          [
+            %{id: "cal-1", selected: false},
+            %{id: "cal-2", selected: true},
+            %{id: "cal-3", selected: false}
+          ],
+          &CalendarEntry.normalize/1
+        )
+
+      assert %{id: "cal-2"} = Calendar.default_booking_calendar(calendars, nil)
+    end
+
+    test "falls through the ladder when the stored booking id matches no entry" do
+      calendars =
+        Enum.map(
+          [%{id: "cal-1", selected: true}, %{id: "cal-2", primary: true}],
+          &CalendarEntry.normalize/1
+        )
+
+      assert %{id: "cal-2"} = Calendar.default_booking_calendar(calendars, "stale-id")
+    end
+
+    test "skips a read-only first entry in favour of a writable one" do
+      calendars =
+        Enum.map(
+          [
+            %{id: "cal-1", read_only: true},
+            %{id: "cal-2", read_only: false}
+          ],
+          &CalendarEntry.normalize/1
+        )
+
+      assert %{id: "cal-2"} = Calendar.default_booking_calendar(calendars, nil)
+    end
+
+    test "skips a booking id that now matches a read-only entry" do
+      calendars =
+        Enum.map(
+          [
+            %{id: "cal-1", read_only: true, primary: false},
+            %{id: "cal-2", read_only: false, primary: true}
+          ],
+          &CalendarEntry.normalize/1
+        )
+
+      assert %{id: "cal-2"} = Calendar.default_booking_calendar(calendars, "cal-1")
+    end
+
+    test "returns nil when every entry is read-only" do
+      calendars =
+        Enum.map(
+          [%{id: "cal-1", read_only: true}, %{id: "cal-2", read_only: true}],
+          &CalendarEntry.normalize/1
+        )
+
+      assert Calendar.default_booking_calendar(calendars, nil) == nil
+    end
+  end
+
+  describe "confirmed_booking_calendar/1" do
+    test "returns the entry matching default_booking_calendar_id" do
+      calendars =
+        Enum.map(
+          [%{id: "cal-1", primary: true}, %{id: "cal-2"}],
+          &CalendarEntry.normalize/1
+        )
+
+      integration = %{calendar_list: calendars, default_booking_calendar_id: "cal-2"}
+
+      assert %{id: "cal-2"} = Calendar.confirmed_booking_calendar(integration)
+    end
+
+    test "falls back to the provider-primary entry when no id is set" do
+      calendars =
+        Enum.map(
+          [%{id: "cal-1"}, %{id: "cal-2", primary: true}],
+          &CalendarEntry.normalize/1
+        )
+
+      integration = %{calendar_list: calendars, default_booking_calendar_id: nil}
+
+      assert %{id: "cal-2"} = Calendar.confirmed_booking_calendar(integration)
+    end
+
+    test "returns nil rather than guessing the first calendar" do
+      calendars = Enum.map([%{id: "cal-1"}, %{id: "cal-2"}], &CalendarEntry.normalize/1)
+      integration = %{calendar_list: calendars, default_booking_calendar_id: nil}
+
+      assert Calendar.confirmed_booking_calendar(integration) == nil
+    end
+
+    test "does not confirm a booking id that now matches a read-only entry" do
+      calendars =
+        Enum.map(
+          [%{id: "cal-1", read_only: true}],
+          &CalendarEntry.normalize/1
+        )
+
+      integration = %{calendar_list: calendars, default_booking_calendar_id: "cal-1"}
+
+      assert Calendar.confirmed_booking_calendar(integration) == nil
     end
   end
 

@@ -113,8 +113,8 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       assert length(attrs.calendar_list) == 1
 
       calendar = List.first(attrs.calendar_list)
-      assert calendar["path"] == "/calendars/user/personal"
-      assert calendar["selected"] == true
+      assert calendar.path == "/calendars/user/personal"
+      assert calendar.selected == true
     end
 
     test "uses provided calendar_list when available" do
@@ -136,8 +136,8 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       assert length(attrs.calendar_list) == 1
 
       calendar = List.first(attrs.calendar_list)
-      assert calendar["id"] == "cal1"
-      assert calendar["name"] == "Personal"
+      assert calendar.id == "cal1"
+      assert calendar.name == "Personal"
     end
 
     test "extracts calendar name from path" do
@@ -154,7 +154,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       calendar = List.first(attrs.calendar_list)
 
       # Name should be extracted from last path segment
-      assert calendar["name"] == "personal"
+      assert calendar.name == "personal"
     end
   end
 

@@ -137,11 +137,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
       assert ZoomProvider.extract_room_id("https://meet.google.com/abc-defg-hij") == nil
     end
 
-    test "extracts room_id from a struct-style room_data map" do
-      assert ZoomProvider.extract_room_id(%{room_data: %{room_id: "abc"}}) == "abc"
-    end
-
-    test "returns nil for unrecognised input" do
+    test "returns nil for non-string input" do
+      # The callback contract only accepts meeting URLs; map unwrapping for
+      # meeting-context shapes happens once, upstream, in Video.Urls.
+      assert ZoomProvider.extract_room_id(%{room_data: %{room_id: "abc"}}) == nil
       assert ZoomProvider.extract_room_id(%{}) == nil
     end
   end

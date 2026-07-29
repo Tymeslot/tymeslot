@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   require Logger
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -20,7 +21,8 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   Returns {:ok, meeting_context} or {:error, reason}.
   The meeting_context contains provider-specific room data and metadata.
   """
-  @spec create_meeting_room(pos_integer() | nil, keyword()) :: {:ok, map()} | {:error, any()}
+  @spec create_meeting_room(pos_integer() | nil, keyword()) ::
+          {:ok, MeetingContext.t()} | {:error, any()}
   def create_meeting_room(user_id \\ nil, opts \\ []) do
     Metrics.time_operation(:video_create_meeting_room, %{}, fn ->
       Logger.info("Creating meeting room for user", user_id: user_id)
@@ -73,7 +75,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
 
   defp add_provider_config_to_context(meeting_context, config) do
     update_in(meeting_context.room_data, fn room_data ->
-      Map.put(room_data, :provider_config, config)
+      %{room_data | provider_config: config}
     end)
   end
 
@@ -150,7 +152,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   @doc """
   Creates a join URL for a meeting participant.
   """
-  @spec create_join_url(map(), String.t(), String.t(), String.t(), DateTime.t()) ::
+  @spec create_join_url(MeetingContext.t(), String.t(), String.t(), String.t(), DateTime.t()) ::
           {:ok, String.t()} | {:error, any()}
   def create_join_url(meeting_context, participant_name, participant_email, role, meeting_time) do
     Metrics.time_operation(
@@ -196,7 +198,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   @doc """
   Handles meeting lifecycle events.
   """
-  @spec handle_meeting_event(map(), atom(), map()) :: :ok | {:error, any()}
+  @spec handle_meeting_event(MeetingContext.t(), atom(), map()) :: :ok | {:error, any()}
   def handle_meeting_event(meeting_context, event, additional_data \\ %{}) do
     Logger.info("Handling meeting event",
       event: event,
@@ -227,7 +229,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   @doc """
   Generates meeting metadata for display or emails.
   """
-  @spec generate_meeting_metadata(map()) :: map()
+  @spec generate_meeting_metadata(MeetingContext.t()) :: map()
   def generate_meeting_metadata(meeting_context) do
     Logger.debug("Generating meeting metadata",
       provider: meeting_context.provider_type,
@@ -238,12 +240,8 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   end
 
   # Private helpers
-  # `room_data` is atom-keyed when a provider has just built it and string-keyed
-  # once it has been through the meeting's JSONB column.
-  defp extract_room_id(meeting_context) do
-    room_data = meeting_context.room_data || %{}
-    Map.get(room_data, :room_id) || Map.get(room_data, "room_id") || "unknown"
-  end
+  defp extract_room_id(%{room_data: %{room_id: room_id}}), do: room_id || "unknown"
+  defp extract_room_id(_meeting_context), do: "unknown"
 
   defp get_provider_config(user_id, opts) do
     case get_integration_from_database(user_id, opts) do

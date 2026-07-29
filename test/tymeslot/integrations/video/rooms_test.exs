@@ -276,7 +276,8 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
         provider_module: MiroTalkProvider,
         room_data: %{
           room_id: "room123",
-          meeting_url: "https://mirotalk.example.com/room123"
+          meeting_url: "https://mirotalk.example.com/room123",
+          provider_config: nil
         }
       }
 
@@ -425,22 +426,6 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
       assert metadata[:join_url] == "https://meet.example.com/room123"
       assert metadata[:custom_url] == "https://meet.example.com/room123"
     end
-
-    test "handles string-keyed room data" do
-      meeting_context = %{
-        provider_type: :mirotalk,
-        provider_module: MiroTalkProvider,
-        room_data: %{
-          "room_id" => "room456",
-          "meeting_url" => "https://mirotalk.example.com/join/room456"
-        }
-      }
-
-      metadata = Rooms.generate_meeting_metadata(meeting_context)
-
-      assert metadata[:meeting_id] == "room456"
-      assert metadata[:join_url] == "https://mirotalk.example.com/join/room456"
-    end
   end
 
   describe "error handling" do
@@ -460,6 +445,7 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
         provider_type: :mirotalk,
         provider_module: MiroTalkProvider,
         room_data: %{
+          room_id: nil,
           meeting_url: "https://mirotalk.example.com/join/room123"
         }
       }
@@ -576,7 +562,7 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
       meeting_context = %{
         provider_type: :mirotalk,
         provider_module: MiroTalkProvider,
-        room_data: %{room_id: "test"}
+        room_data: %{room_id: "test", meeting_url: nil}
       }
 
       # Verify it can handle MiroTalk provider without errors

@@ -19,7 +19,9 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
   @doc """
   Initiates an asynchronous calendar list refresh for an integration.
   Discovers fresh calendars from the provider and updates the database.
-  Sends {:calendar_list_refreshed, component_id, integration_id, calendars} back to the caller.
+  Sends {:calendar_list_refreshed, component_id, integration_id, calendars} back to
+  the caller, where `calendars` is a `[CalendarEntry.t()]` — the same shape as
+  `integration.calendar_list` — so every consumer sees one shape regardless of path.
   """
   @spec refresh_calendar_list_async(integration_id(), user_id(), String.t()) :: {:ok, pid()}
   def refresh_calendar_list_async(integration_id, user_id, component_id) do
@@ -135,9 +137,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
       {:ok, %{calendars: calendars, discovery_credentials: credentials}} ->
         # Filter calendars to only include those with valid paths
         valid_calendars =
-          Enum.filter(calendars, fn calendar ->
-            is_binary(calendar[:path] || calendar[:href])
-          end)
+          Enum.filter(calendars, fn calendar -> is_binary(calendar.path) end)
 
         {:ok, %{calendars: valid_calendars, discovery_credentials: credentials}}
 

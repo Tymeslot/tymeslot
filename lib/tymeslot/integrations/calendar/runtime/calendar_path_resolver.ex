@@ -28,24 +28,11 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver do
   end
 
   defp find_calendar_path_by_id(calendar_list, calendar_id) do
-    calendar =
-      calendar_list
-      |> Enum.map(&normalize_calendar/1)
-      |> Enum.find(&UriUtils.uri_safe_match?(&1.id, calendar_id))
+    calendar = Enum.find(calendar_list, &UriUtils.uri_safe_match?(&1.id, calendar_id))
 
     # CalDAV discovery historically stored only `id` (the href). Fall back to
     # it so existing integrations whose `calendar_list` entries have a null
     # `path` can still resolve a booking target.
     calendar && (calendar.path || calendar.id)
-  end
-
-  # `calendar_list` entries are string-keyed once they have been through the
-  # JSONB column, but arrive atom-keyed straight from discovery. This is the one
-  # place that answers "which key type?"; everything below reads atoms.
-  defp normalize_calendar(calendar) do
-    %{
-      id: Map.get(calendar, "id") || Map.get(calendar, :id),
-      path: Map.get(calendar, "path") || Map.get(calendar, :path)
-    }
   end
 end

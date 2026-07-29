@@ -73,7 +73,7 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
 
       Enum.each(calendars, fn cal ->
         assert byte_size(cal.name) > 0
-        assert byte_size(cal.href) > 0
+        assert byte_size(cal.path) > 0
         assert byte_size(cal.id) > 0
       end)
     end

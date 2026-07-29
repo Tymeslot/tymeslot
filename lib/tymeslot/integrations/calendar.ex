@@ -23,11 +23,13 @@ defmodule Tymeslot.Integrations.Calendar do
   @behaviour Tymeslot.Security.EncryptedStorage
 
   alias Tymeslot.Dashboard.DashboardContext
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
   alias Tymeslot.Integrations.Calendar.ColourResolver
   alias Tymeslot.Integrations.Calendar.Connection
   alias Tymeslot.Integrations.Calendar.Creation
+  alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Deletion
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.OAuth
@@ -176,17 +178,85 @@ defmodule Tymeslot.Integrations.Calendar do
   def toggle_calendar_selection(integration, calendar_id) do
     current_selection =
       Enum.reduce(integration.calendar_list || [], [], fn cal, acc ->
-        cid = calendar_field(cal, :id)
-        is_selected = calendar_field(cal, :selected) || false
-
         is_now_selected =
-          if to_string(cid) == to_string(calendar_id), do: !is_selected, else: is_selected
+          if to_string(cal.id) == to_string(calendar_id), do: !cal.selected, else: cal.selected
 
-        if is_now_selected, do: [to_string(cid) | acc], else: acc
+        if is_now_selected, do: [to_string(cal.id) | acc], else: acc
       end)
 
     update_calendar_selection(integration, %{"selected_calendars" => current_selection})
   end
+
+  @doc """
+  Returns the entries from an integration's `calendar_list` whose `selected`
+  flag is truthy, including read-only ones. See
+  `Tymeslot.Integrations.Calendar.Selection.selected_calendars/1`.
+
+  Use this for conflict-checking visibility — a calendar the user cannot
+  write to can still surface existing events. Callers that need a booking or
+  sync target (which must be writable) should use `writable_calendars/1`
+  instead.
+  """
+  @spec selected_calendars([CalendarEntry.t()] | nil) :: [CalendarEntry.t()]
+  defdelegate selected_calendars(calendar_list), to: Selection
+
+  @doc """
+  Returns the selected entries from an integration's `calendar_list` that
+  are also writable — the calendars available as booking/sync targets. See
+  `Tymeslot.Integrations.Calendar.Selection.writable_calendars/1`.
+  """
+  @spec writable_calendars([CalendarEntry.t()] | nil) :: [CalendarEntry.t()]
+  defdelegate writable_calendars(calendar_list), to: Selection
+
+  @doc """
+  Returns whether the integration has calendars selected but none of them
+  are writable — the booking-target picker has nothing to offer even
+  though the user has enabled calendars for this account. Distinguishes
+  that dead end from "nothing selected yet" (`selected_calendars/1` is
+  empty), which is a different, unremarkable state.
+  """
+  @spec all_selected_read_only?([CalendarEntry.t()] | nil) :: boolean()
+  def all_selected_read_only?(calendar_list) do
+    selected_calendars(calendar_list) != [] and writable_calendars(calendar_list) == []
+  end
+
+  @doc """
+  Resolves the calendar entry that booking currently targets within a
+  calendar list. See
+  `Tymeslot.Integrations.Calendar.Defaults.default_booking_calendar/2`.
+  """
+  @spec default_booking_calendar([CalendarEntry.t()] | nil, String.t() | nil) ::
+          CalendarEntry.t() | nil
+  defdelegate default_booking_calendar(calendar_list, booking_id), to: Defaults
+
+  @doc """
+  Resolves the calendar entry that booking is *confirmed* to target: the
+  entry matching `default_booking_calendar_id`, else the provider-primary
+  entry. Unlike `default_booking_calendar/2`, this never guesses "first
+  calendar" — it returns `nil` until a target has actually been chosen. See
+  `Tymeslot.Integrations.Calendar.Defaults.confirmed_booking_calendar/1`.
+  """
+  @spec confirmed_booking_calendar(%{
+          :calendar_list => [CalendarEntry.t()] | nil,
+          :default_booking_calendar_id => String.t() | nil,
+          optional(atom()) => term()
+        }) :: CalendarEntry.t() | nil
+  defdelegate confirmed_booking_calendar(integration), to: Defaults
+
+  @doc """
+  Finds the calendar entry with the given id. See
+  `Tymeslot.Integrations.Calendar.Selection.find_calendar_by_id/2`.
+  """
+  @spec find_calendar_by_id([CalendarEntry.t()], String.t() | nil) :: CalendarEntry.t() | nil
+  defdelegate find_calendar_by_id(calendar_list, id), to: Selection
+
+  @doc """
+  Finds the calendar entry whose `path` is a prefix of the given
+  provider-side identifier. See
+  `Tymeslot.Integrations.Calendar.Selection.find_calendar_by_path/2`.
+  """
+  @spec find_calendar_by_path([CalendarEntry.t()], String.t() | nil) :: CalendarEntry.t() | nil
+  defdelegate find_calendar_by_path(calendar_list, path), to: Selection
 
   # ---------------------------
   # Public API: Validation/Connection
@@ -232,7 +302,7 @@ defmodule Tymeslot.Integrations.Calendar do
   Prepare selection params from selected paths and discovered calendars.
   """
   @spec prepare_selection_params([String.t()], list()) ::
-          %{required(String.t()) => [String.t()] | [%{String.t() => term()}]}
+          %{required(String.t()) => [String.t()] | [CalendarEntry.t()]}
   def prepare_selection_params(selected_paths, discovered) do
     Selection.prepare_selected_params(selected_paths, discovered)
   end
@@ -529,11 +599,4 @@ defmodule Tymeslot.Integrations.Calendar do
       reason: inspect(reason)
     )
   end
-
-  # `calendar_list` entries are string-keyed once they have been through the
-  # JSONB column and atom-keyed while they are still fresh from provider
-  # discovery, so every read goes through this one accessor rather than each
-  # call site defending for itself.
-  defp calendar_field(calendar, key) when is_atom(key),
-    do: calendar[Atom.to_string(key)] || calendar[key]
 end

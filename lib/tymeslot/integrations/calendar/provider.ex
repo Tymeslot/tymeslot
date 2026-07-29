@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   produces an invalid event, it fails loudly at normalisation time.
   """
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarEvent
 
   @type context :: %{
@@ -90,14 +91,13 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   Unified entry point for the dashboard's "discover calendars" flow. CalDAV
   providers decrypt the stored credentials and probe the configured server;
   OAuth providers issue the appropriate API call against the stored token.
-  Returns a list of provider-shaped calendar maps — `Shared.DiscoveryService`
-  callers normalise these via `standardize_calendar_data/2`.
+  Returns standardised `CalendarEntry` structs.
 
   Optional: providers that do not support discovery (e.g. demo/debug)
   may omit this callback.
   """
   @callback discover_calendars_for_integration(integration :: map()) ::
-              {:ok, list(map())} | {:error, term()}
+              {:ok, [CalendarEntry.t()]} | {:error, term()}
 
   @doc """
   Builds the list of provider-specific client configs for an integration.

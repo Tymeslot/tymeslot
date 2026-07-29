@@ -438,6 +438,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       # The extractor caps the encoded join id at 20 characters.
       assert room_id == "19%3ameeting_abcdefg"
     end
+
+    test "returns nil for non-string input" do
+      # The callback contract only accepts meeting URLs; map unwrapping for
+      # meeting-context shapes happens once, upstream, in Video.Urls.
+      assert TeamsProvider.extract_room_id(%{room_data: %{room_id: "abc"}}) == nil
+      assert TeamsProvider.extract_room_id(%{}) == nil
+    end
   end
 
   describe "valid_meeting_url?/1" do

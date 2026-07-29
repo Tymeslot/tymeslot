@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     base_url: "https://graph.microsoft.com/v1.0"
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.EventNormaliser
@@ -29,16 +30,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
            required(:show_as) => String.t() | nil,
            required(:response_status) => String.t() | nil,
            required(:transparency) => String.t()
-         }
-
-  @typep calendar_entry :: %{
-           required(:id) => String.t() | nil,
-           required(:name) => String.t() | nil,
-           required(:color) => String.t() | nil,
-           required(:primary) => boolean(),
-           required(:selected) => boolean(),
-           required(:can_edit) => boolean() | nil,
-           required(:owner) => String.t()
          }
 
   # Required callbacks for OAuth base
@@ -168,7 +159,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   Discovers all available calendars for the authenticated Outlook account.
   """
   @spec discover_calendars(CalendarIntegrationSchema.t()) ::
-          {:ok, list(calendar_entry())} | {:error, term()}
+          {:ok, [CalendarEntry.t()]} | {:error, term()}
   def discover_calendars(integration) do
     ProviderCommon.discover_calendars(
       integration,
@@ -269,7 +260,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
       primary: cal["isDefaultCalendar"] || false,
       selected: cal["isDefaultCalendar"] || false,
       can_edit: cal["canEdit"],
+      read_only: cal["canEdit"] == false,
       owner: get_calendar_owner(cal)
     }
+    |> CalendarEntry.normalize()
+    |> CalendarEntry.with_defaults()
   end
 end

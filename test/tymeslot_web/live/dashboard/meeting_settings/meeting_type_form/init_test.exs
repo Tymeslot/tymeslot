@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
   @moduletag :unit
   @moduletag :meeting_types
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init
 
   describe "build_form_data/1" do
@@ -179,41 +180,67 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
 
   describe "fetch_available_calendars/2" do
     test "returns only calendars marked selected: true" do
-      calendars = [
-        %{"id" => "cal-1", "name" => "Work", "selected" => true},
-        %{"id" => "cal-2", "name" => "Personal", "selected" => false},
-        %{"id" => "cal-3", "name" => "Holidays", "selected" => true}
-      ]
+      calendars =
+        Enum.map(
+          [
+            %{id: "cal-1", name: "Work", selected: true},
+            %{id: "cal-2", name: "Personal", selected: false},
+            %{id: "cal-3", name: "Holidays", selected: true}
+          ],
+          &CalendarEntry.normalize/1
+        )
 
       integrations = [%{id: 1, calendar_list: calendars}, %{id: 2, calendar_list: []}]
 
       assert Init.fetch_available_calendars(1, integrations) == [
-               %{"id" => "cal-1", "name" => "Work", "selected" => true},
-               %{"id" => "cal-3", "name" => "Holidays", "selected" => true}
+               CalendarEntry.normalize(%{id: "cal-1", name: "Work", selected: true}),
+               CalendarEntry.normalize(%{id: "cal-3", name: "Holidays", selected: true})
              ]
     end
 
     test "returns empty list when no calendar is selected" do
-      calendars = [
-        %{"id" => "cal-1", "name" => "Work", "selected" => false},
-        %{"id" => "cal-2", "name" => "Personal", "selected" => false}
-      ]
+      calendars =
+        Enum.map(
+          [
+            %{id: "cal-1", name: "Work", selected: false},
+            %{id: "cal-2", name: "Personal", selected: false}
+          ],
+          &CalendarEntry.normalize/1
+        )
 
       integrations = [%{id: 1, calendar_list: calendars}]
 
       assert Init.fetch_available_calendars(1, integrations) == []
     end
 
-    test "tolerates atom-keyed selected flags" do
-      calendars = [%{id: "cal-1", name: "Work", selected: true}, %{id: "cal-2", selected: false}]
+    test "excludes read-only calendars even when selected" do
+      # A read-only calendar cannot accept a new booking, so it must never
+      # surface as a meeting-type target regardless of its selection state.
+      calendars =
+        Enum.map(
+          [
+            %{id: "cal-1", name: "Work", selected: true, read_only: false},
+            %{id: "cal-2", name: "Shared (view only)", selected: true, read_only: true}
+          ],
+          &CalendarEntry.normalize/1
+        )
+
       integrations = [%{id: 1, calendar_list: calendars}]
 
-      assert Init.fetch_available_calendars(1, integrations) ==
-               [%{id: "cal-1", name: "Work", selected: true}]
+      assert Init.fetch_available_calendars(1, integrations) == [
+               CalendarEntry.normalize(%{
+                 id: "cal-1",
+                 name: "Work",
+                 selected: true,
+                 read_only: false
+               })
+             ]
     end
 
     test "returns empty list when no integration matches" do
-      integrations = [%{id: 1, calendar_list: [%{"id" => "cal-1", "selected" => true}]}]
+      integrations = [
+        %{id: 1, calendar_list: [CalendarEntry.normalize(%{id: "cal-1", selected: true})]}
+      ]
 
       assert Init.fetch_available_calendars(999, integrations) == []
     end
@@ -226,6 +253,36 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
 
     test "returns empty list for empty integrations" do
       assert Init.fetch_available_calendars(1, []) == []
+    end
+  end
+
+  describe "all_selected_read_only?/2" do
+    test "is true when every selected calendar for the integration is read-only" do
+      calendars =
+        Enum.map(
+          [%{id: "cal-1", name: "Shared (view only)", selected: true, read_only: true}],
+          &CalendarEntry.normalize/1
+        )
+
+      integrations = [%{id: 1, calendar_list: calendars}]
+
+      assert Init.all_selected_read_only?(1, integrations)
+    end
+
+    test "is false when a writable calendar is selected" do
+      calendars =
+        Enum.map(
+          [%{id: "cal-1", name: "Work", selected: true, read_only: false}],
+          &CalendarEntry.normalize/1
+        )
+
+      integrations = [%{id: 1, calendar_list: calendars}]
+
+      refute Init.all_selected_read_only?(1, integrations)
+    end
+
+    test "is false when no integration matches" do
+      refute Init.all_selected_read_only?(999, [])
     end
   end
 end
