@@ -43,7 +43,7 @@
       </script>
     <% end %>
     <.nomodule_fallback nonce={assigns[:csp_nonce]} />
-    <.analytics_scripts />
+    <.analytics_scripts nonce={assigns[:csp_nonce]} />
   </head>
   <body>
     <.noscript_warning message="This app requires JavaScript to function. Please enable it in your browser settings." />

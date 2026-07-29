@@ -44,7 +44,7 @@
     <script phx-track-static type="module" src={~p"/assets/iframe_embed.js"}>
     </script>
     <.nomodule_fallback context={:scheduling_page} nonce={assigns[:csp_nonce]} />
-    <.analytics_scripts />
+    <.analytics_scripts nonce={assigns[:csp_nonce]} />
   </head>
   <body class={"theme-#{assigns[:theme_id] || "1"} #{theme_class(assigns[:theme_id] || "1")}"}>
     <.noscript_warning message="This scheduling page requires JavaScript to book meetings. Please enable it to continue." />
