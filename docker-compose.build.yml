@@ -1,11 +1,16 @@
-# Tymeslot Docker Compose Configuration
+# Tymeslot Docker Compose Configuration — build from source
 #
-# Runs the published image, which bundles PostgreSQL. There is nothing to build
-# and nothing to clone: put this file and a .env next to each other and start.
+# Same single-container setup as docker-compose.yml, but the image is built
+# from this checkout instead of pulled from Docker Hub. Use it when you have
+# modified the source, or when you would rather not run a prebuilt image.
 #
-# IMPORTANT: Create a .env file before starting. Copy .env.example from a clone,
-# or download it on its own:
-#   curl -o .env https://raw.githubusercontent.com/Tymeslot/tymeslot/main/.env.example
+# This file only works from inside a clone, because the build context is the
+# repository itself:
+#   git clone https://github.com/Tymeslot/tymeslot.git
+#   cd tymeslot
+#
+# IMPORTANT: Create a .env file before starting:
+#   cp .env.example .env
 #
 # Then generate required secrets:
 #   openssl rand -base64 64 | tr -d '\n'  # SECRET_KEY_BASE
@@ -16,18 +21,16 @@
 # credentials undecryptable. See README-Docker.md, "Data-at-rest encryption".
 #
 # Fill in the required values in .env, then run:
-#   docker compose up -d
-#
-# To build the image from source instead of pulling it, use
-# docker-compose.build.yml. To run PostgreSQL as a separate container, use
-# docker-compose.with-postgres.yml.
+#   docker compose -f docker-compose.build.yml up -d --build
 
 services:
   tymeslot:
-    # Pin a release tag instead of `latest` for reproducible deployments. The
-    # published tags are listed at
-    # https://hub.docker.com/r/luka1thb/tymeslot/tags
-    image: luka1thb/tymeslot:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.docker
+    # A local-only tag: this image is built here, never pulled. The published
+    # image lives at luka1thb/tymeslot and is what docker-compose.yml uses.
+    image: tymeslot:local
     container_name: tymeslot
     restart: unless-stopped
     # PORT is the listen port; it is published on the host and inside the

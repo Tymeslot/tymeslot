@@ -55,6 +55,15 @@ docker run -d \
 
 This will pull the image automatically if it is not present locally. For a pinned version, replace `latest` with a release tag — `luka1thb/tymeslot:<VERSION>`, substituting the version number you want. The full list of published tags is on [Docker Hub](https://hub.docker.com/r/luka1thb/tymeslot/tags).
 
+**Prefer Compose?** The repository's `docker-compose.yml` runs the same published image and needs no clone. Download it next to your `.env` and start:
+
+```bash
+curl -O https://raw.githubusercontent.com/Tymeslot/tymeslot/main/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/Tymeslot/tymeslot/main/.env.example
+# edit .env, then:
+docker compose up -d
+```
+
 The embedded PostgreSQL listens only on `localhost` inside the container and is never exposed, so its password is an internal detail — if you omit `POSTGRES_PASSWORD` it defaults to `tymeslot`, which is fine for the embedded database. Set a strong `POSTGRES_PASSWORD` when you point Tymeslot at an [external database](#using-an-external-database).
 
 > **Keep `tymeslot_pg:/var/lib/postgresql/data` as a named volume.** Swapping it for a host path (e.g. `./pgdata:/var/lib/postgresql/data`) can break first-run initialization on Docker Desktop, rootless Docker, userns-remap, or SELinux-enforcing hosts because the mount arrives with ownership the container can't change. If you need the database on a specific host path, use an [external PostgreSQL](#using-an-external-database) instead.
@@ -124,7 +133,7 @@ Building from a git URL needs BuildKit, which is the default from Docker 23.0
 onwards.
 
 **With a clone.** Take this path if you intend to modify the source, or to use
-the build script and the repository's own `docker-compose.yml`:
+the build script and the repository's own `docker-compose.build.yml`:
 
 ```bash
 git clone https://github.com/Tymeslot/tymeslot.git
@@ -171,8 +180,13 @@ PORT=4000
 **Method 1 — Docker Compose (recommended, works for both paths):**
 
 ```bash
-docker compose up -d --build
+docker compose up -d --build                              # your own compose.yaml, no clone
+docker compose -f docker-compose.build.yml up -d --build  # in a clone
 ```
+
+In a clone, pass `-f docker-compose.build.yml` explicitly. The default
+`docker-compose.yml` pulls the published image rather than building one, which
+is Option A above.
 
 Compose reads your `.env`, builds the image, and starts the container with the `tymeslot_data` and `tymeslot_pg` volumes. It reads `.env` twice over: once to fill in the `${...}` placeholders in the Compose file, and once through `env_file` to forward every variable into the container. The second part is what carries your SMTP, OAuth and `DATA_ENCRYPTION_KEY` settings through, so keep `env_file` in place if you adapt the file.
 
@@ -181,6 +195,10 @@ To move to a newer release later, set the new tag and rebuild:
 ```bash
 TYMESLOT_VERSION=v1.5.0 docker compose up -d --build
 ```
+
+(In a clone, `git pull` first and rebuild with
+`docker compose -f docker-compose.build.yml up -d --build`; the build context is
+your working tree, so `TYMESLOT_VERSION` has no effect there.)
 
 **Method 2 — Build script (clone only):**
 
@@ -195,7 +213,7 @@ The script validates your `.env`, builds the image, and offers to start the cont
 
 ```bash
 # Build image
-docker build -f Dockerfile.docker -t tymeslot .
+docker build -f Dockerfile.docker -t tymeslot:local .
 
 # Run container
 source .env
@@ -205,7 +223,7 @@ docker run -d \
   --env-file .env \
   -v tymeslot_data:/app/data \
   -v tymeslot_pg:/var/lib/postgresql/data \
-  tymeslot
+  tymeslot:local
 ```
 
 #### 4. Access Your Installation
