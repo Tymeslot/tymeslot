@@ -461,7 +461,6 @@ msgstr "відповісти на цей лист"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:61
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:171
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:98
 #, elixir-autogen, elixir-format
 msgid "soon"
 msgstr "незабаром"
@@ -484,7 +483,6 @@ msgstr[0] "день"
 msgstr[1] "дні"
 msgstr[2] "днів"
 
-#: dev_support/email_testing/helpers.ex:76
 #: lib/tymeslot/emails/appointment_builder.ex:280
 #: lib/tymeslot/emails/shared/formatting.ex:282
 #: lib/tymeslot/emails/shared/formatting.ex:283
@@ -653,11 +651,6 @@ msgstr "Подія оновлена"
 msgid "Title:"
 msgstr "Назва:"
 
-#: lib/tymeslot/emails/templates/event_update_notification.ex:102
-#, elixir-autogen, elixir-format
-msgid "Updated: %{title} — %{date}"
-msgstr "Оновлено: %{title} — %{date}"
-
 #: lib/tymeslot/emails/templates/event_update_notification.ex:227
 #, elixir-autogen, elixir-format
 msgid "What Changed"
@@ -776,14 +769,6 @@ msgstr "Підтвердьте новий email"
 msgid "Confirmed"
 msgstr "Підтверджено"
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex:44
-#: lib/tymeslot/emails/templates/email_change_verification.ex:111
-#, elixir-autogen, elixir-format
-msgid "Didn't request this change? You can safely ignore this email — nothing will happen to your account."
-msgstr ""
-"Не запитували цю зміну? Ви можете безпечно проігнорувати цей лист — з вашим "
-"акаунтом нічого не станеться."
-
 #: lib/tymeslot/emails/shared/meeting/attendee.ex:125
 #, elixir-autogen, elixir-format
 msgid "Email"
@@ -835,18 +820,6 @@ msgstr "п'ятниця"
 msgid "Heads up"
 msgstr "До вашої уваги"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:55
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} — I've blocked the time on my calendar and I'm looking forward to our meeting."
-msgstr ""
-"Вітаю, %{name} — я заблокував(-ла) час у своєму календарі й з нетерпінням "
-"чекаю на нашу зустріч."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex:49
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} — our appointment has been cancelled. I'm sorry for the inconvenience."
-msgstr "Вітаю, %{name} — нашу зустріч скасовано. Перепрошую за незручності."
-
 #: lib/tymeslot/emails/templates/reschedule_request.ex:81
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, I need to reschedule our upcoming meeting."
@@ -875,14 +848,6 @@ msgid "If the new time is final, please update or reschedule the booking in Tyme
 msgstr ""
 "Якщо новий час остаточний, будь ласка, оновіть або перенесіть бронювання в "
 "Tymeslot, щоб учасник отримав оновлені деталі."
-
-#: lib/tymeslot/emails/templates/password_reset.ex:22
-#: lib/tymeslot/emails/templates/password_reset.ex:54
-#, elixir-autogen, elixir-format
-msgid "If you didn't request this change, your account is still secure — you can simply delete this email."
-msgstr ""
-"Якщо ви не запитували цю зміну, ваш акаунт у безпеці — ви можете просто "
-"видалити цей лист."
 
 #: lib/tymeslot/emails/templates/password_reset.ex:32
 #, elixir-autogen, elixir-format
@@ -1098,28 +1063,12 @@ msgstr ""
 "Зустріч «%{title}» видалено з вашого зовнішнього календаря, але вона все ще "
 "активна в Tymeslot."
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex:118
-#, elixir-autogen, elixir-format
-msgid "The meeting \"%{title}\" was deleted from your external calendar. Tymeslot still has this booking on record — please review and cancel it here if the meeting is no longer taking place."
-msgstr ""
-"Зустріч «%{title}» видалено з вашого зовнішнього календаря. Tymeslot усе ще "
-"зберігає це бронювання — будь ласка, перегляньте його й скасуйте тут, якщо "
-"зустріч більше не відбудеться."
-
 #: lib/tymeslot/emails/templates/external_booking_change.ex:202
 #, elixir-autogen, elixir-format
 msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking shown below."
 msgstr ""
 "Зустріч «%{title}» перенесено у вашому зовнішньому календарі. У Tymeslot усе"
 " ще збережено початкове бронювання, показане нижче."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex:132
-#, elixir-autogen, elixir-format
-msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking — please review the details and update or cancel it accordingly."
-msgstr ""
-"Зустріч «%{title}» перенесено у вашому зовнішньому календарі. У Tymeslot усе"
-" ще збережено початкове бронювання — будь ласка, перегляньте деталі та "
-"оновіть або скасуйте його відповідно."
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex:30
 #: lib/tymeslot/emails/templates/email_change_notification.ex:70
@@ -1262,13 +1211,6 @@ msgstr ""
 "Ми раді вітати вас! Щоб почати планувати зустрічі та спростити свій "
 "календар, будь ласка, підтвердьте свою адресу email."
 
-#: lib/tymeslot/emails/templates/email_verification.ex:17
-#, elixir-autogen, elixir-format
-msgid "We're glad you're here. One quick step and your calendar will be ready to go — please confirm your email below."
-msgstr ""
-"Раді бачити вас тут. Ще один швидкий крок — і ваш календар готовий до "
-"роботи. Будь ласка, підтвердьте свій email нижче."
-
 #: lib/tymeslot/emails/templates/email_change_notification.ex:46
 #, elixir-autogen, elixir-format
 msgid "We're letting you know in case it wasn't you."
@@ -1288,11 +1230,6 @@ msgstr "Вітаємо"
 #, elixir-autogen, elixir-format
 msgid "Welcome to Tymeslot"
 msgstr "Ласкаво просимо до Tymeslot"
-
-#: lib/tymeslot/emails/templates/email_verification.ex:31
-#, elixir-autogen, elixir-format
-msgid "Welcome to Tymeslot — please verify your email."
-msgstr "Ласкаво просимо до Tymeslot — будь ласка, підтвердьте свій email."
 
 #: lib/tymeslot/emails/templates/email_verification.ex:42
 #, elixir-autogen, elixir-format
@@ -1589,16 +1526,6 @@ msgstr "%{amount} повернуто на вашу картку"
 msgid "A partial refund was issued."
 msgstr "Здійснено часткове повернення коштів."
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:145
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} — %{amount} of your %{original} payment has been refunded."
-msgstr "Привіт, %{name} — %{amount} з вашого початкового платежу на суму %{original} було повернуто."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:138
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} — your payment of %{amount} has been refunded in full."
-msgstr "Привіт, %{name} — ваш платіж на суму %{amount} було повністю повернуто."
-
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex:269
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{amount} of your %{original} payment has been refunded."
@@ -1679,16 +1606,6 @@ msgstr "Ваш платіж було повернуто."
 msgid "your host"
 msgstr "ваш організатор"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:163
-#, elixir-autogen, elixir-format
-msgid "Hi — %{amount} of your %{original} payment has been refunded."
-msgstr "Привіт — %{amount} з вашого початкового платежу на суму %{original} було повернуто."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:157
-#, elixir-autogen, elixir-format
-msgid "Hi — your payment of %{amount} has been refunded in full."
-msgstr "Привіт — ваш платіж на суму %{amount} було повністю повернуто."
-
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex:287
 #, elixir-autogen, elixir-format
 msgid "Hi, %{amount} of your %{original} payment has been refunded."
@@ -1713,11 +1630,6 @@ msgstr ""
 msgid "Hi there,"
 msgstr "Вітаю!"
 
-#: dev_support/email_testing/helpers.ex:80
-#, elixir-autogen, elixir-format
-msgid "I'll send you a reminder 24 hours before our appointment."
-msgstr ""
-
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:28
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:85
 #, elixir-autogen, elixir-format
@@ -1731,37 +1643,6 @@ msgid "Your Tymeslot account email address has been successfully changed. This c
 msgstr ""
 "Адресу email вашого акаунта Tymeslot успішно змінено. Це підтвердження "
 "надсилається на вашу попередню адресу, щоб ви знали, що зміна відбулася."
-
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:124
-#, elixir-autogen, elixir-format
-msgid "in %{count} day"
-msgid_plural "in %{count} days"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
-
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:113
-#, elixir-autogen, elixir-format
-msgid "in %{count} hour"
-msgid_plural "in %{count} hours"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
-
-#: dev_support/email_testing/helpers.ex:77
-#, elixir-autogen, elixir-format
-msgid "in %{time_until}"
-msgstr ""
-
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:130
-#, elixir-autogen, elixir-format
-msgid "today"
-msgstr ""
-
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:127
-#, elixir-autogen, elixir-format
-msgid "tomorrow"
-msgstr ""
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:170
 #, elixir-autogen, elixir-format
@@ -1791,11 +1672,6 @@ msgstr ""
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:306
 #, elixir-autogen, elixir-format
 msgid "Can't make it: %{url}"
-msgstr ""
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:144
-#, elixir-autogen, elixir-format
-msgid "Hi %{guest} — %{booker} has invited you as a guest to this meeting with %{organizer}."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:297
@@ -1834,7 +1710,7 @@ msgid "You can change your response any time using the links above."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:167
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You're invited"
 msgstr "Вас запрошено"
 
@@ -1844,7 +1720,7 @@ msgid "You're invited - %{date} with %{name}"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:295
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You're invited!"
 msgstr "Вас запрошено"
 
@@ -1857,3 +1733,75 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Join the video call"
 msgstr "Приєднатися до відеодзвінка"
+
+#: lib/tymeslot/emails/templates/email_change_verification.ex:44
+#: lib/tymeslot/emails/templates/email_change_verification.ex:111
+#, elixir-autogen, elixir-format
+msgid "Didn't request this change? You can safely ignore this email - nothing will happen to your account."
+msgstr "Не запитували цю зміну? Ви можете безпечно проігнорувати цей лист — з вашим акаунтом нічого не станеться."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:144
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}."
+msgstr ""
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:145
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - %{amount} of your %{original} payment has been refunded."
+msgstr "Привіт, %{name} — %{amount} з вашого початкового платежу на суму %{original} було повернуто."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:55
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - I've blocked the time on my calendar and I'm looking forward to our meeting."
+msgstr "Вітаю, %{name} — я заблокував(-ла) час у своєму календарі й з нетерпінням чекаю на нашу зустріч."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex:49
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - our appointment has been cancelled. I'm sorry for the inconvenience."
+msgstr "Вітаю, %{name} — нашу зустріч скасовано. Перепрошую за незручності."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:138
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - your payment of %{amount} has been refunded in full."
+msgstr "Привіт, %{name} — ваш платіж на суму %{amount} було повністю повернуто."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:163
+#, elixir-autogen, elixir-format
+msgid "Hi - %{amount} of your %{original} payment has been refunded."
+msgstr "Привіт — %{amount} з вашого початкового платежу на суму %{original} було повернуто."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:157
+#, elixir-autogen, elixir-format
+msgid "Hi - your payment of %{amount} has been refunded in full."
+msgstr "Привіт — ваш платіж на суму %{amount} було повністю повернуто."
+
+#: lib/tymeslot/emails/templates/password_reset.ex:22
+#: lib/tymeslot/emails/templates/password_reset.ex:54
+#, elixir-autogen, elixir-format
+msgid "If you didn't request this change, your account is still secure - you can simply delete this email."
+msgstr "Якщо ви не запитували цю зміну, ваш акаунт у безпеці — ви можете просто видалити цей лист."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex:118
+#, elixir-autogen, elixir-format
+msgid "The meeting \"%{title}\" was deleted from your external calendar. Tymeslot still has this booking on record - please review and cancel it here if the meeting is no longer taking place."
+msgstr "Зустріч «%{title}» видалено з вашого зовнішнього календаря. Tymeslot усе ще зберігає це бронювання — будь ласка, перегляньте його й скасуйте тут, якщо зустріч більше не відбудеться."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex:132
+#, elixir-autogen, elixir-format
+msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking - please review the details and update or cancel it accordingly."
+msgstr "Зустріч «%{title}» перенесено у вашому зовнішньому календарі. У Tymeslot усе ще збережено початкове бронювання — будь ласка, перегляньте деталі та оновіть або скасуйте його відповідно."
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex:102
+#, elixir-autogen, elixir-format
+msgid "Updated: %{title} - %{date}"
+msgstr "Оновлено: %{title} — %{date}"
+
+#: lib/tymeslot/emails/templates/email_verification.ex:17
+#, elixir-autogen, elixir-format
+msgid "We're glad you're here. One quick step and your calendar will be ready to go - please confirm your email below."
+msgstr "Раді бачити вас тут. Ще один швидкий крок — і ваш календар готовий до роботи. Будь ласка, підтвердьте свій email нижче."
+
+#: lib/tymeslot/emails/templates/email_verification.ex:31
+#, elixir-autogen, elixir-format
+msgid "Welcome to Tymeslot - please verify your email."
+msgstr "Ласкаво просимо до Tymeslot — будь ласка, підтвердьте свій email."

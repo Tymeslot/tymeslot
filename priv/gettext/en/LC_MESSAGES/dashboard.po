@@ -36,7 +36,7 @@ msgstr "(you)"
 msgid "Actions"
 msgstr "Actions"
 
-#: lib/tymeslot_web/live/admin_live/components/layout.ex:51
+#: lib/tymeslot_web/live/admin_live/components/layout.ex:50
 #: lib/tymeslot_web/live/admin_live/components/users.ex:64
 #, elixir-autogen, elixir-format
 msgid "Admin"
@@ -58,7 +58,7 @@ msgstr "Admin alert recipient"
 msgid "Admin alerts"
 msgstr "Admin alerts"
 
-#: lib/tymeslot_web/live/admin_live/components/layout.ex:59
+#: lib/tymeslot_web/live/admin_live/components/layout.ex:58
 #, elixir-autogen, elixir-format
 msgid "Admin sections"
 msgstr "Admin sections"
@@ -88,7 +88,7 @@ msgstr ""
 msgid "Authentication"
 msgstr "Authentication"
 
-#: lib/tymeslot_web/live/admin_live/components/layout.ex:33
+#: lib/tymeslot_web/live/admin_live/components/layout.ex:32
 #, elixir-autogen, elixir-format
 msgid "Back to Dashboard"
 msgstr "Back to Dashboard"
@@ -128,11 +128,6 @@ msgstr "Cancel"
 #, elixir-autogen, elixir-format
 msgid "Cannot demote the last admin. Promote someone else first."
 msgstr "Cannot demote the last admin. Promote someone else first."
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex:205
-#, elixir-autogen, elixir-format
-msgid "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
-msgstr "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:225
 #, elixir-autogen, elixir-format
@@ -305,7 +300,7 @@ msgstr "GitHub login"
 msgid "Google login"
 msgstr "Google login"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:53
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:54
 #, elixir-autogen, elixir-format
 msgid "Hidden from your public booking page; reachable only by its direct link"
 msgstr ""
@@ -327,17 +322,12 @@ msgstr "Invalid request."
 msgid "Invalid user id."
 msgstr "Invalid user id."
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:116
-#, elixir-autogen, elixir-format
-msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment — without them the toggle stays locked."
-msgstr "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment — without them the toggle stays locked."
-
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex:58
 #, elixir-autogen, elixir-format
 msgid "Link address"
 msgstr ""
 
-#: lib/tymeslot_web/live/admin_live/components/layout.ex:53
+#: lib/tymeslot_web/live/admin_live/components/layout.ex:52
 #, elixir-autogen, elixir-format
 msgid "Manage this self-hosted Tymeslot install."
 msgstr "Manage this self-hosted Tymeslot install."
@@ -409,16 +399,6 @@ msgstr "Recommended:"
 msgid "Registration enabled"
 msgstr "Registration enabled"
 
-#: lib/tymeslot_web/live/admin_live/formatters.ex:81
-#, elixir-autogen, elixir-format
-msgid "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
-msgstr "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
-
-#: lib/tymeslot_web/live/admin_live/formatters.ex:74
-#, elixir-autogen, elixir-format
-msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
-msgstr "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
-
 #: lib/tymeslot_web/live/admin_live/components/users.ex:36
 #, elixir-autogen, elixir-format
 msgid "Role"
@@ -446,7 +426,7 @@ msgstr "Set %{name}"
 msgid "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
 msgstr "Set STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the environment to enable meeting payments. Without platform credentials the Stripe Connect onboarding flow cannot start."
 
-#: lib/tymeslot_web/live/admin_live/components/layout.ex:62
+#: lib/tymeslot_web/live/admin_live/components/layout.ex:61
 #, elixir-autogen, elixir-format
 msgid "Settings"
 msgstr "Settings"
@@ -496,7 +476,7 @@ msgstr "They will lose access to admin settings and user management."
 msgid "Total users"
 msgstr "Total users"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:55
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:56
 #, elixir-autogen, elixir-format
 msgid "Unlisted"
 msgstr ""
@@ -526,7 +506,7 @@ msgstr "User not found."
 msgid "User promoted to admin."
 msgstr "User promoted to admin."
 
-#: lib/tymeslot_web/live/admin_live/components/layout.ex:65
+#: lib/tymeslot_web/live/admin_live/components/layout.ex:64
 #, elixir-autogen, elixir-format
 msgid "Users"
 msgstr "Users"
@@ -633,7 +613,27 @@ msgstr ""
 msgid "Booking analytics"
 msgstr ""
 
+#: lib/tymeslot_web/live/admin_live/formatters.ex:205
+#, elixir-autogen, elixir-format
+msgid "Cannot disable password authentication while at least one admin signs in with email and password - doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
+msgstr "Cannot disable password authentication while at least one admin signs in with email and password - doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
+
 #: lib/tymeslot_web/live/admin_live/formatters.ex:123
 #, elixir-autogen, elixir-format
-msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint — no raw IP is stored. Off by default; review your privacy policy before enabling."
+msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint - no raw IP is stored. Off by default; review your privacy policy before enabling."
 msgstr ""
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:116
+#, elixir-autogen, elixir-format
+msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment - without them the toggle stays locked."
+msgstr "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment - without them the toggle stays locked."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:81
+#, elixir-autogen, elixir-format
+msgid "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
+msgstr "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
+
+#: lib/tymeslot_web/live/admin_live/formatters.ex:74
+#, elixir-autogen, elixir-format
+msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
+msgstr "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
