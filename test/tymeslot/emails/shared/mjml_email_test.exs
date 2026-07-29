@@ -1,17 +1,9 @@
 defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
-  # async: false — the tracking assertions swap the globally configured mailer
-  # adapter, since which provider options an email carries depends on it.
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
   @moduletag :emails
 
   alias Tymeslot.Emails.Shared.MjmlEmail
-
-  defp configure_mailer(config) do
-    original = Application.get_env(:tymeslot, Tymeslot.Mailer)
-    Application.put_env(:tymeslot, Tymeslot.Mailer, config)
-
-    on_exit(fn -> Application.put_env(:tymeslot, Tymeslot.Mailer, original) end)
-  end
+  alias Tymeslot.Mailer
 
   describe "compile_mjml/1" do
     test "compiles valid MJML to HTML" do
@@ -49,68 +41,45 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       assert %Swoosh.Email{} = email
       assert email.from == {configured(:from_name), configured(:from_email)}
     end
-  end
 
-  describe "base_email/1 tracking on Postmark" do
-    setup do
-      configure_mailer(adapter: Swoosh.Adapters.Postmark, api_key: "test-key")
-    end
-
-    test "defaults to :transactional — no tracking, outbound stream" do
+    test "attaches the logo with a Content-ID equal to its filename" do
+      # SendGrid derives content_id from the filename (ignoring `cid:`), and
+      # Mailgun drops `cid:` entirely and keys inline images by filename, so
+      # cid and filename must match for the logo to render on every provider.
       email = MjmlEmail.base_email()
 
-      assert email.provider_options[:track_opens] == false
-      assert email.provider_options[:track_links] == "None"
-      assert email.provider_options[:message_stream] == "outbound"
+      assert [%Swoosh.Attachment{filename: filename, cid: cid}] = email.attachments
+      assert filename == cid
+      assert cid == MjmlEmail.logo_cid()
     end
 
-    test ":transactional explicitly disables tracking" do
-      email = MjmlEmail.base_email(tracking: :transactional)
+    test "references the logo in the HTML body via cid:<filename>" do
+      mjml = MjmlEmail.logo_header()
 
-      assert email.provider_options[:track_opens] == false
-      assert email.provider_options[:track_links] == "None"
-      assert email.provider_options[:message_stream] == "outbound"
-    end
-
-    test ":lifecycle enables open tracking only, stays on outbound stream" do
-      email = MjmlEmail.base_email(tracking: :lifecycle)
-
-      assert email.provider_options[:track_opens] == true
-      assert email.provider_options[:track_links] == "None"
-      assert email.provider_options[:message_stream] == "outbound"
-    end
-
-    test ":marketing enables full tracking on the broadcast stream" do
-      email = MjmlEmail.base_email(tracking: :marketing)
-
-      assert email.provider_options[:track_opens] == true
-      assert email.provider_options[:track_links] == "HtmlAndText"
-      assert email.provider_options[:message_stream] == "broadcast"
+      assert mjml =~ "src=\"cid:#{MjmlEmail.logo_cid()}\""
     end
   end
 
-  describe "base_email/1 tracking on the other providers" do
-    test "SendGrid gets the category as tracking settings, not Postmark keys" do
-      configure_mailer(adapter: Swoosh.Adapters.Sendgrid, api_key: "SG.test")
+  describe "base_email/1 tracking" do
+    test "defaults to :transactional" do
+      email = MjmlEmail.base_email()
 
-      email = MjmlEmail.base_email(tracking: :marketing)
-
-      assert email.provider_options[:tracking_settings].open_tracking == %{enable: true}
-      assert email.provider_options[:tracking_settings].click_tracking == %{enable: true}
-      refute Map.has_key?(email.provider_options, :message_stream)
+      assert Mailer.tracking(email) == :transactional
     end
 
-    test "AhaSend gets its own tracking map" do
-      configure_mailer(adapter: Swoosh.Adapters.AhaSend, api_key: "aha-sk", account_id: "acct")
-
+    test "stashes :lifecycle when given explicitly" do
       email = MjmlEmail.base_email(tracking: :lifecycle)
 
-      assert email.provider_options[:tracking] == %{open: true, click: false}
+      assert Mailer.tracking(email) == :lifecycle
     end
 
-    test "a provider with no tracking controls carries no provider options" do
-      configure_mailer(adapter: Swoosh.Adapters.SMTP, relay: "smtp.example.com")
+    test "stashes :marketing when given explicitly" do
+      email = MjmlEmail.base_email(tracking: :marketing)
 
+      assert Mailer.tracking(email) == :marketing
+    end
+
+    test "carries no provider options at build time — translation happens at delivery" do
       email = MjmlEmail.base_email(tracking: :marketing)
 
       assert email.provider_options == %{}

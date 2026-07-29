@@ -61,7 +61,7 @@ defmodule Tymeslot.Mailer.HealthCheck do
     end
   end
 
-  defp validate(%{probe: :none} = entry, _config) do
+  defp validate(%{kind: :dev} = entry, _config) do
     Logger.info("Mailer configured with a development adapter; no validation needed",
       provider: entry.label
     )
