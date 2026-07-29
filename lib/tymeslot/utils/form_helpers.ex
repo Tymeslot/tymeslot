@@ -49,6 +49,14 @@ defmodule Tymeslot.Utils.FormHelpers do
     %{target_calendar: ["Selected calendar is not available for this account"]}
   end
 
+  def format_context_error(:no_writable_calendars) do
+    %{
+      target_calendar: [
+        "None of the calendars you selected for this account can accept bookings. Update your calendar selection in Integration settings, or choose a different account."
+      ]
+    }
+  end
+
   def format_context_error(:invalid_price) do
     %{price_cents: ["Enter a valid price"]}
   end

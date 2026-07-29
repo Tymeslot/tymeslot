@@ -189,6 +189,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   attr :selected_calendar_integration_id, :any, required: true
   attr :refreshing_calendars, :boolean, required: true
   attr :available_calendars, :list, required: true
+  attr :no_writable_calendars, :boolean, required: true
   attr :selected_target_calendar_id, :any, required: true
   attr :form_errors, :map, required: true
   attr :myself, :any, required: true
@@ -274,9 +275,24 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
               </div>
             <% else %>
               <%= if @available_calendars == [] do %>
-                <p class="text-token-sm text-tymeslot-500 italic">
-                  No calendars found for this account.
-                </p>
+                <%= if @no_writable_calendars do %>
+                  <div class="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-token-lg">
+                    <p class="text-token-sm text-yellow-700">
+                      None of the calendars you selected for this account can accept bookings.
+                      <a
+                        href={~p"/dashboard/integrations?tab=calendars"}
+                        class="underline hover:text-yellow-800"
+                      >
+                        Update your calendar selection
+                      </a>
+                      or choose a different account.
+                    </p>
+                  </div>
+                <% else %>
+                  <p class="text-token-sm text-tymeslot-500 italic">
+                    No calendars found for this account.
+                  </p>
+                <% end %>
               <% else %>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <%= for cal <- @available_calendars do %>
@@ -284,13 +300,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                       type="button"
                       phx-click={
                         JS.push("select_target_calendar",
-                          value: %{id: cal["id"] || cal[:id]},
+                          value: %{id: cal.id},
                           target: @myself
                         )
                       }
                       class={[
                         "flex items-center p-3 rounded-token-lg border-2 transition-all text-left",
-                        if(@selected_target_calendar_id == (cal["id"] || cal[:id]),
+                        if(@selected_target_calendar_id == (cal.id),
                           do: "bg-teal-50 border-teal-500 shadow-sm",
                           else: "bg-white border-tymeslot-100 hover:border-teal-200"
                         )
@@ -298,12 +314,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                     >
                       <div class={[
                         "w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center",
-                        if(@selected_target_calendar_id == (cal["id"] || cal[:id]),
+                        if(@selected_target_calendar_id == (cal.id),
                           do: "border-teal-50 bg-teal-500",
                           else: "border-tymeslot-300"
                         )
                       ]}>
-                        <%= if @selected_target_calendar_id == (cal["id"] || cal[:id]) do %>
+                        <%= if @selected_target_calendar_id == (cal.id) do %>
                           <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
                           </svg>
@@ -311,7 +327,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                       </div>
                       <span class={[
                         "text-token-sm font-medium truncate",
-                        if(@selected_target_calendar_id == (cal["id"] || cal[:id]),
+                        if(@selected_target_calendar_id == (cal.id),
                           do: "text-teal-900",
                           else: "text-tymeslot-700"
                         )

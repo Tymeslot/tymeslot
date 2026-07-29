@@ -6,19 +6,22 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   seamless switching between different video conferencing platforms.
   """
 
+  alias Tymeslot.Integrations.Video.RoomData
+
   @doc """
   Creates a new meeting room.
 
-  Returns {:ok, room_data} where room_data contains platform-specific information
-  about the created room, or {:error, reason} on failure.
+  Returns {:ok, room_data} where room_data is a `RoomData.t()` carrying
+  platform-specific information about the created room, or {:error, reason}
+  on failure.
   """
-  @callback create_meeting_room(config :: map()) :: {:ok, map()} | {:error, any()}
+  @callback create_meeting_room(config :: map()) :: {:ok, RoomData.t()} | {:error, any()}
 
   @doc """
   Creates a join URL for a participant.
 
   ## Parameters
-    - room_data: Platform-specific room information from create_meeting_room
+    - room_data: `RoomData.t()` returned by create_meeting_room
     - participant_name: Name of the participant
     - participant_email: Email of the participant
     - role: Role of the participant ("organizer", "attendee", "host", etc.)
@@ -27,7 +30,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   Returns {:ok, join_url} or {:error, reason}.
   """
   @callback create_join_url(
-              room_data :: map(),
+              room_data :: RoomData.t(),
               participant_name :: String.t(),
               participant_email :: String.t(),
               role :: String.t(),
@@ -98,7 +101,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   """
   @callback handle_meeting_event(
               event :: atom(),
-              room_data :: map(),
+              room_data :: RoomData.t(),
               additional_data :: map()
             ) :: :ok | {:error, any()}
 
@@ -108,7 +111,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   Returns a map with standardized meeting information that can be used
   across different providers in email templates, calendar invites, etc.
   """
-  @callback generate_meeting_metadata(room_data :: map()) :: map()
+  @callback generate_meeting_metadata(room_data :: RoomData.t()) :: map()
 
   @doc """
   Updates an existing meeting room on the provider's side after the

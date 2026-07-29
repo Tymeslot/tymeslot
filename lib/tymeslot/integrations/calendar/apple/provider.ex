@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
   alias Tymeslot.Security.UrlValidation
@@ -131,7 +132,7 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
   @doc """
   Discovers available calendars on the Apple iCloud account.
   """
-  @spec discover_calendars(map(), keyword()) :: {:ok, list(map())} | {:error, String.t()}
+  @spec discover_calendars(map(), keyword()) :: {:ok, [CalendarEntry.t()]} | {:error, String.t()}
   def discover_calendars(client, opts \\ []) do
     ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
     client = Map.put(client, :provider, :apple)

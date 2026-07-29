@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   """
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
@@ -107,7 +108,8 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
 
     calendar_list =
       Enum.map(calendars, fn cal ->
-        Map.put(cal, "selected", calendar_path(cal) in selected_paths)
+        entry = CalendarEntry.normalize(cal)
+        %{entry | selected: entry.path in selected_paths}
       end)
 
     credential_attrs = %{
@@ -127,13 +129,6 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
       {:error, %Ecto.Changeset{} = cs} -> {:error, {:changeset, cs}}
     end
   end
-
-  # Discovered calendars arrive atom-keyed from the CalDAV discovery layer and
-  # string-keyed once they have been round-tripped through the LiveView params
-  # of the selection step, so both shapes are answered here once.
-  defp calendar_path(%{"path" => path}) when is_binary(path), do: path
-  defp calendar_path(%{path: path}) when is_binary(path), do: path
-  defp calendar_path(_calendar), do: nil
 
   defp apply_account_change(%CalendarIntegrationSchema{provider: provider}, params, discover) do
     case discover.(

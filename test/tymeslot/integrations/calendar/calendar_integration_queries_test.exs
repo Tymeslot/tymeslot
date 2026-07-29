@@ -108,10 +108,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueriesTest do
       {:ok, updated} =
         CalendarIntegrationQueries.deselect_calendars(integration, ["gone@example.com"])
 
-      assert Enum.find(updated.calendar_list, &(&1["id"] == "gone@example.com"))["selected"] ==
+      assert Enum.find(updated.calendar_list, &(&1.id == "gone@example.com")).selected ==
                false
 
-      assert Enum.find(updated.calendar_list, &(&1["id"] == "primary"))["selected"] == true
+      assert Enum.find(updated.calendar_list, &(&1.id == "primary")).selected == true
     end
 
     test "is a no-op that persists unchanged when no ids match" do

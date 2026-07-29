@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModalTest do
 
   import Phoenix.LiveViewTest
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal
 
   @integration %{
@@ -13,7 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModalTest do
     name: "Work Calendar",
     default_booking_calendar_id: nil,
     calendar_list: [
-      %{"id" => "primary", "selected" => true, "primary" => true, "summary" => "Work"}
+      %CalendarEntry{id: "primary", selected: true, primary: true, name: "Work"}
     ]
   }
 

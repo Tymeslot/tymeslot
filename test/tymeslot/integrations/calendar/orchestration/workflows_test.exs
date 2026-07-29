@@ -2,6 +2,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
   use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
   alias Tymeslot.Integrations.CalendarManagement
   import Tymeslot.Factory
@@ -23,7 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
 
       assert_receive {:calendar_list_refreshed, ^component_id, id, calendars}, 5000
       assert id == integration.id
-      assert [%{"id" => "cal_1", "name" => "New Calendar"}] = calendars
+      assert [%CalendarEntry{id: "cal_1", name: "New Calendar"}] = calendars
 
       # Verify DB was updated
       {:ok, updated} = CalendarManagement.get_calendar_integration(integration.id, user.id)
@@ -56,8 +57,8 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
 
       {:ok, updated} = CalendarManagement.get_calendar_integration(integration.id, user.id)
 
-      assert Enum.find(updated.calendar_list, &(&1["id"] == kept))["selected"] == true
-      assert Enum.find(updated.calendar_list, &(&1["id"] == "new"))["selected"] == false
+      assert Enum.find(updated.calendar_list, &(&1.id == kept)).selected == true
+      assert Enum.find(updated.calendar_list, &(&1.id == "new")).selected == false
       assert updated.calendar_paths == [kept]
     end
 
@@ -83,7 +84,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
       assert_receive {:calendar_list_refreshed, ^component_id, _, calendars}, 5000
       # Should return existing list on error
       assert length(calendars) == 1
-      assert List.first(calendars)["id"] == "old"
+      assert List.first(calendars).id == "old"
     end
   end
 
@@ -106,11 +107,11 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
       assert {:ok, updated} = Workflows.update_integration_with_discovery(integration)
 
       # cal_1 should still be selected, cal_2 should be added but not selected
-      assert [c1, c2] = Enum.sort_by(updated.calendar_list, & &1["id"])
-      assert c1["id"] == "cal_1"
-      assert c1["selected"] == true
-      assert c2["id"] == "cal_2"
-      assert c2["selected"] == false
+      assert [c1, c2] = Enum.sort_by(updated.calendar_list, & &1.id)
+      assert c1.id == "cal_1"
+      assert c1.selected == true
+      assert c2.id == "cal_2"
+      assert c2.selected == false
 
       # calendar_paths must be written atomically alongside calendar_list;
       # cal_1 is selected and discovery emits no explicit path so it falls back to id
@@ -129,7 +130,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
       end)
 
       assert {:ok, updated} = Workflows.update_integration_with_discovery(integration)
-      assert updated.calendar_list == existing
+      assert updated.calendar_list == [%CalendarEntry{id: "cal_1", selected: true}]
 
       # calendar_paths must be written atomically: cal_1 is selected and has no
       # explicit path in the fixture, so derive_selected_paths falls back to its id

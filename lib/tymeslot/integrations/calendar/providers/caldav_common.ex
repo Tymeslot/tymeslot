@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   """
 
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Discovery, Events, Http, UrlBuilder}
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
 
   require Logger
@@ -97,7 +98,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   Discovers available calendars via `Discovery.discover_calendars/2`.
   """
   @spec discover_calendars(caldav_client(), keyword()) ::
-          {:ok, list(map())} | {:error, term()}
+          {:ok, [CalendarEntry.t()]} | {:error, term()}
   def discover_calendars(client, opts \\ []) do
     with :ok <- validate_credentials(client) do
       Discovery.discover_calendars(client, opts)

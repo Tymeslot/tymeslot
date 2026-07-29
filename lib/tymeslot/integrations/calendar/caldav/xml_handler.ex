@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.ICalParser
 
   @moduledoc """
@@ -80,19 +81,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   @doc """
   Parses a calendar discovery response using SweetXML.
 
-  Returns a list of calendars with their properties.
+  Returns the discovered calendars as `CalendarEntry` structs, produced at
+  this discovery boundary so every downstream caller reads a single
+  canonical shape.
   """
   @spec parse_calendar_discovery(String.t(), keyword()) ::
-          {:ok,
-           list(%{
-             required(:id) => String.t(),
-             required(:name) => String.t(),
-             required(:href) => String.t(),
-             required(:color) => String.t(),
-             required(:selected) => boolean(),
-             required(:read_only) => boolean()
-           })}
-          | {:error, String.t()}
+          {:ok, [CalendarEntry.t()]} | {:error, String.t()}
   def parse_calendar_discovery(xml_body, opts \\ []) do
     # Parse with security limits
     doc = parse_with_security(xml_body)
@@ -126,10 +120,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
       )
       |> Enum.filter(&include_calendar?/1)
       |> Enum.map(fn cal ->
-        %{
+        %CalendarEntry{
           id: cal.href,
           name: determine_calendar_name(cal),
-          href: cal.href,
+          path: cal.href,
           color: cal.calendar_color,
           selected: Keyword.get(opts, :selected_default, false),
           read_only: read_only?(cal)

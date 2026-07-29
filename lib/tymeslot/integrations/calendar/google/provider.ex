@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     base_url: "https://www.googleapis.com/calendar/v3"
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
@@ -28,16 +29,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
            required(:status) => String.t() | nil,
            required(:transparency) => String.t() | nil,
            required(:meet_url) => String.t() | nil
-         }
-
-  @typep calendar_entry :: %{
-           required(:id) => String.t() | nil,
-           required(:name) => String.t() | nil,
-           required(:description) => String.t() | nil,
-           required(:primary) => boolean(),
-           required(:selected) => boolean(),
-           required(:access_role) => String.t() | nil,
-           required(:color) => String.t() | nil
          }
 
   # Scopes that grant write access to calendar events. Required for Google Meet
@@ -195,7 +186,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   Discovers all available calendars for the authenticated Google account.
   """
   @spec discover_calendars(CalendarIntegrationSchema.t()) ::
-          {:ok, list(calendar_entry())} | {:error, term()}
+          {:ok, [CalendarEntry.t()]} | {:error, term()}
   def discover_calendars(integration) do
     ProviderCommon.discover_calendars(
       integration,
@@ -271,7 +262,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       primary: cal["primary"] || false,
       selected: cal["primary"] || false,
       access_role: cal["accessRole"],
+      read_only: read_only_access_role?(cal["accessRole"]),
       color: cal["backgroundColor"]
     }
+    |> CalendarEntry.normalize()
+    |> CalendarEntry.with_defaults()
   end
+
+  # Google's accessRole reports the caller's permission on the calendar:
+  # "owner"/"writer" can create events, "reader"/"freeBusyReader" cannot.
+  defp read_only_access_role?(role), do: role in ["reader", "freeBusyReader"]
 end

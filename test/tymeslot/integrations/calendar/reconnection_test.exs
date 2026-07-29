@@ -279,8 +279,8 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
       assert reloaded.base_url == "https://caldav.new.example.com"
       assert reloaded.username == "bob"
       assert reloaded.calendar_paths == ["/a/"]
-      assert Enum.find(reloaded.calendar_list, &(&1["path"] == "/a/"))["selected"] == true
-      assert Enum.find(reloaded.calendar_list, &(&1["path"] == "/b/"))["selected"] == false
+      assert Enum.find(reloaded.calendar_list, &(&1.path == "/a/")).selected == true
+      assert Enum.find(reloaded.calendar_list, &(&1.path == "/b/")).selected == false
     end
   end
 

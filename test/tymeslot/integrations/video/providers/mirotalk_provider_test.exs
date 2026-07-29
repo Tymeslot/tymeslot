@@ -438,17 +438,5 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert metadata[:meeting_id] == "room123"
       assert metadata[:join_url] == "https://mirotalk.example.com/join/room123"
     end
-
-    test "handles string-keyed room data" do
-      room_data = %{
-        "room_id" => "room456",
-        "meeting_url" => "https://mirotalk.example.com/join/room456"
-      }
-
-      metadata = MiroTalkProvider.generate_meeting_metadata(room_data)
-
-      assert metadata[:meeting_id] == "room456"
-      assert metadata[:join_url] == "https://mirotalk.example.com/join/room456"
-    end
   end
 end

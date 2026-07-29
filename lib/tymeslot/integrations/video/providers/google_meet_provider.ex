@@ -27,6 +27,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.OAuthTokenManager
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
@@ -100,7 +101,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, participant_email, role, _meeting_time) do
-    base_url = meeting_url(room_data)
+    base_url = room_data.meeting_url
 
     if base_url do
       # Add participant info as URL parameters
@@ -117,7 +118,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
       Logger.debug("Created Google Meet join URL",
         participant: participant_name,
         role: role,
-        room_id: room_id(room_data)
+        room_id: room_data.room_id
       )
 
       {:ok, join_url}
@@ -186,7 +187,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   def handle_meeting_event(event, room_data, additional_data) do
     Logger.info("Handling Google Meet event",
       event: event,
-      room_id: room_id(room_data),
+      room_id: room_data.room_id,
       additional_data: additional_data
     )
 
@@ -212,8 +213,8 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def generate_meeting_metadata(room_data) do
     %{
-      room_id: room_id(room_data),
-      meeting_url: meeting_url(room_data),
+      room_id: room_data.room_id,
+      meeting_url: room_data.meeting_url,
       provider_name: "Google Meet",
       provider_type: :google_meet,
       supports_dial_in: true,
@@ -259,18 +260,6 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def url_patterns, do: ["meet.google.com"]
-
-  # `room_data` arrives atom-keyed when it comes straight from
-  # `create_meeting_room/2`, and string-keyed when it has been round-tripped
-  # through the stored meeting metadata. Dispatch on shape once here so every
-  # call site reads a key one way.
-  defp meeting_url(%{meeting_url: url}), do: url
-  defp meeting_url(%{"meeting_url" => url}), do: url
-  defp meeting_url(_room_data), do: nil
-
-  defp room_id(%{room_id: id}), do: id
-  defp room_id(%{"room_id" => id}), do: id
-  defp room_id(_room_data), do: nil
 
   # Private helper functions (token validation, API calls)
   defp google_oauth_helper do
@@ -553,7 +542,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
         {:error, "Google Meet did not return a space identifier"}
 
       true ->
-        {:ok, %{room_id: space_id, meeting_url: meeting_url, provider_data: space}}
+        {:ok, %RoomData{room_id: space_id, meeting_url: meeting_url, provider_data: space}}
     end
   end
 

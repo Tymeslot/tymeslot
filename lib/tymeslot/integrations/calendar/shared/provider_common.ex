@@ -3,9 +3,11 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   Utilities shared across calendar provider implementations.
   """
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Security.UrlValidation
 
   @doc """
@@ -76,13 +78,16 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
 
   @doc """
   Helper for providers to format calendars returned from their API.
+
+  `mapper` normalises each raw provider calendar into a `CalendarEntry`
+  struct, so this always returns the canonical discovery shape.
   """
   @spec discover_calendars(
           CalendarIntegrationSchema.t(),
           (CalendarIntegrationSchema.t() -> {:ok, [map()]} | {:error, term()}),
-          (map() -> map())
+          (map() -> CalendarEntry.t())
         ) ::
-          {:ok, [map()]} | {:error, term()}
+          {:ok, [CalendarEntry.t()]} | {:error, term()}
   def discover_calendars(integration, list_fun, mapper) do
     case list_fun.(integration) do
       {:ok, calendars} -> {:ok, Enum.map(calendars, mapper)}
@@ -159,7 +164,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   identical apart from the module being dispatched to.
   """
   @spec caldav_discover_from_integration(module(), map()) ::
-          {:ok, list(map())} | {:error, term()}
+          {:ok, [CalendarEntry.t()]} | {:error, term()}
   def caldav_discover_from_integration(provider_module, integration) do
     decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
 
@@ -205,25 +210,12 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   defp caldav_selected_paths(integration) do
     if integration.calendar_list && integration.calendar_list != [] do
       integration.calendar_list
-      |> Enum.map(&normalize_calendar/1)
-      |> Enum.filter(&(&1.selected == true and &1.read_only == false))
+      |> Selection.writable_calendars()
       |> Enum.map(&(&1.path || &1.id))
       |> Enum.reject(&is_nil/1)
     else
       integration.calendar_paths || []
     end
-  end
-
-  # `calendar_list` entries are string-keyed once they have been through the
-  # JSONB column, but arrive atom-keyed straight from discovery. This is the one
-  # place that answers "which key type?"; callers read atoms.
-  defp normalize_calendar(cal) do
-    %{
-      id: Map.get(cal, "id") || Map.get(cal, :id),
-      path: Map.get(cal, "path") || Map.get(cal, :path),
-      selected: Map.get(cal, "selected") || Map.get(cal, :selected),
-      read_only: Map.get(cal, "read_only") || Map.get(cal, :read_only) || false
-    }
   end
 
   defp caldav_path_config(integration, path) do

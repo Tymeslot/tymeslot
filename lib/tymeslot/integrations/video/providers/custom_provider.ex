@@ -45,6 +45,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.TemplateConfig
 
   require Logger
@@ -66,7 +67,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
         with {:ok, processed_url} <- process_template(url, config),
              :ok <- validate_url_length(processed_url),
              true <- valid_url?(processed_url) do
-          room_data = %{
+          room_data = %RoomData{
             room_id: generate_room_id(processed_url),
             meeting_url: processed_url,
             provider_data: %{

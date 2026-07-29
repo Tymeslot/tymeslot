@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
 
@@ -38,7 +39,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       # only warrants a log line, never a failed booking.
       verify_meeting_created(token, meeting["id"])
 
-      room_data = %{
+      room_data = %RoomData{
         room_id: to_string(meeting["id"]),
         meeting_url: meeting["join_url"],
         provider_data: %{
@@ -84,10 +85,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       _no_match -> nil
     end
   end
-
-  # `create_meeting_room/1` above is the only producer of Zoom room data, and
-  # it always builds it with atom keys.
-  def extract_room_id(%{room_data: room_data}), do: room_data[:room_id]
 
   def extract_room_id(_other), do: nil
 

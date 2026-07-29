@@ -12,8 +12,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
 
   require Logger
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Selection
 
   @max_concurrency 20
 
@@ -38,7 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
           |> Task.Supervisor.async_stream(
             selected,
             fn calendar ->
-              api_module.list_events(integration, calendar_id(calendar), start_time, end_time)
+              api_module.list_events(integration, calendar.id, start_time, end_time)
             end,
             max_concurrency: @max_concurrency,
             timeout: 30_000
@@ -51,32 +53,24 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
   end
 
   @doc """
-  Returns only calendars with selected=true and an id present.
-  Supports either atom or string keys.
+  Returns the selected calendars (read-only included, per
+  `Selection.selected_calendars/1` — this only reads events, it never
+  writes) that also have an id present.
   """
-  @spec get_selected_calendars(map()) :: list()
+  @spec get_selected_calendars(map()) :: [CalendarEntry.t()]
   def get_selected_calendars(%{calendar_list: calendar_list}) when is_list(calendar_list) do
-    Enum.filter(calendar_list, fn calendar ->
-      calendar_selected?(calendar) && calendar_id(calendar)
-    end)
+    calendar_list
+    |> Enum.map(&CalendarEntry.normalize/1)
+    |> Selection.selected_calendars()
+    |> Enum.filter(& &1.id)
   end
 
   def get_selected_calendars(_integration), do: []
 
-  # Calendar entries reach this module either atom-keyed (built in memory by
-  # provider discovery) or string-keyed (round-tripped through the JSONB
-  # column), and both are documented as supported. Events are the same story:
-  # Outlook's API module normalises to atom keys, Google's returns the raw
-  # string-keyed payload. Dispatch on shape once here instead of probing both
-  # key types at every read.
-  defp calendar_selected?(%{selected: selected}), do: selected
-  defp calendar_selected?(%{"selected" => selected}), do: selected
-  defp calendar_selected?(_calendar), do: false
-
-  defp calendar_id(%{id: id}), do: id
-  defp calendar_id(%{"id" => id}), do: id
-  defp calendar_id(_calendar), do: nil
-
+  # Events are a separate shape from calendar entries: Outlook's API module
+  # normalises to atom keys, Google's returns the raw string-keyed payload.
+  # Dispatch on shape once here instead of probing both key types at every
+  # read.
   defp event_id(%{id: id}), do: id
   defp event_id(%{"id" => id}), do: id
   defp event_id(_event), do: nil
@@ -103,7 +97,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
   defp deselect_missing_calendars(integration, results) do
     missing_ids =
       for {{:ok, {:error, :not_found, _message}}, calendar} <- results do
-        calendar_id(calendar)
+        calendar.id
       end
 
     do_deselect(integration, missing_ids)

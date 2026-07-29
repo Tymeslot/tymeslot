@@ -6,9 +6,10 @@ defmodule Tymeslot.Integrations.Video.Urls do
   Accepts either raw URLs or meeting context maps.
   """
 
+  alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
 
-  @spec extract_room_id(String.t() | map()) :: String.t() | nil
+  @spec extract_room_id(String.t() | MeetingContext.t()) :: String.t() | nil
   def extract_room_id(%{room_data: room_data}) when is_map(room_data) do
     room_id(room_data)
   end
@@ -26,10 +27,6 @@ defmodule Tymeslot.Integrations.Video.Urls do
 
   def valid_meeting_url?(_url), do: false
 
-  # `room_data` comes back atom-keyed from the provider adapters and
-  # string-keyed when it has been round-tripped through the database, so both
-  # shapes are answered here once rather than at each call site.
   defp room_id(%{room_id: room_id}) when is_binary(room_id), do: room_id
-  defp room_id(%{"room_id" => room_id}) when is_binary(room_id), do: room_id
   defp room_id(_room_data), do: "unknown"
 end

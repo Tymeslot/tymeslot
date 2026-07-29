@@ -50,8 +50,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
       selected = MultiCalendarFetch.get_selected_calendars(integration)
 
       assert length(selected) == 2
-      assert Enum.any?(selected, fn cal -> cal["id"] == "cal1" end)
-      assert Enum.any?(selected, fn cal -> cal["id"] == "cal3" end)
+      assert Enum.any?(selected, fn cal -> cal.id == "cal1" end)
+      assert Enum.any?(selected, fn cal -> cal.id == "cal3" end)
     end
 
     test "filters out calendars without id" do
@@ -65,7 +65,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
       selected = MultiCalendarFetch.get_selected_calendars(integration)
 
       assert length(selected) == 1
-      assert List.first(selected)["id"] == "cal1"
+      assert List.first(selected).id == "cal1"
     end
 
     test "filters out calendars with selected=false" do
@@ -79,7 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
       selected = MultiCalendarFetch.get_selected_calendars(integration)
 
       assert length(selected) == 1
-      assert List.first(selected)["id"] == "cal2"
+      assert List.first(selected).id == "cal2"
     end
 
     test "returns empty list when no calendars selected" do
@@ -122,7 +122,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
       selected = MultiCalendarFetch.get_selected_calendars(integration)
 
       assert length(selected) == 1
-      assert List.first(selected)[:id] == "cal1"
+      assert List.first(selected).id == "cal1"
     end
 
     test "supports mixed atom and string keys" do
