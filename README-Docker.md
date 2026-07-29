@@ -442,6 +442,14 @@ This runs two containers: `tymeslot` (using the slim image described below) and 
 
 To use a database you already run elsewhere, delete the `postgres` service and the `depends_on` block from that file and set `DATABASE_URL` in your `.env`.
 
+That file pulls the published slim image. To run one you built yourself, build the slim target from a clone and point `TYMESLOT_IMAGE` at it:
+
+```bash
+docker build -f Dockerfile.docker --target release-slim -t tymeslot:local-slim .
+echo 'TYMESLOT_IMAGE=tymeslot:local-slim' >> .env
+docker compose -f docker-compose.with-postgres.yml up -d
+```
+
 ### The slim image
 
 `luka1thb/tymeslot:slim` (and `luka1thb/tymeslot:X.Y.Z-slim`) is the same application without the bundled PostgreSQL server: 1.05 GB against 1.22 GB, so roughly 170 MB smaller. It requires an external database and exits immediately with instructions if none is configured.

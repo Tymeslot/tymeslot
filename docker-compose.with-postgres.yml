@@ -23,14 +23,18 @@
 # To point at a database you already run elsewhere instead, delete the
 # `postgres` service and the `depends_on` block below, and set DATABASE_URL
 # (or DATABASE_HOST and friends) in your .env.
+#
+# To run a slim image you built yourself rather than the published one, build
+# the slim target from a clone and set TYMESLOT_IMAGE in your .env:
+#   docker build -f Dockerfile.docker --target release-slim -t tymeslot:local-slim .
+#   echo 'TYMESLOT_IMAGE=tymeslot:local-slim' >> .env
 
 services:
   tymeslot:
-    build:
-      context: .
-      dockerfile: Dockerfile.docker
-      target: release-slim
-    image: luka1thb/tymeslot:slim
+    # Pin a release tag instead of `slim` for reproducible deployments; the
+    # published tags are listed at
+    # https://hub.docker.com/r/luka1thb/tymeslot/tags
+    image: ${TYMESLOT_IMAGE:-luka1thb/tymeslot:slim}
     container_name: tymeslot
     restart: unless-stopped
     # PORT is the listen port; it is published on the host and inside the
