@@ -3,6 +3,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
   @moduletag :emails
 
   alias Tymeslot.Emails.Shared.MjmlEmail
+  alias Tymeslot.Mailer
 
   describe "compile_mjml/1" do
     test "compiles valid MJML to HTML" do
@@ -41,36 +42,47 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       assert email.from == {configured(:from_name), configured(:from_email)}
     end
 
-    test "defaults to :transactional — no tracking, outbound stream" do
+    test "attaches the logo with a Content-ID equal to its filename" do
+      # SendGrid derives content_id from the filename (ignoring `cid:`), and
+      # Mailgun drops `cid:` entirely and keys inline images by filename, so
+      # cid and filename must match for the logo to render on every provider.
       email = MjmlEmail.base_email()
 
-      assert email.provider_options[:track_opens] == false
-      assert email.provider_options[:track_links] == "None"
-      assert email.provider_options[:message_stream] == "outbound"
+      assert [%Swoosh.Attachment{filename: filename, cid: cid}] = email.attachments
+      assert filename == cid
+      assert cid == MjmlEmail.logo_cid()
     end
 
-    test ":transactional explicitly disables tracking" do
-      email = MjmlEmail.base_email(tracking: :transactional)
+    test "references the logo in the HTML body via cid:<filename>" do
+      mjml = MjmlEmail.logo_header()
 
-      assert email.provider_options[:track_opens] == false
-      assert email.provider_options[:track_links] == "None"
-      assert email.provider_options[:message_stream] == "outbound"
+      assert mjml =~ "src=\"cid:#{MjmlEmail.logo_cid()}\""
+    end
+  end
+
+  describe "base_email/1 tracking" do
+    test "defaults to :transactional" do
+      email = MjmlEmail.base_email()
+
+      assert Mailer.tracking(email) == :transactional
     end
 
-    test ":lifecycle enables open tracking only, stays on outbound stream" do
+    test "stashes :lifecycle when given explicitly" do
       email = MjmlEmail.base_email(tracking: :lifecycle)
 
-      assert email.provider_options[:track_opens] == true
-      assert email.provider_options[:track_links] == "None"
-      assert email.provider_options[:message_stream] == "outbound"
+      assert Mailer.tracking(email) == :lifecycle
     end
 
-    test ":marketing enables full tracking on the broadcast stream" do
+    test "stashes :marketing when given explicitly" do
       email = MjmlEmail.base_email(tracking: :marketing)
 
-      assert email.provider_options[:track_opens] == true
-      assert email.provider_options[:track_links] == "HtmlAndText"
-      assert email.provider_options[:message_stream] == "broadcast"
+      assert Mailer.tracking(email) == :marketing
+    end
+
+    test "carries no provider options at build time — translation happens at delivery" do
+      email = MjmlEmail.base_email(tracking: :marketing)
+
+      assert email.provider_options == %{}
     end
   end
 
