@@ -1,8 +1,17 @@
 defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
-  use Tymeslot.DataCase, async: true
+  # async: false — the tracking assertions swap the globally configured mailer
+  # adapter, since which provider options an email carries depends on it.
+  use Tymeslot.DataCase, async: false
   @moduletag :emails
 
   alias Tymeslot.Emails.Shared.MjmlEmail
+
+  defp configure_mailer(config) do
+    original = Application.get_env(:tymeslot, Tymeslot.Mailer)
+    Application.put_env(:tymeslot, Tymeslot.Mailer, config)
+
+    on_exit(fn -> Application.put_env(:tymeslot, Tymeslot.Mailer, original) end)
+  end
 
   describe "compile_mjml/1" do
     test "compiles valid MJML to HTML" do
@@ -40,6 +49,12 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       assert %Swoosh.Email{} = email
       assert email.from == {configured(:from_name), configured(:from_email)}
     end
+  end
+
+  describe "base_email/1 tracking on Postmark" do
+    setup do
+      configure_mailer(adapter: Swoosh.Adapters.Postmark, api_key: "test-key")
+    end
 
     test "defaults to :transactional — no tracking, outbound stream" do
       email = MjmlEmail.base_email()
@@ -71,6 +86,34 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       assert email.provider_options[:track_opens] == true
       assert email.provider_options[:track_links] == "HtmlAndText"
       assert email.provider_options[:message_stream] == "broadcast"
+    end
+  end
+
+  describe "base_email/1 tracking on the other providers" do
+    test "SendGrid gets the category as tracking settings, not Postmark keys" do
+      configure_mailer(adapter: Swoosh.Adapters.Sendgrid, api_key: "SG.test")
+
+      email = MjmlEmail.base_email(tracking: :marketing)
+
+      assert email.provider_options[:tracking_settings].open_tracking == %{enable: true}
+      assert email.provider_options[:tracking_settings].click_tracking == %{enable: true}
+      refute Map.has_key?(email.provider_options, :message_stream)
+    end
+
+    test "AhaSend gets its own tracking map" do
+      configure_mailer(adapter: Swoosh.Adapters.AhaSend, api_key: "aha-sk", account_id: "acct")
+
+      email = MjmlEmail.base_email(tracking: :lifecycle)
+
+      assert email.provider_options[:tracking] == %{open: true, click: false}
+    end
+
+    test "a provider with no tracking controls carries no provider options" do
+      configure_mailer(adapter: Swoosh.Adapters.SMTP, relay: "smtp.example.com")
+
+      email = MjmlEmail.base_email(tracking: :marketing)
+
+      assert email.provider_options == %{}
     end
   end
 

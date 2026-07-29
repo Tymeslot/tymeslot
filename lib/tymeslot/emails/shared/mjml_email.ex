@@ -23,6 +23,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   alias Swoosh.Attachment
   alias Tymeslot.Emails.Shared.{AvatarHelper, Frame, Sanitise, Stage, Styles, Urls}
   alias Tymeslot.Emails.Shared.Styles.Tokens
+  alias Tymeslot.Mailer.Providers
   alias Tymeslot.Security.UrlValidation
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -48,8 +49,8 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   end
 
   @typedoc """
-  Postmark tracking category. Controls open-tracking, link-rewriting and the
-  message stream the email is routed through.
+  Tracking category. Controls open-tracking and link-rewriting, and on
+  Postmark the message stream the email is routed through.
 
     * `:transactional` — confirmations, security alerts, receipts. No opens,
       no link rewriting, sent on the default `outbound` (transactional) stream.
@@ -60,8 +61,13 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     * `:marketing` — bulk newsletters and announcements. Opens on, links
       rewritten in HTML and text, sent on the `broadcast` stream so reputation
       is isolated from transactional mail.
+
+  `Tymeslot.Mailer.Providers.tracking_options/2` translates the category for
+  whichever provider is configured. Only Postmark has message streams; on the
+  other providers the stream half of the category has no equivalent and
+  isolating bulk from transactional reputation is configured at the provider.
   """
-  @type tracking :: :transactional | :lifecycle | :marketing
+  @type tracking :: Providers.tracking()
 
   @doc """
   Creates a base Swoosh email pre-configured for the given tracking category
@@ -85,25 +91,14 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   end
 
   @spec apply_tracking(Swoosh.Email.t(), tracking()) :: Swoosh.Email.t()
-  defp apply_tracking(email, :transactional) do
-    email
-    |> put_provider_option(:track_opens, false)
-    |> put_provider_option(:track_links, "None")
-    |> put_provider_option(:message_stream, "outbound")
-  end
+  defp apply_tracking(email, category) do
+    adapter = Application.get_env(:tymeslot, Tymeslot.Mailer, [])[:adapter]
 
-  defp apply_tracking(email, :lifecycle) do
-    email
-    |> put_provider_option(:track_opens, true)
-    |> put_provider_option(:track_links, "None")
-    |> put_provider_option(:message_stream, "outbound")
-  end
-
-  defp apply_tracking(email, :marketing) do
-    email
-    |> put_provider_option(:track_opens, true)
-    |> put_provider_option(:track_links, "HtmlAndText")
-    |> put_provider_option(:message_stream, "broadcast")
+    adapter
+    |> Providers.tracking_options(category)
+    |> Enum.reduce(email, fn {option, value}, email ->
+      put_provider_option(email, option, value)
+    end)
   end
 
   @logo_cid "tymeslot-logo"
