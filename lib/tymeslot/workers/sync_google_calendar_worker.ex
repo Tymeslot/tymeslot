@@ -196,17 +196,9 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     primary_id = integration.default_booking_calendar_id || "primary"
 
     integration.calendar_list
-    |> Enum.filter(fn cal ->
-      calendar_field(cal, :selected) == true and calendar_field(cal, :id) != primary_id
-    end)
-    |> Enum.map(&calendar_field(&1, :id))
+    |> Enum.filter(fn cal -> cal.selected == true and cal.id != primary_id end)
+    |> Enum.map(& &1.id)
   end
-
-  # `calendar_list` entries are string-keyed once they have been through the
-  # JSONB column and atom-keyed while they are still fresh from provider
-  # discovery, so both shapes are reconciled in this one accessor.
-  defp calendar_field(calendar, key) when is_atom(key),
-    do: calendar[Atom.to_string(key)] || calendar[key]
 
   # Iterates each selected secondary calendar, accumulating the ids of any that
   # no longer exist on Google's side so they can be de-selected in a single write

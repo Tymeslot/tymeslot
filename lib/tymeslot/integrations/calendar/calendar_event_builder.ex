@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   """
 
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias Tymeslot.Utils.MapKeys
   alias TymeslotWeb.Endpoint
 
   @doc """
@@ -85,19 +86,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
     |> List.wrap()
     |> Enum.map(fn a ->
       %{
-        filename: attachment_field(a, :filename),
-        url: attachment_url(attachment_field(a, :stored_path)),
-        content_type: attachment_field(a, :content_type)
+        filename: MapKeys.get(a, :filename),
+        url: attachment_url(MapKeys.get(a, :stored_path)),
+        content_type: MapKeys.get(a, :content_type)
       }
     end)
     |> Enum.reject(&is_nil(&1.url))
   end
-
-  # `attachments_snapshot` entries are string-keyed once the meeting has been
-  # through its JSONB column and atom-keyed while the snapshot is still being
-  # assembled, so both shapes are reconciled in this one accessor.
-  defp attachment_field(attachment, key) when is_atom(key),
-    do: attachment[Atom.to_string(key)] || attachment[key]
 
   defp attachment_url(nil), do: nil
   defp attachment_url(path), do: Endpoint.url() <> "/uploads/" <> path

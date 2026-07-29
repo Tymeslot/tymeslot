@@ -78,7 +78,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
         "status" => "paid"
       }
 
-      event = %{"type" => "invoice.payment_succeeded"}
+      event = %{type: "invoice.payment_succeeded"}
 
       assert {:ok, :invoice_processed} = InvoiceHandler.process(event, invoice)
 
@@ -107,7 +107,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
         "created" => 1_234_567_890
       }
 
-      event = %{"type" => "invoice.payment_failed"}
+      event = %{type: "invoice.payment_failed"}
 
       assert {:ok, :invoice_processed} = InvoiceHandler.process(event, invoice)
 
@@ -137,7 +137,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
         "status" => "paid"
       }
 
-      event = %{"type" => "invoice.paid"}
+      event = %{type: "invoice.paid"}
 
       assert {:ok, :invoice_processed} = InvoiceHandler.process(event, invoice)
 
@@ -164,8 +164,8 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
         "status" => "paid"
       }
 
-      payment_succeeded = %{"type" => "invoice.payment_succeeded"}
-      paid = %{"type" => "invoice.paid"}
+      payment_succeeded = %{type: "invoice.payment_succeeded"}
+      paid = %{type: "invoice.paid"}
 
       assert {:ok, :invoice_processed} = InvoiceHandler.process(payment_succeeded, invoice)
       assert {:ok, :already_processed} = InvoiceHandler.process(paid, invoice)
@@ -199,7 +199,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
         "status" => "paid"
       }
 
-      event = %{"type" => "invoice.paid"}
+      event = %{type: "invoice.paid"}
 
       assert {:ok, :invoice_processed} = InvoiceHandler.process(event, invoice)
 
@@ -229,7 +229,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
         "status" => "paid"
       }
 
-      event = %{"type" => "invoice.paid"}
+      event = %{type: "invoice.paid"}
 
       assert {:ok, :invoice_processed} = InvoiceHandler.process(event, invoice)
 
@@ -239,14 +239,14 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
 
     test "returns error when subscription not found" do
       invoice = %{"id" => "in_123", "subscription" => "nonexistent"}
-      event = %{"type" => "invoice.payment_succeeded"}
+      event = %{type: "invoice.payment_succeeded"}
 
       assert {:error, :retry_later, _error_reason} = InvoiceHandler.process(event, invoice)
     end
 
     test "returns ok for missing subscription id" do
       invoice = %{"id" => "in_123", "subscription" => nil}
-      event = %{"type" => "invoice.payment_succeeded"}
+      event = %{type: "invoice.payment_succeeded"}
 
       assert {:ok, :no_subscription} = InvoiceHandler.process(event, invoice)
     end

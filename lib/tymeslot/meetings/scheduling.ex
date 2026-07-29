@@ -16,6 +16,7 @@ defmodule Tymeslot.Meetings.Scheduling do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
+  alias Tymeslot.Utils.MapKeys
 
   @doc """
   Atomically creates a meeting with conflict checking using database-level locking.
@@ -39,9 +40,9 @@ defmodule Tymeslot.Meetings.Scheduling do
              | :database_error
              | {:validation_error, Changeset.t()}}
   def create_meeting_with_conflict_check(attrs) do
-    start_time = attr(attrs, :start_time)
-    end_time = attr(attrs, :end_time)
-    organizer_user_id = attr(attrs, :organizer_user_id)
+    start_time = MapKeys.get(attrs, :start_time)
+    end_time = MapKeys.get(attrs, :end_time)
+    organizer_user_id = MapKeys.get(attrs, :organizer_user_id)
 
     if start_time && end_time do
       execute_conflict_checked_transaction(start_time, end_time, organizer_user_id, fn ->
@@ -75,8 +76,8 @@ defmodule Tymeslot.Meetings.Scheduling do
              :time_conflict | :database_error | Changeset.t() | {:validation_error, Changeset.t()}}
   def update_meeting_with_conflict_check(%Meeting{} = meeting, attrs) do
     # Only check conflicts if time is being changed
-    start_time = attr(attrs, :start_time)
-    end_time = attr(attrs, :end_time)
+    start_time = MapKeys.get(attrs, :start_time)
+    end_time = MapKeys.get(attrs, :end_time)
 
     if start_time && end_time do
       execute_update_with_conflict_check(meeting, attrs, start_time, end_time)
@@ -112,16 +113,6 @@ defmodule Tymeslot.Meetings.Scheduling do
   end
 
   # Private functions
-
-  # Attrs reach the two public entry points either atom-keyed (the booking
-  # pipeline builds them) or string-keyed (form params). This is the one place
-  # that answers which, so each read above names its key once.
-  defp attr(attrs, key) do
-    case Map.fetch(attrs, key) do
-      {:ok, value} -> value
-      :error -> Map.get(attrs, Atom.to_string(key))
-    end
-  end
 
   defp execute_conflict_checked_transaction(start_time, end_time, organizer_user_id, operation_fn) do
     {buffered_start, buffered_end} =

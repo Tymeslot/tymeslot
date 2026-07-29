@@ -20,6 +20,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessor do
 
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Webhooks.WebhookRegistry
+  alias Tymeslot.Utils.MapKeys
 
   @type process_result :: :ok | {:error, term()}
 
@@ -38,7 +39,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessor do
   end
 
   defp dispatch(event) do
-    type = fetch(event, :type)
+    type = MapKeys.get(event, :type)
 
     case WebhookRegistry.handler_for(type) do
       nil ->
@@ -48,17 +49,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessor do
       handler ->
         Logger.info("Dispatching Connect webhook event",
           event_type: type,
-          event_id: fetch(event, :id)
+          event_id: MapKeys.get(event, :id)
         )
 
         handler.handle(event)
     end
-  end
-
-  # Stripe payloads arrive with string keys, but in-process callers (tests,
-  # replays) hand over atom-keyed maps. Taking the key as an atom keeps both
-  # reads in one place and avoids resolving a key name at runtime.
-  defp fetch(map, key) when is_map(map) and is_atom(key) do
-    Map.get(map, Atom.to_string(key)) || Map.get(map, key)
   end
 end

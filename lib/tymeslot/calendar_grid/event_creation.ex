@@ -30,6 +30,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
   alias Tymeslot.Meetings.AttendeeNotifications
+  alias Tymeslot.Utils.MapKeys
 
   @reauth_flash_message "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
 
@@ -210,7 +211,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   defp build_create_success(created, creating, user_id, start_at, end_at, video_context) do
-    uid = if is_binary(created), do: created, else: created_uid(created)
+    uid = if is_binary(created), do: created, else: MapKeys.get_binary(created, :uid)
 
     {provider, default_booking_calendar_id, reauth_required?} =
       lookup_integration_metadata(creating.integration_id)
@@ -263,8 +264,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     case VideoRooms.create_meeting_room(user_id, opts) do
       {:ok, %{room_data: room_data}} ->
         %{
-          meeting_url: room_data[:meeting_url] || room_data[:join_url],
-          room_id: room_data[:room_id],
+          meeting_url: room_data.meeting_url,
+          room_id: room_data.room_id,
           video_integration_id: integration_id
         }
 
@@ -278,15 +279,6 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
         %{}
     end
   end
-
-  # The created event arrives as an atom-keyed map (the converted shape) or a
-  # string-keyed map (a raw payload); both are answered here once. The bare-uid
-  # string case stays an `if` at the call site: every real provider returns a
-  # map, so as a guarded clause here Dialyzer proves it unreachable, but the
-  # test doubles in event_creation_test.exs do return a bare string.
-  defp created_uid(%{uid: uid}) when is_binary(uid), do: uid
-  defp created_uid(%{"uid" => uid}) when is_binary(uid), do: uid
-  defp created_uid(_created), do: nil
 
   defp build_description(existing, video_context) do
     case video_context[:meeting_url] do

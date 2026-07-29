@@ -51,7 +51,7 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandlerTest do
       PubSub.subscribe(Tymeslot.PubSub, "payment_events:tymeslot")
 
       subscription = %{"id" => "sub_123", "status" => "active"}
-      event = %{"type" => "customer.subscription.created"}
+      event = %{type: "customer.subscription.created"}
 
       assert {:ok, :event_processed} = SubscriptionHandler.process(event, subscription)
 
@@ -66,7 +66,7 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandlerTest do
       PubSub.subscribe(Tymeslot.PubSub, "payment_events:tymeslot")
 
       subscription = %{"id" => "sub_123"}
-      event = %{"type" => "customer.subscription.something_else"}
+      event = %{type: "customer.subscription.something_else"}
 
       assert {:ok, :event_processed} = SubscriptionHandler.process(event, subscription)
 
