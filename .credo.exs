@@ -118,17 +118,16 @@
           # (both MIT) rather than taking the dependencies, so each is scoped
           # to this codebase's conventions and lives beside the other checks.
           #
-          # exit_status: 0 for the same reason as the Jump checks below: the
-          # current run finds 105 dual-key reads, 56 silent rescues and 8
-          # boolean cases. That is a backlog to work through deliberately,
-          # not something to fix under a red gate. Drop exit_status per check
-          # as each reaches zero. (NoSwallowedException's count dropped from
-          # its original 116 once the heuristic learned that passing the
-          # rescued exception on to a helper counts as handling it, not
-          # swallowing it; the residual count is genuine silent rescues.)
-          {CredoChecks.NoDualKeyAccess, [priority: :normal, exit_status: 0]},
-          {CredoChecks.NoCaseOnBoolean, [priority: :low, exit_status: 0]},
-          {CredoChecks.NoSwallowedException, [priority: :normal, exit_status: 0]},
+          # The first run found 105 dual-key reads, 56 silent rescues and 8
+          # boolean cases: a backlog worked through deliberately, rather than
+          # fixed under a red gate. (NoSwallowedException's count dropped
+          # from its original 116 once the heuristic learned that passing
+          # the rescued exception on to a helper counts as handling it, not
+          # swallowing it; the residual count was genuine silent rescues.)
+          # All three have now reached zero and are gated.
+          {CredoChecks.NoDualKeyAccess, [priority: :normal]},
+          {CredoChecks.NoCaseOnBoolean, [priority: :low]},
+          {CredoChecks.NoSwallowedException, [priority: :normal]},
           {CredoChecks.NoInlineCaldavList, [priority: :normal]},
           {CredoChecks.AttendeeNotificationsBoundary, []},
 
@@ -144,13 +143,21 @@
           # gate. Drop exit_status per check as each one reaches zero; that
           # ratchet is the point, and a check left reporting forever is just
           # noise nobody reads.
+          #
+          # UnusedLiveViewAssign and AvoidSocketAssignsInTest are deliberately
+          # absent: both are structurally wrong for this codebase rather than
+          # merely noisy. UnusedLiveViewAssign only looks within one module,
+          # so it cannot see an assign written by a component and read by its
+          # sibling event-handler module, nor one consumed by root.html.heex;
+          # 70 of its 77 findings were that. AvoidSocketAssignsInTest wants
+          # user-observable output, but 201 of its 218 findings were in unit
+          # tests of socket-transformer functions, where socket.assigns is
+          # the return value and there is no rendered output to assert on.
           {Jump.CredoChecks.VacuousTest, [priority: :low, exit_status: 0]},
           {Jump.CredoChecks.TestHasNoAssertions, [priority: :low, exit_status: 0]},
           {Jump.CredoChecks.WeakAssertion, [priority: :low, exit_status: 0]},
           {Jump.CredoChecks.ConditionalAssertion, [priority: :low, exit_status: 0]},
           {Jump.CredoChecks.AssertElementSelectorCanNeverFail, [priority: :low, exit_status: 0]},
-          {Jump.CredoChecks.UnusedLiveViewAssign, [priority: :low, exit_status: 0]},
-          {Jump.CredoChecks.AvoidSocketAssignsInTest, [priority: :low, exit_status: 0]},
 
           #
           ## Additional Maintainability Checks (low priority, only visible with --strict)

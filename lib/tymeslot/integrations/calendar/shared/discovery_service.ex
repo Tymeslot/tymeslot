@@ -7,6 +7,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
   `Tymeslot.Integrations.Calendar.Shared.DiscoveryCache`.
   """
 
+  require Logger
+
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.DiscoveryCache
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
@@ -71,43 +74,49 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
           keyword()
         ) :: {:ok, list(map())} | {:error, String.t()}
   def discover_for_integration(integration, opts \\ []) do
-    provider =
-      try do
-        String.to_existing_atom(integration.provider)
-      rescue
-        ArgumentError -> :unknown
-      end
-
     config = build_config_from_integration(integration)
 
-    case provider do
-      :unknown -> {:error, "Unsupported provider: #{integration.provider}"}
-      _other -> discover_calendars(provider, config, opts)
+    case ProviderConfig.parse_known(integration.provider) do
+      {:ok, provider} ->
+        discover_calendars(provider, config, opts)
+
+      {:error, :unknown} ->
+        Logger.warning("Calendar integration has an unrecognised provider",
+          integration_id: integration.id,
+          provider: integration.provider
+        )
+
+        {:error, "Unsupported provider: #{integration.provider}"}
     end
   end
 
   @doc """
   Standardizes calendar data structure across providers.
 
+  Accepts either `CalendarEntry` structs (providers already converted to the
+  producer edge) or raw provider maps (providers not yet converted), and
+  normalises both into `CalendarEntry` structs via `CalendarEntry.normalize/1`
+  and `CalendarEntry.with_defaults/1`.
+
   ## Parameters
-  - `calendars` - List of calendar maps from various providers
-  - `provider` - The provider type
+  - `calendars` - List of calendar entries or maps from various providers
+  - `provider` - The provider type, used only as a fallback id source when a
+    calendar has neither `:id` nor `:path`/`:href`
 
   ## Returns
-  - List of standardized calendar maps
+  - List of standardized `CalendarEntry` structs
   """
-  @spec standardize_calendar_data(list(map()), atom()) :: list(map())
+  @spec standardize_calendar_data(list(CalendarEntry.t() | map()), atom()) ::
+          list(CalendarEntry.t())
   def standardize_calendar_data(calendars, provider) do
     Enum.map(calendars, fn calendar ->
-      %{
-        id: calendar[:id] || calendar[:path] || generate_calendar_id(calendar, provider),
-        path: calendar[:path] || calendar[:href],
-        name: calendar[:name] || calendar[:displayname] || "Unnamed Calendar",
-        type: calendar[:type] || "calendar",
-        selected: calendar[:selected] || false,
-        provider: provider,
-        metadata: extract_metadata(calendar, provider)
-      }
+      entry = calendar |> CalendarEntry.normalize() |> CalendarEntry.with_defaults()
+
+      if is_nil(entry.id) do
+        %{entry | id: generate_calendar_id(entry, provider)}
+      else
+        entry
+      end
     end)
   end
 
@@ -155,40 +164,12 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
     }
   end
 
-  defp generate_calendar_id(calendar, provider) do
-    # Generate a unique ID for calendars that don't have one
-    path = calendar[:path] || calendar[:href] || ""
-    name = calendar[:name] || ""
-
-    :crypto.hash(:md5, "#{provider}:#{path}:#{name}")
+  # Generate a unique ID for calendars that have neither an `:id` nor a
+  # `:path`/`:href` to fall back to (`CalendarEntry.with_defaults/1` already
+  # covers the common case of deriving one from the other).
+  defp generate_calendar_id(%CalendarEntry{} = entry, provider) do
+    :crypto.hash(:md5, "#{provider}:#{entry.path}:#{entry.name}")
     |> Base.encode16(case: :lower)
     |> String.slice(0..7)
   end
-
-  defp extract_metadata(calendar, provider) do
-    # Extract provider-specific metadata
-    %{
-      color: calendar[:color],
-      description: calendar[:description],
-      timezone: calendar[:timezone],
-      created_at: calendar[:created_at],
-      updated_at: calendar[:updated_at],
-      supported_components: calendar[:supported_components],
-      provider_specific: extract_provider_specific_metadata(calendar, provider)
-    }
-    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-    |> Map.new()
-  end
-
-  defp extract_provider_specific_metadata(calendar, :nextcloud) do
-    %{
-      share_status: calendar[:share_status],
-      owner: calendar[:owner],
-      permissions: calendar[:permissions]
-    }
-    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-    |> Map.new()
-  end
-
-  defp extract_provider_specific_metadata(_calendar, _provider), do: %{}
 end

@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
   alias Tymeslot.Security.UrlValidation
@@ -116,7 +117,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   @doc """
   Discovers available calendars on the Zimbra server.
   """
-  @spec discover_calendars(map(), keyword()) :: {:ok, list(map())} | {:error, String.t()}
+  @spec discover_calendars(map(), keyword()) :: {:ok, [CalendarEntry.t()]} | {:error, String.t()}
   def discover_calendars(client, opts \\ []) do
     ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
 

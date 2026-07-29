@@ -11,6 +11,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.CustomFields
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
   alias Tymeslot.Locales
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.Guests
@@ -564,14 +565,20 @@ defmodule Tymeslot.Bookings.Create do
     case integration_result do
       {:ok, integration} ->
         # Convert stored provider string (e.g., "google_meet") to atom if known
-        raw_provider =
-          try do
-            String.to_existing_atom(integration.provider)
-          rescue
-            ArgumentError -> :unknown
+        provider =
+          case VideoProviderConfig.parse_known(integration.provider) do
+            {:ok, provider} ->
+              provider
+
+            {:error, :unknown} ->
+              Logger.warning("Video integration has an unrecognised provider",
+                video_integration_id: meeting.video_integration_id,
+                provider: integration.provider
+              )
+
+              :none
           end
 
-        provider = if raw_provider in [:unknown, :none], do: :none, else: raw_provider
         {:ok, provider}
 
       {:error, :not_found} ->

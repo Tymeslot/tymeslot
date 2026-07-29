@@ -24,7 +24,6 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       assert {:ok, attrs} = Creation.prepare_attrs(params, 1)
 
       assert attrs.provider == "nextcloud"
-      assert is_atom(:provider)
       assert Map.has_key?(attrs, :provider)
       refute Map.has_key?(attrs, "provider")
       assert attrs.base_url == "https://nextcloud.example.com"
@@ -51,7 +50,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       assert attrs.base_url == "https://caldav.example.com"
       assert attrs.username == "testuser"
       assert attrs.password == "testpass"
-      assert is_list(attrs.calendar_paths)
+      assert attrs.calendar_paths == ["/calendars/user/personal"]
       assert attrs.is_active == true
     end
 
@@ -111,12 +110,11 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       }
 
       assert {:ok, attrs} = Creation.prepare_attrs(params, 1)
-      assert is_list(attrs.calendar_list)
-      assert attrs.calendar_list != []
+      assert length(attrs.calendar_list) == 1
 
       calendar = List.first(attrs.calendar_list)
-      assert calendar["path"] == "/calendars/user/personal"
-      assert calendar["selected"] == true
+      assert calendar.path == "/calendars/user/personal"
+      assert calendar.selected == true
     end
 
     test "uses provided calendar_list when available" do
@@ -135,12 +133,11 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       }
 
       assert {:ok, attrs} = Creation.prepare_attrs(params, 1)
-      assert is_list(attrs.calendar_list)
       assert length(attrs.calendar_list) == 1
 
       calendar = List.first(attrs.calendar_list)
-      assert calendar["id"] == "cal1"
-      assert calendar["name"] == "Personal"
+      assert calendar.id == "cal1"
+      assert calendar.name == "Personal"
     end
 
     test "extracts calendar name from path" do
@@ -157,7 +154,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       calendar = List.first(attrs.calendar_list)
 
       # Name should be extracted from last path segment
-      assert calendar["name"] == "personal"
+      assert calendar.name == "personal"
     end
   end
 
@@ -214,6 +211,10 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
   describe "ensure_primary_on_first/3" do
     setup do
       user = insert(:user)
+      # The primary calendar is recorded on the profile; without one the
+      # promotion below is a silent no-op.
+      insert(:profile, user: user)
+
       %{user: user}
     end
 
@@ -221,10 +222,11 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       integration = insert(:calendar_integration, user: user)
 
       # Simulate this being the first integration (count_before = 0)
-      result = Creation.ensure_primary_on_first(user.id, integration.id, 0)
+      assert {:ok, primary} = Creation.ensure_primary_on_first(user.id, integration.id, 0)
+      assert primary.id == integration.id
 
-      # May return :ok or {:error, :not_found} depending on implementation
-      assert match?(:ok, result) or match?({:error, _reason}, result)
+      assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == integration.id
     end
 
     test "does not set primary if not first integration", %{user: user} do
@@ -242,15 +244,9 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       # Simulate this being the second integration (count_before = 1)
       assert :ok = Creation.ensure_primary_on_first(user.id, integration2.id, 1)
 
-      # Primary should still be the first integration (if profile exists)
-      case ProfileQueries.get_by_user_id(user.id) do
-        {:ok, profile} ->
-          assert profile.primary_calendar_integration_id == integration1.id
-
-        {:error, :not_found} ->
-          # Profile may not exist in test environment
-          :ok
-      end
+      # Primary should still be the first integration
+      assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == integration1.id
     end
 
     test "returns ok when count is greater than zero" do

@@ -477,8 +477,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
 
   describe "check_connectivity/1" do
     test "returns skipped status for any input" do
-      assert {:ok, %{status: :skipped, reason: reason}} = Provider.check_connectivity(%{})
-      assert is_binary(reason)
+      assert {:ok, %{status: :skipped, reason: "OAuth providers use token-based auth"}} =
+               Provider.check_connectivity(%{})
     end
 
     test "returns skipped status when called with an integration struct" do
@@ -584,6 +584,27 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
       end)
 
       assert {:error, :unauthorized} = Provider.test_connection(integration)
+    end
+  end
+
+  describe "discover_calendars/1 read_only mapping" do
+    test "marks non-editable calendars as read_only" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "outlook")
+
+      expect(OutlookCalendarAPIMock, :list_calendars, fn _client ->
+        {:ok,
+         [
+           %{"id" => "editable-cal", "name" => "Editable", "canEdit" => true},
+           %{"id" => "shared-cal", "name" => "Shared", "canEdit" => false}
+         ]}
+      end)
+
+      assert {:ok, calendars} = Provider.discover_calendars(integration)
+
+      by_id = Map.new(calendars, &{&1.id, &1})
+      refute by_id["editable-cal"].read_only
+      assert by_id["shared-cal"].read_only
     end
   end
 end

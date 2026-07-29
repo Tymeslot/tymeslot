@@ -118,10 +118,9 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
 
         opts = [metadata: %{ip: "127.0.0.1"}]
 
-        # Should not crash with options
-        result = provider_module.test_connection(config, opts)
-
-        assert match?({:ok, _result}, result) or match?({:error, _reason}, result)
+        # Port 1 is closed, so every provider reports a connection failure
+        # rather than crashing on the extra options.
+        assert {:error, _reason} = provider_module.test_connection(config, opts)
       end)
     end
   end
@@ -140,11 +139,7 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
 
         client = provider_module.new(config)
 
-        # Client should be a map
-        assert is_map(client)
-
-        # Should have provider field
-        assert Map.has_key?(client, :provider)
+        assert %{provider: ^provider_type, username: "test", password: "test"} = client
       end)
     end
   end
@@ -162,10 +157,8 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
           provider: provider_type
         }
 
-        # Should not crash on network error
-        result = provider_module.test_connection(config)
-
-        assert match?({:error, _reason}, result) or match?({:ok, _result}, result)
+        # Nothing listens on port 1, so every provider surfaces an error tuple.
+        assert {:error, _reason} = provider_module.test_connection(config)
       end)
     end
 
@@ -181,17 +174,8 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
           provider: provider_type
         }
 
-        result = provider_module.test_connection(invalid_config)
-
-        case result do
-          {:error, message} ->
-            # Message should be string or atom
-            assert is_binary(message) or is_atom(message)
-
-          {:ok, _result} ->
-            # Some providers may handle this differently
-            :ok
-        end
+        assert {:error, message} = provider_module.test_connection(invalid_config)
+        assert message =~ "Private or local network addresses are not allowed"
       end)
     end
   end

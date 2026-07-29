@@ -167,8 +167,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
           provider_event_id: "outlook-no-cal-1"
         )
 
-      assert cached != nil
-      assert cached.provider_calendar_id == "primary"
+      assert %{provider_calendar_id: "primary"} = cached
     end
   end
 

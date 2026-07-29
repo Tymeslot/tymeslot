@@ -81,12 +81,19 @@ defmodule Tymeslot.Meetings.VideoRoomsIncompleteRoomTest do
     that carries no room id and no meeting URL.
     """
 
-    @spec create_meeting_room(integer() | nil, keyword()) :: {:ok, map()}
+    alias Tymeslot.Integrations.Video.MeetingContext
+    alias Tymeslot.Integrations.Video.RoomData
+
+    @spec create_meeting_room(integer() | nil, keyword()) :: {:ok, MeetingContext.t()}
     def create_meeting_room(_user_id, _opts) do
       {:ok,
-       %{
+       %MeetingContext{
          provider_type: :mirotalk,
-         room_data: %{provider_data: %{"unexpected" => "data"}},
+         room_data: %RoomData{
+           room_id: nil,
+           meeting_url: nil,
+           provider_data: %{"unexpected" => "data"}
+         },
          provider_module: Tymeslot.Integrations.Video.Providers.MiroTalkProvider
        }}
     end

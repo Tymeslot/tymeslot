@@ -36,7 +36,7 @@ defmodule Tymeslot.Emails.Shared.SanitiseTest do
       text = "He said \"Hello\""
       result = Sanitise.sanitize_for_email(text)
 
-      assert result =~ "&quot;" or result =~ "&#34;"
+      assert result == "He said &quot;Hello&quot;"
     end
 
     test "handles combination of trim and escape" do

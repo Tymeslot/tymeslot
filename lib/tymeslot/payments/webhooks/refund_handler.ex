@@ -29,6 +29,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Payments.CustomerLookup
   alias Tymeslot.Payments.Webhooks.WebhookUtils
+  alias Tymeslot.Utils.MapKeys
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type) when event_type in ["charge.refunded", "charge.refund.updated"] do
@@ -50,9 +51,10 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   def validate(refund_object) when is_map(refund_object) do
     required_fields = ["id"]
 
-    case Enum.all?(required_fields, &Map.has_key?(refund_object, &1)) do
-      true -> :ok
-      false -> {:error, :missing_fields, "Missing required fields in refund object"}
+    if Enum.all?(required_fields, &Map.has_key?(refund_object, &1)) do
+      :ok
+    else
+      {:error, :missing_fields, "Missing required fields in refund object"}
     end
   end
 
@@ -179,18 +181,16 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @spec calculate_total_refunded(map()) :: non_neg_integer()
   def calculate_total_refunded(charge) do
     # First try to get from amount_refunded (most reliable)
-    case Map.get(charge, "amount_refunded") || Map.get(charge, :amount_refunded) do
+    case MapKeys.get(charge, :amount_refunded) do
       amount when is_integer(amount) and amount > 0 ->
         amount
 
       _amount_other ->
         # Fall back to summing individual refunds
-        refunds = get_in(charge, ["refunds", "data"]) || get_in(charge, [:refunds, :data]) || []
+        refunds = get_refunds(charge)
 
         refunds
-        |> Enum.map(fn refund ->
-          refund["amount"] || refund[:amount] || 0
-        end)
+        |> Enum.map(&(MapKeys.get(&1, :amount) || 0))
         |> Enum.sum()
     end
   end
@@ -200,7 +200,16 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @doc false
   @spec get_charge_amount(map()) :: non_neg_integer()
   def get_charge_amount(charge) do
-    Map.get(charge, "amount") || Map.get(charge, :amount) || 0
+    MapKeys.get(charge, :amount) || 0
+  end
+
+  # The list of individual refunds sits one level below the charge, under
+  # "refunds"/"data" (or their atom-keyed equivalents).
+  defp get_refunds(charge) do
+    case MapKeys.get(charge, :refunds) do
+      nil -> []
+      refunds -> MapKeys.get(refunds, :data) || []
+    end
   end
 
   # Calculates the refund percentage.
@@ -242,7 +251,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @doc false
   @spec extract_charge_currency(map()) :: String.t()
   def extract_charge_currency(charge) do
-    Map.get(charge, "currency") || Map.get(charge, :currency) || "eur"
+    MapKeys.get(charge, :currency) || "eur"
   end
 
   defp broadcast_refund_event(user_id, event_id, access_revoked) do

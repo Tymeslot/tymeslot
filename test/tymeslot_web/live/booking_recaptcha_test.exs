@@ -272,7 +272,7 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
     # Should show rate limit message
     eventually(fn ->
       rendered = render(view)
-      assert rendered =~ "Too many" or rendered =~ "try again later"
+      assert rendered =~ "Too many booking attempts. Please try again later."
     end)
   end
 

@@ -188,10 +188,8 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
       # session id — exactly the shape the ReconcileAwaitingPayments sweeper
       # treats as stale and cleans up. The pre-Stripe insert is the deliberate
       # trade-off for not holding a pooled DB connection across the network call.
-      bp = BookingPaymentQueries.by_meeting_id(meeting.id)
-      assert bp
-      assert bp.status == "pending"
-      assert is_nil(bp.stripe_checkout_session_id)
+      assert %{status: "pending", stripe_checkout_session_id: nil} =
+               BookingPaymentQueries.by_meeting_id(meeting.id)
     end
 
     test "rejects checkout when the host lacks :meeting_payments access",

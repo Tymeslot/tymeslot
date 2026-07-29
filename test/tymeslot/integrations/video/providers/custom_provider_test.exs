@@ -22,9 +22,9 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
 
       assert schema[:custom_meeting_url][:type] == :string
       assert schema[:custom_meeting_url][:required] == true
-      assert is_binary(schema[:custom_meeting_url][:label])
-      assert is_binary(schema[:custom_meeting_url][:help_text])
-      assert is_binary(schema[:custom_meeting_url][:placeholder])
+      assert schema[:custom_meeting_url][:label] == "Meeting URL"
+      assert schema[:custom_meeting_url][:placeholder] == "https://meet.example.com/room123"
+      assert schema[:custom_meeting_url][:help_text] =~ "complete video meeting URL"
     end
   end
 
@@ -83,7 +83,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
 
       assert {:ok, room_data} = CustomProvider.create_meeting_room(config)
 
-      assert is_binary(room_data.room_id)
+      assert room_data.room_id =~ ~r/^[a-f0-9]{16}$/
       assert room_data.meeting_url == "https://meet.example.com/room123"
       assert room_data.provider_data.original_url == "https://meet.example.com/room123"
       assert %DateTime{} = room_data.provider_data.created_at
@@ -173,8 +173,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
 
       room_id = CustomProvider.extract_room_id(url)
 
-      assert is_binary(room_id)
-      assert String.length(room_id) == 16
       assert room_id =~ ~r/^[a-f0-9]{16}$/
     end
 

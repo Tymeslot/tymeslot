@@ -112,16 +112,20 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
   def build_attachment_lines(_event), do: nil
 
   defp attachment_line(%{url: url} = attachment) when is_binary(url) and url != "" do
-    case attachment[:content_type] || attachment["content_type"] do
-      mime when is_binary(mime) and mime != "" ->
-        "ATTACH;FMTTYPE=#{mime}:#{sanitize_ical_value(url)}"
-
-      _missing ->
-        "ATTACH:#{sanitize_ical_value(url)}"
+    case content_type(attachment) do
+      nil -> "ATTACH:#{sanitize_ical_value(url)}"
+      mime -> "ATTACH;FMTTYPE=#{mime}:#{sanitize_ical_value(url)}"
     end
   end
 
   defp attachment_line(_other), do: nil
+
+  # Attachments reach the builder atom-keyed from the domain layer and
+  # string-keyed when they have been round-tripped through JSONB, so both
+  # shapes are answered here once.
+  defp content_type(%{content_type: mime}) when is_binary(mime) and mime != "", do: mime
+  defp content_type(%{"content_type" => mime}) when is_binary(mime) and mime != "", do: mime
+  defp content_type(_attachment), do: nil
 
   @spec build_transp(map()) :: String.t() | nil
   def build_transp(%{transparency: t}) when t in [:transparent, "transparent", "TRANSPARENT"],

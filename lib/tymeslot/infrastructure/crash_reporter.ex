@@ -135,6 +135,10 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
     # rate-limiter ETS table or TaskSupervisor briefly unavailable after a crash)
     # must degrade to "drop this alert", never propagate into the logging
     # pipeline or count toward handler removal.
+    #
+    # Logging here would re-enter the very pipeline that just failed, so this
+    # clause must stay silent; the check documents it as the deliberate residual.
+    # credo:disable-for-next-line CredoChecks.NoSwallowedException
     _exception -> :ok
   catch
     _kind, _reason -> :ok

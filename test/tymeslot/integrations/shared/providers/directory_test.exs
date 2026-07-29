@@ -8,15 +8,19 @@ defmodule Tymeslot.Integrations.Providers.DirectoryTest do
   describe "list/1" do
     test "lists calendar providers" do
       list = Directory.list(:calendar)
-      assert is_list(list)
-      assert list != []
+      types = Enum.map(list, & &1.type)
+
+      assert :google in types
+      assert :caldav in types
       assert Enum.all?(list, fn d -> match?(%Descriptor{domain: :calendar}, d) end)
     end
 
     test "lists video providers" do
       list = Directory.list(:video)
-      assert is_list(list)
-      assert list != []
+      types = Enum.map(list, & &1.type)
+
+      assert :zoom in types
+      assert :custom in types
       assert Enum.all?(list, fn d -> match?(%Descriptor{domain: :video}, d) end)
     end
   end
@@ -68,13 +72,17 @@ defmodule Tymeslot.Integrations.Providers.DirectoryTest do
   end
 
   describe "helpers" do
-    test "config_schema/2 returns schema" do
-      assert is_map(Directory.config_schema(:calendar, :google))
+    test "config_schema/2 returns the provider's own schema" do
+      schema = Directory.config_schema(:calendar, :google)
+
+      assert schema[:access_token] == %{type: :string, required: true}
+      assert schema[:refresh_token] == %{type: :string, required: true}
+      assert schema[:token_expires_at] == %{type: :datetime, required: true}
     end
 
-    test "default_provider/1 returns atom" do
-      assert is_atom(Directory.default_provider(:calendar))
-      assert is_atom(Directory.default_provider(:video))
+    test "default_provider/1 returns each domain's default" do
+      assert Directory.default_provider(:calendar) == :caldav
+      assert Directory.default_provider(:video) == :mirotalk
     end
   end
 end

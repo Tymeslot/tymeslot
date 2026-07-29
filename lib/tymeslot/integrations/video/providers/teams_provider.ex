@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
@@ -40,7 +41,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     with {:ok, :valid} <- validate_teams_scope(config),
          {:ok, token} <- get_access_token(config),
          {:ok, meeting} <- create_scheduled_meeting(token, config) do
-      room_data = %{
+      room_data = %RoomData{
         room_id: meeting["id"],
         meeting_url: meeting["joinUrl"],
         provider_data: %{
@@ -81,10 +82,6 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       [_first, encoded_id] -> String.slice(encoded_id, 0, 20)
       _other -> meeting_url
     end
-  end
-
-  def extract_room_id(%{room_data: room_data}) do
-    room_data[:room_id] || room_data["room_id"]
   end
 
   def extract_room_id(_other), do: nil

@@ -31,9 +31,9 @@ defmodule Tymeslot.Integrations.Calendar.SelectionAndFetchTest do
 
       assert params["calendar_paths"] == ["/cal/work"]
       assert [calendar] = params["calendar_list"]
-      assert calendar["id"] == "work"
-      assert calendar["path"] == "/cal/work"
-      assert calendar["selected"] == true
+      assert calendar.id == "work"
+      assert calendar.path == "/cal/work"
+      assert calendar.selected == true
     end
   end
 
@@ -59,8 +59,8 @@ defmodule Tymeslot.Integrations.Calendar.SelectionAndFetchTest do
 
       assert [{"team", true}, {"work", false}] =
                updated.calendar_list
-               |> Enum.sort_by(& &1["id"])
-               |> Enum.map(&{&1["id"], &1["selected"]})
+               |> Enum.sort_by(& &1.id)
+               |> Enum.map(&{&1.id, &1.selected})
     end
   end
 

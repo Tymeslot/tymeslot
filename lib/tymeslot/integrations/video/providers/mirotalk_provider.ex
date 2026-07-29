@@ -16,6 +16,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Security.{RateLimiter, UrlValidation}
 
   @capabilities Capabilities.new!(
@@ -250,7 +251,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       {:error, :invalid_room_response}
     else
       {:ok,
-       %{
+       %RoomData{
          room_id: room_id,
          meeting_url: meeting_url,
          provider_data: response,
@@ -270,8 +271,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, participant_email, role, meeting_time) do
-    room_id = room_data[:room_id] || room_data["room_id"]
-    config = room_data[:provider_config] || room_data["provider_config"]
+    room_id = room_data.room_id
+    config = room_data.provider_config
 
     if room_id != "" and participant_name != "" and config do
       # MiroTalk API returns the full meeting URL, but the 'room' parameter
@@ -383,8 +384,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   def generate_meeting_metadata(room_data) do
     %{
       provider: "mirotalk",
-      meeting_id: room_data[:room_id] || room_data["room_id"],
-      join_url: room_data[:meeting_url] || room_data["meeting_url"]
+      meeting_id: room_data.room_id,
+      join_url: room_data.meeting_url
     }
   end
 

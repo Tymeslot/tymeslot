@@ -233,8 +233,13 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       status = CircuitBreaker.status(name)
 
       assert %{status: :closed, failure_count: 0, success_count: 0, config: config} = status
-      assert is_map(config)
-      assert Map.has_key?(config, :failure_threshold)
+
+      assert config == %{
+               failure_threshold: 5,
+               time_window: :timer.minutes(1),
+               recovery_timeout: :timer.minutes(5),
+               half_open_requests: 3
+             }
     end
   end
 

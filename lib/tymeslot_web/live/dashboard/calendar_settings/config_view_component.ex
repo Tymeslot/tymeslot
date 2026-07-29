@@ -257,11 +257,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
 
   defp normalize_provider(p) when p in @caldav_providers, do: p
 
+  # Matching the string against the known providers avoids converting arbitrary
+  # user input to an atom at all, so there is no ArgumentError to rescue.
   defp normalize_provider(p) when is_binary(p) do
-    atom = String.to_existing_atom(p)
-    if atom in @caldav_providers, do: atom, else: :caldav
-  rescue
-    ArgumentError -> :caldav
+    Enum.find(@caldav_providers, :caldav, &(Atom.to_string(&1) == p))
   end
 
   defp normalize_provider(_other_provider), do: :caldav

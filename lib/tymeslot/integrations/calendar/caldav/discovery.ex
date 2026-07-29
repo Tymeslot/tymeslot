@@ -15,11 +15,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
      - PROPFIND principal URL → `calendar-home-set` href
      - PROPFIND calendar-home-set → calendar list
 
-  Callers receive parsed calendar maps — never raw HTTP responses or XML.
+  Callers receive `CalendarEntry` structs — never raw HTTP responses, XML, or
+  intermediate maps.
   """
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Http, UrlBuilder, XmlHandler}
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Security.{RateLimiter, UrlValidation}
 
   require Logger
@@ -124,10 +126,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
 
   Validates the server URL for SSRF safety and enforces rate limits before
   any network contact. Attempts the guessed discovery path first; on failure
-  follows the full RFC 4791 principal chain. Returns parsed calendar maps.
+  follows the full RFC 4791 principal chain. Returns `CalendarEntry` structs.
   """
   @spec discover_calendars(Base.client(), keyword()) ::
-          {:ok, list(map())} | {:error, Base.error_reason()}
+          {:ok, [CalendarEntry.t()]} | {:error, Base.error_reason()}
   def discover_calendars(client, opts \\ []) do
     ip_address = Keyword.get(opts, :ip_address, "127.0.0.1")
 

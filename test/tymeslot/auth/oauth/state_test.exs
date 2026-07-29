@@ -16,8 +16,8 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
     test "returns a {conn, state} tuple and stores {state, timestamp} in session" do
       {conn, state} = State.generate_and_store_state(build_conn())
 
-      assert is_binary(state)
-      assert byte_size(state) > 0
+      # 32 random bytes, url-safe base64 without padding.
+      assert state =~ ~r/\A[A-Za-z0-9_-]{43}\z/
       assert {^state, timestamp} = Conn.get_session(conn, "_oauth_state")
       assert is_integer(timestamp)
     end

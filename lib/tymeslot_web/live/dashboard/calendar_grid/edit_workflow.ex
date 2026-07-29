@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
@@ -27,20 +28,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     end
   end
 
+  @doc """
+  Resolves the calendar to pre-select for `integration`, restricted to the
+  same subset `CalendarPicker` renders as chips (`Calendar.writable_calendars/1`
+  — selected and not read-only). Resolving against a wider set here than the
+  picker offers would default to a calendar the user is never shown, and the
+  event would be created there with no chip highlighted to explain it.
+  """
   @spec default_calendar_id_for(map()) :: String.t() | nil
   def default_calendar_id_for(integration) do
-    integration.default_booking_calendar_id ||
-      find_primary_calendar_id(integration.calendar_list)
-  end
+    booking_id = Map.get(integration, :default_booking_calendar_id)
+    calendars = Calendar.writable_calendars(integration.calendar_list)
 
-  defp find_primary_calendar_id(nil), do: nil
-  defp find_primary_calendar_id([]), do: nil
-
-  defp find_primary_calendar_id(calendar_list) do
-    primary = Enum.find(calendar_list, &(&1["primary"] || &1[:primary]))
-    selected = primary || Enum.find(calendar_list, &(&1["selected"] || &1[:selected]))
-    cal = selected || List.first(calendar_list)
-    cal["id"] || cal[:id]
+    case Calendar.default_booking_calendar(calendars, booking_id) do
+      nil -> nil
+      entry -> entry.id
+    end
   end
 
   @spec format_create_time(map()) :: String.t()

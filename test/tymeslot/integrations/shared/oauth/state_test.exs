@@ -15,7 +15,6 @@ defmodule Tymeslot.Integrations.Common.OAuth.StateTest do
       user_id = 123
       state = State.generate(user_id, @secret)
 
-      assert is_binary(state)
       assert {:ok, %{user_id: ^user_id, integration_id: nil}} = State.validate(state, @secret)
     end
 

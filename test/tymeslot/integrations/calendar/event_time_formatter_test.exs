@@ -86,7 +86,7 @@ defmodule Tymeslot.Integrations.Calendar.EventTimeFormatterTest do
       result = EventTimeFormatter.format_with_timezone("2026-04-18T10:00:00Z", "Etc/UTC")
 
       assert result["timeZone"] == "Etc/UTC"
-      assert is_binary(result["dateTime"])
+      assert result["dateTime"] == "2026-04-18T10:00:00"
     end
 
     test "returns fallback map for invalid string" do

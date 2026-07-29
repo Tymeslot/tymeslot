@@ -243,7 +243,9 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert payload["user"] == user_name
       assert payload["role"] == role
       assert payload["exp"] == DateTime.to_unix(meeting_time)
-      assert is_binary(payload["jti"])
+      # jti is a UUID v4, making each issued token individually revocable.
+      assert payload["jti"] =~
+               ~r/\A[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/
     end
 
     test "sanitizes user name in token payload" do
@@ -485,18 +487,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert metadata[:provider] == "mirotalk"
       assert metadata[:meeting_id] == "room123"
       assert metadata[:join_url] == "https://mirotalk.example.com/join/room123"
-    end
-
-    test "handles string-keyed room data" do
-      room_data = %{
-        "room_id" => "room456",
-        "meeting_url" => "https://mirotalk.example.com/join/room456"
-      }
-
-      metadata = MiroTalkProvider.generate_meeting_metadata(room_data)
-
-      assert metadata[:meeting_id] == "room456"
-      assert metadata[:join_url] == "https://mirotalk.example.com/join/room456"
     end
   end
 end

@@ -12,10 +12,16 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
 
   setup :verify_on_exit!
 
+  alias Tymeslot.Integrations.Video.MeetingContext
+  alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.Rooms
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
+
+  @no_integration_error "No video integration configured. " <>
+                          "Please add a video integration in the dashboard."
 
   describe "create_meeting_room/1" do
     test "returns error when user_id is nil" do
@@ -264,6 +270,39 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
     end
   end
 
+  describe "create_join_url/5" do
+    test "returns invalid_parameters when the room data carries no provider config" do
+      meeting_context = %MeetingContext{
+        provider_type: :mirotalk,
+        provider_module: MiroTalkProvider,
+        room_data: %RoomData{
+          room_id: "room123",
+          meeting_url: "https://mirotalk.example.com/room123",
+          provider_data: %{},
+          provider_config: nil
+        }
+      }
+
+      participant_name = "John Doe"
+      participant_email = "john@example.com"
+      role = "attendee"
+      meeting_time = DateTime.utc_now()
+
+      # MiroTalk's create_join_url/5 needs a :provider_config in the room data
+      # to build a token-bearing URL, and this context has none.
+      result =
+        Rooms.create_join_url(
+          meeting_context,
+          participant_name,
+          participant_email,
+          role,
+          meeting_time
+        )
+
+      assert {:error, :invalid_parameters} = result
+    end
+  end
+
   describe "update_meeting_room/2" do
     test "returns error when room_id opt is missing" do
       user = insert(:user)
@@ -281,8 +320,7 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
       assert {:error, message} =
                Rooms.update_meeting_room(user.id, room_id: "123456789")
 
-      assert is_binary(message)
-      assert String.contains?(message, "integration")
+      assert message == @no_integration_error
     end
 
     test "dispatches PATCH to Zoom and returns :ok on success" do
@@ -319,8 +357,7 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
       assert {:error, message} =
                Rooms.delete_meeting_room(user.id, room_id: "123456789")
 
-      assert is_binary(message)
-      assert String.contains?(message, "integration")
+      assert message == @no_integration_error
     end
 
     test "dispatches DELETE to Zoom and returns :ok on success" do
@@ -362,19 +399,6 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
                  integration_id: integration.id,
                  room_id: "some-room-id"
                )
-    end
-  end
-
-  describe "error handling" do
-    test "returns appropriate error when provider fails" do
-      user = insert(:user)
-
-      # User with no integration should get helpful error
-      result = Rooms.create_meeting_room(user.id)
-
-      assert {:error, message} = result
-      assert is_binary(message)
-      assert String.contains?(message, "integration")
     end
   end
 

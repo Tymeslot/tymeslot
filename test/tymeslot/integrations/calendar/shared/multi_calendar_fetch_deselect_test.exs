@@ -52,10 +52,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchDeselectTest d
 
     {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
 
-    assert Enum.find(refreshed.calendar_list, &(&1["id"] == "deleted@example.com"))["selected"] ==
+    assert Enum.find(refreshed.calendar_list, &(&1.id == "deleted@example.com")).selected ==
              false
 
-    assert Enum.find(refreshed.calendar_list, &(&1["id"] == "work"))["selected"] == true
+    assert Enum.find(refreshed.calendar_list, &(&1.id == "work")).selected == true
   end
 
   test "de-selects the calendar even when it was the only selected one" do
@@ -80,7 +80,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchDeselectTest d
 
     {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
 
-    assert Enum.find(refreshed.calendar_list, &(&1["id"] == "deleted@example.com"))["selected"] ==
+    assert Enum.find(refreshed.calendar_list, &(&1.id == "deleted@example.com")).selected ==
              false
   end
 end

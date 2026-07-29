@@ -50,7 +50,9 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
     import Tymeslot.CalendarProviderValidationCases
 
     test "validates basic required fields" do
-      test_basic_validation(Provider, "https://mail.example.com")
+      # The shared case block asserts on each missing/invalid field in turn and
+      # returns :ok only once every one of them has been checked.
+      assert :ok = test_basic_validation(Provider, "https://mail.example.com")
     end
 
     test "blocks localhost URLs (SSRF protection)" do
@@ -103,8 +105,8 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
         password: "pass"
       }
 
-      assert {:error, message} = Provider.validate_config(config)
-      assert String.contains?(message, "HTTPS") or String.contains?(message, "https")
+      assert Provider.validate_config(config) ==
+               {:error, "Use HTTPS for non-local Zimbra servers"}
     end
 
     test "accepts HTTPS for public hosts (connection fails without server)" do
@@ -176,13 +178,8 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
 
       client = Provider.new(config)
 
-      # Calendar paths should be formatted for Zimbra
-      assert is_list(client.calendar_paths)
-      assert length(client.calendar_paths) == 1
-
-      assert Enum.any?(client.calendar_paths, fn path ->
-               String.contains?(path, "/dav/testuser@example.com/Calendar/")
-             end)
+      # Calendar names are turned into Zimbra's /dav/{username}/{name}/ paths
+      assert client.calendar_paths == ["/dav/testuser@example.com/Calendar/"]
     end
 
     test "sets empty calendar_paths when not provided" do
@@ -232,7 +229,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       end)
     end
 
-    test "returns helpful error message for authentication failure" do
+    test "returns a sanitised error message when the server is unreachable" do
       integration = %{
         base_url: "http://localhost:1",
         username: "invalid@example.com",
@@ -242,9 +239,11 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       }
 
       capture_log(fn ->
-        # Without actual server, should return connection error
-        assert {:error, message} = Provider.test_connection(integration)
-        assert is_binary(message)
+        # Nothing is listening on port 1, so the error is the generic connect
+        # message — it must never leak the underlying transport reason.
+        assert Provider.test_connection(integration) ==
+                 {:error,
+                  "Unable to connect to the calendar service. Please check the URL and try again."}
       end)
     end
 
@@ -330,9 +329,10 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       end_time = DateTime.add(start_time, 86_400, :second)
 
       capture_log(fn ->
-        # Circuit breaker may return error or empty list depending on state
-        result = Provider.list_events(client, start_time: start_time, end_time: end_time)
-        assert match?({:error, _}, result) or match?({:ok, []}, result)
+        # The circuit breaker is reset in setup, so the CalDAV request is
+        # actually attempted and fails against the dead port.
+        assert {:error, _reason} =
+                 Provider.list_events(client, start_time: start_time, end_time: end_time)
       end)
     end
 

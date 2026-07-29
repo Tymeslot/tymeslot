@@ -196,11 +196,8 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     primary_id = integration.default_booking_calendar_id || "primary"
 
     integration.calendar_list
-    |> Enum.filter(fn cal ->
-      (cal["selected"] || cal[:selected]) == true and
-        (cal["id"] || cal[:id]) != primary_id
-    end)
-    |> Enum.map(fn cal -> cal["id"] || cal[:id] end)
+    |> Enum.filter(fn cal -> cal.selected == true and cal.id != primary_id end)
+    |> Enum.map(& &1.id)
   end
 
   # Iterates each selected secondary calendar, accumulating the ids of any that

@@ -68,10 +68,9 @@ defmodule Tymeslot.Integrations.Calendar.Reminder do
   - anything else (including `"popup"`, `:popup`, `nil`) → `:popup`
   """
   @spec method(map()) :: method()
-  def method(%{} = reminder) do
-    raw = reminder[:method] || reminder["method"]
-    method_atom(raw)
-  end
+  def method(%{method: raw}), do: method_atom(raw)
+  def method(%{"method" => raw}), do: method_atom(raw)
+  def method(%{}), do: method_atom(nil)
 
   @doc """
   Maps the canonical reminder method to a Google Calendar override method string.

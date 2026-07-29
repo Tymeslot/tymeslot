@@ -78,6 +78,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
   import Tymeslot.Factory
   import Tymeslot.TestHelpers.Eventually
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Profiles.ProfileQueries
@@ -266,11 +267,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
         assert added =~ "My #{@label}"
 
         # Persisted with the discovered paths under the right provider.
-        integration =
-          Repo.get_by(CalendarIntegrationSchema, user_id: user.id, provider: @provider)
+        assert %{calendar_paths: calendar_paths} =
+                 Repo.get_by(CalendarIntegrationSchema, user_id: user.id, provider: @provider)
 
-        assert integration
-        assert integration.calendar_paths != []
+        refute calendar_paths == []
       end
     end
 
@@ -409,7 +409,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       )
       |> render_click()
 
-      [%{"id" => "cal-primary", "selected" => selected}] =
+      [%CalendarEntry{id: "cal-primary", selected: selected}] =
         Repo.get!(CalendarIntegrationSchema, integration.id).calendar_list
 
       refute selected

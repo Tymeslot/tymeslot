@@ -24,7 +24,8 @@ defmodule TymeslotWeb.Live.Scheduling.BookingConfigTest do
       assert {:error, errors} =
                InputProcessor.validate_form(params, BookingConfig.booking_field_spec())
 
-      assert Map.has_key?(errors, :name) or Map.has_key?(errors, :email)
+      assert Map.has_key?(errors, :name)
+      assert Map.has_key?(errors, :email)
     end
 
     test "message field is optional" do

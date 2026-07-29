@@ -55,6 +55,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:selected_calendar_integration_id, nil)
      |> assign(:selected_target_calendar_id, nil)
      |> assign(:available_calendars, [])
+     |> assign(:no_writable_calendars, false)
      |> assign(:refreshing_calendars, false)
      |> assign(:reminders, [])
      |> assign(:new_reminder_value, "")
@@ -200,6 +201,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         selected_calendar_integration_id={@selected_calendar_integration_id}
         refreshing_calendars={@refreshing_calendars}
         available_calendars={@available_calendars}
+        no_writable_calendars={@no_writable_calendars}
         selected_target_calendar_id={@selected_target_calendar_id}
         form_errors={@form_errors}
         myself={@myself}
@@ -415,6 +417,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       |> assign(:selected_calendar_integration_id, integration_id)
       |> assign(:refreshing_calendars, true)
       |> assign(:available_calendars, [])
+      |> assign(:no_writable_calendars, false)
       |> assign(:selected_target_calendar_id, nil)
       |> assign(
         :form_errors,

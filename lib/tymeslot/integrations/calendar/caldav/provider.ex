@@ -14,9 +14,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalDAV.ServerDetector
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Utils.MapKeys
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def provider_type, do: :caldav
@@ -67,7 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def new(config) do
-    base_url = config[:base_url] || config["base_url"]
+    base_url = MapKeys.get(config, :base_url)
 
     # Auto-detect server type and use detected type for proper path construction
     detected_provider =
@@ -96,9 +98,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
 
     common_config = %{
       base_url: if(is_binary(base_url), do: CaldavCommon.normalize_url(base_url), else: nil),
-      username: config[:username] || config["username"],
-      password: config[:password] || config["password"],
-      calendar_paths: config[:calendar_paths] || config["calendar_paths"] || [],
+      username: MapKeys.get(config, :username),
+      password: MapKeys.get(config, :password),
+      calendar_paths: MapKeys.get(config, :calendar_paths) || [],
       verify_ssl: true
     }
 
@@ -120,7 +122,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
   @doc """
   Discovers available calendars on the CalDAV server.
   """
-  @spec discover_calendars(map(), keyword()) :: {:ok, list(map())} | {:error, String.t()}
+  @spec discover_calendars(map(), keyword()) :: {:ok, [CalendarEntry.t()]} | {:error, String.t()}
   def discover_calendars(client, opts \\ []) do
     ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
 

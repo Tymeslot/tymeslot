@@ -51,7 +51,7 @@ defmodule Tymeslot.OnboardingTest do
     test "marks user onboarding as complete" do
       user = insert(:user, onboarding_completed_at: nil)
       assert {:ok, updated_user} = Onboarding.complete_onboarding(user)
-      assert updated_user.onboarding_completed_at != nil
+      assert %DateTime{} = updated_user.onboarding_completed_at
     end
 
     test "is idempotent for already-completed users" do
@@ -73,7 +73,7 @@ defmodule Tymeslot.OnboardingTest do
     test "calls Auth in non-dev mode" do
       user = insert(:user, onboarding_completed_at: nil)
       assert {:ok, updated_user} = Onboarding.complete_onboarding(user, false)
-      assert updated_user.onboarding_completed_at != nil
+      assert %DateTime{} = updated_user.onboarding_completed_at
     end
 
     test "emits [:tymeslot, :onboarding, :completed] telemetry for a real user" do

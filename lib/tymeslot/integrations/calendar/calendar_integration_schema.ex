@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   use Ecto.Schema
   import Ecto.Changeset
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Security.Encryption
@@ -29,7 +30,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           token_expires_at: DateTime.t() | nil,
           oauth_scope: String.t() | nil,
           calendar_paths: [String.t()],
-          calendar_list: [map()],
+          calendar_list: [CalendarEntry.t()],
           default_booking_calendar_id: String.t() | nil,
           verify_ssl: boolean(),
           is_active: boolean(),
@@ -72,7 +73,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:token_expires_at, :utc_datetime)
     field(:oauth_scope, :string)
     field(:calendar_paths, {:array, :string}, default: [])
-    field(:calendar_list, {:array, :map}, default: [])
+    field(:calendar_list, {:array, CalendarEntry}, default: [])
     field(:default_booking_calendar_id, :string)
     field(:verify_ssl, :boolean, default: true)
     field(:is_active, :boolean, default: true)

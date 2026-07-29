@@ -7,7 +7,6 @@ defmodule Tymeslot.Integrations.Video.UrlsTest do
   describe "extract_room_id/1" do
     test "extracts room_id from map" do
       assert Urls.extract_room_id(%{room_data: %{room_id: "room123"}}) == "room123"
-      assert Urls.extract_room_id(%{room_data: %{"room_id" => "room456"}}) == "room456"
     end
 
     test "returns nil for a context whose room_data carries no room id" do

@@ -143,10 +143,7 @@ defmodule Tymeslot.Mailer.PostmarkProbeTest do
       assert req.host == "api.postmarkapp.com"
       assert req.path == "/server"
 
-      header_names = Enum.map(req.headers, fn {name, _val} -> name end)
-
-      assert "x-postmark-server-token" in header_names or
-               {"X-Postmark-Server-Token", "my-secret-key"} in req.headers
+      assert {"X-Postmark-Server-Token", "my-secret-key"} in req.headers
     end
   end
 end

@@ -8,6 +8,8 @@ defmodule Tymeslot.Security.InputProcessor do
 
   alias Tymeslot.Security.{FieldValidators, UniversalSanitizer}
 
+  require Logger
+
   @type form_params :: %{String.t() => term()}
   @type form_errors :: %{atom() => [String.t()]}
 
@@ -118,10 +120,18 @@ defmodule Tymeslot.Security.InputProcessor do
 
   defp safe_field_key(key) when is_atom(key), do: key
 
+  # Form errors are keyed by atom. Submitted field names are attacker-controlled,
+  # so an unknown name must never mint an atom; it keeps its string key instead.
   defp safe_field_key(key) when is_binary(key) do
     String.to_existing_atom(key)
   rescue
-    ArgumentError -> key
+    error in ArgumentError ->
+      Logger.debug("Submitted field name has no existing atom; keeping the string key",
+        field: key,
+        error: Exception.message(error)
+      )
+
+      key
   end
 
   defp safe_field_key(key), do: key

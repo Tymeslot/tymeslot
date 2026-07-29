@@ -275,9 +275,15 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
   defp extract_attendee_emails(attendees) do
     attendees
-    |> Enum.map(&(&1["email"] || &1[:email]))
+    |> Enum.map(&attendee_email/1)
     |> Enum.filter(& &1)
   end
+
+  # Attendees arrive string-keyed from provider payloads and atom-keyed from
+  # in-process callers, so both shapes are answered here once.
+  defp attendee_email(%{"email" => email}) when is_binary(email), do: email
+  defp attendee_email(%{email: email}) when is_binary(email), do: email
+  defp attendee_email(_attendee), do: nil
 
   defp schedule_email_job(
          notification_type,

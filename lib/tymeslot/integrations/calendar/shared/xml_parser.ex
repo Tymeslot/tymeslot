@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.XmlParser do
   to avoid code duplication and ensure consistent parsing behavior.
   """
 
+  require Logger
+
   @doc """
   Parses calendar discovery response XML and extracts calendar information.
 
@@ -57,7 +59,12 @@ defmodule Tymeslot.Integrations.Calendar.Shared.XmlParser do
 
     {:ok, calendars}
   rescue
-    _parse_exception -> {:error, "Failed to parse calendar discovery response"}
+    exception ->
+      Logger.warning("Failed to parse calendar discovery response",
+        error: Exception.message(exception)
+      )
+
+      {:error, "Failed to parse calendar discovery response"}
   end
 
   @doc """

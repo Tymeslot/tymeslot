@@ -129,8 +129,9 @@ defmodule Tymeslot.AnnouncementsTest do
           assert :ok = AnnouncementQueries.mark_seen!(-1, "feature_a")
         end)
 
-      assert log =~ "Failed to mark announcement seen" or
-               log =~ "Marking announcement seen raised"
+      # The schema declares foreign_key_constraint(:user_id), so the FK violation
+      # comes back as a changeset error rather than a raised Ecto.ConstraintError.
+      assert log =~ "Failed to mark announcement seen"
 
       assert AnnouncementQueries.seen_keys_for(-1) == []
     end

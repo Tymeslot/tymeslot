@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   """
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
@@ -107,8 +108,8 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
 
     calendar_list =
       Enum.map(calendars, fn cal ->
-        path = cal["path"] || cal[:path]
-        Map.put(cal, "selected", path in selected_paths)
+        entry = CalendarEntry.normalize(cal)
+        %{entry | selected: entry.path in selected_paths}
       end)
 
     credential_attrs = %{

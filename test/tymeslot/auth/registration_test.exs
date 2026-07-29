@@ -81,7 +81,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
   end
 
   describe "input sanitization" do
-    test "sanitizes malicious input" do
+    test "trims the email and never persists a name from the signup params" do
       params = %{
         "email" => "  safe@example.com  ",
         "password" => "ValidPassword123!",
@@ -92,7 +92,6 @@ defmodule Tymeslot.Auth.RegistrationTest do
 
       {:ok, user, _session} = Registration.register_user(params, %Plug.Conn{})
 
-      # Email trimmed
       assert user.email == "safe@example.com"
 
       # Signup persists the email, the password and the terms acceptance, and

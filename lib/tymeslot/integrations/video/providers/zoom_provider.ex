@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
 
@@ -49,7 +50,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       # only warrants a log line, never a failed booking.
       verify_meeting_created(token, meeting["id"])
 
-      room_data = %{
+      room_data = %RoomData{
         room_id: to_string(meeting["id"]),
         meeting_url: meeting["join_url"],
         provider_data: %{
@@ -95,9 +96,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       _no_match -> nil
     end
   end
-
-  def extract_room_id(%{room_data: room_data}),
-    do: room_data[:room_id] || room_data["room_id"]
 
   def extract_room_id(_other), do: nil
 
@@ -153,8 +151,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       provider: "zoom",
       meeting_id: room_data.room_id,
       join_url: room_data.meeting_url,
-      passcode: room_data.provider_data[:passcode] || room_data.provider_data["passcode"],
-      host_url: room_data.provider_data[:start_url] || room_data.provider_data["start_url"]
+      passcode: room_data.provider_data[:passcode],
+      host_url: room_data.provider_data[:start_url]
     }
   end
 

@@ -13,8 +13,9 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
 
       html = EmailVerification.render(user, verification_url)
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      assert html =~ "<html"
+      assert html =~ "</html>"
+      assert html =~ "Welcome to Tymeslot"
     end
 
     test "includes user name in greeting" do
@@ -82,7 +83,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
 
       html = EmailVerification.render(user, verification_url)
 
-      assert html =~ "24 hours" || html =~ "expire"
+      assert html =~ "this link expires in 24 hours"
     end
 
     test "handles special characters in user name" do
@@ -91,8 +92,11 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
 
       html = EmailVerification.render(user, verification_url)
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      # `&` and `'` are entity-encoded, so match the parts of the name that
+      # escaping leaves untouched rather than a specific entity spelling.
+      assert html =~ "Brien"
+      assert html =~ "Sons"
+      assert html =~ verification_url
     end
   end
 
@@ -124,9 +128,10 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
 
       html = EmailVerification.render(user, verification_url)
 
-      assert is_binary(html)
-      # Script tags should be sanitized
+      # The injected markup is neutralised, and the email is still complete.
+      assert html =~ verification_url
       refute html =~ "<script>"
+      refute html =~ "alert('xss')"
     end
   end
 
@@ -141,7 +146,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       url = "https://example.com/verify/token"
       text = EmailVerification.render_text(user, url)
 
-      assert is_binary(text)
+      assert text =~ "Hi <script>alert('xss')</script>,"
       assert text =~ url
     end
 

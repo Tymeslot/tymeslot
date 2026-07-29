@@ -44,11 +44,10 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
     } do
       {:ok, _result} = update_theme(profile, "1")
 
-      {:ok, view, html} = live(conn, ~p"/#{profile.username}")
+      {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
 
       # Core requirement: visitors must see meeting types
       assert html =~ meeting_type.name, "Theme must show meeting types"
-      assert view
     end
 
     test "visitor can see meeting types with rhythm theme", %{
@@ -58,11 +57,10 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
     } do
       {:ok, _result} = update_theme(profile, "2")
 
-      {:ok, view, html} = live(conn, ~p"/#{profile.username}")
+      {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
 
-      # Theme loads with booking interface
-      assert html =~ profile.username or html =~ meeting_type.name
-      assert view
+      # Theme loads with the booking interface, same core requirement as Quill
+      assert html =~ meeting_type.name, "Theme must show meeting types"
     end
   end
 

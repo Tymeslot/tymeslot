@@ -138,7 +138,8 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCompositionTest do
       view |> element("button", "Add Telegram Account") |> render_click()
       assert [stub] = Telegram.list_integrations(user.id)
       initial_token = stub.link_token
-      assert is_binary(initial_token)
+      # 24 random bytes, url-safe base64 without padding
+      assert initial_token =~ ~r/\A[A-Za-z0-9_-]{32}\z/
 
       # Force the expired state so the "Generate New Link" button
       # renders — that is the only UI surface that fires
@@ -159,7 +160,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCompositionTest do
       # regression in the handler that forgot to rotate (or forgot to
       # persist) would leave the old token in place.
       [refreshed] = Telegram.list_integrations(user.id)
-      assert is_binary(refreshed.link_token)
+      assert refreshed.link_token =~ ~r/\A[A-Za-z0-9_-]{32}\z/
       refute refreshed.link_token == initial_token
     end
   end

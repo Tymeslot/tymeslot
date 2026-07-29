@@ -195,11 +195,14 @@ defmodule Tymeslot.Bookings.Validation do
 
   defp parse_date(_invalid), do: {:error, :invalid_date}
 
+  # `TimeSlots.parse_time_slot/1` raises on unparsable input; its underlying
+  # parser already reports the failure as a tuple, so call that directly and
+  # translate the reason rather than round-tripping through an exception.
   defp safe_parse_time_slot(time_string) do
-    time = TimeSlots.parse_time_slot(time_string)
-    {:ok, time}
-  rescue
-    _parse_exception -> {:error, :invalid_time}
+    case DateTimeUtils.parse_time_string(time_string) do
+      {:ok, time} -> {:ok, time}
+      {:error, _reason} -> {:error, :invalid_time}
+    end
   end
 
   defp parse_duration(duration) when is_integer(duration), do: {:ok, duration}

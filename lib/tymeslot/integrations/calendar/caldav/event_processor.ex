@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
+  alias Tymeslot.Utils.MapKeys
 
   # ---------------------------------------------------------------------------
   # Normalisation entry point (called from CalDAV.Provider)
@@ -151,7 +152,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
         provider: :caldav,
         calendar_integration_id: context.calendar_integration_id,
         provider_calendar_id: context.provider_calendar_id,
-        provider_event_id: raw[:href] || raw["href"] || raw[:uid],
+        provider_event_id: raw[:href] || raw[:uid],
         synced_at: context.synced_at,
         summary: raw[:summary],
         description: raw[:description],
@@ -283,7 +284,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
 
   defp map_organiser(organiser) when is_map(organiser) do
     %{
-      email: organiser["email"] || organiser[:email],
+      email: MapKeys.get(organiser, :email),
       display_name: organiser["CN"] || organiser["name"] || organiser[:display_name]
     }
   end
@@ -306,7 +307,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
 
   defp map_attendee(a) when is_map(a) do
     %{
-      email: a["email"] || a[:email],
+      email: MapKeys.get(a, :email),
       display_name: a["name"] || a["CN"] || a[:display_name],
       response_status: map_partstat(a["status"] || a["PARTSTAT"] || a[:response_status]),
       optional: false

@@ -222,13 +222,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandlerTest do
       assert length(calendars) == 2
 
       assert Enum.any?(calendars, fn cal ->
-               cal.href == "/remote.php/dav/calendars/alice/personal/" and
+               cal.path == "/remote.php/dav/calendars/alice/personal/" and
                  cal.name == "Personal" and
                  cal.color == "#1D6EC3FF"
              end)
 
       assert Enum.any?(calendars, fn cal ->
-               cal.href == "/remote.php/dav/calendars/alice/work/" and
+               cal.path == "/remote.php/dav/calendars/alice/work/" and
                  cal.name == "Work"
              end)
     end
@@ -239,7 +239,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandlerTest do
       # Only the calendar collection, not the bare /alice/ collection
       assert length(calendars) == 1
       [cal] = calendars
-      assert cal.href == "/alice/calendar.ics/"
+      assert cal.path == "/alice/calendar.ics/"
       assert cal.name == "Calendar"
     end
 
@@ -248,7 +248,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandlerTest do
 
       assert length(calendars) == 1
       [cal] = calendars
-      assert cal.href == "/dav/user%40example.com/Calendar/"
+      assert cal.path == "/dav/user%40example.com/Calendar/"
       assert cal.name == "Calendar"
     end
 
@@ -260,14 +260,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandlerTest do
       assert {:ok, [cal]} = XmlHandler.parse_calendar_discovery(@no_displayname_xml)
 
       # Name is derived from the last path segment, underscores replaced with spaces
-      assert cal.name =~ "Work calendar" or cal.name =~ "Work Calendar"
+      assert cal.name == "Work calendar"
     end
 
     test "each calendar has required keys" do
       assert {:ok, [cal | _rest]} = XmlHandler.parse_calendar_discovery(@nextcloud_discovery_xml)
 
       assert Map.has_key?(cal, :id)
-      assert Map.has_key?(cal, :href)
+      assert Map.has_key?(cal, :path)
       assert Map.has_key?(cal, :name)
       assert Map.has_key?(cal, :color)
       assert Map.has_key?(cal, :selected)

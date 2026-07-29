@@ -45,44 +45,41 @@ defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
   end
 
   describe "buffer_time_options/0" do
-    test "returns tuples with labels and values" do
-      options = StepConfig.buffer_time_options()
-      assert length(options) == 5
-
-      # Check structure
-      Enum.each(options, fn option ->
-        assert {label, value} = option
-        assert is_binary(label)
-        assert is_integer(value)
-      end)
+    test "returns labelled tuples for every preset" do
+      assert StepConfig.buffer_time_options() == [
+               {"No buffer", 0},
+               {"15 min", 15},
+               {"30 min", 30},
+               {"45 min", 45},
+               {"60 min", 60}
+             ]
     end
   end
 
   describe "advance_booking_options/0" do
-    test "returns tuples with labels and values" do
-      options = StepConfig.advance_booking_options()
-      assert length(options) == 6
-
-      # Check structure
-      Enum.each(options, fn option ->
-        assert {label, value} = option
-        assert is_binary(label)
-        assert is_integer(value)
-      end)
+    test "returns labelled tuples for every preset" do
+      assert StepConfig.advance_booking_options() == [
+               {"1 week", 7},
+               {"2 weeks", 14},
+               {"1 month", 30},
+               {"3 months", 90},
+               {"6 months", 180},
+               {"1 year", 365}
+             ]
     end
   end
 
   describe "min_advance_options/0" do
-    test "returns tuples with labels and values" do
-      options = StepConfig.min_advance_options()
-      assert length(options) == 7
-
-      # Check structure
-      Enum.each(options, fn option ->
-        assert {label, value} = option
-        assert is_binary(label)
-        assert is_integer(value)
-      end)
+    test "returns labelled tuples for every preset" do
+      assert StepConfig.min_advance_options() == [
+               {"No minimum", 0},
+               {"1 hour", 1},
+               {"3 hours", 3},
+               {"6 hours", 6},
+               {"12 hours", 12},
+               {"24 hours", 24},
+               {"48 hours", 48}
+             ]
     end
   end
 end

@@ -4,6 +4,8 @@ defmodule Tymeslot.Security.UrlValidationTest do
 
   alias Tymeslot.Security.UrlValidation
 
+  @invalid_url_message "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
+
   describe "validate_http_url/2" do
     test "accepts valid http and https URLs" do
       assert :ok = UrlValidation.validate_http_url("https://example.com")
@@ -11,16 +13,12 @@ defmodule Tymeslot.Security.UrlValidationTest do
     end
 
     test "rejects non-binary input" do
-      assert {:error, msg} = UrlValidation.validate_http_url(nil)
-      assert is_binary(msg)
+      assert UrlValidation.validate_http_url(nil) == {:error, @invalid_url_message}
     end
 
     test "rejects missing host or malformed URLs" do
-      assert {:error, msg1} = UrlValidation.validate_http_url("https://")
-      assert is_binary(msg1)
-
-      assert {:error, msg2} = UrlValidation.validate_http_url("https:///path")
-      assert is_binary(msg2)
+      assert UrlValidation.validate_http_url("https://") == {:error, @invalid_url_message}
+      assert UrlValidation.validate_http_url("https:///path") == {:error, @invalid_url_message}
     end
 
     test "rejects unsupported schemes with a scheme-specific error" do

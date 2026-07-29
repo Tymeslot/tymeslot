@@ -12,8 +12,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
 
   require Logger
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Selection
 
   @max_concurrency 20
 
@@ -38,8 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
           |> Task.Supervisor.async_stream(
             selected,
             fn calendar ->
-              calendar_id = calendar[:id] || calendar["id"]
-              api_module.list_events(integration, calendar_id, start_time, end_time)
+              api_module.list_events(integration, calendar.id, start_time, end_time)
             end,
             max_concurrency: @max_concurrency,
             timeout: 30_000
@@ -52,17 +53,27 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
   end
 
   @doc """
-  Returns only calendars with selected=true and an id present.
-  Supports either atom or string keys.
+  Returns the selected calendars (read-only included, per
+  `Selection.selected_calendars/1` — this only reads events, it never
+  writes) that also have an id present.
   """
-  @spec get_selected_calendars(map()) :: list()
+  @spec get_selected_calendars(map()) :: [CalendarEntry.t()]
   def get_selected_calendars(%{calendar_list: calendar_list}) when is_list(calendar_list) do
-    Enum.filter(calendar_list, fn calendar ->
-      (calendar[:selected] || calendar["selected"]) && (calendar[:id] || calendar["id"])
-    end)
+    calendar_list
+    |> Enum.map(&CalendarEntry.normalize/1)
+    |> Selection.selected_calendars()
+    |> Enum.filter(& &1.id)
   end
 
   def get_selected_calendars(_integration), do: []
+
+  # Events are a separate shape from calendar entries: Outlook's API module
+  # normalises to atom keys, Google's returns the raw string-keyed payload.
+  # Dispatch on shape once here instead of probing both key types at every
+  # read.
+  defp event_id(%{id: id}), do: id
+  defp event_id(%{"id" => id}), do: id
+  defp event_id(_event), do: nil
 
   defp collect_events(results) do
     {successes, failures} =
@@ -77,7 +88,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
       events =
         successes
         |> Enum.flat_map(fn {{:ok, {:ok, evs}}, _calendar} -> evs end)
-        |> Enum.uniq_by(fn event -> event[:id] || event["id"] end)
+        |> Enum.uniq_by(&event_id/1)
 
       {:ok, events}
     end
@@ -86,7 +97,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
   defp deselect_missing_calendars(integration, results) do
     missing_ids =
       for {{:ok, {:error, :not_found, _message}}, calendar} <- results do
-        calendar[:id] || calendar["id"]
+        calendar.id
       end
 
     do_deselect(integration, missing_ids)

@@ -50,27 +50,29 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
     now = System.monotonic_time(:millisecond)
     expiry = now + processing_ttl()
 
-    case :ets.insert_new(:webhook_idempotency_cache, {event_id, :processing, expiry}) do
-      true ->
-        {:ok, :reserved}
+    if :ets.insert_new(:webhook_idempotency_cache, {event_id, :processing, expiry}) do
+      {:ok, :reserved}
+    else
+      reserve_existing(event_id, expiry)
+    end
+  end
 
-      false ->
-        case lookup_entry(event_id) do
-          {:ok, :processing} ->
-            {:ok, :in_progress}
+  defp reserve_existing(event_id, expiry) do
+    case lookup_entry(event_id) do
+      {:ok, :processing} ->
+        {:ok, :in_progress}
 
-          {:ok, :processed} ->
-            {:ok, :already_processed}
+      {:ok, :processed} ->
+        {:ok, :already_processed}
 
-          :miss ->
-            # Entry expired but wasn't cleaned yet; clear and try again
-            :ets.delete(:webhook_idempotency_cache, event_id)
+      :miss ->
+        # Entry expired but wasn't cleaned yet; clear and try again
+        :ets.delete(:webhook_idempotency_cache, event_id)
 
-            if :ets.insert_new(:webhook_idempotency_cache, {event_id, :processing, expiry}) do
-              {:ok, :reserved}
-            else
-              {:ok, :in_progress}
-            end
+        if :ets.insert_new(:webhook_idempotency_cache, {event_id, :processing, expiry}) do
+          {:ok, :reserved}
+        else
+          {:ok, :in_progress}
         end
     end
   end

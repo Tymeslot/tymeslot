@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.HealthCheck.ResponseHandler
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Workers.EmailWorker
 
@@ -22,7 +23,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       {:ok, updated} = VideoIntegrationQueries.get(integration.id)
       assert updated.needs_reauth == true
       assert updated.is_active == true
-      assert updated.sync_error =~ "expired or been revoked"
+      assert updated.sync_error == ReauthHandling.reauth_error_message(:expired_grant)
 
       assert_enqueued(
         worker: EmailWorker,

@@ -57,8 +57,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
     if is_list(attendees) and attendees != [] do
       attendees
       |> Enum.map(fn attendee ->
-        email = attendee["email"] || attendee[:email]
-        name = attendee["name"] || attendee[:name]
+        email = extract_field(attendee, :email, "email")
+        name = extract_field(attendee, :name, "name")
 
         if email do
           %{

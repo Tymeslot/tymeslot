@@ -33,8 +33,8 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
 
     property "never crashes and returns either ok or error for random strings" do
       check all(s <- string(:ascii)) do
-        result = Duration.parse(s)
-        assert match?({:ok, _result}, result) or match?({:error, _reason}, result)
+        assert {status, _payload} = Duration.parse(s)
+        assert status in [:ok, :error]
       end
     end
 

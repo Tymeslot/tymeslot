@@ -50,7 +50,7 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.ProviderTest do
     import Tymeslot.CalendarProviderValidationCases
 
     test "validates basic required fields" do
-      test_basic_validation(Provider, "https://dav.mailbox.org")
+      assert :ok = test_basic_validation(Provider, "https://dav.mailbox.org")
     end
 
     test "rejects HTTP for the public mailbox.org host" do

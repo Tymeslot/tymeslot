@@ -23,6 +23,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
+  require Logger
+
   @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
@@ -542,10 +544,18 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     end
   end
 
+  # Form keys are user-submitted, so an unrecognised one must never mint an
+  # atom; it keeps its string key and is rejected downstream instead.
   defp try_string_to_atom(k) do
     String.to_existing_atom(k)
   rescue
-    ArgumentError -> k
+    error in ArgumentError ->
+      Logger.debug("Video integration param has no existing atom; keeping the string key",
+        param: k,
+        error: Exception.message(error)
+      )
+
+      k
   end
 
   defp normalize_id(id) when is_integer(id), do: id

@@ -64,14 +64,14 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
   end
 
   describe "connection validation consistency" do
-    test "custom provider test_connection returns tuple" do
+    test "custom provider test_connection reports an unreachable URL" do
       {:ok, custom} = ProviderRegistry.get_provider(:custom)
 
       config = %{custom_meeting_url: "https://meet.example.com/room"}
-      result = custom.test_connection(config)
 
-      # Should return a tuple
-      assert match?({:ok, _result}, result) or match?({:error, _reason}, result)
+      # The URL is well-formed, so it gets as far as the reachability probe,
+      # which always fails: example.com has no `meet` host.
+      assert {:error, _reason} = custom.test_connection(config)
     end
 
     test "mirotalk test_connection requires HTTP mock" do
@@ -103,17 +103,9 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
       {:ok, custom} = ProviderRegistry.get_provider(:custom)
 
       config = %{custom_meeting_url: "invalid-url"}
-      result = custom.test_connection(config)
 
-      case result do
-        {:error, message} ->
-          # Message should be string or atom
-          assert is_binary(message) or is_atom(message)
-
-        {:ok, _result} ->
-          # Some providers may handle this differently
-          :ok
-      end
+      assert custom.test_connection(config) ==
+               {:error, "Invalid URL scheme. Only http and https are supported"}
     end
   end
 
@@ -136,17 +128,17 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
         recording_required: false
       }
 
-      recommended = ProviderRegistry.recommend_provider(requirements)
-
-      assert is_atom(recommended)
-      assert recommended in ProviderRegistry.list_providers()
+      # Ten participants with no recording needs is served by the default.
+      assert ProviderRegistry.recommend_provider(requirements) == :mirotalk
     end
 
-    test "capability filtering returns list" do
-      # Capability filtering should return a list
-      result = ProviderRegistry.providers_with_capability(:screen_sharing)
-
-      assert is_list(result)
+    test "capability filtering returns only providers with that capability" do
+      assert ProviderRegistry.providers_with_capability(:screen_sharing) == [
+               :mirotalk,
+               :google_meet,
+               :teams,
+               :zoom
+             ]
     end
   end
 
@@ -169,9 +161,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
         custom_meeting_url: "https://meet.example.com/room123"
       }
 
-      result = custom.validate_config(custom_config)
-      # Custom provider validation may return :ok, {:ok, _result}, or {:error, _reason}
-      assert result == :ok or match?({:ok, _result}, result) or match?({:error, _reason}, result)
+      assert custom.validate_config(custom_config) == :ok
     end
 
     # Every video provider's `validate_config/1` is a structural check only;

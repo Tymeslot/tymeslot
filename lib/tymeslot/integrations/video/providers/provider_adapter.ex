@@ -9,16 +9,16 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
 
   require Logger
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
 
   @doc """
   Creates a new meeting room using the specified provider.
 
-  Returns {:ok, %{provider_type: atom, room_data: map, provider_module: module}}
-  or {:error, reason}.
+  Returns {:ok, MeetingContext.t()} or {:error, reason}.
   """
-  @spec create_meeting_room(atom(), map()) :: {:ok, map()} | {:error, term()}
+  @spec create_meeting_room(atom(), map()) :: {:ok, MeetingContext.t()} | {:error, term()}
   def create_meeting_room(provider_type, config) do
     Metrics.time_operation(:video_create_room, %{provider: provider_type}, fn ->
       Logger.info("Creating meeting room", provider: provider_type)
@@ -28,14 +28,14 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
            {:ok, room_data} <- provider_module.create_meeting_room(config) do
         Logger.info("Successfully created meeting room",
           provider: provider_type,
-          room_id: extract_room_identifier(room_data)
+          room_id: room_data.room_id || "unknown"
         )
 
         # Handle meeting created event
         provider_module.handle_meeting_event(:created, room_data, %{})
 
         {:ok,
-         %{
+         %MeetingContext{
            provider_type: provider_type,
            room_data: room_data,
            provider_module: provider_module
@@ -59,7 +59,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   @doc """
   Creates a join URL for a participant.
   """
-  @spec create_join_url(map(), String.t(), String.t(), atom(), DateTime.t()) ::
+  @spec create_join_url(MeetingContext.t(), String.t(), String.t(), atom(), DateTime.t()) ::
           {:ok, String.t()} | {:error, term()}
   def create_join_url(meeting_context, participant_name, participant_email, role, meeting_time) do
     %{
@@ -241,7 +241,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   @doc """
   Handles meeting lifecycle events.
   """
-  @spec handle_meeting_event(map(), atom(), map()) :: :ok | {:error, term()}
+  @spec handle_meeting_event(MeetingContext.t(), atom(), map()) :: :ok | {:error, term()}
   def handle_meeting_event(meeting_context, event, additional_data \\ %{}) do
     %{
       provider_type: provider_type,
@@ -252,7 +252,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
     Logger.info("Handling meeting event",
       provider: provider_type,
       event: event,
-      room_id: extract_room_identifier(room_data)
+      room_id: room_data.room_id || "unknown"
     )
 
     case provider_module.handle_meeting_event(event, room_data, additional_data) do
@@ -278,7 +278,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   @doc """
   Generates meeting metadata for display purposes.
   """
-  @spec generate_meeting_metadata(map()) :: map()
+  @spec generate_meeting_metadata(MeetingContext.t()) :: map()
   def generate_meeting_metadata(meeting_context) do
     %{
       provider_type: provider_type,
@@ -327,17 +327,4 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
       end
     end)
   end
-
-  defp extract_room_identifier(room_data) when is_map(room_data) do
-    # Try common room identifier keys
-    room_data[:room_id] ||
-      room_data[:meeting_id] ||
-      room_data[:id] ||
-      room_data["room_id"] ||
-      room_data["meeting_id"] ||
-      room_data["id"] ||
-      "unknown"
-  end
-
-  defp extract_room_identifier(_arg), do: "unknown"
 end

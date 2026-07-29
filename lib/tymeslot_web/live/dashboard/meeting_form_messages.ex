@@ -19,7 +19,6 @@ defmodule TymeslotWeb.Dashboard.MeetingFormMessages do
   import Phoenix.LiveView, only: [send_update: 2]
 
   alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Integrations.Calendar.Selection
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
 
   @doc "Dismisses a reminder confirmation prompt on the form."
@@ -43,14 +42,18 @@ defmodule TymeslotWeb.Dashboard.MeetingFormMessages do
     {:noreply, socket}
   end
 
-  @doc "Pushes the refreshed calendar list back to the form."
+  @doc """
+  Pushes the refreshed calendar list back to the form, narrowed to writable
+  booking targets (see `Tymeslot.Integrations.Calendar.writable_calendars/1`).
+  """
   @spec handle_calendar_list_refreshed(String.t(), list(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_calendar_list_refreshed(form_id, calendars, socket) do
     send_update(MeetingTypeForm,
       id: form_id,
       refreshing_calendars: false,
-      available_calendars: Selection.selected_calendars(calendars)
+      available_calendars: Calendar.writable_calendars(calendars),
+      no_writable_calendars: Calendar.all_selected_read_only?(calendars)
     )
 
     {:noreply, socket}

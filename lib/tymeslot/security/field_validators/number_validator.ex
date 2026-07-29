@@ -56,6 +56,9 @@ defmodule Tymeslot.Security.FieldValidators.NumberValidator do
   defp safe_float_parse(value) do
     Float.parse(value)
   rescue
+    # Overflow is an expected shape of hostile input, not a failure to record:
+    # logging it would let any visitor fill the log with 309-digit strings.
+    # credo:disable-for-next-line CredoChecks.NoSwallowedException
     ArgumentError -> :error
   end
 
@@ -65,6 +68,9 @@ defmodule Tymeslot.Security.FieldValidators.NumberValidator do
       _other -> :error
     end
   rescue
+    # Same rationale as `safe_float_parse/1`: caller-controlled input, and the
+    # rejection is already reported to the caller as a validation error.
+    # credo:disable-for-next-line CredoChecks.NoSwallowedException
     ArgumentError -> :error
   end
 

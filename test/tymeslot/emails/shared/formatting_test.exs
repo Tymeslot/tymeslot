@@ -68,7 +68,8 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
       result = Formatting.format_time(datetime)
 
       assert result =~ "02:30 PM"
-      assert result =~ "EST" or result =~ "EDT"
+      # 25 November is after the first Sunday of November, so New York is on EST.
+      assert result =~ "EST"
     end
 
     test "formats time with UTC timezone" do
@@ -95,7 +96,8 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
       result = Formatting.format_time_range(start_time, end_time)
 
       assert result =~ "02:30 PM - 03:30 PM"
-      assert result =~ "EST" or result =~ "EDT"
+      # 25 November is after the first Sunday of November, so New York is on EST.
+      assert result =~ "EST"
     end
 
     test "formats time range across different hours" do

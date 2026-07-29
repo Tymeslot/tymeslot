@@ -8,7 +8,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
     test "returns list of all registered providers" do
       providers = ProviderRegistry.list_providers()
 
-      assert is_list(providers)
       assert :caldav in providers
       assert :google in providers
       assert :nextcloud in providers
@@ -16,12 +15,13 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
       # Outlook may not be enabled in all environments
     end
 
-    test "may include development providers in test environment" do
+    test "lists the development-only providers alongside the production ones" do
       providers = ProviderRegistry.list_providers()
 
-      # Debug and demo providers may be available in test environment
-      assert is_list(providers)
-      assert length(providers) >= 4
+      # list_providers/0 reports the registry's static map, so the dev-only
+      # providers appear here even when valid_providers/0 filters them out.
+      assert :debug in providers
+      assert :demo in providers
     end
   end
 
@@ -60,8 +60,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
     test "returns error for unknown provider" do
       assert {:error, message} = ProviderRegistry.get_provider(:unknown)
 
-      assert String.contains?(message, "Invalid provider") or
-               String.contains?(message, "Unknown provider")
+      assert message == "Unknown provider type: :unknown"
     end
 
     test "returns {:ok, module} for a provider that is disabled in config (toggle-agnostic)" do
@@ -135,7 +134,6 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
     test "returns list of all valid provider atoms" do
       providers = ProviderRegistry.valid_providers()
 
-      assert is_list(providers)
       assert :caldav in providers
       assert :google in providers
       assert :nextcloud in providers
@@ -143,12 +141,17 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
       # Outlook may not be enabled in all environments
     end
 
-    test "may include development providers in test environment" do
-      providers = ProviderRegistry.valid_providers()
+    test "reports only providers that are enabled at runtime" do
+      valid = ProviderRegistry.valid_providers()
+      registered = ProviderRegistry.list_providers()
 
-      # Debug and demo providers may be available in test environment
-      assert is_list(providers)
-      assert length(providers) >= 4
+      assert valid != []
+
+      assert Enum.all?(valid, &(&1 in registered)),
+             "valid_providers/0 must be a subset of the registered providers"
+
+      # Registered, but not enabled in the test environment.
+      refute :debug in valid
     end
   end
 
@@ -183,22 +186,24 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
     test "returns metadata for all providers" do
       providers = ProviderRegistry.list_providers_with_metadata()
 
-      assert is_list(providers)
-      assert providers != []
+      assert length(providers) == ProviderRegistry.provider_count()
 
       # Check metadata structure
-      provider = Enum.find(providers, fn p -> p.type == :caldav end)
-      assert provider.type == :caldav
+      assert provider = Enum.find(providers, fn p -> p.type == :caldav end)
       assert provider.module == Tymeslot.Integrations.Calendar.CalDAV.Provider
       assert provider.display_name == "CalDAV"
-      assert is_map(provider.config_schema)
+
+      assert %{
+               base_url: %{type: :string, required: true},
+               username: %{type: :string, required: true},
+               password: %{type: :string, required: true}
+             } = provider.config_schema
     end
 
     test "includes config schema for each provider" do
       providers = ProviderRegistry.list_providers_with_metadata()
 
       Enum.each(providers, fn provider ->
-        assert is_map(provider.config_schema)
         # Each provider should have at least one field in the schema
         assert map_size(provider.config_schema) > 0
       end)

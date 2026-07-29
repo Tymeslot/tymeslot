@@ -6,6 +6,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
 
   use TymeslotWeb, :live_component
 
+  require Logger
+
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
   alias Tymeslot.Utils.SanitizeMerge
@@ -321,7 +323,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
           try do
             String.to_existing_atom(k)
           rescue
-            ArgumentError -> k
+            ArgumentError ->
+              # Debug rather than warning: the keys come straight from a form
+              # post, so anyone could otherwise fill the log with unknown ones.
+              Logger.debug("Leaving unknown form key as a string", form_key: k)
+
+              k
           end
         else
           k

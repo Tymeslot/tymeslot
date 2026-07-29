@@ -24,11 +24,18 @@ defmodule Tymeslot.Emails.Shared.Meeting.VideoSectionTest do
     test "supports different intents" do
       url = "https://meet.example.com/room123"
 
-      for intent <- [:confirmed, :alert, :cancelled] do
-        html = VideoSection.video_meeting_section(intent, url)
-        assert is_binary(html)
-        assert html =~ url
-      end
+      rendered =
+        for intent <- [:confirmed, :alert, :cancelled] do
+          html = VideoSection.video_meeting_section(intent, url)
+
+          assert html =~ url
+          assert html =~ "Join Meeting"
+
+          html
+        end
+
+      # Each intent must paint its own colour band, so no two renders are alike.
+      assert rendered |> Enum.uniq() |> length() == 3
     end
 
     test "allows custom title and button text" do
@@ -61,11 +68,17 @@ defmodule Tymeslot.Emails.Shared.Meeting.VideoSectionTest do
     end
 
     test "supports different intents" do
-      for intent <- [:confirmed, :alert, :cancelled] do
-        html = VideoSection.time_alert_badge(intent, "Time text")
-        assert is_binary(html)
-        assert html =~ "Time text"
-      end
+      rendered =
+        for intent <- [:confirmed, :alert, :cancelled] do
+          html = VideoSection.time_alert_badge(intent, "Time text")
+
+          assert html =~ "Time text"
+
+          html
+        end
+
+      # Each intent must paint its own colour band, so no two renders are alike.
+      assert rendered |> Enum.uniq() |> length() == 3
     end
   end
 end

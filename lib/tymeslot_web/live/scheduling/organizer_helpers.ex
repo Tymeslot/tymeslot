@@ -7,6 +7,8 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   IP captured at mount.
   """
 
+  require Logger
+
   alias Phoenix.Component
   alias Tymeslot.Demo
   alias Tymeslot.Security.InputProcessor
@@ -126,7 +128,14 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
           try do
             ClientIP.get_from_mount(socket)
           rescue
-            _error -> "unknown"
+            exception ->
+              # Debug rather than warning: this is the expected outcome whenever
+              # the helper runs outside mount, which is why it is wrapped at all.
+              Logger.debug("Client IP unavailable outside mount",
+                error: Exception.message(exception)
+              )
+
+              "unknown"
           end
       end
 

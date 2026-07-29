@@ -10,9 +10,8 @@ defmodule Tymeslot.TimezonesTest do
       options = Timezones.all_options()
       assert length(options) > 80
 
-      {label, tz_id} = hd(options)
-      assert is_binary(label)
-      assert is_binary(tz_id)
+      # Options are sorted by label, so the head is the alphabetically first city.
+      assert {"Abidjan, Ivory Coast", "Africa/Abidjan"} = hd(options)
     end
 
     test "all timezone IDs are valid" do
@@ -32,10 +31,12 @@ defmodule Tymeslot.TimezonesTest do
       results = Timezones.search("")
       assert length(results) > 50
 
+      # Los Angeles heads the popular block that precedes the alphabetical rest.
       {label, tz_id, offset} = hd(results)
-      assert is_binary(label)
-      assert is_binary(tz_id)
-      assert is_binary(offset)
+      assert label == "Los Angeles, United States"
+      assert tz_id == "America/Los_Angeles"
+      # The offset shifts with DST, so pin the format rather than the hour.
+      assert offset =~ ~r/^UTC[+-]\d{1,2}(:\d{2})?$/
 
       # Popular timezones appear before the alphabetical rest
       tz_ids = Enum.map(results, fn {_l, id, _o} -> id end)

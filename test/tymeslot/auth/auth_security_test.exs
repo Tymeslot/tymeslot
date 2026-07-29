@@ -135,16 +135,16 @@ defmodule Tymeslot.Auth.SecurityTest do
       end)
     end
 
-    test "sanitizes malicious input" do
+    test "a script payload in the full name never reaches the user record" do
       params = %{
         "email" => "safe@example.com",
         "password" => "ValidPass123!",
         "password_confirmation" => "ValidPass123!",
-        "name" => "<script>alert('xss')</script>Safe Name",
+        "full_name" => "<script>alert('xss')</script>Safe Name",
         "terms_accepted" => "true"
       }
 
-      {:ok, user, _session} = Auth.register_user(params, %Plug.Conn{})
+      assert {:ok, user, _message} = Auth.register_user(params, %Plug.Conn{})
 
       # Signup persists the email, the password and the terms acceptance, and
       # nothing else. A hostile "name" in the payload is dropped outright
@@ -191,8 +191,7 @@ defmodule Tymeslot.Auth.SecurityTest do
   describe "password reset security" do
     test "reset tokens are single-use" do
       user = insert(:user)
-      result = Auth.initiate_password_reset(user.email)
-      assert match?({:ok, _result}, result) or match?({:ok, _, _}, result)
+      assert {:ok, :reset_initiated, _message} = Auth.initiate_password_reset(user.email)
 
       # Get token directly using helper - initiate_password_reset sends it via email
       # For testing, we generate a fresh token and store it
@@ -231,7 +230,8 @@ defmodule Tymeslot.Auth.SecurityTest do
                Auth.request_email_change(user, "new@example.com", "Current123!")
 
       assert updated.pending_email == "new@example.com"
-      assert updated.email_change_token_hash != nil
+      # SHA-256 hex digest of the emailed token — the raw token is never stored.
+      assert updated.email_change_token_hash =~ ~r/^[0-9a-f]{64}$/
     end
 
     test "password changes require current password" do
