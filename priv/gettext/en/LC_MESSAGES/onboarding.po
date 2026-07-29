@@ -57,11 +57,6 @@ msgstr "Duration"
 msgid "Finish"
 msgstr "Finish"
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:83
-#, elixir-autogen, elixir-format
-msgid "Go create your first event type — and let people book you."
-msgstr "Go create your first event type — and let people book you."
-
 #: lib/tymeslot_web/components/announcement_modal_component.ex:117
 #: lib/tymeslot_web/components/announcement_modal_component.ex:121
 #, elixir-autogen, elixir-format
@@ -79,11 +74,6 @@ msgstr "New feature"
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr "Next"
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex:55
-#, elixir-autogen, elixir-format
-msgid "Profile, availability, integrations, and automation — all one click away."
-msgstr "Profile, availability, integrations, and automation — all one click away."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:66
 #, elixir-autogen, elixir-format
@@ -134,3 +124,13 @@ msgstr "Your account"
 #, elixir-autogen, elixir-format
 msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
 msgstr "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:83
+#, elixir-autogen, elixir-format
+msgid "Go create your first event type - and let people book you."
+msgstr "Go create your first event type - and let people book you."
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:55
+#, elixir-autogen, elixir-format
+msgid "Profile, availability, integrations, and automation - all one click away."
+msgstr "Profile, availability, integrations, and automation - all one click away."

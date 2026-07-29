@@ -57,11 +57,6 @@ msgstr ""
 msgid "Finish"
 msgstr ""
 
-#: lib/tymeslot/onboarding/dashboard_tour.ex:83
-#, elixir-autogen, elixir-format
-msgid "Go create your first event type — and let people book you."
-msgstr ""
-
 #: lib/tymeslot_web/components/announcement_modal_component.ex:117
 #: lib/tymeslot_web/components/announcement_modal_component.ex:121
 #, elixir-autogen, elixir-format
@@ -78,11 +73,6 @@ msgstr ""
 #: lib/tymeslot_web/components/tour_overlay.ex:61
 #, elixir-autogen, elixir-format
 msgid "Next"
-msgstr ""
-
-#: lib/tymeslot/onboarding/dashboard_tour.ex:55
-#, elixir-autogen, elixir-format
-msgid "Profile, availability, integrations, and automation — all one click away."
 msgstr ""
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:66
@@ -133,4 +123,14 @@ msgstr ""
 #: lib/tymeslot/onboarding/dashboard_tour.ex:44
 #, elixir-autogen, elixir-format
 msgid "Switch between Scheduling (your event types) and Calendar (a full view of your bookings and synced events)."
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:83
+#, elixir-autogen, elixir-format
+msgid "Go create your first event type - and let people book you."
+msgstr ""
+
+#: lib/tymeslot/onboarding/dashboard_tour.ex:55
+#, elixir-autogen, elixir-format
+msgid "Profile, availability, integrations, and automation - all one click away."
 msgstr ""
