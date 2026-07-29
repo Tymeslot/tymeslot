@@ -49,6 +49,13 @@ defmodule Tymeslot.Mailer.ProvidersTest do
       assert %{adapter: Swoosh.Adapters.Postmark} = Providers.fetch!("  postmark\n")
     end
 
+    test "all/0 returns every entry keyed by its EMAIL_ADAPTER name" do
+      all = Providers.all()
+
+      assert Enum.sort(Map.keys(all)) == Providers.names()
+      assert %{label: "Postmark", adapter: Swoosh.Adapters.Postmark} = all["postmark"]
+    end
+
     test "raises on an unknown name and lists the supported ones" do
       error = assert_raise(ArgumentError, fn -> Providers.fetch!("mailchimp") end)
 
@@ -173,6 +180,24 @@ defmodule Tymeslot.Mailer.ProvidersTest do
           Providers.build!("sendgrid")
         end
       end)
+    end
+  end
+
+  describe "blank_to_nil/1" do
+    test "nil stays nil" do
+      assert Providers.blank_to_nil(nil) == nil
+    end
+
+    test "an empty string collapses to nil" do
+      assert Providers.blank_to_nil("") == nil
+    end
+
+    test "a whitespace-only string collapses to nil" do
+      assert Providers.blank_to_nil("   ") == nil
+    end
+
+    test "a real value is trimmed and kept" do
+      assert Providers.blank_to_nil("  smtp  ") == "smtp"
     end
   end
 
