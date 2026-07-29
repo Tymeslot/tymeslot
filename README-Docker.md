@@ -68,7 +68,7 @@ The embedded PostgreSQL listens only on `localhost` inside the container and is 
 
 > **Keep `tymeslot_pg:/var/lib/postgresql/data` as a named volume.** Swapping it for a host path (e.g. `./pgdata:/var/lib/postgresql/data`) can break first-run initialization on Docker Desktop, rootless Docker, userns-remap, or SELinux-enforcing hosts because the mount arrives with ownership the container can't change. If you need the database on a specific host path, use an [external PostgreSQL](#using-an-external-database) instead.
 
-> ⚠️ **Email defaults to silent discard.** Without email configuration, `EMAIL_ADAPTER` defaults to `test`, which **drops every message** — password resets, booking confirmations and reminders all vanish with no error. Configure SMTP or Postmark (below) before going live. See **<https://tymeslot.app/docs/email-smtp>** and **<https://tymeslot.app/docs/email-postmark>**.
+> ⚠️ **Email defaults to silent discard.** Without email configuration, `EMAIL_ADAPTER` defaults to `test`, which **drops every message** — password resets, booking confirmations and reminders all vanish with no error. Configure SMTP, Postmark, SendGrid, Mailgun or AhaSend (below) before going live. See **<https://tymeslot.app/docs/email-smtp>** and **<https://tymeslot.app/docs/email-postmark>**.
 
 ### Option B — Build from source (Docker Compose)
 
@@ -301,7 +301,20 @@ Email configuration is **required for production deployments** to enable:
 - Calendar event notifications
 - User invitations
 
-**Option 1: SMTP (recommended for most users)**
+`EMAIL_ADAPTER` picks how mail leaves the container. Every option below is equally supported; the API adapters differ from SMTP mainly in reporting failures usefully and in not needing an outbound SMTP port.
+
+| `EMAIL_ADAPTER` | Additional variables |
+|---|---|
+| `smtp` | `SMTP_HOST`, `SMTP_PORT` (default 587), `SMTP_USERNAME`, `SMTP_PASSWORD` |
+| `postmark` | `POSTMARK_API_KEY` |
+| `sendgrid` | `SENDGRID_API_KEY` |
+| `mailgun` | `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, optional `MAILGUN_BASE_URL` for EU accounts |
+| `ahasend` | `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID` |
+| `test` | none — every message is discarded |
+
+Any provider not listed works over `smtp`; point `SMTP_HOST` at the relay it gives you. An `EMAIL_ADAPTER` value Tymeslot does not recognise stops the container at boot instead of silently discarding mail.
+
+**Option 1: SMTP (works with every provider)**
 ```bash
 EMAIL_ADAPTER=smtp
 EMAIL_FROM_NAME="Your Company"
@@ -312,13 +325,15 @@ SMTP_USERNAME=your-smtp-username
 SMTP_PASSWORD=your-smtp-password
 ```
 
-**Option 2: Postmark (recommended for high reliability)**
+**Option 2: a provider API (clearer delivery errors, no SMTP port needed)**
 ```bash
 EMAIL_ADAPTER=postmark
 EMAIL_FROM_NAME="Your Company"
 EMAIL_FROM_ADDRESS=noreply@yourdomain.com
 POSTMARK_API_KEY=your-postmark-api-key
 ```
+
+Swap in `sendgrid`, `mailgun` or `ahasend` with the variables from the table above. Whichever you choose, Tymeslot validates the credentials once at startup (without sending anything) and logs the result, so a bad key shows up in the container logs immediately rather than on the first booking.
 
 **Development/Testing Only**: You can use `EMAIL_ADAPTER=test` to skip email configuration during development. Emails will be logged to console instead of being sent.
 
