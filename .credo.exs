@@ -118,18 +118,16 @@
           # (both MIT) rather than taking the dependencies, so each is scoped
           # to this codebase's conventions and lives beside the other checks.
           #
-          # exit_status: 0 for the same reason as the Jump checks below: the
-          # first run found 105 dual-key reads, 56 silent rescues and 8
-          # boolean cases. That is a backlog to work through deliberately,
-          # not something to fix under a red gate. Drop exit_status per check
-          # as each reaches zero. (NoSwallowedException's count dropped from
-          # its original 116 once the heuristic learned that passing the
-          # rescued exception on to a helper counts as handling it, not
-          # swallowing it; the residual count is genuine silent rescues.)
-          # NoCaseOnBoolean has reached zero and is gated.
-          {CredoChecks.NoDualKeyAccess, [priority: :normal, exit_status: 0]},
+          # The first run found 105 dual-key reads, 56 silent rescues and 8
+          # boolean cases: a backlog worked through deliberately, rather than
+          # fixed under a red gate. (NoSwallowedException's count dropped
+          # from its original 116 once the heuristic learned that passing
+          # the rescued exception on to a helper counts as handling it, not
+          # swallowing it; the residual count was genuine silent rescues.)
+          # All three have now reached zero and are gated.
+          {CredoChecks.NoDualKeyAccess, [priority: :normal]},
           {CredoChecks.NoCaseOnBoolean, [priority: :low]},
-          {CredoChecks.NoSwallowedException, [priority: :normal, exit_status: 0]},
+          {CredoChecks.NoSwallowedException, [priority: :normal]},
           {CredoChecks.NoInlineCaldavList, [priority: :normal]},
           {CredoChecks.AttendeeNotificationsBoundary, []},
 
