@@ -23,6 +23,7 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
   alias Tymeslot.Integrations.Shared.Lock
+  alias Tymeslot.Mailer.HealthCheck, as: MailerHealthCheck
   alias Tymeslot.Telegram.BotSetup
   alias TymeslotWeb.Endpoint
 
@@ -141,7 +142,10 @@ defmodule Tymeslot.Application do
         do: [Tymeslot.Integrations.Calendar.DebugStore],
         else: []
 
-    children = base_children ++ production_children ++ dev_children ++ [TymeslotWeb.Endpoint]
+    children =
+      base_children ++
+        production_children ++
+        dev_children ++ [TymeslotWeb.Endpoint] ++ mailer_health_check_children()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
@@ -202,11 +206,10 @@ defmodule Tymeslot.Application do
   end
 
   defp validate_config! do
-    # Validate mailer configuration at startup
-    # This catches SMTP misconfigurations before first email send
-    # Note: Always returns :ok but logs prominent errors if misconfigured
-    mailer_config = Application.get_env(:tymeslot, Tymeslot.Mailer)
-    Tymeslot.Mailer.HealthCheck.validate_startup_config(mailer_config)
+    # Mailer configuration is validated by mailer_health_check_children/0
+    # instead of here: its credential probe needs Tymeslot.Finch, which
+    # doesn't exist yet at this point in start/2, before Supervisor.start_link
+    # has run.
 
     # Validate legal agreements configuration
     if Application.get_env(:tymeslot, :enforce_legal_agreements, false) do
@@ -232,6 +235,34 @@ defmodule Tymeslot.Application do
 
     # Validate database connection pool configuration
     validate_db_pool_config!()
+  end
+
+  # Runs the mailer startup health check as a supervised, transient Task
+  # appended after Tymeslot.Finch (and every other child) so its credential
+  # probe — which requires the Finch pool to be up — actually executes,
+  # instead of always taking the "Finch not started" skip branch. Skipped in
+  # test, mirroring the gating already used for the other startup-only checks
+  # in validate_config!/0. `:transient` stops the supervisor restarting the
+  # task once it exits normally; HealthCheck never raises, so it always does.
+  @spec mailer_health_check_children() :: [Supervisor.child_spec()]
+  defp mailer_health_check_children do
+    if Application.get_env(:tymeslot, :environment) != :test do
+      [
+        Supervisor.child_spec(
+          {Task, &validate_mailer_config!/0},
+          id: Tymeslot.Mailer.HealthCheckTask,
+          restart: :transient
+        )
+      ]
+    else
+      []
+    end
+  end
+
+  @spec validate_mailer_config!() :: :ok
+  defp validate_mailer_config! do
+    mailer_config = Application.get_env(:tymeslot, Tymeslot.Mailer)
+    MailerHealthCheck.validate_startup_config(mailer_config)
   end
 
   # Logs HTTP proxy configuration for visibility
