@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
+  alias Tymeslot.Utils.MapKeys
 
   @doc """
   Moves an event from one integration to another via delete + create.
@@ -119,7 +120,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves do
   defp finish_successful_move(ctx, created) do
     CalendarGrid.delete_cached_event(ctx.event.calendar_integration_id, ctx.event.uid)
 
-    uid = if is_binary(created), do: created, else: created_uid(created) || ctx.new_uid
+    uid =
+      if is_binary(created), do: created, else: MapKeys.get_binary(created, :uid) || ctx.new_uid
 
     timing =
       if ctx.event.all_day do
@@ -144,15 +146,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves do
       {:event_move_result, {:ok, uid: uid, integration_id: ctx.new_integration_id}}
     )
   end
-
-  # The created event arrives as an atom-keyed map (the converted shape) or a
-  # string-keyed map (a raw payload); both are answered here once, and `nil`
-  # falls back to the uid this move generated. The bare-uid string case stays an
-  # `if` at the call site: every real provider returns a map, so as a guarded
-  # clause here Dialyzer proves it unreachable, but test doubles do return one.
-  defp created_uid(%{uid: uid}) when is_binary(uid), do: uid
-  defp created_uid(%{"uid" => uid}) when is_binary(uid), do: uid
-  defp created_uid(_created), do: nil
 
   defp tag_move_create_for_offline_retry(ctx) do
     meeting = %{

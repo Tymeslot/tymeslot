@@ -223,8 +223,7 @@ defmodule Tymeslot.ThemeCustomizations do
   @spec initialize_customization(profile_id(), theme_id()) :: %{
           customization: ThemeCustomizationSchema.t(),
           original: ThemeCustomizationSchema.t(),
-          presets: map(),
-          defaults: map()
+          presets: map()
         }
   def initialize_customization(profile_id, theme_id) do
     saved = get_by_profile_and_theme(profile_id, theme_id)
@@ -233,8 +232,7 @@ defmodule Tymeslot.ThemeCustomizations do
     %{
       customization: customization,
       original: saved || customization,
-      presets: Presets.get_all_presets(),
-      defaults: Defaults.get_theme_defaults(theme_id)
+      presets: Presets.get_all_presets()
     }
   end
 

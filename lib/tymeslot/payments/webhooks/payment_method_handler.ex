@@ -24,18 +24,11 @@ defmodule Tymeslot.Payments.Webhooks.PaymentMethodHandler do
     customer_id = payment_method["customer"]
 
     Logger.info("Processing payment_method event",
-      event_type: event_type(event),
+      event_type: Map.get(event, :type),
       payment_method_id: payment_method_id,
       customer_id: customer_id
     )
 
     {:ok, :payment_method_processed}
   end
-
-  # Stripe delivers string-keyed payloads; in-process replays and tests hand
-  # over atom-keyed ones. Both shapes are answered here so the rest of the
-  # module reads a plain string.
-  defp event_type(%{"type" => type}) when is_binary(type), do: type
-  defp event_type(%{type: type}) when is_binary(type), do: type
-  defp event_type(_event), do: nil
 end

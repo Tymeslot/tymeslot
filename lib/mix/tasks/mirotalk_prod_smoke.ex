@@ -71,8 +71,7 @@ defmodule Mix.Tasks.MirotalkProdSmoke do
 
     {:ok, meeting_context} = ProviderAdapter.create_meeting_room(:mirotalk, config)
 
-    # Provider modules always build `room_data` with atom keys.
-    room_id = meeting_context.room_data[:room_id] || "unknown"
+    room_id = meeting_context.room_data.room_id || "unknown"
 
     IO.puts("\nCreated room:")
     IO.puts("room_id: #{room_id}")

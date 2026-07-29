@@ -122,10 +122,11 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerMultiCalendarTest do
 
       {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
 
-      assert Enum.find(refreshed.calendar_list, &(&1["id"] == "deleted@example.com"))["selected"] ==
-               false
+      deleted_entry = Enum.find(refreshed.calendar_list, &(&1.id == "deleted@example.com"))
+      assert %{selected: false} = deleted_entry
 
-      assert Enum.find(refreshed.calendar_list, &(&1["id"] == "primary"))["selected"] == true
+      primary_entry = Enum.find(refreshed.calendar_list, &(&1.id == "primary"))
+      assert %{selected: true} = primary_entry
     end
 
     test "de-selects every missing calendar when several 404 in the same run" do
@@ -158,8 +159,8 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerMultiCalendarTest do
 
       selected =
         refreshed.calendar_list
-        |> Enum.filter(& &1["selected"])
-        |> Enum.map(& &1["id"])
+        |> Enum.filter(& &1.selected)
+        |> Enum.map(& &1.id)
 
       assert selected == ["primary"]
     end
@@ -211,11 +212,11 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerMultiCalendarTest do
 
       {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
 
-      assert Enum.find(refreshed.calendar_list, &(&1["id"] == "work@example.com"))["selected"] ==
-               true
+      work_entry = Enum.find(refreshed.calendar_list, &(&1.id == "work@example.com"))
+      assert %{selected: true} = work_entry
 
-      assert Enum.find(refreshed.calendar_list, &(&1["id"] == "deleted@example.com"))["selected"] ==
-               false
+      deleted_entry = Enum.find(refreshed.calendar_list, &(&1.id == "deleted@example.com"))
+      assert %{selected: false} = deleted_entry
     end
 
     test "returns {:error, reason} on a non-404 three-tuple instead of crashing" do

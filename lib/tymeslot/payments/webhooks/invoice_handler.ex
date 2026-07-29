@@ -41,7 +41,8 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(event, invoice) do
-    event_type = event_type(event)
+    # WebhookProcessor stamps an atom :type on every event before dispatch.
+    event_type = Map.get(event, :type)
     subscription_id = subscription_id(invoice)
 
     Logger.info("Processing invoice event",
@@ -72,10 +73,6 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
         {:ok, :ignored}
     end
   end
-
-  # Stripe events arrive JSON-decoded, so string-keyed; the webhook processor
-  # additionally stamps an atom `:type` before dispatching. Read both here, once.
-  defp event_type(event), do: Map.get(event, "type") || Map.get(event, :type)
 
   # Stripe API 2025-03-31.basil moved the invoice's subscription reference
   # from the top-level field into parent.subscription_details. Read whichever
