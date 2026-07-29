@@ -2,40 +2,27 @@ defmodule Tymeslot.Mailer.HealthCheck do
   @moduledoc """
   Health checks for mailer configuration at application startup.
 
-  Validates that mailer configuration is correct and services are reachable
-  before the application starts accepting requests. This prevents silent failures
-  where emails fail hours or days after deployment.
+  Validates that mailer configuration is correct and the provider is reachable
+  before the application starts accepting requests. This prevents silent
+  failures where emails fail hours or days after deployment.
 
-  ## SMTP Validation
+  Which checks run is decided by `Tymeslot.Mailer.Providers`, so a provider
+  added to that registry is validated here without touching this module.
 
-  1. **Structure Validation** (fast, always runs):
-     - Required fields present (host, username, password)
-     - Valid types and ranges
-     - Non-empty values
+  1. **Structure validation** (fast, always runs): every key the adapter
+     requires is present, a string, and non-empty. SMTP additionally checks
+     the port is an integer in range.
 
-  2. **Connection Test** (1-5 seconds, always runs) — see `Tymeslot.Mailer.SmtpProbe`:
-     - Server is reachable on specified port
-     - SMTP service responds with valid greeting (220)
-     - SSL/TLS handshake succeeds (for port 465)
-     - Certificate validation works
+  2. **Credential test** (1-5 seconds, always runs): SMTP opens a connection
+     via `Tymeslot.Mailer.SmtpProbe`; the API providers call one cheap
+     endpoint via `Tymeslot.Mailer.ApiProbe`. Neither sends mail.
 
-  **Not Tested:** SMTP authentication (credentials) - validated on first email send
+  **Not tested:** SMTP authentication, which is validated on first email send.
 
-  ## Postmark Validation
+  ## Other adapters
 
-  1. **Structure Validation** (fast, always runs):
-     - API key is present and non-empty
-     - API key is a string
-
-  2. **API Key Test** (1-5 seconds, always runs) — see `Tymeslot.Mailer.PostmarkProbe`:
-     - Makes request to Postmark `/server` endpoint
-     - Validates API key is active and valid
-     - Checks network connectivity to Postmark API
-
-  ## Other Adapters
-
-  - **Test/Local adapters**: No validation (assumed safe for development)
-  - **Unknown adapters**: Warning logged, no validation
+  - **Test and Local adapters**: no validation, they are development targets.
+  - **Adapters outside the registry**: warning logged, no validation.
 
   ## Example
 
@@ -45,94 +32,106 @@ defmodule Tymeslot.Mailer.HealthCheck do
 
   require Logger
 
-  alias Tymeslot.Mailer.{PostmarkProbe, SmtpProbe}
+  alias Tymeslot.Mailer.{ApiProbe, Providers, SmtpProbe}
 
   @type mailer_config :: keyword()
 
   @doc """
   Validates mailer configuration at startup.
 
-  For SMTP adapter, performs both structure validation and connection test.
-  For Postmark adapter, performs structure validation and API key test.
-  For Test/Local adapters, no validation is performed.
+  Logs errors prominently but always returns `:ok` to prevent blocking app
+  startup. This allows the application to start even with email
+  misconfiguration, but operators will see prominent error messages in logs
+  indicating emails will fail.
 
-  Logs errors prominently but always returns :ok to prevent blocking app startup.
-  This allows the application to start even with email misconfiguration, but
-  operators will see prominent error messages in logs indicating emails will fail.
-
-  Note: Function name does not use ! suffix because it never raises - it logs
-  errors and returns :ok in all cases.
+  Note: function name does not use a `!` suffix because it never raises; it
+  logs errors and returns `:ok` in all cases.
   """
   @spec validate_startup_config(mailer_config()) :: :ok
   def validate_startup_config(config) do
     case config[:adapter] do
-      Swoosh.Adapters.SMTP ->
-        validate_smtp(config)
-
-      Swoosh.Adapters.Postmark ->
-        validate_postmark(config)
-
-      adapter when adapter in [Swoosh.Adapters.Test, Swoosh.Adapters.Local] ->
-        log_dev_adapter(adapter)
-
       nil ->
         log_missing_adapter()
 
       adapter ->
-        log_unknown_adapter(adapter)
+        case Providers.for_adapter(adapter) do
+          {:ok, entry} -> validate(entry, config)
+          :error -> log_unknown_adapter(adapter)
+        end
     end
   end
 
-  defp validate_smtp(config) do
-    with :ok <- validate_smtp_structure(config),
-         :ok <- SmtpProbe.test_connection(config) do
-      Logger.info("✓ SMTP mailer configuration validated successfully")
-      :ok
-    else
-      {:error, reason} ->
-        Logger.error(
-          "SMTP configuration validation failed; emails will not be sent until configuration is fixed",
-          reason: reason
-        )
-
-        :ok
-    end
-  end
-
-  defp validate_postmark(config) do
-    with :ok <- validate_postmark_structure(config),
-         :ok <- PostmarkProbe.test_api_key(config) do
-      Logger.info("✓ Postmark mailer configuration validated successfully")
-      :ok
-    else
-      {:error, reason} ->
-        Logger.error(
-          "Postmark configuration validation failed; verify POSTMARK_API_KEY at https://account.postmarkapp.com/servers",
-          reason: reason
-        )
-
-        :ok
-    end
-  end
-
-  defp log_dev_adapter(adapter) do
-    Logger.info("Mailer configured with dev/test adapter; no validation needed",
-      adapter: inspect(adapter)
+  defp validate(%{probe: :none} = entry, _config) do
+    Logger.info("Mailer configured with a development adapter; no validation needed",
+      provider: entry.label
     )
 
     :ok
   end
 
+  defp validate(entry, config) do
+    with :ok <- validate_structure(entry, config),
+         :ok <- probe(entry, config) do
+      Logger.info("✓ Mailer configuration validated successfully", provider: entry.label)
+      :ok
+    else
+      {:error, reason} ->
+        Logger.error(
+          "Mailer configuration validation failed; emails will not be sent " <>
+            "until the configuration is fixed",
+          provider: entry.label,
+          reason: reason,
+          variables: Enum.join(Map.values(entry.env_vars) ++ entry.optional_env_vars, ", ")
+        )
+
+        :ok
+    end
+  end
+
+  defp probe(%{probe: :smtp}, config), do: SmtpProbe.test_connection(config)
+  defp probe(entry, config), do: ApiProbe.run(entry.probe, entry.label, config)
+
+  defp validate_structure(%{probe: :smtp}, config), do: validate_smtp_structure(config)
+
+  defp validate_structure(entry, config) do
+    Enum.reduce_while(entry.required_config, :ok, fn key, :ok ->
+      case validate_credential(entry, key, config[key]) do
+        :ok -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  defp validate_credential(entry, key, nil) do
+    {:error, "#{entry.label} #{key} is required (set #{entry.env_vars[key]})"}
+  end
+
+  defp validate_credential(entry, key, value) when not is_binary(value) do
+    {:error, "#{entry.label} #{key} must be a string, got: #{inspect(value)}"}
+  end
+
+  defp validate_credential(entry, key, value) do
+    if String.trim(value) == "" do
+      {:error, "#{entry.label} #{key} cannot be empty"}
+    else
+      :ok
+    end
+  end
+
   defp log_missing_adapter do
     Logger.error(
-      "Mailer adapter not configured; no emails will be sent. Set the EMAIL_ADAPTER environment variable."
+      "Mailer adapter not configured; no emails will be sent. Set EMAIL_ADAPTER.",
+      supported: Enum.join(Providers.names(), ", ")
     )
 
     :ok
   end
 
   defp log_unknown_adapter(adapter) do
-    Logger.warning("Unknown mailer adapter; skipping validation", adapter: inspect(adapter))
+    Logger.warning("Mailer adapter is not in the provider registry; skipping validation",
+      adapter: inspect(adapter)
+    )
+
     :ok
   end
 
@@ -152,24 +151,6 @@ defmodule Tymeslot.Mailer.HealthCheck do
 
       config[:port] not in 1..65_535 ->
         {:error, "SMTP port must be between 1-65535, got: #{config[:port]}"}
-
-      true ->
-        :ok
-    end
-  end
-
-  defp validate_postmark_structure(config) do
-    api_key = config[:api_key]
-
-    cond do
-      is_nil(api_key) ->
-        {:error, "Postmark API key is required (set POSTMARK_API_KEY environment variable)"}
-
-      not is_binary(api_key) ->
-        {:error, "Postmark API key must be a string"}
-
-      String.trim(api_key) == "" ->
-        {:error, "Postmark API key cannot be empty"}
 
       true ->
         :ok
