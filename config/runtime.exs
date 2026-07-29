@@ -327,8 +327,12 @@ if config_env() == :prod do
   # owns the list of supported values and the variables each one reads; an
   # unrecognised value raises rather than silently discarding every email.
   # Default to smtp for self-hosted deployments.
-  # On Cloudron: auto-detect sendmail addon when EMAIL_ADAPTER is not explicitly set
-  email_adapter_explicit = System.get_env("EMAIL_ADAPTER")
+  # On Cloudron: auto-detect sendmail addon when EMAIL_ADAPTER is not explicitly set.
+  # A set-but-blank EMAIL_ADAPTER= is treated the same as unset, so it falls
+  # through to the default/auto-detection below instead of raising as an
+  # unrecognised provider name.
+  email_adapter_explicit =
+    "EMAIL_ADAPTER" |> System.get_env() |> Tymeslot.Mailer.Providers.blank_to_nil()
 
   mailer_config =
     cond do
@@ -392,11 +396,22 @@ if config_env() == :prod do
   end
 end
 
-# Configure mailer for non-production environments
-if config_env() != :prod do
-  # Default to smtp for self-hosted deployments
+# Configure mailer for non-production, non-test environments. `config/test.exs`
+# pins the adapter to `Swoosh.Adapters.Test` so the test suite is deterministic
+# regardless of the developer's ambient EMAIL_ADAPTER; runtime.exs must never
+# override that pin.
+if config_env() not in [:prod, :test] do
+  # Default to smtp for self-hosted deployments. A set-but-blank
+  # EMAIL_ADAPTER= is treated the same as unset, so it falls through to the
+  # default below instead of Providers.build/1 raising on an unrecognised
+  # provider name.
   email_adapter_default = Application.get_env(:tymeslot, :email_adapter_default, "smtp")
-  email_adapter = System.get_env("EMAIL_ADAPTER", email_adapter_default)
+
+  email_adapter =
+    "EMAIL_ADAPTER"
+    |> System.get_env()
+    |> Tymeslot.Mailer.Providers.blank_to_nil()
+    |> Kernel.||(email_adapter_default)
 
   # A provider whose credentials are absent falls back to the local mailbox at
   # /dev/mailbox rather than failing to boot: an unconfigured development
