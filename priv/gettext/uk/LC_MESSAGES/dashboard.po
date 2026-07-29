@@ -615,26 +615,26 @@ msgid "Booking analytics"
 msgstr "Аналітика бронювань"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:205
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Cannot disable password authentication while at least one admin signs in with email and password - doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
 msgstr "Неможливо вимкнути автентифікацію за паролем, поки принаймні один адміністратор входить за допомогою електронної пошти та пароля — це заблокує їм доступ. Спочатку понизьте цих адміністраторів або попросіть їх перейти на вхід через OAuth."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:123
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint - no raw IP is stored. Off by default; review your privacy policy before enabling."
 msgstr "Збирайте аналітику для сторінок бронювання цього екземпляра з повагою до приватності: перегляди сторінок, джерело трафіку (UTM/реферер) та конверсію. Унікальні відвідувачі підраховуються за допомогою відбитка без файлів cookie, що змінюється щодня — необроблена IP-адреса не зберігається. Вимкнено за замовчуванням; перегляньте свою політику конфіденційності перед увімкненням."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:116
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment - without them the toggle stays locked."
 msgstr "Дозволяє організаторам на цьому сервері приймати оплату від бронювальників через Stripe Connect. Потребує встановлення STRIPE_SECRET_KEY та STRIPE_CONNECT_WEBHOOK_SECRET у середовищі — без них перемикач залишається заблокованим."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:81
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
 msgstr "Вимагати прохідний бал reCAPTCHA v3 у публічній формі бронювання. Потребує налаштування RECAPTCHA_SITE_KEY та RECAPTCHA_SECRET_KEY у середовищі — коли ключі відсутні, перемикач враховується, але перевірка пропускається без повідомлення."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:74
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment - when keys are missing the toggle is honoured but verification is silently skipped."
 msgstr "Вимагати прохідний бал reCAPTCHA v3 у публічній формі реєстрації. Потребує налаштування RECAPTCHA_SITE_KEY та RECAPTCHA_SECRET_KEY у середовищі — коли ключі відсутні, перемикач враховується, але перевірка пропускається без повідомлення."

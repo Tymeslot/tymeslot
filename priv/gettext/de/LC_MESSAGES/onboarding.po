@@ -126,11 +126,11 @@ msgid "Switch between Scheduling (your event types) and Calendar (a full view of
 msgstr "Wechseln Sie zwischen Planung (Ihre Termintypen) und Kalender (eine vollständige Ansicht Ihrer Buchungen und synchronisierten Termine)."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:83
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Go create your first event type - and let people book you."
 msgstr "Legen Sie jetzt Ihren ersten Termintyp an — und lassen Sie sich buchen."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:55
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Profile, availability, integrations, and automation - all one click away."
 msgstr "Profil, Verfügbarkeit, Integrationen und Automatisierung — alles nur einen Klick entfernt."
