@@ -73,6 +73,33 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
       assert metadata.provider == :caldav
     end
 
+    test "an {:error, _} return is recorded as a failure, not a success", %{
+      handler_id: handler_id
+    } do
+      ref = make_ref()
+      parent = self()
+
+      :telemetry.attach(
+        handler_id,
+        [:tymeslot, :calendar, :update_event],
+        fn _event, measurements, metadata, _config ->
+          send(parent, {:telemetry, ref, measurements, metadata})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      result =
+        Metrics.time_operation(:update_event, %{}, fn -> {:error, "Unexpected status: 409"} end)
+
+      assert result == {:error, "Unexpected status: 409"}
+
+      assert_receive {:telemetry, ^ref, _measurements, metadata}
+      assert metadata.status == :error
+      assert metadata.error =~ "409"
+    end
+
     test "on exception, emits error event and reraises", %{handler_id: handler_id} do
       ref = make_ref()
       parent = self()

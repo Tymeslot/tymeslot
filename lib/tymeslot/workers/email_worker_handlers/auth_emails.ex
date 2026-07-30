@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
   @spec handle_email_verification(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -41,7 +42,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
           error: inspect(reason)
         )
 
-        {:error, "Failed to send email verification"}
+        DeliveryOutcome.from_error(reason, "Failed to send email verification")
     end
   end
 
@@ -75,7 +76,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
           error: inspect(reason)
         )
 
-        {:error, "Failed to send password reset email"}
+        DeliveryOutcome.from_error(reason, "Failed to send password reset email")
     end
   end
 
@@ -108,7 +109,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
               error: inspect(reason)
             )
 
-            {:error, "Failed to send email change verification"}
+            DeliveryOutcome.from_error(reason, "Failed to send email change verification")
         end
 
       {:error, :not_found} ->
@@ -138,7 +139,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
               error: inspect(reason)
             )
 
-            {:error, "Failed to send email change notification"}
+            DeliveryOutcome.from_error(reason, "Failed to send email change notification")
         end
 
       {:error, :not_found} ->
