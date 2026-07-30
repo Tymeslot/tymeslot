@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
         socket =
           socket
-          |> assign(:submitting, false)
+          |> release_submission()
           |> Flash.put_flash(:error, "Too many booking attempts. Please try again later.")
 
         {:error, socket}
@@ -167,7 +167,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
         socket =
           socket
-          |> assign(:submitting, false)
+          |> release_submission()
           |> Flash.put_flash(:error, "Too many booking attempts. Please try again later.")
 
         {:error, socket}
@@ -277,8 +277,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   def handle_booking_error(socket, reason) do
     socket =
       socket
-      |> assign(:submitting, false)
-      |> assign(:submission_processed, false)
+      |> release_submission()
       |> Flash.put_flash(:error, BookingErrorMessage.message(reason))
 
     Logger.error("Failed to create meeting appointment", reason: inspect(reason))
@@ -287,6 +286,21 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   end
 
   # Private functions
+
+  # Ends an in-flight submission attempt: clears the spinner *and* releases the
+  # duplicate-submission lock claimed by `check_duplicate_submission/1`.
+  #
+  # Both flags must move together. The lock is claimed before the rate-limit and
+  # reCAPTCHA gates run, so a failure branch that clears only `:submitting`
+  # leaves `:submission_processed` set and wedges the form: every retry in that
+  # session is rejected as "already being processed" until the booker reloads
+  # the page. Route every non-success exit through here rather than assigning
+  # the flags by hand.
+  defp release_submission(socket) do
+    socket
+    |> assign(:submitting, false)
+    |> assign(:submission_processed, false)
+  end
 
   defp validate_and_submit(socket, sanitized_params, booking_params) do
     engine = socket.assigns[:engine]
@@ -366,7 +380,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       {:error, :recaptcha_failed} ->
         socket =
           socket
-          |> assign(:submitting, false)
+          |> release_submission()
           |> Flash.put_flash(:error, "Security verification failed. Please try again.")
 
         {:error, socket}
@@ -374,7 +388,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       {:error, :recaptcha_script_blocked} ->
         socket =
           socket
-          |> assign(:submitting, false)
+          |> release_submission()
           |> Flash.put_flash(
             :error,
             "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
@@ -435,8 +449,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   defp handle_expired_preview(socket) do
     socket =
       socket
-      |> assign(:submitting, false)
-      |> assign(:submission_processed, false)
+      |> release_submission()
       |> Flash.put_flash(
         :error,
         dgettext("booking", "Preview session expired. Reload the page to continue.")
@@ -450,8 +463,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       socket
       |> assign(:form, Component.to_form(sanitized_params))
       |> assign(:validation_errors, Enum.into(errors, %{}))
-      |> assign(:submitting, false)
-      |> assign(:submission_processed, false)
+      |> release_submission()
       |> Flash.put_flash(
         :error,
         dgettext("booking", "Please correct the errors below before submitting.")
@@ -471,8 +483,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   defp handle_slot_taken(socket) do
     socket =
       socket
-      |> assign(:submitting, false)
-      |> assign(:submission_processed, false)
+      |> release_submission()
       |> Flash.put_flash(:error, BookingErrorMessage.message(:slot_taken))
 
     {:slot_taken, socket}
