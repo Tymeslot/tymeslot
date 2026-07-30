@@ -117,7 +117,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
             Conn.send_resp(conn, 412, "Precondition Failed")
 
           2 ->
-            assert if_match == ["*"]
+            # A forced overwrite carries no condition at all.
+            assert if_match == []
             Conn.send_resp(conn, 204, "")
         end
       end)
