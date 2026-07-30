@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   Single source of truth for provider metadata and utilities across domains.
 
   UI and services should query this module to list providers, access their
-  config schemas, capabilities, OAuth support, and test connections.
+  config schemas, capabilities, and OAuth support.
   """
 
   alias Tymeslot.Integrations.Providers.Descriptor
@@ -118,28 +118,6 @@ defmodule Tymeslot.Integrations.Providers.Directory do
 
       _other ->
         {:error, :unknown_provider}
-    end
-  end
-
-  @doc """
-  Tests connection for a provider in a domain.
-  """
-  @spec test_connection(domain(), atom(), map()) :: {:ok, String.t()} | {:error, any()}
-  def test_connection(:video, type, config) do
-    Tymeslot.Integrations.Video.Providers.ProviderRegistry.test_provider_connection(type, config)
-  end
-
-  def test_connection(:calendar, type, config) do
-    case Tymeslot.Integrations.Calendar.Providers.ProviderRegistry.get_provider(type) do
-      {:ok, mod} ->
-        if callback_exported?(mod, :test_connection, 1) do
-          mod.test_connection(config)
-        else
-          {:error, :not_supported}
-        end
-
-      {:error, _reason} = err ->
-        err
     end
   end
 

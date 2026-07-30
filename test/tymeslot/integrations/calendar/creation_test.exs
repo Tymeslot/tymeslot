@@ -162,6 +162,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
     test "validates CalDAV config before creation" do
       attrs = %{
         provider: "caldav",
+        user_id: 1,
         base_url: "https://caldav.example.com",
         username: "user",
         password: "pass",
@@ -188,6 +189,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
     test "returns error for invalid credentials" do
       attrs = %{
         provider: "caldav",
+        user_id: 1,
         base_url: "https://caldav.example.com",
         username: "invalid",
         password: "wrong"

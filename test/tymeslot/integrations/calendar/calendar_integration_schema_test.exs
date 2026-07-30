@@ -440,4 +440,60 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       assert decrypted.refresh_token == nil
     end
   end
+
+  describe "to_provider_config/1" do
+    test "carries only the fields CalDAV-family test_connection/1 callbacks read" do
+      user = insert(:user)
+
+      stored =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          base_url: "https://caldav.example.com",
+          calendar_paths: ["/cal1"],
+          username_encrypted: Encryption.encrypt("secretuser"),
+          password_encrypted: Encryption.encrypt("secretpass"),
+          access_token_encrypted: Encryption.encrypt("secrettoken"),
+          refresh_token_encrypted: Encryption.encrypt("secretrefresh"),
+          google_channel_secret: "secretchannel"
+        )
+
+      integration = CalendarIntegrationSchema.decrypt_credentials(stored)
+
+      config = CalendarIntegrationSchema.to_provider_config(integration)
+
+      assert config == %{
+               base_url: "https://caldav.example.com",
+               username: "secretuser",
+               password: "secretpass",
+               calendar_paths: ["/cal1"],
+               provider: "caldav"
+             }
+    end
+
+    test "never leaks encrypted ciphertext or unrelated schema fields via inspect/1" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          username_encrypted: Encryption.encrypt("secretuser"),
+          password_encrypted: Encryption.encrypt("secretpass"),
+          access_token_encrypted: Encryption.encrypt("secrettoken"),
+          refresh_token_encrypted: Encryption.encrypt("secretrefresh"),
+          google_channel_secret: "secretchannel"
+        )
+
+      inspected = inspect(CalendarIntegrationSchema.to_provider_config(integration))
+
+      refute inspected =~ integration.password_encrypted
+      refute inspected =~ "password_encrypted"
+      refute inspected =~ "username_encrypted"
+      refute inspected =~ "access_token_encrypted"
+      refute inspected =~ "refresh_token_encrypted"
+      refute inspected =~ "secretchannel"
+      refute inspected =~ "google_channel_secret"
+    end
+  end
 end

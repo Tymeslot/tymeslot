@@ -17,14 +17,25 @@ defmodule Tymeslot.Integrations.Calendar.CaldavConnectionRateLimitTest do
   @moduletag :integrations
   @moduletag :security
 
+  import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Connection
   alias Tymeslot.Integrations.HealthCheck.Assessor
+  alias Tymeslot.Security.RateLimiter
 
   # The bucket allows 20 connection tests per 10 minutes per scope.
   @limit 20
+
+  setup do
+    # These fixtures point at localhost — allow the SSRF guard to pass so
+    # `validate_config/1` (which now always runs ahead of the probe) doesn't
+    # reject them before the rate-limiter logic under test even runs.
+    with_config(:tymeslot, :allow_private_ips_for_calendar, true)
+    :ok
+  end
 
   describe "interactive connection tests" do
     test "one user hammering the button cannot exhaust another user's budget" do
@@ -39,14 +50,50 @@ defmodule Tymeslot.Integrations.Calendar.CaldavConnectionRateLimitTest do
   end
 
   describe "scheduled health probes" do
-    test "cannot starve the owner's interactive check" do
+    test "background probing is unmetered by construction and never starves the owner's interactive check" do
       integration = caldav_integration()
 
-      exhaust(fn -> Assessor.test_integration(:calendar, integration) end)
+      # The scheduler already owns its own cadence (a 30-minute floor plus
+      # its own backoff), so `ConnectionProbe` treats `scope: :background` as
+      # unmetered by construction — running well past the interactive
+      # per-actor limit never trips a refusal, and never draws from the
+      # interactive bucket either.
+      Enum.each(1..(@limit * 2), fn _i ->
+        refute rate_limited?(Assessor.test_integration(:calendar, integration))
+      end)
 
-      # The background bucket is real — it just belongs to the integration.
-      assert rate_limited?(Assessor.test_integration(:calendar, integration))
       refute rate_limited?(Connection.test_connection(integration))
+    end
+  end
+
+  describe "integration creation" do
+    # `Calendar.Creation.test_config/3` validates structurally before ever
+    # calling `Connection.probe/3` (see its moduledoc), so a structurally
+    # invalid submission never draws from the bucket.
+    test "a structurally invalid config is rejected without ever touching the rate limiter" do
+      user = insert(:user)
+
+      attrs = %{
+        "name" => "Bad CalDAV",
+        "provider" => "caldav",
+        "url" => "not-a-valid-url",
+        "username" => "user",
+        "password" => "pass",
+        "calendar_paths" => ""
+      }
+
+      for _i <- 1..(@limit + 5) do
+        assert {:error, _reason} = Calendar.create_integration(attrs, user.id)
+      end
+
+      # The full per-user budget is still available: none of the failed
+      # structural checks above drew from it.
+      for _i <- 1..@limit do
+        assert :ok = RateLimiter.check_connection_test_rate_limit(:caldav, {:user, user.id})
+      end
+
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check_connection_test_rate_limit(:caldav, {:user, user.id})
     end
   end
 
@@ -58,8 +105,6 @@ defmodule Tymeslot.Integrations.Calendar.CaldavConnectionRateLimitTest do
 
   defp exhaust(fun), do: Enum.each(1..@limit, fn _i -> fun.() end)
 
-  defp rate_limited?({:error, message}) when is_binary(message),
-    do: message =~ "reached the limit"
-
+  defp rate_limited?({:error, {:rate_limited, message}}), do: message =~ "reached the limit"
   defp rate_limited?(_result), do: false
 end

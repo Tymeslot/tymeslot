@@ -394,15 +394,21 @@ defmodule Tymeslot.Profiles do
 
   Same precedence as `display_name/1`, for callers that hold a user rather
   than a profile (the email templates, for instance). `:profile` must be
-  preloaded for the first rung to apply; without it only the user's own name
-  is available, which is the correct answer for an OAuth signup that has not
-  finished onboarding yet.
+  preloaded: raises `ArgumentError` when it is an
+  `Ecto.Association.NotLoaded` struct, since silently falling back to the
+  user's own name is indistinguishable from an email/password signup that
+  legitimately has none. Callers must fetch the user via a function that
+  preloads `:profile`, such as `Auth.UserQueries.get_user_with_profile/1`.
   """
   @spec user_display_name(map() | nil) :: String.t() | nil
   def user_display_name(nil), do: nil
 
   def user_display_name(%{profile: %ProfileSchema{} = profile} = user),
     do: display_name(%{profile | user: user})
+
+  def user_display_name(%{profile: %Ecto.Association.NotLoaded{}}) do
+    raise ArgumentError, "user.profile must be preloaded; use get_user_with_profile/1"
+  end
 
   def user_display_name(user), do: presence(user_name(%{user: user}))
 

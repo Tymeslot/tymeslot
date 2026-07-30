@@ -115,14 +115,6 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert Floki.text(doc) =~ "Close"
   end
 
-  test "renders shared loading_spinner correctly" do
-    assigns = %{class: "w-10 h-10"}
-    html = render_component(&UIComponents.loading_spinner/1, assigns)
-    doc = Floki.parse_document!(html)
-    assert html =~ "animate-spin"
-    assert Floki.find(doc, "svg.w-10.h-10.animate-spin") != []
-  end
-
   test "renders shared form_submit_button correctly" do
     # Non-saving state
     assigns = %{saving: false, text: "Save Me"}
@@ -137,7 +129,10 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     html = render_component(&UIComponents.form_submit_button/1, assigns)
     doc = Floki.parse_document!(html)
     assert html =~ "Saving Now..."
-    assert html =~ "animate-spin"
+    # The design-system `<.spinner>` carries the `spinner` class; the spin
+    # animation comes from CSS (`.spinner { @apply animate-spin }`), not from a
+    # utility class in the markup.
+    assert html =~ "spinner"
     assert Floki.find(doc, "button[type='submit'][disabled]") != []
   end
 

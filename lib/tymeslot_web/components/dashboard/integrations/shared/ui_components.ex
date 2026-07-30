@@ -30,41 +30,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
       ]}
       title="Close"
     >
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M6 18L18 6M6 6l12 12"
-        />
-      </svg>
+      <.icon name="hero-x-mark" class="w-6 h-6" />
       <span class="text-sm font-medium text-red-500 group-hover:text-red-700 transition-colors duration-200">
         Close
       </span>
     </button>
-    """
-  end
-
-  @doc """
-  Renders a loading spinner animation.
-
-  ## Examples
-
-      <.loading_spinner />
-  """
-  attr :class, :string, default: "h-4 w-4"
-
-  @spec loading_spinner(map()) :: Phoenix.LiveView.Rendered.t()
-  def loading_spinner(assigns) do
-    ~H"""
-    <svg class={["animate-spin", @class]} fill="none" viewBox="0 0 24 24">
-      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-      <path
-        class="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      />
-    </svg>
     """
   end
 
@@ -87,7 +57,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
     <button type="submit" disabled={@saving} class={@class}>
       <%= if @saving do %>
         <span class="flex items-center">
-          <.loading_spinner class="h-4 w-4 mr-2" />
+          <.spinner class="h-4 w-4 mr-2" />
           {@saving_text}
         </span>
       <% else %>
@@ -139,14 +109,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   def health_warning_badge(assigns) do
     ~H"""
     <span class={@class}>
-      <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-        />
-      </svg>
+      <.icon name="hero-exclamation-triangle" class="w-3 h-3 shrink-0" />
       Connection issues
     </span>
     """

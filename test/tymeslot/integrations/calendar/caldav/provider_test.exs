@@ -47,8 +47,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
       assert test_basic_validation(Provider, "https://caldav.example.com") == :ok
     end
 
-    test "attempts connection when all required fields present" do
-      assert test_validation_attempts_connection(Provider, "https://caldav.example.com") == :ok
+    test "accepts a complete config without touching the network" do
+      test_validation_accepts_without_network_probe(Provider, "https://caldav.example.com")
     end
   end
 
@@ -293,7 +293,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
     end
   end
 
-  describe "test_connection/2" do
+  describe "test_connection/1" do
     test "returns error for invalid credentials" do
       integration = %{
         base_url: "http://localhost:1",
@@ -303,12 +303,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
       }
 
       capture_log(fn ->
-        result = Provider.test_connection(integration)
+        result = Provider.perform_connection_test(integration)
         assert {:error, _message} = result
       end)
     end
 
-    test "accepts options with metadata" do
+    test "is pure I/O — takes only the integration, no caller options" do
       integration = %{
         base_url: "http://localhost:1",
         username: "user",
@@ -316,16 +316,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
         calendar_paths: []
       }
 
-      opts = [metadata: %{ip: "192.168.1.1"}]
-
       capture_log(fn ->
-        result = Provider.test_connection(integration, opts)
+        result = Provider.perform_connection_test(integration)
         assert {:error, _message} = result
       end)
     end
   end
 
-  describe "discover_calendars/2" do
+  describe "discover_calendars/1" do
     test "returns error without valid server" do
       client = %{
         base_url: "http://localhost:1",
@@ -337,23 +335,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
 
       capture_log(fn ->
         result = Provider.discover_calendars(client)
-        assert {:error, _message} = result
-      end)
-    end
-
-    test "accepts options with IP address for rate limiting" do
-      client = %{
-        base_url: "http://localhost:1",
-        username: "user",
-        password: "pass",
-        calendar_paths: [],
-        provider: :caldav
-      }
-
-      opts = [metadata: %{ip: "192.168.1.1"}]
-
-      capture_log(fn ->
-        result = Provider.discover_calendars(client, opts)
         assert {:error, _message} = result
       end)
     end

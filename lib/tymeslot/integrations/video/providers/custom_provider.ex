@@ -39,8 +39,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   All URLs (static and template) must:
   - Use HTTP or HTTPS scheme
   - Have a valid, resolvable host
-  - Not point to private or loopback addresses (in test_connection only)
-  - Be reachable (in test_connection only)
+  - Not point to private or loopback addresses (in perform_connection_test only)
+  - Be reachable (in perform_connection_test only)
   """
 
   alias Tymeslot.Infrastructure.Config
@@ -207,7 +207,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   def valid_meeting_url?(meeting_url), do: valid_url?(meeting_url)
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def test_connection(config) do
+  def perform_connection_test(config) do
     case Map.get(config, :custom_meeting_url) do
       nil ->
         {:error, "No custom meeting URL provided"}
@@ -238,6 +238,9 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def display_name, do: "Custom Video Link"
+
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def connection_test_bucket, do: :custom
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do
@@ -288,7 +291,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
       provider: "custom",
       meeting_id: room_data.room_id,
       join_url: room_data.meeting_url,
-      custom_url: Map.get(room_data.provider_data, "original_url")
+      custom_url: Map.get(room_data.provider_data, :original_url)
     }
   end
 

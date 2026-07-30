@@ -17,7 +17,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder
   alias Tymeslot.Integrations.Video.RoomData
-  alias Tymeslot.Security.{RateLimiter, UrlValidation}
+  alias Tymeslot.Security.UrlValidation
 
   @capabilities Capabilities.new!(
                   recording: false,
@@ -36,6 +36,9 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   def display_name, do: "MiroTalk P2P"
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def connection_test_bucket, do: :mirotalk
+
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do
     %{
       api_key: %{type: :string, required: true, description: "API key for MiroTalk server"},
@@ -44,7 +47,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   end
 
   # Structural validation only, in line with every other video provider: the
-  # callers that need connectivity (`ProviderRegistry.test_provider_connection/2`,
+  # callers that need connectivity (`Video.Connection.probe/3`,
   # `ProviderAdapter.create_meeting_room/2`) invoke `validate_config/1` first and
   # then the function that talks to the server. Reaching the network from here
   # doubled every scheduled health probe against the customer's self-hosted
@@ -62,33 +65,24 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   @doc """
   Tests the connection to the MiroTalk API.
 
-  Accepts a `:rate_limit_scope` option naming who the test is charged to —
-  `{:user, user_id}` for an interactive test, `{:integration, id}` for a
-  scheduled health probe. Callers with no actor context fall back to the target
-  host, so the bucket is never shared instance-wide.
+  Pure I/O — the caller (`Tymeslot.Integrations.Video.Connection`) decides
+  whether and to whom the test is rate-limited.
   """
-  @spec test_connection(
-          %{required(:api_key) => String.t(), required(:base_url) => String.t()},
-          keyword()
-        ) :: {:ok, String.t()} | {:error, term()}
+  @spec perform_connection_test(%{
+          required(:api_key) => String.t(),
+          required(:base_url) => String.t()
+        }) ::
+          {:ok, String.t()} | {:error, term()}
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def test_connection(config, opts \\ []) do
+  def perform_connection_test(config) do
     # For MiroTalk, we can test by checking if the API endpoint is reachable
     base_url = Map.get(config, :base_url)
     api_key = Map.get(config, :api_key)
 
-    # Structural URL validation runs first: it is local and cheap, so a
-    # malformed URL keeps its own error message instead of being masked by a
-    # rate-limit rejection, and tokens are only spent on tests that reach out.
-    with :ok <- validate_base_url(base_url),
-         :ok <- check_rate_limit(rate_limit_scope(opts, base_url)) do
+    with :ok <- validate_base_url(base_url) do
       # Proceed with API connection test
       test_api_connection(base_url, api_key)
     end
-  end
-
-  defp rate_limit_scope(opts, base_url) do
-    Keyword.get(opts, :rate_limit_scope) || {:host, URI.parse(base_url).host}
   end
 
   defp validate_base_url(nil), do: {:error, "Base URL is required"}
@@ -405,12 +399,4 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def url_patterns, do: ["mirotalk", "talk."]
-
-  # Rate limit helper
-  defp check_rate_limit(scope) do
-    case RateLimiter.check_mirotalk_connection_rate_limit(scope) do
-      :ok -> :ok
-      {:error, :rate_limited, message} -> {:error, message}
-    end
-  end
 end

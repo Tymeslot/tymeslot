@@ -12,7 +12,11 @@ defmodule Tymeslot.Infrastructure.Logging.Redactor do
     {~r/"?access_token"?[^a-zA-Z0-9]+"[^"]+"/i, "access_token: \"[REDACTED]\""},
     {~r/"?refresh_token"?[^a-zA-Z0-9]+"[^"]+"/i, "refresh_token: \"[REDACTED]\""},
     {~r/"?client_secret"?[^a-zA-Z0-9]+"[^"]+"/i, "client_secret: \"[REDACTED]\""},
-    {~r/"?api_key"?[^a-zA-Z0-9]+"[^"]+"/i, "api_key: \"[REDACTED]\""}
+    {~r/"?api_key"?[^a-zA-Z0-9]+"[^"]+"/i, "api_key: \"[REDACTED]\""},
+    # `password[a-z_]*` so `password_confirmation`, `new_password` and friends
+    # are covered too — an alphanumeric suffix would otherwise break the match
+    # and leave the value in the clear.
+    {~r/"?password[a-z_]*"?[^a-zA-Z0-9]+"[^"]+"/i, "password: \"[REDACTED]\""}
   ]
 
   @doc """

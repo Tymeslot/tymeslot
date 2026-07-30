@@ -55,47 +55,40 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       assert :ok = test_basic_validation(Provider, "https://mail.example.com")
     end
 
-    test "blocks localhost URLs (SSRF protection)" do
+    # `validate_config/1` is structural only — it never performs network I/O
+    # (the connectivity probe used to run here too, doubling the rate-limit
+    # charge across two buckets for a single form submission). HTTP is
+    # allowed for localhost/private/link-local hosts (dev/test environments),
+    # so URL validation passes here; the live check now runs separately,
+    # through `test_connection/1`.
+    test "allows HTTP for localhost URLs without touching the network" do
       config = %{
         base_url: "http://localhost:8080",
         username: "user",
         password: "pass"
       }
 
-      # Should allow HTTP for localhost but still fail connection
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        # Will fail connection but URL validation should pass for local hosts
-        assert match?({:error, _}, result)
-      end)
+      assert :ok = Provider.validate_config(config)
     end
 
-    test "blocks private IP addresses (SSRF protection)" do
+    test "allows HTTP for private IP addresses without touching the network" do
       config = %{
         base_url: "http://10.0.0.1",
         username: "user",
         password: "pass"
       }
 
-      # Should allow HTTP for private IPs but still fail connection
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        assert match?({:error, _}, result)
-      end)
+      assert :ok = Provider.validate_config(config)
     end
 
-    test "blocks AWS metadata endpoint (SSRF protection)" do
+    test "allows HTTP for the AWS metadata endpoint without touching the network" do
       config = %{
         base_url: "http://169.254.169.254",
         username: "user",
         password: "pass"
       }
 
-      # Should allow HTTP for link-local but still fail connection
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        assert match?({:error, _}, result)
-      end)
+      assert :ok = Provider.validate_config(config)
     end
 
     test "enforces HTTPS for public hosts" do
@@ -109,32 +102,24 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
                {:error, "Use HTTPS for non-local Zimbra servers"}
     end
 
-    test "accepts HTTPS for public hosts (connection fails without server)" do
+    test "accepts HTTPS for public hosts without touching the network" do
       config = %{
         base_url: "https://mail.example.com",
         username: "user@example.com",
         password: "pass"
       }
 
-      # URL validation passes but connection test fails without actual server
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        assert match?({:error, _}, result)
-      end)
+      assert :ok = Provider.validate_config(config)
     end
 
-    test "accepts full CalDAV URL format (connection fails without server)" do
+    test "accepts full CalDAV URL format without touching the network" do
       config = %{
         base_url: "https://mail.example.com/dav/user@example.com",
         username: "user@example.com",
         password: "pass"
       }
 
-      # URL validation passes but connection test fails without actual server
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        assert match?({:error, _}, result)
-      end)
+      assert :ok = Provider.validate_config(config)
     end
   end
 
@@ -222,7 +207,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
 
       # Will fail but tests interface
       capture_log(fn ->
-        case Provider.test_connection(integration) do
+        case Provider.perform_connection_test(integration) do
           {:ok, message} -> assert String.contains?(message, "Zimbra")
           {:error, _reason} -> :ok
         end
@@ -241,13 +226,13 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       capture_log(fn ->
         # Nothing is listening on port 1, so the error is the generic connect
         # message — it must never leak the underlying transport reason.
-        assert Provider.test_connection(integration) ==
+        assert Provider.perform_connection_test(integration) ==
                  {:error,
                   "Unable to connect to the calendar service. Please check the URL and try again."}
       end)
     end
 
-    test "accepts options with IP metadata" do
+    test "is pure I/O — takes only the integration, no caller options" do
       integration = %{
         base_url: "http://localhost:1",
         username: "user@example.com",
@@ -256,11 +241,9 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
         provider: :zimbra
       }
 
-      opts = [metadata: %{ip: "192.168.1.1"}]
-
       capture_log(fn ->
         # Without actual server, should return connection error
-        assert {:error, _message} = Provider.test_connection(integration, opts)
+        assert {:error, _message} = Provider.perform_connection_test(integration)
       end)
     end
   end
@@ -293,23 +276,6 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       capture_log(fn ->
         # discover_calendars should set provider to :zimbra internally
         result = Provider.discover_calendars(client)
-        assert {:error, _message} = result
-      end)
-    end
-
-    test "accepts options for rate limiting" do
-      client = %{
-        base_url: "https://mail.example.com",
-        username: "user@example.com",
-        password: "pass",
-        calendar_paths: [],
-        provider: :zimbra
-      }
-
-      opts = [metadata: %{ip: "10.0.0.1"}]
-
-      capture_log(fn ->
-        result = Provider.discover_calendars(client, opts)
         assert {:error, _message} = result
       end)
     end

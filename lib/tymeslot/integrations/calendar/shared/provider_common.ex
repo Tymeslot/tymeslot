@@ -62,21 +62,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   end
 
   @doc """
-  Runs a CalDAV connection test and normalizes error responses.
-  """
-  @spec test_caldav_connection(CaldavCommon.caldav_client(), keyword()) ::
-          :ok | {:error, String.t()}
-  def test_caldav_connection(client, opts \\ []) do
-    error_formatter = Keyword.get(opts, :error_formatter, &default_caldav_error/1)
-    test_opts = Keyword.get(opts, :test_opts, [])
-
-    case CaldavCommon.test_connection(client, test_opts) do
-      {:ok, _result} -> :ok
-      {:error, reason} -> {:error, error_formatter.(reason)}
-    end
-  end
-
-  @doc """
   Helper for providers to format calendars returned from their API.
 
   `mapper` normalises each raw provider calendar into a `CalendarEntry`
@@ -134,7 +119,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       provider: normalize_provider(integration.provider)
     }
 
-    case CaldavCommon.test_connection(client, rate_limit_scope: opts[:rate_limit_scope]) do
+    case CaldavCommon.test_connection(client) do
       {:ok, _response} ->
         {:ok, success_msg}
 
@@ -156,11 +141,16 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   Common implementation of `discover_calendars_for_integration/1` for
   CalDAV-based providers that store encrypted credentials.
 
-  Decrypts the integration's username/password, builds a config map,
-  constructs a client via `provider_module.new/1`, and calls
-  `provider_module.discover_calendars/1`. Used by Radicale, Zimbra,
-  MailboxOrg, and Baikal — providers whose discovery shim is otherwise
-  identical apart from the module being dispatched to.
+  Decrypts the integration's username/password, builds a config map, and
+  calls `provider_module.new/1` + `provider_module.discover_calendars/1`.
+  Used by Radicale, Zimbra, MailboxOrg, Apple, and Baikal — providers whose
+  discovery shim is otherwise identical apart from the module being
+  dispatched to.
+
+  Pure I/O — rate limiting and caching this call is the caller's job
+  (`Tymeslot.Integrations.Calendar.Discovery`, the single choke point that
+  wraps every CalDAV provider's `discover_calendars_for_integration/1`),
+  not this shim's.
   """
   @spec caldav_discover_from_integration(module(), map()) ::
           {:ok, [CalendarEntry.t()]} | {:error, term()}
@@ -174,8 +164,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       calendar_paths: integration.calendar_paths
     }
 
-    client = provider_module.new(config)
-    provider_module.discover_calendars(client)
+    provider_module.discover_calendars(provider_module.new(config))
   end
 
   @doc """
@@ -227,9 +216,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       verify_ssl: true
     }
   end
-
-  defp default_caldav_error({:error, message}) when is_binary(message), do: message
-  defp default_caldav_error(reason), do: "Connection failed: #{inspect(reason)}"
 
   defp normalize_provider(provider) when is_atom(provider), do: provider
 

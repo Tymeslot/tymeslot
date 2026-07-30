@@ -107,7 +107,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"items" => []})}}
       end)
 
-      assert {:ok, message} = GoogleMeetProvider.test_connection(config)
+      assert {:ok, message} = GoogleMeetProvider.perform_connection_test(config)
       assert String.contains?(message, "successful")
     end
 
@@ -122,7 +122,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         {:ok, %Req.Response{status: 401, body: "Unauthorized"}}
       end)
 
-      assert {:error, message} = GoogleMeetProvider.test_connection(config)
+      assert {:error, message} = GoogleMeetProvider.perform_connection_test(config)
       assert String.contains?(message, "Connection test failed")
     end
 
@@ -133,7 +133,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         {:ok, %Req.Response{status: 200, body: "not json"}}
       end)
 
-      assert {:error, message} = GoogleMeetProvider.test_connection(config)
+      assert {:error, message} = GoogleMeetProvider.perform_connection_test(config)
       assert message =~ "Invalid JSON"
     end
 
@@ -163,7 +163,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"items" => []})}}
       end)
 
-      assert {:ok, _result} = GoogleMeetProvider.test_connection(config)
+      assert {:ok, _result} = GoogleMeetProvider.perform_connection_test(config)
     end
   end
 

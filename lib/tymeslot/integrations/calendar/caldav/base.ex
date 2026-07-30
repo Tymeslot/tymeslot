@@ -34,7 +34,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
   alias Tymeslot.Integrations.Calendar.CalDAV.XmlHandler
   alias Tymeslot.Integrations.Calendar.ICalBuilder
-  alias Tymeslot.Security.RateLimiter
 
   require Logger
 
@@ -198,10 +197,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
            })}
           | {:error, error_reason()}
   def discover_calendars(client, opts \\ []) do
-    ip_address = Keyword.get(opts, :ip_address, "127.0.0.1")
-
-    with :ok <- check_rate_limit(:discovery, ip_address),
-         :ok <- validate_client_url(client.base_url) do
+    with :ok <- validate_client_url(client.base_url) do
       with_caldav_breaker(client, opts, fn ->
         discovery_url = UrlBuilder.build_discovery_url(client)
 
@@ -370,12 +366,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
     CalendarCircuitBreaker.with_breaker(provider, opts, fun)
   end
 
-  defp parse_calendar_discovery(xml_body, client) do
-    XmlHandler.parse_calendar_discovery(xml_body,
-      include_id: true,
-      include_selected: false,
-      provider: client.provider
-    )
+  defp parse_calendar_discovery(xml_body, _client) do
+    XmlHandler.parse_calendar_discovery(xml_body)
   end
 
   defp build_ical_data(event_data, uid) do
@@ -384,13 +376,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
 
   defp generate_uid do
     ICalBuilder.generate_uid()
-  end
-
-  defp check_rate_limit(:discovery, ip_address) do
-    case RateLimiter.check_calendar_discovery_rate_limit(ip_address) do
-      :ok -> :ok
-      {:error, :rate_limited, message} -> {:error, message}
-    end
   end
 
   defp validate_client_url(url) when is_binary(url) do

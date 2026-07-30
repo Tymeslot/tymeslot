@@ -9,7 +9,6 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   """
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.Connection
   alias Tymeslot.Integrations.Calendar.EventsRead
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.{CaldavCommon, ProviderAdapter}
@@ -163,30 +162,6 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
          {:ok, _info} <- adapter_client.provider_module.check_connectivity(adapter_client.client) do
       :ok
     end
-  end
-
-  @doc """
-  Tests the connection and returns display-friendly message.
-  Delegates to Connection.test_connection/2 to centralize provider resolution.
-
-  `:scope` distinguishes an interactive test from a scheduled background probe;
-  see `Tymeslot.Integrations.Calendar.Connection.test_connection/2`.
-  """
-  @spec test_connection(integration(), keyword()) :: {:ok, String.t()} | {:error, any()}
-  def test_connection(integration, opts \\ []) do
-    start_time = System.monotonic_time(:millisecond)
-
-    result = Connection.test_connection(integration, opts)
-
-    duration = System.monotonic_time(:millisecond) - start_time
-
-    :telemetry.execute(
-      [:tymeslot, :integration, :test_connection],
-      %{duration: duration},
-      %{provider: integration.provider, type: "calendar", success: match?({:ok, _result}, result)}
-    )
-
-    result
   end
 
   @doc """

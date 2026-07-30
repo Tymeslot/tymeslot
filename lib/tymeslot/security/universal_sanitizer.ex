@@ -64,6 +64,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
            enforce_max_input_bytes(input, max_input_bytes, on_too_long, log_events, metadata),
          {:ok, sanitized} <-
            sanitize_input(bounded, mode, allow_html, log_events, field, metadata),
+         :ok <- validate_utf8(sanitized, log_events, field, metadata),
          {:ok, validated} <-
            validate_length(sanitized, max_length, on_too_long, log_events, metadata) do
       {:ok, String.trim(validated)}

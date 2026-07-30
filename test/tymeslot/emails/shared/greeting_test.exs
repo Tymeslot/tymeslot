@@ -2,6 +2,7 @@ defmodule Tymeslot.Emails.Shared.GreetingTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.Shared.Greeting
 
   describe "html/1" do
@@ -89,8 +90,12 @@ defmodule Tymeslot.Emails.Shared.GreetingTest do
       assert Greeting.text(user) == "Hi Ada from GitHub,"
     end
 
-    test "falls back to the signup name when the profile is not loaded" do
-      assert Greeting.text(build(:user, name: "Ada from GitHub")) == "Hi Ada from GitHub,"
+    test "raises when the profile is not loaded" do
+      user = build(:user, name: "Ada from GitHub")
+
+      assert_raise ArgumentError, ~r/user.profile must be preloaded/, fn ->
+        Greeting.text(user)
+      end
     end
 
     test "stays neutral when neither the profile nor the user carries a name" do
@@ -105,6 +110,30 @@ defmodule Tymeslot.Emails.Shared.GreetingTest do
 
       assert Greeting.text(user) == "Hi there,"
       refute Greeting.text(user) =~ "ada@example.com"
+    end
+  end
+
+  describe "name resolution via the persisted signup + onboarding path" do
+    test "a name set through onboarding survives to the HTML greeting HTML-escaped exactly once" do
+      # Exercises the real path a mailer handler uses: email/password signup
+      # never sets user.name (see Registration.create_user/1), so the
+      # profile's full_name — set at onboarding — is the only source of a
+      # greeted name, reached here via UserQueries.get_user_with_profile/1
+      # exactly as the email worker handlers reach it.
+      user = insert(:user, name: nil)
+      insert(:profile, user: user, full_name: "O'Brien & Sons <script>alert(1)</script>")
+
+      {:ok, loaded_user} = UserQueries.get_user_with_profile(user.id)
+
+      html = Greeting.html(loaded_user)
+
+      # Escaped exactly once: the raw payload must not survive verbatim, and
+      # the escaped characters must not themselves be re-escaped (which would
+      # turn "&amp;" into "&amp;amp;").
+      refute html =~ "<script>"
+      refute html =~ "&amp;amp;"
+      refute html =~ "&amp;#39;"
+      assert html == "Hi O&#39;Brien &amp; Sons &lt;script&gt;alert(1)&lt;/script&gt;,"
     end
   end
 

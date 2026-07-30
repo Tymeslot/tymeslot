@@ -222,6 +222,23 @@ defmodule Tymeslot.Bookings.Create do
         # Actual conflict detected - fail fast to prevent double booking
         {:error, :slot_unavailable}
 
+      {:error, reason} when reason in [:some_calendars_unavailable, :all_calendars_unavailable] ->
+        # Distinct from the transport errors below: here the fetch SUCCEEDED in
+        # reaching the calendar layer, which reported that it could not read
+        # every selected calendar. The busy set is therefore incomplete, and
+        # falling through to "proceed anyway" would skip the conflict check
+        # entirely — strictly worse than checking against a partial set, because
+        # a conflict sitting in a calendar that did respond would also be missed.
+        # Refuse instead; `classify_error/1` maps this to `:slot_taken`, so the
+        # booker is returned to the schedule step and can retry.
+        Logger.warning(
+          "Calendar availability could not be verified, refusing booking",
+          reason: inspect(reason),
+          organizer_user_id: booking_data.organizer_user_id
+        )
+
+        {:error, :availability_unverifiable}
+
       {:error, reason} ->
         # Calendar transport/timeout errors - log but don't block booking
         # The booking will succeed and calendar sync will be retried in background
@@ -450,51 +467,33 @@ defmodule Tymeslot.Bookings.Create do
   # share one user-facing meaning, so they collapse to a single atom each.
   # Reasons that already arrive as arbitrary changeset/validation text pass
   # through unchanged (`is_binary/1` clause).
-  defp classify_error(reason) do
-    case reason do
-      :meeting_type_inactive ->
-        :meeting_type_inactive
+  # A table rather than a clause ladder: every entry is the same behaviour over
+  # varying data, so the mapping is the whole content. `:availability_unverifiable`
+  # collapses to `:slot_taken` because we could not read the organiser's full busy
+  # set and so cannot prove the slot is free — the booker gets the same "pick
+  # another slot" outcome as a genuine clash, and the distinction survives in the
+  # logs rather than the copy.
+  @error_classifications %{
+    meeting_type_inactive: :meeting_type_inactive,
+    meeting_type_not_found: :meeting_type_not_found,
+    meeting_type_missing: :meeting_type_not_found,
+    time_conflict: :slot_taken,
+    slot_unavailable: :slot_taken,
+    availability_unverifiable: :slot_taken,
+    organizer_required: :organizer_required,
+    validation_error: :booking_failed,
+    payments_unavailable: :payments_unavailable,
+    host_not_found: :host_not_found,
+    host_missing: :host_not_found
+  }
 
-      :meeting_type_not_found ->
-        :meeting_type_not_found
+  defp classify_error(reason) when is_map_key(@error_classifications, reason),
+    do: Map.fetch!(@error_classifications, reason)
 
-      :time_conflict ->
-        :slot_taken
-
-      :slot_unavailable ->
-        :slot_taken
-
-      :organizer_required ->
-        :organizer_required
-
-      :validation_error ->
-        :booking_failed
-
-      :payments_unavailable ->
-        :payments_unavailable
-
-      :host_not_found ->
-        :host_not_found
-
-      :host_missing ->
-        :host_not_found
-
-      :meeting_type_missing ->
-        :meeting_type_not_found
-
-      {:custom_field_errors, _errors} ->
-        :custom_field_errors
-
-      {:checkout_failed, _reason} ->
-        :checkout_failed
-
-      reason when is_binary(reason) ->
-        reason
-
-      _other ->
-        :booking_failed
-    end
-  end
+  defp classify_error({:custom_field_errors, _errors}), do: :custom_field_errors
+  defp classify_error({:checkout_failed, _reason}), do: :checkout_failed
+  defp classify_error(reason) when is_binary(reason), do: reason
+  defp classify_error(_other), do: :booking_failed
 
   defp emit_booking_created do
     :telemetry.execute([:tymeslot, :booking, :created], %{count: 1}, %{})

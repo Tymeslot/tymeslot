@@ -69,7 +69,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
 
       expect(ZoomOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
-      assert {:ok, message} = ZoomProvider.test_connection(config)
+      assert {:ok, message} = ZoomProvider.perform_connection_test(config)
       assert String.contains?(message, "Successfully authenticated")
     end
 
@@ -78,7 +78,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
 
       expect(ZoomOAuthHelperMock, :validate_token, fn _config -> {:error, "expired"} end)
 
-      assert {:error, message} = ZoomProvider.test_connection(config)
+      assert {:error, message} = ZoomProvider.perform_connection_test(config)
       assert String.contains?(message, "Failed to authenticate")
       assert String.contains?(message, "expired")
     end

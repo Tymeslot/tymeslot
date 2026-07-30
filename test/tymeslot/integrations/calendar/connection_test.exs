@@ -139,7 +139,8 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
           provider: "google",
           access_token_encrypted: Encryption.encrypt("access_token"),
           refresh_token_encrypted: Encryption.encrypt("refresh_token"),
-          token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second)
+          token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
+          oauth_scope: "https://www.googleapis.com/auth/calendar"
         )
 
       integration_map = %{
@@ -199,10 +200,13 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
     end
 
     test "tests Google Calendar provider connection" do
+      user = insert(:user)
+
       integration = %{
         provider: "google",
         access_token: "test_token",
-        refresh_token: "refresh_token"
+        refresh_token: "refresh_token",
+        user_id: user.id
       }
 
       # Mock connection test

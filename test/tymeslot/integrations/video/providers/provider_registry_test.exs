@@ -127,7 +127,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
     # This probe runs on a schedule against a self-hosted MiroTalk server the
     # customer owns, so the number of requests it costs them is part of the
     # contract. `validate_config/1` must stay a pure structural check, leaving
-    # `test_connection/1` as the single caller that touches the network.
+    # `perform_connection_test/1` as the single caller that touches the network.
     test "issues exactly one request to the mirotalk server per probe" do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
       {:ok, counter} = Agent.start_link(fn -> 0 end)

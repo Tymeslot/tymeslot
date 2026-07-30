@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   seamless switching between different video conferencing platforms.
   """
 
+  alias Tymeslot.Integrations.Shared.ConnectionProbe
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.RoomData
 
@@ -58,22 +59,21 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   @doc """
   Tests the connection to the video service.
 
+  Pure I/O: providers never rate-limit their own connection test. The caller
+  (`Tymeslot.Integrations.Video.Connection`) is the single place that decides
+  whether the test is rate-limited and who it is charged to.
+
   Returns {:ok, message} on success or {:error, reason} on failure.
+
+  Named `perform_connection_test/1` rather than `test_connection/1` so a
+  direct provider call reads as out-of-band — the human-facing name
+  `test_connection` is reserved for the facade
+  (`Tymeslot.Integrations.Video.test_connection/2`) and
+  `Tymeslot.Integrations.Video.Connection`/`ProviderAdapter`, the only
+  legitimate callers of this callback; `CredoChecks.ConnectionProbeBoundary`
+  enforces that mechanically.
   """
-  @callback test_connection(config :: map()) :: {:ok, String.t()} | {:error, any()}
-
-  @doc """
-  Tests the connection, given caller context.
-
-  Optional. Providers that rate-limit their connection test implement this so
-  the limiter can be keyed on whoever asked (`:rate_limit_scope`) rather than on
-  a single instance-wide bucket. `ProviderRegistry.test_provider_connection/3`
-  prefers this over `test_connection/1` when a provider exports it.
-  """
-  @callback test_connection(config :: map(), opts :: keyword()) ::
-              {:ok, String.t()} | {:error, any()}
-
-  @optional_callbacks test_connection: 2
+  @callback perform_connection_test(config :: map()) :: {:ok, String.t()} | {:error, any()}
 
   @doc """
   Returns the provider type identifier.
@@ -84,6 +84,14 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   Returns the display name for this provider.
   """
   @callback display_name() :: String.t()
+
+  @doc """
+  Returns the connection-test rate-limit bucket this provider draws its
+  budget from. There is no default implementation: every provider must
+  declare a bucket explicitly, so a new provider that omits it fails
+  `mix compile --warnings-as-errors` instead of silently running unmetered.
+  """
+  @callback connection_test_bucket() :: ConnectionProbe.bucket()
 
   @doc """
   Returns the configuration schema for this provider.
@@ -176,7 +184,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
 
   @doc """
   Builds the runtime config map this provider expects in `create_meeting_room/1`,
-  `test_connection/1`, etc.
+  `perform_connection_test/1`, etc.
 
   Receives the persisted integration record, its decrypted credentials, and any
   call-site options (e.g. `meeting_id` for the custom provider). The provider

@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Video.Providers.CustomProvider
+  alias Tymeslot.Integrations.Video.RoomData
 
   describe "provider_type/0" do
     test "returns :custom" do
@@ -259,11 +260,11 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
 
   describe "generate_meeting_metadata/1" do
     test "returns metadata with custom provider info" do
-      room_data = %{
+      room_data = %RoomData{
         room_id: "abc123def456",
         meeting_url: "https://meet.example.com/room123",
         provider_data: %{
-          "original_url" => "https://meet.example.com/room123"
+          original_url: "https://meet.example.com/room123"
         }
       }
 
@@ -276,7 +277,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
     end
 
     test "handles missing provider_data gracefully" do
-      room_data = %{
+      room_data = %RoomData{
         room_id: "xyz789",
         meeting_url: "https://meet.example.com/room456",
         provider_data: %{}
@@ -607,7 +608,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
     test "rejects template in fragment during test_connection" do
       config = %{custom_meeting_url: ~S"https://jitsi.example.org/room#{{meeting_id}}"}
 
-      assert {:error, message} = CustomProvider.test_connection(config)
+      assert {:error, message} = CustomProvider.perform_connection_test(config)
       assert String.contains?(message, "fragment")
     end
   end

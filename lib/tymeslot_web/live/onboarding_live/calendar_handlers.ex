@@ -185,7 +185,13 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
     username = form_data["username"]
     password = form_data["password"]
 
-    case Calendar.discover_and_filter_calendars(:caldav, url, username, password) do
+    case Calendar.discover_and_filter_calendars(
+           :caldav,
+           url,
+           username,
+           password,
+           user_id
+         ) do
       {:ok, %{discovery_credentials: credentials}} ->
         params = %{
           "provider" => "caldav",

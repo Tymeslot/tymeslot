@@ -272,6 +272,17 @@ defmodule Tymeslot.Integrations.Calendar do
   end
 
   @doc """
+  Tests connectivity to an integration's provider and returns a
+  display-friendly message.
+
+  `:scope` distinguishes an interactive "Test connection" click from a
+  scheduled background probe; see
+  `Tymeslot.Integrations.Calendar.Connection.test_connection/2`.
+  """
+  @spec test_connection(integration(), keyword()) :: {:ok, String.t()} | {:error, any()}
+  defdelegate test_connection(integration, opts \\ []), to: Connection
+
+  @doc """
   Returns the list of CalDAV-based provider atoms.
   See `Tymeslot.Integrations.Calendar.ProviderConfig.caldav_based_providers/0`.
   """
@@ -460,12 +471,21 @@ defmodule Tymeslot.Integrations.Calendar do
 
   @doc """
   Discovers calendars for raw credentials and filters them for valid paths.
+
+  `user_id` is the plain owner id the discovery is charged to; the
+  rate-limiter actor tuple is built internally rather than by the caller.
   """
-  @spec discover_and_filter_calendars(atom() | String.t(), String.t(), String.t(), String.t()) ::
+  @spec discover_and_filter_calendars(
+          atom() | String.t(),
+          String.t(),
+          String.t(),
+          String.t(),
+          user_id()
+        ) ::
           {:ok, %{calendars: list(), discovery_credentials: Discovery.discovery_credentials()}}
           | {:error, any()}
-  def discover_and_filter_calendars(provider, url, username, password) do
-    Workflows.discover_and_filter_calendars(provider, url, username, password)
+  def discover_and_filter_calendars(provider, url, username, password, user_id) do
+    Workflows.discover_and_filter_calendars(provider, url, username, password, user_id)
   end
 
   # ---------------------------

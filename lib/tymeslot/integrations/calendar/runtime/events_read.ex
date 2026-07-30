@@ -1,60 +1,14 @@
 defmodule Tymeslot.Integrations.Calendar.EventsRead do
   @moduledoc """
-  Read-path calendar operations (range and list-in-range) extracted from runtime operations.
+  Read-path calendar operations (per-client range fetch with fallback,
+  extracted from runtime operations).
   """
 
   require Logger
   alias Tymeslot.Infrastructure.Logging.Redactor
-  alias Tymeslot.Integrations.Calendar.CalDAV.Base
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
-  alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
-
-  @doc """
-  Lists events within a date range from all configured calendars.
-  Uses server-side filtering to exclude events outside the range.
-  Fetches from all calendars in parallel for better performance.
-
-  DEPRECATED: Prefer get_events_for_range_fresh/3 in EventQueries when possible.
-  """
-  @spec list_events_in_range(DateTime.t() | Date.t(), DateTime.t() | Date.t(), (-> list(map()))) ::
-          {:ok, list(map())} | {:error, term()}
-  def list_events_in_range(start_date, end_date, clients_fun \\ &ClientManager.clients/0) do
-    Logger.info("Listing calendar events in range from all calendars",
-      start_date: start_date,
-      end_date: end_date
-    )
-
-    case {ensure_utc(start_date), ensure_utc(end_date)} do
-      {{:ok, start_utc}, {:ok, end_utc}} ->
-        all_clients = clients_fun.()
-        Logger.info("Fetching from calendars in parallel", calendar_count: length(all_clients))
-
-        tasks =
-          Enum.map(all_clients, fn client ->
-            Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-              fetch_events_with_fallback(client, start_utc, end_utc)
-            end)
-          end)
-
-        results = Task.await_many(tasks, Base.task_await_timeout_ms())
-
-        all_events =
-          results
-          |> Enum.filter(fn
-            {:ok, _events, _path} -> true
-            _result -> false
-          end)
-          |> Enum.flat_map(fn {:ok, events, _path} -> events end)
-          |> Enum.uniq_by(&{&1.uid, &1.start_time})
-
-        Logger.info("Total events found across all calendars", event_count: length(all_events))
-        {:ok, all_events}
-
-      _result ->
-        {:error, :timezone_error}
-    end
-  end
+  alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
 
   @doc """
   Fetches events for the given client with a fallback to full list filtering when needed.
@@ -68,6 +22,25 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
         expanded = expand_recurring_events(normalized, start_utc, end_utc)
 
         wrap_events_result(client, {:ok, expanded})
+
+      {:error, %Outcome{failed: failed}} = error when failed != [] ->
+        # This is a retry-skip optimisation, not the aggregation policy that
+        # `FetchAggregate` centralises below: the primary fetch already ran
+        # the full multi-calendar fetch (MultiCalendarFetch) and at least one
+        # selected calendar hard-failed; the fallback below re-runs that same
+        # multi-calendar fetch over a 13x wider range (30d..365d vs. the
+        # narrow range here), so it cannot succeed where the primary just
+        # failed for this reason. Retrying it anyway would double the timeout
+        # risk and provider quota use exactly when the provider is already
+        # degraded. Deciding this from `outcome.failed` (rather than a
+        # provider-specific error atom) is what lets `MultiCalendarFetch`
+        # report the real per-calendar failures instead of flattening them.
+        Logger.warning("Primary fetch reported unavailable calendars, skipping fallback",
+          calendar_path: get_calendar_path(client),
+          failed_count: length(failed)
+        )
+
+        wrap_events_result(client, error, :error)
 
       error ->
         Logger.warning("Failed to fetch from calendar, trying fallback",
@@ -184,19 +157,6 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
   defp parse_exdates(exdates) when is_list(exdates), do: exdates
   defp parse_exdates(_other), do: []
 
-  defp ensure_utc(%DateTime{time_zone: "Etc/UTC"} = dt), do: {:ok, dt}
-
-  defp ensure_utc(%DateTime{} = dt) do
-    case DateTime.shift_zone(dt, "Etc/UTC") do
-      {:ok, utc_dt} -> {:ok, utc_dt}
-      {:error, _reason} -> {:error, :timezone_error}
-    end
-  end
-
-  defp ensure_utc(%Date{} = d) do
-    {:ok, DateTime.new!(d, ~T[00:00:00], "Etc/UTC")}
-  end
-
   defp wrap_events_result(client, result, _log_level \\ nil)
 
   defp wrap_events_result(client, {:ok, events}, _log_level) do
@@ -206,6 +166,26 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
     )
 
     {:ok, events, get_calendar_path(client)}
+  end
+
+  # %Outcome{} carries the full events list of every calendar that
+  # succeeded, so it must never be handed to a logger whole (see the
+  # generic clause below, which would otherwise inspect it). Log only the
+  # operational summary: counts and which calendars failed and why.
+  defp wrap_events_result(client, {:error, %Outcome{} = outcome}, _log_level) do
+    path = get_calendar_path(client)
+
+    Logger.error("Failed to fetch from calendar",
+      calendar_path: path,
+      attempted: outcome.attempted,
+      succeeded: outcome.succeeded,
+      failed:
+        Enum.map(outcome.failed, fn %{source: source, reason: reason} ->
+          %{source: source, reason: Redactor.redact_and_truncate(reason)}
+        end)
+    )
+
+    {:error, outcome, path}
   end
 
   defp wrap_events_result(client, {:error, error}, _log_level) do

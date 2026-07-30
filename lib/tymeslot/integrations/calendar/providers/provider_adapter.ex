@@ -7,10 +7,12 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   """
 
   require Logger
+  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
+  alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
 
   @type adapter_client :: %{
           required(:provider_type) => atom(),
@@ -141,6 +143,22 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
               provider: adapter_client.provider_type,
               error_type: type,
               reason: inspect(reason)
+            )
+
+            error
+
+          # An %Outcome{} carries the full events list of every calendar
+          # that succeeded in the round; never let it reach `inspect/1`
+          # below. Log only the operational summary.
+          {:error, %Outcome{} = outcome} = error ->
+            Logger.error("Failed to get events in range",
+              provider: adapter_client.provider_type,
+              attempted: outcome.attempted,
+              succeeded: outcome.succeeded,
+              failed:
+                Enum.map(outcome.failed, fn %{source: source, reason: reason} ->
+                  %{source: source, reason: Redactor.redact_and_truncate(reason)}
+                end)
             )
 
             error

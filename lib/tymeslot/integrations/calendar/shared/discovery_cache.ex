@@ -9,10 +9,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryCache do
   for the same key — a stampede of simultaneous discovery requests (e.g. several
   dashboard tabs) hits the provider once rather than once per caller.
 
-  Keys are `{provider, "username@host"}` tuples built by
-  `Tymeslot.Integrations.Calendar.Shared.DiscoveryService`. Only successful
-  (`{:ok, calendars}`) results are retained; the caller invalidates transient
-  failures so they are not served stale.
+  Keys are built by `Tymeslot.Integrations.Calendar.Discovery`: a
+  `{provider, "username@host"}` tuple (via
+  `Tymeslot.Integrations.Calendar.Shared.DiscoveryService.build_cache_key/2`)
+  for not-yet-persisted credentials, or a `{provider, integration_id}` tuple
+  for an already-persisted integration. Only successful (`{:ok, calendars}`)
+  results are retained; the caller invalidates transient failures so they
+  are not served stale.
   """
   use Tymeslot.Infrastructure.CacheStore,
     table_name: :calendar_discovery_cache,

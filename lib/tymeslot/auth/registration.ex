@@ -26,6 +26,10 @@ defmodule Tymeslot.Auth.Registration do
     - opts: Optional parameters including:
       - :return_url - URL to redirect to after registration
       - :metadata - Map of app-specific data to include in PubSub event
+      - :rate_limit_checked - set to `true` when the caller has already
+        consumed a signup rate-limit token for this attempt (e.g.
+        `Tymeslot.Auth.SignupSecurity.gate/2` on the LiveView signup path),
+        so this function skips its own check instead of double-counting
 
   ## Returns
     - {:ok, user, message} on success
@@ -35,7 +39,7 @@ defmodule Tymeslot.Auth.Registration do
           {:ok, term(), String.t()} | {:error, atom(), String.t()} | {:error, :input, map()}
   def register_user(params, socket_or_conn, opts \\ []) do
     with {:ok, validated_params} <- validate_input(params),
-         :ok <- check_rate_limit(params["email"], socket_or_conn),
+         :ok <- check_rate_limit(params["email"], socket_or_conn, opts),
          {:ok, user} <- create_and_verify_user(validated_params, socket_or_conn, opts) do
       {:ok, user,
        "Account created successfully. Please check your email for verification instructions."}
@@ -79,9 +83,13 @@ defmodule Tymeslot.Auth.Registration do
     end
   end
 
-  defp check_rate_limit(email, socket_or_conn) do
-    ip = ClientIP.get(socket_or_conn)
-    RateLimiter.check_signup_rate_limit(email, ip)
+  defp check_rate_limit(email, socket_or_conn, opts) do
+    if Keyword.get(opts, :rate_limit_checked, false) do
+      :ok
+    else
+      ip = ClientIP.get(socket_or_conn)
+      RateLimiter.check_signup_rate_limit(email, ip)
+    end
   end
 
   defp create_and_verify_user(validated_params, socket_or_conn, opts) do

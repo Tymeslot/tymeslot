@@ -26,9 +26,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
     module_setup = module_setup_quote(provider, default_name)
     track_form_change = track_form_change_handler_quote()
     validate_field = validate_field_handler_quote()
-    discover_calendars = discover_calendars_handler_quote()
     validation_helpers = validation_helpers_quote()
-    discovery_helpers = discovery_helpers_quote()
     name_suggestion = name_suggestion_quote()
     calendar_formatting = calendar_formatting_quote()
     config_defaults = config_defaults_quote()
@@ -37,9 +35,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
       unquote(module_setup)
       unquote(track_form_change)
       unquote(validate_field)
-      unquote(discover_calendars)
       unquote(validation_helpers)
-      unquote(discovery_helpers)
       unquote(name_suggestion)
       unquote(calendar_formatting)
       unquote(config_defaults)
@@ -54,7 +50,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
       @config_base_default_name default_name
 
       alias Phoenix.Component
-      alias Tymeslot.Integrations.Calendar.Discovery
       alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
     end
   end
@@ -86,29 +81,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
             {:ok, _result} -> handle_valid_field(socket, field_atom)
             {:error, error} -> handle_invalid_field(socket, field_atom, error)
           end
-        end
-      end
-    end
-  end
-
-  defp discover_calendars_handler_quote do
-    quote do
-      @impl Phoenix.LiveComponent
-      def handle_event("discover_calendars", %{"integration" => params}, socket) do
-        socket = Component.assign(socket, :saving, true)
-
-        case CalendarInputValidation.validate_calendar_discovery(params,
-               metadata: socket.assigns.metadata,
-               provider: @config_base_provider
-             ) do
-          {:ok, sanitized_params} ->
-            handle_discovery_success(socket, sanitized_params)
-
-          {:error, validation_errors} ->
-            {:noreply,
-             socket
-             |> Component.assign(:form_errors, validation_errors)
-             |> Component.assign(:saving, false)}
         end
       end
     end
@@ -146,40 +118,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
            :form_errors,
            Map.put(socket.assigns.form_errors || %{}, field_atom, error)
          )}
-      end
-    end
-  end
-
-  defp discovery_helpers_quote do
-    quote do
-      defp handle_discovery_state(socket, discovery_result) do
-        case discovery_result do
-          {:ok, %{calendars: calendars, discovery_credentials: credentials}} ->
-            socket
-            |> Component.assign(:discovered_calendars, calendars)
-            |> Component.assign(:show_calendar_selection, true)
-            |> Component.assign(:discovery_credentials, credentials)
-            |> Component.assign(:saving, false)
-            |> Component.assign(:form_errors, %{})
-
-          {:error, reason} ->
-            socket
-            |> Component.assign(:saving, false)
-            |> Component.assign(:form_errors, %{discovery: [reason]})
-        end
-      end
-
-      defp handle_discovery_success(socket, sanitized_params) do
-        discovery_result =
-          Discovery.discover_calendars_for_credentials(
-            @config_base_provider,
-            sanitized_params["url"],
-            sanitized_params["username"],
-            sanitized_params["password"],
-            force_refresh: true
-          )
-
-        {:noreply, handle_discovery_state(socket, discovery_result)}
       end
     end
   end

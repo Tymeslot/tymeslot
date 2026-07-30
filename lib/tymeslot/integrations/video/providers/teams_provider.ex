@@ -92,7 +92,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def test_connection(config) do
+  def perform_connection_test(config) do
     case get_access_token(config) do
       {:ok, _token} ->
         {:ok, "Successfully authenticated with Microsoft Teams"}
@@ -107,6 +107,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def display_name, do: "Microsoft Teams"
+
+  # A per-actor bucket shared across every OAuth-backed provider: the test
+  # itself rides on a token that is already scarce, but without a charge
+  # here it is unbounded and can burn the instance-wide OAuth quota shared
+  # by every user.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def connection_test_bucket, do: :oauth
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do
@@ -149,9 +156,9 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       provider: "teams",
       meeting_id: room_data.room_id,
       join_url: room_data.meeting_url,
-      passcode: room_data.provider_data["passcode"],
-      dial_in_number: room_data.provider_data["toll_number"],
-      conference_id: room_data.provider_data["conference_id"]
+      passcode: room_data.provider_data[:passcode],
+      dial_in_number: room_data.provider_data[:toll_number],
+      conference_id: room_data.provider_data[:conference_id]
     }
   end
 

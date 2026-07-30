@@ -4,10 +4,12 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   """
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Discovery
+  alias Tymeslot.Integrations.Calendar.Provider
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
-  alias Tymeslot.Integrations.Calendar.Shared.DiscoveryService
   alias Tymeslot.Integrations.Calendar.Tokens
+  alias Tymeslot.Integrations.Shared.ConnectionProbe
 
   require Logger
 
@@ -50,7 +52,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
     end
   end
 
-  def validate_connection(%{provider: provider} = integration, _user_id)
+  def validate_connection(%{provider: provider} = integration, user_id)
       when provider in @caldav_provider_strings do
     client_config = %{
       base_url: integration.base_url,
@@ -64,7 +66,10 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
         _other -> :unknown
       end
 
-    case DiscoveryService.discover_calendars(provider_atom, client_config) do
+    # Reaches `Discovery` directly rather than through `probe/3` — metering
+    # happens at the `Discovery` funnel itself, charged to the acting user,
+    # so no second charge is needed here.
+    case Discovery.discover_calendars(provider_atom, client_config, actor: {:user, user_id}) do
       {:ok, _result} -> {:ok, integration}
       {:error, _msg} -> {:error, :network_error}
     end
@@ -85,49 +90,110 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   @doc """
   Test provider connectivity via registry.
 
+  This is the single place that resolves the provider module and hands off
+  to `ConnectionProbe.probe/1`, which decides whether a connection test is
+  rate-limited and, if so, who it is charged to — providers are pure I/O and
+  never call the rate limiter themselves, and neither does this function.
   `:scope` says who is asking: `:interactive` (the default, a user pressing
-  "Test connection") or `:background` (a scheduled health probe). It decides the
-  rate-limit bucket the provider charges the test to, and keeping the two apart
-  is the point: an instance's scheduled probing must never be able to exhaust
-  the budget a real user's button draws from, nor one user another's.
+  "Test connection") or `:background` (a scheduled health probe). Keeping
+  the two apart is the point: an instance's scheduled probing must never be
+  able to exhaust the budget a real user's button draws from, nor one user
+  another's — and `:background` is unmetered by construction, per
+  `ConnectionProbe`'s moduledoc.
   """
-  @type scope :: :interactive | :background
+  @type scope :: ConnectionProbe.scope()
 
   @spec test_connection(CalendarIntegrationSchema.t(), keyword()) ::
           {:ok, String.t()} | {:error, term()}
   def test_connection(%{provider: provider} = integration, opts \\ []) do
-    with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
-         {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom) do
-      scope = rate_limit_scope(integration, Keyword.get(opts, :scope, :interactive))
+    scope = Keyword.get(opts, :scope, :interactive)
+    start_time = System.monotonic_time(:millisecond)
 
-      run_connection_test(provider_module, integration, rate_limit_scope: scope)
+    result =
+      with {:ok, provider_atom} <- ProviderConfig.parse_known(provider),
+           {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom) do
+        config = to_probe_config(provider_atom, integration)
+
+        ConnectionProbe.probe_provider(provider_module, integration,
+          scope: scope,
+          # Deliberately nothing to validate here — see this function's doc.
+          validate: fn -> :ok end,
+          run: fn -> provider_module.perform_connection_test(config) end
+        )
+      else
+        _other -> {:error, :unsupported_provider}
+      end
+
+    :telemetry.execute(
+      [:tymeslot, :integration, :test_connection],
+      %{duration: System.monotonic_time(:millisecond) - start_time},
+      %{provider: provider, type: "calendar", success: match?({:ok, _result}, result)}
+    )
+
+    result
+  end
+
+  # CalDAV-family `validate_config/1` and `perform_connection_test/1` callbacks read
+  # `config` with bracket access, which the persisted `CalendarIntegrationSchema`
+  # struct doesn't support. Converts it to the same atom-keyed map
+  # `Calendar.Creation.prevalidate_config/1` builds from form attrs, so
+  # `probe/3` always receives one shape per provider family. A caller that
+  # already passes a plain map is left untouched; OAuth providers read the
+  # struct directly (dot/`Map` access) and are never converted.
+  defp to_probe_config(provider_atom, %CalendarIntegrationSchema{} = integration) do
+    if ProviderConfig.caldav_based?(provider_atom) do
+      CalendarIntegrationSchema.to_provider_config(integration)
     else
-      _other -> {:error, :unsupported_provider}
+      integration
     end
   end
 
-  defp rate_limit_scope(integration, :interactive),
-    do: actor_scope({:user, Map.get(integration, :user_id)}, integration)
+  defp to_probe_config(_provider_atom, config), do: config
 
-  defp rate_limit_scope(integration, :background),
-    do: actor_scope({:integration, Map.get(integration, :id)}, integration)
+  @doc """
+  Runs the rate-limited connection probe for `provider_atom` against `config`,
+  charging an already-resolved `actor`.
 
-  # Unsaved or partially built integrations (the connection-validation path
-  # tests credentials before anything is persisted) carry no actor id yet, so
-  # fall back to the target host rather than to one shared bucket.
-  defp actor_scope({_kind, nil}, integration),
-    do: {:host, URI.parse(Map.get(integration, :base_url) || "").host}
+  Resolves the provider module from `provider_atom` and asks it for its own
+  connection-test bucket via `connection_test_bucket/0` (each provider's
+  behaviour declares this callback with no default, so a provider can't omit
+  it). `actor` must already be a resolved `ConnectionProbe.actor()` for any
+  provider with a real bucket; `:unmetered` providers ignore it and callers
+  may pass `nil`. Unlike `test_connection/2`, there is no persisted
+  integration to resolve an actor from here — the caller already knows who
+  is submitting the form.
 
-  defp actor_scope(scope, _integration), do: scope
+  Deliberately does NOT call `validate_config/1`. That callback validates
+  user-supplied *input*, not persisted state: it requires a complete config
+  and, for OAuth providers, checks the stored `oauth_scope` against a
+  provider-specific format. This function's one call path is the creation
+  pre-check, where the config really is untrusted input and structural
+  validation runs ahead of it (`Calendar.Creation.prevalidate_config/1`).
 
-  # Only the CalDAV-family providers rate-limit their connection test and so
-  # accept caller context; the OAuth ones (Google, Outlook) expose arity 1 only.
-  defp run_connection_test(provider_module, integration, opts) do
-    if Code.ensure_loaded?(provider_module) and
-         function_exported?(provider_module, :test_connection, 2) do
-      provider_module.test_connection(integration, opts)
-    else
-      provider_module.test_connection(integration)
+  Returns `ConnectionProbe`'s refusal tagged, never flattened to text —
+  building copy for it is the caller's job (see the moduledoc on
+  `Tymeslot.Integrations.Shared.ConnectionProbe`); `Calendar.Creation`
+  passes it straight up to its own caller.
+
+  `Calendar.Creation.prevalidate_config/1` (via its private `test_config/3`)
+  is the only caller.
+  """
+  @spec probe(atom(), Provider.config(), ConnectionProbe.actor() | nil) ::
+          {:ok, String.t()} | {:error, term()}
+  def probe(provider_atom, config, actor) do
+    case ProviderRegistry.get_provider(provider_atom) do
+      {:ok, provider_module} ->
+        ConnectionProbe.probe(%ConnectionProbe.Request{
+          provider_module: provider_module,
+          scope: :interactive,
+          actor: actor,
+          # Deliberately nothing to validate here — see this function's doc.
+          validate: fn -> :ok end,
+          run: fn -> provider_module.perform_connection_test(config) end
+        })
+
+      _other ->
+        {:error, :unsupported_provider}
     end
   end
 end

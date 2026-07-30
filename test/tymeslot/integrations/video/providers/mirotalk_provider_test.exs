@@ -98,7 +98,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
         {:error, %Mint.TransportError{reason: :econnrefused}}
       end)
 
-      assert {:error, message} = MiroTalkProvider.test_connection(config)
+      assert {:error, message} = MiroTalkProvider.perform_connection_test(config)
       assert String.contains?(message, "Connection refused")
     end
 
@@ -115,7 +115,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
          }}
       end)
 
-      log = capture_log(fn -> MiroTalkProvider.test_connection(config) end)
+      log = capture_log(fn -> MiroTalkProvider.perform_connection_test(config) end)
 
       assert log =~ "MiroTalk server error"
       refute log =~ "ya29.secret"

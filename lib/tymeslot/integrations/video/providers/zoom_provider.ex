@@ -103,7 +103,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   def valid_meeting_url?(meeting_url), do: meeting_url =~ @zoom_url_pattern
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def test_connection(config) do
+  def perform_connection_test(config) do
     case get_access_token(config) do
       {:ok, _token} -> {:ok, "Successfully authenticated with Zoom"}
       {:error, reason} -> {:error, "Failed to authenticate with Zoom: #{inspect(reason)}"}
@@ -115,6 +115,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def display_name, do: "Zoom"
+
+  # A per-actor bucket shared across every OAuth-backed provider: the test
+  # itself rides on a token that is already scarce, but without a charge
+  # here it is unbounded and can burn the instance-wide OAuth quota shared
+  # by every user.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def connection_test_bucket, do: :oauth
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do

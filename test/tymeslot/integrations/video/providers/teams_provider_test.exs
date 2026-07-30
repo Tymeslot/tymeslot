@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
@@ -104,7 +105,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
-      assert {:ok, message} = TeamsProvider.test_connection(config)
+      assert {:ok, message} = TeamsProvider.perform_connection_test(config)
       assert String.contains?(message, "Successfully authenticated")
     end
 
@@ -113,7 +114,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
       expect(TeamsOAuthHelperMock, :validate_token, fn _client -> {:error, "Invalid"} end)
 
-      assert {:error, message} = TeamsProvider.test_connection(config)
+      assert {:error, message} = TeamsProvider.perform_connection_test(config)
       assert String.contains?(message, "Failed to authenticate")
     end
   end
@@ -459,13 +460,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
   describe "generate_meeting_metadata/1" do
     test "returns metadata with Teams-specific features" do
-      room_data = %{
+      room_data = %RoomData{
         room_id: "meeting123",
         meeting_url: "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc%40thread.v2/0",
         provider_data: %{
-          "passcode" => "123456",
-          "toll_number" => "+1-555-0100",
-          "conference_id" => "987654321"
+          passcode: "123456",
+          toll_number: "+1-555-0100",
+          conference_id: "987654321"
         }
       }
 
@@ -474,6 +475,8 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       assert metadata[:provider] == "teams"
       assert metadata[:meeting_id] == "meeting123"
       assert metadata[:passcode] == "123456"
+      assert metadata[:dial_in_number] == "+1-555-0100"
+      assert metadata[:conference_id] == "987654321"
     end
   end
 

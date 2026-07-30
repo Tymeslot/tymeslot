@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
             <button
               phx-click="slack_show_webhook_form"
               phx-target={@myself}
-              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-token-xl border-2 bg-white border-tymeslot-200 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all"
+              class="btn-secondary"
             >
               Add via webhook URL
             </button>

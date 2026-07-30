@@ -47,6 +47,13 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def display_name, do: "Google Meet"
 
+  # A per-actor bucket shared across every OAuth-backed provider: the test
+  # itself rides on a token that is already scarce, but without a charge
+  # here it is unbounded and can burn the instance-wide OAuth quota shared
+  # by every user.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def connection_test_bucket, do: :oauth
+
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do
     %{
@@ -167,7 +174,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   def valid_meeting_url?(_url), do: false
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def test_connection(config) do
+  def perform_connection_test(config) do
     Logger.info("Testing Google Meet connection")
 
     with {:ok, valid_token} <- ensure_valid_token(config),

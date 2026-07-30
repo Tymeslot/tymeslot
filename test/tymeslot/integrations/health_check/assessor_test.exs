@@ -68,6 +68,46 @@ defmodule Tymeslot.Integrations.HealthCheck.AssessorTest do
       assert is_integer(duration)
     end
 
+    test "does not leak a CalDAV password when the connection probe raises a KeyError" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "google")
+
+      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _int, _start, _end ->
+        raise KeyError,
+          key: :missing_key,
+          term: %{username: "caldav-user", password: "hunter2-CalDAV-SECRET"} # gitleaks:allow — synthetic fixture; test asserts it is redacted
+      end)
+
+      {result, _duration} = Assessor.assess(:calendar, integration)
+
+      assert {:error, {:exception, message}} = result
+
+      # The security property: the credential never survives into the reason,
+      # which `IntegrationHealthWorker` logs verbatim.
+      refute message =~ "hunter2-CalDAV-SECRET"
+      assert message =~ "[REDACTED]"
+
+      # The message itself is kept (redacted, not discarded) so the substrings
+      # `ErrorAnalysis.classify_error/1` matches on survive — dropping it would
+      # silently downgrade a permanent auth failure to a transient one.
+      assert message =~ "caldav-user"
+    end
+
+    test "keeps the auth markers error classification depends on" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "google")
+
+      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _int, _start, _end ->
+        raise CaseClauseError, term: %{"error" => "invalid_grant", "password" => "SECRET-PW"}
+      end)
+
+      {result, _duration} = Assessor.assess(:calendar, integration)
+
+      assert {:error, {:exception, message}} = result
+      refute message =~ "SECRET-PW"
+      assert message =~ "invalid_grant"
+    end
+
     test "decrypts CalDAV credentials before testing connection" do
       user = insert(:user)
 

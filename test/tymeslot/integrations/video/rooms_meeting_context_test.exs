@@ -153,9 +153,9 @@ defmodule Tymeslot.Integrations.Video.RoomsMeetingContextTest do
           room_id: "meeting123",
           meeting_url: "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc%40thread.v2/0",
           provider_data: %{
-            "passcode" => "123456",
-            "toll_number" => "+1-555-0100",
-            "conference_id" => "987654321"
+            passcode: "123456",
+            toll_number: "+1-555-0100",
+            conference_id: "987654321"
           }
         }
       }
@@ -177,7 +177,7 @@ defmodule Tymeslot.Integrations.Video.RoomsMeetingContextTest do
           room_id: "abc123def456",
           meeting_url: "https://meet.example.com/room123",
           provider_data: %{
-            "original_url" => "https://meet.example.com/room123"
+            original_url: "https://meet.example.com/room123"
           }
         }
       }

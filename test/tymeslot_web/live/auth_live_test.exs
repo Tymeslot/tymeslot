@@ -558,6 +558,24 @@ defmodule TymeslotWeb.AuthLiveTest do
     end
   end
 
+  describe "verify-email page" do
+    test "shows the address the verification email was sent to", %{conn: conn} do
+      user = insert(:unverified_user)
+
+      conn =
+        init_test_session(conn, %{
+          "unverified_user_id" => user.id,
+          "unverified_user_email" => user.email,
+          "unverified_session_timestamp" => DateTime.to_unix(DateTime.utc_now())
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/auth/verify-email")
+
+      assert html =~ "Sent to"
+      assert html =~ user.email
+    end
+  end
+
   defp setup_password_reset_token(_context) do
     user = insert(:user)
     {token, _value} = Token.generate_password_reset_token()
