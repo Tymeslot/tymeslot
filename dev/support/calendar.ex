@@ -76,11 +76,6 @@ defmodule Tymeslot.Dev.Calendar do
   # --- CalendarBehaviour -----------------------------------------------------
 
   @impl true
-  def list_events_in_range(user_id, %DateTime{} = start_time, %DateTime{} = end_time) do
-    {:ok, generate(user_id, start_time, end_time)}
-  end
-
-  @impl true
   def get_events_for_range_fresh(user_id, %Date{} = start_date, %Date{} = end_date) do
     timezone = timezone_for(user_id)
     range_start = day_start(start_date, timezone)
@@ -132,9 +127,6 @@ defmodule Tymeslot.Dev.Calendar do
   def get_booking_integration_info(_context), do: {:error, :no_integration}
 
   # --- Helpers ---------------------------------------------------------------
-
-  defp generate(user_id, range_start, range_end),
-    do: generate(user_id, range_start, range_end, range_start.time_zone)
 
   defp generate(_user_id, range_start, range_end, timezone) do
     %{pattern: pattern, rules: rules, events: events} = DebugStore.snapshot()

@@ -133,40 +133,32 @@ defmodule Tymeslot.Security.RateLimiter do
   # Integrations
 
   @doc """
-  Rate limit CalDAV connection testing attempts.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-  """
-  @spec check_caldav_connection_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_caldav_connection_rate_limit(ip_address),
-    do: Integrations.check_caldav_connection(ip_address)
+  Rate limit a provider's connection-test attempts, in the bucket the
+  provider draws its budget from (`:caldav`, `:nextcloud`, `:mirotalk`,
+  `:custom`, `:oauth`, or `:discovery` for calendar discovery, which is
+  metered exactly like a connection test but isn't tied to any one
+  provider's own bucket).
 
-  @doc """
-  Rate limit MiroTalk connection testing attempts.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-  """
-  @spec check_mirotalk_connection_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_mirotalk_connection_rate_limit(ip_address),
-    do: Integrations.check_mirotalk_connection(ip_address)
+  Limit: 20 tests per 10 minutes per scope (30 for `:discovery`), except
+  `:custom` — which probes an arbitrary user-supplied host — at 5 per 10
+  minutes. The bucket is always charged to `{:user, user_id}` — an
+  interactive "Test connection" click or integration setup. A scheduled
+  background health probe never reaches this function at all: see
+  `Tymeslot.Integrations.Shared.ConnectionProbe`'s `:background` clause
+  (and its moduledoc) for why background probing is unmetered by
+  construction rather than charged to some other bucket.
 
-  @doc """
-  Rate limit Nextcloud connection testing attempts.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
-  """
-  @spec check_nextcloud_connection_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_nextcloud_connection_rate_limit(ip_address),
-    do: Integrations.check_nextcloud_connection(ip_address)
+  Only `Tymeslot.Integrations.Shared.ConnectionProbe` calls this directly —
+  `CredoChecks.RateLimiterBoundary` enforces that boundary mechanically.
 
-  @doc """
-  Rate limit calendar discovery attempts.
   Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
   """
-  @spec check_calendar_discovery_rate_limit(String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  def check_calendar_discovery_rate_limit(ip_address),
-    do: Integrations.check_calendar_discovery(ip_address)
+  @spec check_connection_test_rate_limit(
+          Integrations.connection_bucket(),
+          Integrations.connection_scope() | nil
+        ) :: :ok | {:error, :rate_limited, String.t()} | {:error, :unattributable}
+  def check_connection_test_rate_limit(bucket, scope),
+    do: Integrations.check_connection_test(bucket, scope)
 
   # Bookings
 

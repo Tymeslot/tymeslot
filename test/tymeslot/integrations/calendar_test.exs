@@ -8,7 +8,6 @@ defmodule Tymeslot.Integrations.CalendarTest do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias Tymeslot.Integrations.Calendar.Diagnostics
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Workers.ColourWriteBackWorker
 
@@ -108,7 +107,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
       end)
 
       assert {:ok, "Google Calendar connection successful"} =
-               Diagnostics.test_connection(integration)
+               Calendar.test_connection(integration)
     end
   end
 

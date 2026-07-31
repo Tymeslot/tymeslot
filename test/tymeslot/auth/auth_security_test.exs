@@ -135,7 +135,14 @@ defmodule Tymeslot.Auth.SecurityTest do
       end)
     end
 
-    test "a script payload in the full name never reaches the user record" do
+    test "signup never persists a name, even when the payload supplies one" do
+      # Not an XSS/sanitisation assertion: @signup_field_spec in
+      # Registration doesn't validate a name field at all, and
+      # create_user/1 hardcodes its attrs to email/password/terms, so
+      # `user.name` is nil for every signup regardless of input. The
+      # `<script>` payload here is a deliberate negative control — it proves
+      # nothing is silently smuggled through an unvalidated key, not that
+      # anything is sanitised.
       params = %{
         "email" => "safe@example.com",
         "password" => "ValidPass123!",
@@ -145,9 +152,8 @@ defmodule Tymeslot.Auth.SecurityTest do
       }
 
       assert {:ok, user, _message} = Auth.register_user(params, %Plug.Conn{})
+
       assert user.email == "safe@example.com"
-      # The submitted full name is sanitised during validation and the signup
-      # path does not persist it, so no payload can survive on the record.
       assert is_nil(user.name)
     end
 

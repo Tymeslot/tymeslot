@@ -129,11 +129,29 @@ defmodule Tymeslot.Emails.Shared.Text do
   """
   @spec centered_text(String.t(), keyword()) :: String.t()
   def centered_text(text, opts \\ []) do
+    text
+    |> Sanitise.sanitize_for_email()
+    |> centered_html(opts)
+  end
+
+  @doc """
+  Centered body text whose content is **already** HTML-escaped.
+
+  Same rendering as `centered_text/2` without the escaping step, for the one
+  case where the caller owns the escaping: `Greeting.html/1` escapes the
+  recipient's name itself so it can splice it into a translated sentence.
+  Running it through `centered_text/2` instead escapes it twice and mails out
+  `Hi O&#39;Brien &amp; Sons,`.
+
+  Pass only strings that are already safe. Anything derived from user input
+  must go through `Sanitise.sanitize_for_email/1` exactly once on its way here.
+  """
+  @spec centered_html(String.t(), keyword()) :: String.t()
+  def centered_html(safe_text, opts \\ []) do
     font_size = Keyword.get(opts, :font_size, "16px")
     font_weight = Keyword.get(opts, :font_weight)
     color = Keyword.get(opts, :color, Styles.ink_soft())
     padding = Keyword.get(opts, :padding, "4px 0 12px 0")
-    safe_text = Sanitise.sanitize_for_email(text)
 
     font_weight_attr =
       if font_weight, do: ~s( font-weight="#{font_weight}"), else: ""

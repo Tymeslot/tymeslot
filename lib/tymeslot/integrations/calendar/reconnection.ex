@@ -72,11 +72,23 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
 
   Options (keyword):
     * `:discover` — `(provider, url, username, password -> {:ok, %{calendars: …, discovery_credentials: …}} | {:error, term()})`.
-      Defaults to `Calendar.discover_and_filter_calendars/4`.
+      Defaults to `Calendar.discover_and_filter_calendars/5`, closed over this
+      integration's owner so the discovery is charged to them. The seam stays
+      arity-4 so callers injecting a double need not know about the actor.
   """
   @spec reconnect(integration(), params(), keyword()) :: reconnect_ok() | reconnect_error()
   def reconnect(%CalendarIntegrationSchema{} = integration, params, opts \\ []) do
-    discover = Keyword.get(opts, :discover, &Calendar.discover_and_filter_calendars/4)
+    default_discover = fn provider, url, username, password ->
+      Calendar.discover_and_filter_calendars(
+        provider,
+        url,
+        username,
+        password,
+        integration.user_id
+      )
+    end
+
+    discover = Keyword.get(opts, :discover, default_discover)
     apply_account_change(integration, params, discover)
   end
 

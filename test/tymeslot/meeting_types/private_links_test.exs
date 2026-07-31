@@ -10,6 +10,7 @@ defmodule Tymeslot.MeetingTypes.PrivateLinksTest do
 
   alias Ecto.Changeset
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   describe "effective_slug/1" do
@@ -91,6 +92,16 @@ defmodule Tymeslot.MeetingTypes.PrivateLinksTest do
       ids = user.id |> MeetingTypes.get_public_meeting_types() |> Enum.map(& &1.id)
 
       assert ids == [active.id]
+    end
+
+    test "returns nothing and seeds nothing for a host with no meeting types" do
+      user = insert(:user)
+
+      assert MeetingTypes.get_public_meeting_types(user.id) == []
+
+      # A public page view must never write to the host's account: the default
+      # "15 Minutes"/"30 Minutes" types must not be conjured into existence.
+      refute MeetingTypeQueries.has_meeting_types?(user.id)
     end
   end
 

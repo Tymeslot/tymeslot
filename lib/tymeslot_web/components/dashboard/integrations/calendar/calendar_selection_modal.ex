@@ -63,6 +63,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
               phx-value-integration_id={@integration.id}
               phx-value-calendar_id={calendar.id}
               phx-target={@target}
+              aria-pressed={to_string(calendar.selected)}
               class={[
                 "inline-flex items-center gap-2.5 rounded-token-xl border-2 px-3.5 py-2 text-token-xs font-bold transition-all",
                 (calendar.selected &&

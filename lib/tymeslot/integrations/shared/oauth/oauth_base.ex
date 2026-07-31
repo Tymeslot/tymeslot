@@ -183,6 +183,13 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
       @impl Tymeslot.Integrations.Calendar.Provider
       def display_name, do: @display_name
 
+      # A per-actor bucket shared across every OAuth-backed provider: the
+      # test itself rides on a token that is already scarce, but without a
+      # charge here it is unbounded and can burn the instance-wide OAuth
+      # quota shared by every user.
+      @impl Tymeslot.Integrations.Calendar.Provider
+      def connection_test_bucket, do: :oauth
+
       @impl Tymeslot.Integrations.Calendar.Provider
       def config_schema, do: OAuthBase.config_schema()
 

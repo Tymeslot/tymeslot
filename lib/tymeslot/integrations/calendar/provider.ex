@@ -9,12 +9,27 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Shared.ConnectionProbe
 
   @type context :: %{
           calendar_integration_id: integer(),
           provider_calendar_id: String.t(),
           synced_at: DateTime.t()
         }
+
+  @typedoc """
+  The shape `validate_config/1` and `perform_connection_test/1` are called with.
+
+  CalDAV-family providers read a plain, atom-keyed map (built by
+  `Calendar.Creation.prevalidate_config/1` for a not-yet-persisted
+  integration, or by `CalendarIntegrationSchema.to_provider_config/1` for an
+  already-persisted one) via bracket access. OAuth providers instead read the
+  persisted `CalendarIntegrationSchema` struct directly, via dot/`Map`
+  access. `Calendar.Connection.probe/3` is the single choke point both
+  shapes flow through.
+  """
+  @type config :: map() | CalendarIntegrationSchema.t()
 
   @doc """
   Creates a new client instance for the provider.
@@ -54,14 +69,48 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   @callback display_name() :: String.t()
 
   @doc """
+  Returns the connection-test rate-limit bucket this provider draws its
+  budget from, or `:unmetered` for providers whose connection test must
+  deliberately run without charging (dev-only providers, whose test never
+  reaches a real external service). There is no default implementation:
+  every provider must declare a bucket explicitly, so a new provider that
+  omits it fails `mix compile --warnings-as-errors` instead of silently
+  running unmetered.
+  """
+  @callback connection_test_bucket() :: ConnectionProbe.bucket()
+
+  @doc """
   Returns the configuration schema for this provider.
   """
   @callback config_schema() :: map()
 
   @doc """
   Validates the provider configuration.
+
+  Structural validation only; never performs network I/O.
+  `Calendar.Connection.probe/3` runs this first and then `perform_connection_test/1`
+  — folding the network probe into this callback would double-charge a
+  rate-limited connection test that runs both in sequence.
   """
-  @callback validate_config(config :: map()) :: :ok | {:error, String.t()}
+  @callback validate_config(config :: config()) :: :ok | {:error, String.t()}
+
+  @doc """
+  Tests connectivity to the provider using the given config.
+
+  Pure I/O: this callback never rate-limits itself. The single choke point
+  for connection-test rate limiting is
+  `Tymeslot.Integrations.Calendar.Connection.test_connection/2`, which decides
+  whether and to whom the test is charged before calling this.
+
+  Named `perform_connection_test/1` rather than `test_connection/1` so a
+  direct provider call reads as out-of-band — the human-facing name
+  `test_connection` is reserved for the facade
+  (`Tymeslot.Integrations.Calendar.test_connection/2`) and
+  `Tymeslot.Integrations.Calendar.Connection`, the only legitimate callers of
+  this callback; `CredoChecks.ConnectionProbeBoundary` enforces that
+  mechanically.
+  """
+  @callback perform_connection_test(config :: config()) :: {:ok, String.t()} | {:error, term()}
 
   @callback normalise_events(raw_events :: [map()], context :: context()) ::
               {:ok, [CalendarEvent.t()]} | {:error, term()}
@@ -100,6 +149,24 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
               {:ok, [CalendarEntry.t()]} | {:error, term()}
 
   @doc """
+  Discovers raw calendars from a client built via `new/1`.
+
+  Pure I/O: never rate-limits or caches itself. The single choke point for
+  discovery metering and caching is
+  `Tymeslot.Integrations.Calendar.Discovery`, which wraps a call to this
+  callback (indirectly, via `discover_calendars_for_integration/1`, or
+  directly for not-yet-persisted credentials) in the `:discovery`
+  `ConnectionProbe` bucket.
+
+  Optional: only implemented by CalDAV-family providers, whose
+  `new/1` + `discover_calendars/1` pair this callback names directly. OAuth
+  providers implement `discover_calendars_for_integration/1` against a fixed
+  vendor endpoint instead and never go through this pair.
+  """
+  @callback discover_calendars(client :: any()) ::
+              {:ok, [map()] | [CalendarEntry.t()]} | {:error, term()}
+
+  @doc """
   Builds the list of provider-specific client configs for an integration.
 
   Used by `Runtime.ClientManager` to construct adapter clients for sync,
@@ -120,6 +187,7 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   @callback build_booking_client_config(integration :: map()) :: any() | nil
 
   @optional_callbacks discover_calendars_for_integration: 1,
+                      discover_calendars: 1,
                       build_client_configs: 1,
                       build_booking_client_config: 1
 end

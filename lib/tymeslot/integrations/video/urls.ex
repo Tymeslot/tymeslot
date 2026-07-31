@@ -11,7 +11,9 @@ defmodule Tymeslot.Integrations.Video.Urls do
 
   @spec extract_room_id(String.t() | MeetingContext.t()) :: String.t() | nil
   def extract_room_id(%{room_data: room_data}) when is_map(room_data) do
-    room_id(room_data)
+    # No placeholder fallback here: a context without a room id has no room, and
+    # returning a stand-in string would let callers persist an unusable room.
+    Map.get(room_data, :room_id)
   end
 
   def extract_room_id(meeting_url) when is_binary(meeting_url) do
@@ -26,7 +28,4 @@ defmodule Tymeslot.Integrations.Video.Urls do
   end
 
   def valid_meeting_url?(_url), do: false
-
-  defp room_id(%{room_id: room_id}) when is_binary(room_id), do: room_id
-  defp room_id(_room_data), do: "unknown"
 end

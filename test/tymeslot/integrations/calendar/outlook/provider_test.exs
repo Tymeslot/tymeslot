@@ -564,7 +564,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
       end)
 
       assert {:ok, "Outlook Calendar connection successful"} =
-               Provider.test_connection(integration)
+               Provider.perform_connection_test(integration)
     end
 
     test "test_connection handles unauthorized error" do
@@ -583,7 +583,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
         {:error, :unauthorized, "token expired"}
       end)
 
-      assert {:error, :unauthorized} = Provider.test_connection(integration)
+      assert {:error, :unauthorized} = Provider.perform_connection_test(integration)
     end
   end
 

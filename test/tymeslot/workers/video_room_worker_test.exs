@@ -92,22 +92,21 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
     test "handles malformed API response (invalid JSON)" do
       %{meeting: meeting} = setup_video_scenario()
 
-      # MiroTalk provider tries both HTTPS and HTTP, so expect 2 calls
-      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      # One call: room creation. validate_config/1 no longer pre-flights it.
+      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200, body: "not valid json"}}
       end)
 
       assert {:error, _reason} = perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
     end
 
-    test "handles malformed API response (missing expected field)" do
+    test "fails and attaches nothing when the API response is missing the expected field" do
       %{meeting: meeting} = setup_video_scenario()
 
-      # MiroTalk provider tries HTTPS, then HTTP, then tries to create join URLs (4 total calls)
-      # First 2 calls: room creation attempts that return malformed responses
-      # Next 2 calls: join URL creation attempts (if room creation somehow "succeeds")
-      expect(Tymeslot.HTTPClientMock, :post, 4, fn _url, _body, _headers, _opts ->
-        # Valid JSON but missing the "meeting" field that MiroTalk expects
+      # One call: room creation. The job must fail rather than attach a room the
+      # attendees cannot join, so creation stops there and no join-URL calls
+      # follow.
+      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
         {:ok,
          %Req.Response{
            status: 200,
@@ -115,28 +114,26 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
          }}
       end)
 
-      result = perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
+      # {:error, _} keeps the job retryable within max_attempts rather than
+      # burying the failure behind a successful-looking :ok.
+      assert {:error, :invalid_room_response} =
+               perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
 
-      # Both branches are left unpinned on purpose. Today this returns :ok and
-      # persists an unusable room: video_room_id "unknown" (the fallback in
-      # Video.Urls.room_id/1), meeting_url and location nil, yet
-      # video_room_enabled true, and an organiser join URL ending in "&room="
-      # with a null room in its JWT. Asserting :ok would cement that bug;
-      # asserting {:error, _} would fail until VideoRooms.build_video_room_attrs/2
-      # is fixed to reject a context carrying no room id. Pin this once it is.
-      # credo:disable-for-lines:4 Jump.CredoChecks.WeakAssertion
-      case result do
-        :ok -> assert true
-        {:error, _reason} -> assert true
-        other -> flunk("Unexpected result: #{inspect(other)}")
-      end
+      updated_meeting = Repo.get(MeetingSchema, meeting.id)
+      refute updated_meeting.video_room_enabled
+      assert is_nil(updated_meeting.video_room_id)
+      assert is_nil(updated_meeting.meeting_url)
+      assert is_nil(updated_meeting.organizer_video_url)
+      assert is_nil(updated_meeting.attendee_video_url)
+
+      refute_enqueued(worker: CalendarEventWorker)
     end
 
     test "handles empty API response" do
       %{meeting: meeting} = setup_video_scenario()
 
-      # MiroTalk provider tries both HTTPS and HTTP, so expect 2 calls
-      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      # One call: room creation. validate_config/1 no longer pre-flights it.
+      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200, body: ""}}
       end)
 
@@ -150,8 +147,13 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
         {:ok, %Req.Response{status: 429, body: "Too Many Requests"}}
       end)
 
-      assert {:error, reason} = perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
-      assert reason =~ "status 429"
+      # The 429 now surfaces from the room-creation request itself, as a
+      # structured error, rather than from the connection test that used to
+      # pre-flight it and reported a string.
+      assert {:error, {:http_error, 429, message}} =
+               perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
+
+      assert message =~ "MiroTalk API error"
     end
 
     test "sends fallback emails on final failure and enters long-term recovery with distributed snooze" do

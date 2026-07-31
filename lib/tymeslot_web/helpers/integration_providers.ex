@@ -21,6 +21,22 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
   end
 
   @doc """
+  Turns a `Tymeslot.Integrations.Shared.ConnectionProbe` refusal into a
+  flash-ready message.
+
+  `{:rate_limited, message}` carries the limiter's own user-facing text
+  verbatim; `:unattributable` gets a fixed message here, since
+  `ConnectionProbe` deliberately never invents user-facing copy for it (see
+  its moduledoc) — building that copy is the web layer's job.
+  """
+  @spec connection_test_refusal_message({:rate_limited, String.t()} | :unattributable) ::
+          String.t()
+  def connection_test_refusal_message({:rate_limited, message}), do: message
+
+  def connection_test_refusal_message(:unattributable),
+    do: "Connection test could not be attributed to your account. Please try again."
+
+  @doc """
   Format connection test success message for a provider.
   """
   @spec format_test_success_message(atom | String.t(), String.t()) :: String.t()
@@ -36,8 +52,21 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
 
   @doc """
   Map a provider error reason to form field errors.
+
+  A `ConnectionProbe` refusal (`{:rate_limited, _}` or `:unattributable`) is
+  not a provider-specific problem, so it is never classified against
+  `:api_key`/`:base_url` — it lands on `:base`, using
+  `connection_test_refusal_message/1` for the copy, the one place that text
+  is built.
   """
-  @spec reason_to_form_errors(String.t() | any()) :: map()
+  @spec reason_to_form_errors({:rate_limited, String.t()} | :unattributable | String.t() | any()) ::
+          map()
+  def reason_to_form_errors({:rate_limited, _message} = refusal),
+    do: %{base: connection_test_refusal_message(refusal)}
+
+  def reason_to_form_errors(:unattributable),
+    do: %{base: connection_test_refusal_message(:unattributable)}
+
   def reason_to_form_errors(reason) do
     case classify_reason(reason) do
       :api_key -> %{api_key: reason}

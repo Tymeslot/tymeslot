@@ -256,24 +256,26 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   def handle_event("test_connection", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
-      case normalize_id(id) do
-        nil ->
-          {:noreply, socket}
+    # `Video.test_connection/2` routes through `ConnectionProbe`, the single
+    # choke point for connection-test rate limiting: every provider, OAuth
+    # included, now draws from a real bucket, so no compensating guard
+    # belongs here.
+    case normalize_id(id) do
+      nil ->
+        {:noreply, socket}
 
-        int_id ->
-          provider = get_provider_name(socket, int_id)
+      int_id ->
+        provider = get_provider_name(socket, int_id)
 
-          socket =
-            socket
-            |> assign(:testing_connection, int_id)
-            |> start_async(:test_connection, fn ->
-              {provider, Video.test_connection(user_id, int_id)}
-            end)
+        socket =
+          socket
+          |> assign(:testing_connection, int_id)
+          |> start_async(:test_connection, fn ->
+            {provider, Video.test_connection(user_id, int_id)}
+          end)
 
-          {:noreply, socket}
-      end
-    end)
+        {:noreply, socket}
+    end
   end
 
   @impl Phoenix.LiveComponent
@@ -282,6 +284,17 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
       {:ok, message} ->
         notify_parent(
           {:flash, {:info, IntegrationProviders.format_test_success_message(provider, message)}}
+        )
+
+      {:error, {:rate_limited, _message} = refusal} ->
+        notify_parent(
+          {:flash, {:error, IntegrationProviders.connection_test_refusal_message(refusal)}}
+        )
+
+      {:error, :unattributable} ->
+        notify_parent(
+          {:flash,
+           {:error, IntegrationProviders.connection_test_refusal_message(:unattributable)}}
         )
 
       {:error, reason} when is_binary(reason) ->

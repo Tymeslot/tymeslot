@@ -7,38 +7,26 @@ defmodule Tymeslot.Integrations.Video.SelectionTest do
 
   describe "providers_with_capability/1" do
     test "returns providers with screen sharing capability" do
-      providers = Selection.providers_with_capability(:screen_sharing)
-
-      assert :mirotalk in providers
-      assert :google_meet in providers
+      assert_capability(:screen_sharing, [:mirotalk, :google_meet, :teams, :zoom])
     end
 
     test "returns providers with recording capability" do
-      providers = Selection.providers_with_capability(:recording)
-
-      assert :google_meet in providers
-      # MiroTalk declares `recording: false`, so it must be filtered out
-      refute :mirotalk in providers
+      assert_capability(:recording, [:google_meet, :teams, :zoom])
     end
 
-    test "excludes providers that do not support a waiting room" do
-      providers = Selection.providers_with_capability(:waiting_room)
-
-      refute :mirotalk in providers
-      refute :google_meet in providers
+    test "returns providers with waiting room capability" do
+      assert_capability(:waiting_room, [:teams, :zoom])
     end
 
     test "returns empty list for nonexistent capability" do
-      providers = Selection.providers_with_capability(:nonexistent_capability)
-
-      assert providers == []
+      assert Selection.providers_with_capability(:nonexistent_capability) == []
     end
 
     test "returns valid provider atoms" do
       providers = Selection.providers_with_capability(:screen_sharing)
 
       Enum.each(providers, fn provider ->
-        assert provider in [:mirotalk, :google_meet, :teams, :custom, :zoom]
+        assert provider in [:mirotalk, :google_meet, :teams, :zoom, :custom]
       end)
     end
 
@@ -52,6 +40,13 @@ defmodule Tymeslot.Integrations.Video.SelectionTest do
       Enum.each(providers_with_screen_sharing, fn provider ->
         assert provider in all_types
       end)
+    end
+
+    defp assert_capability(capability, supporting) do
+      registered = Enum.map(Discovery.list_available_providers(), & &1.type)
+      expected = supporting |> Enum.filter(&(&1 in registered)) |> Enum.sort()
+
+      assert Enum.sort(Selection.providers_with_capability(capability)) == expected
     end
   end
 

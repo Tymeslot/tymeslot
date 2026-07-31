@@ -34,17 +34,24 @@ defmodule Tymeslot.MeetingTypes do
   end
 
   @doc """
-  Gets the publicly listed meeting types for a user (active and not private),
-  creating defaults if none exist. This feeds the public booking overview;
-  private types are excluded and reachable only by their direct link.
+  Gets the publicly listed meeting types for a user (active and not private).
+  This feeds the public booking overview; private types are excluded and
+  reachable only by their direct link.
+
+  Deliberately a pure read: unlike the two owner-facing listings above it never
+  seeds the default meeting types. An anonymous page view must not write to the
+  host's account, and a host with no meeting types must show the booking page's
+  empty state rather than be given two bookable durations they never created
+  (which would also silently resurrect defaults a host had deleted on purpose).
   """
   @spec get_public_meeting_types(integer()) :: [Ecto.Schema.t()]
   def get_public_meeting_types(user_id) do
-    list_seeding_defaults(user_id, &MeetingTypeQueries.list_public_meeting_types/1)
+    MeetingTypeQueries.list_public_meeting_types(user_id)
   end
 
-  # The three public listings above differ only in which query they run; each
-  # seeds the user's default meeting types first if they have none yet.
+  # The two owner-facing listings above differ only in which query they run;
+  # each seeds the user's default meeting types first if they have none yet.
+  # The public listing deliberately does not go through here.
   defp list_seeding_defaults(user_id, list_fun) do
     ensure_default_meeting_types(user_id)
     list_fun.(user_id)

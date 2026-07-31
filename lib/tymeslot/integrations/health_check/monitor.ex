@@ -103,7 +103,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
         consecutive_hard_failures: 0,
         successes: health_state.successes + 1,
         last_check_at: DateTime.utc_now(),
-        status: determine_status(0, health_state.successes + 1),
+        status: determine_status(0, health_state.successes + 1, health_state.status),
         backoff_ms: @check_interval,
         last_error_class: nil
     }
@@ -118,7 +118,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
     # triggers the 48h user notification.
     if health_state.backoff_ms >= @max_backoff_ms do
       failures = health_state.failures + 1
-      new_status = determine_status(failures, 0)
+      new_status = determine_status(failures, 0, health_state.status)
 
       became_unhealthy_at =
         if new_status == :unhealthy and is_nil(health_state.became_unhealthy_at),
@@ -150,7 +150,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   def update_health(health_state, {:error, _error_reason, :hard}) do
     failures = health_state.failures + 1
     consecutive_hard_failures = health_state.consecutive_hard_failures + 1
-    new_status = determine_status(failures, 0)
+    new_status = determine_status(failures, 0, health_state.status)
     just_became_unhealthy? = new_status == :unhealthy and health_state.status != :unhealthy
 
     new_backoff =
@@ -179,13 +179,26 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   end
 
   @doc """
-  Determines the health status based on failure and success counts.
+  Determines the health status from the failure and success counts and the
+  status the integration held before this probe.
+
+  `previous_status` is what separates "recovering" from "never broken". The
+  recovery threshold is flap protection: it stops an integration that has been
+  failing from being declared healthy again on one lucky probe. It is not a
+  probation period for integrations that have never failed, so a healthy
+  integration whose probe succeeds stays healthy immediately.
   """
-  @spec determine_status(non_neg_integer(), non_neg_integer()) :: health_status()
-  def determine_status(failures, _successes) when failures >= @failure_threshold, do: :unhealthy
-  def determine_status(failures, _successes) when failures > 0, do: :degraded
-  def determine_status(_failures, successes) when successes >= @recovery_threshold, do: :healthy
-  def determine_status(_failures, _successes), do: :degraded
+  @spec determine_status(non_neg_integer(), non_neg_integer(), health_status()) :: health_status()
+  def determine_status(failures, _successes, _previous) when failures >= @failure_threshold,
+    do: :unhealthy
+
+  def determine_status(failures, _successes, _previous) when failures > 0, do: :degraded
+  def determine_status(_failures, _successes, :healthy), do: :healthy
+
+  def determine_status(_failures, successes, _previous) when successes >= @recovery_threshold,
+    do: :healthy
+
+  def determine_status(_failures, _successes, _previous), do: :degraded
 
   @doc """
   Detects transitions between health states.

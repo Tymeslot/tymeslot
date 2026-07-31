@@ -150,6 +150,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
 
   @doc """
   Tests connection to a video provider.
+
+  Not validated or rate-limited here: `Tymeslot.Integrations.Video.Connection.probe/3`
+  runs `validate_config/1` first and is the choke point that decides whether
+  and to whom the test is charged.
   """
   @spec test_connection(atom(), map()) :: {:ok, String.t()} | {:error, term()}
   def test_connection(provider_type, config) do

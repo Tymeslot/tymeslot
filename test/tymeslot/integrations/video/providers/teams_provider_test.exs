@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
@@ -43,19 +44,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
     test "returns correct capabilities for Teams" do
       capabilities = TeamsProvider.capabilities()
 
-      assert capabilities[:supports_instant_meetings] == false
-      assert capabilities[:supports_scheduled_meetings] == true
-      assert capabilities[:supports_recurring_meetings] == false
-      assert capabilities[:supports_waiting_room] == true
-      assert capabilities[:supports_recording] == true
-      assert capabilities[:supports_dial_in] == true
+      assert capabilities[:waiting_room] == true
+      assert capabilities[:recording] == true
+      assert capabilities[:dial_in] == true
       assert capabilities[:max_participants] == 300
-      assert capabilities[:requires_account] == true
-      assert capabilities[:supports_custom_branding] == false
-      assert capabilities[:supports_breakout_rooms] == true
-      assert capabilities[:supports_screen_sharing] == true
-      assert capabilities[:supports_chat] == true
-      assert capabilities[:requires_work_account] == true
+      assert capabilities[:breakout_rooms] == true
+      assert capabilities[:screen_sharing] == true
+      assert capabilities[:chat] == true
     end
   end
 
@@ -110,7 +105,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
-      assert {:ok, message} = TeamsProvider.test_connection(config)
+      assert {:ok, message} = TeamsProvider.perform_connection_test(config)
       assert String.contains?(message, "Successfully authenticated")
     end
 
@@ -119,7 +114,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
       expect(TeamsOAuthHelperMock, :validate_token, fn _client -> {:error, "Invalid"} end)
 
-      assert {:error, message} = TeamsProvider.test_connection(config)
+      assert {:error, message} = TeamsProvider.perform_connection_test(config)
       assert String.contains?(message, "Failed to authenticate")
     end
   end
@@ -465,13 +460,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
   describe "generate_meeting_metadata/1" do
     test "returns metadata with Teams-specific features" do
-      room_data = %{
+      room_data = %RoomData{
         room_id: "meeting123",
         meeting_url: "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc%40thread.v2/0",
         provider_data: %{
-          "passcode" => "123456",
-          "toll_number" => "+1-555-0100",
-          "conference_id" => "987654321"
+          passcode: "123456",
+          toll_number: "+1-555-0100",
+          conference_id: "987654321"
         }
       }
 
@@ -480,6 +475,8 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       assert metadata[:provider] == "teams"
       assert metadata[:meeting_id] == "meeting123"
       assert metadata[:passcode] == "123456"
+      assert metadata[:dial_in_number] == "+1-555-0100"
+      assert metadata[:conference_id] == "987654321"
     end
   end
 

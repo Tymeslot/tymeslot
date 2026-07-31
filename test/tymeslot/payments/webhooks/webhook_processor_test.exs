@@ -130,6 +130,35 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessorTest do
     end
   end
 
+  describe "process_event/1 type stamping" do
+    # Production Stripe payloads are string-keyed end to end (see
+    # SignatureVerifier.to_string/1 and Jason.decode/1 in DevelopmentMode),
+    # but every non-dispute/refund handler pattern-matches only the atom
+    # `:type` key. process_with_handler/3 is the sole place that stamps an
+    # atom `:type` onto the event before dispatch. This test drives
+    # process_event/1 with a fully string-keyed event, the shape handlers
+    # actually receive in production, so a regression in that stamping step
+    # is caught here instead of being silently swallowed by the rescue in
+    # process_event/1 (which would still return 200 to Stripe).
+    test "a fully string-keyed event reaches an atom-:type-matching handler" do
+      event = %{
+        "id" => "evt_charge_succeeded",
+        "type" => "charge.succeeded",
+        "created" => 1_700_000_000,
+        "livemode" => false,
+        "data" => %{
+          "object" => %{
+            "id" => "ch_123",
+            "object" => "charge",
+            "amount" => 1000
+          }
+        }
+      }
+
+      assert {:ok, :charge_logged} = WebhookProcessor.process_event(event)
+    end
+  end
+
   describe "process_event/1 runtime isolation" do
     # Regression test for Task 94: the background recorder for unhandled Stripe
     # events must run under Tymeslot.TaskSupervisor so that a crash inside the

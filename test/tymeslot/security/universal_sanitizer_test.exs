@@ -239,6 +239,20 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
              end)
     end
 
+    test "rejects percent-encoded input that decodes to invalid UTF-8" do
+      # 0xE9 alone is a lone continuation-less byte: invalid UTF-8. The raw
+      # input "Jos%E9 Smith" is valid UTF-8 (it's plain ASCII with a literal
+      # '%'), so the pre-decode gate lets it through; without a post-decode
+      # re-check this reaches the database as invalid UTF-8 and raises.
+      assert {:error, "Invalid text encoding"} =
+               UniversalSanitizer.sanitize_and_validate("Jos%E9 Smith", log_events: false)
+    end
+
+    test "still accepts percent-encoded input that decodes to valid UTF-8" do
+      assert {:ok, "José"} =
+               UniversalSanitizer.sanitize_and_validate("Jos%C3%A9", log_events: false)
+    end
+
     test "defaults field to :unknown when caller omits it" do
       {events, _log} =
         with_captured_warnings(fn ->
@@ -333,6 +347,16 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
     test "still trims surrounding whitespace" do
       assert {:ok, "Luka <> Paul"} =
                UniversalSanitizer.sanitize_and_validate("  Luka <> Paul  ",
+                 mode: :plain_text,
+                 log_events: false
+               )
+    end
+
+    test "accepts a percent-encoded sequence unchanged (no decoding, so no post-decode gate)" do
+      # Plain-text mode never decodes, so the string that would be invalid
+      # UTF-8 *after* decoding in strict mode is untouched and stays valid.
+      assert {:ok, "Jos%E9 Smith"} =
+               UniversalSanitizer.sanitize_and_validate("Jos%E9 Smith",
                  mode: :plain_text,
                  log_events: false
                )

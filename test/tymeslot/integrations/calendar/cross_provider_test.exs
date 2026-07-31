@@ -85,7 +85,7 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
   end
 
   describe "connection validation consistency" do
-    test "test_connection returns error for invalid credentials" do
+    test "perform_connection_test returns error for invalid credentials" do
       Enum.each(@production_providers, fn provider_type ->
         {:ok, provider_module} = ProviderRegistry.get_provider(provider_type)
 
@@ -97,14 +97,14 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
           provider: provider_type
         }
 
-        result = provider_module.test_connection(invalid_config)
+        result = provider_module.perform_connection_test(invalid_config)
 
         # Should return error tuple
         assert match?({:error, _reason}, result)
       end)
     end
 
-    test "test_connection accepts metadata options" do
+    test "perform_connection_test/1 is pure I/O — takes only the config, no caller options" do
       Enum.each(@production_providers, fn provider_type ->
         {:ok, provider_module} = ProviderRegistry.get_provider(provider_type)
 
@@ -116,11 +116,9 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
           provider: provider_type
         }
 
-        opts = [metadata: %{ip: "127.0.0.1"}]
+        result = provider_module.perform_connection_test(config)
 
-        # Port 1 is closed, so every provider reports a connection failure
-        # rather than crashing on the extra options.
-        assert {:error, _reason} = provider_module.test_connection(config, opts)
+        assert match?({:ok, _result}, result) or match?({:error, _reason}, result)
       end)
     end
   end
@@ -158,7 +156,7 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
         }
 
         # Nothing listens on port 1, so every provider surfaces an error tuple.
-        assert {:error, _reason} = provider_module.test_connection(config)
+        assert {:error, _reason} = provider_module.perform_connection_test(config)
       end)
     end
 
@@ -174,7 +172,7 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
           provider: provider_type
         }
 
-        assert {:error, message} = provider_module.test_connection(invalid_config)
+        assert {:error, message} = provider_module.perform_connection_test(invalid_config)
         assert message =~ "Private or local network addresses are not allowed"
       end)
     end

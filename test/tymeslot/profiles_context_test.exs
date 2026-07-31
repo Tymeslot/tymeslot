@@ -314,6 +314,26 @@ defmodule Tymeslot.ProfilesContextTest do
 
       assert Profiles.display_name(unloaded) == nil
     end
+
+    test "user_display_name returns nil for nil user" do
+      assert Profiles.user_display_name(nil) == nil
+    end
+
+    test "user_display_name uses the profile's full name when the profile is loaded" do
+      user = insert(:user, name: "Ada from GitHub")
+      profile = insert(:profile, user: user, full_name: "Ada Lovelace")
+      loaded_user = %{user | profile: profile}
+
+      assert Profiles.user_display_name(loaded_user) == "Ada Lovelace"
+    end
+
+    test "user_display_name raises when the profile association is not loaded" do
+      user = insert(:user, name: "Ada from GitHub")
+
+      assert_raise ArgumentError, ~r/user.profile must be preloaded/, fn ->
+        Profiles.user_display_name(user)
+      end
+    end
   end
 
   # =====================================

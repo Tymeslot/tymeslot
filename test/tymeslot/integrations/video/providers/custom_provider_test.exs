@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Video.Providers.CustomProvider
+  alias Tymeslot.Integrations.Video.RoomData
 
   describe "provider_type/0" do
     test "returns :custom" do
@@ -32,20 +33,13 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
     test "returns correct capabilities for custom provider" do
       capabilities = CustomProvider.capabilities()
 
-      assert capabilities[:supports_instant_meetings] == true
-      assert capabilities[:supports_scheduled_meetings] == true
-      assert capabilities[:supports_recurring_meetings] == true
-      assert capabilities[:supports_waiting_room] == false
-      assert capabilities[:supports_recording] == false
-      assert capabilities[:supports_dial_in] == false
+      assert capabilities[:waiting_room] == false
+      assert capabilities[:recording] == false
+      assert capabilities[:dial_in] == false
       assert capabilities[:max_participants] == nil
-      assert capabilities[:requires_account] == false
-      assert capabilities[:supports_custom_branding] == true
-      assert capabilities[:supports_breakout_rooms] == false
-      assert capabilities[:supports_screen_sharing] == false
-      assert capabilities[:supports_chat] == false
-      assert capabilities[:requires_work_account] == false
-      assert capabilities[:is_custom_provider] == true
+      assert capabilities[:breakout_rooms] == false
+      assert capabilities[:screen_sharing] == false
+      assert capabilities[:chat] == false
     end
   end
 
@@ -266,11 +260,11 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
 
   describe "generate_meeting_metadata/1" do
     test "returns metadata with custom provider info" do
-      room_data = %{
+      room_data = %RoomData{
         room_id: "abc123def456",
         meeting_url: "https://meet.example.com/room123",
         provider_data: %{
-          "original_url" => "https://meet.example.com/room123"
+          original_url: "https://meet.example.com/room123"
         }
       }
 
@@ -283,7 +277,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
     end
 
     test "handles missing provider_data gracefully" do
-      room_data = %{
+      room_data = %RoomData{
         room_id: "xyz789",
         meeting_url: "https://meet.example.com/room456",
         provider_data: %{}
@@ -614,7 +608,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
     test "rejects template in fragment during test_connection" do
       config = %{custom_meeting_url: ~S"https://jitsi.example.org/room#{{meeting_id}}"}
 
-      assert {:error, message} = CustomProvider.test_connection(config)
+      assert {:error, message} = CustomProvider.perform_connection_test(config)
       assert String.contains?(message, "fragment")
     end
   end

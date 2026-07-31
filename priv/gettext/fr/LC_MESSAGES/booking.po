@@ -150,16 +150,6 @@ msgstr "1 semaine à l'avance"
 msgid "1 year in advance"
 msgstr "1 an à l'avance"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:145
-#, elixir-autogen, elixir-format
-msgid "15 Minutes"
-msgstr "15 minutes"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:155
-#, elixir-autogen, elixir-format
-msgid "30 Minutes"
-msgstr "30 minutes"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:301
 #, elixir-autogen, elixir-format
 msgid "90 days in advance"
@@ -392,11 +382,6 @@ msgstr "Bonjour, je suis %{name}. Choisissez la durée de notre échange."
 msgid "I acknowledge the above"
 msgstr "Je reconnais ce qui précède"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:157
-#, elixir-autogen, elixir-format
-msgid "In-depth discussion or detailed review"
-msgstr "Discussion approfondie ou examen détaillé"
-
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:56
 #, elixir-autogen, elixir-format
 msgid "Invalid date/time"
@@ -527,7 +512,7 @@ msgstr "Besoin de reporter ? Vérifiez votre e-mail de confirmation."
 msgid "No"
 msgstr "Non"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:126
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:125
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:74
 #, elixir-autogen, elixir-format
 msgid "No meeting types available"
@@ -569,7 +554,7 @@ msgstr "Le paiement a été annulé. Veuillez réessayer de réserver."
 msgid "Pick a meeting duration below."
 msgstr "Choisissez une durée ci-dessous."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:127
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:126
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:75
 #, elixir-autogen, elixir-format
 msgid "Please contact the organizer"
@@ -599,7 +584,7 @@ msgstr "Veuillez remplir tous les champs obligatoires"
 msgid "Please select a date to see available times"
 msgstr "Veuillez sélectionner une date pour voir les horaires"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:173
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:152
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration first"
 msgstr "Veuillez d'abord choisir une durée"
@@ -626,11 +611,6 @@ msgstr "Règles de confidentialité"
 #, elixir-autogen, elixir-format
 msgid "Question %{n} of %{m}"
 msgstr "Question %{n} sur %{m}"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:147
-#, elixir-autogen, elixir-format
-msgid "Quick chat or brief consultation"
-msgstr "Discussion rapide ou brève consultation"
 
 #: lib/tymeslot_web/themes/quill/meeting/reschedule.ex:97
 #: lib/tymeslot_web/themes/rhythm/meeting/reschedule.ex:80
@@ -987,7 +967,7 @@ msgid "name"
 msgstr "Nom"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex:87
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:177
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:156
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex:87
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:118
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:338

@@ -190,6 +190,21 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   def categorize_error(429), do: :rate_limit
   def categorize_error(status) when is_integer(status) and status >= 500, do: :network
 
+  # The CalDAV-family `t:Tymeslot.Integrations.Calendar.CalDAV.Base.error_reason/0`
+  # atoms, reached directly now that `validate_config/1` no longer runs its own
+  # network probe ahead of discovery — previously these were caught earlier by
+  # a provider's own `error_formatter`, which happened to embed a recognisable
+  # word ("password", "not found") in the string before it ever reached here.
+  def categorize_error(:unauthorized), do: :auth
+  def categorize_error(:forbidden), do: :permission
+  def categorize_error(:not_found), do: :config
+  def categorize_error(:rate_limited), do: :rate_limit
+  def categorize_error(:timeout), do: :timeout
+
+  def categorize_error(reason)
+      when reason in [:network_error, :server_error, :server_unresponsive],
+      do: :network
+
   def categorize_error(_error), do: :unknown
 
   @doc """

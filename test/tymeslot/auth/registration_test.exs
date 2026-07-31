@@ -81,7 +81,12 @@ defmodule Tymeslot.Auth.RegistrationTest do
   end
 
   describe "input sanitization" do
-    test "trims the email and never persists a name from the signup params" do
+    test "trims the email; a name in the signup params is never persisted at all" do
+      # Not an XSS/sanitisation assertion for `name`: create_user/1
+      # hardcodes its attrs to email/password/terms, so `user.name` is nil
+      # for every signup regardless of input. The `<script>` payload here is
+      # a deliberate negative control — it proves nothing is silently
+      # smuggled through an unvalidated key, not that anything is sanitised.
       params = %{
         "email" => "  safe@example.com  ",
         "password" => "ValidPassword123!",
@@ -93,10 +98,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
       {:ok, user, _session} = Registration.register_user(params, %Plug.Conn{})
 
       assert user.email == "safe@example.com"
-
-      # Signup only accepts email, password and full_name, so an unrecognised
-      # "name" key cannot smuggle markup onto the record.
-      assert user.name == nil
+      assert is_nil(user.name)
     end
   end
 

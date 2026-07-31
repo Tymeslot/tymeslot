@@ -12,16 +12,31 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Shared.ProviderConfigHelper
+  alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder
   alias Tymeslot.Integrations.Video.RoomData
-  alias Tymeslot.Security.{RateLimiter, UrlValidation}
+  alias Tymeslot.Security.UrlValidation
+
+  @capabilities Capabilities.new!(
+                  recording: false,
+                  screen_sharing: true,
+                  waiting_room: false,
+                  max_participants: 100,
+                  dial_in: false,
+                  chat: true,
+                  breakout_rooms: false
+                )
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def provider_type, do: :mirotalk
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def display_name, do: "MiroTalk P2P"
+
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def connection_test_bucket, do: :mirotalk
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do
@@ -31,55 +46,40 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     }
   end
 
+  # Structural validation only, in line with every other video provider: the
+  # callers that need connectivity (`Video.Connection.probe/3`,
+  # `ProviderAdapter.create_meeting_room/2`) invoke `validate_config/1` first and
+  # then the function that talks to the server. Reaching the network from here
+  # doubled every scheduled health probe against the customer's self-hosted
+  # MiroTalk instance, and burned two rate-limiter tokens for one probe.
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def validate_config(config) do
-    required_fields = [:api_key, :base_url]
-    missing_fields = required_fields -- Map.keys(config)
-
-    if Enum.empty?(missing_fields) do
-      # All required fields present, now test the actual connection
-      case test_connection(config) do
-        {:ok, _message} -> :ok
-        {:error, reason} -> {:error, reason}
-      end
-    else
-      {:error, "Missing required fields: #{Enum.join(missing_fields, ", ")}"}
+    with :ok <- ProviderConfigHelper.validate_required_fields(config, [:api_key, :base_url]) do
+      validate_base_url(Map.get(config, :base_url))
     end
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def capabilities do
-    %{
-      recording: false,
-      screen_sharing: true,
-      waiting_room: false,
-      max_participants: 100,
-      requires_download: false,
-      supports_phone_dial_in: false,
-      supports_chat: true,
-      supports_breakout_rooms: false,
-      end_to_end_encryption: true
-    }
-  end
+  def capabilities, do: @capabilities
 
   @doc """
   Tests the connection to the MiroTalk API.
-  """
-  @spec test_connection(
-          %{required(:api_key) => String.t(), required(:base_url) => String.t()},
-          keyword()
-        ) :: {:ok, String.t()} | {:error, term()}
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def test_connection(config, opts \\ []) do
-    # Extract IP address for rate limiting
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
 
+  Pure I/O — the caller (`Tymeslot.Integrations.Video.Connection`) decides
+  whether and to whom the test is rate-limited.
+  """
+  @spec perform_connection_test(%{
+          required(:api_key) => String.t(),
+          required(:base_url) => String.t()
+        }) ::
+          {:ok, String.t()} | {:error, term()}
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def perform_connection_test(config) do
     # For MiroTalk, we can test by checking if the API endpoint is reachable
     base_url = Map.get(config, :base_url)
     api_key = Map.get(config, :api_key)
 
-    with :ok <- check_rate_limit(ip_address),
-         :ok <- validate_base_url(base_url) do
+    with :ok <- validate_base_url(base_url) do
       # Proceed with API connection test
       test_api_connection(base_url, api_key)
     end
@@ -210,13 +210,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       {:ok, %Req.Response{status: 200, body: body}} ->
         case Jason.decode(body) do
           {:ok, response} ->
-            {:ok,
-             %RoomData{
-               room_id: response["room_id"] || response["meeting"],
-               meeting_url: response["meeting_url"] || response["meeting"],
-               provider_data: response,
-               provider_config: config
-             }}
+            build_room_data(response, config)
 
           {:error, _decode_error} ->
             Logger.error("Invalid JSON response from MiroTalk API")
@@ -235,6 +229,39 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
         {:error, reason}
     end
   end
+
+  # A 200 response that carries neither a room id nor a meeting URL is not a
+  # usable room: persisting it would attach an empty room to the booking. Treat
+  # it as a failed creation so the caller can retry or surface the failure.
+  defp build_room_data(response, config) when is_map(response) do
+    room_id = presence(response["room_id"] || response["meeting"])
+    meeting_url = presence(response["meeting_url"] || response["meeting"])
+
+    if is_nil(room_id) and is_nil(meeting_url) do
+      Logger.error("MiroTalk API returned no room identifier",
+        response_keys: response |> Map.keys() |> Enum.sort()
+      )
+
+      {:error, :invalid_room_response}
+    else
+      {:ok,
+       %RoomData{
+         room_id: room_id,
+         meeting_url: meeting_url,
+         provider_data: response,
+         provider_config: config
+       }}
+    end
+  end
+
+  defp build_room_data(_response, _config) do
+    Logger.error("MiroTalk API returned a non-object JSON body")
+    {:error, :invalid_room_response}
+  end
+
+  defp presence(nil), do: nil
+  defp presence(""), do: nil
+  defp presence(value), do: value
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, participant_email, role, meeting_time) do
@@ -372,12 +399,4 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def url_patterns, do: ["mirotalk", "talk."]
-
-  # Rate limit helper
-  defp check_rate_limit(ip) do
-    case RateLimiter.check_mirotalk_connection_rate_limit(ip) do
-      :ok -> :ok
-      {:error, :rate_limited, message} -> {:error, message}
-    end
-  end
 end

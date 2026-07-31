@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Http, UrlBuilder, XmlHandler}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias Tymeslot.Security.{RateLimiter, UrlValidation}
+  alias Tymeslot.Security.UrlValidation
 
   require Logger
 
@@ -65,15 +65,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   `current-user-principal` probe which verifies credentials are valid even
   when the guessed path is wrong (e.g., Zimbra).
 
-  Rate-limited per IP to prevent connection-testing abuse.
+  Pure I/O: rate limiting the connection test is the caller's job
+  (`Tymeslot.Integrations.Calendar.Connection.test_connection/2`), not this
+  module's — charging a token here as well as there would tax one click twice.
   """
   @spec test_connection(Base.client(), keyword()) ::
           {:ok, String.t()} | {:error, Base.error_reason()}
   def test_connection(client, opts \\ []) do
-    ip_address = Keyword.get(opts, :ip_address, "127.0.0.1")
-
-    with :ok <- check_rate_limit(:connection, ip_address),
-         :ok <- UrlValidation.validate_http_url(client.base_url, url_validation_opts(opts)) do
+    with :ok <- UrlValidation.validate_http_url(client.base_url, url_validation_opts(opts)) do
       discovery_url = UrlBuilder.build_discovery_url(client)
 
       result =
@@ -123,17 +122,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   @doc """
   Discovers available calendars on the CalDAV server.
 
-  Validates the server URL for SSRF safety and enforces rate limits before
-  any network contact. Attempts the guessed discovery path first; on failure
-  follows the full RFC 4791 principal chain. Returns `CalendarEntry` structs.
+  Validates the server URL for SSRF safety before any network contact.
+  Attempts the guessed discovery path first; on failure follows the full RFC
+  4791 principal chain. Returns `CalendarEntry` structs.
+
+  Pure I/O: rate limiting discovery is the caller's job
+  (`Tymeslot.Integrations.Calendar.Discovery`), not this module's — charging
+  a token here as well as there would tax one discovery request twice.
   """
   @spec discover_calendars(Base.client(), keyword()) ::
           {:ok, [CalendarEntry.t()]} | {:error, Base.error_reason()}
   def discover_calendars(client, opts \\ []) do
-    ip_address = Keyword.get(opts, :ip_address, "127.0.0.1")
-
-    with :ok <- check_rate_limit(:discovery, ip_address),
-         :ok <- UrlValidation.validate_http_url(client.base_url, url_validation_opts(opts)) do
+    with :ok <- UrlValidation.validate_http_url(client.base_url, url_validation_opts(opts)) do
       with_discovery_breaker(client, opts, fn ->
         discovery_url = UrlBuilder.build_discovery_url(client)
 
@@ -186,12 +186,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
     end
   end
 
-  defp parse_calendar_discovery(xml_body, client) do
-    XmlHandler.parse_calendar_discovery(xml_body,
-      include_id: true,
-      include_selected: false,
-      provider: client.provider
-    )
+  defp parse_calendar_discovery(xml_body, _client) do
+    XmlHandler.parse_calendar_discovery(xml_body)
   end
 
   defp with_discovery_breaker(client, opts, fun) when is_function(fun, 0) do
@@ -199,19 +195,5 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
     host = Base.extract_host_from_url(client.base_url)
     opts = Keyword.put(opts, :host, host)
     CalendarCircuitBreaker.with_breaker(provider, opts, fun)
-  end
-
-  defp check_rate_limit(:connection, ip_address) do
-    case RateLimiter.check_caldav_connection_rate_limit(ip_address) do
-      :ok -> :ok
-      {:error, :rate_limited, message} -> {:error, message}
-    end
-  end
-
-  defp check_rate_limit(:discovery, ip_address) do
-    case RateLimiter.check_calendar_discovery_rate_limit(ip_address) do
-      :ok -> :ok
-      {:error, :rate_limited, message} -> {:error, message}
-    end
   end
 end

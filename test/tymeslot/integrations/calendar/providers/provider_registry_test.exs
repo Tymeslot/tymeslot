@@ -156,6 +156,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
   end
 
   describe "validate_provider_config/2" do
+    # `validate_config/1` is structural only — it never performs network I/O,
+    # so a structurally complete config passes without touching the network.
     test "delegates validation to provider module for caldav" do
       config = %{
         base_url: "https://caldav.example.com",
@@ -163,9 +165,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
         password: "pass"
       }
 
-      # Will fail connection but structure is validated
       result = ProviderRegistry.validate_provider_config(:caldav, config)
-      assert match?({:error, _reason}, result)
+      assert result == :ok
     end
 
     test "validates missing required fields" do
@@ -240,6 +241,9 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
   end
 
   describe "create_client/3" do
+    # `validate_config/1` is structural only — it never performs network I/O,
+    # so a structurally complete config passes validation and the client is
+    # built.
     test "creates client with validation for caldav" do
       config = %{
         base_url: "https://caldav.example.com",
@@ -248,9 +252,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
         calendar_paths: []
       }
 
-      # Will fail validation due to network error
       result = ProviderRegistry.create_client(:caldav, config)
-      assert match?({:error, _reason}, result)
+      assert match?({:ok, _client}, result)
     end
 
     test "creates client without validation when skip_validation is true" do

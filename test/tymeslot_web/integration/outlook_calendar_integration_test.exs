@@ -5,25 +5,46 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
   """
   use TymeslotWeb.ConnCase, async: false
 
+  import Mox
   import Tymeslot.Factory
+
   alias Phoenix.Flash
+  alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
+  alias Tymeslot.Security.Encryption
 
   @moduletag :calendar_integration
 
-  # The reasons CalendarAPIBehaviour.api_error/0 declares for Outlook. Asserting
-  # against the whole set still catches an undeclared reason atom leaking out.
-  @declared_error_reasons [
-    :unauthorized,
-    :not_found,
-    :rate_limited,
-    :network_error,
-    :authentication_error
-  ]
+  @token_url "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+
+  setup :verify_on_exit!
+
+  # Microsoft credentials fall back to OUTLOOK_CLIENT_ID/SECRET when
+  # `:outlook_oauth` is unset, so the refresh path takes a different branch
+  # depending on whether the developer's shell happens to export them. Pin the
+  # config so every run reaches the HTTP call.
+  defp pin_microsoft_credentials(_context) do
+    prior = Application.get_env(:tymeslot, :outlook_oauth)
+
+    Application.put_env(:tymeslot, :outlook_oauth,
+      client_id: "test-client-id",
+      client_secret: "test-client-secret"
+    )
+
+    on_exit(fn ->
+      if prior,
+        do: Application.put_env(:tymeslot, :outlook_oauth, prior),
+        else: Application.delete_env(:tymeslot, :outlook_oauth)
+    end)
+
+    :ok
+  end
 
   describe "Outlook Token Management" do
+    setup :pin_microsoft_credentials
+
     setup do
       user = insert(:user)
 
@@ -54,15 +75,21 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
       # Force token to be expired
       expired = %{integration | token_expires_at: DateTime.add(DateTime.utc_now(), -1, :hour)}
 
-      case CalendarAPI.refresh_token(expired) do
-        {:ok, {_access, _refresh, _expires_at}} ->
-          # Success only if real tokens are configured
-          assert byte_size(System.get_env("TEST_OUTLOOK_REFRESH_TOKEN") || "") > 0
+      expect(HTTPClientMock, :request, fn :post, @token_url, body, _headers, _opts ->
+        assert body =~ "grant_type=refresh_token"
 
-        {:error, error_reason, _error_message} ->
-          # Expected when tokens are invalid
-          assert error_reason in [:authentication_error, :invalid_grant, :unauthorized]
-      end
+        {:ok,
+         %Req.Response{
+           status: 400,
+           body: Jason.encode!(%{"error" => "invalid_grant"})
+         }}
+      end)
+
+      # Microsoft answers a revoked or expired refresh token with 400; the API
+      # translates that into a reauth-worthy :unauthorized rather than a
+      # retryable network error.
+      assert CalendarAPI.refresh_token(expired) ==
+               {:error, :unauthorized, "Token refresh failed"}
     end
   end
 
@@ -70,11 +97,15 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
     setup do
       user = insert(:user)
 
+      # A live access token keeps these tests on the Graph call itself rather
+      # than diverting through the token-refresh path.
       integration =
         insert(:calendar_integration,
           user: user,
           provider: "outlook",
-          is_active: true
+          is_active: true,
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
         )
 
       {:ok, user: user, integration: integration}
@@ -84,26 +115,53 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
       start_time = DateTime.add(DateTime.utc_now(), -7, :day)
       end_time = DateTime.add(DateTime.utc_now(), 7, :day)
 
-      case CalendarAPI.list_primary_events(integration, start_time, end_time) do
-        {:ok, events} ->
-          # Verify events are properly structured
-          Enum.each(events, fn event ->
-            assert %{id: _id, start: _start, end: _end} = event
-          end)
+      graph_event = %{
+        "id" => "AAMkAGI=",
+        "subject" => "Quarterly review",
+        "start" => %{"dateTime" => "2024-03-15T14:00:00", "timeZone" => "UTC"},
+        "end" => %{"dateTime" => "2024-03-15T15:00:00", "timeZone" => "UTC"}
+      }
 
-        {:error, error_reason, _error_message} ->
-          # Expected without real tokens
-          assert error_reason in @declared_error_reasons
-      end
+      expect(HTTPClientMock, :request, fn :get, url, _body, headers, _opts ->
+        assert String.starts_with?(url, "https://graph.microsoft.com/v1.0/me/calendarView")
+        assert url =~ "startDateTime=#{URI.encode_www_form(DateTime.to_iso8601(start_time))}"
+        assert url =~ "endDateTime=#{URI.encode_www_form(DateTime.to_iso8601(end_time))}"
+
+        assert Enum.any?(headers, fn {k, v} ->
+                 String.downcase(k) == "authorization" and v == "Bearer valid_token"
+               end)
+
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"value" => [graph_event]})}}
+      end)
+
+      # Graph events are returned verbatim; the string-keyed shape is what
+      # `convert_to_common_format/1` downstream expects.
+      assert CalendarAPI.list_primary_events(integration, start_time, end_time) ==
+               {:ok, [graph_event]}
     end
 
-    test "handles API errors gracefully", %{integration: integration} do
-      # Test with invalid time range
+    test "surfaces a Graph rejection of an inverted time range", %{integration: integration} do
+      # Graph, not Tymeslot, validates the range: start after end comes back
+      # as a 400 that the API maps to a network error.
       invalid_start = DateTime.add(DateTime.utc_now(), 7, :day)
       invalid_end = DateTime.add(DateTime.utc_now(), -7, :day)
 
-      result = CalendarAPI.list_primary_events(integration, invalid_start, invalid_end)
-      assert {:error, _error_reason, _error_message} = result
+      expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 400,
+           body:
+             Jason.encode!(%{
+               "error" => %{
+                 "code" => "ErrorInvalidTimeRange",
+                 "message" => "The start time must be before the end time."
+               }
+             })
+         }}
+      end)
+
+      assert CalendarAPI.list_primary_events(integration, invalid_start, invalid_end) ==
+               {:error, :network_error, "HTTP 400 (see logs for details)"}
     end
   end
 
@@ -166,28 +224,31 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
   describe "Error Handling" do
     setup do
       user = insert(:user)
-      integration = insert(:calendar_integration, user: user, provider: "outlook")
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "outlook",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+        )
+
       {:ok, user: user, integration: integration}
     end
 
     test "handles connection failures gracefully", %{integration: integration} do
-      # Test calendar operations with invalid/expired tokens
       start_time = DateTime.utc_now()
       end_time = DateTime.add(start_time, 1, :hour)
 
-      case CalendarAPI.list_primary_events(integration, start_time, end_time) do
-        {:ok, events} ->
-          # Only succeeds with real tokens
-          assert byte_size(System.get_env("TEST_OUTLOOK_ACCESS_TOKEN") || "") > 0
+      expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:error, %Req.TransportError{reason: :econnrefused}}
+      end)
 
-          Enum.each(events, fn event ->
-            assert %{id: _id, start: _start, end: _end} = event
-          end)
+      assert {:error, :network_error, message} =
+               CalendarAPI.list_primary_events(integration, start_time, end_time)
 
-        {:error, error_reason, _error_message} ->
-          # Expected failure without real tokens
-          assert error_reason in @declared_error_reasons
-      end
+      assert message =~ "Network error:"
+      assert message =~ "econnrefused"
     end
 
     test "handles invalid OAuth callback parameters", %{conn: conn} do

@@ -22,6 +22,20 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
+  Gets a single user with the profile preloaded.
+
+  Same contract as `get_user/1`. Used by the email worker handlers, which need
+  `profile.full_name` to greet the recipient by name.
+  """
+  @spec get_user_with_profile(integer()) :: {:ok, UserSchema.t()} | {:error, :not_found}
+  def get_user_with_profile(id) do
+    case Repo.get(UserSchema, id) do
+      nil -> {:error, :not_found}
+      user -> {:ok, Repo.preload(user, :profile)}
+    end
+  end
+
+  @doc """
   Gets a user by email.
   Returns {:ok, user} if found, {:error, :not_found} otherwise.
 

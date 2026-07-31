@@ -63,6 +63,8 @@ defmodule Tymeslot.Meetings.VideoRooms do
     - {:error, :video_integration_missing} if no video integration configured
     - {:error, :video_integration_inactive} if integration is disabled
     - {:error, :unknown_provider} if provider is unsupported
+    - {:error, :incomplete_video_room} if the provider returned a room carrying
+      neither a room id nor a meeting URL
     - {:error, :database_update_failed} if the final write fails
     - {:error, reason} on other failures
 
@@ -161,11 +163,34 @@ defmodule Tymeslot.Meetings.VideoRooms do
     end
   end
 
-  @spec build_video_room_attrs(MeetingSchema.t(), MeetingContext.t()) :: {:ok, map()}
+  @spec build_video_room_attrs(MeetingSchema.t(), MeetingContext.t()) ::
+          {:ok, map()} | {:error, :incomplete_video_room}
   defp build_video_room_attrs(meeting, meeting_context) do
-    with meeting_url <- get_meeting_url_from_context(meeting_context),
-         room_id <- video_module().extract_room_id(meeting_context),
-         {:ok, organizer_url} <- create_secure_join_url(meeting, meeting_context, "organizer"),
+    meeting_url = get_meeting_url_from_context(meeting_context)
+    room_id = video_module().extract_room_id(meeting_context)
+
+    case {room_id, meeting_url} do
+      {nil, nil} -> reject_incomplete_room(meeting, meeting_context)
+      _identified -> complete_video_room_attrs(meeting, meeting_context, room_id, meeting_url)
+    end
+  end
+
+  # A provider that answers successfully but hands back neither a room id nor a
+  # meeting URL has given us nothing to join. Refusing it here keeps the booking
+  # free of a room that is flagged as enabled but cannot be entered.
+  defp reject_incomplete_room(meeting, meeting_context) do
+    Logger.error("Video provider returned a room with no identifier or URL",
+      meeting_id: meeting.id,
+      provider_type: Map.get(meeting_context, :provider_type)
+    )
+
+    {:error, :incomplete_video_room}
+  end
+
+  @spec complete_video_room_attrs(MeetingSchema.t(), map(), String.t() | nil, String.t() | nil) ::
+          {:ok, map()}
+  defp complete_video_room_attrs(meeting, meeting_context, room_id, meeting_url) do
+    with {:ok, organizer_url} <- create_secure_join_url(meeting, meeting_context, "organizer"),
          {:ok, attendee_url} <- create_secure_join_url(meeting, meeting_context, "participant") do
       expiry_time = DateTime.add(meeting.end_time, 1800, :second)
 

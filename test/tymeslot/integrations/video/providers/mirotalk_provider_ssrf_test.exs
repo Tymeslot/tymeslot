@@ -56,7 +56,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderSsrfTest do
       # check because it uses a hostname, not a bare IP literal.  The SSRF guard
       # then fires at the HTTP layer, returning SsrfBlockedError — which
       # handle_http_error maps to a generic connection failure message.
-      assert {:error, message} = MiroTalkProvider.test_connection(@config)
+      assert {:error, message} = MiroTalkProvider.perform_connection_test(@config)
       assert message =~ "Connection failed:"
     end
   end

@@ -59,14 +59,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
               </h3>
               <%= if !@webhook.is_active do %>
                 <span class="inline-flex items-center gap-1 bg-tymeslot-200 text-tymeslot-600 text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2.5"
-                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                    />
-                  </svg>
+                  <.icon name="hero-x-circle" class="w-3 h-3" />
                   Disabled
                 </span>
               <% end %>
@@ -99,14 +92,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             <%!-- Last Triggered Info --%>
             <%= if @webhook.last_triggered_at do %>
               <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
-                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+                <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
                 <span>
                   Last triggered: <%= format_datetime(@webhook.last_triggered_at) %>
                   <%= if @webhook.last_status do %>
@@ -118,14 +104,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
               </div>
             <% else %>
               <div class="flex items-center gap-2 text-token-sm text-tymeslot-400 italic">
-                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+                <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
                 <span>Never triggered</span>
               </div>
             <% end %>
@@ -167,24 +146,10 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             }
           >
             <%= if @testing do %>
-              <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
+              <.spinner class="w-4 h-4" />
               <span class="hidden sm:inline">Testing</span>
             <% else %>
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
+              <.icon name="hero-bolt" class="w-4 h-4" />
               Test
             <% end %>
           </button>
@@ -195,14 +160,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
             title="View Delivery Logs"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
+            <.icon name="hero-document-text" class="w-4 h-4" />
             Logs
           </button>
 
@@ -213,14 +171,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
               class="p-2.5 text-tymeslot-400 hover:text-turquoise-600 hover:bg-turquoise-50 rounded-token-xl transition-all"
               title="Edit Webhook"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
+              <.icon name="hero-pencil-square" class="w-5 h-5" />
             </button>
 
             <%!-- Delete Button --%>
@@ -229,14 +180,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
               class="p-2.5 text-tymeslot-300 hover:text-red-500 hover:bg-red-50 rounded-token-xl transition-all"
               title="Delete Webhook"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
+              <.icon name="hero-trash" class="w-5 h-5" />
             </button>
           </div>
         </div>

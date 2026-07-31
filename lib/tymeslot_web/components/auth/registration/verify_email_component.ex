@@ -23,7 +23,9 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
       </:heading>
 
       <:form>
-        <.email_verification_message />
+        <.email_verification_message email={
+          get_in(assigns, [:form_data, :email]) || get_in(assigns, [:unverified_user, :email])
+        } />
         <div class="mt-6 sm:mt-8 space-y-4">
           <.resend_verification_button
             loading={assigns[:loading] || false}
@@ -51,16 +53,18 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
     """
   end
 
+  attr :email, :string, default: nil
+
   defp email_verification_message(assigns) do
     ~H"""
     <div class="text-center mb-8">
       <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
         We've just sent you a verification email! Please click the link in the email to confirm your address and finish setting up your account.
       </p>
-      <%= if email = get_in(assigns, [:form_data, :email]) || get_in(assigns, [:unverified_user, :email]) do %>
+      <%= if @email do %>
         <div class="mt-6 p-4 bg-tymeslot-50/50 border-2 border-tymeslot-100/50 rounded-2xl inline-block">
           <p class="text-token-2xs font-black text-tymeslot-400 uppercase tracking-widest mb-1">Sent to</p>
-          <p class="text-tymeslot-900 font-bold text-base">{email}</p>
+          <p class="text-tymeslot-900 font-bold text-base">{@email}</p>
         </div>
       <% end %>
     </div>
@@ -77,17 +81,12 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
     >
       <%= cond do %>
         <% @loading -> %>
-          <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+          <.spinner class="-ml-1 mr-3 h-5 w-5 text-white inline-block" />
           Sending...
         <% @cooldown > 0 -> %>
           Resend available in {@cooldown}s
         <% true -> %>
-          <svg class="w-5 h-5 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
+          <.icon name="hero-arrow-path" class="w-5 h-5 mr-2 inline-block" />
           Resend Verification Email
       <% end %>
     </button>

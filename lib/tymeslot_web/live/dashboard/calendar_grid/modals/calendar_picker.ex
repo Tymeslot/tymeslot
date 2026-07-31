@@ -44,12 +44,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
             phx-value-integration-id={integration.id}
             phx-value-calendar-id={cal.id}
             phx-target={@myself}
-            class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_selected.(cal), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
+            aria-pressed={to_string(is_selected.(cal))}
+            class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-token-lg border text-token-xs transition-all #{if is_selected.(cal), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
             title={cal_name.(cal)}
           >
-            <div :if={cal.color} class="w-2 h-2 rounded-full shrink-0" style={"background-color: #{cal.color}"}></div>
+            <div :if={cal.color} class="w-2 h-2 rounded-token-full shrink-0" style={"background-color: #{cal.color}"}></div>
             <span class="truncate max-w-[10rem]"><%= cal_name.(cal) %></span>
-            <span :if={cal.primary} class="text-token-xs font-bold bg-tymeslot-200 px-1 py-0.5 rounded text-tymeslot-500 uppercase">Primary</span>
+            <span :if={cal.primary} class="text-token-xs font-bold bg-tymeslot-200 px-1 py-0.5 rounded-token-md text-tymeslot-500 uppercase">Primary</span>
           </button>
         </div>
         <%!-- Fallback: integration with no calendar list (single calendar) --%>

@@ -4,9 +4,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   """
   use TymeslotWeb, :live_component
 
+  require Logger
+
   alias Tymeslot.FreeBusy
   alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Integrations.Calendar.Diagnostics
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.Monitor
@@ -18,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerModal
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
   alias TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent
+  alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.Flash
 
@@ -209,13 +211,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
              socket
              |> assign(:is_refreshing, true)
              |> start_async(:refresh_calendars, fn ->
-               active
-               |> Task.async_stream(
+               Tymeslot.TaskSupervisor
+               |> Task.Supervisor.async_stream_nolink(
+                 active,
                  fn integration ->
                    {integration.name, Calendar.update_integration_with_discovery(integration)}
                  end,
                  max_concurrency: 5,
-                 timeout: 30_000
+                 timeout: 30_000,
+                 on_timeout: :kill_task
                )
                |> Enum.to_list()
              end)}
@@ -260,31 +264,35 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   def handle_event("test_connection", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check_caldav_connection_rate_limit(user_id) do
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
+    # `Calendar.test_connection/1` routes through `ConnectionProbe`, the
+    # single choke point for connection-test rate limiting: every provider,
+    # OAuth included, now draws from a real bucket, so no compensating guard
+    # belongs here.
+    with {:ok, int_id} <- parse_int(id),
+         {:ok, integration} <- Calendar.get_integration(int_id, user_id),
+         {:ok, message} <- Calendar.test_connection(integration) do
+      Flash.info(message)
+      {:noreply, socket}
+    else
+      {:error, :not_found} ->
+        Flash.error("Integration not found")
         {:noreply, socket}
 
-      :ok ->
-        with {:ok, int_id} <- parse_int(id),
-             {:ok, integration} <-
-               Calendar.get_integration(int_id, socket.assigns.current_user.id),
-             {:ok, message} <- Diagnostics.test_connection(integration) do
-          Flash.info(message)
-          {:noreply, socket}
-        else
-          {:error, :not_found} ->
-            Flash.error("Integration not found")
-            {:noreply, socket}
+      {:error, {:rate_limited, _message} = refusal} ->
+        Flash.error(IntegrationProviders.connection_test_refusal_message(refusal))
+        {:noreply, socket}
 
-          {:error, reason} ->
-            Flash.error("Connection test failed: #{inspect(reason)}")
-            {:noreply, socket}
+      {:error, :unattributable} ->
+        Flash.error(IntegrationProviders.connection_test_refusal_message(:unattributable))
+        {:noreply, socket}
 
-          :error ->
-            Flash.error("Invalid calendar ID")
-            {:noreply, socket}
-        end
+      {:error, reason} ->
+        Flash.error("Connection test failed: #{inspect(reason)}")
+        {:noreply, socket}
+
+      :error ->
+        Flash.error("Invalid calendar ID")
+        {:noreply, socket}
     end
   end
 
@@ -341,7 +349,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     {:noreply, socket |> assign(:is_refreshing, false) |> load_integrations()}
   end
 
-  def handle_async(:refresh_calendars, {:error, _reason}, socket) do
+  def handle_async(:refresh_calendars, {:exit, reason}, socket) do
+    Logger.error("Calendar refresh task crashed", reason: inspect(reason))
     Flash.error("Refresh process failed unexpectedly.")
     {:noreply, assign(socket, :is_refreshing, false)}
   end

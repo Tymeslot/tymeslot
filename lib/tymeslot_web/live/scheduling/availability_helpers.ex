@@ -150,7 +150,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
               duration_minutes
             )
 
-          AvailabilityCache.get_or_compute(cache_key, fn ->
+          AvailabilityCache.get_or_compute_events(cache_key, fn ->
             with {:ok, events} <-
                    CalendarEvents.get_calendar_events_from_context(
                      start_date,

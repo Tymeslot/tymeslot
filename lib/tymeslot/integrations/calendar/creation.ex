@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.Connection
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
@@ -28,12 +29,18 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
     {:ok, %CalendarIntegrationSchema{}}
     {:error, {:form_errors, map()}}
     {:error, {:changeset, %Ecto.Changeset{}}}
+    {:error, {:rate_limited, String.t()}}
+    {:error, :unattributable}
     {:error, term()}
   """
   @spec create_with_validation(user_id(), %{String.t() => term()}, keyword()) ::
           {:ok, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()}
           | {:error,
-             {:form_errors, %{String.t() => term()}} | {:changeset, Ecto.Changeset.t()} | term()}
+             {:form_errors, %{String.t() => term()}}
+             | {:changeset, Ecto.Changeset.t()}
+             | {:rate_limited, String.t()}
+             | :unattributable
+             | term()}
   def create_with_validation(user_id, params, opts \\ [])
       when is_integer(user_id) and is_map(params) do
     metadata = Keyword.get(opts, :metadata, %{})
@@ -52,6 +59,14 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
 
       {:error, %Ecto.Changeset{} = cs} ->
         {:error, {:changeset, cs}}
+
+      # `Creation.prevalidate_config/1`'s refusal, passed straight up still
+      # tagged — see its doc.
+      {:error, {:rate_limited, _message} = refusal} ->
+        {:error, refusal}
+
+      {:error, :unattributable} ->
+        {:error, :unattributable}
 
       {:error, validation_errors} when is_map(validation_errors) ->
         {:error, {:form_errors, validation_errors}}
@@ -239,24 +254,41 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
 
   - Uses ProviderRegistry for provider validation/lookup
   - Uses Shared.ErrorHandler to sanitize provider-specific error messages
+
+  `validate_config/1` is structural only (see
+  `Tymeslot.Integrations.Calendar.Provider`); the live connectivity check that
+  used to be embedded in some providers' `validate_config/1` now runs here
+  explicitly, through the same rate-limited choke point
+  (`Tymeslot.Integrations.Shared.ConnectionProbe`) the "Test connection" button
+  uses, charged to the user submitting the form.
   """
   @spec prevalidate_config(%{required(:provider) => String.t(), optional(atom()) => term()}) ::
           {:ok, %{required(:provider) => String.t(), optional(atom()) => term()}}
-          | {:error, Ecto.Changeset.t()}
+          | {:error, Ecto.Changeset.t() | {:rate_limited, String.t()} | :unattributable}
   def prevalidate_config(%{provider: provider} = attrs)
       when provider in @caldav_provider_strings do
     config = %{
       base_url: attrs[:base_url],
       username: attrs[:username],
       password: attrs[:password],
-      calendar_paths: attrs[:calendar_paths] || []
+      calendar_paths: attrs[:calendar_paths] || [],
+      provider: provider
     }
 
     with {:ok, provider_atom} <- ProviderRegistry.validate_provider(provider),
-         {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom) do
-      case provider_module.validate_config(config) do
+         {:ok, _provider_module} <- ProviderRegistry.get_provider(provider_atom) do
+      case test_config(provider_atom, config, attrs[:user_id]) do
         :ok ->
           {:ok, attrs}
+
+        # `ConnectionProbe`'s refusal is passed straight up, still tagged —
+        # building copy for it is the web layer's job (see its moduledoc),
+        # not this pre-validation step's.
+        {:error, {:rate_limited, _message} = refusal} ->
+          {:error, refusal}
+
+        {:error, :unattributable} ->
+          {:error, :unattributable}
 
         {:error, reason} ->
           message = ErrorHandler.sanitize_error_message(reason, provider_atom)
@@ -271,5 +303,22 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   def prevalidate_config(attrs) when is_map(attrs) do
     # OAuth providers and any non-Caldav-like providers don't need pre-validation
     {:ok, attrs}
+  end
+
+  # Structural validation, then the live probe — charged to the user submitting
+  # the form, through the same choke point (`Calendar.Connection.probe/3`) the
+  # "Test connection" button uses.
+  #
+  # The structural check belongs HERE rather than inside `probe/3`: this is the
+  # one path where `config` is untrusted user input. `probe/3`'s other callers
+  # probe already-persisted integrations, which must not be re-validated against
+  # current input rules (see `Connection.probe/3`). Validating first also means a
+  # malformed submission is rejected without ever charging a rate-limit token.
+  defp test_config(provider_atom, config, user_id) do
+    with {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom),
+         :ok <- provider_module.validate_config(config),
+         {:ok, _message} <- Connection.probe(provider_atom, config, {:user, user_id}) do
+      :ok
+    end
   end
 end

@@ -2,13 +2,17 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   @moduledoc """
   Email template for appointment confirmations sent to attendees and organisers.
   Role-dispatched via `render/3`.
+
+  The money sections live in the sibling
+  `Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks`, which owns
+  both the attendee receipt and the organiser payout summary.
   """
 
   import Swoosh.Email
 
+  alias Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks
   alias Tymeslot.Integrations.Calendar.IcsGenerator
   alias Tymeslot.Locales
-  alias Tymeslot.MeetingPayments
 
   alias Tymeslot.Emails.Shared.{
     Callouts,
@@ -16,13 +20,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     MeetingComponents,
     MjmlEmail,
     Sanitise,
-    Styles,
     TemplateHelper,
     Text,
     TextBodyHelper
   }
-
-  require Logger
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -38,7 +39,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     locale = Map.get(appointment_details, :attendee_locale, "en")
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      attendee_video_url = Map.get(appointment_details, :attendee_video_url)
+      attendee_video_url = join_url(:attendee, appointment_details)
 
       meeting_details = %{
         date: appointment_details.date,
@@ -46,9 +47,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         duration: appointment_details.duration,
         location: appointment_details.location,
         location_type: Map.get(appointment_details, :location_type),
-        meeting_type: appointment_details.meeting_type,
-        video_url: attendee_video_url,
-        video_url_role: "attendee"
+        meeting_type: appointment_details.meeting_type
       }
 
       intro_copy =
@@ -58,7 +57,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
           name: appointment_details.attendee_name
         )
 
-      payment_receipt = build_payment_receipt(appointment_details)
+      payment_receipt = PaymentBlocks.attendee_receipt(appointment_details)
 
       mjml_content = """
       #{Text.centered_text(intro_copy, padding: "8px 0 16px 0")}
@@ -73,7 +72,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         button_text: dgettext("emails", "Join Video Meeting"))
       end}
 
-      #{if payment_receipt, do: payment_receipt_block_html(payment_receipt)}
+      #{if payment_receipt, do: PaymentBlocks.attendee_receipt_html(payment_receipt)}
 
       #{Text.section_title(dgettext("emails", "Need to make changes?"))}
 
@@ -130,6 +129,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       guest_name = Map.get(appointment_details, :guest_name) || guest_email
+      guest_video_url = join_url(:guest, appointment_details)
 
       meeting_details = %{
         date: appointment_details.date,
@@ -153,6 +153,12 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       #{Text.centered_text(intro_copy, padding: "8px 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
+
+      #{if guest_video_url do
+        MeetingComponents.video_meeting_section(@intent, guest_video_url,
+        title: dgettext("emails", "Join when you're ready"),
+        button_text: dgettext("emails", "Join Meeting"))
+      end}
 
       #{Text.section_title(dgettext("emails", "Will you be there?"))}
 
@@ -197,17 +203,24 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
   def render(:organizer, organizer_email, appointment_details) do
     Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(appointment_details), fn ->
-      organiser_payment = build_organizer_payment(appointment_details)
+      organiser_payment = PaymentBlocks.organizer_summary(appointment_details)
+      organizer_video_url = join_url(:organizer, appointment_details)
 
       mjml_content = """
       #{MeetingComponents.attendee_info_section(@intent, %{name: appointment_details.attendee_name, email: appointment_details.attendee_email})}
 
       #{MeetingComponents.attendee_message_box(@intent, appointment_details[:attendee_message])}
 
-      #{MeetingComponents.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time_owner_tz, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type, video_url: Map.get(appointment_details, :meeting_url), video_url_role: "host"}, organizer_locale(appointment_details))}
+      #{MeetingComponents.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time_owner_tz, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type}, organizer_locale(appointment_details))}
+
+      #{if organizer_video_url do
+        MeetingComponents.video_meeting_section(@intent, organizer_video_url,
+        title: dgettext("emails", "Host video call"),
+        button_text: dgettext("emails", "Start Meeting"))
+      end}
 
       #{MeetingComponents.custom_answers_section(appointment_details)}
-      #{if organiser_payment, do: organizer_payment_block_html(organiser_payment)}
+      #{if organiser_payment, do: PaymentBlocks.organizer_summary_html(organiser_payment)}
 
       #{Text.section_title(dgettext("emails", "Need to make changes?"))}
 
@@ -256,10 +269,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
 
     video_section =
-      TextBodyHelper.format_video_section(
-        Map.get(appointment_details, :attendee_video_url),
-        locale
-      )
+      TextBodyHelper.format_video_section(join_url(:attendee, appointment_details), locale)
 
     action_links = TextBodyHelper.format_action_links(appointment_details, locale)
     custom_answers = TextBodyHelper.format_custom_answers(appointment_details, locale)
@@ -267,7 +277,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     payment_section =
       case payment_receipt do
         nil -> ""
-        receipt -> "\n#{payment_receipt_block_text(receipt)}\n"
+        receipt -> "\n#{PaymentBlocks.attendee_receipt_text(receipt)}\n"
       end
 
     """
@@ -291,6 +301,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   defp build_guest_text_body(appointment_details, guest_name, locale) do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
 
+    video_section =
+      TextBodyHelper.format_video_section(join_url(:guest, appointment_details), locale)
+
     """
     #{dgettext("emails", "You're invited!")}
 
@@ -299,7 +312,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     #{dgettext("emails", "%{booker} has invited you as a guest to this meeting with %{organizer}.", booker: appointment_details.attendee_name, organizer: appointment_details.organizer_name)}
 
     #{dgettext("emails", "MEETING DETAILS:")}
-    #{meeting_details}
+    #{meeting_details}#{video_section}
 
     #{dgettext("emails", "WILL YOU BE THERE?")}
     #{dgettext("emails", "Yes, I'll attend: %{url}", url: Map.get(appointment_details, :guest_accept_url, "#"))}
@@ -324,7 +337,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
     video_section =
       TextBodyHelper.format_video_section(
-        Map.get(appointment_details, :meeting_url),
+        join_url(:organizer, appointment_details),
         organizer_locale(appointment_details)
       )
 
@@ -343,7 +356,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     payment_section =
       case organiser_payment do
         nil -> ""
-        payment -> "\n#{organizer_payment_block_text(payment)}\n"
+        payment -> "\n#{PaymentBlocks.organizer_summary_text(payment)}\n"
       end
 
     """
@@ -392,214 +405,33 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   defp reminder_to_minutes(value, "days"), do: value * 60 * 24
   defp reminder_to_minutes(value, _unit), do: value
 
+  # Which video join URL each recipient is given.
+  #
+  # `Meetings.VideoRooms` mints two per-role join URLs when it provisions a
+  # room: `organizer_video_url` (provider role "organizer") and
+  # `attendee_video_url` (provider role "participant"). Each is built from that
+  # one person's name and email, so it identifies them in the room.
+  # `meeting_url` is the shared, identity-free room URL.
+  #
+  #   * the organiser hosts the call, so they get the host URL;
+  #   * the booker gets the participant URL minted for them;
+  #   * guests are third parties with no URL of their own. Handing them the
+  #     booker's URL would put them in the room under the booker's identity,
+  #     so they get the shared room URL, the same link the ICS attachment on
+  #     this very email already advertises.
+  #
+  # The organiser URL falls back to the room URL: a meeting can carry
+  # `meeting_url` without the per-role pair (its presence is also what marks a
+  # booking as a video meeting; `AppointmentBuilder` derives
+  # `location_type: :video` from it), and the host reaching the room beats no
+  # join link at all.
+  defp join_url(:organizer, details) do
+    Map.get(details, :organizer_video_url) || Map.get(details, :meeting_url)
+  end
+
+  defp join_url(:attendee, details), do: Map.get(details, :attendee_video_url)
+
+  defp join_url(:guest, details), do: Map.get(details, :meeting_url)
+
   defp organizer_locale(_appointment_details), do: Locales.default_locale()
-
-  # Organiser-facing payment summary. Host emails are intentionally English-only
-  # to match the spec; the block shows the gross amount, the platform fee, and
-  # the net the host will receive (before Stripe processing fees, which are
-  # billed against the host's Stripe balance separately).
-  defp build_organizer_payment(appointment_details) do
-    case Map.get(appointment_details, :booking_payment) do
-      nil ->
-        nil
-
-      %{status: status, amount_cents: amount, currency: currency} = bp
-      when status in ["paid", "partially_refunded", "refunded"] and is_integer(amount) ->
-        application_fee = Map.get(bp, :application_fee_cents) || 0
-        net = max(amount - application_fee, 0)
-
-        %{
-          attendee_paid: Formatting.format_currency(amount, currency),
-          platform_fee: Formatting.format_currency(application_fee, currency),
-          net_received: Formatting.format_currency(net, currency)
-        }
-
-      _other ->
-        nil
-    end
-  end
-
-  defp organizer_payment_block_html(payment) do
-    """
-    #{Text.section_title("You received #{Sanitise.sanitize_for_email(payment.net_received)}")}
-    <mj-section
-      background-color="#{Styles.canvas_soft()}"
-      border-radius="#{Styles.card_radius()}"
-      padding="20px 26px"
-      css-class="mobile-card email-canvas-soft"
-    >
-      <mj-column>
-        <mj-text
-          font-size="15px"
-          color="#{Styles.text_color(:primary)}"
-          line-height="1.7"
-          align="left"
-        >
-          Attendee paid: <strong>#{Sanitise.sanitize_for_email(payment.attendee_paid)}</strong><br/>
-          Tymeslot platform fee: <strong>#{Sanitise.sanitize_for_email(payment.platform_fee)}</strong><br/>
-          You received: <strong>#{Sanitise.sanitize_for_email(payment.net_received)}</strong> (less Stripe processing fees)
-        </mj-text>
-        <mj-text
-          font-size="13px"
-          color="#{Styles.text_color(:muted)}"
-          line-height="1.55"
-          align="left"
-          padding-top="12px"
-        >
-          Funds will arrive on your usual Stripe payout schedule.
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    """
-  end
-
-  defp organizer_payment_block_text(payment) do
-    String.trim_trailing("""
-    PAYMENT RECEIVED:
-    You received #{payment.net_received}
-    Attendee paid:           #{payment.attendee_paid}
-    Tymeslot platform fee:   #{payment.platform_fee}
-    You received:            #{payment.net_received} (less Stripe processing fees)
-
-    Funds will arrive on your usual Stripe payout schedule.
-    """)
-  end
-
-  # Build the attendee-facing payment receipt block from a booking_payment
-  # snapshot embedded in `appointment_details`. Returns nil when the
-  # booking is free (no booking_payment present) or the payment is not in a
-  # paid-like state, so callers can short-circuit.
-  defp build_payment_receipt(appointment_details) do
-    case Map.get(appointment_details, :booking_payment) do
-      nil ->
-        nil
-
-      %{status: status, amount_cents: amount, currency: currency} = bp
-      when status in ["paid", "partially_refunded", "refunded"] and is_integer(amount) ->
-        %{
-          amount: Formatting.format_currency(amount, currency),
-          paid_at: format_paid_at(bp, appointment_details),
-          reference: Map.get(bp, :stripe_charge_id),
-          receipt_url: receipt_url_for(bp)
-        }
-
-      _other ->
-        nil
-    end
-  end
-
-  defp format_paid_at(%{paid_at: %DateTime{} = paid_at}, appointment_details) do
-    locale = Map.get(appointment_details, :attendee_locale, "en")
-    date = Formatting.format_date(DateTime.to_date(paid_at), locale)
-    time = Formatting.format_time(paid_at)
-    dgettext("emails", "%{date} at %{time}", date: date, time: time)
-  end
-
-  defp format_paid_at(_bp, _appointment_details), do: nil
-
-  defp receipt_url_for(%{stripe_charge_id: charge_id, stripe_account_id: account_id})
-       when is_binary(charge_id) and charge_id != "" and is_binary(account_id) and
-              account_id != "" do
-    case MeetingPayments.retrieve_charge_receipt_url(charge_id, account_id) do
-      {:ok, url} ->
-        url
-
-      {:error, reason} ->
-        Logger.warning("Failed to fetch Stripe receipt URL for confirmation email",
-          charge_id: charge_id,
-          reason: inspect(reason)
-        )
-
-        nil
-    end
-  end
-
-  defp receipt_url_for(_bp), do: nil
-
-  defp payment_receipt_block_html(receipt) do
-    title = dgettext("emails", "Payment receipt")
-
-    amount_line =
-      dgettext("emails", "%{amount} paid", amount: Sanitise.sanitize_for_email(receipt.amount))
-
-    date_line =
-      if receipt.paid_at do
-        dgettext("emails", "Date: %{date}", date: Sanitise.sanitize_for_email(receipt.paid_at))
-      end
-
-    reference_line =
-      if receipt.reference do
-        dgettext("emails", "Reference: %{ref}",
-          ref: Sanitise.sanitize_for_email(receipt.reference)
-        )
-      end
-
-    receipt_button =
-      if receipt.receipt_url do
-        button_label = dgettext("emails", "View receipt")
-        safe_url = Sanitise.sanitize_for_email(receipt.receipt_url)
-
-        """
-        <mj-button
-          href="#{safe_url}"
-          background-color="#{Styles.intent_accent_deep(:confirmed)}"
-          color="#ffffff"
-          border-radius="#{Styles.button_radius()}"
-          font-weight="600"
-          padding="14px 0 0 0"
-          inner-padding="#{Styles.button_padding(:small)}"
-        >
-          #{button_label}
-        </mj-button>
-        """
-      end
-
-    body_lines =
-      [amount_line, date_line, reference_line]
-      |> Enum.reject(&is_nil/1)
-      |> Enum.join("<br/>\n")
-
-    """
-    #{Text.section_title(title)}
-    <mj-section
-      background-color="#{Styles.canvas_soft()}"
-      border-radius="#{Styles.card_radius()}"
-      padding="20px 26px"
-      css-class="mobile-card email-canvas-soft"
-    >
-      <mj-column>
-        <mj-text
-          font-size="15px"
-          color="#{Styles.text_color(:primary)}"
-          line-height="1.7"
-          align="center"
-        >
-          #{body_lines}
-        </mj-text>
-        #{receipt_button}
-      </mj-column>
-    </mj-section>
-    """
-  end
-
-  defp payment_receipt_block_text(receipt) do
-    header = dgettext("emails", "PAYMENT RECEIPT:")
-
-    amount_line = dgettext("emails", "%{amount} paid", amount: receipt.amount)
-
-    date_line =
-      if receipt.paid_at, do: dgettext("emails", "Date: %{date}", date: receipt.paid_at)
-
-    reference_line =
-      if receipt.reference, do: dgettext("emails", "Reference: %{ref}", ref: receipt.reference)
-
-    link_line =
-      if receipt.receipt_url do
-        dgettext("emails", "View receipt: %{url}", url: receipt.receipt_url)
-      end
-
-    [header, amount_line, date_line, reference_line, link_line]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join("\n")
-  end
 end

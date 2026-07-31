@@ -150,16 +150,6 @@ msgstr ""
 msgid "1 year in advance"
 msgstr ""
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:145
-#, elixir-autogen, elixir-format
-msgid "15 Minutes"
-msgstr ""
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:155
-#, elixir-autogen, elixir-format
-msgid "30 Minutes"
-msgstr ""
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:301
 #, elixir-autogen, elixir-format
 msgid "90 days in advance"
@@ -392,11 +382,6 @@ msgstr ""
 msgid "I acknowledge the above"
 msgstr ""
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:157
-#, elixir-autogen, elixir-format
-msgid "In-depth discussion or detailed review"
-msgstr ""
-
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:56
 #, elixir-autogen, elixir-format
 msgid "Invalid date/time"
@@ -527,7 +512,7 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:126
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:125
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:74
 #, elixir-autogen, elixir-format
 msgid "No meeting types available"
@@ -569,7 +554,7 @@ msgstr ""
 msgid "Pick a meeting duration below."
 msgstr ""
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:127
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:126
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:75
 #, elixir-autogen, elixir-format
 msgid "Please contact the organizer"
@@ -599,7 +584,7 @@ msgstr ""
 msgid "Please select a date to see available times"
 msgstr ""
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:173
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:152
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration first"
 msgstr ""
@@ -625,11 +610,6 @@ msgstr ""
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex:37
 #, elixir-autogen, elixir-format
 msgid "Question %{n} of %{m}"
-msgstr ""
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:147
-#, elixir-autogen, elixir-format
-msgid "Quick chat or brief consultation"
 msgstr ""
 
 #: lib/tymeslot_web/themes/quill/meeting/reschedule.ex:97
@@ -987,7 +967,7 @@ msgid "name"
 msgstr ""
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex:87
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:177
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:156
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex:87
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:118
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:338

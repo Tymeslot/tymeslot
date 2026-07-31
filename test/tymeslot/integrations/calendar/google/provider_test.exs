@@ -516,7 +516,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
       end)
 
       assert {:ok, "Google Calendar connection successful"} =
-               Provider.test_connection(integration)
+               Provider.perform_connection_test(integration)
     end
 
     test "test_connection handles unauthorized error" do
@@ -535,7 +535,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
         {:error, :unauthorized, "token expired"}
       end)
 
-      assert {:error, :unauthorized} = Provider.test_connection(integration)
+      assert {:error, :unauthorized} = Provider.perform_connection_test(integration)
     end
   end
 

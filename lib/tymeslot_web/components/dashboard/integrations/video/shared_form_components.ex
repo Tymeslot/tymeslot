@@ -197,6 +197,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   end
 
   @doc """
+  Returns the form-level error message, if any, for the `:base` key that
+  `TymeslotWeb.Helpers.IntegrationProviders.reason_to_form_errors/1` and
+  `duplicate_integration` handling assign it under. `nil` when there is none.
+  """
+  @spec form_level_error(map()) :: String.t() | nil
+  def form_level_error(form_errors), do: Map.get(form_errors, :base)
+
+  @doc """
   Renders the standard form header with close button.
   """
   attr :title, :string, required: true

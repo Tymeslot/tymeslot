@@ -116,14 +116,29 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
         base_url: "https://mirotalk.example.com"
       }
 
-      # test_provider_connection calls validate_config, which calls test_connection,
-      # and then it calls test_connection again. So we expect 2 calls.
-      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200}}
       end)
 
       result = ProviderRegistry.test_provider_connection(:mirotalk, config)
       assert {:ok, _result} = result
+    end
+
+    # This probe runs on a schedule against a self-hosted MiroTalk server the
+    # customer owns, so the number of requests it costs them is part of the
+    # contract. `validate_config/1` must stay a pure structural check, leaving
+    # `perform_connection_test/1` as the single caller that touches the network.
+    test "issues exactly one request to the mirotalk server per probe" do
+      config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
+      {:ok, counter} = Agent.start_link(fn -> 0 end)
+
+      stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        Agent.update(counter, &(&1 + 1))
+        {:ok, %Req.Response{status: 200}}
+      end)
+
+      assert {:ok, _message} = ProviderRegistry.test_provider_connection(:mirotalk, config)
+      assert Agent.get(counter, & &1) == 1
     end
 
     test "returns error for missing required config" do
@@ -191,10 +206,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
 
   describe "providers_with_capability/1" do
     test "filters providers by specific capability" do
-      # MiroTalk and Google Meet declare screen_sharing; Zoom, Teams and the
-      # custom provider do not.
+      # MiroTalk, Google Meet, Teams and Zoom declare screen_sharing; only the
+      # custom provider does not.
       assert Enum.sort(ProviderRegistry.providers_with_capability(:screen_sharing)) ==
-               [:google_meet, :mirotalk]
+               [:google_meet, :mirotalk, :teams, :zoom]
     end
 
     test "returns empty list for non-existent capability" do

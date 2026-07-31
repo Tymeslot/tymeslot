@@ -47,13 +47,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       assert capabilities[:screen_sharing] == true
       assert capabilities[:waiting_room] == false
       assert capabilities[:max_participants] == 250
-      assert capabilities[:requires_download] == false
-      assert capabilities[:supports_phone_dial_in] == true
-      assert capabilities[:supports_chat] == true
-      assert capabilities[:supports_breakout_rooms] == true
-      assert capabilities[:end_to_end_encryption] == true
-      assert capabilities[:supports_live_streaming] == true
-      assert capabilities[:supports_recording] == true
+      assert capabilities[:dial_in] == true
+      assert capabilities[:chat] == true
+      assert capabilities[:breakout_rooms] == true
     end
   end
 
@@ -111,7 +107,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"items" => []})}}
       end)
 
-      assert {:ok, message} = GoogleMeetProvider.test_connection(config)
+      assert {:ok, message} = GoogleMeetProvider.perform_connection_test(config)
       assert String.contains?(message, "successful")
     end
 
@@ -126,7 +122,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         {:ok, %Req.Response{status: 401, body: "Unauthorized"}}
       end)
 
-      assert {:error, message} = GoogleMeetProvider.test_connection(config)
+      assert {:error, message} = GoogleMeetProvider.perform_connection_test(config)
       assert String.contains?(message, "Connection test failed")
     end
 
@@ -137,7 +133,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         {:ok, %Req.Response{status: 200, body: "not json"}}
       end)
 
-      assert {:error, message} = GoogleMeetProvider.test_connection(config)
+      assert {:error, message} = GoogleMeetProvider.perform_connection_test(config)
       assert message =~ "Invalid JSON"
     end
 
@@ -167,7 +163,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"items" => []})}}
       end)
 
-      assert {:ok, _result} = GoogleMeetProvider.test_connection(config)
+      assert {:ok, _result} = GoogleMeetProvider.perform_connection_test(config)
     end
   end
 

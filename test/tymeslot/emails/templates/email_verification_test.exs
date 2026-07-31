@@ -27,6 +27,27 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       assert html =~ "Jane Smith"
     end
 
+    test "escapes an HTML-significant name exactly once" do
+      user = build_user_data(%{name: "O'Brien & Sons", email: "brien@example.com"})
+
+      html = EmailVerification.render(user, "https://example.com/verify/token")
+
+      # Escaped once, so the client renders "Hi O'Brien & Sons,". Escaping it
+      # twice mails out the literal text "Hi O&#39;Brien &amp; Sons,".
+      assert html =~ "Hi O&#39;Brien &amp; Sons,"
+      refute html =~ "&amp;#39;"
+      refute html =~ "&amp;amp;"
+    end
+
+    test "keeps a hostile name inert in the rendered email" do
+      user = build_user_data(%{name: "<script>alert('xss')</script>", email: "x@example.com"})
+
+      html = EmailVerification.render(user, "https://example.com/verify/token")
+
+      refute html =~ "<script>"
+      assert html =~ "&lt;script&gt;"
+    end
+
     test "uses a neutral greeting when name is nil, never the email address" do
       user = build_user_data(%{name: nil, email: "user@example.com"})
       verification_url = "https://example.com/verify/token789"
