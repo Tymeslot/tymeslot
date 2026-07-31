@@ -20,11 +20,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
   alias TymeslotWeb.Dashboard.VideoSettings.Components
+  alias TymeslotWeb.Dashboard.VideoSettings.FormInput
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
-  alias TymeslotWeb.Live.Shared.FormValidationHelpers
-
-  require Logger
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -122,43 +120,15 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
       |> Map.put(field, value)
       |> Map.put("provider", socket.assigns.config_provider)
 
-    socket = assign(socket, :form_values, form_values)
+    form_errors =
+      FormInput.validate_field(
+        socket.assigns.form_errors || %{},
+        field,
+        value,
+        DashboardHelpers.get_security_metadata(socket)
+      )
 
-    metadata = DashboardHelpers.get_security_metadata(socket)
-    field_atom = map_field_to_atom(field)
-
-    if String.trim(to_string(value)) == "" do
-      current_errors = socket.assigns.form_errors || %{}
-
-      {:noreply,
-       assign(
-         socket,
-         :form_errors,
-         FormValidationHelpers.delete_field_error(current_errors, field_atom)
-       )}
-    else
-      case VideoInputValidation.validate_single_field(field_atom, value, metadata: metadata) do
-        {:ok, _sanitized_value} ->
-          current_errors = socket.assigns.form_errors || %{}
-
-          {:noreply,
-           assign(
-             socket,
-             :form_errors,
-             FormValidationHelpers.delete_field_error(current_errors, field_atom)
-           )}
-
-        {:error, error} ->
-          current_errors = socket.assigns.form_errors || %{}
-
-          {:noreply,
-           assign(
-             socket,
-             :form_errors,
-             Map.put(current_errors, field_atom, error)
-           )}
-      end
-    end
+    {:noreply, assign(socket, form_values: form_values, form_errors: form_errors)}
   end
 
   def handle_event("add_integration", %{"integration" => params}, socket) do
@@ -182,7 +152,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
              |> assign(:saving, false)}
           else
             handle_create_result(
-              Video.create_integration(user_id, provider, map_keys_to_atoms(validated_params)),
+              Video.create_integration(
+                user_id,
+                provider,
+                FormInput.to_atom_keys(validated_params)
+              ),
               socket
             )
           end
@@ -201,7 +175,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     user_id = socket.assigns.current_user.id
 
     with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
-      case normalize_id(id) do
+      case FormInput.integration_id(id) do
         nil ->
           {:noreply, socket}
 
@@ -233,7 +207,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     user_id = socket.assigns.current_user.id
 
     with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
-      case normalize_id(id) do
+      case FormInput.integration_id(id) do
         nil ->
           {:noreply, socket}
 
@@ -280,7 +254,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     # choke point for connection-test rate limiting: every provider, OAuth
     # included, now draws from a real bucket, so no compensating guard
     # belongs here.
-    case normalize_id(id) do
+    case FormInput.integration_id(id) do
       nil ->
         {:noreply, socket}
 
@@ -317,16 +291,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
            {:error, IntegrationProviders.connection_test_refusal_message(:unattributable)}}
         )
 
-      {:error, reason} when is_binary(reason) ->
-        notify_parent({:flash, {:error, reason}})
-
+      # Covers both a bare message and a provider's tagged `{tag, message}`;
+      # the tag drives field mapping, never the copy shown here.
       {:error, reason} ->
         notify_parent(
-          {:flash,
-           {:error,
-            dgettext("dashboard_integrations", "Connection test failed: %{reason}",
-              reason: inspect(reason)
-            )}}
+          {:flash, {:error, IntegrationProviders.connection_test_error_message(reason)}}
         )
     end
 
@@ -600,51 +569,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
       click_event: "setup_provider",
       connected?: Enum.any?(integrations, &(&1.provider == provider))
     }
-  end
-
-  defp map_keys_to_atoms(%{} = map) do
-    for {k, v} <- map, into: %{} do
-      key =
-        cond do
-          is_atom(k) -> k
-          is_binary(k) -> try_string_to_atom(k)
-        end
-
-      {key, v}
-    end
-  end
-
-  # Form keys are user-submitted, so an unrecognised one must never mint an
-  # atom; it keeps its string key and is rejected downstream instead.
-  defp try_string_to_atom(k) do
-    String.to_existing_atom(k)
-  rescue
-    error in ArgumentError ->
-      Logger.debug("Video integration param has no existing atom; keeping the string key",
-        param: k,
-        error: Exception.message(error)
-      )
-
-      k
-  end
-
-  defp normalize_id(id) when is_integer(id), do: id
-
-  defp normalize_id(id) when is_binary(id) do
-    case Integer.parse(id) do
-      {int, ""} -> int
-      _other -> nil
-    end
-  end
-
-  defp map_field_to_atom(field) do
-    case field do
-      "name" -> :name
-      "base_url" -> :base_url
-      "api_key" -> :api_key
-      "custom_meeting_url" -> :custom_meeting_url
-      _other -> :unknown
-    end
   end
 
   defp get_provider_name(socket, id) do
