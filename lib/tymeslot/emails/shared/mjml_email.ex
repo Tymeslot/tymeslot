@@ -185,8 +185,8 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     stage_subtitle = organizer_details[:stage_subtitle]
 
     Frame.wrap(%{
-      title: "Message from #{organizer_name}",
-      preview: "#{organizer_name} via Tymeslot",
+      title: dgettext("emails", "Message from %{name}", name: organizer_name),
+      preview: dgettext("emails", "%{name} via Tymeslot", name: organizer_name),
       pre_card: logo_header(),
       stage: Stage.stage_band(intent, stage_eyebrow, stage_title, stage_subtitle),
       header: organizer_strip(organizer_avatar_url, organizer_name, organizer_title),

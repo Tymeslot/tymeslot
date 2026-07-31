@@ -22,6 +22,8 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
     `Video.handle_reauth_required/2` wrappers.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   @typedoc """
@@ -40,22 +42,33 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   # One row per cause: the operator-facing log line and the message persisted
   # to the integration's `sync_error`, which the account owner reads. Keeping
   # them together stops the two from drifting, and stops a decryption
-  # diagnosis being reused for an OAuth failure it does not describe.
+  # diagnosis being reused for an OAuth failure it does not describe. Only
+  # `message` is translated — `log` stays English so operator-facing logs read
+  # the same whatever locale the flagging process happens to carry.
   @causes %{
     credentials_undecryptable: %{
       log: "Integration credentials cannot be decrypted — flagging for reauth",
       message:
-        "Stored credentials could not be decrypted with the current encryption key. Please reconnect the integration."
+        dgettext_noop(
+          "dashboard_integrations",
+          "Stored credentials could not be decrypted with the current encryption key. Please reconnect the integration."
+        )
     },
     expired_grant: %{
       log: "Integration authorisation has expired or been revoked — flagging for reauth",
       message:
-        "Access to the connected account has expired or been revoked. Please reconnect the integration."
+        dgettext_noop(
+          "dashboard_integrations",
+          "Access to the connected account has expired or been revoked. Please reconnect the integration."
+        )
     },
     rejected_credentials: %{
       log: "Integration credentials were rejected by the provider — flagging for reauth",
       message:
-        "The provider rejected the stored credentials for this integration. Please reconnect the integration."
+        dgettext_noop(
+          "dashboard_integrations",
+          "The provider rejected the stored credentials for this integration. Please reconnect the integration."
+        )
     }
   }
 
@@ -67,7 +80,8 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   for; pass a `t:cause/0` for the others.
   """
   @spec reauth_error_message(cause()) :: String.t()
-  def reauth_error_message(cause \\ @default_cause), do: fetch_cause(cause).message
+  def reauth_error_message(cause \\ @default_cause),
+    do: translate_message(fetch_cause(cause).message)
 
   @doc """
   Flags an integration for reauthentication.
@@ -105,7 +119,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
       user_id: integration.user_id
     )
 
-    case mark_needs_reauth.(integration, cause.message) do
+    case mark_needs_reauth.(integration, translate_message(cause.message)) do
       {:ok, _integration} ->
         :ok
 
@@ -122,4 +136,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   end
 
   defp fetch_cause(cause), do: Map.get(@causes, cause) || @causes[@default_cause]
+
+  defp translate_message(msgid),
+    do: Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_integrations", msgid)
 end

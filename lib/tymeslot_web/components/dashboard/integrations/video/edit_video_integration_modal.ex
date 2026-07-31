@@ -194,7 +194,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                     name="integration[custom_meeting_url]"
                     label={dgettext("dashboard_integrations", "Meeting URL")}
                     value={Map.get(@form_values, "custom_meeting_url", @integration.custom_meeting_url || "")}
-                    placeholder="https://jitsi.example.org/{{meeting_id}}"
+                    placeholder={
+                      dgettext("dashboard_integrations", "https://jitsi.example.org/{{meeting_id}}")
+                    }
                     form_errors={@form_errors}
                     error_key={:custom_meeting_url}
                     target={@myself}
@@ -212,7 +214,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                     name="integration[base_url]"
                     label={dgettext("dashboard_integrations", "Base URL")}
                     value={Map.get(@form_values, "base_url", @integration.base_url || "")}
-                    placeholder="https://mirotalk.example.com"
+                    placeholder={
+                      dgettext("dashboard_integrations", "https://mirotalk.yourdomain.com")
+                    }
                     form_errors={@form_errors}
                     error_key={:base_url}
                     target={@myself}

@@ -13,6 +13,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes do
   `code 4711`, turning a permanent authorisation gap into a retry loop.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   # Zoom's error code for "the token's grant does not include this scope".
   @missing_scope_code 4711
 
@@ -49,8 +51,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes do
   "Reconnect required" message shown on the dashboard.
   """
   @spec action_phrase(operation()) :: String.t()
-  def action_phrase(:write), do: "create and update meetings"
-  def action_phrase(:delete), do: "cancel meetings"
+  def action_phrase(:write),
+    do: dgettext("dashboard_integrations", "create and update meetings")
+
+  def action_phrase(:delete), do: dgettext("dashboard_integrations", "cancel meetings")
 
   @doc """
   Detects Zoom's `4711` response, which means the token's grant predates a

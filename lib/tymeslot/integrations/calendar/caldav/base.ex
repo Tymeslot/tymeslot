@@ -29,6 +29,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   Retryable errors: `:network_error`, `:timeout`, `:server_error`
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalDAV.Http, as: CalDAVHttp
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
@@ -90,45 +92,103 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
           | :timeout
           | String.t()
 
-  # One sentence per `error_reason/0` member, written for the account owner
-  # rather than for an operator. Anything that surfaces a CalDAV failure to a
-  # user (the offline queue's `sync_last_error`, for instance) routes through
-  # `describe_error/1` so an inspected atom can never leak into the product.
-  # Raw terms stay in the logs, which is where diagnostics belong.
-  @error_descriptions %{
-    unauthorized:
-      "The calendar server rejected the stored credentials. Please reconnect the calendar.",
-    forbidden: "The calendar server refused access to this calendar.",
-    not_found: "The event no longer exists on the calendar server.",
-    precondition_failed:
-      "The event changed on the calendar server since Tymeslot last synced it.",
-    rate_limited:
-      "The calendar server is rate-limiting Tymeslot. Tymeslot will retry automatically.",
-    network_error:
-      "Tymeslot could not reach the calendar server. Tymeslot will retry automatically.",
-    invalid_response: "The calendar server returned a response Tymeslot could not understand.",
-    server_error: "The calendar server reported an error. Tymeslot will retry automatically.",
-    server_unresponsive:
-      "The calendar server did not respond. Tymeslot will retry automatically.",
-    timeout: "The calendar server took too long to respond. Tymeslot will retry automatically."
-  }
-
-  @unknown_error_description "Tymeslot could not complete the request against the calendar server."
-
   @doc """
   Turns an `t:error_reason/0` into a sentence safe to show the account owner.
+
+  One clause per `error_reason/0` member, written for the account owner rather
+  than for an operator. Anything that surfaces a CalDAV failure to a user (the
+  offline queue's `sync_last_error`, for instance) routes through here so an
+  inspected atom can never leak into the product. Raw terms stay in the logs,
+  which is where diagnostics belong.
 
   String reasons (e.g. `"Unexpected status: 418"`) pass through unchanged;
   unrecognised terms collapse to a generic sentence rather than being
   inspected, so internal representations never reach the UI.
+
+  Kept as functions rather than a module attribute: a `dgettext/2` call in an
+  attribute would freeze the locale at compile time.
   """
   @spec describe_error(error_reason() | term()) :: String.t()
   def describe_error(reason) when is_binary(reason), do: reason
 
-  def describe_error(reason) when is_atom(reason),
-    do: Map.get(@error_descriptions, reason, @unknown_error_description)
+  def describe_error(:unauthorized),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server rejected the stored credentials. Please reconnect the calendar."
+      )
 
-  def describe_error(_other), do: @unknown_error_description
+  def describe_error(:forbidden),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server refused access to this calendar."
+      )
+
+  def describe_error(:not_found),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The event no longer exists on the calendar server."
+      )
+
+  def describe_error(:precondition_failed),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The event changed on the calendar server since Tymeslot last synced it."
+      )
+
+  def describe_error(:rate_limited),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server is rate-limiting Tymeslot. Tymeslot will retry automatically."
+      )
+
+  def describe_error(:network_error),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "Tymeslot could not reach the calendar server. Tymeslot will retry automatically."
+      )
+
+  def describe_error(:invalid_response),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server returned a response Tymeslot could not understand."
+      )
+
+  def describe_error(:server_error),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server reported an error. Tymeslot will retry automatically."
+      )
+
+  def describe_error(:server_unresponsive),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server did not respond. Tymeslot will retry automatically."
+      )
+
+  def describe_error(:timeout),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server took too long to respond. Tymeslot will retry automatically."
+      )
+
+  def describe_error(_other), do: unknown_error_description()
+
+  defp unknown_error_description do
+    dgettext(
+      "dashboard_calendar_providers",
+      "Tymeslot could not complete the request against the calendar server."
+    )
+  end
 
   # ---------------------------------------------------------------------------
   # HTTP transport delegates

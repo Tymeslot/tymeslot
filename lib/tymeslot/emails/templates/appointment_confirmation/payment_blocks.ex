@@ -7,9 +7,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   tells:
 
   - the **attendee receipt** — what the booker paid, when, the charge
-    reference, and a link to the Stripe-hosted receipt. Fully localised.
-  - the **organiser summary** — gross, platform fee, and net payout. Host
-    emails are intentionally English-only to match the spec.
+    reference, and a link to the Stripe-hosted receipt. Rendered in the
+    booker's locale.
+  - the **organiser summary** — gross, platform fee, and net payout. Rendered
+    in the instance's default locale: `AppointmentConfirmation.organizer_locale/1`
+    returns it unconditionally rather than reading anything off the organiser.
 
   Both are built from the `:booking_payment` snapshot embedded in
   `appointment_details`, and both builders return `nil` for a free booking or a
@@ -182,8 +184,25 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   @doc "Renders the organiser payout summary as MJML."
   @spec organizer_summary_html(map()) :: String.t()
   def organizer_summary_html(payment) do
+    # `Text.section_title/2` escapes what it is handed, so the amount goes in raw.
+    title = dgettext("emails", "You received %{amount}", amount: payment.net_received)
+
+    body_lines =
+      Enum.join(
+        [
+          dgettext("emails", "Attendee paid: %{amount}", amount: strong(payment.attendee_paid)),
+          dgettext("emails", "Tymeslot platform fee: %{amount}",
+            amount: strong(payment.platform_fee)
+          ),
+          dgettext("emails", "You received: %{amount} (less Stripe processing fees)",
+            amount: strong(payment.net_received)
+          )
+        ],
+        "<br/>\n"
+      )
+
     """
-    #{Text.section_title("You received #{Sanitise.sanitize_for_email(payment.net_received)}")}
+    #{Text.section_title(title)}
     <mj-section
       background-color="#{Styles.canvas_soft()}"
       border-radius="#{Styles.card_radius()}"
@@ -197,9 +216,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
           line-height="1.7"
           align="left"
         >
-          Attendee paid: <strong>#{Sanitise.sanitize_for_email(payment.attendee_paid)}</strong><br/>
-          Tymeslot platform fee: <strong>#{Sanitise.sanitize_for_email(payment.platform_fee)}</strong><br/>
-          You received: <strong>#{Sanitise.sanitize_for_email(payment.net_received)}</strong> (less Stripe processing fees)
+          #{body_lines}
         </mj-text>
         <mj-text
           font-size="13px"
@@ -208,7 +225,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
           align="left"
           padding-top="12px"
         >
-          Funds will arrive on your usual Stripe payout schedule.
+          #{dgettext("emails", "Funds will arrive on your usual Stripe payout schedule.")}
         </mj-text>
       </mj-column>
     </mj-section>
@@ -217,17 +234,28 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
 
   @doc "Renders the organiser payout summary as plain text."
   @spec organizer_summary_text(map()) :: String.t()
+  # The label column used to be padded to a fixed width; that is gone on
+  # purpose, because a translated label is a different length and the padding
+  # would misalign in every locale but English.
   def organizer_summary_text(payment) do
-    String.trim_trailing("""
-    PAYMENT RECEIVED:
-    You received #{payment.net_received}
-    Attendee paid:           #{payment.attendee_paid}
-    Tymeslot platform fee:   #{payment.platform_fee}
-    You received:            #{payment.net_received} (less Stripe processing fees)
-
-    Funds will arrive on your usual Stripe payout schedule.
-    """)
+    [
+      dgettext("emails", "PAYMENT RECEIVED:"),
+      dgettext("emails", "You received %{amount}", amount: payment.net_received),
+      dgettext("emails", "Attendee paid: %{amount}", amount: payment.attendee_paid),
+      dgettext("emails", "Tymeslot platform fee: %{amount}", amount: payment.platform_fee),
+      dgettext("emails", "You received: %{amount} (less Stripe processing fees)",
+        amount: payment.net_received
+      ),
+      "",
+      dgettext("emails", "Funds will arrive on your usual Stripe payout schedule.")
+    ]
+    |> Enum.join("\n")
+    |> String.trim_trailing()
   end
+
+  # The bold markup rides in on the placeholder rather than living inside the
+  # msgid, so the HTML and plain-text summaries share one translation each.
+  defp strong(amount), do: "<strong>#{Sanitise.sanitize_for_email(amount)}</strong>"
 
   defp receipt_button(%{receipt_url: nil}), do: nil
 

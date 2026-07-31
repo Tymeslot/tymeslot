@@ -19,6 +19,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   intermediate maps.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Http, UrlBuilder, XmlHandler}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
@@ -112,7 +114,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   # Radicale returns 403 for auth failures; re-tag so callers treat it as a
   # credential error rather than a permissions error. Every other error passes
   # through unchanged.
-  defp normalise_test_result(:ok, _client), do: {:ok, "CalDAV connection successful"}
+  defp normalise_test_result(:ok, _client),
+    do: {:ok, dgettext("dashboard_calendar_providers", "CalDAV connection successful")}
 
   defp normalise_test_result({:error, :forbidden}, %{provider: :radicale}),
     do: {:error, :unauthorized}

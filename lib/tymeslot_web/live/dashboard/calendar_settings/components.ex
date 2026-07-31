@@ -463,8 +463,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
         Enum.find(calendar_list, & &1.primary)
 
     case target do
-      %{read_only: true} -> "booking target can no longer accept bookings"
-      _not_read_only_or_absent -> nil
+      %{read_only: true} ->
+        dgettext("dashboard_calendar_settings", "booking target can no longer accept bookings")
+
+      _not_read_only_or_absent ->
+        nil
     end
   end
 

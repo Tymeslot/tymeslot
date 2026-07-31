@@ -43,7 +43,7 @@ defmodule Tymeslot.Integrations.Video.ConnectionTest do
         {:ok, %Req.Response{status: 200, body: "{\"items\": []}"}}
       end)
 
-      assert {:ok, "Google Meet connection successful"} =
+      assert {:ok, "Google Meet connected successfully!"} =
                Connection.test_connection(user.id, integration.id)
     end
 

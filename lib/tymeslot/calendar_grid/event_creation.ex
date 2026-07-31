@@ -19,6 +19,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   flashes.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Bookings.CreateAdHoc
@@ -32,14 +34,17 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Utils.MapKeys
 
-  @reauth_flash_message "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
-
   @doc """
   Returns the flash message surfaced to the user when an integration's
   credentials require reauthentication during event creation.
   """
   @spec reauth_flash_message() :: String.t()
-  def reauth_flash_message, do: @reauth_flash_message
+  def reauth_flash_message,
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
+      )
 
   @doc """
   Creates a calendar event from a resolved create-form payload.
@@ -170,8 +175,10 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
       {:error, :no_meet_url, video_context} ->
         warning =
-          "Google Calendar saved the event but didn't return a Meet link — " <>
-            "please try again or add it manually."
+          dgettext(
+            "dashboard_calendar_events",
+            "Google Calendar saved the event but didn't return a Meet link — please try again or add it manually."
+          )
 
         {:ok, result} =
           build_create_success(

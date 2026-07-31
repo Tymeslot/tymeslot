@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   used by CalDAV-compatible providers (e.g., generic CalDAV, Radicale).
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Discovery, Events, Http, UrlBuilder}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
@@ -321,9 +323,16 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     |> List.first()
   end
 
-  defp success_message(:nextcloud), do: "Nextcloud connection successful"
-  defp success_message(:radicale), do: "Radicale connection successful"
-  defp success_message(_arg), do: "CalDAV connection successful"
+  # Same msgids the provider modules themselves use, so the message a user
+  # sees does not depend on which of the two paths produced it.
+  defp success_message(:nextcloud),
+    do: dgettext("dashboard_calendar_providers", "Nextcloud connection successful")
+
+  defp success_message(:radicale),
+    do: dgettext("dashboard_calendar_providers", "Radicale connection successful")
+
+  defp success_message(_arg),
+    do: dgettext("dashboard_calendar_providers", "CalDAV connection successful")
 
   defp validate_credentials(client) do
     username = client[:username] || Map.get(client, :username)

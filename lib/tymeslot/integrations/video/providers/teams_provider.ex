@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   Provides seamless OAuth integration allowing users to create Teams meetings on their behalf.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
@@ -95,10 +97,15 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   def perform_connection_test(config) do
     case get_access_token(config) do
       {:ok, _token} ->
-        {:ok, "Successfully authenticated with Microsoft Teams"}
+        {:ok, dgettext("dashboard_integrations", "Microsoft Teams connected successfully!")}
 
       {:error, reason} ->
-        {:error, "Failed to authenticate with Microsoft Teams: #{inspect(reason)}"}
+        {:error,
+         dgettext(
+           "dashboard_integrations",
+           "Failed to authenticate with Microsoft Teams: %{reason}",
+           reason: inspect(reason)
+         )}
     end
   end
 
@@ -212,9 +219,10 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       )
 
       {:error,
-       "Teams integration is missing required permissions. " <>
-         "Please disconnect and reconnect your Microsoft Teams integration in the dashboard " <>
-         "to grant the necessary permissions for creating meetings."}
+       dgettext(
+         "dashboard_integrations",
+         "Teams integration is missing required permissions. Please disconnect and reconnect your Microsoft Teams integration in the dashboard to grant the necessary permissions for creating meetings."
+       )}
     end
   end
 
@@ -367,7 +375,10 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
         {:ok, integration} ->
           VideoIntegrationQueries.mark_needs_reauth(
             integration,
-            "Microsoft Teams access was revoked. Please reconnect your Teams account."
+            dgettext(
+              "dashboard_integrations",
+              "Microsoft Teams access was revoked. Please reconnect your Teams account."
+            )
           )
 
         {:error, :not_found} ->

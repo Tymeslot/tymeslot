@@ -13,6 +13,8 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
@@ -86,11 +88,17 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
     cond do
       !Enum.empty?(missing_fields) ->
-        {:error, "Missing required fields: #{Enum.join(missing_fields, ", ")}"}
+        {:error,
+         dgettext("dashboard_calendar_providers", "Missing required fields: %{fields}",
+           fields: Enum.join(missing_fields, ", ")
+         )}
 
       !valid_nextcloud_url?(config[:base_url]) ->
         {:error,
-         "Invalid Nextcloud URL. Should be your Nextcloud server URL (e.g., https://cloud.example.com) or calendar URL"}
+         dgettext(
+           "dashboard_calendar_providers",
+           "Invalid Nextcloud URL. Should be your Nextcloud server URL (e.g., https://cloud.example.com) or calendar URL"
+         )}
 
       true ->
         :ok
@@ -163,15 +171,21 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
     case CaldavCommon.test_connection(client) do
       {:ok, _message} ->
-        {:ok, "Nextcloud connection successful"}
+        {:ok, dgettext("dashboard_calendar_providers", "Nextcloud connection successful")}
 
       {:error, :unauthorized} ->
         {:error,
-         "Authentication failed. Check your Nextcloud username and password. Consider using an app password."}
+         dgettext(
+           "dashboard_calendar_providers",
+           "Authentication failed. Check your Nextcloud username and password. Consider using an app password."
+         )}
 
       {:error, :not_found} ->
         {:error,
-         "Nextcloud server not found or CalDAV endpoint not accessible. Check your server URL."}
+         dgettext(
+           "dashboard_calendar_providers",
+           "Nextcloud server not found or CalDAV endpoint not accessible. Check your server URL."
+         )}
 
       {:error, reason} ->
         {:error, reason}

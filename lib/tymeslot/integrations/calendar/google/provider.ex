@@ -11,6 +11,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     display_name: "Google Calendar",
     base_url: "https://www.googleapis.com/calendar/v3"
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -220,13 +222,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
            DateTime.add(DateTime.utc_now(), 1, :day)
          ) do
       {:ok, _events} ->
-        {:ok, "Google Calendar connection successful"}
+        {:ok, dgettext("dashboard_calendar_providers", "Google Calendar connection successful")}
 
       {:error, :unauthorized, _message} ->
         {:error, :unauthorized}
 
       {:error, :rate_limited, _message} ->
-        {:error, "Rate limited - please try again later"}
+        {:error,
+         dgettext("dashboard_calendar_providers", "Rate limited - please try again later")}
 
       {:error, _type, reason} ->
         message = ErrorHandler.sanitize_error_message(reason, :google)

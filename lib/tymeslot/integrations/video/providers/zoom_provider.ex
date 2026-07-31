@@ -8,6 +8,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   calendar events created by the user's calendar provider.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
@@ -106,8 +108,14 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def perform_connection_test(config) do
     case get_access_token(config) do
-      {:ok, _token} -> {:ok, "Successfully authenticated with Zoom"}
-      {:error, reason} -> {:error, "Failed to authenticate with Zoom: #{inspect(reason)}"}
+      {:ok, _token} ->
+        {:ok, dgettext("dashboard_integrations", "Zoom connected successfully!")}
+
+      {:error, reason} ->
+        {:error,
+         dgettext("dashboard_integrations", "Failed to authenticate with Zoom: %{reason}",
+           reason: inspect(reason)
+         )}
     end
   end
 
@@ -495,7 +503,12 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       {:error, _reason} ->
         # Refresh itself failed — credentials are no longer usable.
         flag_revoked_token(config)
-        {:error, "Zoom token refresh failed after 401. Please reconnect your Zoom account."}
+
+        {:error,
+         dgettext(
+           "dashboard_integrations",
+           "Zoom token refresh failed after 401. Please reconnect your Zoom account."
+         )}
     end
   end
 
@@ -586,7 +599,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     flag_for_reauth(
       config,
       "zoom_token_revoked",
-      "Zoom access was revoked. Please reconnect your Zoom account."
+      dgettext(
+        "dashboard_integrations",
+        "Zoom access was revoked. Please reconnect your Zoom account."
+      )
     )
   end
 
@@ -596,8 +612,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     flag_for_reauth(
       config,
       "zoom_missing_scope",
-      "Zoom is missing the permission needed to #{Scopes.action_phrase(operation)}. " <>
-        "Please reconnect your Zoom account."
+      dgettext(
+        "dashboard_integrations",
+        "Zoom is missing the permission needed to %{action}. Please reconnect your Zoom account.",
+        action: Scopes.action_phrase(operation)
+      )
     )
   end
 

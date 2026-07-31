@@ -152,7 +152,7 @@ msgstr "Для перерви встановлено власне значенн
 msgid "Buffer time updated to %{minutes} minutes"
 msgstr "Час перерви оновлено: %{minutes} хв"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:226
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:223
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Календар"

@@ -60,7 +60,7 @@ defmodule Tymeslot.Integrations.VideoTest do
         {:ok, %Req.Response{status: 401, body: "Unauthorized"}}
       end)
 
-      assert {:error, "Invalid API key - Authentication failed"} =
+      assert {:error, {:invalid_api_key, "Invalid API key - Authentication failed"}} =
                Video.create_integration(user.id, :mirotalk, attrs)
     end
 

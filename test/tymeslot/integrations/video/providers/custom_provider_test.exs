@@ -55,7 +55,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
       config = %{custom_meeting_url: ""}
 
       assert {:error, message} = CustomProvider.validate_config(config)
-      assert String.contains?(message, "cannot be empty")
+      assert String.contains?(message, "required")
     end
 
     test "returns error for invalid URL format" do
@@ -101,7 +101,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
       config = %{custom_meeting_url: ""}
 
       assert {:error, message} = CustomProvider.create_meeting_room(config)
-      assert String.contains?(message, "cannot be empty")
+      assert String.contains?(message, "required")
     end
 
     test "returns error for invalid URL" do

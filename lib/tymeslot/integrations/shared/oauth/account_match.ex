@@ -4,6 +4,8 @@ defmodule Tymeslot.Integrations.Common.OAuth.AccountMatch do
   and handling race conditions during creation.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   @doc """
@@ -32,7 +34,10 @@ defmodule Tymeslot.Integrations.Common.OAuth.AccountMatch do
         )
 
         {:error,
-         "Could not verify your account identity. Please try again. If the problem persists, remove and re-add the integration."}
+         dgettext(
+           "dashboard_integrations",
+           "Could not verify your account identity. Please try again. If the problem persists, remove and re-add the integration."
+         )}
 
       existing.provider_account_id == new_account_id ->
         update_fn.()
@@ -45,7 +50,10 @@ defmodule Tymeslot.Integrations.Common.OAuth.AccountMatch do
         )
 
         {:error,
-         "You authenticated with a different account than the one linked to this integration. Please use the correct account."}
+         dgettext(
+           "dashboard_integrations",
+           "You authenticated with a different account than the one linked to this integration. Please use the correct account."
+         )}
     end
   end
 

@@ -352,7 +352,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
       Enum.reduce(results, {0, []}, fn
         {:ok, {_name, {:ok, _result}}}, {s, f} -> {s + 1, f}
         {:ok, {name, _error}}, {s, f} -> {s, [name | f]}
-        _other, {s, f} -> {s, ["unknown" | f]}
+        # A result shape we cannot read a calendar name out of; it still has to
+        # be named in the "… failed: %{detail}" list, so it gets a placeholder
+        # that reads as a name rather than a bare adjective.
+        _other, {s, f} -> {s, [dgettext("dashboard_calendar_settings", "unknown calendar") | f]}
       end)
 
     failures = length(failed_names)

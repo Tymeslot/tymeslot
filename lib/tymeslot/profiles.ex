@@ -5,6 +5,8 @@ defmodule Tymeslot.Profiles do
   specialized tasks to subcomponents.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Availability.WeeklySchedule
@@ -248,7 +250,11 @@ defmodule Tymeslot.Profiles do
       {:ok, updated_profile}
     else
       {:error, :rate_limited} ->
-        {:error, "Too many username change attempts. Please try again later."}
+        {:error,
+         dgettext(
+           "dashboard_profile",
+           "Too many username change attempts. Please try again later."
+         )}
 
       {:error, reason} ->
         {:error, reason}

@@ -44,6 +44,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       states: [:available, :scheduled, :executing, :retryable, :suspended]
     ]
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Events, as: CalDAVEvents
@@ -511,7 +513,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
     case CalendarManagement.mark_needs_reauth(
            integration,
-           "The booking calendar no longer exists on the CalDAV server. Please reconnect the integration and select a different calendar."
+           dgettext(
+             "dashboard_calendar_providers",
+             "The booking calendar no longer exists on the CalDAV server. Please reconnect the integration and select a different calendar."
+           )
          ) do
       {:ok, _updated} ->
         {:discard, "CalDAV booking calendar not found — user action required"}
@@ -613,7 +618,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
     case CalendarManagement.mark_needs_reauth(
            integration,
-           "CalDAV server rejected the stored credentials. Please reconnect the integration."
+           dgettext(
+             "dashboard_calendar_providers",
+             "CalDAV server rejected the stored credentials. Please reconnect the integration."
+           )
          ) do
       {:ok, _updated} ->
         {:discard, "CalDAV server rejected credentials — reauthentication required"}

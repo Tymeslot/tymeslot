@@ -11,6 +11,8 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
@@ -112,9 +114,17 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
   def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      success_message: "Zimbra connection successful",
-      unauthorized_message: "Authentication failed. Check your Zimbra username and password.",
-      not_found_message: "Zimbra server not found. Check your server URL.",
+      success_message: dgettext("dashboard_calendar_providers", "Zimbra connection successful"),
+      unauthorized_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Authentication failed. Check your Zimbra username and password."
+        ),
+      not_found_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Zimbra server not found. Check your server URL."
+        ),
       error_formatter: &format_error/1
     )
   end
@@ -170,9 +180,13 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   defp validate_zimbra_url(url) do
     case UrlValidation.validate_http_url(url,
            enforce_https_for_public: true,
-           https_error_message: "Use HTTPS for non-local Zimbra servers",
+           https_error_message:
+             dgettext("dashboard_calendar_providers", "Use HTTPS for non-local Zimbra servers"),
            invalid_message:
-             "Invalid Zimbra URL. Should be your Zimbra server URL (e.g., https://mail.example.com) or full CalDAV URL (e.g., https://mail.example.com/dav/user@example.com)"
+             dgettext(
+               "dashboard_calendar_providers",
+               "Invalid Zimbra URL. Should be your Zimbra server URL (e.g., https://mail.example.com) or full CalDAV URL (e.g., https://mail.example.com/dav/user@example.com)"
+             )
          ) do
       :ok -> :ok
       {:error, message} -> {:error, message}

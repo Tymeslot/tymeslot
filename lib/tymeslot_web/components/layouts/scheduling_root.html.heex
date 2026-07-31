@@ -11,18 +11,24 @@
     <meta name="csrf-token" content={get_csrf_token()} />
     <meta name="csp-nonce" content={assigns[:csp_nonce]} />
     <.live_title suffix=" · Tymeslot">
-      {assigns[:page_title] || "Schedule a Meeting"}
+      {assigns[:page_title] || dgettext("booking", "Schedule a meeting")}
     </.live_title>
 
     <%!-- Social share (Open Graph / Twitter) preview for booking links --%>
     <meta property="og:type" content="profile" />
     <meta property="og:site_name" content="Tymeslot" />
-    <meta property="og:title" content={assigns[:page_title] || "Schedule a Meeting"} />
+    <meta
+      property="og:title"
+      content={assigns[:page_title] || dgettext("booking", "Schedule a meeting")}
+    />
     <meta property="og:description" content={booking_og_description(assigns)} />
     <meta property="og:url" content={current_url(assigns)} />
     <meta property="og:image" content={booking_og_image(assigns)} />
     <meta name="twitter:card" content={booking_twitter_card(assigns)} />
-    <meta name="twitter:title" content={assigns[:page_title] || "Schedule a Meeting"} />
+    <meta
+      name="twitter:title"
+      content={assigns[:page_title] || dgettext("booking", "Schedule a meeting")}
+    />
     <meta name="twitter:description" content={booking_og_description(assigns)} />
     <meta name="twitter:image" content={booking_og_image(assigns)} />
 
@@ -47,7 +53,12 @@
     <.analytics_scripts nonce={assigns[:csp_nonce]} />
   </head>
   <body class={"theme-#{assigns[:theme_id] || "1"} #{theme_class(assigns[:theme_id] || "1")}"}>
-    <.noscript_warning message="This scheduling page requires JavaScript to book meetings. Please enable it to continue." />
+    <.noscript_warning message={
+      dgettext(
+        "booking",
+        "This scheduling page requires JavaScript to book meetings. Please enable it to continue."
+      )
+    } />
     <.flash_group flash={@flash} id="scheduling-flash-group" />
     <main>
       {@inner_content}

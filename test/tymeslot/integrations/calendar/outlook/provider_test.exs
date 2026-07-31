@@ -563,7 +563,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
         {:ok, []}
       end)
 
-      assert {:ok, "Outlook Calendar connection successful"} =
+      assert {:ok, "Outlook Calendar connected successfully!"} =
                Provider.perform_connection_test(integration)
     end
 

@@ -31,7 +31,7 @@ msgstr ""
 msgid "At least 8 characters"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/flash.ex:163
+#: lib/tymeslot_web/components/core_components/flash.ex:164
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr ""
@@ -51,7 +51,7 @@ msgstr ""
 msgid "Change language"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/flash.ex:85
+#: lib/tymeslot_web/components/core_components/flash.ex:86
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr ""
@@ -66,7 +66,7 @@ msgstr ""
 msgid "Confirm"
 msgstr ""
 
-#: lib/tymeslot_web/components/core_components/flash.ex:155
+#: lib/tymeslot_web/components/core_components/flash.ex:156
 #, elixir-autogen, elixir-format
 msgid "Connection Lost"
 msgstr ""
@@ -138,12 +138,12 @@ msgstr ""
 msgid "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge."
 msgstr ""
 
-#: lib/tymeslot_web/components/layouts/root.html.heex:51
+#: lib/tymeslot_web/components/layouts/root.html.heex:50
 #, elixir-autogen, elixir-format
 msgid "This app requires JavaScript to function. Please enable it in your browser settings."
 msgstr ""
 
-#: lib/tymeslot_web/components/timezone_dropdown.ex:166
+#: lib/tymeslot_web/components/timezone_dropdown.ex:154
 #, elixir-autogen, elixir-format
 msgid "This timezone will be used for your availability and scheduling."
 msgstr ""
@@ -169,7 +169,7 @@ msgid "application"
 msgstr ""
 
 #: lib/tymeslot_web/components/timezone_dropdown.ex:74
-#: lib/tymeslot_web/components/timezone_dropdown.ex:154
+#: lib/tymeslot_web/components/timezone_dropdown.ex:142
 #, elixir-autogen, elixir-format
 msgid "local time"
 msgstr ""
@@ -226,4 +226,9 @@ msgstr ""
 #: lib/tymeslot_web/components/site_components.ex:450
 #, elixir-autogen, elixir-format
 msgid "© %{year} Tymeslot. All rights reserved."
+msgstr ""
+
+#: lib/tymeslot_web/components/core_components/containers.ex:156
+#, elixir-autogen, elixir-format
+msgid "Saving changes..."
 msgstr ""

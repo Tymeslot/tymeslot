@@ -43,6 +43,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   - Be reachable (in perform_connection_test only)
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
@@ -68,11 +70,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     Logger.info("Creating custom video meeting room")
 
     case Map.get(config, :custom_meeting_url) do
-      nil ->
-        {:error, "Custom meeting URL is required"}
-
-      "" ->
-        {:error, "Custom meeting URL cannot be empty"}
+      url when url in [nil, ""] ->
+        {:error, custom_url_required_message()}
 
       url ->
         with {:ok, processed_url} <- process_template(url, config),
@@ -127,7 +126,10 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
 
     if uri.fragment && String.contains?(uri.fragment, TemplateConfig.template_variable()) do
       {:error,
-       "Template variable cannot be used in URL fragment (#). Fragments are not sent to the server, so all meetings would use the same room. Use the template in the path instead: https://example.com/{{meeting_id}}"}
+       dgettext(
+         "dashboard_integrations",
+         "Template variable cannot be used in URL fragment (#). Fragments are not sent to the server, so all meetings would use the same room. Use the template in the path instead: https://example.com/{{meeting_id}}"
+       )}
     else
       :ok
     end
@@ -186,7 +188,12 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
       :ok
     else
       {:error,
-       "Processed URL exceeds maximum length of #{max_length} characters (got #{url_length})"}
+       dgettext(
+         "dashboard_integrations",
+         "Processed URL exceeds maximum length of %{max_length} characters (got %{url_length})",
+         max_length: max_length,
+         url_length: url_length
+       )}
     end
   end
 
@@ -209,11 +216,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def perform_connection_test(config) do
     case Map.get(config, :custom_meeting_url) do
-      nil ->
-        {:error, "No custom meeting URL provided"}
-
-      "" ->
-        {:error, "Custom meeting URL cannot be empty"}
+      url when url in [nil, ""] ->
+        {:error, custom_url_required_message()}
 
       url ->
         # Validate template position first
@@ -225,7 +229,13 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
           with :ok <- assert_http_or_https(test_url),
                :ok <- assert_public_host(test_url),
                {:ok, status} <- check_reachable(test_url) do
-            {:ok, "URL is reachable (HTTP #{status})"}
+            # Shares the msgid the non-2xx branches use: the caller wraps a
+            # success in "✓ Custom provider configured - …", so the status
+            # line does not have to carry the verdict itself.
+            {:ok,
+             dgettext("dashboard_integrations", "URL responded with HTTP %{status}",
+               status: status
+             )}
           else
             {:error, reason} -> {:error, reason}
           end
@@ -259,11 +269,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def validate_config(config) do
     case Map.get(config, :custom_meeting_url) do
-      nil ->
-        {:error, "Custom meeting URL is required"}
-
-      "" ->
-        {:error, "Custom meeting URL cannot be empty"}
+      url when url in [nil, ""] ->
+        {:error, custom_url_required_message()}
 
       url ->
         # Validate template position first
@@ -274,10 +281,18 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
 
           if valid_url?(test_url),
             do: :ok,
-            else: {:error, "Invalid URL format. Please provide a valid HTTP/HTTPS URL."}
+            else:
+              {:error,
+               dgettext(
+                 "dashboard_integrations",
+                 "Invalid URL format. Please provide a valid HTTP/HTTPS URL."
+               )}
         end
     end
   end
+
+  defp custom_url_required_message,
+    do: dgettext("dashboard_integrations", "Custom meeting URL is required")
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def capabilities, do: @capabilities
@@ -330,7 +345,11 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     if uri.scheme in ["http", "https"] do
       :ok
     else
-      {:error, "Invalid URL scheme. Only http and https are supported"}
+      {:error,
+       dgettext(
+         "dashboard_integrations",
+         "Invalid URL scheme. Only http and https are supported"
+       )}
     end
   end
 
@@ -343,9 +362,16 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
          false <- private_or_loopback_ip?(ip) do
       :ok
     else
-      false -> {:error, "Invalid host in URL"}
-      {:error, _reason} -> {:error, "Could not resolve host: #{host}"}
-      true -> {:error, "URL resolves to a private or loopback address"}
+      false ->
+        {:error, dgettext("dashboard_integrations", "Invalid hostname in URL")}
+
+      {:error, _reason} ->
+        {:error,
+         dgettext("dashboard_integrations", "Could not resolve host: %{host}", host: host)}
+
+      true ->
+        {:error,
+         dgettext("dashboard_integrations", "URL resolves to a private or loopback address")}
     end
   end
 
@@ -372,7 +398,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
         do_get(url, opts)
 
       {:ok, %{status: status}} ->
-        {:error, "URL responded with HTTP #{status}"}
+        {:error,
+         dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)}
 
       {:error, _reason} ->
         do_get(url, opts)
@@ -385,22 +412,29 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
         {:ok, status}
 
       {:ok, %{status: status}} ->
-        {:error, "URL responded with HTTP #{status}"}
+        {:error,
+         dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)}
 
       {:error, exception} when is_exception(exception) ->
         case exception do
           %Mint.TransportError{reason: :timeout} ->
-            {:error, "Connection timeout while reaching the URL"}
+            {:error, url_timeout_message()}
 
           %Req.TransportError{reason: :timeout} ->
-            {:error, "Connection timeout while reaching the URL"}
+            {:error, url_timeout_message()}
 
           _network_exception ->
-            {:error, "Failed to reach URL: #{Exception.message(exception)}"}
+            {:error, unreachable_url_message(Exception.message(exception))}
         end
 
       {:error, reason} ->
-        {:error, "Failed to reach URL: #{inspect(reason)}"}
+        {:error, unreachable_url_message(inspect(reason))}
     end
   end
+
+  defp url_timeout_message,
+    do: dgettext("dashboard_integrations", "Connection timeout while reaching the URL")
+
+  defp unreachable_url_message(reason),
+    do: dgettext("dashboard_integrations", "Failed to reach URL: %{reason}", reason: reason)
 end

@@ -10,6 +10,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   - Outlook: Microsoft Outlook Calendar with OAuth
   """
   use Ecto.Schema
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Ecto.Changeset
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
   alias Tymeslot.Integrations.Calendar.CalendarEntry
@@ -162,11 +164,15 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     |> check_constraint(:provider, name: :calendar_integrations_provider_check)
     |> unique_constraint([:user_id, :provider, :provider_account_id],
       name: :unique_active_calendar_account_per_user,
-      message: "an integration for this account already exists"
+      # `TymeslotWeb.Components.CoreComponents.Forms.translate_error/1` runs the stored msgid
+      # through the "errors" domain at render time, so the changeset must
+      # carry the untranslated msgid — hence `dgettext_noop/2`, not
+      # `dgettext/2`, which would translate here and miss the lookup there.
+      message: dgettext_noop("errors", "an integration for this account already exists")
     )
     |> unique_constraint([:user_id, :provider],
       name: :unique_active_calendar_null_account_per_user,
-      message: "an integration for this provider already exists"
+      message: dgettext_noop("errors", "an integration for this provider already exists")
     )
   end
 

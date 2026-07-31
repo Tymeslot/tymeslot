@@ -151,7 +151,7 @@ msgstr "Margine impostato su un valore personalizzato"
 msgid "Buffer time updated to %{minutes} minutes"
 msgstr "Margine aggiornato a %{minutes} minuti"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:226
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex:223
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Calendario"

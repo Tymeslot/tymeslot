@@ -239,16 +239,22 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     success_message =
       cond do
         Demo.demo_mode?(socket) and socket.assigns[:is_rescheduling] ->
-          "Demo: Meeting rescheduled successfully! (Using the app, you would receive a confirmation email)"
+          dgettext(
+            "booking",
+            "Demo: Meeting rescheduled successfully! (Using the app, you would receive a confirmation email)"
+          )
 
         Demo.demo_mode?(socket) ->
-          "Demo: Booking submitted successfully! (Using the app, you would receive a confirmation email)"
+          dgettext(
+            "booking",
+            "Demo: Booking submitted successfully! (Using the app, you would receive a confirmation email)"
+          )
 
         socket.assigns[:is_rescheduling] ->
-          "Meeting rescheduled successfully!"
+          dgettext("booking", "Meeting rescheduled successfully!")
 
         true ->
-          "Booking submitted successfully!"
+          dgettext("booking", "Booking submitted successfully!")
       end
 
     socket =

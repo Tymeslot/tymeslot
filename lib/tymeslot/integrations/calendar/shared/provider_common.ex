@@ -3,6 +3,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   Utilities shared across calendar provider implementations.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
@@ -20,7 +22,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
     if Enum.empty?(missing_fields) do
       :ok
     else
-      {:error, "Missing required fields: #{Enum.join(missing_fields, ", ")}"}
+      {:error,
+       dgettext("dashboard_calendar_providers", "Missing required fields: %{fields}",
+         fields: Enum.join(missing_fields, ", ")
+       )}
     end
   end
 
@@ -42,7 +47,12 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   """
   @spec validate_url(String.t(), keyword()) :: :ok | {:error, String.t()}
   def validate_url(url, opts \\ []) do
-    invalid_message = Keyword.get(opts, :message, "Invalid URL format")
+    invalid_message =
+      Keyword.get(
+        opts,
+        :message,
+        dgettext("dashboard_calendar_providers", "Invalid URL format")
+      )
 
     allow_private =
       Keyword.get(
@@ -56,8 +66,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       disallowed_protocol_error: invalid_message,
       enforce_https_for_public: true,
       block_private_ips: not allow_private,
-      https_error_message: "Use HTTPS for non-local calendar servers",
-      private_ip_error_message: "Private or local network addresses are not allowed"
+      https_error_message:
+        dgettext("dashboard_calendar_providers", "Use HTTPS for non-local calendar servers"),
+      private_ip_error_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Private or local network addresses are not allowed"
+        )
     )
   end
 

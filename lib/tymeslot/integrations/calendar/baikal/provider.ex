@@ -9,6 +9,8 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
@@ -82,7 +84,10 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
     with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]) do
       ProviderCommon.validate_url(config[:base_url],
         message:
-          "Invalid Baikal URL. Should be your Baikal server URL including /dav.php (e.g., https://baikal.example.com/dav.php)"
+          dgettext(
+            "dashboard_calendar_providers",
+            "Invalid Baikal URL. Should be your Baikal server URL including /dav.php (e.g., https://baikal.example.com/dav.php)"
+          )
       )
     end
   end
@@ -111,10 +116,17 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
   @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
   def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      success_message: "Baikal connection successful",
-      unauthorized_message: "Authentication failed. Check your Baikal username and password.",
+      success_message: dgettext("dashboard_calendar_providers", "Baikal connection successful"),
+      unauthorized_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Authentication failed. Check your Baikal username and password."
+        ),
       not_found_message:
-        "Baikal server not found. Confirm the URL includes /dav.php (e.g., https://baikal.example.com/dav.php).",
+        dgettext(
+          "dashboard_calendar_providers",
+          "Baikal server not found. Confirm the URL includes /dav.php (e.g., https://baikal.example.com/dav.php)."
+        ),
       error_formatter: &format_error/1
     )
   end
@@ -203,5 +215,8 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
   end
 
   defp format_error({:error, message}) when is_binary(message), do: message
-  defp format_error(error), do: "Baikal error: #{inspect(error)}"
+
+  defp format_error(error),
+    do:
+      dgettext("dashboard_calendar_providers", "Baikal error: %{detail}", detail: inspect(error))
 end

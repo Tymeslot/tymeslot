@@ -8,6 +8,8 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
@@ -81,7 +83,10 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
     with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]) do
       ProviderCommon.validate_url(config[:base_url],
         message:
-          "Invalid Radicale URL. Should be your Radicale server URL (e.g., https://radicale.example.com:5232)"
+          dgettext(
+            "dashboard_calendar_providers",
+            "Invalid Radicale URL. Should be your Radicale server URL (e.g., https://radicale.example.com:5232)"
+          )
       )
     end
   end
@@ -110,9 +115,17 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
   @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
   def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      success_message: "Radicale connection successful",
-      unauthorized_message: "Authentication failed. Check your Radicale username and password.",
-      not_found_message: "Radicale server not found. Check your server URL and port if needed.",
+      success_message: dgettext("dashboard_calendar_providers", "Radicale connection successful"),
+      unauthorized_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Authentication failed. Check your Radicale username and password."
+        ),
+      not_found_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Radicale server not found. Check your server URL and port if needed."
+        ),
       error_formatter: &format_error/1
     )
   end
@@ -203,5 +216,10 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
   end
 
   defp format_error({:error, message}) when is_binary(message), do: message
-  defp format_error(error), do: "Radicale error: #{inspect(error)}"
+
+  defp format_error(error),
+    do:
+      dgettext("dashboard_calendar_providers", "Radicale error: %{detail}",
+        detail: inspect(error)
+      )
 end

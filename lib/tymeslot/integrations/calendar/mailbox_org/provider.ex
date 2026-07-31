@@ -18,6 +18,8 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
@@ -122,11 +124,18 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
   @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
   def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      success_message: "mailbox.org connection successful",
+      success_message:
+        dgettext("dashboard_calendar_providers", "mailbox.org connection successful"),
       unauthorized_message:
-        "Authentication failed. If 2FA is enabled, generate an application-specific password in mailbox.org Settings → Security.",
+        dgettext(
+          "dashboard_calendar_providers",
+          "Authentication failed. If 2FA is enabled, generate an application-specific password in mailbox.org Settings → Security."
+        ),
       not_found_message:
-        "mailbox.org CalDAV endpoint not found. Confirm the server URL is https://dav.mailbox.org",
+        dgettext(
+          "dashboard_calendar_providers",
+          "mailbox.org CalDAV endpoint not found. Confirm the server URL is https://dav.mailbox.org"
+        ),
       error_formatter: &format_error/1
     )
   end
@@ -180,9 +189,12 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
   defp validate_mailbox_url(url) do
     UrlValidation.validate_http_url(url,
       enforce_https_for_public: true,
-      https_error_message: "mailbox.org requires HTTPS",
+      https_error_message: dgettext("dashboard_calendar_providers", "mailbox.org requires HTTPS"),
       invalid_message:
-        "Invalid mailbox.org URL. Use https://dav.mailbox.org (or your custom mailbox.org-compatible CalDAV endpoint)."
+        dgettext(
+          "dashboard_calendar_providers",
+          "Invalid mailbox.org URL. Use https://dav.mailbox.org (or your custom mailbox.org-compatible CalDAV endpoint)."
+        )
     )
   end
 

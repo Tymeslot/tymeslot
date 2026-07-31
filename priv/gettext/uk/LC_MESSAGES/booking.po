@@ -150,16 +150,6 @@ msgstr "1 тиждень"
 msgid "1 year in advance"
 msgstr "1 рік"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:144
-#, elixir-autogen, elixir-format
-msgid "15 Minutes"
-msgstr "15 хвилин"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:154
-#, elixir-autogen, elixir-format
-msgid "30 Minutes"
-msgstr "30 хвилин"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:301
 #, elixir-autogen, elixir-format
 msgid "90 days in advance"
@@ -388,11 +378,6 @@ msgstr "Вітаю! Я %{name}."
 msgid "I acknowledge the above"
 msgstr "Я підтверджую вищезазначене"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:156
-#, elixir-autogen, elixir-format
-msgid "In-depth discussion or detailed review"
-msgstr "Поглиблене обговорення або детальний огляд"
-
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:56
 #, elixir-autogen, elixir-format
 msgid "Invalid date/time"
@@ -523,7 +508,7 @@ msgstr "Потрібно перенести зустріч? Перевірте �
 msgid "No"
 msgstr "Ні"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:125
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:124
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:74
 #, elixir-autogen, elixir-format
 msgid "No meeting types available"
@@ -560,19 +545,19 @@ msgstr "Платіж скасовано"
 msgid "Payment was cancelled. Please try booking again."
 msgstr "Платіж було скасовано. Будь ласка, спробуйте забронювати ще раз."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:126
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:125
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:75
 #, elixir-autogen, elixir-format
 msgid "Please contact the organizer"
 msgstr "Зв’яжіться з організатором"
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:469
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:487
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below before submitting."
 msgstr "Будь ласка, виправте наведені нижче помилки перед надсиланням."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:113
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:320
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:340
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below."
 msgstr "Будь ласка, виправте наведені нижче помилки."
@@ -590,7 +575,7 @@ msgstr "Заповніть усі обов’язкові поля"
 msgid "Please select a date to see available times"
 msgstr "Оберіть дату, щоб побачити вільний час"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:172
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:151
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration first"
 msgstr "Спочатку оберіть тривалість зустрічі"
@@ -617,11 +602,6 @@ msgstr "Політика конфіденційності"
 #, elixir-autogen, elixir-format
 msgid "Question %{n} of %{m}"
 msgstr "Запитання %{n} з %{m}"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:146
-#, elixir-autogen, elixir-format
-msgid "Quick chat or brief consultation"
-msgstr "Швидка розмова або коротка консультація"
 
 #: lib/tymeslot_web/themes/quill/meeting/reschedule.ex:97
 #: lib/tymeslot_web/themes/rhythm/meeting/reschedule.ex:80
@@ -973,7 +953,7 @@ msgid "name"
 msgstr "Ім’я"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex:87
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:176
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:155
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex:87
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:118
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:338
@@ -1177,7 +1157,7 @@ msgstr "Забронюйте зустріч з %{name}. Оберіть зруч�
 msgid "Pick a time that works for you and book a meeting in seconds."
 msgstr "Оберіть зручний для вас час і забронюйте зустріч за лічені секунди."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:454
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:473
 #, elixir-autogen, elixir-format
 msgid "Preview session expired. Reload the page to continue."
 msgstr "Сеанс попереднього перегляду завершився. Перезавантажте сторінку, щоб продовжити."
@@ -1264,12 +1244,12 @@ msgstr "Некоректний тип зустрічі"
 msgid "Payment not found."
 msgstr "Оплату не знайдено."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:378
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:398
 #, elixir-autogen, elixir-format
 msgid "Security verification failed. Please try again."
 msgstr "Помилка перевірки безпеки. Спробуйте ще раз."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:389
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:409
 #, elixir-autogen, elixir-format
 msgid "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
 msgstr "Перевірка безпеки наразі недоступна. Це може бути пов'язано з вимкненим JavaScript, розширеннями конфіденційності в браузері (Privacy Badger, uBlock Origin тощо) або політиками мережевої безпеки. Змініть налаштування або зверніться до служби підтримки, якщо проблема не зникне."
@@ -1290,3 +1270,35 @@ msgstr "Ваше бронювання вже обробляється. Будь 
 #, elixir-autogen, elixir-format
 msgid "Pick an option below."
 msgstr "Оберіть варіант нижче."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:257
+#, elixir-autogen, elixir-format
+msgid "Booking submitted successfully!"
+msgstr "Бронювання успішно надіслано!"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:248
+#, elixir-autogen, elixir-format
+msgid "Demo: Booking submitted successfully! (Using the app, you would receive a confirmation email)"
+msgstr "Демо: бронювання успішно надіслано! (У застосунку ви б отримали лист із підтвердженням)"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:242
+#, elixir-autogen, elixir-format
+msgid "Demo: Meeting rescheduled successfully! (Using the app, you would receive a confirmation email)"
+msgstr "Демо: зустріч успішно перенесено! (У застосунку ви б отримали лист із підтвердженням)"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:254
+#, elixir-autogen, elixir-format
+msgid "Meeting rescheduled successfully!"
+msgstr "Зустріч успішно перенесено!"
+
+#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:14
+#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:22
+#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:30
+#, elixir-autogen, elixir-format
+msgid "Schedule a meeting"
+msgstr "Запланувати зустріч"
+
+#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:57
+#, elixir-autogen, elixir-format
+msgid "This scheduling page requires JavaScript to book meetings. Please enable it to continue."
+msgstr "Для бронювання зустрічей на цій сторінці потрібен JavaScript. Увімкніть його, щоб продовжити."

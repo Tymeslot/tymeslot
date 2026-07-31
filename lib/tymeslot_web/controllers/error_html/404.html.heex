@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>Page not found · Tymeslot</title>
+    <title>{dgettext("errors", "Page not found")} · Tymeslot</title>
     <link rel="icon" type="image/svg+xml" href={~p"/images/brand/favicon.svg"} />
     <%!--
       Self-contained on purpose: this template renders with no layout (the
@@ -39,20 +39,20 @@
         </div>
 
         <p class="mt-6 text-token-sm font-bold uppercase tracking-[0.2em] text-turquoise-600">
-          Error 404
+          {dgettext("errors", "Error 404")}
         </p>
         <h1 class="mt-2 text-token-3xl font-black tracking-tight text-tymeslot-900">
-          This page doesn't exist
+          {dgettext("errors", "This page doesn't exist")}
         </h1>
         <p class="mt-3 text-token-base text-tymeslot-500">
-          The link may be broken, or the page may have moved.
+          {dgettext("errors", "The link may be broken, or the page may have moved.")}
         </p>
 
         <a
           href={~p"/"}
           class="mt-8 inline-flex items-center justify-center gap-2 rounded-token-2xl bg-linear-to-br from-turquoise-600 to-cyan-600 px-7 py-3.5 text-token-base font-bold text-white shadow-lg shadow-turquoise-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:from-turquoise-700 hover:to-cyan-700 hover:shadow-xl hover:shadow-turquoise-500/40"
         >
-          Go to Tymeslot
+          {dgettext("errors", "Go to Tymeslot")}
           <.icon name="hero-arrow-right-mini" class="h-4 w-4" />
         </a>
       </div>

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TabNav do
   off; Slack is omitted entirely.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.Icons.IconComponents
 
@@ -25,7 +26,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TabNav do
         class={tab_class(@active_tab == :webhooks)}
       >
         <IconComponents.icon name={:webhook} class="w-5 h-5" />
-        <span>Webhooks</span>
+        <span>{dgettext("dashboard_automation", "Webhooks")}</span>
       </button>
 
       <%= if @telegram_enabled do %>
@@ -34,13 +35,15 @@ defmodule TymeslotWeb.Dashboard.Automation.TabNav do
           class={tab_class(@active_tab == :telegram)}
         >
           <IconComponents.icon name={:telegram} class="w-5 h-5" />
-          <span>Telegram</span>
+          <span>{dgettext("dashboard_automation", "Telegram")}</span>
         </button>
       <% else %>
         <div class="flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 bg-transparent border-transparent text-tymeslot-400 opacity-60 cursor-not-allowed">
           <IconComponents.icon name={:telegram} class="w-5 h-5" />
-          <span>Telegram</span>
-          <span class="ml-2 text-token-2xs bg-tymeslot-100 px-2 py-0.5 rounded-full uppercase tracking-tighter">Disabled</span>
+          <span>{dgettext("dashboard_automation", "Telegram")}</span>
+          <span class="ml-2 text-token-2xs bg-tymeslot-100 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+            {dgettext("dashboard_automation_chat", "Disabled")}
+          </span>
         </div>
       <% end %>
 
@@ -50,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TabNav do
           class={tab_class(@active_tab == :slack)}
         >
           <IconComponents.icon name={:slack} class="w-5 h-5" />
-          <span>Slack</span>
+          <span>{dgettext("dashboard_automation", "Slack")}</span>
         </button>
       <% end %>
     </div>

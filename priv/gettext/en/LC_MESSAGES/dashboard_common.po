@@ -39,6 +39,9 @@ msgstr ""
 msgid "Availability"
 msgstr ""
 
+#: lib/tymeslot/integrations/calendar/display_helpers.ex:98
+#: lib/tymeslot/integrations/calendar/display_helpers.ex:146
+#: lib/tymeslot/integrations/calendar/display_helpers.ex:157
 #: lib/tymeslot_web/components/dashboard_layout.ex:179
 #: lib/tymeslot_web/helpers/page_titles.ex:23
 #, elixir-autogen, elixir-format

@@ -19,6 +19,8 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   @behaviour Tymeslot.Integrations.Video.Providers.ProviderBehaviour
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Infrastructure.Config
@@ -179,11 +181,13 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
     with {:ok, valid_token} <- ensure_valid_token(config),
          {:ok, _calendar_list} <- get_calendar_list(valid_token) do
-      {:ok, "Google Meet connection successful"}
+      {:ok, dgettext("dashboard_integrations", "Google Meet connected successfully!")}
     else
       {:error, reason} ->
         Logger.error("Google Meet connection test failed", reason: Redactor.redact(reason))
-        {:error, "Connection test failed: #{reason}"}
+
+        {:error,
+         dgettext("dashboard_integrations", "Connection test failed: %{reason}", reason: reason)}
     end
   end
 
@@ -491,7 +495,10 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
         {:ok, integration} ->
           VideoIntegrationQueries.mark_needs_reauth(
             integration,
-            "Google Meet access was revoked. Please reconnect your Google account."
+            dgettext(
+              "dashboard_integrations",
+              "Google Meet access was revoked. Please reconnect your Google account."
+            )
           )
 
         {:error, :not_found} ->
@@ -513,8 +520,12 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     case Config.http_client_module().request(:get, url, "", headers, []) do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
         case Jason.decode(response_body) do
-          {:ok, list} -> {:ok, list}
-          {:error, _decode_error} -> {:error, "Invalid JSON response from Google Calendar API"}
+          {:ok, list} ->
+            {:ok, list}
+
+          {:error, _decode_error} ->
+            {:error,
+             dgettext("dashboard_integrations", "Invalid JSON response from Google Calendar API")}
         end
 
       {:ok, %Req.Response{status: status, body: body}} ->
@@ -523,7 +534,10 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
           body: Redactor.redact_and_truncate(body)
         )
 
-        {:error, "HTTP #{status} (see logs for details)"}
+        {:error,
+         dgettext("dashboard_integrations", "HTTP %{status} (see logs for details)",
+           status: status
+         )}
 
       {:error, reason} ->
         {:error, inspect(reason)}

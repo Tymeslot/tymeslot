@@ -11,6 +11,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     display_name: "Outlook Calendar",
     base_url: "https://graph.microsoft.com/v1.0"
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -193,13 +195,15 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
            DateTime.add(DateTime.utc_now(), 1, :day)
          ) do
       {:ok, _events} ->
-        {:ok, "Outlook Calendar connection successful"}
+        {:ok,
+         dgettext("dashboard_calendar_providers", "Outlook Calendar connected successfully!")}
 
       {:error, :unauthorized, _message} ->
         {:error, :unauthorized}
 
       {:error, :rate_limited, _message} ->
-        {:error, "Rate limited - please try again later"}
+        {:error,
+         dgettext("dashboard_calendar_providers", "Rate limited - please try again later")}
 
       {:error, _error_type, reason} ->
         message = ErrorHandler.sanitize_error_message(reason, :outlook)

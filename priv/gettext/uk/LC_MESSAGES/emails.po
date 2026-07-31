@@ -21,17 +21,17 @@ msgstr "ДІЇ:"
 msgid "ATTENDEE INFORMATION:"
 msgstr "ІНФОРМАЦІЯ ПРО УЧАСНИКА:"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:108
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:107
 #, elixir-autogen, elixir-format
 msgid "Appointment Confirmed - %{date} with %{name}"
 msgstr "Зустріч підтверджено - %{date} з %{name}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:274
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:284
 #, elixir-autogen, elixir-format
 msgid "Appointment Confirmed!"
 msgstr "Зустріч підтверджено!"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:363
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:376
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:173
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:222
 #, elixir-autogen, elixir-format
@@ -51,8 +51,8 @@ msgstr "ДЕТАЛІ СКАСОВАНОЇ ЗУСТРІЧІ:"
 msgid "Cancel"
 msgstr "Скасувати"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:80
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:214
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:79
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:227
 #, elixir-autogen, elixir-format
 msgid "Cancel Appointment"
 msgstr "Скасувати зустріч"
@@ -109,10 +109,10 @@ msgstr "Тривалість:"
 msgid "Email:"
 msgstr "Електронна пошта:"
 
-#: lib/tymeslot/emails/shared/greeting.ex:27
-#: lib/tymeslot/emails/shared/greeting.ex:38
+#: lib/tymeslot/emails/shared/greeting.ex:39
+#: lib/tymeslot/emails/shared/greeting.ex:50
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:140
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:276
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:286
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:163
 #: lib/tymeslot/emails/templates/reschedule_request.ex:108
 #, elixir-autogen, elixir-format
@@ -145,7 +145,7 @@ msgstr "Я надішлю нагадування за %{label} до початк
 msgid "I'm looking forward to our conversation!"
 msgstr "З нетерпінням чекаю на нашу розмову!"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:278
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:288
 #, elixir-autogen, elixir-format
 msgid "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you."
 msgstr "З нетерпінням чекаю на нашу зустріч. Я вже зарезервував час у календарі та буду готовий до розмови."
@@ -162,13 +162,14 @@ msgid "JOIN VIDEO MEETING:"
 msgstr "ПРИЄДНАТИСЯ ДО ВІДЕОЗУСТРІЧІ:"
 
 #: lib/tymeslot/emails/shared/meeting/video_section.ex:24
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:160
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:54
 #, elixir-autogen, elixir-format
 msgid "Join Meeting"
 msgstr "Приєднатися до зустрічі"
 
 #: lib/tymeslot/emails/shared/meeting/video_section.ex:23
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:73
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:72
 #, elixir-autogen, elixir-format
 msgid "Join Video Meeting"
 msgstr "Приєднатися до відеозустрічі"
@@ -189,14 +190,14 @@ msgstr "Місце проведення"
 msgid "Location:"
 msgstr "Місце:"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:286
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:296
 #, elixir-autogen, elixir-format
 msgid "Looking forward to meeting you!"
 msgstr "З нетерпінням чекаю на зустріч!"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:280
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:301
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:354
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:290
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:314
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:367
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:214
 #: lib/tymeslot/emails/templates/calendar_invitation.ex:120
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex:108
@@ -231,8 +232,8 @@ msgstr "Зустріч скасовано"
 msgid "Meeting Cancelled - %{date} with %{name}"
 msgstr "Зустріч скасовано - %{date} з %{name}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:97
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:170
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:96
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:176
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:127
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:212
 #, elixir-autogen, elixir-format
@@ -260,8 +261,8 @@ msgstr "Ім'я:"
 msgid "Need to change plans?"
 msgstr "Змінилися плани?"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:78
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:212
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:77
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:225
 #, elixir-autogen, elixir-format
 msgid "Need to make changes?"
 msgstr "Потрібно внести зміни?"
@@ -277,12 +278,12 @@ msgstr "Для цієї зустрічі не заплановано нагад�
 msgid "Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out."
 msgstr "Щойно ви оберете новий час, ви отримаєте електронний лист із підтвердженням та оновленими деталями. Якщо у вас виникнуть запитання або потрібно обговорити інші варіанти, будь ласка, звертайтеся."
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:283
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:293
 #, elixir-autogen, elixir-format
 msgid "QUESTIONS?"
 msgstr "ЗАПИТАННЯ?"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:83
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:82
 #, elixir-autogen, elixir-format
 msgid "Questions? %{contact_info}"
 msgstr "Маєте запитання? %{contact_info}"
@@ -302,13 +303,13 @@ msgstr "Нагадування за %{label} до зустрічі."
 msgid "Reminder: Our meeting is %{time_until}"
 msgstr "Нагадування: Наша зустріч через %{time_until}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:87
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:86
 #, elixir-autogen, elixir-format
 msgid "Reminders Scheduled"
 msgstr "Заплановані нагадування"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:80
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:214
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:79
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:227
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:59
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:119
 #: lib/tymeslot/emails/templates/reschedule_request.ex:78
@@ -452,7 +453,7 @@ msgstr "відповісти на цей лист"
 msgid "soon"
 msgstr "незабаром"
 
-#: lib/tymeslot/emails/shared/text.ex:237
+#: lib/tymeslot/emails/shared/text.ex:255
 #, elixir-autogen, elixir-format
 msgid "Having trouble with the button? Copy and paste this link into your browser:"
 msgstr "Не працює кнопка? Скопіюйте та вставте це посилання у свій браузер:"
@@ -473,54 +474,54 @@ msgstr[0] "година"
 msgstr[1] "години"
 msgstr[2] "годин"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:223
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:352
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:236
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:365
 #, elixir-autogen, elixir-format
 msgid "%{name} has scheduled a meeting with you."
 msgstr "%{name} запланував(-ла) зустріч з вами."
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:373
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:386
 #, elixir-autogen, elixir-format
 msgid "- No reminder emails are scheduled for this appointment"
 msgstr "- Для цієї зустрічі не заплановано нагадувань електронною поштою."
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:359
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:372
 #, elixir-autogen, elixir-format
 msgid "- Prepare an agenda if needed"
 msgstr "- Підготуйте порядок денний, якщо потрібно"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:358
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:371
 #, elixir-autogen, elixir-format
 msgid "- Review any relevant materials"
 msgstr "- Перегляньте відповідні матеріали"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:371
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:384
 #, elixir-autogen, elixir-format
 msgid "- Set a reminder %{time} before"
 msgstr "- Налаштуйте нагадування за %{time} до початку"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:360
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:373
 #, elixir-autogen, elixir-format
 msgid "- Test video/audio setup if virtual"
 msgstr "- Перевірте налаштування відео/аудіо, якщо зустріч онлайн"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:387
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:400
 #, elixir-autogen, elixir-format
 msgid "15 minutes"
 msgstr "15 хвилин"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:221
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:350
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:234
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:363
 #, elixir-autogen, elixir-format
 msgid "New Appointment Booked!"
 msgstr "Заброньовано нову зустріч!"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:240
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:253
 #, elixir-autogen, elixir-format
 msgid "New Appointment: %{name} - %{date}"
 msgstr "Нова зустріч: %{name} - %{date}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:357
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:370
 #, elixir-autogen, elixir-format
 msgid "PREPARATION REMINDERS:"
 msgstr "НАГАДУВАННЯ ЩОДО ПІДГОТОВКИ:"
@@ -739,7 +740,7 @@ msgstr "Підтвердьте нову адресу електронної по
 msgid "Confirm your new email"
 msgstr "Підтвердьте нову електронну адресу"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:94
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:93
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:64
 #, elixir-autogen, elixir-format
 msgid "Confirmed"
@@ -797,6 +798,7 @@ msgstr "До вашої уваги"
 msgid "Hi %{name}, I need to reschedule our upcoming meeting."
 msgstr "Вітаю, %{name}! Мені потрібно перенести нашу заплановану зустріч."
 
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:218
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:113
 #, elixir-autogen, elixir-format
 msgid "Host video call"
@@ -837,6 +839,7 @@ msgstr "Таке трапляється з найкращими! Натисні�
 msgid "It happens to the best of us. Click the button below to choose a new password and pick up where you left off."
 msgstr "Таке трапляється з найкращими. Натисніть кнопку нижче, щоб обрати новий пароль і продовжити з того місця, де зупинилися."
 
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:159
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:53
 #, elixir-autogen, elixir-format
 msgid "Join when you're ready"
@@ -896,7 +899,7 @@ msgstr "понеділок"
 msgid "Name"
 msgstr "Ім'я"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:220
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:233
 #, elixir-autogen, elixir-format
 msgid "New booking"
 msgstr "Нове бронювання"
@@ -948,7 +951,7 @@ msgstr "Швидкі дії"
 msgid "REQUEST DETAILS:"
 msgstr "ДЕТАЛІ ЗАПИТУ:"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:72
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:71
 #, elixir-autogen, elixir-format
 msgid "Ready to join when it's time?"
 msgstr "Готові приєднатися в потрібний час?"
@@ -990,6 +993,7 @@ msgstr "Встановити новий пароль"
 msgid "Set New Password:"
 msgstr "Встановити новий пароль:"
 
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:219
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:114
 #, elixir-autogen, elixir-format
 msgid "Start Meeting"
@@ -1197,7 +1201,7 @@ msgstr "Ви надіслали запит на зміну адреси елек
 msgid "You may need to sign in again on other devices"
 msgstr "Можливо, доведеться знову увійти на інших пристроях"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:95
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:94
 #, elixir-autogen, elixir-format
 msgid "You're booked."
 msgstr "Зустріч заплановано."
@@ -1360,7 +1364,7 @@ msgstr "Час запиту:"
 msgid "Security notification"
 msgstr "Сповіщення безпеки"
 
-#: lib/tymeslot/emails/shared/mjml_email.ex:324
+#: lib/tymeslot/emails/shared/mjml_email.ex:319
 #, elixir-autogen, elixir-format
 msgid "Sent with care by"
 msgstr "Надіслано від"
@@ -1396,8 +1400,8 @@ msgstr "Що буде далі"
 msgid "What you need to know"
 msgstr "Що варто знати"
 
-#: lib/tymeslot/emails/shared/layouts.ex:152
-#: lib/tymeslot/emails/shared/mjml_email.ex:326
+#: lib/tymeslot/emails/shared/layouts.ex:154
+#: lib/tymeslot/emails/shared/mjml_email.ex:321
 #, elixir-autogen, elixir-format
 msgid "scheduling that respects your time"
 msgstr "планування, що поважає ваш час"
@@ -1408,8 +1412,8 @@ msgstr "планування, що поважає ваш час"
 msgid "For security, a copy of this confirmation was sent to your previous email address."
 msgstr "З міркувань безпеки копію цього підтвердження надіслано на вашу попередню адресу електронної пошти."
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:521
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:586
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:119
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:166
 #, elixir-autogen, elixir-format
 msgid "%{amount} paid"
 msgstr "Сплачено %{amount}"
@@ -1419,34 +1423,34 @@ msgstr "Сплачено %{amount}"
 msgid "%{date} at %{time}"
 msgstr "%{date} о %{time}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:525
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:589
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:123
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:169
 #, elixir-autogen, elixir-format
 msgid "Date: %{date}"
 msgstr "Дата: %{date}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:584
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:164
 #, elixir-autogen, elixir-format
 msgid "PAYMENT RECEIPT:"
 msgstr "КВИТАНЦІЯ ПРО ОПЛАТУ:"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:518
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:116
 #, elixir-autogen, elixir-format
 msgid "Payment receipt"
 msgstr "Квитанція про оплату"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:530
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:592
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:128
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:172
 #, elixir-autogen, elixir-format
 msgid "Reference: %{ref}"
 msgstr "Код операції: %{ref}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:537
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:263
 #, elixir-autogen, elixir-format
 msgid "View receipt"
 msgstr "Переглянути квитанцію"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:596
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:176
 #, elixir-autogen, elixir-format
 msgid "View receipt: %{url}"
 msgstr "Переглянути квитанцію: %{url}"
@@ -1562,8 +1566,8 @@ msgstr "Вітаю! Ваш платіж на суму %{amount} було пов�
 msgid "A request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you."
 msgstr "Надійшов запит на зміну адреси електронної пошти вашого облікового запису Tymeslot. Ми повідомляємо вам про це, щоб ви могли підтвердити, що це були саме ви."
 
-#: lib/tymeslot/emails/shared/greeting.ex:26
-#: lib/tymeslot/emails/shared/greeting.ex:37
+#: lib/tymeslot/emails/shared/greeting.ex:38
+#: lib/tymeslot/emails/shared/greeting.ex:49
 #, elixir-autogen, elixir-format
 msgid "Hi there,"
 msgstr "Вітаю!"
@@ -1595,72 +1599,72 @@ msgstr "Додаткова інформація"
 msgid "A meeting changed in your external calendar."
 msgstr "У вашому зовнішньому календарі змінено зустріч."
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:299
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:312
 #, elixir-autogen, elixir-format
 msgid "%{booker} has invited you as a guest to this meeting with %{organizer}."
 msgstr "%{booker} запрошує вас як гостя на цю зустріч із %{organizer}."
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:159
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:165
 #, elixir-autogen, elixir-format
 msgid "Can't make it"
 msgstr "Не зможу бути"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:306
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:319
 #, elixir-autogen, elixir-format
 msgid "Can't make it: %{url}"
 msgstr "Не зможу бути: %{url}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:297
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:310
 #, elixir-autogen, elixir-format
 msgid "Hi %{guest},"
 msgstr "Вітаю, %{guest}!"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:304
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:317
 #, elixir-autogen, elixir-format
 msgid "WILL YOU BE THERE?"
 msgstr "ЧИ БУДЕТЕ ВИ ПРИСУТНІ?"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:157
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:163
 #, elixir-autogen, elixir-format
 msgid "Will you be there?"
 msgstr "Чи будете ви присутні?"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:159
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:165
 #, elixir-autogen, elixir-format
 msgid "Yes, I'll attend"
 msgstr "Так, я буду"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:305
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:318
 #, elixir-autogen, elixir-format
 msgid "Yes, I'll attend: %{url}"
 msgstr "Так, я буду: %{url}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:161
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:167
 #, elixir-autogen, elixir-format
 msgid "You can change your response any time using the buttons above."
 msgstr "Ви можете змінити свою відповідь у будь-який час за допомогою кнопок вище."
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:308
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:321
 #, elixir-autogen, elixir-format
 msgid "You can change your response any time using the links above."
 msgstr "Ви можете змінити свою відповідь у будь-який час за допомогою посилань вище."
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:167
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:173
 #, elixir-autogen, elixir-format
 msgid "You're invited"
 msgstr "Вас запрошено"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:180
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:186
 #, elixir-autogen, elixir-format
 msgid "You're invited - %{date} with %{name}"
 msgstr "Вас запрошено - %{date} з %{name}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:295
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:308
 #, elixir-autogen, elixir-format
 msgid "You're invited!"
 msgstr "Вас запрошено!"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:168
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:174
 #, elixir-autogen, elixir-format
 msgid "You've been added as a guest"
 msgstr "Вас додано як гостя"
@@ -1841,7 +1845,7 @@ msgstr "Вітаю, %{guest} - %{booker} запрошує вас як гостя
 msgid "Hi %{name} - %{amount} of your %{original} payment has been refunded."
 msgstr "Вітаю, %{name} - %{amount} з вашого початкового платежу на суму %{original} було повернуто."
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:55
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:54
 #, elixir-autogen, elixir-format
 msgid "Hi %{name} - I've blocked the time on my calendar and I'm looking forward to our meeting."
 msgstr "Вітаю, %{name} - я заблокував(-ла) час у своєму календарі й з нетерпінням чекаю на нашу зустріч."
@@ -1907,3 +1911,53 @@ msgstr "Раді бачити вас тут. Ще один швидкий кро
 #, elixir-autogen, elixir-format
 msgid "Welcome to Tymeslot - please verify your email."
 msgstr "Ласкаво просимо до Tymeslot - будь ласка, підтвердьте свою електронну пошту."
+
+#: lib/tymeslot/emails/shared/mjml_email.ex:189
+#, elixir-autogen, elixir-format
+msgid "%{name} via Tymeslot"
+msgstr "%{name} через Tymeslot"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:193
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:244
+#, elixir-autogen, elixir-format
+msgid "Attendee paid: %{amount}"
+msgstr "Учасник сплатив: %{amount}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:228
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:250
+#, elixir-autogen, elixir-format
+msgid "Funds will arrive on your usual Stripe payout schedule."
+msgstr "Кошти надійдуть за вашим звичайним графіком виплат Stripe."
+
+#: lib/tymeslot/emails/shared/layouts.ex:62
+#, elixir-autogen, elixir-format
+msgid "Important notification from Tymeslot"
+msgstr "Важливе сповіщення від Tymeslot"
+
+#: lib/tymeslot/emails/shared/mjml_email.ex:188
+#, elixir-autogen, elixir-format
+msgid "Message from %{name}"
+msgstr "Повідомлення від %{name}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:242
+#, elixir-autogen, elixir-format
+msgid "PAYMENT RECEIVED:"
+msgstr "ОПЛАТУ ОТРИМАНО:"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:194
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:245
+#, elixir-autogen, elixir-format
+msgid "Tymeslot platform fee: %{amount}"
+msgstr "Комісія платформи Tymeslot: %{amount}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:188
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:243
+#, elixir-autogen, elixir-format
+msgid "You received %{amount}"
+msgstr "Ви отримали %{amount}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:197
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex:246
+#, elixir-autogen, elixir-format
+msgid "You received: %{amount} (less Stripe processing fees)"
+msgstr "Ви отримали: %{amount} (без урахування комісії Stripe за обробку платежу)"

@@ -21,6 +21,8 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
@@ -125,11 +127,18 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
   @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
   def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      success_message: "Apple iCloud connection successful",
+      success_message:
+        dgettext("dashboard_calendar_providers", "Apple iCloud connection successful"),
       unauthorized_message:
-        "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security, and use it instead of your Apple ID password.",
+        dgettext(
+          "dashboard_calendar_providers",
+          "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security, and use it instead of your Apple ID password."
+        ),
       not_found_message:
-        "Apple iCloud CalDAV endpoint not found. The server URL must be https://caldav.icloud.com",
+        dgettext(
+          "dashboard_calendar_providers",
+          "Apple iCloud CalDAV endpoint not found. The server URL must be https://caldav.icloud.com"
+        ),
       error_formatter: &format_error/1
     )
   end
@@ -183,8 +192,13 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
   defp validate_apple_url(url) do
     UrlValidation.validate_http_url(url,
       enforce_https_for_public: true,
-      https_error_message: "Apple iCloud requires HTTPS",
-      invalid_message: "Invalid Apple iCloud URL. The server must be https://caldav.icloud.com."
+      https_error_message:
+        dgettext("dashboard_calendar_providers", "Apple iCloud requires HTTPS"),
+      invalid_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Invalid Apple iCloud URL. The server must be https://caldav.icloud.com."
+        )
     )
   end
 

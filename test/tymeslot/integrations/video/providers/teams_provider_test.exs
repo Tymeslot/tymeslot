@@ -106,7 +106,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
       assert {:ok, message} = TeamsProvider.perform_connection_test(config)
-      assert String.contains?(message, "Successfully authenticated")
+      assert String.contains?(message, "connected successfully")
     end
 
     test "returns error when token validation fails" do

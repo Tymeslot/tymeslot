@@ -5,6 +5,8 @@ defmodule Tymeslot.Auth.AuthActions do
   Extracts business logic from LiveView components.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Auth.{PasswordReset, Registration, Validation}
@@ -13,20 +15,19 @@ defmodule Tymeslot.Auth.AuthActions do
 
   @type signup_params :: Tymeslot.Auth.Validation.signup_params()
 
-  @registration_disabled_message "Registration is currently disabled."
-  @password_auth_disabled_message "Password authentication is currently disabled."
-
   @doc """
   Returns the user-facing message for when registration is disabled.
   """
   @spec registration_disabled_message() :: String.t()
-  def registration_disabled_message, do: @registration_disabled_message
+  def registration_disabled_message,
+    do: dgettext("auth", "Registration is currently disabled.")
 
   @doc """
   Returns the user-facing message for when password authentication is disabled.
   """
   @spec password_auth_disabled_message() :: String.t()
-  def password_auth_disabled_message, do: @password_auth_disabled_message
+  def password_auth_disabled_message,
+    do: dgettext("auth", "Password authentication is currently disabled.")
 
   # Registration Actions
 
@@ -37,8 +38,8 @@ defmodule Tymeslot.Auth.AuthActions do
           {:ok, atom(), String.t()} | {:error, String.t()} | {:error, :field_errors, map()}
   def register_user(user_params, socket) do
     cond do
-      not Config.password_auth_enabled?() -> {:error, @password_auth_disabled_message}
-      not Config.registration_enabled?() -> {:error, @registration_disabled_message}
+      not Config.password_auth_enabled?() -> {:error, password_auth_disabled_message()}
+      not Config.registration_enabled?() -> {:error, registration_disabled_message()}
       true -> do_register_user(user_params, socket)
     end
   end
@@ -84,7 +85,7 @@ defmodule Tymeslot.Auth.AuthActions do
     if Config.password_auth_enabled?() do
       do_request_password_reset(email, socket)
     else
-      {:error, @password_auth_disabled_message}
+      {:error, password_auth_disabled_message()}
     end
   end
 
@@ -112,7 +113,7 @@ defmodule Tymeslot.Auth.AuthActions do
     if Config.password_auth_enabled?() do
       do_reset_password(token, password, password_confirmation)
     else
-      {:error, @password_auth_disabled_message}
+      {:error, password_auth_disabled_message()}
     end
   end
 
@@ -120,7 +121,10 @@ defmodule Tymeslot.Auth.AuthActions do
     case PasswordReset.reset_password(token, password, password_confirmation) do
       {:ok, _user, _message} ->
         {:ok, :password_reset_success,
-         "Your password has been reset successfully. Please log in with your new password."}
+         dgettext(
+           "auth",
+           "Your password has been reset successfully. Please log in with your new password."
+         )}
 
       {:error, reason, _message} ->
         {:error, normalize_auth_error(reason)}
@@ -162,7 +166,8 @@ defmodule Tymeslot.Auth.AuthActions do
     Validation.validate_new_password_input(params)
   end
 
-  def validate_password_reset_input(_params), do: {:error, %{base: ["Invalid input format"]}}
+  def validate_password_reset_input(_params),
+    do: {:error, %{base: [dgettext("auth", "Invalid input format")]}}
 
   # State Management
 
@@ -222,17 +227,18 @@ defmodule Tymeslot.Auth.AuthActions do
 
   defp normalize_auth_error(reason) do
     case reason do
-      :rate_limited -> "Too many attempts. Please try again later"
-      :server_error -> "A server error occurred. Please try again"
-      :invalid_input -> "Invalid input provided"
-      :invalid_password -> "Invalid password"
+      :rate_limited -> dgettext("auth", "Too many attempts. Please try again later.")
+      :server_error -> dgettext("auth", "A server error occurred. Please try again")
+      :invalid_input -> dgettext("auth", "Invalid input provided")
+      :invalid_password -> dgettext("auth", "Invalid password")
       :invalid_token -> get_token_error_message(:invalid_token)
       :token_expired -> get_token_error_message(:token_expired)
     end
   end
 
-  defp get_token_error_message(:invalid_token), do: "Invalid or expired token"
+  defp get_token_error_message(:invalid_token),
+    do: dgettext("auth", "Invalid or expired token")
 
   defp get_token_error_message(:token_expired),
-    do: "This link has expired. Please request a new one"
+    do: dgettext("auth", "This link has expired. Please request a new one")
 end

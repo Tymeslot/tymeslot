@@ -150,16 +150,6 @@ msgstr "1 settimana di anticipo"
 msgid "1 year in advance"
 msgstr "1 anno di anticipo"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:144
-#, elixir-autogen, elixir-format
-msgid "15 Minutes"
-msgstr "15 minuti"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:154
-#, elixir-autogen, elixir-format
-msgid "30 Minutes"
-msgstr "30 minuti"
-
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:301
 #, elixir-autogen, elixir-format
 msgid "90 days in advance"
@@ -388,11 +378,6 @@ msgstr "Ciao! Sono %{name}."
 msgid "I acknowledge the above"
 msgstr "Confermo quanto sopra"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:156
-#, elixir-autogen, elixir-format
-msgid "In-depth discussion or detailed review"
-msgstr "Discussione approfondita o revisione dettagliata"
-
 #: lib/tymeslot_web/themes/shared/localization_helpers.ex:56
 #, elixir-autogen, elixir-format
 msgid "Invalid date/time"
@@ -523,7 +508,7 @@ msgstr "Devi riprogrammare? Controlla l'email di conferma."
 msgid "No"
 msgstr "No"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:125
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:124
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:74
 #, elixir-autogen, elixir-format
 msgid "No meeting types available"
@@ -560,19 +545,19 @@ msgstr "Pagamento annullato"
 msgid "Payment was cancelled. Please try booking again."
 msgstr "Il pagamento è stato annullato. Riprova a prenotare."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:126
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:125
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:75
 #, elixir-autogen, elixir-format
 msgid "Please contact the organizer"
 msgstr "Contatta l'organizzatore"
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:469
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:487
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below before submitting."
 msgstr "Correggi gli errori riportati di seguito prima di inviare."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:113
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:320
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:340
 #, elixir-autogen, elixir-format
 msgid "Please correct the errors below."
 msgstr "Correggi gli errori riportati di seguito."
@@ -590,7 +575,7 @@ msgstr "Compila tutti i campi obbligatori"
 msgid "Please select a date to see available times"
 msgstr "Seleziona una data per vedere gli orari disponibili"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:172
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:151
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration first"
 msgstr "Seleziona prima la durata della riunione"
@@ -617,11 +602,6 @@ msgstr "Informativa sulla privacy"
 #, elixir-autogen, elixir-format
 msgid "Question %{n} of %{m}"
 msgstr "Domanda %{n} di %{m}"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:146
-#, elixir-autogen, elixir-format
-msgid "Quick chat or brief consultation"
-msgstr "Chiacchierata veloce o breve consulenza"
 
 #: lib/tymeslot_web/themes/quill/meeting/reschedule.ex:97
 #: lib/tymeslot_web/themes/rhythm/meeting/reschedule.ex:80
@@ -973,7 +953,7 @@ msgid "name"
 msgstr "Nome"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex:87
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:176
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:155
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex:87
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:118
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:338
@@ -1177,7 +1157,7 @@ msgstr "Prenota una riunione con %{name}. Scegli un orario che ti è comodo."
 msgid "Pick a time that works for you and book a meeting in seconds."
 msgstr "Scegli un orario che ti è comodo e prenota una riunione in pochi secondi."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:454
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:473
 #, elixir-autogen, elixir-format
 msgid "Preview session expired. Reload the page to continue."
 msgstr "Sessione di anteprima scaduta. Ricarica la pagina per continuare."
@@ -1264,12 +1244,12 @@ msgstr "Tipo di riunione non valido"
 msgid "Payment not found."
 msgstr "Pagamento non trovato."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:378
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:398
 #, elixir-autogen, elixir-format
 msgid "Security verification failed. Please try again."
 msgstr "Verifica di sicurezza non riuscita. Riprova."
 
-#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:389
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:409
 #, elixir-autogen, elixir-format
 msgid "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
 msgstr "La verifica di sicurezza non è al momento disponibile. La causa potrebbe essere JavaScript disattivato, estensioni per la privacy del browser (Privacy Badger, uBlock Origin, ecc.) o criteri di sicurezza della rete. Modifica le impostazioni o contatta l'assistenza se il problema persiste."
@@ -1290,3 +1270,35 @@ msgstr "La tua prenotazione è già in fase di elaborazione. Attendi..."
 #, elixir-autogen, elixir-format
 msgid "Pick an option below."
 msgstr "Scegli un'opzione qui sotto."
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:257
+#, elixir-autogen, elixir-format
+msgid "Booking submitted successfully!"
+msgstr "Prenotazione inviata con successo!"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:248
+#, elixir-autogen, elixir-format
+msgid "Demo: Booking submitted successfully! (Using the app, you would receive a confirmation email)"
+msgstr "Demo: prenotazione inviata con successo! (Nell'app riceveresti un'email di conferma)"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:242
+#, elixir-autogen, elixir-format
+msgid "Demo: Meeting rescheduled successfully! (Using the app, you would receive a confirmation email)"
+msgstr "Demo: riunione riprogrammata con successo! (Nell'app riceveresti un'email di conferma)"
+
+#: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:254
+#, elixir-autogen, elixir-format
+msgid "Meeting rescheduled successfully!"
+msgstr "Riunione riprogrammata con successo!"
+
+#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:14
+#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:22
+#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:30
+#, elixir-autogen, elixir-format
+msgid "Schedule a meeting"
+msgstr "Fissa una riunione"
+
+#: lib/tymeslot_web/components/layouts/scheduling_root.html.heex:57
+#, elixir-autogen, elixir-format
+msgid "This scheduling page requires JavaScript to book meetings. Please enable it to continue."
+msgstr "Questa pagina di prenotazione richiede JavaScript per prenotare le riunioni. Attivalo per continuare."

@@ -31,7 +31,7 @@ msgstr "✓ Confermato (%{at})"
 msgid "At least 8 characters"
 msgstr "Almeno 8 caratteri"
 
-#: lib/tymeslot_web/components/core_components/flash.ex:163
+#: lib/tymeslot_web/components/core_components/flash.ex:164
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr "Tentativo di riconnessione in corso"
@@ -51,7 +51,7 @@ msgstr "Annulla"
 msgid "Change language"
 msgstr "Cambia lingua"
 
-#: lib/tymeslot_web/components/core_components/flash.ex:85
+#: lib/tymeslot_web/components/core_components/flash.ex:86
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Chiudi"
@@ -66,7 +66,7 @@ msgstr "Chiudi la finestra"
 msgid "Confirm"
 msgstr "Conferma"
 
-#: lib/tymeslot_web/components/core_components/flash.ex:155
+#: lib/tymeslot_web/components/core_components/flash.ex:156
 #, elixir-autogen, elixir-format
 msgid "Connection Lost"
 msgstr "Connessione persa"
@@ -138,12 +138,12 @@ msgstr "Schede"
 msgid "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge."
 msgstr "Questa %{context} richiede un browser moderno con supporto per i moduli ES. Aggiorna Chrome, Firefox, Safari o Edge all'ultima versione."
 
-#: lib/tymeslot_web/components/layouts/root.html.heex:51
+#: lib/tymeslot_web/components/layouts/root.html.heex:50
 #, elixir-autogen, elixir-format
 msgid "This app requires JavaScript to function. Please enable it in your browser settings."
 msgstr "Questa applicazione richiede JavaScript per funzionare. Abilitalo nelle impostazioni del browser."
 
-#: lib/tymeslot_web/components/timezone_dropdown.ex:166
+#: lib/tymeslot_web/components/timezone_dropdown.ex:154
 #, elixir-autogen, elixir-format
 msgid "This timezone will be used for your availability and scheduling."
 msgstr "Questo fuso orario verrà utilizzato per la tua disponibilità e per la pianificazione."
@@ -169,7 +169,7 @@ msgid "application"
 msgstr "applicazione"
 
 #: lib/tymeslot_web/components/timezone_dropdown.ex:74
-#: lib/tymeslot_web/components/timezone_dropdown.ex:154
+#: lib/tymeslot_web/components/timezone_dropdown.ex:142
 #, elixir-autogen, elixir-format
 msgid "local time"
 msgstr "ora locale"
@@ -227,3 +227,8 @@ msgstr "Vedi su GitHub"
 #, elixir-autogen, elixir-format
 msgid "© %{year} Tymeslot. All rights reserved."
 msgstr "© %{year} Tymeslot. Tutti i diritti riservati."
+
+#: lib/tymeslot_web/components/core_components/containers.ex:156
+#, elixir-autogen, elixir-format
+msgid "Saving changes..."
+msgstr "Salvataggio delle modifiche in corso..."

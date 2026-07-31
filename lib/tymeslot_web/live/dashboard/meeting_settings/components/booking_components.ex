@@ -282,14 +282,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                 <%= if @no_writable_calendars do %>
                   <div class="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-token-lg">
                     <p class="text-token-sm text-yellow-700">
-                      None of the calendars you selected for this account can accept bookings.
+                      {dgettext(
+                        "dashboard_meeting_form",
+                        "None of the calendars you selected for this account can accept bookings."
+                      )}
                       <a
                         href={~p"/dashboard/integrations?tab=calendars"}
                         class="underline hover:text-yellow-800"
                       >
-                        Update your calendar selection
+                        {dgettext("dashboard_meeting_form", "Update your calendar selection")}
                       </a>
-                      or choose a different account.
+                      {dgettext("dashboard_meeting_form", "or choose a different account.")}
                     </p>
                   </div>
                 <% else %>

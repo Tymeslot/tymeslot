@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Components.CoreComponents.Containers do
   @moduledoc "Container and display components extracted from CoreComponents."
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.CoreComponents.Feedback
   alias TymeslotWeb.Components.CoreComponents.Icons
@@ -152,7 +153,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
       <%= if @saving do %>
         <div class="ml-auto bg-emerald-50 text-emerald-700 px-4 py-2 rounded-full font-black text-xs uppercase tracking-wider border-2 border-emerald-100 flex items-center">
           <Feedback.spinner class="h-4 w-4 mr-2" />
-          Saving changes...
+          {dgettext("common", "Saving changes...")}
         </div>
       <% end %>
     </div>

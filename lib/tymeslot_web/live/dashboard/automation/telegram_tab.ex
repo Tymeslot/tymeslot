@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
   through the `:myself` target passed in by the caller.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.Automation.TelegramCard
   alias TymeslotWeb.Dashboard.Automation.TelegramEmptyState
@@ -20,9 +21,13 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
     <%= if @integrations != [] do %>
       <div class="space-y-6">
         <div class="flex items-center justify-between">
-          <.section_header level={2} title="Your Telegram Integrations" count={length(@integrations)} />
+          <.section_header
+            level={2}
+            title={dgettext("dashboard_automation_chat", "Your Telegram Integrations")}
+            count={length(@integrations)}
+          />
           <button phx-click="show_telegram_form" phx-target={@myself} class="btn-primary">
-            Add Telegram Account
+            {dgettext("dashboard_automation_chat", "Add Telegram Account")}
           </button>
         </div>
 

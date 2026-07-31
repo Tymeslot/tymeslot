@@ -5,6 +5,8 @@ defmodule Tymeslot.Integrations.Video do
   Exposes a cohesive API used by web components without any LiveView/socket coupling.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.HealthCheck
@@ -483,7 +485,10 @@ defmodule Tymeslot.Integrations.Video do
         # User already has integration(s) for this provider but we can't identify
         # which account this callback belongs to. Reject to avoid silently overwriting.
         {:error,
-         "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."}
+         dgettext(
+           "dashboard_integrations",
+           "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
+         )}
 
       {:error, :not_found} ->
         VideoIntegrationQueries.create(

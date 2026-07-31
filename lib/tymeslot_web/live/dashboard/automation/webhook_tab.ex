@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
   through the `:myself` target passed in by the caller.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.Automation.WebhookCard
   alias TymeslotWeb.Dashboard.Automation.WebhookDocumentation
@@ -21,9 +22,13 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
     <%= if @webhooks != [] do %>
       <div class="space-y-6">
         <div class="flex items-center justify-between">
-          <.section_header level={2} title="Your Webhooks" count={length(@webhooks)} />
+          <.section_header
+            level={2}
+            title={dgettext("dashboard_automation", "Your Webhooks")}
+            count={length(@webhooks)}
+          />
           <button phx-click="show_webhook_form" phx-target={@myself} class="btn-primary">
-            Create Webhook
+            {dgettext("dashboard_automation", "Create Webhook")}
           </button>
         </div>
 

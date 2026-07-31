@@ -6,6 +6,8 @@ defmodule Tymeslot.Availability.InputValidation do
   time inputs, break scheduling, and schedule management operations.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -221,22 +223,29 @@ defmodule Tymeslot.Availability.InputValidation do
 
   defp validate_time_format(time_str) when is_binary(time_str) do
     case DateTimeUtils.parse_hhmm(time_str) do
-      {:ok, _time} -> :ok
-      {:error, _reason} -> {:error, "Time must be in HH:MM format (e.g., 09:30)"}
+      {:ok, _time} ->
+        :ok
+
+      {:error, _reason} ->
+        {:error, dgettext("dashboard_availability", "Time must be in HH:MM format (e.g., 09:30)")}
     end
   end
 
-  defp validate_time_format(_arg), do: {:error, "Time must be a string"}
+  defp validate_time_format(_arg),
+    do: {:error, dgettext("dashboard_availability", "Time must be a string")}
 
   defp validate_time_range(start_time, end_time) do
     with {:ok, start_parsed} <- DateTimeUtils.parse_hhmm(start_time),
          {:ok, end_parsed} <- DateTimeUtils.parse_hhmm(end_time) do
       case Time.compare(start_parsed, end_parsed) do
-        :lt -> :ok
-        _other -> {:error, "End time must be after start time"}
+        :lt ->
+          :ok
+
+        _other ->
+          {:error, dgettext("dashboard_availability", "End time must be after start time")}
       end
     else
-      _other -> {:error, "Invalid time format"}
+      _other -> {:error, dgettext("dashboard_availability", "Invalid time format")}
     end
   end
 
@@ -248,7 +257,11 @@ defmodule Tymeslot.Availability.InputValidation do
       {:ok, sanitized_label} ->
         cond do
           String.length(sanitized_label) > 50 ->
-            {:error, %{label: "Break label must be 50 characters or less"}}
+            {:error,
+             %{
+               label:
+                 dgettext("dashboard_availability", "Break label must be 50 characters or less")
+             }}
 
           String.trim(sanitized_label) == "" ->
             {:ok, "Break"}
@@ -263,7 +276,7 @@ defmodule Tymeslot.Availability.InputValidation do
   end
 
   defp validate_break_label(_invalid, _metadata) do
-    {:error, %{label: "Break label must be text"}}
+    {:error, %{label: dgettext("dashboard_availability", "Break label must be text")}}
   end
 
   defp validate_duration_input(duration_input, metadata) do
@@ -278,13 +291,28 @@ defmodule Tymeslot.Availability.InputValidation do
             {:ok, to_string(duration)}
 
           {duration, ""} when duration <= 0 ->
-            {:error, %{duration: "Duration must be greater than 0 minutes"}}
+            {:error,
+             %{
+               duration:
+                 dgettext("dashboard_availability", "Duration must be greater than 0 minutes")
+             }}
 
           {duration, ""} when duration > 480 ->
-            {:error, %{duration: "Duration cannot exceed 8 hours (480 minutes)"}}
+            {:error,
+             %{
+               duration:
+                 dgettext(
+                   "dashboard_availability",
+                   "Duration cannot exceed 8 hours (480 minutes)"
+                 )
+             }}
 
           _invalid ->
-            {:error, %{duration: "Duration must be a valid number of minutes"}}
+            {:error,
+             %{
+               duration:
+                 dgettext("dashboard_availability", "Duration must be a valid number of minutes")
+             }}
         end
 
       {:error, error} ->
@@ -299,8 +327,11 @@ defmodule Tymeslot.Availability.InputValidation do
     |> Enum.reject(&(&1 == ""))
     |> Enum.reduce_while({:ok, []}, fn segment, {:ok, acc} ->
       case Integer.parse(segment) do
-        {day, ""} -> {:cont, {:ok, [day | acc]}}
-        _unparsable -> {:halt, {:error, "Invalid day selection format"}}
+        {day, ""} ->
+          {:cont, {:ok, [day | acc]}}
+
+        _unparsable ->
+          {:halt, {:error, dgettext("dashboard_availability", "Invalid day selection format")}}
       end
     end)
     |> filter_selected_days()
@@ -316,7 +347,7 @@ defmodule Tymeslot.Availability.InputValidation do
       |> Enum.uniq()
 
     if Enum.empty?(days) do
-      {:error, "No valid days selected"}
+      {:error, dgettext("dashboard_availability", "No valid days selected")}
     else
       {:ok, days}
     end

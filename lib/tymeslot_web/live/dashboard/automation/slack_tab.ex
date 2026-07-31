@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
   through the `:myself` target passed in by the caller.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Dashboard.Automation.SlackCard
   alias TymeslotWeb.Dashboard.Automation.SlackEmptyState
@@ -21,17 +22,23 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
     <%= if @integrations != [] do %>
       <div class="space-y-6">
         <div class="flex items-center justify-between">
-          <.section_header level={2} title="Your Slack Integrations" count={length(@integrations)} />
+          <.section_header
+            level={2}
+            title={dgettext("dashboard_automation_chat", "Your Slack Integrations")}
+            count={length(@integrations)}
+          />
           <div class="flex items-center gap-3">
             <%= if @oauth_mode_available? do %>
-              <.link href={~p"/api/slack/oauth/start"} class="btn-primary">Add to Slack</.link>
+              <.link href={~p"/api/slack/oauth/start"} class="btn-primary">
+                {dgettext("dashboard_automation_chat", "Add to Slack")}
+              </.link>
             <% end %>
             <button
               phx-click="slack_show_webhook_form"
               phx-target={@myself}
               class="btn-secondary"
             >
-              Add via webhook URL
+              {dgettext("dashboard_automation_chat", "Add via webhook URL")}
             </button>
           </div>
         </div>

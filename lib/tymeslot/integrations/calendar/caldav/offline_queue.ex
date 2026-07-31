@@ -31,6 +31,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   per row via `conflict_policy_for/1`).
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Base, as: CalDAVBase
@@ -41,9 +43,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   # `sync_last_error` is read by the account owner, so every value written to
   # it is a sentence. Transport failures get theirs from
   # `CalDAVBase.describe_error/1`; these two cover the local-state failures
-  # that never reach the wire.
-  @no_primary_path_message "No calendar is selected for this connection, so the change could not be sent to the calendar server."
-  @unsendable_change_message "Tymeslot could not send this change to the calendar server."
+  # that never reach the wire. Both live as functions at the bottom of this
+  # module rather than as module attributes: a `dgettext/2` call in an
+  # attribute would freeze the locale at compile time.
 
   @spec flush(map(), CalDAVBase.client()) :: :ok
   def flush(integration, client) do
@@ -65,7 +67,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
        ) do
     case primary_path(integration) do
       nil ->
-        record_skip(integration, row, "no primary calendar path", @no_primary_path_message)
+        record_skip(integration, row, "no primary calendar path", no_primary_path_message())
 
       path ->
         case Events.create_calendar_event(client, path, row_to_event_data(row), events_opts()) do
@@ -86,7 +88,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
        ) do
     case primary_path(integration) do
       nil ->
-        record_skip(integration, row, "no primary calendar path", @no_primary_path_message)
+        record_skip(integration, row, "no primary calendar path", no_primary_path_message())
 
       path ->
         opts =
@@ -114,7 +116,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
        ) do
     case primary_path(integration) do
       nil ->
-        record_skip(integration, row, "no primary calendar path", @no_primary_path_message)
+        record_skip(integration, row, "no primary calendar path", no_primary_path_message())
 
       path ->
         case Events.delete_calendar_event(client, path, row.uid, events_opts()) do
@@ -146,7 +148,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
     ProviderCalendarEventQueries.mark_sync_failed(
       integration.id,
       row.uid,
-      @unsendable_change_message
+      unsendable_change_message()
     )
   end
 
@@ -225,4 +227,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
   defp format_reason(reason) when is_binary(reason), do: reason
   defp format_reason(reason), do: inspect(reason)
+
+  defp no_primary_path_message do
+    dgettext(
+      "dashboard_calendar_providers",
+      "No calendar is selected for this connection, so the change could not be sent to the calendar server."
+    )
+  end
+
+  defp unsendable_change_message do
+    dgettext(
+      "dashboard_calendar_providers",
+      "Tymeslot could not send this change to the calendar server."
+    )
+  end
 end

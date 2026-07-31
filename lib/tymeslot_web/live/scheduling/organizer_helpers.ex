@@ -7,6 +7,8 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
   IP captured at mount.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Phoenix.Component
@@ -40,7 +42,7 @@ defmodule TymeslotWeb.Live.Scheduling.OrganizerHelpers do
         |> assign(:organizer_profile, nil)
         |> assign(:organizer_user_id, nil)
         |> assign(:meeting_types, [])
-        |> assign(:page_title, "User Not Found")
+        |> assign(:page_title, dgettext("errors", "Page not found"))
 
       {:ok, context} ->
         socket
