@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Discovery
+  alias Tymeslot.Integrations.Calendar.Reconnection
+  alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Security.Encryption
   import Tymeslot.Factory
   import Mox
@@ -85,7 +87,7 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
 
   describe "discover_calendars_for_credentials/5" do
     test "returns error for unknown provider" do
-      assert {:error, "Unknown provider: unknown"} =
+      assert {:error, {:config, "Unknown provider: unknown"}} =
                Discovery.discover_calendars_for_credentials(
                  :unknown,
                  "http://url",
@@ -95,13 +97,83 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
     end
 
     test "returns error for invalid provider string" do
-      assert {:error, "Unknown provider: invalid"} =
+      assert {:error, {:config, "Unknown provider: invalid"}} =
                Discovery.discover_calendars_for_credentials(
                  "invalid",
                  "http://url",
                  "u",
                  "p"
                )
+    end
+  end
+
+  describe "error classification under a non-English locale" do
+    setup do
+      original = Application.get_env(:tymeslot, :pseudo_locale_enabled)
+      Application.put_env(:tymeslot, :pseudo_locale_enabled, true)
+      Gettext.put_locale(TymeslotWeb.Gettext, "pseudo")
+
+      on_exit(fn ->
+        Gettext.put_locale(TymeslotWeb.Gettext, "en")
+
+        if is_nil(original) do
+          Application.delete_env(:tymeslot, :pseudo_locale_enabled)
+        else
+          Application.put_env(:tymeslot, :pseudo_locale_enabled, original)
+        end
+      end)
+
+      :ok
+    end
+
+    test "the category comes from the raw error, not from the localised message" do
+      # The pseudo locale rewrites every string that genuinely goes through
+      # gettext, so the returned message contains none of the English keywords
+      # the old classifier matched on ("unauthorized", "password", …). The
+      # category must still be `:auth`, because it is derived from the raw
+      # `:unauthorized` before the message is ever built.
+      assert {:auth, message} = ErrorHandler.classify_and_format(:unauthorized, :caldav)
+
+      assert String.starts_with?(message, "⟦")
+      refute String.downcase(message) =~ "password"
+      refute String.downcase(message) =~ "authentication"
+
+      # And the pair reaches Reconnection intact, which still maps it to a
+      # credentials error rather than passing the message through.
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          base_url: "https://caldav.example.com",
+          username_encrypted: Encryption.encrypt("alice"),
+          password_encrypted: Encryption.encrypt("oldpass")
+        )
+
+      params = %{
+        "url" => "https://caldav.example.com",
+        "username" => "alice",
+        "password" => "wrongpass"
+      }
+
+      discover = fn _provider, _url, _username, _password -> {:error, {:auth, message}} end
+
+      assert {:error, :invalid_credentials} =
+               Reconnection.reconnect(integration, params, discover: discover)
+    end
+
+    test "the form field for a validation error comes from the raw error too" do
+      assert ErrorHandler.error_field(:unauthorized) == :password
+      assert ErrorHandler.error_field(:not_found) == :base_url
+      assert ErrorHandler.error_field(:rate_limited) == :base
+
+      # `sanitize_error_message/2` is pseudo-localised here, and the field is
+      # still the one the raw error implies.
+      message = ErrorHandler.sanitize_error_message(:unauthorized, :caldav)
+      assert String.starts_with?(message, "⟦")
+
+      changeset =
+        ErrorHandler.create_validation_error(message, ErrorHandler.error_field(:unauthorized))
+
+      assert changeset.errors == [password: {message, []}]
     end
   end
 

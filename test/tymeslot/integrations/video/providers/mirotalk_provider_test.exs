@@ -98,8 +98,45 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
         {:error, %Mint.TransportError{reason: :econnrefused}}
       end)
 
-      assert {:error, message} = MiroTalkProvider.perform_connection_test(config)
+      assert {:error, {:unreachable, message}} = MiroTalkProvider.perform_connection_test(config)
       assert String.contains?(message, "Connection refused")
+    end
+
+    # The tag, not the message, is what the web layer classifies on, so it has
+    # to distinguish a rejected credential from a server the URL can't reach.
+    test "tags a 401 as :invalid_api_key" do
+      config = %{api_key: "bad_key", base_url: "https://mirotalk.example.com"}
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 401, body: "Unauthorized"}}
+      end)
+
+      assert {:error, {:invalid_api_key, message}} =
+               MiroTalkProvider.perform_connection_test(config)
+
+      # An "Unauthorized" body takes the explicit branch, which names the key
+      # rather than falling back to the generic authentication message.
+      assert message == "Invalid API key - Authentication failed"
+    end
+
+    test "tags a 404 as :unreachable" do
+      config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 404}}
+      end)
+
+      assert {:error, {:unreachable, _message}} = MiroTalkProvider.perform_connection_test(config)
+    end
+
+    test "tags a rejected base URL as :unreachable without touching the network" do
+      config = %{api_key: "test_key", base_url: "not a url"}
+
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 200}}
+      end)
+
+      assert {:error, {:unreachable, _message}} = MiroTalkProvider.perform_connection_test(config)
     end
 
     test "redacts and truncates error bodies in logs" do

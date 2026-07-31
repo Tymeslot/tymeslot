@@ -25,7 +25,6 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Selection
-  alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Integrations.CalendarManagement
 
@@ -152,12 +151,15 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
       {:ok, %{calendars: calendars, discovery_credentials: credentials}} ->
         {:ok, :needs_calendar_selection, %{calendars: calendars, credentials: credentials}}
 
-      {:error, reason} when is_binary(reason) ->
-        if ErrorHandler.categorize_error(reason) == :auth do
-          {:error, :invalid_credentials}
-        else
-          {:error, reason}
-        end
+      # Discovery hands back `{category, message}`, with the category derived
+      # from the raw provider error before the message was localised. Branch
+      # on the category only: `message` is display text and, once translated,
+      # carries no English keywords left to match on.
+      {:error, {:auth, _message}} ->
+        {:error, :invalid_credentials}
+
+      {:error, {_category, message}} when is_binary(message) ->
+        {:error, message}
 
       {:error, reason} ->
         {:error, reason}

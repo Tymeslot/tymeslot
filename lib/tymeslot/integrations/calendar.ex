@@ -464,7 +464,7 @@ defmodule Tymeslot.Integrations.Calendar do
           keyword()
         ) ::
           {:ok, %{calendars: list(), discovery_credentials: Discovery.discovery_credentials()}}
-          | {:error, String.t()}
+          | {:error, {Discovery.error_category(), String.t()}}
   def discover_calendars_for_credentials(provider, url, username, password, opts \\ []) do
     Discovery.discover_calendars_for_credentials(provider, url, username, password, opts)
   end

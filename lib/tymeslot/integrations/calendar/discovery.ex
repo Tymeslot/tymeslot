@@ -25,6 +25,8 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   anything itself.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Integrations.Calendar.ProviderConfig
@@ -33,6 +35,10 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   alias Tymeslot.Integrations.Shared.ConnectionProbe
 
   @caldav_provider_strings ProviderConfig.caldav_based_provider_strings()
+
+  # Re-exported so callers can spell the classified error shape without
+  # reaching past this boundary into the shared error handler.
+  @type error_category :: ErrorHandler.error_category()
 
   @type discovery_credentials :: %{
           required(:url) => String.t(),
@@ -61,7 +67,11 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
         provider_module.discover_calendars_for_integration(integration)
       end
     else
-      _other -> {:error, "Unknown provider: #{provider}"}
+      _other ->
+        {:error,
+         dgettext("dashboard_calendar_providers", "Unknown provider: %{provider}",
+           provider: provider
+         )}
     end
   end
 
@@ -86,8 +96,13 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
 
   ## Returns
   - `{:ok, calendars}` - List of discovered calendars
-  - `{:error, reason}` - Error if discovery fails, including the rate-limited
-    and unattributable-actor cases
+  - `{:error, {category, message}}` - A provider failure, classified from the
+    raw error before `message` was localised. Callers that need to act on the
+    failure read `category`; `message` is display text only.
+  - `{:error, {:rate_limited, message}}` / `{:error, :unattributable}` - the
+    rate-limit choke point's own refusals, passed through untouched.
+    `:rate_limited` is deliberately distinct from the `:rate_limit` category,
+    so the two 2-tuples never blur together.
   """
   @spec discover_calendars(
           atom(),
@@ -102,7 +117,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
           {:ok, list(map())}
           | {:error, {:rate_limited, String.t()}}
           | {:error, :unattributable}
-          | {:error, atom() | String.t()}
+          | {:error, {ErrorHandler.error_category(), String.t()}}
   def discover_calendars(provider_atom, config, opts \\ []) do
     case Keyword.fetch(opts, :actor) do
       {:ok, actor} ->
@@ -110,7 +125,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
         force_refresh = Keyword.get(opts, :force_refresh, false)
 
         probe_and_cache(cache_key, actor, force_refresh, fn ->
-          ErrorHandler.with_error_handling(
+          ErrorHandler.with_classified_error_handling(
             provider_atom,
             fn -> dispatch_caldav_discovery(provider_atom, config) end,
             %{operation: "calendar_discovery"}
@@ -122,13 +137,23 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
           provider: provider_atom
         )
 
-        {:error, "Calendar discovery could not be attributed to your account. Please try again."}
+        {:error,
+         {:unknown,
+          dgettext(
+            "dashboard_calendar_providers",
+            "Calendar discovery could not be attributed to your account. Please try again."
+          )}}
     end
   end
 
   @doc """
   Discover calendars using raw credentials before creating an integration.
-  Returns {:ok, %{calendars: standardized, discovery_credentials: %{...}}} or {:error, message}.
+
+  Returns `{:ok, %{calendars: standardized, discovery_credentials: %{...}}}`
+  or `{:error, {category, message}}`. Every failure is classified from the raw
+  error before its message is localised, so a caller can branch on `category`
+  (see `Tymeslot.Integrations.Calendar.Reconnection`) without reading text
+  that changes with the user's locale.
   """
   @spec discover_calendars_for_credentials(
           atom() | String.t(),
@@ -138,7 +163,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
           keyword()
         ) ::
           {:ok, %{calendars: list(), discovery_credentials: discovery_credentials()}}
-          | {:error, String.t()}
+          | {:error, {ErrorHandler.error_category(), String.t()}}
   def discover_calendars_for_credentials(provider, url, username, password, opts \\ []) do
     force_refresh = Keyword.get(opts, :force_refresh, false)
 
@@ -171,7 +196,11 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
         end
 
       {:error, :unknown_provider} ->
-        {:error, "Unknown provider: #{provider}"}
+        {:error,
+         {:config,
+          dgettext("dashboard_calendar_providers", "Unknown provider: %{provider}",
+            provider: provider
+          )}}
     end
   end
 
@@ -225,30 +254,55 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   end
 
   # A rate-limit refusal is already a finished, user-facing sentence ("You've
-  # reached the limit of N …"). Running it through `format_provider_error/3`
+  # reached the limit of N …"). Running it through `classify_and_format/3`
   # would replace it with a generic provider error and drop the only guidance
-  # the user can act on, so it passes through untouched.
+  # the user can act on, so the message passes through untouched; only the
+  # category is restated in this function's vocabulary.
   defp credentials_discovery_error({:error, {:discovery, {:rate_limited, message}}}, _p, _atom),
-    do: {:error, message}
+    do: {:error, {:rate_limit, message}}
 
   # `discover_calendars/3` leaves `ConnectionProbe`'s `:unattributable`
   # refusal tagged rather than flattening it — build the user-facing text
   # here, the caller-facing edge for this flow.
   defp credentials_discovery_error({:error, {:discovery, :unattributable}}, _p, _atom),
-    do: {:error, "Calendar discovery could not be attributed to your account. Please try again."}
+    do:
+      {:error,
+       {:unknown,
+        dgettext(
+          "dashboard_calendar_providers",
+          "Calendar discovery could not be attributed to your account. Please try again."
+        )}}
 
+  # `validate_config/1` hands back a raw reason, so this is the one place the
+  # provider error is classified and formatted.
   defp credentials_discovery_error({:error, {:validation, reason}}, _provider, provider_atom),
     do:
       {:error,
-       ErrorHandler.format_provider_error(reason, provider_atom, %{operation: "validation"})}
+       ErrorHandler.classify_and_format(reason, provider_atom, %{operation: "validation"})}
+
+  # Already classified and formatted by `discover_calendars/3` — passed
+  # straight through. Formatting it a second time would mean re-deriving the
+  # category from a message that has been through gettext, which only ever
+  # worked because the English wording happened to contain the same keywords.
+  defp credentials_discovery_error(
+         {:error, {:discovery, {category, message}}},
+         _provider,
+         _provider_atom
+       )
+       when is_atom(category) and is_binary(message),
+       do: {:error, {category, message}}
 
   defp credentials_discovery_error({:error, {:discovery, reason}}, _provider, provider_atom),
     do:
-      {:error,
-       ErrorHandler.format_provider_error(reason, provider_atom, %{operation: "discovery"})}
+      {:error, ErrorHandler.classify_and_format(reason, provider_atom, %{operation: "discovery"})}
 
   defp credentials_discovery_error({:error, :unknown_provider}, provider, _provider_atom),
-    do: {:error, "Unknown provider: #{provider}"}
+    do:
+      {:error,
+       {:config,
+        dgettext("dashboard_calendar_providers", "Unknown provider: %{provider}",
+          provider: provider
+        )}}
 
   defp resolve_provider_atom(p) do
     case ProviderRegistry.validate_provider(p) do
@@ -342,7 +396,10 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
       {:ok, provider_module} = provider_module_for(provider_atom)
       config |> provider_module.new() |> provider_module.discover_calendars()
     else
-      {:error, "Unsupported provider: #{provider_atom}"}
+      {:error,
+       dgettext("dashboard_calendar_providers", "Unsupported provider: %{provider}",
+         provider: provider_atom
+       )}
     end
   end
 
@@ -361,9 +418,15 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
     |> Enum.uniq()
   end
 
-  defp format_discovery_error(:unauthorized), do: "Authentication failed during discovery"
-  defp format_discovery_error(:not_found), do: "Calendar server not found"
-  defp format_discovery_error(:network_error), do: "Network error during discovery"
-  defp format_discovery_error(reason) when is_binary(reason), do: reason
-  defp format_discovery_error(_arg), do: "Calendar discovery failed"
+  # `discover_calendars/3`'s classified shape (and `ConnectionProbe`'s
+  # `{:rate_limited, message}`): the message is already user-facing and
+  # localised, and this opportunistic pre-discovery has no use for the
+  # category. Raw provider errors never reach here any more — they are
+  # classified and formatted at the `discover_calendars/3` boundary.
+  defp format_discovery_error({_tag, message}) when is_binary(message), do: message
+
+  # Everything the choke point can still refuse with bare: `:unattributable`,
+  # and an unresolvable provider.
+  defp format_discovery_error(_arg),
+    do: dgettext("dashboard_calendar_providers", "Calendar discovery failed")
 end

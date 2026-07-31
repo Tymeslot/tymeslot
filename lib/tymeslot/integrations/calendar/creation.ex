@@ -291,8 +291,13 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
           {:error, :unattributable}
 
         {:error, reason} ->
+          # Which field to blame is decided from the raw `reason`, never from
+          # `message`: the latter is localised, so parsing it back would pick
+          # the right field in English only.
           message = ErrorHandler.sanitize_error_message(reason, provider_atom)
-          {:error, ErrorHandler.create_validation_error(message)}
+
+          {:error,
+           ErrorHandler.create_validation_error(message, ErrorHandler.error_field(reason))}
       end
     else
       # If provider validation/lookup fails, skip pre-validation and allow creation to proceed

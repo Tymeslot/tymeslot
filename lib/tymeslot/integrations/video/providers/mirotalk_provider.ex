@@ -8,6 +8,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   @behaviour Tymeslot.Integrations.Video.Providers.ProviderBehaviour
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Infrastructure.Config
@@ -28,6 +30,15 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
                   chat: true,
                   breakout_rooms: false
                 )
+
+  @typedoc """
+  A tagged `perform_connection_test/1` failure.
+
+  `:invalid_api_key` is the server explicitly rejecting the credential (HTTP
+  401); `:unreachable` covers everything else, where the server could not be
+  reached or did not answer as a MiroTalk API, which points at the base URL.
+  """
+  @type test_failure :: {:invalid_api_key | :unreachable, String.t()}
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def provider_type, do: :mirotalk
@@ -67,26 +78,39 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   Pure I/O — the caller (`Tymeslot.Integrations.Video.Connection`) decides
   whether and to whom the test is rate-limited.
+
+  Failures come back tagged, `{:error, {tag, message}}`. The tag is derived
+  from the raw HTTP status here, where it is still unambiguous; `message` is
+  display text and nothing may branch on it. The web layer maps the tag to a
+  form field (`TymeslotWeb.Helpers.IntegrationProviders.reason_to_form_errors/1`)
+  and renders only the message. This is the same split the calendar half
+  already applies (see `Tymeslot.Integrations.Calendar.Creation` and
+  `Tymeslot.Integrations.Calendar.Reconnection`): matching English keywords
+  back out of a localised message picks the right field in English only.
   """
   @spec perform_connection_test(%{
           required(:api_key) => String.t(),
           required(:base_url) => String.t()
         }) ::
-          {:ok, String.t()} | {:error, term()}
+          {:ok, String.t()} | {:error, test_failure()}
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def perform_connection_test(config) do
     # For MiroTalk, we can test by checking if the API endpoint is reachable
     base_url = Map.get(config, :base_url)
     api_key = Map.get(config, :api_key)
 
-    with :ok <- validate_base_url(base_url) do
+    case validate_base_url(base_url) do
       # Proceed with API connection test
-      test_api_connection(base_url, api_key)
+      :ok -> test_api_connection(base_url, api_key)
+      {:error, message} -> {:error, {:unreachable, message}}
     end
   end
 
-  defp validate_base_url(nil), do: {:error, "Base URL is required"}
-  defp validate_base_url(""), do: {:error, "Base URL cannot be empty"}
+  # Returns untagged errors: `validate_config/1` is the structural gate every
+  # provider shares, and its contract is `{:error, message}`. Only
+  # `perform_connection_test/1` tags what it hands back.
+  defp validate_base_url(url) when url in [nil, ""],
+    do: {:error, dgettext("dashboard_integrations", "Base URL is required")}
 
   defp validate_base_url(url) do
     UrlValidation.validate_http_url(url, block_private_ips: true)
@@ -116,24 +140,43 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   defp handle_api_response({:error, error}), do: handle_http_error(error)
 
   defp handle_http_response(%Req.Response{status: 200}) do
-    {:ok, "Connection successful - API key is valid"}
+    {:ok, dgettext("dashboard_integrations", "Connection successful - API key is valid")}
   end
 
   defp handle_http_response(%Req.Response{status: 401, body: body}) do
-    handle_auth_error(body, "Authentication failed - Please check your API key")
+    handle_auth_error(
+      body,
+      dgettext("dashboard_integrations", "Authentication failed - Please check your API key")
+    )
   end
 
-  defp handle_http_response(%Req.Response{status: 403, body: body}) do
-    handle_auth_error(body, "Access forbidden - API key may lack required permissions")
+  # A 403 is not the server calling the key invalid — a reverse proxy in front
+  # of the wrong base URL answers the same way — so it stays on `:unreachable`.
+  defp handle_http_response(%Req.Response{status: 403}) do
+    {:error,
+     {:unreachable,
+      dgettext(
+        "dashboard_integrations",
+        "Access forbidden - API key may lack required permissions"
+      )}}
   end
 
   defp handle_http_response(%Req.Response{status: 404}) do
-    {:error, "API endpoint not found - Please verify the base URL is correct"}
+    {:error,
+     {:unreachable,
+      dgettext(
+        "dashboard_integrations",
+        "API endpoint not found - Please verify the base URL is correct"
+      )}}
   end
 
   defp handle_http_response(%Req.Response{status: 406}) do
     {:error,
-     "Not Acceptable - The MiroTalk server rejected the request. Please verify your base URL and API configuration"}
+     {:unreachable,
+      dgettext(
+        "dashboard_integrations",
+        "Not Acceptable - The MiroTalk server rejected the request. Please verify your base URL and API configuration"
+      )}}
   end
 
   defp handle_http_response(%Req.Response{status: status, body: body})
@@ -142,18 +185,32 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
     Logger.error("MiroTalk server error", status: status, body: redacted_body)
 
-    {:error, "MiroTalk server error (status #{status}) - Please try again later"}
+    {:error,
+     {:unreachable,
+      dgettext(
+        "dashboard_integrations",
+        "MiroTalk server error (status %{status}) - Please try again later",
+        status: status
+      )}}
   end
 
   defp handle_http_response(%Req.Response{status: status}) do
-    {:error, "Unexpected response (status #{status}) - Please verify your configuration"}
+    {:error,
+     {:unreachable,
+      dgettext(
+        "dashboard_integrations",
+        "Unexpected response (status %{status}) - Please verify your configuration",
+        status: status
+      )}}
   end
 
   defp handle_auth_error(body, default_message) do
     if String.contains?(body || "", "Unauthorized") do
-      {:error, "Invalid API key - Authentication failed"}
+      {:error,
+       {:invalid_api_key,
+        dgettext("dashboard_integrations", "Invalid API key - Authentication failed")}}
     else
-      {:error, default_message}
+      {:error, {:invalid_api_key, default_message}}
     end
   end
 
@@ -161,27 +218,31 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     case exception do
       # Mint transport errors with specific reasons
       %Mint.TransportError{reason: :nxdomain} ->
-        {:error, "Domain not found - Please check the URL"}
+        {:error, {:unreachable, domain_not_found_message()}}
 
       %Mint.TransportError{reason: :econnrefused} ->
-        {:error, "Connection refused - Server may be down or URL incorrect"}
+        {:error, {:unreachable, connection_refused_message()}}
 
       %Mint.TransportError{reason: :timeout} ->
-        {:error, "Connection timeout - Server took too long to respond"}
+        {:error, {:unreachable, connection_timeout_message()}}
 
       # Req transport errors (may wrap Mint errors)
       %Req.TransportError{reason: :nxdomain} ->
-        {:error, "Domain not found - Please check the URL"}
+        {:error, {:unreachable, domain_not_found_message()}}
 
       %Req.TransportError{reason: :econnrefused} ->
-        {:error, "Connection refused - Server may be down or URL incorrect"}
+        {:error, {:unreachable, connection_refused_message()}}
 
       %Req.TransportError{reason: :timeout} ->
-        {:error, "Connection timeout - Server took too long to respond"}
+        {:error, {:unreachable, connection_timeout_message()}}
 
       # Generic fallback with message
       _other ->
-        {:error, "Connection failed: #{Exception.message(exception)}"}
+        {:error,
+         {:unreachable,
+          dgettext("dashboard_integrations", "Connection failed: %{reason}",
+            reason: Exception.message(exception)
+          )}}
     end
   end
 
@@ -399,4 +460,17 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def url_patterns, do: ["mirotalk", "talk."]
+
+  defp domain_not_found_message,
+    do: dgettext("dashboard_integrations", "Domain not found - Please check the URL")
+
+  defp connection_refused_message,
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "Connection refused - Server may be down or URL incorrect"
+      )
+
+  defp connection_timeout_message,
+    do: dgettext("dashboard_integrations", "Connection timeout - Server took too long to respond")
 end
