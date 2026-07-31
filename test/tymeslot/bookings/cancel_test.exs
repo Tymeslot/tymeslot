@@ -373,7 +373,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       access_token_encrypted: Encryption.encrypt("access-token"),
       refresh_token_encrypted: Encryption.encrypt("refresh-token"),
       token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting",
+      oauth_scope: "meeting:write:meeting meeting:delete:meeting",
       provider_account_id: nil
     )
   end

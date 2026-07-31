@@ -123,6 +123,36 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       assert :ok =
                perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
     end
+
+    test "discards instead of retrying when the grant lacks the delete scope" do
+      %{user: user} = create_user_with_profile()
+      integration = insert_zoom_integration(user)
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_integration_id: integration.id,
+          video_room_id: "333"
+        })
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 400,
+           body:
+             Jason.encode!(%{
+               "code" => 4711,
+               "message" =>
+                 "Invalid access token, does not contain scopes:[meeting:delete:meeting]."
+             })
+         }}
+      end)
+
+      # Re-consent is the only fix, so the job must not burn its retry budget.
+      assert {:discard, _reason} =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
+    end
   end
 
   describe "perform/1 — guards" do
@@ -162,7 +192,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       access_token_encrypted: Encryption.encrypt("access-token"),
       refresh_token_encrypted: Encryption.encrypt("refresh-token"),
       token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting",
+      oauth_scope: "meeting:write:meeting meeting:delete:meeting",
       provider_account_id: nil
     )
   end
