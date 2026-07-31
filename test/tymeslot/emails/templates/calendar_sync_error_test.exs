@@ -155,7 +155,10 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
       assert text =~ "Calendar Sync Error"
       assert text =~ ":unknown_error"
-      assert text =~ "Duration: #{meeting.duration} minutes"
+      # 60 minutes reads as "1 hour": durations are formatted for humans, in the
+      # recipient's locale, not echoed back as a raw minute count.
+      assert meeting.duration == 60
+      assert text =~ "Duration: 1 hour"
     end
   end
 

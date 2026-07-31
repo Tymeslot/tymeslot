@@ -17,7 +17,9 @@ defmodule TymeslotWeb.FallbackControllerTest do
 
       # Not the bare Phoenix "Not Found" text — a self-contained, branded page
       # whose primary action routes to "/", which sends visitors on to auth.
-      assert body =~ "This page doesn't exist"
+      # The headline is translated, so HEEx renders it as dynamic content and
+      # escapes the apostrophe; the browser still shows a plain one.
+      assert body =~ "This page doesn&#39;t exist"
       assert body =~ "<!DOCTYPE html>"
       assert body =~ ~s(href="/")
       assert body =~ "app.css"
