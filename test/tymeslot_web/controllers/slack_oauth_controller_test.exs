@@ -12,6 +12,7 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
   alias Phoenix.Flash
   alias Phoenix.Token
   alias Tymeslot.Repo
+  alias Tymeslot.Slack.OAuth
   alias Tymeslot.Slack.SlackIntegrationSchema
   alias TymeslotWeb.Endpoint
 
@@ -34,6 +35,7 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
   describe "GET /api/slack/oauth/start" do
     test "redirects to slack.com/oauth/v2/authorize with the expected params", %{conn: conn} do
       user = insert(:user)
+      user_id = user.id
       conn = conn |> log_in_user(user) |> get(~p"/api/slack/oauth/start")
 
       target = redirected_to(conn, 302)
@@ -43,8 +45,8 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
       assert params["client_id"] == "slack-test-client-id"
       assert params["scope"] =~ "chat:write"
       assert params["redirect_uri"] =~ "/api/slack/oauth/callback"
-      assert is_binary(params["state"])
-      assert params["state"] != ""
+      # The state is a signed token binding the user the flow was started for.
+      assert {:ok, ^user_id} = OAuth.verify_state(params["state"])
     end
 
     test "redirects unauthenticated requests to the login page", %{conn: conn} do

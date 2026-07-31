@@ -12,10 +12,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     base_url: "https://graph.microsoft.com/v1.0"
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, MultiCalendarFetch, ProviderCommon}
+  alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
 
   @typep converted_event :: %{
            required(:uid) => String.t() | nil,
@@ -29,16 +31,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
            required(:show_as) => String.t() | nil,
            required(:response_status) => String.t() | nil,
            required(:transparency) => String.t()
-         }
-
-  @typep calendar_entry :: %{
-           required(:id) => String.t() | nil,
-           required(:name) => String.t() | nil,
-           required(:color) => String.t() | nil,
-           required(:primary) => boolean(),
-           required(:selected) => boolean(),
-           required(:can_edit) => boolean() | nil,
-           required(:owner) => String.t()
          }
 
   # Required callbacks for OAuth base
@@ -114,7 +106,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   def get_calendar_api_module, do: api_module()
 
   @spec call_list_events(CalendarIntegrationSchema.t(), DateTime.t(), DateTime.t()) ::
-          {:ok, list(map())} | {:error, atom(), String.t()}
+          {:ok, list(map())} | {:error, Outcome.t()} | {:error, atom(), String.t()}
   def call_list_events(integration, start_time, end_time) do
     MultiCalendarFetch.list_events_with_selection(
       integration,
@@ -167,8 +159,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   @doc """
   Discovers all available calendars for the authenticated Outlook account.
   """
+  @impl Tymeslot.Integrations.Calendar.Provider
   @spec discover_calendars(CalendarIntegrationSchema.t()) ::
-          {:ok, list(calendar_entry())} | {:error, term()}
+          {:ok, [CalendarEntry.t()]} | {:error, term()}
   def discover_calendars(integration) do
     ProviderCommon.discover_calendars(
       integration,
@@ -190,8 +183,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   Tests the connection to Microsoft Graph API.
   Makes a simple API call to verify OAuth token validity and API accessibility.
   """
-  @spec test_connection(CalendarIntegrationSchema.t()) :: {:ok, String.t()} | {:error, term()}
-  def test_connection(integration) do
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec perform_connection_test(CalendarIntegrationSchema.t()) ::
+          {:ok, String.t()} | {:error, term()}
+  def perform_connection_test(integration) do
     case api_module().list_primary_events(
            integration,
            DateTime.utc_now(),
@@ -269,7 +264,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
       primary: cal["isDefaultCalendar"] || false,
       selected: cal["isDefaultCalendar"] || false,
       can_edit: cal["canEdit"],
+      read_only: cal["canEdit"] == false,
       owner: get_calendar_owner(cal)
     }
+    |> CalendarEntry.normalize()
+    |> CalendarEntry.with_defaults()
   end
 end

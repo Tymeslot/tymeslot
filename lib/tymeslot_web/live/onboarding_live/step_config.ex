@@ -55,6 +55,10 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   # Superset of every step that can appear — used only for membership checks.
   @all_steps @steps_with_theme
 
+  # String forms of the same list, so a URL segment can be checked without
+  # converting user-supplied text into an atom.
+  @all_step_names Enum.map(@all_steps, &Atom.to_string/1)
+
   @buffer_time_values [0, 15, 30, 45, 60]
 
   @buffer_minutes_constraints %{
@@ -142,10 +146,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   """
   @spec valid_step?(binary()) :: boolean()
   def valid_step?(step_name) when is_binary(step_name) do
-    step_atom = String.to_existing_atom(step_name)
-    step_atom in @all_steps
-  rescue
-    ArgumentError -> false
+    step_name in @all_step_names
   end
 
   @spec valid_step?(step()) :: boolean()

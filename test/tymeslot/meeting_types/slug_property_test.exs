@@ -35,8 +35,7 @@ defmodule Tymeslot.MeetingTypes.SlugPropertyTest do
       long_name = String.duplicate("a", 500)
       result = Slugs.to_slug(%{name: long_name})
       # No length cap in to_slug/1 itself — it returns the full slug.
-      assert is_binary(result)
-      assert result =~ ~r/\A[a-z0-9-]+\z/
+      assert result == long_name
     end
 
     test "handles a mixed ASCII + unicode name by keeping only ASCII characters" do

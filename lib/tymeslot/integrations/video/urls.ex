@@ -6,11 +6,14 @@ defmodule Tymeslot.Integrations.Video.Urls do
   Accepts either raw URLs or meeting context maps.
   """
 
+  alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
 
-  @spec extract_room_id(String.t() | map()) :: String.t() | nil
+  @spec extract_room_id(String.t() | MeetingContext.t()) :: String.t() | nil
   def extract_room_id(%{room_data: room_data}) when is_map(room_data) do
-    room_data[:room_id] || room_data["room_id"] || "unknown"
+    # No placeholder fallback here: a context without a room id has no room, and
+    # returning a stand-in string would let callers persist an unusable room.
+    Map.get(room_data, :room_id)
   end
 
   def extract_room_id(meeting_url) when is_binary(meeting_url) do

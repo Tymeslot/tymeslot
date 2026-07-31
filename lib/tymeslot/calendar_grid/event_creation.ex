@@ -30,6 +30,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
   alias Tymeslot.Meetings.AttendeeNotifications
+  alias Tymeslot.Utils.MapKeys
 
   @reauth_flash_message "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
 
@@ -210,7 +211,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   defp build_create_success(created, creating, user_id, start_at, end_at, video_context) do
-    uid = if is_binary(created), do: created, else: created[:uid] || created["uid"]
+    uid = if is_binary(created), do: created, else: MapKeys.get_binary(created, :uid)
 
     {provider, default_booking_calendar_id, reauth_required?} =
       lookup_integration_metadata(creating.integration_id)
@@ -263,8 +264,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     case VideoRooms.create_meeting_room(user_id, opts) do
       {:ok, %{room_data: room_data}} ->
         %{
-          meeting_url: room_data[:meeting_url] || room_data[:join_url],
-          room_id: room_data[:room_id],
+          meeting_url: room_data.meeting_url,
+          room_id: room_data.room_id,
           video_integration_id: integration_id
         }
 

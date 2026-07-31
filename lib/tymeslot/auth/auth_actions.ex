@@ -57,7 +57,10 @@ defmodule Tymeslot.Auth.AuthActions do
            converted_params,
            socket,
            calling_app: :auth,
-           metadata: metadata
+           metadata: metadata,
+           # SignupSecurity.gate/2 already consumed a signup rate-limit token
+           # for this attempt on the LiveView path; avoid double-counting it.
+           rate_limit_checked: true
          ) do
       {:ok, _user, message} ->
         {:ok, :verify_email, message}

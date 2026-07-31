@@ -35,12 +35,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
     test "returns correct capabilities for Zoom" do
       capabilities = ZoomProvider.capabilities()
 
-      assert capabilities[:supports_scheduled_meetings] == true
-      assert capabilities[:supports_recurring_meetings] == true
-      assert capabilities[:supports_waiting_room] == true
+      assert capabilities[:waiting_room] == true
       assert capabilities[:max_participants] == 100
-      assert capabilities[:requires_account] == true
-      assert capabilities[:requires_work_account] == false
+      assert capabilities[:recording] == true
+      assert capabilities[:dial_in] == true
+      assert capabilities[:breakout_rooms] == true
+      assert capabilities[:screen_sharing] == true
+      assert capabilities[:chat] == true
     end
   end
 
@@ -68,7 +69,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
 
       expect(ZoomOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
-      assert {:ok, message} = ZoomProvider.test_connection(config)
+      assert {:ok, message} = ZoomProvider.perform_connection_test(config)
       assert String.contains?(message, "Successfully authenticated")
     end
 
@@ -77,7 +78,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
 
       expect(ZoomOAuthHelperMock, :validate_token, fn _config -> {:error, "expired"} end)
 
-      assert {:error, message} = ZoomProvider.test_connection(config)
+      assert {:error, message} = ZoomProvider.perform_connection_test(config)
       assert String.contains?(message, "Failed to authenticate")
       assert String.contains?(message, "expired")
     end
@@ -137,11 +138,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
       assert ZoomProvider.extract_room_id("https://meet.google.com/abc-defg-hij") == nil
     end
 
-    test "extracts room_id from a struct-style room_data map" do
-      assert ZoomProvider.extract_room_id(%{room_data: %{room_id: "abc"}}) == "abc"
-    end
-
-    test "returns nil for unrecognised input" do
+    test "returns nil for non-string input" do
+      # The callback contract only accepts meeting URLs; map unwrapping for
+      # meeting-context shapes happens once, upstream, in Video.Urls.
+      assert ZoomProvider.extract_room_id(%{room_data: %{room_id: "abc"}}) == nil
       assert ZoomProvider.extract_room_id(%{}) == nil
     end
   end

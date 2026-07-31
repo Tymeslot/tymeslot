@@ -45,7 +45,9 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperTest do
       # Cancelling a booking needs its own granular scope; without it Zoom
       # rejects every delete with code 4711.
       assert query["scope"] =~ "meeting:delete:meeting"
-      assert is_binary(query["state"])
+
+      # Signed state: base64url payload and HMAC, separated by a dot.
+      assert [_payload, _signature] = String.split(query["state"], ".")
     end
   end
 

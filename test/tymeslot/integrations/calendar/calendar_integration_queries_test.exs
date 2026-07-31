@@ -35,10 +35,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueriesTest do
       raw_integration =
         Repo.get(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
 
-      assert raw_integration.username_encrypted != nil
-      assert raw_integration.password_encrypted != nil
-      refute raw_integration.username_encrypted == "secretuser"
-      refute raw_integration.password_encrypted == "secretpass"
+      assert byte_size(raw_integration.username_encrypted) > 0
+      assert byte_size(raw_integration.password_encrypted) > 0
+      refute String.contains?(raw_integration.username_encrypted, "secretuser")
+      refute String.contains?(raw_integration.password_encrypted, "secretpass")
 
       # But decrypted when retrieved through queries
       {:ok, retrieved} = CalendarIntegrationQueries.get(integration.id)
@@ -108,10 +108,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueriesTest do
       {:ok, updated} =
         CalendarIntegrationQueries.deselect_calendars(integration, ["gone@example.com"])
 
-      assert Enum.find(updated.calendar_list, &(&1["id"] == "gone@example.com"))["selected"] ==
+      assert Enum.find(updated.calendar_list, &(&1.id == "gone@example.com")).selected ==
                false
 
-      assert Enum.find(updated.calendar_list, &(&1["id"] == "primary"))["selected"] == true
+      assert Enum.find(updated.calendar_list, &(&1.id == "primary")).selected == true
     end
 
     test "is a no-op that persists unchanged when no ids match" do

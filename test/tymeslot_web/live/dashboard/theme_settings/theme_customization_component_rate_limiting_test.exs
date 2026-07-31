@@ -119,6 +119,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponentRateLim
       assert Enum.reject(results, &match?({:error, :rate_limited, _message}, &1)) == []
     end
 
+    # The per-user assertions live inside the shared helper
+    # `RateLimiterTestHelpers.test_multiple_users_operate_independently/3`.
+    # credo:disable-for-next-line Jump.CredoChecks.TestHasNoAssertions
     test "multiple users operate independently", %{user_id: base_user_id} do
       user_2 = insert(:user)
       user_3 = insert(:user)

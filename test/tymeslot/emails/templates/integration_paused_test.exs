@@ -11,7 +11,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationPausedTest do
 
       html = IntegrationPaused.render(user, integration, :calendar, 14)
 
-      assert is_binary(html)
+      assert html =~ "<!doctype html>"
       assert String.length(html) > 500
     end
 
@@ -21,7 +21,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationPausedTest do
 
       html = IntegrationPaused.render(user, integration, :video, 14)
 
-      assert is_binary(html)
+      assert html =~ "<!doctype html>"
       assert String.length(html) > 500
     end
 
@@ -67,7 +67,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationPausedTest do
 
       html = IntegrationPaused.render(user, integration, :other, 14)
 
-      assert is_binary(html)
+      assert html =~ "<!doctype html>"
       assert String.length(html) > 500
     end
   end
@@ -112,7 +112,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationPausedTest do
 
       text = IntegrationPaused.render_text(user, integration, :calendar, 14)
 
-      assert is_binary(text)
+      assert text =~ "Weird<>provider"
       assert text =~ "Open Integration Settings"
     end
   end

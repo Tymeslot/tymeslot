@@ -167,7 +167,7 @@ defmodule TymeslotWeb.AuthLiveTest do
           "password" => "WrongPassword"
         })
 
-      assert Flash.get(conn.assigns.flash, :error) != nil
+      assert Flash.get(conn.assigns.flash, :error) == "Invalid email or password."
       assert redirected_to(conn) == ~p"/auth/login"
     end
   end
@@ -482,7 +482,7 @@ defmodule TymeslotWeb.AuthLiveTest do
 
       render_hook(view, "resend_verification", %{})
 
-      assert render(view) =~ "limit" or render(view) =~ "Too many"
+      assert render(view) =~ "Too many email verification attempts. Please try again later."
     end
 
     test "resend_verification disables the button with a live cooldown countdown",
@@ -558,6 +558,24 @@ defmodule TymeslotWeb.AuthLiveTest do
     end
   end
 
+  describe "verify-email page" do
+    test "shows the address the verification email was sent to", %{conn: conn} do
+      user = insert(:unverified_user)
+
+      conn =
+        init_test_session(conn, %{
+          "unverified_user_id" => user.id,
+          "unverified_user_email" => user.email,
+          "unverified_session_timestamp" => DateTime.to_unix(DateTime.utc_now())
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/auth/verify-email")
+
+      assert html =~ "Sent to"
+      assert html =~ user.email
+    end
+  end
+
   defp setup_password_reset_token(_context) do
     user = insert(:user)
     {token, _value} = Token.generate_password_reset_token()
@@ -614,8 +632,7 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert redirected_to(conn) == "/dashboard"
 
       # Verify user was created
-      user = Auth.get_user_by_email("oauth_new@example.com")
-      assert user
+      assert user = Auth.get_user_by_email("oauth_new@example.com")
       assert user.github_user_id == "gh_new_123"
     end
   end

@@ -4,7 +4,9 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.RecipientLocale
+  alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.Emails.Templates.CalendarSyncError
+  alias Tymeslot.Profiles
 
   import Tymeslot.Factory
   import Tymeslot.TestFixtures
@@ -16,8 +18,9 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
       html = CalendarSyncError.render(meeting, error_reason)
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      assert html =~ "</html>"
+      assert html =~ "Calendar Sync Error"
+      assert html =~ "Meeting Details"
     end
 
     test "includes error details in output" do
@@ -26,9 +29,8 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
       html = CalendarSyncError.render(meeting, error_reason)
 
-      assert is_binary(html)
-      # Error details should be formatted and included
-      assert String.length(html) > 500
+      assert html =~ "Error Details"
+      assert html =~ ":authentication_failed"
     end
 
     test "includes meeting details" do
@@ -46,8 +48,11 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
       html = CalendarSyncError.render(meeting, error_reason)
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      # Falls back to the application default timezone rather than crashing
+      fallback_local = DateTime.shift_zone!(meeting.start_time, Profiles.get_default_timezone())
+
+      assert html =~ Formatting.format_time(fallback_local, "en")
+      assert html =~ "Calendar Sync Error"
     end
 
     test "converts meeting time to owner's timezone" do
@@ -57,9 +62,10 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
       html = CalendarSyncError.render(meeting, error_reason)
 
-      assert is_binary(html)
-      # Should contain time information
-      assert String.length(html) > 500
+      owner_local = DateTime.shift_zone!(meeting.start_time, "America/New_York")
+
+      assert html =~ Formatting.format_time(owner_local, "en")
+      refute html =~ Formatting.format_time(meeting.start_time, "en")
     end
 
     test "includes action required section" do
@@ -80,21 +86,22 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       assert html =~ "Common causes:"
     end
 
-    test "handles various error reasons" do
+    test "renders each error reason into the error details section" do
       meeting = insert(:meeting)
 
       error_reasons = [
-        :network_error,
-        :timeout,
-        :authentication_failed,
-        :rate_limited,
-        :server_error
+        {:network_error, ":network_error"},
+        {:timeout, ":timeout"},
+        {:authentication_failed, ":authentication_failed"},
+        {:rate_limited, ":rate_limited"},
+        {:server_error, ":server_error"}
       ]
 
-      for error_reason <- error_reasons do
+      for {error_reason, rendered} <- error_reasons do
         html = CalendarSyncError.render(meeting, error_reason)
-        assert is_binary(html)
-        assert String.length(html) > 500
+
+        assert html =~ "Error Details"
+        assert html =~ rendered
       end
     end
   end
@@ -146,8 +153,9 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
       text = CalendarSyncError.render_text(meeting, :unknown_error)
 
-      assert is_binary(text)
-      assert String.length(text) > 100
+      assert text =~ "Calendar Sync Error"
+      assert text =~ ":unknown_error"
+      assert text =~ "Duration: #{meeting.duration} minutes"
     end
   end
 
@@ -156,8 +164,8 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       meeting = insert(:meeting)
       html = CalendarSyncError.render(meeting, "<CalDAV:error> tag not closed & invalid")
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      assert html =~ "</html>"
+      assert html =~ "Error Details"
       refute html =~ "<CalDAV:error>"
     end
 
@@ -165,8 +173,9 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       meeting = insert(:meeting)
       html = CalendarSyncError.render(meeting, "Response: <foo/> & </bar> unclosed")
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      assert html =~ "</html>"
+      assert html =~ "Error Details"
+      refute html =~ "<foo/>"
     end
   end
 
@@ -179,17 +188,17 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       meeting = insert(:meeting)
       text = CalendarSyncError.render_text(meeting, "<script>alert('xss')</script>")
 
-      assert is_binary(text)
       assert text =~ "Calendar Sync Error"
       assert text =~ "ACTION REQUIRED"
+      assert text =~ "<script>alert('xss')</script>"
     end
 
     test "CalendarSyncError.render_text returns a valid binary with malicious location" do
       meeting = insert(:meeting, location: "Room A\nX-Injected: evil-header")
       text = CalendarSyncError.render_text(meeting, :network_error)
 
-      assert is_binary(text)
       assert text =~ "Calendar Sync Error"
+      assert text =~ "Location: Room A"
     end
   end
 end

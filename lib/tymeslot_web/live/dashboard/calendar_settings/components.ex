@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.HealthCheck
@@ -405,7 +406,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     [
       integration.provider_account_email,
       conflict_segment(integration, calendar_list),
-      booking_segment(integration, calendar_list),
+      booking_segment(integration),
       sync_segment(integration)
     ]
     |> Enum.reject(&is_nil/1)
@@ -425,7 +426,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   end
 
   defp conflict_segment(%{is_active: true}, calendar_list) when calendar_list != [] do
-    selected = Enum.count(calendar_list, &(&1["selected"] || &1[:selected]))
+    selected = Enum.count(calendar_list, & &1.selected)
 
     dgettext("dashboard_calendar_settings", "conflict-checks %{selected} of %{total} calendars",
       selected: selected,
@@ -435,10 +436,16 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   defp conflict_segment(_integration, _calendar_list), do: nil
 
-  defp booking_segment(integration, calendar_list) do
-    case booking_calendar(integration, calendar_list) do
+  # This is a display-only summary, so it only names a booking target once
+  # one is confirmed — see `Calendar.confirmed_booking_calendar/1`. When the
+  # configured target exists but is read-only (no longer eligible), that
+  # helper returns nil like the unconfigured case would; surface a warning
+  # instead of silently dropping the segment, since a read-only target is a
+  # problem the user needs to fix, not an absent one.
+  defp booking_segment(integration) do
+    case Calendar.confirmed_booking_calendar(integration) do
       nil ->
-        nil
+        read_only_booking_target_warning(integration)
 
       calendar ->
         dgettext("dashboard_calendar_settings", "books into %{calendar}",
@@ -447,11 +454,18 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     end
   end
 
-  defp booking_calendar(integration, calendar_list) do
+  defp read_only_booking_target_warning(integration) do
+    calendar_list = integration.calendar_list || []
     booking_id = Map.get(integration, :default_booking_calendar_id)
 
-    Enum.find(calendar_list, &(booking_id && (&1["id"] || &1[:id]) == booking_id)) ||
-      Enum.find(calendar_list, &(&1["primary"] || &1[:primary]))
+    target =
+      (booking_id && Enum.find(calendar_list, &(&1.id == booking_id))) ||
+        Enum.find(calendar_list, & &1.primary)
+
+    case target do
+      %{read_only: true} -> "booking target can no longer accept bookings"
+      _not_read_only_or_absent -> nil
+    end
   end
 
   defp sync_segment(%{last_sync_at: %DateTime{} = synced_at}),

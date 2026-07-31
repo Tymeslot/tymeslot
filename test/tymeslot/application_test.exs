@@ -2,243 +2,76 @@ defmodule Tymeslot.ApplicationTest do
   use ExUnit.Case, async: false
   @moduletag :infrastructure
 
-  alias Tymeslot.Infrastructure.{AvailabilityCache, DashboardCache}
+  alias Tymeslot.Infrastructure.{AvailabilityCache, CircuitBreaker, DashboardCache}
+  alias Tymeslot.Integrations.Calendar.RequestCoalescer
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
   alias Tymeslot.Security.AccountLockout
   alias Tymeslot.Security.RateLimit
 
   describe "core application services" do
-    test "Tymeslot.PubSub is started" do
-      assert is_pid(Process.whereis(Tymeslot.PubSub))
+    # These four children are third-party processes (Phoenix.PubSub, Ecto, Finch,
+    # Task.Supervisor) registered under Tymeslot-owned names. There is no
+    # application function to call: the registration itself is what this guards,
+    # and dropping a child spec is exactly the regression it catches.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
+    test "base children are registered under their application names" do
+      for name <- [Tymeslot.PubSub, Tymeslot.Repo, Tymeslot.Finch, Tymeslot.TaskSupervisor] do
+        assert is_pid(Process.whereis(name)), "#{inspect(name)} is not running"
+      end
     end
 
-    test "Repo is started" do
-      assert is_pid(Process.whereis(Tymeslot.Repo))
-    end
+    test "infrastructure caches are started and serve reads" do
+      key = {:application_test, System.unique_integer([:positive])}
 
-    test "Finch is started" do
-      assert is_pid(Process.whereis(Tymeslot.Finch))
-    end
+      assert :ok = DashboardCache.put(key, :cached)
+      assert DashboardCache.get_or_compute(key, fn -> :recomputed end) == :cached
+      DashboardCache.invalidate(key)
 
-    test "Task.Supervisor is started" do
-      assert is_pid(Process.whereis(Tymeslot.TaskSupervisor))
-    end
+      assert :ok = AvailabilityCache.put(key, :cached)
+      assert AvailabilityCache.get_or_compute(key, fn -> :recomputed end) == :cached
+      AvailabilityCache.invalidate(key)
 
-    test "Infrastructure caches are started" do
-      assert is_pid(Process.whereis(DashboardCache))
-      assert is_pid(Process.whereis(AvailabilityCache))
+      # IdempotencyCache reads through to the database, which this module has no
+      # sandbox connection for; its process being up is what the tree guarantees.
       assert is_pid(Process.whereis(IdempotencyCache))
     end
 
-    test "Security services are started" do
-      # RateLimit (Hammer ETS) is not a named process; verify its ETS table is up
-      assert :ets.info(RateLimit) != :undefined
+    test "security services are started" do
+      identifier = "application-test-#{System.unique_integer([:positive])}@example.com"
+      on_exit(fn -> AccountLockout.clear_failed_attempts(identifier) end)
+
       # AccountLockout is a plain module backed by ETS; the table is owned by
-      # AccountLockout.TableOwner in the supervision tree.
-      assert is_pid(Process.whereis(AccountLockout.TableOwner))
-      assert :ets.info(:account_lockout_table) != :undefined
+      # AccountLockout.TableOwner in the supervision tree, so a recorded attempt
+      # round-tripping proves the owner started.
+      assert AccountLockout.get_failed_attempt_count(identifier) == 0
+      assert AccountLockout.check_and_record_attempt(identifier, false) == :ok
+      assert AccountLockout.get_failed_attempt_count(identifier) == 1
+
+      # RateLimit (Hammer ETS) is not a named process; a first hit against a
+      # fresh bucket proves its table is up.
+      bucket = "application-test:#{System.unique_integer([:positive])}"
+      assert RateLimit.hit(bucket, 60_000, 5) == {:allow, 1}
     end
 
     test "Oban is started" do
-      # In test mode with testing: :manual, Oban might be registered under a different name
-      # or we can check via Oban.whereis/1 using the default name.
-      assert is_pid(Process.whereis(Oban)) or is_pid(Oban.whereis(Oban))
+      # Oban registers itself in Oban.Registry rather than under a local name,
+      # so Oban.whereis/1 is the supported lookup.
+      assert is_pid(Oban.whereis(Oban))
     end
 
-    test "CircuitBreakerSupervisor is started" do
-      assert is_pid(Process.whereis(Tymeslot.Infrastructure.CircuitBreakerSupervisor))
+    test "CircuitBreakerSupervisor is started with its named breakers" do
+      assert %{status: :closed} = CircuitBreaker.status(:email_service_breaker)
     end
 
-    test "RequestCoalescer is started" do
-      assert is_pid(Process.whereis(Tymeslot.Integrations.Calendar.RequestCoalescer))
-    end
-  end
+    test "RequestCoalescer is started and runs fetches" do
+      today = Date.utc_today()
 
-  describe "Oban queue configuration" do
-    setup do
-      # Save original config
-      original_base = Application.get_env(:tymeslot, :oban_queues)
-      original_additional = Application.get_env(:tymeslot, :oban_additional_queues)
-
-      on_exit(fn ->
-        # Restore original config
-        if original_base do
-          Application.put_env(:tymeslot, :oban_queues, original_base)
-        else
-          Application.delete_env(:tymeslot, :oban_queues)
-        end
-
-        if original_additional do
-          Application.put_env(:tymeslot, :oban_additional_queues, original_additional)
-        else
-          Application.delete_env(:tymeslot, :oban_additional_queues)
-        end
-      end)
-
-      :ok
-    end
-
-    test "merges base and additional queues with additional taking precedence" do
-      Application.put_env(:tymeslot, :oban_queues,
-        default: 10,
-        emails: 5,
-        webhooks: 3
-      )
-
-      Application.put_env(:tymeslot, :oban_additional_queues,
-        emails: 20,
-        saas_emails: 5
-      )
-
-      base_queues = Application.get_env(:tymeslot, :oban_queues, [])
-      additional_queues = Application.get_env(:tymeslot, :oban_additional_queues, [])
-      merged = Keyword.merge(base_queues, additional_queues)
-
-      # Verify emails was overridden
-      assert merged[:emails] == 20
-      # Verify saas_emails was added
-      assert merged[:saas_emails] == 5
-      # Verify default and webhooks remain unchanged
-      assert merged[:default] == 10
-      assert merged[:webhooks] == 3
-    end
-
-    test "detects conflicts when additional queues override base queue concurrency" do
-      Application.put_env(:tymeslot, :oban_queues,
-        default: 10,
-        emails: 5
-      )
-
-      Application.put_env(:tymeslot, :oban_additional_queues,
-        emails: 20,
-        saas_emails: 5
-      )
-
-      base_queues = Application.get_env(:tymeslot, :oban_queues, [])
-      additional_queues = Application.get_env(:tymeslot, :oban_additional_queues, [])
-
-      base_queue_keys = Keyword.keys(base_queues)
-      additional_queue_keys = Keyword.keys(additional_queues)
-      conflict_keys = Enum.filter(additional_queue_keys, &(&1 in base_queue_keys))
-
-      # Verify conflict detection logic
-      assert :emails in conflict_keys
-      assert :saas_emails not in conflict_keys
-      assert length(conflict_keys) == 1
-    end
-
-    test "handles empty queues gracefully" do
-      Application.delete_env(:tymeslot, :oban_queues)
-      Application.delete_env(:tymeslot, :oban_additional_queues)
-
-      base_queues = Application.get_env(:tymeslot, :oban_queues, [])
-      additional_queues = Application.get_env(:tymeslot, :oban_additional_queues, [])
-      merged = Keyword.merge(base_queues, additional_queues)
-
-      # When empty, the application would use a fallback
-      final_queues =
-        if Enum.empty?(merged) do
-          [default: 1]
-        else
-          merged
-        end
-
-      assert final_queues == [default: 1]
-    end
-
-    test "loads base queues only when no additional queues configured" do
-      Application.put_env(:tymeslot, :oban_queues, default: 10, emails: 5)
-      Application.delete_env(:tymeslot, :oban_additional_queues)
-
-      base_queues = Application.get_env(:tymeslot, :oban_queues, [])
-      additional_queues = Application.get_env(:tymeslot, :oban_additional_queues, [])
-      merged = Keyword.merge(base_queues, additional_queues)
-
-      assert merged == [default: 10, emails: 5]
-    end
-
-    test "loads additional queues when no base queues configured" do
-      Application.delete_env(:tymeslot, :oban_queues)
-      Application.put_env(:tymeslot, :oban_additional_queues, saas_emails: 5)
-
-      base_queues = Application.get_env(:tymeslot, :oban_queues, [])
-      additional_queues = Application.get_env(:tymeslot, :oban_additional_queues, [])
-      merged = Keyword.merge(base_queues, additional_queues)
-
-      assert merged == [saas_emails: 5]
-    end
-
-    test "preserves all queues from both base and additional" do
-      Application.put_env(:tymeslot, :oban_queues,
-        default: 10,
-        emails: 5,
-        webhooks: 3
-      )
-
-      Application.put_env(:tymeslot, :oban_additional_queues,
-        payments: 2,
-        saas_emails: 5
-      )
-
-      base_queues = Application.get_env(:tymeslot, :oban_queues, [])
-      additional_queues = Application.get_env(:tymeslot, :oban_additional_queues, [])
-      merged = Keyword.merge(base_queues, additional_queues)
-
-      # Verify all queues are present
-      assert Keyword.has_key?(merged, :default)
-      assert Keyword.has_key?(merged, :emails)
-      assert Keyword.has_key?(merged, :webhooks)
-      assert Keyword.has_key?(merged, :payments)
-      assert Keyword.has_key?(merged, :saas_emails)
-      assert length(merged) == 5
-    end
-
-    test "raises clear error when oban_queues is not a keyword list" do
-      Application.put_env(:tymeslot, :oban_queues, "not a keyword list")
-
-      assert_raise ArgumentError,
-                   ~r/:oban_queues must be a keyword list/,
-                   fn ->
-                     # This would be called during application startup
-                     # We can't actually start the app in tests, so we test the logic directly
-                     base_queues = Application.get_env(:tymeslot, :oban_queues, [])
-
-                     unless Keyword.keyword?(base_queues) do
-                       raise ArgumentError,
-                             ":oban_queues must be a keyword list, got: #{inspect(base_queues)}"
-                     end
-                   end
-    end
-
-    test "raises clear error when oban_additional_queues is not a keyword list" do
-      Application.put_env(:tymeslot, :oban_queues, default: 10)
-      Application.put_env(:tymeslot, :oban_additional_queues, %{not: "keyword list"})
-
-      assert_raise ArgumentError,
-                   ~r/:oban_additional_queues must be a keyword list/,
-                   fn ->
-                     additional_queues =
-                       Application.get_env(:tymeslot, :oban_additional_queues, [])
-
-                     unless Keyword.keyword?(additional_queues) do
-                       raise ArgumentError,
-                             ":oban_additional_queues must be a keyword list, got: #{inspect(additional_queues)}"
-                     end
-                   end
-    end
-
-    test "handles nil queue configurations gracefully" do
-      Application.delete_env(:tymeslot, :oban_queues)
-      Application.delete_env(:tymeslot, :oban_additional_queues)
-
-      base_queues = Application.get_env(:tymeslot, :oban_queues, [])
-      additional_queues = Application.get_env(:tymeslot, :oban_additional_queues, [])
-
-      # Both should be empty lists (default value)
-      assert base_queues == []
-      assert additional_queues == []
-      assert Keyword.keyword?(base_queues)
-      assert Keyword.keyword?(additional_queues)
+      assert RequestCoalescer.coalesce(1, today, today, fn -> {:ok, [%{uid: "evt-1"}]} end) ==
+               {:ok, [%{uid: "evt-1"}]}
     end
   end
+
+  # Oban queue merging, validation, and the "no queues configured" fallback are
+  # covered against the real implementation in
+  # Tymeslot.Infrastructure.ObanQueuesTest.
 end

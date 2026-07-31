@@ -18,7 +18,9 @@
   transform: translateY(-8px) scale(0.98);
 }
 
-/* Loading Spinner — backs the <.spinner> component */
+/* Loading Spinner — backs the <.spinner> component. Sizing comes from the
+   component's `class` attr (default h-5 w-5); keeping it out of this
+   selector lets call sites override it with utility classes. */
 .spinner {
-  @apply animate-spin h-5 w-5;
+  @apply animate-spin;
 }

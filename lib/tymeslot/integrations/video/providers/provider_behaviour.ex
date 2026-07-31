@@ -6,19 +6,24 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   seamless switching between different video conferencing platforms.
   """
 
+  alias Tymeslot.Integrations.Shared.ConnectionProbe
+  alias Tymeslot.Integrations.Video.Providers.Capabilities
+  alias Tymeslot.Integrations.Video.RoomData
+
   @doc """
   Creates a new meeting room.
 
-  Returns {:ok, room_data} where room_data contains platform-specific information
-  about the created room, or {:error, reason} on failure.
+  Returns {:ok, room_data} where room_data is a `RoomData.t()` carrying
+  platform-specific information about the created room, or {:error, reason}
+  on failure.
   """
-  @callback create_meeting_room(config :: map()) :: {:ok, map()} | {:error, any()}
+  @callback create_meeting_room(config :: map()) :: {:ok, RoomData.t()} | {:error, any()}
 
   @doc """
   Creates a join URL for a participant.
 
   ## Parameters
-    - room_data: Platform-specific room information from create_meeting_room
+    - room_data: `RoomData.t()` returned by create_meeting_room
     - participant_name: Name of the participant
     - participant_email: Email of the participant
     - role: Role of the participant ("organizer", "attendee", "host", etc.)
@@ -27,7 +32,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   Returns {:ok, join_url} or {:error, reason}.
   """
   @callback create_join_url(
-              room_data :: map(),
+              room_data :: RoomData.t(),
               participant_name :: String.t(),
               participant_email :: String.t(),
               role :: String.t(),
@@ -54,9 +59,21 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   @doc """
   Tests the connection to the video service.
 
+  Pure I/O: providers never rate-limit their own connection test. The caller
+  (`Tymeslot.Integrations.Video.Connection`) is the single place that decides
+  whether the test is rate-limited and who it is charged to.
+
   Returns {:ok, message} on success or {:error, reason} on failure.
+
+  Named `perform_connection_test/1` rather than `test_connection/1` so a
+  direct provider call reads as out-of-band — the human-facing name
+  `test_connection` is reserved for the facade
+  (`Tymeslot.Integrations.Video.test_connection/2`) and
+  `Tymeslot.Integrations.Video.Connection`/`ProviderAdapter`, the only
+  legitimate callers of this callback; `CredoChecks.ConnectionProbeBoundary`
+  enforces that mechanically.
   """
-  @callback test_connection(config :: map()) :: {:ok, String.t()} | {:error, any()}
+  @callback perform_connection_test(config :: map()) :: {:ok, String.t()} | {:error, any()}
 
   @doc """
   Returns the provider type identifier.
@@ -67,6 +84,14 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   Returns the display name for this provider.
   """
   @callback display_name() :: String.t()
+
+  @doc """
+  Returns the connection-test rate-limit bucket this provider draws its
+  budget from. There is no default implementation: every provider must
+  declare a bucket explicitly, so a new provider that omits it fails
+  `mix compile --warnings-as-errors` instead of silently running unmetered.
+  """
+  @callback connection_test_bucket() :: ConnectionProbe.bucket()
 
   @doc """
   Returns the configuration schema for this provider.
@@ -83,8 +108,15 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
 
   This helps the system understand what features the provider supports
   (e.g., recording, screen sharing, waiting rooms, etc.).
+
+  The keys are a closed vocabulary declared by
+  `Tymeslot.Integrations.Video.Providers.Capabilities`. Build the map with
+  `Capabilities.new!/1` from a module attribute so an unknown or missing key
+  fails at compile time: `ProviderRegistry.providers_with_capability/1` reads
+  the map with `Map.get/3`, so a misspelt key is indistinguishable from an
+  unsupported feature.
   """
-  @callback capabilities() :: map()
+  @callback capabilities() :: Capabilities.t()
 
   @doc """
   Handles provider-specific meeting lifecycle events.
@@ -98,7 +130,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   """
   @callback handle_meeting_event(
               event :: atom(),
-              room_data :: map(),
+              room_data :: RoomData.t(),
               additional_data :: map()
             ) :: :ok | {:error, any()}
 
@@ -108,7 +140,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   Returns a map with standardized meeting information that can be used
   across different providers in email templates, calendar invites, etc.
   """
-  @callback generate_meeting_metadata(room_data :: map()) :: map()
+  @callback generate_meeting_metadata(room_data :: RoomData.t()) :: map()
 
   @doc """
   Updates an existing meeting room on the provider's side after the
@@ -152,7 +184,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
 
   @doc """
   Builds the runtime config map this provider expects in `create_meeting_room/1`,
-  `test_connection/1`, etc.
+  `perform_connection_test/1`, etc.
 
   Receives the persisted integration record, its decrypted credentials, and any
   call-site options (e.g. `meeting_id` for the custom provider). The provider

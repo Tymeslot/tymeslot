@@ -184,10 +184,44 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       open_caldav_form(view)
 
       # Force the async task itself to crash (rather than return an
-      # {:error, _} tuple) by having the HTTP boundary raise. Nothing in the
-      # CalDAV discovery chain rescues arbitrary exceptions, so this
-      # propagates all the way out of the start_async task and LiveView
-      # delivers {:exit, reason} to handle_async/3.
+      # {:error, _} tuple) by having the HTTP boundary exit. The discovery
+      # chain runs inside `CalendarCircuitBreaker.with_breaker/3`, whose
+      # `rescue` converts a raised exception into `{:error, _}` — but `rescue`
+      # does not catch exits, so this propagates all the way out of the
+      # start_async task and LiveView delivers {:exit, reason} to
+      # handle_async/3. (The rescued-exception path is covered by the test
+      # below.)
+      Mox.stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
+        exit(:boom)
+      end)
+
+      view
+      |> form("#caldav-form", %{
+        "url" => "https://cal.example.com",
+        "username" => "alice",
+        "password" => "secret"
+      })
+      |> render_submit()
+
+      render_async(view)
+      html = render(view)
+
+      assert html =~ "Something went wrong while contacting the calendar server"
+      refute has_element?(view, "button[type='submit'][disabled]")
+    end
+
+    test "a raised exception is absorbed by the circuit breaker and shown as a discovery error",
+         %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+      view = navigate_to_calendar_step(view)
+
+      open_caldav_form(view)
+
+      # `validate_config/1` is structural only, so a raised exception now
+      # surfaces from inside `CalendarCircuitBreaker.with_breaker/3`, which
+      # rescues it into `{:error, _}`. The task therefore does NOT crash: the
+      # user sees a discovery error rather than the crash-recovery message,
+      # and the form is still re-enabled either way.
       Mox.stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
         raise "boom"
       end)
@@ -203,7 +237,8 @@ defmodule TymeslotWeb.OnboardingLive.CaldavDiscoveryTest do
       render_async(view)
       html = render(view)
 
-      assert html =~ "Something went wrong while contacting the calendar server"
+      refute html =~ "Something went wrong while contacting the calendar server"
+      assert has_element?(view, "p.text-red-600")
       refute has_element?(view, "button[type='submit'][disabled]")
     end
 

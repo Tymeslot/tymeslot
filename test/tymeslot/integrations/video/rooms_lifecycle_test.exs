@@ -1,6 +1,7 @@
-defmodule Tymeslot.Integrations.Video.RoomsTest do
+defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
   @moduledoc """
-  Tests for video room creation and provider integration.
+  Tests for the video room lifecycle: creating, updating, and deleting rooms
+  against a configured provider integration.
   """
 
   use Tymeslot.DataCase, async: true
@@ -11,14 +12,16 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
 
   setup :verify_on_exit!
 
-  alias Tymeslot.Integrations.Video.Providers.CustomProvider
-  alias Tymeslot.Integrations.Video.Providers.GoogleMeetProvider
+  alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
-  alias Tymeslot.Integrations.Video.Providers.TeamsProvider
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.Rooms
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
+
+  @no_integration_error "No video integration configured. " <>
+                          "Please add a video integration in the dashboard."
 
   describe "create_meeting_room/1" do
     test "returns error when user_id is nil" do
@@ -44,8 +47,9 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
           api_key: "test-key"
         })
 
-      # Mock MiroTalk API call
-      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      # One MiroTalk API call: booking a room no longer pays for a pre-flight
+      # connection test inside `validate_config/1` on top of the real request.
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok,
          %Req.Response{
            status: 200,
@@ -267,13 +271,15 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
   end
 
   describe "create_join_url/5" do
-    test "requires valid meeting_context with provider_type" do
-      meeting_context = %{
+    test "returns invalid_parameters when the room data carries no provider config" do
+      meeting_context = %MeetingContext{
         provider_type: :mirotalk,
         provider_module: MiroTalkProvider,
-        room_data: %{
+        room_data: %RoomData{
           room_id: "room123",
-          meeting_url: "https://mirotalk.example.com/room123"
+          meeting_url: "https://mirotalk.example.com/room123",
+          provider_data: %{},
+          provider_config: nil
         }
       }
 
@@ -282,8 +288,8 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
       role = "attendee"
       meeting_time = DateTime.utc_now()
 
-      # Will attempt to call provider adapter, which will fail without actual integration
-      # but demonstrates the interface is called correctly
+      # MiroTalk's create_join_url/5 needs a :provider_config in the room data
+      # to build a token-bearing URL, and this context has none.
       result =
         Rooms.create_join_url(
           meeting_context,
@@ -293,179 +299,7 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
           meeting_time
         )
 
-      # Expect either success or provider-specific error
-      assert match?({:ok, _}, result) or match?({:error, _}, result)
-    end
-  end
-
-  describe "handle_meeting_event/3" do
-    test "delegates event to provider adapter" do
-      meeting_context = %{
-        provider_type: :mirotalk,
-        provider_module: MiroTalkProvider,
-        room_data: %{
-          room_id: "room123",
-          meeting_url: "https://mirotalk.example.com/room123"
-        }
-      }
-
-      event = :started
-      additional_data = %{participant_count: 5}
-
-      # MiroTalk provider always returns :ok for events
-      assert :ok = Rooms.handle_meeting_event(meeting_context, event, additional_data)
-    end
-
-    test "handles different event types" do
-      meeting_context = %{
-        provider_type: :mirotalk,
-        provider_module: MiroTalkProvider,
-        room_data: %{room_id: "room123"}
-      }
-
-      assert :ok = Rooms.handle_meeting_event(meeting_context, :created, %{})
-      assert :ok = Rooms.handle_meeting_event(meeting_context, :started, %{})
-      assert :ok = Rooms.handle_meeting_event(meeting_context, :ended, %{})
-      assert :ok = Rooms.handle_meeting_event(meeting_context, :cancelled, %{})
-    end
-
-    test "handles meeting_ended event for Teams provider" do
-      meeting_context = %{
-        provider_type: :teams,
-        provider_module: TeamsProvider,
-        room_data: %{room_id: "meeting123"}
-      }
-
-      assert :ok = Rooms.handle_meeting_event(meeting_context, :meeting_ended, %{})
-    end
-  end
-
-  describe "generate_meeting_metadata/1" do
-    test "generates metadata for MiroTalk provider" do
-      meeting_context = %{
-        provider_type: :mirotalk,
-        provider_module: MiroTalkProvider,
-        room_data: %{
-          room_id: "room123",
-          meeting_url: "https://mirotalk.example.com/join/room123"
-        }
-      }
-
-      metadata = Rooms.generate_meeting_metadata(meeting_context)
-
-      assert metadata[:provider] == "mirotalk"
-      assert metadata[:meeting_id] == "room123"
-      assert metadata[:join_url] == "https://mirotalk.example.com/join/room123"
-    end
-
-    test "generates metadata for Google Meet provider" do
-      meeting_context = %{
-        provider_type: :google_meet,
-        provider_module: GoogleMeetProvider,
-        room_data: %{
-          room_id: "abc-defg-hij",
-          meeting_url: "https://meet.google.com/abc-defg-hij"
-        }
-      }
-
-      metadata = Rooms.generate_meeting_metadata(meeting_context)
-
-      assert metadata[:provider_type] == :google_meet
-      assert metadata[:provider_name] == "Google Meet"
-      assert metadata[:room_id] == "abc-defg-hij"
-      assert metadata[:meeting_url] == "https://meet.google.com/abc-defg-hij"
-      assert metadata[:supports_dial_in] == true
-      assert metadata[:supports_recording] == true
-      assert metadata[:max_participants] == 250
-    end
-
-    test "generates metadata for Teams provider" do
-      meeting_context = %{
-        provider_type: :teams,
-        provider_module: TeamsProvider,
-        room_data: %{
-          room_id: "meeting123",
-          meeting_url: "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc%40thread.v2/0",
-          provider_data: %{
-            "passcode" => "123456",
-            "toll_number" => "+1-555-0100",
-            "conference_id" => "987654321"
-          }
-        }
-      }
-
-      metadata = Rooms.generate_meeting_metadata(meeting_context)
-
-      assert metadata[:provider] == "teams"
-      assert metadata[:meeting_id] == "meeting123"
-      assert metadata[:passcode] == "123456"
-      assert metadata[:dial_in_number] == "+1-555-0100"
-      assert metadata[:conference_id] == "987654321"
-    end
-
-    test "generates metadata for Custom provider" do
-      meeting_context = %{
-        provider_type: :custom,
-        provider_module: CustomProvider,
-        room_data: %{
-          room_id: "abc123def456",
-          meeting_url: "https://meet.example.com/room123",
-          provider_data: %{
-            "original_url" => "https://meet.example.com/room123"
-          }
-        }
-      }
-
-      metadata = Rooms.generate_meeting_metadata(meeting_context)
-
-      assert metadata[:provider] == "custom"
-      assert metadata[:meeting_id] == "abc123def456"
-      assert metadata[:join_url] == "https://meet.example.com/room123"
-      assert metadata[:custom_url] == "https://meet.example.com/room123"
-    end
-
-    test "handles string-keyed room data" do
-      meeting_context = %{
-        provider_type: :mirotalk,
-        provider_module: MiroTalkProvider,
-        room_data: %{
-          "room_id" => "room456",
-          "meeting_url" => "https://mirotalk.example.com/join/room456"
-        }
-      }
-
-      metadata = Rooms.generate_meeting_metadata(meeting_context)
-
-      assert metadata[:meeting_id] == "room456"
-      assert metadata[:join_url] == "https://mirotalk.example.com/join/room456"
-    end
-  end
-
-  describe "error handling" do
-    test "returns appropriate error when provider fails" do
-      user = insert(:user)
-
-      # User with no integration should get helpful error
-      result = Rooms.create_meeting_room(user.id)
-
-      assert {:error, message} = result
-      assert is_binary(message)
-      assert String.contains?(message, "integration")
-    end
-
-    test "handles missing room_id gracefully in metadata generation" do
-      meeting_context = %{
-        provider_type: :mirotalk,
-        provider_module: MiroTalkProvider,
-        room_data: %{
-          meeting_url: "https://mirotalk.example.com/join/room123"
-        }
-      }
-
-      metadata = Rooms.generate_meeting_metadata(meeting_context)
-
-      # Should still generate metadata, room_id will be nil or "unknown"
-      assert is_map(metadata)
+      assert {:error, :invalid_parameters} = result
     end
   end
 
@@ -486,8 +320,7 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
       assert {:error, message} =
                Rooms.update_meeting_room(user.id, room_id: "123456789")
 
-      assert is_binary(message)
-      assert String.contains?(message, "integration")
+      assert message == @no_integration_error
     end
 
     test "dispatches PATCH to Zoom and returns :ok on success" do
@@ -524,8 +357,7 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
       assert {:error, message} =
                Rooms.delete_meeting_room(user.id, room_id: "123456789")
 
-      assert is_binary(message)
-      assert String.contains?(message, "integration")
+      assert message == @no_integration_error
     end
 
     test "dispatches DELETE to Zoom and returns :ok on success" do
@@ -567,62 +399,6 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
                  integration_id: integration.id,
                  room_id: "some-room-id"
                )
-    end
-  end
-
-  describe "provider integration" do
-    test "supports MiroTalk provider type" do
-      meeting_context = %{
-        provider_type: :mirotalk,
-        provider_module: MiroTalkProvider,
-        room_data: %{room_id: "test"}
-      }
-
-      # Verify it can handle MiroTalk provider without errors
-      assert :ok = Rooms.handle_meeting_event(meeting_context, :created, %{})
-      assert is_map(Rooms.generate_meeting_metadata(meeting_context))
-    end
-
-    test "supports Google Meet provider type" do
-      meeting_context = %{
-        provider_type: :google_meet,
-        provider_module: GoogleMeetProvider,
-        room_data: %{room_id: "test", meeting_url: "https://meet.google.com/abc-defg-hij"}
-      }
-
-      assert :ok = Rooms.handle_meeting_event(meeting_context, :created, %{})
-      assert is_map(Rooms.generate_meeting_metadata(meeting_context))
-    end
-
-    test "supports Teams provider type" do
-      meeting_context = %{
-        provider_type: :teams,
-        provider_module: TeamsProvider,
-        room_data: %{
-          room_id: "test",
-          meeting_url:
-            "https://teams.microsoft.com/l/meetup-join/19%3ameeting_test%40thread.v2/0",
-          provider_data: %{}
-        }
-      }
-
-      assert :ok = Rooms.handle_meeting_event(meeting_context, :meeting_ended, %{})
-      assert is_map(Rooms.generate_meeting_metadata(meeting_context))
-    end
-
-    test "supports Custom provider type" do
-      meeting_context = %{
-        provider_type: :custom,
-        provider_module: CustomProvider,
-        room_data: %{
-          room_id: "test",
-          meeting_url: "https://meet.example.com/room123",
-          provider_data: %{}
-        }
-      }
-
-      assert :ok = Rooms.handle_meeting_event(meeting_context, :created, %{})
-      assert is_map(Rooms.generate_meeting_metadata(meeting_context))
     end
   end
 

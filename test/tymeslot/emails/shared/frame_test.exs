@@ -17,7 +17,6 @@ defmodule Tymeslot.Emails.Shared.FrameTest do
     test "returns non-empty MJML with all required keys" do
       mjml = Frame.wrap(@base_sections)
 
-      assert is_binary(mjml)
       assert String.length(mjml) > 100
       assert mjml =~ "<mjml>"
       assert mjml =~ "</mjml>"

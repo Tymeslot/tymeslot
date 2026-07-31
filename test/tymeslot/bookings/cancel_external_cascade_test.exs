@@ -112,7 +112,7 @@ defmodule Tymeslot.Bookings.CancelExternalCascadeTest do
 
       assert {:ok, cancelled} = Cancel.execute_external(meeting)
       assert cancelled.status == "cancelled"
-      assert cancelled.cancelled_at != nil
+      assert %DateTime{} = cancelled.cancelled_at
       assert cancelled.cancellation_reason == "Cancelled externally via calendar sync"
     end
 

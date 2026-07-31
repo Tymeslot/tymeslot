@@ -10,10 +10,35 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisor do
   alias Tymeslot.Integrations.Calendar.ProviderConfig, as: CalendarProviderConfig
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
 
+  @email_breaker_name :email_service_breaker
+
+  @email_breaker_config %{
+    failure_threshold: 3,
+    time_window: :timer.minutes(1),
+    recovery_timeout: :timer.minutes(5),
+    half_open_requests: 2
+  }
+
   @spec start_link(any()) :: Supervisor.on_start()
   def start_link(init_arg) do
     Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
   end
+
+  @doc "Name of the breaker guarding the email provider."
+  @spec email_breaker_name() :: atom()
+  def email_breaker_name, do: @email_breaker_name
+
+  @doc """
+  How long the email breaker stays open before it probes the provider again.
+
+  Exposed so callers that must outwait an open circuit (notably
+  `Tymeslot.Workers.EmailWorker`, which snoozes rather than burning retries
+  inside the window) derive the delay from the breaker's own tuning instead of
+  repeating the number.
+  """
+  @spec email_breaker_recovery_seconds() :: pos_integer()
+  def email_breaker_recovery_seconds,
+    do: div(@email_breaker_config.recovery_timeout, 1_000)
 
   @impl Supervisor
   def init(_init_arg) do
@@ -42,14 +67,8 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisor do
       # Circuit breaker for email service (Postmark)
       Supervisor.child_spec(
         {Tymeslot.Infrastructure.CircuitBreaker,
-         name: :email_service_breaker,
-         config: %{
-           failure_threshold: 3,
-           time_window: :timer.minutes(1),
-           recovery_timeout: :timer.minutes(5),
-           half_open_requests: 2
-         }},
-        id: :email_service_breaker
+         name: @email_breaker_name, config: @email_breaker_config},
+        id: @email_breaker_name
       ),
 
       # Circuit breaker for OAuth services

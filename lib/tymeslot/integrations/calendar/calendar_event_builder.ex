@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   """
 
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias Tymeslot.Utils.MapKeys
   alias TymeslotWeb.Endpoint
 
   @doc """
@@ -85,9 +86,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
     |> List.wrap()
     |> Enum.map(fn a ->
       %{
-        filename: a["filename"] || a[:filename],
-        url: attachment_url(a["stored_path"] || a[:stored_path]),
-        content_type: a["content_type"] || a[:content_type]
+        filename: MapKeys.get(a, :filename),
+        url: attachment_url(MapKeys.get(a, :stored_path)),
+        content_type: MapKeys.get(a, :content_type)
       }
     end)
     |> Enum.reject(&is_nil(&1.url))

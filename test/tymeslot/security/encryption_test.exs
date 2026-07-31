@@ -9,7 +9,8 @@ defmodule Tymeslot.Security.EncryptionTest do
       plaintext = "sensitive_password"
 
       encrypted = Encryption.encrypt(plaintext)
-      assert is_binary(encrypted)
+      # 1 version byte + 12-byte nonce + 16-byte GCM tag + ciphertext
+      assert byte_size(encrypted) == byte_size(plaintext) + 29
       assert encrypted != plaintext
 
       decrypted = Encryption.decrypt(encrypted)
@@ -104,8 +105,8 @@ defmodule Tymeslot.Security.EncryptionTest do
     test "generates a random API key" do
       key = Encryption.generate_api_key()
 
-      assert is_binary(key)
-      assert String.length(key) > 0
+      # 32 random bytes, url-safe base64 encoded without padding
+      assert String.length(key) == 43
     end
 
     test "generates unique keys on each call" do
@@ -130,8 +131,7 @@ defmodule Tymeslot.Security.EncryptionTest do
       keys = for _i <- 1..10, do: Encryption.generate_api_key()
 
       Enum.each(keys, fn key ->
-        assert is_binary(key)
-        assert String.length(key) > 40
+        assert String.length(key) == 43
       end)
     end
   end

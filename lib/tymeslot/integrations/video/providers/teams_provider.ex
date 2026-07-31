@@ -11,13 +11,25 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.OAuthTokenManager
+  alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   require Logger
 
   @behaviour ProviderBehaviour
+
+  @capabilities Capabilities.new!(
+                  waiting_room: true,
+                  recording: true,
+                  dial_in: true,
+                  max_participants: 300,
+                  breakout_rooms: true,
+                  screen_sharing: true,
+                  chat: true
+                )
 
   @graph_api_base_url "https://graph.microsoft.com/v1.0"
   @teams_url_pattern ~r/teams\.microsoft\.com\/l\/meetup-join\//
@@ -29,7 +41,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     with {:ok, :valid} <- validate_teams_scope(config),
          {:ok, token} <- get_access_token(config),
          {:ok, meeting} <- create_scheduled_meeting(token, config) do
-      room_data = %{
+      room_data = %RoomData{
         room_id: meeting["id"],
         meeting_url: meeting["joinUrl"],
         provider_data: %{
@@ -72,10 +84,6 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     end
   end
 
-  def extract_room_id(%{room_data: room_data}) do
-    room_data[:room_id] || room_data["room_id"]
-  end
-
   def extract_room_id(_other), do: nil
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
@@ -84,7 +92,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def test_connection(config) do
+  def perform_connection_test(config) do
     case get_access_token(config) do
       {:ok, _token} ->
         {:ok, "Successfully authenticated with Microsoft Teams"}
@@ -99,6 +107,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def display_name, do: "Microsoft Teams"
+
+  # A per-actor bucket shared across every OAuth-backed provider: the test
+  # itself rides on a token that is already scarce, but without a charge
+  # here it is unbounded and can burn the instance-wide OAuth quota shared
+  # by every user.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def connection_test_bucket, do: :oauth
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do
@@ -123,23 +138,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def capabilities do
-    %{
-      supports_instant_meetings: false,
-      supports_scheduled_meetings: true,
-      supports_recurring_meetings: false,
-      supports_waiting_room: true,
-      supports_recording: true,
-      supports_dial_in: true,
-      max_participants: 300,
-      requires_account: true,
-      supports_custom_branding: false,
-      supports_breakout_rooms: true,
-      supports_screen_sharing: true,
-      supports_chat: true,
-      requires_work_account: true
-    }
-  end
+  def capabilities, do: @capabilities
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def handle_meeting_event(:meeting_ended, room_data, _additional_data) do
@@ -157,9 +156,9 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       provider: "teams",
       meeting_id: room_data.room_id,
       join_url: room_data.meeting_url,
-      passcode: room_data.provider_data["passcode"],
-      dial_in_number: room_data.provider_data["toll_number"],
-      conference_id: room_data.provider_data["conference_id"]
+      passcode: room_data.provider_data[:passcode],
+      dial_in_number: room_data.provider_data[:toll_number],
+      conference_id: room_data.provider_data[:conference_id]
     }
   end
 

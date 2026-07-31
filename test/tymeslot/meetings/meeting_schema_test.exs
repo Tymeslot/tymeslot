@@ -19,12 +19,18 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
   }
 
   describe "custom_fields_snapshot and custom_field_answers" do
-    test "custom_fields_snapshot defaults to empty list" do
-      assert %Meeting{custom_fields_snapshot: []} = %Meeting{}
+    test "custom_fields_snapshot defaults to empty list when omitted from the changeset" do
+      cs = Meeting.changeset(%Meeting{}, @valid_base_attrs)
+
+      assert cs.valid?
+      assert Changeset.get_field(cs, :custom_fields_snapshot) == []
     end
 
-    test "custom_field_answers defaults to empty map" do
-      assert %Meeting{custom_field_answers: %{}} = %Meeting{}
+    test "custom_field_answers defaults to empty map when omitted from the changeset" do
+      cs = Meeting.changeset(%Meeting{}, @valid_base_attrs)
+
+      assert cs.valid?
+      assert Changeset.get_field(cs, :custom_field_answers) == %{}
     end
 
     test "changeset accepts a snapshot and answers map" do

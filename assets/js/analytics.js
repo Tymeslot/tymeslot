@@ -9,15 +9,47 @@
  * GDPR guardrail: props must be categorical dimensions only (e.g. {step}).
  * Never pass user ids, emails, names, or free text.
  */
+
+/**
+ * Events tracked before the provider arrives are buffered rather than dropped.
+ * The tracker is injected from an idle callback after `load` (see
+ * `analytics_scripts/1` in `layouts.ex`), which lands after LiveView mounts —
+ * so the page-view beacons that fire on mount would otherwise be lost.
+ * The cap keeps the buffer bounded on a standalone Core install, where no
+ * provider ever arrives and the queue would grow for the life of the page.
+ */
+const PENDING_LIMIT = 50;
+
 export function installAnalytics(target = window) {
+  const pending = [];
+
+  const provider = () => {
+    const candidate = target.umami;
+    return candidate && typeof candidate.track === "function" ? candidate : null;
+  };
+
+  const flush = () => {
+    const sink = provider();
+    if (!sink) return;
+    while (pending.length) {
+      const [event, props] = pending.shift();
+      sink.track(event, props);
+    }
+  };
+
   target.analytics = {
     track(event, props = {}) {
-      const provider = target.umami;
-      if (provider && typeof provider.track === "function") {
-        provider.track(event, props);
+      const sink = provider();
+      if (sink) {
+        flush();
+        sink.track(event, props);
+      } else if (pending.length < PENDING_LIMIT) {
+        pending.push([event, props]);
       }
     },
   };
+
+  target.addEventListener?.("tymeslot:analytics-ready", flush);
   return target.analytics;
 }
 

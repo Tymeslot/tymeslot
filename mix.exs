@@ -74,9 +74,14 @@ defmodule Tymeslot.MixProject do
       {:lazy_html, "~> 0.1.8", only: :test},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.5.1", runtime: Mix.env() == :dev},
-      {:swoosh, "~> 1.19"},
+      # 1.27 is the first release carrying the AhaSend adapter.
+      {:swoosh, "~> 1.27"},
+      # Required by Swoosh's Mailgun adapter (multipart request bodies).
+      {:multipart, "~> 0.4"},
       {:finch, "~> 0.20"},
-      {:req, "~> 0.6"},
+      # Pinned to 0.6.x: 0.7's bare-atom finch: option triggers a deprecation
+      # warning on every outbound request until http_client.ex is migrated.
+      {:req, "~> 0.6.0"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.3"},
       {:gettext, "~> 1.0"},

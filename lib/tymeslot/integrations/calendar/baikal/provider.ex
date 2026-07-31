@@ -10,14 +10,18 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
-  alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
+  alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def provider_type, do: :baikal
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def display_name, do: "Baikal"
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def connection_test_bucket, do: :caldav
 
   @doc "Returns the LiveComponent module for provider configuration UI"
   @spec setup_component() :: module()
@@ -67,17 +71,18 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
     }
   end
 
+  # Structural validation only, in line with every other provider's
+  # `validate_config/1`: the caller that needs connectivity
+  # (`Calendar.Creation.prevalidate_config/1`) invokes `validate_config/1` first
+  # and then `perform_connection_test/1`. Folding a connectivity probe into this
+  # callback would double-charge a rate-limited connection test that runs both
+  # in sequence.
   @impl Tymeslot.Integrations.Calendar.Provider
   def validate_config(config) do
-    with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]),
-         :ok <-
-           ProviderCommon.validate_url(config[:base_url],
-             message:
-               "Invalid Baikal URL. Should be your Baikal server URL including /dav.php (e.g., https://baikal.example.com/dav.php)"
-           ),
-         {:ok, client} <- build_test_client(config) do
-      ProviderCommon.test_caldav_connection(client,
-        error_formatter: &baikal_error_formatter/1
+    with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]) do
+      ProviderCommon.validate_url(config[:base_url],
+        message:
+          "Invalid Baikal URL. Should be your Baikal server URL including /dav.php (e.g., https://baikal.example.com/dav.php)"
       )
     end
   end
@@ -102,10 +107,10 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
   @doc """
   Tests connection to the Baikal server with Baikal-specific messaging.
   """
-  @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
-  def test_connection(integration, opts \\ []) do
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
+  def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      metadata: opts[:metadata],
       success_message: "Baikal connection successful",
       unauthorized_message: "Authentication failed. Check your Baikal username and password.",
       not_found_message:
@@ -117,11 +122,11 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
   @doc """
   Discovers available calendars on the Baikal server.
   """
-  @spec discover_calendars(map(), keyword()) :: {:ok, list(map())} | {:error, String.t()}
-  def discover_calendars(client, opts \\ []) do
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec discover_calendars(map()) :: {:ok, [CalendarEntry.t()]} | {:error, String.t()}
+  def discover_calendars(client) do
     client = Map.put(client, :provider, :baikal)
-    CaldavCommon.discover_calendars(client, ip_address: ip_address)
+    CaldavCommon.discover_calendars(client)
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -160,21 +165,6 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
 
   # Private helpers
 
-  defp build_test_client(config) do
-    full_client = new(config)
-
-    client = %{
-      base_url: full_client.base_url,
-      username: full_client.username,
-      password: full_client.password,
-      calendar_paths: full_client.calendar_paths,
-      verify_ssl: true,
-      provider: full_client.provider
-    }
-
-    {:ok, client}
-  end
-
   defp normalize_base_url(url) do
     url
     |> String.trim()
@@ -211,9 +201,6 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
       "#{dav_prefix}#{calendar_name}/"
     end
   end
-
-  defp baikal_error_formatter(reason),
-    do: ErrorHandler.sanitize_error_message(reason, :baikal)
 
   defp format_error({:error, message}) when is_binary(message), do: message
   defp format_error(error), do: "Baikal error: #{inspect(error)}"

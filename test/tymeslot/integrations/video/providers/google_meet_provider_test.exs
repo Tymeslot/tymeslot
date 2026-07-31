@@ -47,13 +47,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       assert capabilities[:screen_sharing] == true
       assert capabilities[:waiting_room] == false
       assert capabilities[:max_participants] == 250
-      assert capabilities[:requires_download] == false
-      assert capabilities[:supports_phone_dial_in] == true
-      assert capabilities[:supports_chat] == true
-      assert capabilities[:supports_breakout_rooms] == true
-      assert capabilities[:end_to_end_encryption] == true
-      assert capabilities[:supports_live_streaming] == true
-      assert capabilities[:supports_recording] == true
+      assert capabilities[:dial_in] == true
+      assert capabilities[:chat] == true
+      assert capabilities[:breakout_rooms] == true
     end
   end
 
@@ -111,7 +107,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"items" => []})}}
       end)
 
-      assert {:ok, message} = GoogleMeetProvider.test_connection(config)
+      assert {:ok, message} = GoogleMeetProvider.perform_connection_test(config)
       assert String.contains?(message, "successful")
     end
 
@@ -126,7 +122,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         {:ok, %Req.Response{status: 401, body: "Unauthorized"}}
       end)
 
-      assert {:error, message} = GoogleMeetProvider.test_connection(config)
+      assert {:error, message} = GoogleMeetProvider.perform_connection_test(config)
       assert String.contains?(message, "Connection test failed")
     end
 
@@ -137,7 +133,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         {:ok, %Req.Response{status: 200, body: "not json"}}
       end)
 
-      assert {:error, message} = GoogleMeetProvider.test_connection(config)
+      assert {:error, message} = GoogleMeetProvider.perform_connection_test(config)
       assert message =~ "Invalid JSON"
     end
 
@@ -167,7 +163,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"items" => []})}}
       end)
 
-      assert {:ok, _result} = GoogleMeetProvider.test_connection(config)
+      assert {:ok, _result} = GoogleMeetProvider.perform_connection_test(config)
     end
   end
 
@@ -225,24 +221,8 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       refute String.contains?(join_url, "role=host")
     end
 
-    test "handles string-keyed room data" do
-      room_data = %{"meeting_url" => "https://meet.google.com/xyz-abcd-efg"}
-      meeting_time = DateTime.utc_now()
-
-      assert {:ok, join_url} =
-               GoogleMeetProvider.create_join_url(
-                 room_data,
-                 "User",
-                 "user@example.com",
-                 "attendee",
-                 meeting_time
-               )
-
-      assert String.starts_with?(join_url, "https://meet.google.com/xyz-abcd-efg?")
-    end
-
     test "returns error when meeting_url is missing" do
-      room_data = %{room_id: "abc-defg-hij"}
+      room_data = %{room_id: "abc-defg-hij", meeting_url: nil}
       meeting_time = DateTime.utc_now()
 
       assert {:error, message} =
@@ -352,25 +332,16 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       assert metadata[:supports_dial_in] == true
       assert metadata[:supports_recording] == true
       assert metadata[:max_participants] == 250
-      assert is_binary(metadata[:meeting_instructions])
-      assert is_binary(metadata[:technical_requirements])
-      assert is_list(metadata[:additional_features])
-      assert "Recording available" in metadata[:additional_features]
-      assert "Screen sharing" in metadata[:additional_features]
-      assert "Phone dial-in available" in metadata[:additional_features]
-    end
+      assert metadata[:meeting_instructions] =~ "join the Google Meet video conference"
+      assert metadata[:technical_requirements] =~ "Modern web browser or Google Meet mobile app"
 
-    test "supports string-keyed room data in metadata generation" do
-      room_data = %{
-        "room_id" => "xyz-abcd-efg",
-        "meeting_url" => "https://meet.google.com/xyz-abcd-efg"
-      }
-
-      metadata = GoogleMeetProvider.generate_meeting_metadata(room_data)
-
-      assert metadata[:room_id] == "xyz-abcd-efg"
-      assert metadata[:meeting_url] == "https://meet.google.com/xyz-abcd-efg"
-      assert metadata[:provider_name] == "Google Meet"
+      assert metadata[:additional_features] == [
+               "Recording available",
+               "Screen sharing",
+               "Live captions",
+               "Breakout rooms",
+               "Phone dial-in available"
+             ]
     end
   end
 

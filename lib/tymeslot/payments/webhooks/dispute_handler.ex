@@ -48,9 +48,10 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
   def validate(dispute) when is_map(dispute) do
     required_fields = ["id", "charge", "amount", "status"]
 
-    case Enum.all?(required_fields, &Map.has_key?(dispute, &1)) do
-      true -> :ok
-      false -> {:error, :missing_fields, "Missing required fields in dispute object"}
+    if Enum.all?(required_fields, &Map.has_key?(dispute, &1)) do
+      :ok
+    else
+      {:error, :missing_fields, "Missing required fields in dispute object"}
     end
   end
 

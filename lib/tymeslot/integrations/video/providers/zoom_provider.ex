@@ -12,9 +12,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.OAuthTokenManager
+  alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
 
@@ -24,6 +26,16 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   @api_base_url "https://api.zoom.us/v2"
   @zoom_url_pattern ~r/zoom\.us\/(j|my|w)\//
+
+  @capabilities Capabilities.new!(
+                  waiting_room: true,
+                  recording: true,
+                  dial_in: true,
+                  max_participants: 100,
+                  breakout_rooms: true,
+                  screen_sharing: true,
+                  chat: true
+                )
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_meeting_room(config) do
@@ -39,7 +51,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       # only warrants a log line, never a failed booking.
       verify_meeting_created(token, meeting["id"])
 
-      room_data = %{
+      room_data = %RoomData{
         room_id: to_string(meeting["id"]),
         meeting_url: meeting["join_url"],
         provider_data: %{
@@ -86,16 +98,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     end
   end
 
-  def extract_room_id(%{room_data: room_data}),
-    do: room_data[:room_id] || room_data["room_id"]
-
   def extract_room_id(_other), do: nil
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def valid_meeting_url?(meeting_url), do: meeting_url =~ @zoom_url_pattern
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def test_connection(config) do
+  def perform_connection_test(config) do
     case get_access_token(config) do
       {:ok, _token} -> {:ok, "Successfully authenticated with Zoom"}
       {:error, reason} -> {:error, "Failed to authenticate with Zoom: #{inspect(reason)}"}
@@ -107,6 +116,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def display_name, do: "Zoom"
+
+  # A per-actor bucket shared across every OAuth-backed provider: the test
+  # itself rides on a token that is already scarce, but without a charge
+  # here it is unbounded and can burn the instance-wide OAuth quota shared
+  # by every user.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def connection_test_bucket, do: :oauth
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do
@@ -127,23 +143,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def capabilities do
-    %{
-      supports_instant_meetings: true,
-      supports_scheduled_meetings: true,
-      supports_recurring_meetings: true,
-      supports_waiting_room: true,
-      supports_recording: true,
-      supports_dial_in: true,
-      max_participants: 100,
-      requires_account: true,
-      supports_custom_branding: false,
-      supports_breakout_rooms: true,
-      supports_screen_sharing: true,
-      supports_chat: true,
-      requires_work_account: false
-    }
-  end
+  def capabilities, do: @capabilities
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def handle_meeting_event(:meeting_ended, room_data, _additional_data) do
@@ -159,8 +159,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       provider: "zoom",
       meeting_id: room_data.room_id,
       join_url: room_data.meeting_url,
-      passcode: room_data.provider_data[:passcode] || room_data.provider_data["passcode"],
-      host_url: room_data.provider_data[:start_url] || room_data.provider_data["start_url"]
+      passcode: room_data.provider_data[:passcode],
+      host_url: room_data.provider_data[:start_url]
     }
   end
 

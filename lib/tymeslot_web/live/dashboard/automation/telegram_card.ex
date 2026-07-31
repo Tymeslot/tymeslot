@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
 
@@ -33,9 +34,10 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             "p-3 rounded-2xl transition-colors duration-300 shrink-0",
             icon_bg(@integration.status)
           ]}>
-            <svg class={["w-6 h-6", icon_color(@integration.status)]} viewBox="0 0 24 24" fill="currentColor">
-              <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-            </svg>
+            <IconComponents.icon
+              name={:telegram}
+              class={"w-6 h-6 #{icon_color(@integration.status)}"}
+            />
           </div>
 
           <%!-- Integration Details --%>
@@ -78,16 +80,12 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
               <%!-- Last Triggered Info --%>
               <%= if @integration.last_triggered_at do %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
-                  <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
                   <span>{dgettext("dashboard_automation_chat", "Last triggered: %{time}", time: AutomationHelpers.format_datetime(@integration.last_triggered_at))}</span>
                 </div>
               <% else %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-400 italic">
-                  <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <.icon name="hero-clock" class="w-4 h-4 shrink-0" />
                   <span>{dgettext("dashboard_automation_chat", "Never triggered")}</span>
                 </div>
               <% end %>
@@ -132,14 +130,10 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
               ]}
             >
               <%= if @testing do %>
-                <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+                <.spinner class="w-4 h-4" />
                 <span class="hidden sm:inline">{dgettext("dashboard_automation_chat", "Testing")}</span>
               <% else %>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+                <.icon name="hero-bolt" class="w-4 h-4" />
                 {dgettext("dashboard_automation_chat", "Test")}
               <% end %>
             </button>
@@ -170,9 +164,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             phx-click={@on_view_deliveries}
             class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+            <.icon name="hero-document-text" class="w-4 h-4" />
             {dgettext("dashboard_automation_chat", "Logs")}
           </button>
 
@@ -184,9 +176,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
                 class="p-2.5 text-tymeslot-400 hover:text-turquoise-600 hover:bg-turquoise-50 rounded-token-xl transition-all"
                 title={dgettext("dashboard_automation_chat", "Edit")}
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
+                <.icon name="hero-pencil-square" class="w-5 h-5" />
               </button>
             <% end %>
 
@@ -197,9 +187,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
                 class="p-2.5 text-tymeslot-400 hover:text-amber-600 hover:bg-amber-50 rounded-token-xl transition-all"
                 title={dgettext("dashboard_automation_chat", "Disconnect Telegram")}
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
+                <.icon name="hero-link" class="w-5 h-5" />
               </button>
             <% end %>
 
@@ -209,9 +197,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
               class="p-2.5 text-tymeslot-300 hover:text-red-500 hover:bg-red-50 rounded-token-xl transition-all"
               title={dgettext("dashboard_automation_chat", "Delete")}
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
+              <.icon name="hero-trash" class="w-5 h-5" />
             </button>
           </div>
         </div>

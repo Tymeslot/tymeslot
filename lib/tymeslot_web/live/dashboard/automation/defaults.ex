@@ -1,15 +1,20 @@
-defmodule TymeslotWeb.Dashboard.AutomationSettingsDefaults do
+defmodule TymeslotWeb.Dashboard.Automation.Defaults do
   @moduledoc """
-  Default socket assigns for the three automation channels (webhooks, Telegram,
-  Slack). Extracted from `AutomationSettingsComponent` to keep that component
-  focused on events and rendering.
+  Initial socket assigns for `TymeslotWeb.Dashboard.AutomationSettingsComponent`,
+  one function per integration channel.
+
+  Kept apart from the component so the three lists of starting values stay
+  readable side by side and can be extended without growing the component.
   """
+
   import Phoenix.Component, only: [assign: 3]
 
-  alias Phoenix.LiveView.Socket
   alias Tymeslot.Webhooks
 
-  @spec assign_webhook_defaults(Socket.t()) :: Socket.t()
+  @doc """
+  Assigns the webhook tab's starting state.
+  """
+  @spec assign_webhook_defaults(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def assign_webhook_defaults(socket) do
     socket
     |> assign(:webhooks, [])
@@ -28,7 +33,10 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsDefaults do
     |> assign(:webhook_form_timestamp, nil)
   end
 
-  @spec assign_telegram_defaults(Socket.t()) :: Socket.t()
+  @doc """
+  Assigns the Telegram tab's starting state.
+  """
+  @spec assign_telegram_defaults(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def assign_telegram_defaults(socket) do
     socket
     |> assign(:telegram_integrations, [])
@@ -52,7 +60,10 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsDefaults do
     |> assign(:telegram_subscribed, false)
   end
 
-  @spec assign_slack_defaults(Socket.t()) :: Socket.t()
+  @doc """
+  Assigns the Slack tab's starting state.
+  """
+  @spec assign_slack_defaults(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def assign_slack_defaults(socket) do
     socket
     |> assign(:slack_integrations, [])

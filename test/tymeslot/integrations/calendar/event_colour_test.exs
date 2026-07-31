@@ -14,8 +14,8 @@ defmodule Tymeslot.Integrations.Calendar.EventColourTest do
 
       Enum.each(palette, fn entry ->
         assert {key, label, class} = entry
-        assert is_binary(key)
-        assert is_binary(label)
+        assert key in EventColour.keys()
+        assert label == String.capitalize(key)
         assert String.starts_with?(class, "bg-calendar-")
       end)
     end

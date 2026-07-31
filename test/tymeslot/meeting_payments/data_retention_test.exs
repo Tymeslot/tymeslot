@@ -40,14 +40,14 @@ defmodule Tymeslot.MeetingPayments.DataRetentionTest do
       assert is_nil(bp.attendee_email)
       assert is_nil(bp.attendee_name)
       assert bp.meeting_type_name == "[deleted]"
-      assert bp.host_deleted_at != nil
+      assert %DateTime{} = bp.host_deleted_at
 
       pt = Repo.reload(pt)
       assert pt.user_id == nil
       # host snapshot retained on payment_transactions
       assert pt.host_email == "host@example.com"
       assert pt.host_name == "Host Person"
-      assert pt.host_deleted_at != nil
+      assert %DateTime{} = pt.host_deleted_at
 
       # connect_account is soft-deleted and excluded from the live lookup
       refute ConnectAccountQueries.live_for_user(user.id)
@@ -73,7 +73,7 @@ defmodule Tymeslot.MeetingPayments.DataRetentionTest do
       assert pt.user_id == nil
       assert pt.host_email == "newhost@example.com"
       assert pt.host_name == "New Host"
-      assert pt.host_deleted_at != nil
+      assert %DateTime{} = pt.host_deleted_at
     end
 
     test "does not overwrite an existing payment_transactions host snapshot" do
@@ -106,11 +106,8 @@ defmodule Tymeslot.MeetingPayments.DataRetentionTest do
 
       first_bp = Repo.reload(bp)
       first_pt = Repo.reload(pt)
-      first_stamp_bp = first_bp.host_deleted_at
-      first_stamp_pt = first_pt.host_deleted_at
-
-      assert first_stamp_bp != nil
-      assert first_stamp_pt != nil
+      assert %DateTime{} = first_stamp_bp = first_bp.host_deleted_at
+      assert %DateTime{} = first_stamp_pt = first_pt.host_deleted_at
 
       # Running again must not touch already-anonymised rows.
       assert :ok = DataRetention.anonymise_host(user.id)

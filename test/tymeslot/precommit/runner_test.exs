@@ -7,9 +7,17 @@ defmodule Tymeslot.Precommit.RunnerTest do
 
   alias Tymeslot.Precommit.Runner
 
+  @ansi ~r/\e\[[0-9;]*m/
+
   defp stub(exit_codes) do
     fn args, _env -> Map.fetch!(exit_codes, args) end
   end
+
+  # `Mix.shell().info/1` colours its output whenever it is attached to a
+  # terminal, which splits markers such as "ok      " from the step name with a
+  # reset sequence. Assert on the plain text so a run in a terminal and a piped
+  # run (CI) agree.
+  defp capture_plain(fun), do: fun |> capture_io() |> String.replace(@ansi, "")
 
   describe "run/3" do
     test "all-pass steps report ok and return :ok" do
@@ -17,7 +25,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
       cmd_fun = stub(%{["a"] => 0, ["b"] => 0, ["c"] => 0})
 
       output =
-        capture_io(fn ->
+        capture_plain(fn ->
           assert Runner.run(steps, false, cmd: cmd_fun) == :ok
         end)
 
@@ -32,7 +40,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
       cmd_fun = stub(%{["a"] => 0, ["b"] => 1, ["c"] => 0})
 
       output =
-        capture_io(fn ->
+        capture_plain(fn ->
           assert catch_exit(Runner.run(steps, false, cmd: cmd_fun)) == {:shutdown, 1}
         end)
 
@@ -46,7 +54,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
       cmd_fun = stub(%{["compile"] => 1, ["credo"] => 0})
 
       output =
-        capture_io(fn ->
+        capture_plain(fn ->
           assert catch_exit(Runner.run(steps, false, cmd: cmd_fun)) == {:shutdown, 1}
         end)
 
@@ -69,7 +77,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
       end
 
       output =
-        capture_io(fn ->
+        capture_plain(fn ->
           assert catch_exit(Runner.run(steps, false, cmd: cmd_fun)) == {:shutdown, 1}
         end)
 
@@ -84,7 +92,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
       cmd_fun = stub(%{["a"] => 1, ["b"] => 0, ["c"] => 0})
 
       output =
-        capture_io(fn ->
+        capture_plain(fn ->
           assert catch_exit(Runner.run(steps, true, cmd: cmd_fun)) == {:shutdown, 1}
         end)
 

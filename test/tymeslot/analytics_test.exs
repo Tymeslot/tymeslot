@@ -259,9 +259,8 @@ defmodule Tymeslot.AnalyticsTest do
         })
 
       rows = Analytics.attribution_table(user.id, from, to)
-      linkedin = Enum.find(rows, &(&1.utm_source == "linkedin"))
+      assert linkedin = Enum.find(rows, &(&1.utm_source == "linkedin"))
 
-      assert linkedin != nil
       assert linkedin.visits == 1
       assert linkedin.bookings == 0
     end
@@ -279,9 +278,8 @@ defmodule Tymeslot.AnalyticsTest do
       )
 
       rows = Analytics.attribution_table(user.id, from, to)
-      newsletter = Enum.find(rows, &(&1.utm_source == "newsletter"))
+      assert newsletter = Enum.find(rows, &(&1.utm_source == "newsletter"))
 
-      assert newsletter != nil
       assert newsletter.visits == 0
       assert newsletter.unique_visitors == 0
       assert newsletter.bookings == 1
@@ -311,9 +309,8 @@ defmodule Tymeslot.AnalyticsTest do
       )
 
       rows = Analytics.attribution_table(user.id, from, to)
-      twitter = Enum.find(rows, &(&1.utm_source == "twitter"))
+      assert twitter = Enum.find(rows, &(&1.utm_source == "twitter"))
 
-      assert twitter != nil
       assert twitter.visits == 1
       assert twitter.unique_visitors == 1
       assert twitter.bookings == 1

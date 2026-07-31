@@ -120,9 +120,8 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
     test "returns status map for valid provider" do
       status = VideoCircuitBreaker.status(:google_meet)
 
-      assert is_map(status)
-      assert Map.has_key?(status, :status)
-      assert status.status in [:closed, :open, :half_open]
+      assert %{status: state} = status
+      assert state in [:closed, :open, :half_open]
     end
 
     test "returns error for invalid provider" do

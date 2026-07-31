@@ -128,7 +128,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
     @end_time ~U[2026-04-30 00:00:00Z]
     @sync_started_at ~U[2026-04-15 12:00:00.000000Z]
 
-    defp seed_cached_event(integration, uid) do
+    # 12h before @sync_started_at: inside the 24h grace period, so a suspicious
+    # batch containing this row is refused.
+    @recently_confirmed_at ~U[2026-04-15 00:00:00.000000Z]
+
+    # 60h before @sync_started_at: past the grace period, so the absence counts
+    # as corroborated and the deletions are reconciled.
+    @long_unconfirmed_at ~U[2026-04-13 00:00:00.000000Z]
+
+    defp seed_cached_event(integration, uid, synced_at \\ @recently_confirmed_at) do
       insert(:provider_calendar_event,
         calendar_integration: integration,
         uid: uid,
@@ -137,7 +145,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
         provider_event_id: "/cal/#{uid}.ics",
         start_at: ~U[2026-04-15 10:00:00.000000Z],
         end_at: ~U[2026-04-15 11:00:00.000000Z],
-        synced_at: ~U[2026-04-15 00:00:00.000000Z]
+        synced_at: synced_at
       )
     end
 
@@ -231,6 +239,72 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
                ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-6")
 
       assert {:ok, _event} = ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-1")
+    end
+
+    test "reconciles an empty listing once the cache has gone unconfirmed past the grace period",
+         %{integration: integration} do
+      # A calendar the user genuinely emptied produces the same listing as a
+      # failed read. Without a release the refusal blocks the sync token and the
+      # integration deadlocks: every later cycle re-fetches the same empty
+      # listing and refuses again, forever.
+      seed_cached_event(integration, "cached-1", @long_unconfirmed_at)
+
+      assert :ok =
+               SyncReconciler.process_full_fetch(
+                 integration,
+                 [],
+                 @start_time,
+                 @end_time,
+                 @sync_started_at,
+                 "/cal/"
+               )
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-1")
+    end
+
+    test "releases the ratio-based refusal after the grace period too",
+         %{integration: integration} do
+      for i <- 1..6, do: seed_cached_event(integration, "cached-#{i}", @long_unconfirmed_at)
+
+      # 5 of 6 missing — suspicious by ratio, but unconfirmed long enough to be real.
+      assert :ok =
+               SyncReconciler.process_full_fetch(
+                 integration,
+                 [raw_event("cached-1")],
+                 @start_time,
+                 @end_time,
+                 @sync_started_at,
+                 "/cal/"
+               )
+
+      for i <- 2..6 do
+        assert {:error, :not_found} =
+                 ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-#{i}")
+      end
+
+      assert {:ok, _event} = ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-1")
+    end
+
+    test "keeps refusing while any missing event was confirmed inside the grace period",
+         %{integration: integration} do
+      seed_cached_event(integration, "cached-1", @long_unconfirmed_at)
+      seed_cached_event(integration, "cached-2", @recently_confirmed_at)
+
+      # The newest missing row decides: one recent confirmation means this could
+      # still be a transient failed read, so nothing is deleted.
+      assert {:error, :suspicious_bulk_deletion} =
+               SyncReconciler.process_full_fetch(
+                 integration,
+                 [],
+                 @start_time,
+                 @end_time,
+                 @sync_started_at,
+                 "/cal/"
+               )
+
+      assert {:ok, _event} = ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-1")
+      assert {:ok, _event} = ProviderCalendarEventQueries.get_by_uid(integration.id, "cached-2")
     end
   end
 

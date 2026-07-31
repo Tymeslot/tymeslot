@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.HealthCheckSchedulerTest do
   alias Oban.Job
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Integrations.HealthCheck.ProviderHelpers
   alias Tymeslot.Repo
 
   setup :verify_on_exit!
@@ -238,16 +239,19 @@ defmodule Tymeslot.Integrations.HealthCheckSchedulerTest do
     end
 
     test "safe_to_existing_atom handles unrecognized provider names" do
-      # Test that String.to_existing_atom raises ArgumentError for invalid atoms
-      # This validates that safe_to_existing_atom's rescue clause will be triggered
-      assert_raise ArgumentError, fn ->
-        String.to_existing_atom("goggle_invalid_provider")
-      end
+      # An unknown name would raise ArgumentError from String.to_existing_atom;
+      # the rescue clause turns it into nil and logs instead.
+      log =
+        capture_log(fn ->
+          assert ProviderHelpers.safe_to_existing_atom("goggle_invalid_provider") == nil
+        end)
 
-      # Verify that valid providers work (atoms that exist)
-      assert String.to_existing_atom("google") == :google
-      assert String.to_existing_atom("outlook") == :outlook
-      assert String.to_existing_atom("mirotalk") == :mirotalk
+      assert log =~ "Provider name not recognised"
+
+      assert ProviderHelpers.safe_to_existing_atom("google") == :google
+      assert ProviderHelpers.safe_to_existing_atom("outlook") == :outlook
+      assert ProviderHelpers.safe_to_existing_atom("mirotalk") == :mirotalk
+      assert ProviderHelpers.safe_to_existing_atom(nil) == nil
     end
   end
 end

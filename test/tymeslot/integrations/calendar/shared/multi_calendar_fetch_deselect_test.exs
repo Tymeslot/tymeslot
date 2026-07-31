@@ -52,10 +52,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchDeselectTest d
 
     {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
 
-    assert Enum.find(refreshed.calendar_list, &(&1["id"] == "deleted@example.com"))["selected"] ==
+    assert Enum.find(refreshed.calendar_list, &(&1.id == "deleted@example.com")).selected ==
              false
 
-    assert Enum.find(refreshed.calendar_list, &(&1["id"] == "work"))["selected"] == true
+    assert Enum.find(refreshed.calendar_list, &(&1.id == "work")).selected == true
   end
 
   test "de-selects the calendar even when it was the only selected one" do
@@ -70,7 +70,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchDeselectTest d
     start_time = DateTime.utc_now()
     end_time = DateTime.add(start_time, 3600, :second)
 
-    assert {:error, :all_calendars_unavailable} =
+    # The deleted calendar is confirmed-absent (404), not a hard failure, so
+    # `failed` is empty here. With nothing else selected, this is a
+    # known-empty busy set, not a failed fetch.
+    assert {:ok, []} =
              MultiCalendarFetch.list_events_with_selection(
                integration,
                start_time,
@@ -80,7 +83,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchDeselectTest d
 
     {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
 
-    assert Enum.find(refreshed.calendar_list, &(&1["id"] == "deleted@example.com"))["selected"] ==
+    assert Enum.find(refreshed.calendar_list, &(&1.id == "deleted@example.com")).selected ==
              false
   end
 end

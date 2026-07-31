@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   """
 
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Discovery, Events, Http, UrlBuilder}
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
 
   require Logger
@@ -97,7 +98,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   Discovers available calendars via `Discovery.discover_calendars/2`.
   """
   @spec discover_calendars(caldav_client(), keyword()) ::
-          {:ok, list(map())} | {:error, term()}
+          {:ok, [CalendarEntry.t()]} | {:error, term()}
   def discover_calendars(client, opts \\ []) do
     with :ok <- validate_credentials(client) do
       Discovery.discover_calendars(client, opts)
@@ -306,7 +307,13 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   # Helpers
-  defp get_calendar_paths(client), do: client[:calendar_paths] || client["calendar_paths"] || []
+
+  # Client configs are built atom-keyed in this application but arrive
+  # string-keyed when they have been round-tripped through JSON, so both
+  # shapes are answered here once.
+  defp get_calendar_paths(%{calendar_paths: paths}) when is_list(paths), do: paths
+  defp get_calendar_paths(%{"calendar_paths" => paths}) when is_list(paths), do: paths
+  defp get_calendar_paths(_client), do: []
 
   defp primary_calendar_path(client) do
     client

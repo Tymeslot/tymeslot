@@ -74,6 +74,9 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   def display_name, do: "Debug Calendar (Development Only)"
 
   @impl Tymeslot.Integrations.Calendar.Provider
+  def connection_test_bucket, do: :unmetered
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   def config_schema do
     %{
       user_id: %{
@@ -135,8 +138,9 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   Tests the connection for the debug calendar provider.
   Always returns success since this is a test provider.
   """
-  @spec test_connection(map()) :: {:ok, String.t()}
-  def test_connection(_integration) do
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec perform_connection_test(map()) :: {:ok, String.t()}
+  def perform_connection_test(_integration) do
     {:ok, "Debug calendar connection successful"}
   end
 

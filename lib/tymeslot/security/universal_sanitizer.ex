@@ -64,6 +64,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
            enforce_max_input_bytes(input, max_input_bytes, on_too_long, log_events, metadata),
          {:ok, sanitized} <-
            sanitize_input(bounded, mode, allow_html, log_events, field, metadata),
+         :ok <- validate_utf8(sanitized, log_events, field, metadata),
          {:ok, validated} <-
            validate_length(sanitized, max_length, on_too_long, log_events, metadata) do
       {:ok, String.trim(validated)}
@@ -212,7 +213,14 @@ defmodule Tymeslot.Security.UniversalSanitizer do
       decoded -> decode_url_recursive(decoded, remaining - 1)
     end
   rescue
-    _exception -> input
+    exception ->
+      # Debug rather than warning: the input is attacker-controlled, so a louder
+      # level would let anyone flood the log with malformed percent-encoding.
+      Logger.debug("Percent-decoding failed, sanitising the raw input instead",
+        error: Exception.message(exception)
+      )
+
+      input
   end
 
   defp sanitize_html(input, true) do

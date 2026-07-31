@@ -41,6 +41,9 @@ defmodule Tymeslot.Integrations.Calendar.DemoCalendarProvider do
   def display_name, do: "Demo Calendar"
 
   @impl Tymeslot.Integrations.Calendar.Provider
+  def connection_test_bucket, do: :unmetered
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   defdelegate config_schema, to: DebugCalendarProvider
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -61,8 +64,9 @@ defmodule Tymeslot.Integrations.Calendar.DemoCalendarProvider do
   Tests the connection for the demo calendar provider.
   Always returns success.
   """
-  @spec test_connection(term()) :: {:ok, String.t()}
-  def test_connection(_integration) do
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec perform_connection_test(term()) :: {:ok, String.t()}
+  def perform_connection_test(_integration) do
     {:ok, "Demo calendar connection successful"}
   end
 end

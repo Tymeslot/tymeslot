@@ -19,13 +19,11 @@ defmodule Tymeslot.ThemeCustomizationsLifecycleTest do
       assert %{
                customization: %ThemeCustomizationSchema{},
                original: %ThemeCustomizationSchema{},
-               presets: presets,
-               defaults: defaults
+               presets: presets
              } = result
 
       assert Map.has_key?(presets, :color_schemes)
       assert Map.has_key?(presets, :gradients)
-      assert defaults.background_type == "gradient"
     end
 
     test "initialize_customization/2 returns existing customization when saved", %{

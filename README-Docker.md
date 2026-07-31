@@ -55,11 +55,20 @@ docker run -d \
 
 This will pull the image automatically if it is not present locally. For a pinned version, replace `latest` with a release tag — `luka1thb/tymeslot:<VERSION>`, substituting the version number you want. The full list of published tags is on [Docker Hub](https://hub.docker.com/r/luka1thb/tymeslot/tags).
 
+**Prefer Compose?** The repository's `docker-compose.yml` runs the same published image and needs no clone. Download it next to your `.env` and start:
+
+```bash
+curl -O https://raw.githubusercontent.com/Tymeslot/tymeslot/main/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/Tymeslot/tymeslot/main/.env.example
+# edit .env, then:
+docker compose up -d
+```
+
 The embedded PostgreSQL listens only on `localhost` inside the container and is never exposed, so its password is an internal detail — if you omit `POSTGRES_PASSWORD` it defaults to `tymeslot`, which is fine for the embedded database. Set a strong `POSTGRES_PASSWORD` when you point Tymeslot at an [external database](#using-an-external-database).
 
 > **Keep `tymeslot_pg:/var/lib/postgresql/data` as a named volume.** Swapping it for a host path (e.g. `./pgdata:/var/lib/postgresql/data`) can break first-run initialization on Docker Desktop, rootless Docker, userns-remap, or SELinux-enforcing hosts because the mount arrives with ownership the container can't change. If you need the database on a specific host path, use an [external PostgreSQL](#using-an-external-database) instead.
 
-> ⚠️ **Email defaults to silent discard.** Without email configuration, `EMAIL_ADAPTER` defaults to `test`, which **drops every message** — password resets, booking confirmations and reminders all vanish with no error. Configure SMTP or Postmark (below) before going live. See **<https://tymeslot.app/docs/email-smtp>** and **<https://tymeslot.app/docs/email-postmark>**.
+> ⚠️ **Email defaults to silent discard.** Without email configuration, `EMAIL_ADAPTER` defaults to `test`, which **drops every message** — password resets, booking confirmations and reminders all vanish with no error. Configure SMTP, Postmark, SendGrid, Mailgun or AhaSend (below) before going live. See **<https://tymeslot.app/docs/email-smtp>** and **<https://tymeslot.app/docs/email-postmark>**.
 
 ### Option B — Build from source (Docker Compose)
 
@@ -124,7 +133,7 @@ Building from a git URL needs BuildKit, which is the default from Docker 23.0
 onwards.
 
 **With a clone.** Take this path if you intend to modify the source, or to use
-the build script and the repository's own `docker-compose.yml`:
+the build script and the repository's own `docker-compose.build.yml`:
 
 ```bash
 git clone https://github.com/Tymeslot/tymeslot.git
@@ -171,8 +180,13 @@ PORT=4000
 **Method 1 — Docker Compose (recommended, works for both paths):**
 
 ```bash
-docker compose up -d --build
+docker compose up -d --build                              # your own compose.yaml, no clone
+docker compose -f docker-compose.build.yml up -d --build  # in a clone
 ```
+
+In a clone, pass `-f docker-compose.build.yml` explicitly. The default
+`docker-compose.yml` pulls the published image rather than building one, which
+is Option A above.
 
 Compose reads your `.env`, builds the image, and starts the container with the `tymeslot_data` and `tymeslot_pg` volumes. It reads `.env` twice over: once to fill in the `${...}` placeholders in the Compose file, and once through `env_file` to forward every variable into the container. The second part is what carries your SMTP, OAuth and `DATA_ENCRYPTION_KEY` settings through, so keep `env_file` in place if you adapt the file.
 
@@ -181,6 +195,10 @@ To move to a newer release later, set the new tag and rebuild:
 ```bash
 TYMESLOT_VERSION=v1.5.0 docker compose up -d --build
 ```
+
+(In a clone, `git pull` first and rebuild with
+`docker compose -f docker-compose.build.yml up -d --build`; the build context is
+your working tree, so `TYMESLOT_VERSION` has no effect there.)
 
 **Method 2 — Build script (clone only):**
 
@@ -195,7 +213,7 @@ The script validates your `.env`, builds the image, and offers to start the cont
 
 ```bash
 # Build image
-docker build -f Dockerfile.docker -t tymeslot .
+docker build -f Dockerfile.docker -t tymeslot:local .
 
 # Run container
 source .env
@@ -205,7 +223,7 @@ docker run -d \
   --env-file .env \
   -v tymeslot_data:/app/data \
   -v tymeslot_pg:/var/lib/postgresql/data \
-  tymeslot
+  tymeslot:local
 ```
 
 #### 4. Access Your Installation
@@ -283,7 +301,20 @@ Email configuration is **required for production deployments** to enable:
 - Calendar event notifications
 - User invitations
 
-**Option 1: SMTP (recommended for most users)**
+`EMAIL_ADAPTER` picks how mail leaves the container. Every option below is equally supported; the API adapters differ from SMTP mainly in reporting failures usefully and in not needing an outbound SMTP port.
+
+| `EMAIL_ADAPTER` | Additional variables |
+|---|---|
+| `smtp` | `SMTP_HOST`, `SMTP_PORT` (default 587), `SMTP_USERNAME`, `SMTP_PASSWORD` |
+| `postmark` | `POSTMARK_API_KEY` |
+| `sendgrid` | `SENDGRID_API_KEY` |
+| `mailgun` | `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, optional `MAILGUN_BASE_URL` for EU accounts |
+| `ahasend` | `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID` |
+| `test` | none — every message is discarded |
+
+Any provider not listed works over `smtp`; point `SMTP_HOST` at the relay it gives you. An `EMAIL_ADAPTER` value Tymeslot does not recognise stops the container at boot instead of silently discarding mail.
+
+**Option 1: SMTP (works with every provider)**
 ```bash
 EMAIL_ADAPTER=smtp
 EMAIL_FROM_NAME="Your Company"
@@ -294,13 +325,15 @@ SMTP_USERNAME=your-smtp-username
 SMTP_PASSWORD=your-smtp-password
 ```
 
-**Option 2: Postmark (recommended for high reliability)**
+**Option 2: a provider API (clearer delivery errors, no SMTP port needed)**
 ```bash
 EMAIL_ADAPTER=postmark
 EMAIL_FROM_NAME="Your Company"
 EMAIL_FROM_ADDRESS=noreply@yourdomain.com
 POSTMARK_API_KEY=your-postmark-api-key
 ```
+
+Swap in `sendgrid`, `mailgun` or `ahasend` with the variables from the table above. Whichever you choose, Tymeslot validates the credentials once at startup (without sending anything) and logs the result, so a bad key shows up in the container logs immediately rather than on the first booking.
 
 **Development/Testing Only**: You can use `EMAIL_ADAPTER=test` to skip email configuration during development. Emails will be logged to console instead of being sent.
 
@@ -423,6 +456,14 @@ docker compose -f docker-compose.with-postgres.yml up -d
 This runs two containers: `tymeslot` (using the slim image described below) and `tymeslot-postgres` (`postgres:17-alpine`), with the app waiting on the database's health check before it starts. The database lives in its own `tymeslot_pgdata` volume, so `docker exec tymeslot-postgres pg_dump …` is all a backup takes.
 
 To use a database you already run elsewhere, delete the `postgres` service and the `depends_on` block from that file and set `DATABASE_URL` in your `.env`.
+
+That file pulls the published slim image. To run one you built yourself, build the slim target from a clone and point `TYMESLOT_IMAGE` at it:
+
+```bash
+docker build -f Dockerfile.docker --target release-slim -t tymeslot:local-slim .
+echo 'TYMESLOT_IMAGE=tymeslot:local-slim' >> .env
+docker compose -f docker-compose.with-postgres.yml up -d
+```
 
 ### The slim image
 

@@ -70,6 +70,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannelTest do
       Application.put_env(:tymeslot, :webhook_base_url, "https://hooks.example.com")
 
       expires_ms = System.os_time(:millisecond) + 6 * 24 * 3_600_000
+      test_pid = self()
 
       expect(Tymeslot.HTTPClientMock, :request, fn :post, url, body, _headers, _opts ->
         assert url ==
@@ -77,6 +78,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannelTest do
 
         assert body =~ ~s("type":"web_hook")
         assert body =~ ~s("address":"https://hooks.example.com/webhooks/google-calendar")
+
+        send(test_pid, {:watch_request, Jason.decode!(body)})
 
         {:ok,
          %Req.Response{
@@ -91,10 +94,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannelTest do
       end)
 
       assert {:ok, updated} = PushChannel.register_push_channel(integration)
+      assert_receive {:watch_request, watch_request}
 
-      assert is_binary(updated.google_channel_id)
+      # The persisted id and secret must be exactly the pair Google was told to
+      # echo back, otherwise inbound webhook verification can never match.
+      assert updated.google_channel_id == watch_request["id"]
+      assert updated.google_channel_secret == watch_request["token"]
       assert updated.google_channel_resource_id == "server-resource-id"
-      assert is_binary(updated.google_channel_secret)
       assert %DateTime{} = updated.google_channel_expires_at
 
       expected = DateTime.truncate(DateTime.from_unix!(expires_ms, :millisecond), :second)

@@ -36,8 +36,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserMultistatusTest do
       </multistatus>
       """
 
-      assert {:ok, events} = ICalParser.parse_multistatus(xml_body)
-      assert is_list(events)
+      assert {:ok, [event]} = ICalParser.parse_multistatus(xml_body)
+      assert event.uid == "event1@example.com"
+      assert event.summary == "CalDAV Event"
+      assert event.start_time == ~U[2030-01-15 10:00:00Z]
+      assert event.end_time == ~U[2030-01-15 11:00:00Z]
     end
 
     test "handles XML entities in calendar data" do

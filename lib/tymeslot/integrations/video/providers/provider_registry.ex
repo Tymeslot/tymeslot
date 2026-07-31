@@ -14,22 +14,20 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistry do
     metadata_fields: [:capabilities],
     providers: ProviderConfig.providers_map()
 
-  @doc """
-  Tests provider connection.
-
-  This is a video-specific function that validates configuration and tests connectivity.
-  """
+  # This is a video-specific function that just talks to the network — no
+  # validation and no rate limiting here. It is public only so
+  # `ProviderAdapter.test_connection/2` (its one legitimate caller) can reach
+  # it across module boundaries; `@doc false` keeps it out of published docs
+  # so it doesn't read as a general-purpose entry point. Every other route to
+  # a connection test goes through `Tymeslot.Integrations.Video.Connection`,
+  # which validates the config structurally and decides whether and to whom
+  # the test is rate-limited before this ever runs.
+  @doc false
   @spec test_provider_connection(atom(), map()) :: :ok | {:ok, term()} | {:error, term()}
   def test_provider_connection(provider_type, config) do
     case get_provider(provider_type) do
-      {:ok, module} ->
-        case module.validate_config(config) do
-          :ok -> module.test_connection(config)
-          {:error, _reason} = error -> error
-        end
-
-      {:error, _reason} = error ->
-        error
+      {:ok, module} -> module.perform_connection_test(config)
+      {:error, _reason} = error -> error
     end
   end
 

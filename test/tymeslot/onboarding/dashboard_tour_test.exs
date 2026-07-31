@@ -10,8 +10,10 @@ defmodule Tymeslot.Onboarding.DashboardTourTest do
   describe "steps/0" do
     test "returns a non-empty list of step maps" do
       steps = DashboardTour.steps()
-      assert is_list(steps)
-      refute Enum.empty?(steps)
+
+      assert length(steps) == 6
+      assert %{id: :welcome} = List.first(steps)
+      assert %{id: :done} = List.last(steps)
     end
 
     test "every step has the required keys" do
@@ -73,9 +75,7 @@ defmodule Tymeslot.Onboarding.DashboardTourTest do
 
     test "returns the last step at the final index" do
       last_index = DashboardTour.count() - 1
-      last_step = DashboardTour.step_at(last_index)
-      assert is_map(last_step)
-      assert Map.has_key?(last_step, :id)
+      assert %{id: :done} = DashboardTour.step_at(last_index)
     end
 
     test "returns nil for an out-of-range index" do

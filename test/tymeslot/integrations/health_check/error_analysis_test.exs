@@ -36,6 +36,15 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysisTest do
                :transient
     end
 
+    test "classifies a bare ConnectionProbe rate-limit refusal as transient (belt-and-braces)" do
+      # `HealthCheck.orchestrate_health_check/2` short-circuits on this exact
+      # shape before it ever reaches `ErrorAnalysis` — a probe that never ran
+      # is not a probe that failed — so this clause only matters if some
+      # future caller lets one through anyway.
+      assert ErrorAnalysis.classify_error({:rate_limited, "You've reached the limit"}) ==
+               :transient
+    end
+
     test "classifies HTTP 429 as transient" do
       assert ErrorAnalysis.classify_error({:http_error, 429, "Too Many Requests"}) == :transient
     end

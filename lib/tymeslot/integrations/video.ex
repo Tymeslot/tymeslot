@@ -9,10 +9,10 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
+  alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.Discovery
   alias Tymeslot.Integrations.Video.ProviderConfig
-  alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Video.Rooms
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   alias Tymeslot.Integrations.Video.Urls
@@ -55,14 +55,18 @@ defmodule Tymeslot.Integrations.Video do
   worker or caller that receives `{:error, :requires_reencryption, integration}`
   from `VideoIntegrationQueries.get/1` or `VideoIntegrationQueries.get_for_user/2`.
 
+  Pass `cause: cause` (see `t:Tymeslot.Integrations.Shared.ReauthHandling.cause/0`)
+  when the integration needs reconnecting for a different reason, so the message
+  recorded on `sync_error` describes what actually failed.
+
   Returns an Oban return value: `{:discard, _}` on success (retrying won't
   recover the credentials), or `{:error, _}` if the flag couldn't be persisted —
   which causes Oban to retry the job and take another shot at recording the flag.
   """
-  @spec handle_reauth_required(VideoIntegrationSchema.t()) ::
+  @spec handle_reauth_required(VideoIntegrationSchema.t(), keyword()) ::
           {:discard, String.t()} | {:error, String.t()}
-  def handle_reauth_required(%VideoIntegrationSchema{} = integration) do
-    case flag_for_reauth(integration) do
+  def handle_reauth_required(%VideoIntegrationSchema{} = integration, opts \\ []) do
+    case flag_for_reauth(integration, opts) do
       :ok -> {:discard, "Credentials require reauthentication"}
       {:error, _changeset} -> {:error, "Failed to flag integration for reauth"}
     end
@@ -117,10 +121,13 @@ defmodule Tymeslot.Integrations.Video do
   end
 
   # Shared helper: delegates to ReauthHandling.flag/2 with video-specific opts.
-  defp flag_for_reauth(integration) do
-    ReauthHandling.flag(integration,
-      mark_needs_reauth: &VideoIntegrationQueries.mark_needs_reauth/2,
-      log_prefix: "Video"
+  defp flag_for_reauth(integration, opts \\ []) do
+    ReauthHandling.flag(
+      integration,
+      Keyword.merge(
+        [mark_needs_reauth: &VideoIntegrationQueries.mark_needs_reauth/2, log_prefix: "Video"],
+        opts
+      )
     )
   end
 
@@ -140,20 +147,7 @@ defmodule Tymeslot.Integrations.Video do
         {:error, :unknown} -> :unknown
       end
 
-    # Ensure all keys are atoms to avoid mixed keys error in Ecto.cast
-    # We use try/rescue to safely handle unknown atom strings
-    attrs =
-      Enum.reduce(attrs, %{}, fn
-        {k, v}, acc when is_binary(k) ->
-          try do
-            Map.put(acc, String.to_existing_atom(k), v)
-          rescue
-            ArgumentError -> acc
-          end
-
-        {k, v}, acc when is_atom(k) ->
-          Map.put(acc, k, v)
-      end)
+    attrs = AttrsCasting.atomize_known_attrs(attrs)
 
     # Enforce provider in attrs consistently as string for DB layer
     attrs = Map.put(Map.put(attrs, :user_id, user_id), :provider, to_string(provider))
@@ -161,18 +155,20 @@ defmodule Tymeslot.Integrations.Video do
     do_create_integration(provider, attrs)
   end
 
+  # `create_integration/3` has already atomised every key by the time these
+  # clauses run, so the attrs are read one way here.
   defp do_create_integration(:mirotalk, attrs) do
     # Set provider_account_id for dedup
-    base_url = attrs[:base_url] || attrs["base_url"]
+    base_url = attrs[:base_url]
     attrs = Map.put(attrs, :provider_account_id, base_url)
 
     # Pre-test the connection prior to creation for better UX
     config = %{
-      api_key: attrs[:api_key] || attrs["api_key"],
+      api_key: attrs[:api_key],
       base_url: base_url
     }
 
-    with {:ok, _msg} <- ProviderRegistry.test_provider_connection(:mirotalk, config),
+    with {:ok, _msg} <- probe_mirotalk_connection(config, attrs[:user_id]),
          :ok <- check_no_duplicate(attrs) do
       VideoIntegrationQueries.create(attrs)
     end
@@ -180,7 +176,7 @@ defmodule Tymeslot.Integrations.Video do
 
   defp do_create_integration(:custom, attrs) do
     # Set provider_account_id from custom_meeting_url for dedup
-    custom_url = attrs[:custom_meeting_url] || attrs["custom_meeting_url"]
+    custom_url = attrs[:custom_meeting_url]
     attrs = Map.put(attrs, :provider_account_id, custom_url)
 
     with :ok <- check_no_duplicate(attrs) do
@@ -195,6 +191,15 @@ defmodule Tymeslot.Integrations.Video do
   end
 
   defp do_create_integration(_unknown, _attrs), do: {:error, :unknown_provider}
+
+  # Structural validation is never rate-limited; only the network probe is,
+  # charged to the user submitting the setup form. Both happen inside
+  # `Connection.probe/3` — the same choke point
+  # `Video.Connection.test_integration/2` uses — rather than reimplementing
+  # the validation, bucket lookup, and charge here.
+  defp probe_mirotalk_connection(config, user_id) do
+    Connection.probe(:mirotalk, config, {:user, user_id})
+  end
 
   defp check_no_duplicate(%{
          user_id: user_id,
@@ -319,10 +324,16 @@ defmodule Tymeslot.Integrations.Video do
   def default_provider, do: Discovery.default_provider()
 
   # ---------------
-  # Connection
+  # Connection (by id, or probe_integration/2 for the background/health-check struct path)
   # ---------------
   @spec test_connection(pos_integer(), pos_integer()) :: {:ok, String.t()} | {:error, any()}
-  defdelegate test_connection(user_id, id), to: Connection
+  def test_connection(user_id, id) when is_integer(user_id) and is_integer(id),
+    do: Connection.test_connection(user_id, id)
+
+  @spec probe_integration(VideoIntegrationSchema.t(), keyword()) ::
+          {:ok, String.t()} | {:error, any()}
+  def probe_integration(%VideoIntegrationSchema{} = integration, opts),
+    do: Connection.test_integration(integration, opts)
 
   # ---------------
   # Meeting room operations

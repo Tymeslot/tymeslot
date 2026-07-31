@@ -218,6 +218,41 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
     end
   end
 
+  describe "alerts reporting a failure of the email pipeline itself" do
+    setup do
+      setup_config(:tymeslot,
+        admin_alerts_enabled: true,
+        admin_alert_email: "ops@example.com"
+      )
+    end
+
+    # Enqueuing this alert is a feedback loop: the alert job fails for the same
+    # reason the original did, its discard raises another alert, and so on. One
+    # suppressed recipient once produced eighteen jobs and eighty-three failed
+    # attempts this way.
+    test "an EmailWorker failure is logged but never enqueues another email" do
+      assert :ok =
+               AdminAlerts.send_alert(:oban_job_failure, %{
+                 worker: "Tymeslot.Workers.EmailWorker",
+                 queue: "emails",
+                 job_id: 393_245
+               })
+
+      assert all_enqueued(worker: EmailWorker) == []
+    end
+
+    test "a failure in any other worker still enqueues an alert email" do
+      assert :ok =
+               AdminAlerts.send_alert(:oban_job_failure, %{
+                 worker: "Tymeslot.Workers.WebhookWorker",
+                 queue: "webhooks",
+                 job_id: 393_246
+               })
+
+      assert [_job] = all_enqueued(worker: EmailWorker)
+    end
+  end
+
   describe "unknown alert types" do
     setup do
       setup_config(:tymeslot,
