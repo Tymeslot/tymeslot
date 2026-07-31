@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Components.ContainersTest do
     html = render_component(&CoreComponents.spinner/1, %{})
     doc = Floki.parse_document!(html)
 
-    assert [{"svg", attrs, _}] = Floki.find(doc, "svg.spinner")
+    assert [{"svg", attrs, _children}] = Floki.find(doc, "svg.spinner")
     assert {"class", class} = List.keyfind(attrs, "class", 0)
     assert class =~ "h-5"
     assert class =~ "w-5"
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Components.ContainersTest do
     html = render_component(&CoreComponents.spinner/1, %{class: "h-8 w-8"})
     doc = Floki.parse_document!(html)
 
-    assert [{"svg", attrs, _}] = Floki.find(doc, "svg.spinner")
+    assert [{"svg", attrs, _children}] = Floki.find(doc, "svg.spinner")
     assert {"class", class} = List.keyfind(attrs, "class", 0)
     assert class =~ "h-8"
     assert class =~ "w-8"

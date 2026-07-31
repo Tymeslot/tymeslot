@@ -118,7 +118,10 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
 
         result = provider_module.perform_connection_test(config)
 
-        assert match?({:ok, _result}, result) or match?({:error, _reason}, result)
+        # The arity is the point: the call above passes the config alone. The
+        # port is closed, so the probe reaches the network and fails there
+        # rather than being rejected for a missing options argument.
+        assert match?({:error, _reason}, result)
       end)
     end
   end

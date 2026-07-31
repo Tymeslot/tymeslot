@@ -48,7 +48,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
     end
 
     test "accepts a complete config without touching the network" do
-      test_validation_accepts_without_network_probe(Provider, "https://caldav.example.com")
+      assert test_validation_accepts_without_network_probe(
+               Provider,
+               "https://caldav.example.com"
+             ) == :ok
     end
   end
 

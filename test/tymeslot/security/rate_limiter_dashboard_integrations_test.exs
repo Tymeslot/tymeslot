@@ -36,7 +36,6 @@ defmodule Tymeslot.Security.RateLimiterDashboardIntegrationsTest do
       assert {:error, :rate_limited, message} =
                RateLimiter.check_webhook_write_rate_limit(user_id)
 
-      assert is_binary(message)
       assert message =~ "30"
       assert message =~ "30 minutes"
       assert message =~ "webhook write"
@@ -70,11 +69,11 @@ defmodule Tymeslot.Security.RateLimiterDashboardIntegrationsTest do
     end
 
     test "multiple users operate independently" do
-      test_multiple_users_operate_independently(
-        [11_011, 11_012, 11_013, 11_014, 11_015],
-        20,
-        &RateLimiter.check_webhook_write_rate_limit/1
-      )
+      assert test_multiple_users_operate_independently(
+               [11_011, 11_012, 11_013, 11_014, 11_015],
+               20,
+               &RateLimiter.check_webhook_write_rate_limit/1
+             ) == :ok
     end
   end
 
@@ -272,11 +271,11 @@ defmodule Tymeslot.Security.RateLimiterDashboardIntegrationsTest do
     end
 
     test "multiple users operate independently" do
-      test_multiple_users_operate_independently(
-        [11_411, 11_412, 11_413, 11_414, 11_415],
-        20,
-        &RateLimiter.check_integration_write_rate_limit/1
-      )
+      assert test_multiple_users_operate_independently(
+               [11_411, 11_412, 11_413, 11_414, 11_415],
+               20,
+               &RateLimiter.check_integration_write_rate_limit/1
+             ) == :ok
     end
   end
 end

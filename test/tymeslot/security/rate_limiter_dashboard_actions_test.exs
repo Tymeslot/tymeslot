@@ -217,11 +217,11 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
     end
 
     test "multiple users operate independently" do
-      test_multiple_users_operate_independently(
-        [11_711, 11_712, 11_713, 11_714, 11_715],
-        15,
-        &RateLimiter.check_dashboard_cancel_rate_limit/1
-      )
+      assert test_multiple_users_operate_independently(
+               [11_711, 11_712, 11_713, 11_714, 11_715],
+               15,
+               &RateLimiter.check_dashboard_cancel_rate_limit/1
+             ) == :ok
     end
   end
 
