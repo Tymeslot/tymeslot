@@ -1,4 +1,31 @@
 
+[1.6.0]
+* core: Handle CalDAV servers that answer conditional PUT with 409
+* core: Stop a dead recipient address from blocking all outbound email
+* core: Prevent CalDAV sync stalling permanently on an emptied calendar
+* core: Let bookers retry after a failed security or rate-limit check
+* core: Stop clobbering the test mailer adapter and treat blank EMAIL_ADAPTER as unset
+* core: Run the mailer credential probe after the supervision tree starts
+* core: Apply mail tracking at delivery time and fix inline logo Content-ID
+* core: Stop the external-database compose file rebuilding over the published tag
+* core: Make docker compose up work without cloning the repository
+* core: Exclude read-only calendars from booking targets
+* core: Keep the calendar event's video link when no meeting URL is returned
+* core: Give connection-test rate limits a per-actor bucket
+* core: Probe a MiroTalk server once per health check, not twice
+* core: Keep a healthy integration healthy on its first probe
+* core: Tell users an expired grant is expired, not undecryptable
+* core: Store readable sync errors instead of inspected atoms
+* core: Read the organiser from CalDAV events
+* core: Give organisers and guests a video join link
+* core: Align video provider capability keys so lookups are complete
+* core: Stop attaching video rooms that cannot be joined
+* core: Block private IPv6 addresses that URI parsing hid
+* core: Greet users by name in emails, and escape it only once
+* core: Stop booking page views from seeding meeting types
+* core: Add SendGrid, Mailgun and AhaSend as email delivery options
+
+
 [1.5.0]
 * [BREAKING] core: Select an external database only when DATABASE_URL is remote
 * core: Recover calendar sync when a provider event no longer exists

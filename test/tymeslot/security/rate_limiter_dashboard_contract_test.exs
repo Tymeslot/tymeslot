@@ -1,3 +1,7 @@
+# These tests drive RateLimiter functions through captures held in @functions,
+# invoked as fun.(...). VacuousTest cannot see application calls through
+# anonymous-function invocation, so it flags them as false positives.
+# credo:disable-for-this-file Jump.CredoChecks.VacuousTest
 defmodule Tymeslot.Security.RateLimiterDashboardContractTest do
   use ExUnit.Case, async: false
 
