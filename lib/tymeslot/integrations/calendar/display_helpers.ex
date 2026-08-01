@@ -7,22 +7,56 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
   facade rather than this module directly.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Providers.Directory
 
   @doc """
   Map connection/validation error atoms to user-friendly messages.
   """
   @spec connection_error_message(term()) :: String.t()
-  def connection_error_message(reason) do
-    case reason do
-      :timeout -> "Calendar service is not responding. Please try again later."
-      :authentication_failed -> "Authentication failed. Please reconnect your calendar."
-      :token_expired -> "Your calendar access has expired. Please reconnect."
-      :network_error -> "Unable to reach calendar service. Check your internet connection."
-      :invalid_credentials -> "Invalid calendar credentials. Please update your connection."
-      _other -> "Failed to connect to calendar. Please try again or reconnect."
-    end
-  end
+  def connection_error_message(:timeout),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "Calendar service is not responding. Please try again later."
+      )
+
+  def connection_error_message(:authentication_failed),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "Authentication failed. Please reconnect your calendar."
+      )
+
+  def connection_error_message(:token_expired),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "Your calendar access has expired. Please reconnect."
+      )
+
+  def connection_error_message(:network_error),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "Unable to reach calendar service. Check your internet connection."
+      )
+
+  def connection_error_message(:invalid_credentials),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "Invalid calendar credentials. Please update your connection."
+      )
+
+  def connection_error_message(_other),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "Failed to connect to calendar. Please try again or reconnect."
+      )
 
   @doc """
   Format provider display name for UI consumption.
@@ -36,15 +70,12 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
   Helper to extract a friendly display name from a calendar.
   Handles the case where Radicale calendars may have UUIDs as names.
   """
-  @spec extract_calendar_display_name(%{
-          optional(String.t()) => term(),
-          optional(atom()) => term()
-        }) ::
-          String.t()
+  @spec extract_calendar_display_name(CalendarEntry.t() | map()) :: String.t()
   def extract_calendar_display_name(calendar) do
-    raw_name = calendar["name"] || calendar[:name]
-    path = calendar["path"] || calendar[:path] || calendar["href"] || calendar[:href]
-    id = calendar["id"] || calendar[:id]
+    entry = CalendarEntry.normalize(calendar)
+    raw_name = entry.name
+    path = entry.path
+    id = entry.id
 
     cond do
       # If name exists and doesn't look like a UUID, use it
@@ -64,7 +95,7 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
         raw_name
 
       true ->
-        "Calendar"
+        dgettext("dashboard_common", "Calendar")
     end
   end
 
@@ -72,6 +103,12 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
   Normalizes discovery errors into user-friendly strings.
   """
   @spec normalize_discovery_error(any()) :: String.t()
+  # Discovery's classified error shape: the category is for callers that have
+  # a decision to make, and displaying an error is not one of them.
+  def normalize_discovery_error({category, message})
+      when is_atom(category) and is_binary(message),
+      do: message
+
   def normalize_discovery_error(reason) do
     errors =
       reason
@@ -79,8 +116,14 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
       |> Enum.reject(&(&1 in [nil, ""]))
 
     case errors do
-      [] -> "Calendar discovery failed. Please check your credentials and try again."
-      errors -> Enum.map_join(errors, ", ", &to_string/1)
+      [] ->
+        dgettext(
+          "dashboard_calendar_providers",
+          "Calendar discovery failed. Please check your credentials and try again."
+        )
+
+      errors ->
+        Enum.map_join(errors, ", ", &to_string/1)
     end
   end
 
@@ -100,7 +143,7 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
 
     case List.last(segments) do
       nil ->
-        "Calendar"
+        dgettext("dashboard_common", "Calendar")
 
       name ->
         name
@@ -111,5 +154,5 @@ defmodule Tymeslot.Integrations.Calendar.DisplayHelpers do
     end
   end
 
-  defp extract_name_from_path(_arg), do: "Calendar"
+  defp extract_name_from_path(_arg), do: dgettext("dashboard_common", "Calendar")
 end

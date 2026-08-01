@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchemaTest do
   @moduletag :schema
 
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Security.Encryption
 
   describe "changeset/2 - provider validation" do
     test "accepts valid providers (mirotalk, google_meet, custom)" do
@@ -256,7 +257,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchemaTest do
       # Encrypted field should exist and be different from plain text
       assert Map.has_key?(changeset.changes, :api_key_encrypted)
       assert changeset.changes.api_key_encrypted != api_key
-      assert is_binary(changeset.changes.api_key_encrypted)
+      assert Encryption.decrypt(changeset.changes.api_key_encrypted) == api_key
     end
 
     test "encrypts access_token before storage" do
@@ -280,7 +281,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchemaTest do
       # Encrypted field should exist
       assert Map.has_key?(changeset.changes, :access_token_encrypted)
       assert changeset.changes.access_token_encrypted != access_token
-      assert is_binary(changeset.changes.access_token_encrypted)
+      assert Encryption.decrypt(changeset.changes.access_token_encrypted) == access_token
     end
 
     test "encrypts refresh_token before storage" do

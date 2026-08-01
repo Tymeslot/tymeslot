@@ -20,9 +20,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
   On success the row is marked `"synced"` (or the cache row is deleted
   for a successful `locally_deleted`). On failure the row stays in the
-  queue with an incremented `sync_attempts` and the formatted error in
-  `sync_last_error`. The next sync cycle retries automatically — there
-  is no backoff beyond the sync cadence itself.
+  queue with an incremented `sync_attempts` and a human-readable
+  description of the failure in `sync_last_error`. The next sync cycle
+  retries automatically — there is no backoff beyond the sync cadence
+  itself.
 
   A `412 Precondition Failed` response to a `locally_modified` flush
   follows the usual conflict-resolution policy (`:keep_local` for
@@ -30,12 +31,21 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   per row via `conflict_policy_for/1`).
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Base, as: CalDAVBase
   alias Tymeslot.Integrations.Calendar.CalDAV.Events
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+
+  # `sync_last_error` is read by the account owner, so every value written to
+  # it is a sentence. Transport failures get theirs from
+  # `CalDAVBase.describe_error/1`; these two cover the local-state failures
+  # that never reach the wire. Both live as functions at the bottom of this
+  # module rather than as module attributes: a `dgettext/2` call in an
+  # attribute would freeze the locale at compile time.
 
   @spec flush(map(), CalDAVBase.client()) :: :ok
   def flush(integration, client) do
@@ -57,7 +67,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
        ) do
     case primary_path(integration) do
       nil ->
-        record_skip(integration, row, "no primary calendar path")
+        record_skip(integration, row, "no primary calendar path", no_primary_path_message())
 
       path ->
         case Events.create_calendar_event(client, path, row_to_event_data(row), events_opts()) do
@@ -78,7 +88,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
        ) do
     case primary_path(integration) do
       nil ->
-        record_skip(integration, row, "no primary calendar path")
+        record_skip(integration, row, "no primary calendar path", no_primary_path_message())
 
       path ->
         opts =
@@ -106,7 +116,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
        ) do
     case primary_path(integration) do
       nil ->
-        record_skip(integration, row, "no primary calendar path")
+        record_skip(integration, row, "no primary calendar path", no_primary_path_message())
 
       path ->
         case Events.delete_calendar_event(client, path, row.uid, events_opts()) do
@@ -127,8 +137,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
   defp flush_row(%ProviderCalendarEventSchema{sync_state: other} = row, integration, _client) do
     # Defensive: an unknown sync_state string should never reach the queue.
-    # Mark the attempt so it's visible in dashboards and continue.
-    record_failure(integration, row, :unknown, "unknown sync_state: #{inspect(other)}")
+    # The state itself is a developer detail, so it goes to the log; the row
+    # records the attempt with a message the account owner can read.
+    Logger.error("CalDAV offline queue row carries an unknown sync_state",
+      calendar_integration_id: integration.id,
+      uid: row.uid,
+      sync_state: inspect(other)
+    )
+
+    ProviderCalendarEventQueries.mark_sync_failed(
+      integration.id,
+      row.uid,
+      unsendable_change_message()
+    )
   end
 
   # ---------------------------------------------------------------------------
@@ -169,27 +190,32 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
     end
   end
 
+  # The log keeps the raw term for diagnosis; `sync_last_error` is a
+  # user-facing column, so it gets the sentence from `CalDAVBase.describe_error/1`
+  # rather than an inspected atom.
   defp record_failure(integration, row, operation, reason) do
-    reason_str = format_reason(reason)
-
     Logger.warning("CalDAV offline queue replay failed",
       calendar_integration_id: integration.id,
       uid: row.uid,
       operation: operation,
-      error: reason_str
+      error: format_reason(reason)
     )
 
-    ProviderCalendarEventQueries.mark_sync_failed(integration.id, row.uid, reason_str)
+    ProviderCalendarEventQueries.mark_sync_failed(
+      integration.id,
+      row.uid,
+      CalDAVBase.describe_error(reason)
+    )
   end
 
-  defp record_skip(integration, row, reason) do
+  defp record_skip(integration, row, reason, message) do
     Logger.warning("CalDAV offline queue replay skipped",
       calendar_integration_id: integration.id,
       uid: row.uid,
       reason: reason
     )
 
-    ProviderCalendarEventQueries.mark_sync_failed(integration.id, row.uid, reason)
+    ProviderCalendarEventQueries.mark_sync_failed(integration.id, row.uid, message)
   end
 
   defp log_success(row, operation) do
@@ -201,4 +227,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
   defp format_reason(reason) when is_binary(reason), do: reason
   defp format_reason(reason), do: inspect(reason)
+
+  defp no_primary_path_message do
+    dgettext(
+      "dashboard_calendar_providers",
+      "No calendar is selected for this connection, so the change could not be sent to the calendar server."
+    )
+  end
+
+  defp unsendable_change_message do
+    dgettext(
+      "dashboard_calendar_providers",
+      "Tymeslot could not send this change to the calendar server."
+    )
+  end
 end

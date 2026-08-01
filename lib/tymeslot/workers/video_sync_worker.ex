@@ -125,6 +125,19 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     :ok
   end
 
+  # The integration's OAuth grant lacks the scope this action needs. Only the
+  # user reconnecting can fix that, and the provider has already flagged the
+  # integration for reauth, so retrying would just replay a guaranteed failure
+  # until the job exhausts its attempts and pages an admin.
+  defp handle_result({:error, :insufficient_scope}, action, meeting) do
+    Logger.error("Video provider scope insufficient, discarding job",
+      meeting_id: meeting.id,
+      action: action
+    )
+
+    {:discard, "Video provider scope insufficient — reconnect required"}
+  end
+
   defp handle_result({:error, reason}, action, meeting) do
     Logger.warning("Provider video sync failed, will retry",
       meeting_id: meeting.id,

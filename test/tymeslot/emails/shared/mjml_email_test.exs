@@ -3,6 +3,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
   @moduletag :emails
 
   alias Tymeslot.Emails.Shared.MjmlEmail
+  alias Tymeslot.Mailer
 
   describe "compile_mjml/1" do
     test "compiles valid MJML to HTML" do
@@ -20,7 +21,6 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
 
       html = MjmlEmail.compile_mjml(mjml)
 
-      assert is_binary(html)
       assert html =~ "Hello World"
       assert html =~ "<!doctype html>"
     end
@@ -39,42 +39,50 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       email = MjmlEmail.base_email()
 
       assert %Swoosh.Email{} = email
-      assert email.from != nil
-      {name, address} = email.from
-      assert is_binary(name)
-      assert is_binary(address)
+      assert email.from == {configured(:from_name), configured(:from_email)}
     end
 
-    test "defaults to :transactional — no tracking, outbound stream" do
+    test "attaches the logo with a Content-ID equal to its filename" do
+      # SendGrid derives content_id from the filename (ignoring `cid:`), and
+      # Mailgun drops `cid:` entirely and keys inline images by filename, so
+      # cid and filename must match for the logo to render on every provider.
       email = MjmlEmail.base_email()
 
-      assert email.provider_options[:track_opens] == false
-      assert email.provider_options[:track_links] == "None"
-      assert email.provider_options[:message_stream] == "outbound"
+      assert [%Swoosh.Attachment{filename: filename, cid: cid}] = email.attachments
+      assert filename == cid
+      assert cid == MjmlEmail.logo_cid()
     end
 
-    test ":transactional explicitly disables tracking" do
-      email = MjmlEmail.base_email(tracking: :transactional)
+    test "references the logo in the HTML body via cid:<filename>" do
+      mjml = MjmlEmail.logo_header()
 
-      assert email.provider_options[:track_opens] == false
-      assert email.provider_options[:track_links] == "None"
-      assert email.provider_options[:message_stream] == "outbound"
+      assert mjml =~ "src=\"cid:#{MjmlEmail.logo_cid()}\""
+    end
+  end
+
+  describe "base_email/1 tracking" do
+    test "defaults to :transactional" do
+      email = MjmlEmail.base_email()
+
+      assert Mailer.tracking(email) == :transactional
     end
 
-    test ":lifecycle enables open tracking only, stays on outbound stream" do
+    test "stashes :lifecycle when given explicitly" do
       email = MjmlEmail.base_email(tracking: :lifecycle)
 
-      assert email.provider_options[:track_opens] == true
-      assert email.provider_options[:track_links] == "None"
-      assert email.provider_options[:message_stream] == "outbound"
+      assert Mailer.tracking(email) == :lifecycle
     end
 
-    test ":marketing enables full tracking on the broadcast stream" do
+    test "stashes :marketing when given explicitly" do
       email = MjmlEmail.base_email(tracking: :marketing)
 
-      assert email.provider_options[:track_opens] == true
-      assert email.provider_options[:track_links] == "HtmlAndText"
-      assert email.provider_options[:message_stream] == "broadcast"
+      assert Mailer.tracking(email) == :marketing
+    end
+
+    test "carries no provider options at build time — translation happens at delivery" do
+      email = MjmlEmail.base_email(tracking: :marketing)
+
+      assert email.provider_options == %{}
     end
   end
 
@@ -82,8 +90,8 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
     test "returns a valid email address" do
       email = MjmlEmail.fetch_from_email()
 
-      assert is_binary(email)
-      assert email =~ ~r/@/
+      assert email == configured(:from_email)
+      assert email =~ ~r/^[^@\s]+@[^@\s]+\.[^@\s]+$/
     end
   end
 
@@ -91,7 +99,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
     test "returns a non-empty string" do
       name = MjmlEmail.fetch_from_name()
 
-      assert is_binary(name)
+      assert name == configured(:from_name)
       assert String.length(name) > 0
     end
   end
@@ -107,7 +115,6 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
 
       mjml = MjmlEmail.base_mjml_template(content, organizer_details)
 
-      assert is_binary(mjml)
       assert mjml =~ "<mjml>"
       assert mjml =~ "</mjml>"
       assert mjml =~ "Test Content"
@@ -223,4 +230,8 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       refute mjml =~ "R&amp;amp;D"
     end
   end
+
+  # Reads the sender identity from config rather than the module under test, so
+  # the assertions stay independent of MjmlEmail's own accessors.
+  defp configured(key), do: Application.get_env(:tymeslot, :email)[key]
 end

@@ -2,8 +2,15 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
   @moduledoc """
   Ensures that main dashboard page components use `<.section_header>` for consistent UI.
 
-  Main components at the top level of `lib/tymeslot_web/live/dashboard/` should
-  provide a consistent heading using the shared component.
+  Page components under `lib/tymeslot_web/live/dashboard/` should provide a
+  consistent heading using the shared component. The same applies to the
+  dashboard pages a downstream overlay contributes from its own web namespace,
+  since they render inside the same dashboard shell.
+
+  This is not a "top level only" rule. Page components nested one level down
+  (`profile_settings/`, `automation/`, `theme_settings/`) are checked too. Only
+  the helper directories listed in `@helper_paths` are exempt, because the page
+  component that renders them supplies the heading on their behalf.
   """
 
   use Credo.Check,
@@ -44,21 +51,33 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
     end
   end
 
+  # Both web namespaces: the overlay contributes its own dashboard pages through
+  # Core's :dashboard_action_components extension point, and they render in the
+  # same shell, so the same heading rule applies to them.
+  @dashboard_dirs [
+    "lib/tymeslot_web/live/dashboard/",
+    "lib/tymeslot_saas_web/live/dashboard/"
+  ]
+
+  # Helper components rendered inside a page component, which carries the
+  # section header on their behalf. Every entry below matches a directory that
+  # exists; prune it when one is removed, rather than leaving a pattern that
+  # silently matches nothing.
+  @helper_paths [
+    "/availability/",
+    "/calendar_grid/",
+    "/calendar_settings/",
+    "/meeting_settings/",
+    "/shared/",
+    "/subscription/",
+    "/theme_customization/",
+    "calendar_grid_component"
+  ]
+
   defp dashboard_page_component?(filename) do
-    # Target main dashboard components (top-level in the dashboard directory)
-    # excluding subdirectories which usually contain helper components
-    String.contains?(filename, "apps/tymeslot/lib/tymeslot_web/live/dashboard/") and
+    String.contains?(filename, @dashboard_dirs) and
       String.ends_with?(filename, "_component.ex") and
-      not String.contains?(filename, [
-        "/availability/",
-        "/calendar_settings/",
-        "/meeting_settings/",
-        "/meetings/",
-        "/shared/",
-        "/theme_customization/",
-        "/calendar_grid/",
-        "calendar_grid_component"
-      ])
+      not String.contains?(filename, @helper_paths)
   end
 
   defp has_section_header?(content) do

@@ -69,14 +69,22 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   def handle_event("change_language", %{"locale" => locale}, socket) do
     case Auth.update_user_locale(socket.assigns.current_user, locale) do
       {:ok, updated_user} ->
-        new_locale = updated_user.locale || Locales.default_locale()
+        new_locale = Locales.acceptable(updated_user.locale) || socket.assigns.ambient_locale
         Gettext.put_locale(new_locale)
 
+        # Re-navigate to the same page so the whole LiveView remounts and every
+        # translated string re-renders in the new locale. LiveView's change
+        # tracking otherwise keeps `dgettext/2` output that depends on no assign
+        # (the card heading/description, the "Back to Dashboard" link) frozen in
+        # the previous language. `AppLocaleHook` re-resolves the locale from the
+        # saved `user.locale` on remount, falling back through the session/
+        # default chain (`:ambient_locale`) when the preference was cleared
+        # ("Automatic"). The flash mirrors that same resolution so it, too,
+        # reads in the new language.
         {:noreply,
          socket
-         |> assign(:current_user, updated_user)
-         |> assign(:locale, new_locale)
-         |> LiveView.put_flash(:info, dgettext("account", "Language preference saved."))}
+         |> LiveView.put_flash(:info, dgettext("account", "Language preference saved."))
+         |> LiveView.push_navigate(to: ~p"/dashboard/account")}
 
       {:error, _changeset} ->
         {:noreply,

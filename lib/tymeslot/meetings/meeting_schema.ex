@@ -304,6 +304,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> validate_length(:utm_term, max: 255)
     |> validate_length(:referrer_host, max: 255)
     |> validate_length(:visitor_hash, max: 64)
+    # Google Calendar's documented maximum event id length.
+    |> validate_length(:provider_event_id, max: 1024)
     |> TrackingParams.validate_tracking_params(:tracking_params)
     |> calculate_duration()
     |> unique_constraint(:uid)

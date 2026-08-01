@@ -15,32 +15,6 @@ if config_env() != :test do
   Tymeslot.Infrastructure.DotenvLoader.load([dotenv_path])
 end
 
-# Helper to safely parse integers from environment variables with validation
-parse_int = fn var, default ->
-  case System.get_env(var) do
-    nil ->
-      default
-
-    value ->
-      case Integer.parse(value) do
-        {int, _} when int >= 1 and int <= 65535 ->
-          int
-
-        {int, _} ->
-          raise """
-          Invalid #{var}: #{int}
-          Port must be between 1-65535
-          """
-
-        :error ->
-          raise """
-          Invalid #{var}: #{inspect(value)}
-          Must be a valid integer
-          """
-      end
-  end
-end
-
 # Helper to parse IP addresses using Erlang's built-in parser
 # Supports both IPv4 and IPv6 addresses in all standard notations
 parse_ip = fn ip_string ->
@@ -290,48 +264,12 @@ if config_env() == :prod do
     secret_key_base: secret_key_base,
     check_origin: check_origin_config
 
-  # Database configuration helper
-  get_database_config = fn deployment_type, overrides ->
-    base_config =
-      case deployment_type do
-        "cloudron" ->
-          [
-            url: System.get_env("CLOUDRON_POSTGRESQL_URL"),
-            username: System.get_env("CLOUDRON_POSTGRESQL_USERNAME"),
-            password: System.get_env("CLOUDRON_POSTGRESQL_PASSWORD"),
-            hostname: System.get_env("CLOUDRON_POSTGRESQL_HOST"),
-            port: System.get_env("CLOUDRON_POSTGRESQL_PORT"),
-            database: System.get_env("CLOUDRON_POSTGRESQL_DATABASE"),
-            pool_size: parse_int.("DATABASE_POOL_SIZE", 60),
-            idle_interval: 60_000,
-            queue_target: 5000,
-            queue_interval: 10000
-          ]
-
-        "docker" ->
-          # Docker deployment with embedded or external PostgreSQL
-          # Default pool_size=60 supports high Oban concurrency (~47 max concurrent workers)
-          # Note: Ensure PostgreSQL max_connections >= 100 (Docker embedded Postgres default)
-          # To increase: Add `-c max_connections=150` to postgres command in docker-compose.yml
-          [
-            hostname: System.get_env("DATABASE_HOST", "localhost"),
-            port: parse_int.("DATABASE_PORT", 5432),
-            database: System.get_env("POSTGRES_DB", "tymeslot"),
-            username: System.get_env("POSTGRES_USER", "tymeslot"),
-            password:
-              System.get_env("POSTGRES_PASSWORD") ||
-                raise("POSTGRES_PASSWORD environment variable is missing"),
-            pool_size: parse_int.("DATABASE_POOL_SIZE", 60),
-            idle_interval: 60_000,
-            queue_target: 5000,
-            queue_interval: 10000
-          ]
-      end
-
-    Keyword.merge(base_config, overrides)
-  end
-
-  config :tymeslot, Tymeslot.Repo, get_database_config.(deployment_type, [])
+  # Database configuration. The mapping from environment to Repo options lives
+  # in a module so it can be unit-tested; this file is never evaluated by
+  # `mix test`.
+  config :tymeslot,
+         Tymeslot.Repo,
+         Tymeslot.Infrastructure.DatabaseConfig.build(deployment_type, System.get_env())
 
   # Remote IP handling: trust private/loopback proxies and read proxy headers
   # Cloudron uses x-forwarded-for header from its reverse proxy
@@ -385,57 +323,32 @@ if config_env() == :prod do
        ]}
     ]
 
-  # Configure mailer based on EMAIL_ADAPTER setting
-  # Default to smtp for self-hosted deployments
-  # On Cloudron: auto-detect sendmail addon when EMAIL_ADAPTER is not explicitly set
-  email_adapter_explicit = System.get_env("EMAIL_ADAPTER")
-
-  # Helper: build standard SMTP config from SMTP_* env vars
-  build_smtp_config = fn ->
-    smtp_host = System.get_env("SMTP_HOST")
-    smtp_username = System.get_env("SMTP_USERNAME")
-    smtp_password = System.get_env("SMTP_PASSWORD")
-
-    if smtp_host != nil and String.trim(smtp_host) == "" do
-      raise "SMTP_HOST cannot be empty or whitespace-only"
-    end
-
-    if smtp_username != nil and String.trim(smtp_username) == "" do
-      raise "SMTP_USERNAME cannot be empty or whitespace-only"
-    end
-
-    if smtp_password != nil and String.trim(smtp_password) == "" do
-      raise "SMTP_PASSWORD cannot be empty or whitespace-only"
-    end
-
-    Tymeslot.Mailer.SMTPConfig.build(
-      host: smtp_host,
-      port: parse_int.("SMTP_PORT", 587),
-      username: smtp_username,
-      password: smtp_password
-    )
-  end
+  # Configure mailer based on EMAIL_ADAPTER setting. `Tymeslot.Mailer.Providers`
+  # owns the list of supported values and the variables each one reads; an
+  # unrecognised value raises rather than silently discarding every email.
+  # Default to smtp for self-hosted deployments.
+  # On Cloudron: auto-detect sendmail addon when EMAIL_ADAPTER is not explicitly set.
+  # A set-but-blank EMAIL_ADAPTER= is treated the same as unset, so it falls
+  # through to the default/auto-detection below instead of raising as an
+  # unrecognised provider name.
+  email_adapter_explicit =
+    "EMAIL_ADAPTER" |> System.get_env() |> Tymeslot.Mailer.Providers.blank_to_nil()
 
   mailer_config =
     cond do
       # Explicit adapter always wins — user knows what they want
       email_adapter_explicit != nil ->
-        case email_adapter_explicit do
-          "smtp" ->
-            build_smtp_config.()
+        if Tymeslot.Mailer.Providers.dev_only?(email_adapter_explicit) do
+          raise """
+          EMAIL_ADAPTER=#{String.trim(email_adapter_explicit)} is a development-only adapter.
 
-          "postmark" ->
-            [adapter: Swoosh.Adapters.Postmark, api_key: System.get_env("POSTMARK_API_KEY")]
-
-          "test" ->
-            [adapter: Swoosh.Adapters.Test]
-
-          "local" ->
-            [adapter: Swoosh.Adapters.Test]
-
-          _ ->
-            [adapter: Swoosh.Adapters.Test]
+          Swoosh's in-memory mailbox is disabled in production, so it cannot
+          deliver anything. Configure a real provider, or set EMAIL_ADAPTER=test
+          if you deliberately want every email discarded.
+          """
         end
+
+        Tymeslot.Mailer.Providers.build!(email_adapter_explicit)
 
       # Cloudron sendmail addon auto-detection (no explicit EMAIL_ADAPTER set)
       deployment_type == "cloudron" and System.get_env("CLOUDRON_MAIL_SMTP_SERVER") != nil ->
@@ -448,7 +361,7 @@ if config_env() == :prod do
 
       # Default: standard SMTP from SMTP_* env vars
       true ->
-        build_smtp_config.()
+        Tymeslot.Mailer.Providers.build!("smtp")
     end
 
   config :tymeslot, Tymeslot.Mailer, mailer_config
@@ -483,64 +396,39 @@ if config_env() == :prod do
   end
 end
 
-# Configure mailer for non-production environments
-if config_env() != :prod do
-  # Default to smtp for self-hosted deployments
+# Configure mailer for non-production, non-test environments. `config/test.exs`
+# pins the adapter to `Swoosh.Adapters.Test` so the test suite is deterministic
+# regardless of the developer's ambient EMAIL_ADAPTER; runtime.exs must never
+# override that pin.
+if config_env() not in [:prod, :test] do
+  # Default to smtp for self-hosted deployments. A set-but-blank
+  # EMAIL_ADAPTER= is treated the same as unset, so it falls through to the
+  # default below instead of Providers.build/1 raising on an unrecognised
+  # provider name.
   email_adapter_default = Application.get_env(:tymeslot, :email_adapter_default, "smtp")
-  email_adapter = System.get_env("EMAIL_ADAPTER", email_adapter_default)
 
+  email_adapter =
+    "EMAIL_ADAPTER"
+    |> System.get_env()
+    |> Tymeslot.Mailer.Providers.blank_to_nil()
+    |> Kernel.||(email_adapter_default)
+
+  # A provider whose credentials are absent falls back to the local mailbox at
+  # /dev/mailbox rather than failing to boot: an unconfigured development
+  # machine should still start. Credentials that are present but malformed
+  # still raise, here as in production.
   mailer_config =
-    case email_adapter do
-      "smtp" ->
-        # In non-production, only configure SMTP if SMTP_HOST is set and non-empty
-        # Otherwise fall back to Local adapter for development
-        smtp_host = System.get_env("SMTP_HOST")
+    case Tymeslot.Mailer.Providers.build(email_adapter) do
+      {:ok, config} ->
+        config
 
-        if smtp_host != nil and String.trim(smtp_host) != "" do
-          smtp_username = System.get_env("SMTP_USERNAME")
-          smtp_password = System.get_env("SMTP_PASSWORD")
+      {:error, reason} ->
+        Logger.info(
+          "EMAIL_ADAPTER=#{String.trim(email_adapter)} is not configured (#{reason}); " <>
+            "delivering to the local mailbox instead"
+        )
 
-          # Check for empty strings
-          if smtp_username != nil and String.trim(smtp_username) == "" do
-            raise "SMTP_USERNAME cannot be empty or whitespace-only"
-          end
-
-          if smtp_password != nil and String.trim(smtp_password) == "" do
-            raise "SMTP_PASSWORD cannot be empty or whitespace-only"
-          end
-
-          # Use shared SMTP configuration module
-          # This validates all required fields and handles SSL/TLS/STARTTLS setup
-          # It also trims whitespace from host and validates all input types
-          Tymeslot.Mailer.SMTPConfig.build(
-            host: smtp_host,
-            port: parse_int.("SMTP_PORT", 587),
-            username: smtp_username,
-            password: smtp_password
-          )
-        else
-          [adapter: Swoosh.Adapters.Local]
-        end
-
-      "postmark" ->
-        if System.get_env("POSTMARK_API_KEY") do
-          [
-            adapter: Swoosh.Adapters.Postmark,
-            api_key: System.get_env("POSTMARK_API_KEY")
-          ]
-        else
-          [adapter: Swoosh.Adapters.Local]
-        end
-
-      _ ->
-        if System.get_env("POSTMARK_API_KEY") do
-          [
-            adapter: Swoosh.Adapters.Postmark,
-            api_key: System.get_env("POSTMARK_API_KEY")
-          ]
-        else
-          [adapter: Swoosh.Adapters.Local]
-        end
+        [adapter: Swoosh.Adapters.Local]
     end
 
   config :tymeslot, Tymeslot.Mailer, mailer_config
@@ -858,7 +746,7 @@ config :tymeslot, :recaptcha,
   expected_hostnames: recaptcha_expected_hostnames
 
 # The enabled flags are seeded from env in non-test environments only — test
-# config sets them explicitly in apps/tymeslot/config/test.exs so the
+# config sets them explicitly in config/test.exs so the
 # developer shell can't accidentally enable reCAPTCHA for tests by exporting
 # RECAPTCHA_SIGNUP_ENABLED.
 if config_env() != :test do

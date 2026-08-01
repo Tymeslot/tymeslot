@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
   alias Tymeslot.Utils.SanitizeMerge
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
+  alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -120,16 +121,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
         {:noreply, assign(socket, form_errors: validation_errors, is_saving: false)}
 
       {:ok, sanitized_params} ->
-        user_id = socket.assigns.current_user.id
-
-        case RateLimiter.check_calendar_discovery_rate_limit(user_id) do
-          {:error, :rate_limited, message} ->
-            Flash.error(message)
-            {:noreply, assign(socket, :is_saving, false)}
-
-          :ok ->
-            do_discover_calendars(provider, sanitized_params, socket)
-        end
+        # No rate-limit check here: `DiscoveryService` is the single choke point
+        # and charges the actor itself. Checking again here would consume a
+        # second token for one click, halving the effective budget while still
+        # reporting the full limit in the error message.
+        do_discover_calendars(provider, sanitized_params, socket)
     end
   end
 
@@ -156,46 +152,67 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
               params
           end
 
-        case Calendar.create_integration_with_validation(
-               user_id,
-               processed_params,
-               metadata: socket.assigns.security_metadata
-             ) do
-          {:ok, _integration} ->
-            send(self(), {:integration_added, :calendar})
+        result =
+          Calendar.create_integration_with_validation(
+            user_id,
+            processed_params,
+            metadata: socket.assigns.security_metadata
+          )
 
-            Flash.info(
-              dgettext("dashboard_calendar_settings", "Calendar integration added successfully")
-            )
-
-            close_modal()
-            {:noreply, reset_form_state(socket)}
-
-          {:error, :duplicate_integration} ->
-            {:noreply,
-             assign(socket,
-               form_errors: %{
-                 generic: [
-                   dgettext(
-                     "dashboard_calendar_settings",
-                     "A calendar integration with this configuration already exists"
-                   )
-                 ]
-               },
-               is_saving: false
-             )}
-
-          {:error, {:form_errors, errors}} ->
-            {:noreply, assign(socket, form_errors: errors, is_saving: false)}
-
-          {:error, {:changeset, changeset}} ->
-            {:noreply,
-             assign(socket,
-               form_errors: %{generic: [ChangesetUtils.get_first_error(changeset)]},
-               is_saving: false
-             )}
-        end
+        handle_create_integration_result(result, socket)
     end
+  end
+
+  defp handle_create_integration_result({:ok, _integration}, socket) do
+    send(self(), {:integration_added, :calendar})
+    Flash.info(dgettext("dashboard_calendar_settings", "Calendar integration added successfully"))
+    close_modal()
+    {:noreply, reset_form_state(socket)}
+  end
+
+  defp handle_create_integration_result({:error, :duplicate_integration}, socket) do
+    {:noreply,
+     assign(socket,
+       form_errors: %{
+         generic: [
+           dgettext(
+             "dashboard_calendar_settings",
+             "A calendar integration with this configuration already exists"
+           )
+         ]
+       },
+       is_saving: false
+     )}
+  end
+
+  defp handle_create_integration_result({:error, {:form_errors, errors}}, socket) do
+    {:noreply, assign(socket, form_errors: errors, is_saving: false)}
+  end
+
+  defp handle_create_integration_result({:error, {:changeset, changeset}}, socket) do
+    {:noreply,
+     assign(socket,
+       form_errors: %{generic: [ChangesetUtils.get_first_error(changeset)]},
+       is_saving: false
+     )}
+  end
+
+  # `Calendar.create_integration_with_validation/3` widens to a tagged
+  # `ConnectionProbe` refusal when the pre-validation connection probe itself
+  # is rate-limited or unattributable; `connection_test_refusal_message/1` is
+  # the one place that builds display copy for either tag.
+  defp handle_create_integration_result({:error, {:rate_limited, _message} = refusal}, socket),
+    do: refusal_result(refusal, socket)
+
+  defp handle_create_integration_result({:error, :unattributable}, socket),
+    do: refusal_result(:unattributable, socket)
+
+  defp refusal_result(refusal, socket) do
+    {:noreply,
+     assign(socket,
+       form_errors: %{generic: [IntegrationProviders.connection_test_refusal_message(refusal)]},
+       is_saving: false
+     )}
   end
 
   @impl Phoenix.LiveComponent
@@ -222,7 +239,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
            provider,
            sanitized_params["url"],
            sanitized_params["username"],
-           sanitized_params["password"]
+           sanitized_params["password"],
+           socket.assigns.current_user.id
          ) do
       {:ok, %{calendars: calendars, discovery_credentials: credentials}} ->
         {:noreply,
@@ -267,11 +285,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
 
   defp normalize_provider(p) when p in @caldav_providers, do: p
 
+  # Matching the string against the known providers avoids converting arbitrary
+  # user input to an atom at all, so there is no ArgumentError to rescue.
   defp normalize_provider(p) when is_binary(p) do
-    atom = String.to_existing_atom(p)
-    if atom in @caldav_providers, do: atom, else: :caldav
-  rescue
-    ArgumentError -> :caldav
+    Enum.find(@caldav_providers, :caldav, &(Atom.to_string(&1) == p))
   end
 
   defp normalize_provider(_other_provider), do: :caldav

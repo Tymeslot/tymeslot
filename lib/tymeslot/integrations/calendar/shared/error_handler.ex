@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   across all calendar providers (CalDAV, Nextcloud, Google, Outlook).
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   @type error_category ::
@@ -25,6 +27,11 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   @doc """
   Sanitizes error messages to remove sensitive server information.
   Internal details are logged but not exposed to users.
+
+  The `is_binary/1` clause pattern-matches English keywords, so `error` must
+  be raw provider output: an atom, or the untranslated text an API handed
+  back. What comes out is localised and must not be fed back in, nor parsed
+  for meaning; see `error_field/1` for deriving a form field instead.
   """
   @spec sanitize_error_message(String.t() | atom() | tuple(), provider()) :: String.t()
   def sanitize_error_message(error, provider \\ :generic)
@@ -36,63 +43,108 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     # Return sanitized message based on common patterns
     cond do
       String.contains?(error, ["401", "unauthorized", "authentication"]) ->
-        "Authentication failed. Please check your credentials."
+        dgettext(
+          "dashboard_calendar_providers",
+          "Authentication failed. Please check your credentials."
+        )
 
       String.contains?(error, ["404", "not found"]) ->
-        "Resource not found. Please verify your configuration."
+        dgettext(
+          "dashboard_calendar_providers",
+          "Resource not found. Please verify your configuration."
+        )
 
       String.contains?(error, ["500", "502", "503", "504"]) ->
-        "The calendar service is temporarily unavailable. Please try again later."
+        dgettext(
+          "dashboard_calendar_providers",
+          "The calendar service is temporarily unavailable. Please try again later."
+        )
 
       String.contains?(error, ["timeout", "timed out"]) ->
-        "The request timed out. Please try again."
+        dgettext("dashboard_calendar_providers", "The request timed out. Please try again.")
 
       String.contains?(error, ["SSL", "TLS", "certificate"]) ->
-        "Secure connection failed. Please check your server configuration."
+        dgettext(
+          "dashboard_calendar_providers",
+          "Secure connection failed. Please check your server configuration."
+        )
 
       String.contains?(error, ["network", "connection refused", "ECONNREFUSED"]) ->
-        "Unable to connect to the calendar service. Please check the URL and try again."
+        dgettext(
+          "dashboard_calendar_providers",
+          "Unable to connect to the calendar service. Please check the URL and try again."
+        )
 
       true ->
         # Generic message for unknown errors
-        "An error occurred while communicating with the calendar service."
+        dgettext(
+          "dashboard_calendar_providers",
+          "An error occurred while communicating with the calendar service."
+        )
     end
   end
 
   def sanitize_error_message(:unauthorized, :apple) do
-    "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security → App-Specific Passwords, and use it instead of your Apple ID password."
+    dgettext(
+      "dashboard_calendar_providers",
+      "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security → App-Specific Passwords, and use it instead of your Apple ID password."
+    )
   end
 
   def sanitize_error_message(:unauthorized, _provider) do
-    "Authentication failed. Please check your credentials."
+    dgettext(
+      "dashboard_calendar_providers",
+      "Authentication failed. Please check your credentials."
+    )
   end
 
   def sanitize_error_message(:forbidden, :mailbox_org) do
-    "Access denied. If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead."
+    dgettext(
+      "dashboard_calendar_providers",
+      "Access denied. If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead."
+    )
   end
 
   def sanitize_error_message(:forbidden, :apple) do
-    "Access denied. iCloud requires an app-specific password generated at appleid.apple.com — your Apple ID password will not work for CalDAV."
+    dgettext(
+      "dashboard_calendar_providers",
+      "Access denied. iCloud requires an app-specific password generated at appleid.apple.com — your Apple ID password will not work for CalDAV."
+    )
   end
 
   def sanitize_error_message(:forbidden, _provider) do
-    "Access denied. You do not have permission to access this calendar resource."
+    dgettext(
+      "dashboard_calendar_providers",
+      "Access denied. You do not have permission to access this calendar resource."
+    )
   end
 
   def sanitize_error_message(:not_found, _provider) do
-    "Resource not found. Please verify your configuration."
+    dgettext(
+      "dashboard_calendar_providers",
+      "Resource not found. Please verify your configuration."
+    )
   end
 
   def sanitize_error_message(:rate_limited, _provider) do
-    "Too many requests. Please wait a moment and try again."
+    dgettext(
+      "dashboard_calendar_providers",
+      "Too many requests. Please wait a moment and try again."
+    )
   end
 
   def sanitize_error_message(:network_error, _provider) do
-    "Network connection failed. Please check your internet connection."
+    dgettext(
+      "dashboard_calendar_providers",
+      "Network connection failed. Please check your internet connection."
+    )
   end
 
   def sanitize_error_message(:server_error, _provider) do
-    "The calendar service encountered an error. Please try again later."
+    dgettext(
+      "dashboard_calendar_providers",
+      "The calendar service encountered an error. Please try again later."
+    )
   end
 
   def sanitize_error_message({:error, message}, provider) when is_binary(message) do
@@ -101,7 +153,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
 
   def sanitize_error_message(error, provider) do
     Logger.error("Unknown calendar error", provider: provider, error: inspect(error))
-    "An unexpected error occurred. Please try again."
+    dgettext("dashboard_calendar_providers", "An unexpected error occurred. Please try again.")
   end
 
   @doc """
@@ -117,6 +169,25 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   """
   @spec format_provider_error(any(), provider(), %{atom() => term()}) :: String.t()
   def format_provider_error(error, provider, context \\ %{}) do
+    {_category, message} = classify_and_format(error, provider, context)
+    message
+  end
+
+  @doc """
+  Classifies a provider error and formats it in one step, returning both.
+
+  Classification runs on the *raw* error; the message it produces is
+  localised. Callers that need to act on the outcome (map an auth failure to
+  a form error, pick a field, decide whether to retry) must carry the
+  category returned here rather than re-reading the message: once translated,
+  the message is presentation and can no longer be parsed for meaning.
+
+  ## Returns
+  - `{category, user_friendly_message}`
+  """
+  @spec classify_and_format(any(), provider(), %{atom() => term()}) ::
+          {error_category(), String.t()}
+  def classify_and_format(error, provider, context \\ %{}) do
     category = categorize_error(error)
     base_message = get_user_friendly_message(category, provider)
     suggestions = get_recovery_suggestions(category, provider)
@@ -129,15 +200,27 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
       context: context
     )
 
-    if suggestions do
-      "#{base_message}. #{suggestions}"
-    else
-      base_message
-    end
+    # Both halves are already localised by `get_user_friendly_message/2` and
+    # `get_recovery_suggestions/2`; only the punctuation joins them, so there
+    # is nothing here for a translator to act on.
+    message =
+      if suggestions do
+        "#{base_message}. #{suggestions}"
+      else
+        base_message
+      end
+
+    {category, message}
   end
 
   @doc """
   Categorizes an error based on its content.
+
+  Only ever pass a *raw* error here: an atom, an HTTP status, an exception, or
+  untranslated provider output. The `is_binary/1` clause below matches English
+  keywords, so feeding it a message that has been through `dgettext` silently
+  yields `:unknown` in every non-English locale. Classify first, translate
+  afterwards — see `classify_and_format/3`.
 
   ## Parameters
   - `error` - The error to categorize
@@ -190,6 +273,21 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   def categorize_error(429), do: :rate_limit
   def categorize_error(status) when is_integer(status) and status >= 500, do: :network
 
+  # The CalDAV-family `t:Tymeslot.Integrations.Calendar.CalDAV.Base.error_reason/0`
+  # atoms, reached directly now that `validate_config/1` no longer runs its own
+  # network probe ahead of discovery — previously these were caught earlier by
+  # a provider's own `error_formatter`, which happened to embed a recognisable
+  # word ("password", "not found") in the string before it ever reached here.
+  def categorize_error(:unauthorized), do: :auth
+  def categorize_error(:forbidden), do: :permission
+  def categorize_error(:not_found), do: :config
+  def categorize_error(:rate_limited), do: :rate_limit
+  def categorize_error(:timeout), do: :timeout
+
+  def categorize_error(reason)
+      when reason in [:network_error, :server_error, :server_unresponsive],
+      do: :network
+
   def categorize_error(_error), do: :unknown
 
   @doc """
@@ -208,25 +306,51 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
 
     case category do
       :auth ->
-        "Authentication failed for #{provider_name}. Please check your username and password"
+        dgettext(
+          "dashboard_calendar_providers",
+          "Authentication failed for %{provider}. Please check your username and password",
+          provider: provider_name
+        )
 
       :permission ->
-        "Access denied. You don't have permission to access this #{provider_name} resource"
+        dgettext(
+          "dashboard_calendar_providers",
+          "Access denied. You don't have permission to access this %{provider} resource",
+          provider: provider_name
+        )
 
       :timeout ->
-        "Connection to #{provider_name} timed out. The server may be slow or unreachable"
+        dgettext(
+          "dashboard_calendar_providers",
+          "Connection to %{provider} timed out. The server may be slow or unreachable",
+          provider: provider_name
+        )
 
       :rate_limit ->
-        "Too many requests to #{provider_name}. Please wait a moment and try again"
+        dgettext(
+          "dashboard_calendar_providers",
+          "Too many requests to %{provider}. Please wait a moment and try again",
+          provider: provider_name
+        )
 
       :network ->
-        "Unable to connect to #{provider_name}. Please check your network connection and server URL"
+        dgettext(
+          "dashboard_calendar_providers",
+          "Unable to connect to %{provider}. Please check your network connection and server URL",
+          provider: provider_name
+        )
 
       :config ->
-        "#{provider_name} configuration error. Please verify your server URL and settings"
+        dgettext(
+          "dashboard_calendar_providers",
+          "%{provider} configuration error. Please verify your server URL and settings",
+          provider: provider_name
+        )
 
       :unknown ->
-        "An unexpected error occurred with #{provider_name}"
+        dgettext("dashboard_calendar_providers", "An unexpected error occurred with %{provider}",
+          provider: provider_name
+        )
     end
   end
 
@@ -249,57 +373,90 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   end
 
   defp get_auth_suggestion(:auth, :nextcloud) do
-    "Try using an app password instead of your regular password. You can create one in Nextcloud's security settings"
+    dgettext(
+      "dashboard_calendar_providers",
+      "Try using an app password instead of your regular password. You can create one in Nextcloud's security settings"
+    )
   end
 
   defp get_auth_suggestion(:auth, :radicale) do
-    "Check your Radicale credentials. If using htpasswd authentication, ensure the password is correct"
+    dgettext(
+      "dashboard_calendar_providers",
+      "Check your Radicale credentials. If using htpasswd authentication, ensure the password is correct"
+    )
   end
 
   defp get_auth_suggestion(:auth, :mailbox_org) do
-    "If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead"
+    dgettext(
+      "dashboard_calendar_providers",
+      "If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead"
+    )
   end
 
   defp get_auth_suggestion(:auth, :apple) do
-    "iCloud requires an app-specific password. Generate one at appleid.apple.com under Sign-In and Security → App-Specific Passwords, and use it instead of your Apple ID password"
+    dgettext(
+      "dashboard_calendar_providers",
+      "iCloud requires an app-specific password. Generate one at appleid.apple.com under Sign-In and Security → App-Specific Passwords, and use it instead of your Apple ID password"
+    )
   end
 
   defp get_auth_suggestion(:auth, _provider) do
-    "Double-check your credentials and ensure they haven't expired"
+    dgettext(
+      "dashboard_calendar_providers",
+      "Double-check your credentials and ensure they haven't expired"
+    )
   end
 
   defp get_auth_suggestion(_category, _provider), do: nil
 
   defp get_network_suggestion(:network, :nextcloud) do
-    "Verify the URL format: https://your-domain.com (Nextcloud path will be added automatically)"
+    dgettext(
+      "dashboard_calendar_providers",
+      "Verify the URL format: https://your-domain.com (Nextcloud path will be added automatically)"
+    )
   end
 
   defp get_network_suggestion(:network, :radicale) do
-    "Verify the Radicale URL including port if needed (e.g., https://radicale.example.com:5232)"
+    dgettext(
+      "dashboard_calendar_providers",
+      "Verify the Radicale URL including port if needed (e.g., https://radicale.example.com:5232)"
+    )
   end
 
   defp get_network_suggestion(:network, :caldav) do
-    "Verify the full CalDAV URL including the path (e.g., https://server.com/caldav/)"
+    dgettext(
+      "dashboard_calendar_providers",
+      "Verify the full CalDAV URL including the path (e.g., https://server.com/caldav/)"
+    )
   end
 
   defp get_network_suggestion(_category, _provider), do: nil
 
   defp get_config_suggestion(:config, :radicale) do
-    "Check that Radicale is running and accessible at the specified URL and port"
+    dgettext(
+      "dashboard_calendar_providers",
+      "Check that Radicale is running and accessible at the specified URL and port"
+    )
   end
 
   defp get_config_suggestion(:config, _provider) do
-    "Check that the server URL is correct and the CalDAV service is enabled"
+    dgettext(
+      "dashboard_calendar_providers",
+      "Check that the server URL is correct and the CalDAV service is enabled"
+    )
   end
 
   defp get_config_suggestion(_category, _provider), do: nil
 
   defp get_other_suggestion(:timeout) do
-    "If the problem persists, contact your calendar server administrator"
+    dgettext(
+      "dashboard_calendar_providers",
+      "If the problem persists, contact your calendar server administrator"
+    )
   end
 
   defp get_other_suggestion(:rate_limit) do
-    "Wait 60 seconds before trying again"
+    dgettext("dashboard_calendar_providers", "Wait 60 seconds before trying again")
   end
 
   defp get_other_suggestion(_category), do: nil
@@ -307,21 +464,50 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   @doc """
   Creates a validation error in the format expected by the UI.
 
+  `message` is already localised presentation text, so it is never inspected
+  to work out which field is at fault. Callers derive `field` from the raw
+  error instead, typically via `error_field/1`.
+
   ## Parameters
-  - `message` - The error message
-  - `field` - The field that caused the error (optional)
+  - `message` - The error message, ready to display
+  - `field` - The form field to attach it to (defaults to `:base`)
 
   ## Returns
   - Pseudo-changeset error structure
   """
-  @spec create_validation_error(String.t(), atom() | nil) :: Ecto.Changeset.t()
-  def create_validation_error(message, field \\ nil) do
-    error_field = field || detect_error_field(message)
-
+  @spec create_validation_error(String.t(), atom()) :: Ecto.Changeset.t()
+  def create_validation_error(message, field \\ :base) do
     %Ecto.Changeset{
-      errors: [{error_field, {message, []}}],
+      errors: [{field, {message, []}}],
       valid?: false
     }
+  end
+
+  @doc """
+  Picks the CalDAV form field an error should be attached to, from the raw
+  error rather than from any message built out of it.
+
+  Categorisation does the work, so this stays correct in every locale.
+
+  ## Parameters
+  - `error` - The raw error (atom, status code, untranslated provider output)
+
+  ## Returns
+  - A field name for `create_validation_error/2`
+  """
+  @spec error_field(any()) :: atom()
+  def error_field(error) do
+    case categorize_error(error) do
+      # Both an auth rejection and a permission refusal are almost always
+      # answered by a different secret: an app-specific password rather than
+      # the account one.
+      :auth -> :password
+      :permission -> :password
+      :config -> :base_url
+      :network -> :base_url
+      :timeout -> :base_url
+      _other_category -> :base
+    end
   end
 
   @doc """
@@ -338,19 +524,38 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   @spec with_error_handling(provider(), function(), %{atom() => term()}) ::
           {:ok, any()} | {:error, String.t()}
   def with_error_handling(provider, operation, context \\ %{}) do
+    case with_classified_error_handling(provider, operation, context) do
+      {:error, {_category, message}} -> {:error, message}
+      ok -> ok
+    end
+  end
+
+  @doc """
+  As `with_error_handling/3`, but keeps the category alongside the message.
+
+  Use this wherever a caller further up has to act on *what kind* of failure
+  it was. The category is derived from the raw error before the message is
+  built, so it survives translation; the message never has to be parsed back.
+
+  ## Returns
+  - `{:ok, result}` or `{:error, {category, formatted_message}}`
+  """
+  @spec with_classified_error_handling(provider(), function(), %{atom() => term()}) ::
+          {:ok, any()} | {:error, {error_category(), String.t()}}
+  def with_classified_error_handling(provider, operation, context \\ %{}) do
     case operation.() do
       {:ok, result} ->
         {:ok, result}
 
       {:error, reason} ->
-        {:error, format_provider_error(reason, provider, context)}
+        {:error, classify_and_format(reason, provider, context)}
 
       error ->
-        {:error, format_provider_error(error, provider, context)}
+        {:error, classify_and_format(error, provider, context)}
     end
   rescue
     exception ->
-      {:error, format_provider_error(exception, provider, context)}
+      {:error, classify_and_format(exception, provider, context)}
   end
 
   @doc """
@@ -409,7 +614,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
 
   defp format_provider_name(provider) do
     case provider do
-      :caldav -> "CalDAV server"
+      :caldav -> dgettext("dashboard_calendar_providers", "CalDAV server")
       :nextcloud -> "Nextcloud"
       :radicale -> "Radicale"
       :zimbra -> "Zimbra"
@@ -417,28 +622,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
       :apple -> "Apple iCloud"
       :google -> "Google Calendar"
       :outlook -> "Outlook Calendar"
-      _other_provider -> "calendar provider"
-    end
-  end
-
-  defp detect_error_field(message) do
-    message_lower = String.downcase(message)
-
-    cond do
-      String.contains?(message_lower, ["password", "authentication", "unauthorized"]) ->
-        :password
-
-      String.contains?(message_lower, ["username", "user"]) ->
-        :username
-
-      String.contains?(message_lower, ["url", "domain", "endpoint", "server"]) ->
-        :base_url
-
-      String.contains?(message_lower, ["calendar", "path"]) ->
-        :calendar_paths
-
-      true ->
-        :base
+      _other_provider -> dgettext("dashboard_calendar_providers", "calendar provider")
     end
   end
 end

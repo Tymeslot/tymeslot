@@ -85,7 +85,7 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
   end
 
   describe "connection validation consistency" do
-    test "test_connection returns error for invalid credentials" do
+    test "perform_connection_test returns error for invalid credentials" do
       Enum.each(@production_providers, fn provider_type ->
         {:ok, provider_module} = ProviderRegistry.get_provider(provider_type)
 
@@ -97,14 +97,14 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
           provider: provider_type
         }
 
-        result = provider_module.test_connection(invalid_config)
+        result = provider_module.perform_connection_test(invalid_config)
 
         # Should return error tuple
         assert match?({:error, _reason}, result)
       end)
     end
 
-    test "test_connection accepts metadata options" do
+    test "perform_connection_test/1 is pure I/O — takes only the config, no caller options" do
       Enum.each(@production_providers, fn provider_type ->
         {:ok, provider_module} = ProviderRegistry.get_provider(provider_type)
 
@@ -116,12 +116,12 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
           provider: provider_type
         }
 
-        opts = [metadata: %{ip: "127.0.0.1"}]
+        result = provider_module.perform_connection_test(config)
 
-        # Should not crash with options
-        result = provider_module.test_connection(config, opts)
-
-        assert match?({:ok, _result}, result) or match?({:error, _reason}, result)
+        # The arity is the point: the call above passes the config alone. The
+        # port is closed, so the probe reaches the network and fails there
+        # rather than being rejected for a missing options argument.
+        assert match?({:error, _reason}, result)
       end)
     end
   end
@@ -140,11 +140,7 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
 
         client = provider_module.new(config)
 
-        # Client should be a map
-        assert is_map(client)
-
-        # Should have provider field
-        assert Map.has_key?(client, :provider)
+        assert %{provider: ^provider_type, username: "test", password: "test"} = client
       end)
     end
   end
@@ -162,10 +158,8 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
           provider: provider_type
         }
 
-        # Should not crash on network error
-        result = provider_module.test_connection(config)
-
-        assert match?({:error, _reason}, result) or match?({:ok, _result}, result)
+        # Nothing listens on port 1, so every provider surfaces an error tuple.
+        assert {:error, _reason} = provider_module.perform_connection_test(config)
       end)
     end
 
@@ -181,17 +175,8 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
           provider: provider_type
         }
 
-        result = provider_module.test_connection(invalid_config)
-
-        case result do
-          {:error, message} ->
-            # Message should be string or atom
-            assert is_binary(message) or is_atom(message)
-
-          {:ok, _result} ->
-            # Some providers may handle this differently
-            :ok
-        end
+        assert {:error, message} = provider_module.perform_connection_test(invalid_config)
+        assert message =~ "Private or local network addresses are not allowed"
       end)
     end
   end

@@ -27,8 +27,8 @@ defmodule Tymeslot.Auth.EmailChangeTest do
                Auth.request_email_change(user, new_email, "Password123!")
 
       assert updated_user.pending_email == new_email
-      assert updated_user.email_change_token_hash != nil
-      assert updated_user.email_change_sent_at != nil
+      assert byte_size(updated_user.email_change_token_hash) > 0
+      assert %DateTime{} = updated_user.email_change_sent_at
 
       # Verify both email jobs were enqueued
       assert_enqueued(
@@ -46,7 +46,11 @@ defmodule Tymeslot.Auth.EmailChangeTest do
           args: %{"action" => "send_email_change_verification", "user_id" => updated_user.id}
         )
 
-      assert is_binary(verification_job.args["verification_url"])
+      # The emailed link carries the raw token whose hash was persisted on the user.
+      assert [_base, emailed_token] =
+               String.split(verification_job.args["verification_url"], "/email-change/")
+
+      assert Token.hash_token(emailed_token) == updated_user.email_change_token_hash
 
       assert_enqueued(
         worker: EmailWorker,
@@ -123,7 +127,7 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       assert updated_user.email == new_email
       assert updated_user.pending_email == nil
       assert updated_user.email_change_token_hash == nil
-      assert updated_user.email_change_confirmed_at != nil
+      assert %DateTime{} = updated_user.email_change_confirmed_at
 
       # Verify the confirmation email job was enqueued for both addresses
       assert_enqueued(
@@ -181,11 +185,11 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       {:ok, user_with_pending} =
         UserTokenQueries.request_email_change(user, new_email, token)
 
-      {:ok, user: user_with_pending}
+      {:ok, user: user_with_pending, new_email: new_email}
     end
 
-    test "successfully cancels pending email change", %{user: user} do
-      assert user.pending_email != nil
+    test "successfully cancels pending email change", %{user: user, new_email: new_email} do
+      assert user.pending_email == new_email
 
       assert {:ok, updated_user, _message} = Auth.cancel_email_change(user)
 

@@ -47,7 +47,14 @@ defmodule Tymeslot.Utils.DateTimeUtils do
         {:error, :invalid_time_format}
     end
   rescue
-    _exception -> {:error, :invalid_time_format}
+    exception ->
+      # The `case` above already covers every shape we expect to fail, so
+      # reaching here means something genuinely unexpected about the input.
+      Logger.warning("Unexpected failure parsing a time string",
+        error: Exception.message(exception)
+      )
+
+      {:error, :invalid_time_format}
   end
 
   def parse_time_string(_value), do: {:error, :invalid_time_format}

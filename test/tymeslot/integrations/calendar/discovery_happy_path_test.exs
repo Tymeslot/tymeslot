@@ -8,11 +8,24 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryHappyPathTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Discovery
+  alias Tymeslot.Integrations.Calendar.Shared.DiscoveryCache
   alias Tymeslot.Integrations.CalendarManagement
   import Mox
   import Tymeslot.Factory
 
   setup :verify_on_exit!
+
+  # `DiscoveryCache` is a shared, process-wide ETS table keyed on
+  # `{provider, "username@host"}`. Both tests below reuse the same
+  # "user"@"caldav.example.com" fixture, so a cached result left over from
+  # another suite run (or a prior run of this same test) would return stale
+  # (or partial) `calendar_paths` instead of exercising the stubbed PROPFIND
+  # response this file sets up. Clearing it here keeps this file's two tests
+  # deterministic without touching shared test support.
+  setup do
+    DiscoveryCache.clear_all()
+    :ok
+  end
 
   @propfind_calendar_response """
   <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
@@ -57,17 +70,21 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryHappyPathTest do
         {:ok, %Req.Response{status: 207, body: @propfind_calendar_response}}
       end)
 
+      # `discover_caldav_calendar_paths/1` charges the discovery request to
+      # `{:user, attrs[:user_id]}` — the rate limiter only needs a positive
+      # integer (no DB row lookup, see `RateLimiter.Integrations.scope_key/1`),
+      # so a plain id is enough here; unlike the end-to-end test below, this
+      # one never persists anything.
       attrs = %{
         provider: "caldav",
         base_url: "https://caldav.example.com",
         username: "user",
-        password: "pass"
+        password: "pass",
+        user_id: 1
       }
 
       assert {:ok, %{calendar_paths: paths} = result} = Discovery.maybe_discover_calendars(attrs)
-      assert is_list(paths)
-      assert paths != []
-      assert Enum.all?(paths, &is_binary/1)
+      assert Enum.sort(paths) == ["/calendars/user/personal/", "/calendars/user/work/"]
       # Other fields are preserved unchanged.
       assert result.provider == "caldav"
       assert result.username == "user"
@@ -103,8 +120,12 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryHappyPathTest do
       }
 
       assert {:ok, integration} = CalendarManagement.create_calendar_integration(attrs)
-      assert is_list(integration.calendar_paths)
-      assert integration.calendar_paths != []
+
+      assert Enum.sort(integration.calendar_paths) == [
+               "/calendars/user/personal/",
+               "/calendars/user/work/"
+             ]
+
       assert integration.provider == "caldav"
       assert integration.user_id == user.id
     end

@@ -15,12 +15,20 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
   alias Tymeslot.Integrations.Calendar.EventsRead
   alias Tymeslot.Integrations.Calendar.RequestCoalescer
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
+  alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate
+  alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
 
   @type user_id :: pos_integer()
 
   @doc """
   Lists all events from all configured calendars.
   Fetches from all calendars in parallel for better performance.
+
+  Reachable from the availability path (`Events.get_calendar_events/3` falls
+  back here when the organiser's profile can't be loaded), so it shares
+  `fetch_events_from_providers/3`'s fail-closed policy via
+  `resolve_availability_fetch/3`: a calendar we failed to read from must
+  never be silently treated as an empty diary.
   """
   @spec list_events(user_id() | nil) :: {:ok, list(map())} | {:error, term()}
   def list_events(user_id \\ nil) do
@@ -38,36 +46,13 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
 
           results =
             Tymeslot.TaskSupervisor
-            |> Task.Supervisor.async_stream(all_clients, &fetch_events_from_client/1,
-              timeout: 45_000
+            |> Task.Supervisor.async_stream_nolink(all_clients, &fetch_events_from_client/1,
+              timeout: 45_000,
+              on_timeout: :kill_task
             )
             |> unwrap_async_results()
 
-          {successful_results, failed_results} =
-            Enum.split_with(results, &successful_result?/1)
-
-          if failed_results != [] do
-            Logger.warning("Some calendar fetches failed",
-              user_id: user_id,
-              failed_count: length(failed_results),
-              errors: Enum.map(failed_results, fn {:error, reason} -> reason end)
-            )
-          end
-
-          if Enum.empty?(successful_results) do
-            {:error, :fetch_failed}
-          else
-            all_events =
-              successful_results
-              |> Enum.flat_map(&extract_events/1)
-              |> Enum.uniq_by(&{&1.uid, &1.start_time})
-
-            Logger.info("Total events found across all calendars",
-              event_count: length(all_events)
-            )
-
-            {:ok, all_events}
-          end
+          resolve_availability_fetch(results, user_id, length(all_clients))
         end
       )
     end
@@ -107,21 +92,6 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
     end)
   end
 
-  @doc """
-  Lists events within a date range from all configured calendars.
-  Uses server-side filtering to exclude events outside the range.
-  Fetches from all calendars in parallel for better performance.
-
-  DEPRECATED: Use get_events_for_range_fresh/3 instead.
-  """
-  @spec list_events_in_range(user_id() | nil, DateTime.t() | Date.t(), DateTime.t() | Date.t()) ::
-          {:ok, list(map())} | {:error, term()}
-  def list_events_in_range(user_id, start_date_or_dt, end_date_or_dt) do
-    EventsRead.list_events_in_range(start_date_or_dt, end_date_or_dt, fn ->
-      ClientManager.clients(user_id)
-    end)
-  end
-
   @doc false
   @spec month_utc_boundaries(integer(), 1..12, String.t()) :: {DateTime.t(), DateTime.t()}
   def month_utc_boundaries(year, month, timezone) do
@@ -151,41 +121,90 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
     # Fetch events from all configured calendars
     all_clients = ClientManager.clients(user_id)
 
-    # Fetch events from each calendar in parallel
-    tasks =
-      Enum.map(all_clients, fn client ->
-        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-          fetch_events_for_client_in_range(client, start_datetime, end_datetime)
-        end)
-      end)
-
-    # Wait for all tasks to complete
-    results = Task.await_many(tasks, Base.task_await_timeout_ms())
-
-    successful = Enum.filter(results, &match?({:ok, _events, _path}, &1))
-
-    if successful == [] do
-      # All configured calendars failed (circuit open, network error, etc.). Return an error
-      # rather than {:ok, []} — an empty list would make every slot look available, silently
-      # hiding conflicts with external calendar entries.
-      Logger.warning("All calendar fetches failed, cannot determine availability",
-        user_id: user_id,
-        client_count: length(all_clients)
+    # Fetch events from each calendar in parallel. Unlinked and individually
+    # timed out via `async_stream_nolink/on_timeout: :kill_task` rather than
+    # `async/await_many`, so one slow calendar can't discard every other
+    # calendar's already-fetched result — it now surfaces as a normal failed
+    # entry that `resolve_availability_fetch/3` classifies, instead of the
+    # whole coalesced fetch dying with `{:error, :timeout}`.
+    results =
+      Tymeslot.TaskSupervisor
+      |> Task.Supervisor.async_stream_nolink(
+        all_clients,
+        fn client -> fetch_events_for_client_in_range(client, start_datetime, end_datetime) end,
+        timeout: Base.task_await_timeout_ms(),
+        on_timeout: :kill_task
       )
+      |> unwrap_async_results()
 
-      {:error, :all_calendars_unavailable}
-    else
-      all_events =
-        successful
-        |> Enum.flat_map(fn {:ok, events, _path} -> events end)
-        |> Enum.uniq_by(&{&1.uid, &1.start_time})
+    resolve_availability_fetch(results, user_id, length(all_clients))
+  end
 
-      Logger.info("Total fresh events found across all calendars",
-        event_count: length(all_events)
-      )
+  # This is the availability path, so anything less than a complete picture
+  # fails closed: offering slots built only from the calendars that happened to
+  # respond would silently hide conflicts sitting in the ones that didn't, and
+  # a partial `{:ok, _}` is indistinguishable from a complete one. The actual
+  # "an unread calendar is not an empty calendar" policy lives once in
+  # `FetchAggregate`; this function only classifies raw results and logs the
+  # outcome for this call site.
+  defp resolve_availability_fetch(results, user_id, client_count) do
+    results
+    |> FetchAggregate.collect(&classify_fetch_result/1, user_id: user_id)
+    |> FetchAggregate.require_complete()
+    |> log_and_dedupe_availability(user_id, client_count)
+  end
 
-      {:ok, all_events}
-    end
+  # `fetch_events_from_client/1` fails with the 3-tuple `{:error, reason, path}`
+  # (see `EventsRead.wrap_events_result/3`); a killed/crashed task instead
+  # surfaces as the 2-tuple `{:error, {:task_exit, reason}}` from
+  # `unwrap_async_results/1`. Both must be classified or a failed fetch raises
+  # here instead of degrading, defeating the fail-closed handling below.
+  #
+  # A Google/Outlook client whose own multi-calendar fetch (MultiCalendarFetch)
+  # hard-failed on at least one selected calendar surfaces its `Outcome` as
+  # `reason` here rather than a flattened atom; classifying it as `:aggregate`
+  # merges its events/attempted/succeeded/failed straight into this level's
+  # `Outcome` (via `FetchAggregate.collect/3`) instead of counting one
+  # integration's several calendars as a single opaque source.
+  defp classify_fetch_result({:ok, events, _path}), do: {:ok, events}
+
+  defp classify_fetch_result({:error, %Outcome{} = outcome, _path}), do: {:aggregate, outcome}
+
+  defp classify_fetch_result({:error, reason, path}), do: {:error, path, reason}
+  defp classify_fetch_result({:error, reason}), do: {:error, :unknown, reason}
+
+  defp log_and_dedupe_availability({:ok, events}, _user_id, _client_count) do
+    all_events = Enum.uniq_by(events, &{&1.uid, &1.start_time})
+
+    Logger.info("Total fresh events found across all calendars", event_count: length(all_events))
+
+    {:ok, all_events}
+  end
+
+  defp log_and_dedupe_availability(
+         {:error, :all_calendars_unavailable} = error,
+         user_id,
+         client_count
+       ) do
+    Logger.warning("All calendar fetches failed, cannot determine availability",
+      user_id: user_id,
+      client_count: client_count
+    )
+
+    error
+  end
+
+  defp log_and_dedupe_availability(
+         {:error, :some_calendars_unavailable} = error,
+         user_id,
+         client_count
+       ) do
+    Logger.warning("Some calendar fetches failed, cannot safely determine availability",
+      user_id: user_id,
+      client_count: client_count
+    )
+
+    error
   end
 
   defp fetch_events_for_client_in_range(client, start_datetime, end_datetime) do
@@ -204,11 +223,6 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
       _other -> {:error, :unknown_task_result}
     end)
   end
-
-  defp successful_result?({:ok, _events, _path}), do: true
-  defp successful_result?(_result), do: false
-
-  defp extract_events({:ok, events, _path}), do: events
 
   defp to_utc_datetime(%DateTime{} = dt, _default_time), do: dt
 

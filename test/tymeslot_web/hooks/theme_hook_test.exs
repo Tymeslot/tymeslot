@@ -25,10 +25,9 @@ defmodule TymeslotWeb.Hooks.ThemeHookTest do
       module call to absent-or-raise. The actual checker,
       `Tymeslot.Features.check_access/2`, already has an explicit
       `try/rescue` (`features.ex:48–59`) and is wired into worker and
-      context modules, not this hook. The SaaS
-      `SubscriptionFeatureGates` hook that *does* override feature
-      assigns is already covered at
-      `apps/tymeslot_saas/test/tymeslot_saas_web/hooks/subscription_feature_gates_test.exs`.
+      context modules, not this hook. A downstream overlay's
+      subscription hook that *does* override feature assigns is already
+      covered by that overlay's own tests.
 
     * `nil booking_theme → default theme "1"` — the premise is
       contradicted by production code. `ProfileSchema.booking_theme`

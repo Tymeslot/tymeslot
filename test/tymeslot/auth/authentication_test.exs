@@ -38,7 +38,7 @@ defmodule Tymeslot.Auth.AuthenticationTest do
       assert {:error, :email_not_verified, message} =
                Authentication.authenticate_user(user.email, password)
 
-      assert is_binary(message)
+      assert message == "Please verify your email address before logging in."
     end
 
     test "consistent error messages prevent user enumeration" do

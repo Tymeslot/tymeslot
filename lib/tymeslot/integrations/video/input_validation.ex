@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   MiroTalk and Custom Video configuration forms.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Shared.InputValidators
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer, UrlValidation}
 
@@ -40,7 +42,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
           provider: provider
         })
 
-        {:error, %{provider: "Unknown video provider"}}
+        {:error, %{provider: dgettext("dashboard_integrations", "Unknown video provider")}}
     end
   end
 
@@ -159,18 +161,26 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
 
   # Helper validation functions
 
-  defp validate_api_key(nil, _metadata), do: {:error, %{api_key: "API key is required"}}
-  defp validate_api_key("", _metadata), do: {:error, %{api_key: "API key is required"}}
+  defp validate_api_key(nil, _metadata), do: {:error, %{api_key: api_key_required_message()}}
+  defp validate_api_key("", _metadata), do: {:error, %{api_key: api_key_required_message()}}
 
   defp validate_api_key(api_key, metadata) when is_binary(api_key) do
     case UniversalSanitizer.sanitize_and_validate(api_key, allow_html: false, metadata: metadata) do
       {:ok, sanitized_api_key} ->
         cond do
           String.length(sanitized_api_key) > 500 ->
-            {:error, %{api_key: "API key must be 500 characters or less"}}
+            {:error,
+             %{
+               api_key:
+                 dgettext("dashboard_integrations", "API key must be 500 characters or less")
+             }}
 
           String.length(String.trim(sanitized_api_key)) < 8 ->
-            {:error, %{api_key: "API key must be at least 8 characters"}}
+            {:error,
+             %{
+               api_key:
+                 dgettext("dashboard_integrations", "API key must be at least 8 characters")
+             }}
 
           true ->
             {:ok, String.trim(sanitized_api_key)}
@@ -182,15 +192,19 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   end
 
   defp validate_api_key(_other, _metadata) do
-    {:error, %{api_key: "API key must be text"}}
+    {:error, %{api_key: dgettext("dashboard_integrations", "API key must be text")}}
   end
 
-  defp validate_base_url(nil, _metadata), do: {:error, %{base_url: "Base URL is required"}}
-  defp validate_base_url("", _metadata), do: {:error, %{base_url: "Base URL is required"}}
+  defp validate_base_url(nil, _metadata), do: {:error, %{base_url: base_url_required_message()}}
+  defp validate_base_url("", _metadata), do: {:error, %{base_url: base_url_required_message()}}
 
   defp validate_base_url(base_url, metadata) when is_binary(base_url) do
     case InputValidators.validate_server_url(base_url, metadata,
-           error_message: "Please enter a valid server URL (e.g., https://mirotalk.example.com)",
+           error_message:
+             dgettext(
+               "dashboard_integrations",
+               "Please enter a valid server URL (e.g., https://mirotalk.example.com)"
+             ),
            validate_url_fn: &validate_video_url/1
          ) do
       {:ok, sanitized_url} -> {:ok, sanitized_url}
@@ -199,14 +213,14 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   end
 
   defp validate_base_url(_other, _metadata) do
-    {:error, %{base_url: "Base URL must be text"}}
+    {:error, %{base_url: dgettext("dashboard_integrations", "Base URL must be text")}}
   end
 
   defp validate_meeting_url(nil, _metadata),
-    do: {:error, %{custom_meeting_url: "Meeting URL is required"}}
+    do: {:error, %{custom_meeting_url: meeting_url_required_message()}}
 
   defp validate_meeting_url("", _metadata),
-    do: {:error, %{custom_meeting_url: "Meeting URL is required"}}
+    do: {:error, %{custom_meeting_url: meeting_url_required_message()}}
 
   defp validate_meeting_url(meeting_url, metadata) when is_binary(meeting_url) do
     trimmed_url = String.trim(meeting_url)
@@ -214,9 +228,12 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
 
     invalid_meeting_url_error =
       if has_protocol do
-        "Please enter a valid meeting URL (e.g., https://meet.google.com/abc-defg-hij)"
+        dgettext(
+          "dashboard_integrations",
+          "Please enter a valid meeting URL (e.g., https://meet.google.com/abc-defg-hij)"
+        )
       else
-        "Only HTTP and HTTPS URLs are allowed"
+        http_https_only_message()
       end
 
     case InputValidators.validate_server_url(trimmed_url, metadata,
@@ -229,14 +246,19 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   end
 
   defp validate_meeting_url(_other, _metadata) do
-    {:error, %{custom_meeting_url: "Meeting URL must be text"}}
+    {:error,
+     %{custom_meeting_url: dgettext("dashboard_integrations", "Meeting URL must be text")}}
   end
 
   defp validate_video_url(url) do
     UrlValidation.validate_http_url(url,
       extra_checks: &validate_external_video_host/1,
-      disallowed_protocol_error: "Only HTTP and HTTPS URLs are allowed",
-      invalid_message: "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
+      disallowed_protocol_error: http_https_only_message(),
+      invalid_message:
+        dgettext(
+          "dashboard_integrations",
+          "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
+        )
     )
   end
 
@@ -244,7 +266,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
     if video_host_allowed?(host) do
       :ok
     else
-      {:error, "Invalid hostname in URL"}
+      {:error, dgettext("dashboard_integrations", "Invalid hostname in URL")}
     end
   end
 
@@ -264,4 +286,14 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
         true
     end
   end
+
+  defp api_key_required_message, do: dgettext("dashboard_integrations", "API key is required")
+
+  defp base_url_required_message, do: dgettext("dashboard_integrations", "Base URL is required")
+
+  defp meeting_url_required_message,
+    do: dgettext("dashboard_integrations", "Meeting URL is required")
+
+  defp http_https_only_message,
+    do: dgettext("dashboard_integrations", "Only HTTP and HTTPS URLs are allowed")
 end

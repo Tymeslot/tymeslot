@@ -6,7 +6,10 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   used by CalDAV-compatible providers (e.g., generic CalDAV, Radicale).
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Discovery, Events, Http, UrlBuilder}
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
 
   require Logger
@@ -97,7 +100,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   Discovers available calendars via `Discovery.discover_calendars/2`.
   """
   @spec discover_calendars(caldav_client(), keyword()) ::
-          {:ok, list(map())} | {:error, term()}
+          {:ok, [CalendarEntry.t()]} | {:error, term()}
   def discover_calendars(client, opts \\ []) do
     with :ok <- validate_credentials(client) do
       Discovery.discover_calendars(client, opts)
@@ -306,7 +309,13 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   # Helpers
-  defp get_calendar_paths(client), do: client[:calendar_paths] || client["calendar_paths"] || []
+
+  # Client configs are built atom-keyed in this application but arrive
+  # string-keyed when they have been round-tripped through JSON, so both
+  # shapes are answered here once.
+  defp get_calendar_paths(%{calendar_paths: paths}) when is_list(paths), do: paths
+  defp get_calendar_paths(%{"calendar_paths" => paths}) when is_list(paths), do: paths
+  defp get_calendar_paths(_client), do: []
 
   defp primary_calendar_path(client) do
     client
@@ -314,9 +323,16 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     |> List.first()
   end
 
-  defp success_message(:nextcloud), do: "Nextcloud connection successful"
-  defp success_message(:radicale), do: "Radicale connection successful"
-  defp success_message(_arg), do: "CalDAV connection successful"
+  # Same msgids the provider modules themselves use, so the message a user
+  # sees does not depend on which of the two paths produced it.
+  defp success_message(:nextcloud),
+    do: dgettext("dashboard_calendar_providers", "Nextcloud connection successful")
+
+  defp success_message(:radicale),
+    do: dgettext("dashboard_calendar_providers", "Radicale connection successful")
+
+  defp success_message(_arg),
+    do: dgettext("dashboard_calendar_providers", "CalDAV connection successful")
 
   defp validate_credentials(client) do
     username = client[:username] || Map.get(client, :username)

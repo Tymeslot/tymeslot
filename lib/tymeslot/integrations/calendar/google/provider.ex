@@ -11,10 +11,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     display_name: "Google Calendar",
     base_url: "https://www.googleapis.com/calendar/v3"
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
+  alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
   alias Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch
 
   @typep converted_event :: %{
@@ -28,16 +32,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
            required(:status) => String.t() | nil,
            required(:transparency) => String.t() | nil,
            required(:meet_url) => String.t() | nil
-         }
-
-  @typep calendar_entry :: %{
-           required(:id) => String.t() | nil,
-           required(:name) => String.t() | nil,
-           required(:description) => String.t() | nil,
-           required(:primary) => boolean(),
-           required(:selected) => boolean(),
-           required(:access_role) => String.t() | nil,
-           required(:color) => String.t() | nil
          }
 
   # Scopes that grant write access to calendar events. Required for Google Meet
@@ -146,7 +140,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   def get_calendar_api_module, do: api_module()
 
   @spec call_list_events(CalendarIntegrationSchema.t(), DateTime.t(), DateTime.t()) ::
-          {:ok, list(map())} | {:error, atom(), String.t()}
+          {:ok, list(map())} | {:error, Outcome.t()} | {:error, atom(), String.t()}
   def call_list_events(integration, start_time, end_time) do
     MultiCalendarFetch.list_events_with_selection(
       integration,
@@ -194,8 +188,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   @doc """
   Discovers all available calendars for the authenticated Google account.
   """
+  @impl Tymeslot.Integrations.Calendar.Provider
   @spec discover_calendars(CalendarIntegrationSchema.t()) ::
-          {:ok, list(calendar_entry())} | {:error, term()}
+          {:ok, [CalendarEntry.t()]} | {:error, term()}
   def discover_calendars(integration) do
     ProviderCommon.discover_calendars(
       integration,
@@ -217,21 +212,24 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   Tests the connection to Google Calendar API.
   Makes a simple API call to verify OAuth token validity and API accessibility.
   """
-  @spec test_connection(CalendarIntegrationSchema.t()) :: {:ok, String.t()} | {:error, term()}
-  def test_connection(integration) do
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec perform_connection_test(CalendarIntegrationSchema.t()) ::
+          {:ok, String.t()} | {:error, term()}
+  def perform_connection_test(integration) do
     case api_module().list_primary_events(
            integration,
            DateTime.utc_now(),
            DateTime.add(DateTime.utc_now(), 1, :day)
          ) do
       {:ok, _events} ->
-        {:ok, "Google Calendar connection successful"}
+        {:ok, dgettext("dashboard_calendar_providers", "Google Calendar connection successful")}
 
       {:error, :unauthorized, _message} ->
         {:error, :unauthorized}
 
       {:error, :rate_limited, _message} ->
-        {:error, "Rate limited - please try again later"}
+        {:error,
+         dgettext("dashboard_calendar_providers", "Rate limited - please try again later")}
 
       {:error, _type, reason} ->
         message = ErrorHandler.sanitize_error_message(reason, :google)
@@ -271,7 +269,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       primary: cal["primary"] || false,
       selected: cal["primary"] || false,
       access_role: cal["accessRole"],
+      read_only: read_only_access_role?(cal["accessRole"]),
       color: cal["backgroundColor"]
     }
+    |> CalendarEntry.normalize()
+    |> CalendarEntry.with_defaults()
   end
+
+  # Google's accessRole reports the caller's permission on the calendar:
+  # "owner"/"writer" can create events, "reader"/"freeBusyReader" cannot.
+  defp read_only_access_role?(role), do: role in ["reader", "freeBusyReader"]
 end

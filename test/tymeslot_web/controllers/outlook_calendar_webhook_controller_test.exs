@@ -106,7 +106,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
       |> post("/webhooks/outlook-calendar", payload)
 
       updated = Repo.get!(CalendarIntegrationSchema, integration.id)
-      assert updated.last_outlook_notification_at != nil
+      assert %DateTime{} = updated.last_outlook_notification_at
     end
   end
 

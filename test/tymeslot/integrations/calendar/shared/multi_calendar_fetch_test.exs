@@ -2,6 +2,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
 
+  alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
   alias Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch
 
   # Mock API module for testing
@@ -50,8 +51,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
       selected = MultiCalendarFetch.get_selected_calendars(integration)
 
       assert length(selected) == 2
-      assert Enum.any?(selected, fn cal -> cal["id"] == "cal1" end)
-      assert Enum.any?(selected, fn cal -> cal["id"] == "cal3" end)
+      assert Enum.any?(selected, fn cal -> cal.id == "cal1" end)
+      assert Enum.any?(selected, fn cal -> cal.id == "cal3" end)
     end
 
     test "filters out calendars without id" do
@@ -65,7 +66,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
       selected = MultiCalendarFetch.get_selected_calendars(integration)
 
       assert length(selected) == 1
-      assert List.first(selected)["id"] == "cal1"
+      assert List.first(selected).id == "cal1"
     end
 
     test "filters out calendars with selected=false" do
@@ -79,7 +80,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
       selected = MultiCalendarFetch.get_selected_calendars(integration)
 
       assert length(selected) == 1
-      assert List.first(selected)["id"] == "cal2"
+      assert List.first(selected).id == "cal2"
     end
 
     test "returns empty list when no calendars selected" do
@@ -122,7 +123,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
       selected = MultiCalendarFetch.get_selected_calendars(integration)
 
       assert length(selected) == 1
-      assert List.first(selected)[:id] == "cal1"
+      assert List.first(selected).id == "cal1"
     end
 
     test "supports mixed atom and string keys" do
@@ -234,17 +235,22 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
 
       # All calendars failing must surface as an error, not {:ok, []}. An empty list
       # would make every slot appear available and risk double-booking against hidden
-      # external events.
-      assert {:error, :all_calendars_unavailable} =
+      # external events. The error carries the full Outcome (not a flattened atom)
+      # so a caller aggregating several integrations can see exactly which
+      # calendars failed and why.
+      assert {:error, %Outcome{succeeded: 0, failed: failed}} =
                MultiCalendarFetch.list_events_with_selection(
                  integration,
                  start_time,
                  end_time,
                  FailingAPI
                )
+
+      assert length(failed) == 2
+      assert Enum.all?(failed, &(&1.reason == :timeout))
     end
 
-    test "includes successful results even when some fail" do
+    test "fails closed when some calendars error, rather than returning a partial result" do
       # Create a mock that fails for specific calendars
       defmodule PartialFailAPI do
         @spec list_events(any(), binary(), any(), any()) :: {:error, atom()} | {:ok, list()}
@@ -269,7 +275,12 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
       start_time = DateTime.utc_now()
       end_time = DateTime.add(start_time, 3600, :second)
 
-      assert {:ok, events} =
+      # `failing_cal` errors with a transient network failure, so its busy time
+      # is unknown — not known-empty. Returning the two calendars that did
+      # respond would be indistinguishable from a complete fetch and would
+      # offer slots over whatever sits in the calendar that didn't answer.
+      # The failing calendar's own id/reason survive in the returned Outcome.
+      assert {:error, %Outcome{succeeded: 2, failed: [%{source: "failing_cal", reason: reason}]}} =
                MultiCalendarFetch.list_events_with_selection(
                  integration,
                  start_time,
@@ -277,10 +288,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
                  PartialFailAPI
                )
 
-      # Should have events from successful calendars only
-      assert length(events) == 2
-      assert Enum.any?(events, fn e -> e["id"] == "cal1-1" end)
-      assert Enum.any?(events, fn e -> e["id"] == "cal2-1" end)
+      assert reason == :network_error
     end
 
     test "tolerates a deleted calendar (404) on a plain-map integration without crashing" do
@@ -315,6 +323,102 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
                )
 
       assert Enum.map(events, & &1["id"]) == ["cal1-1"]
+    end
+
+    test "classifies a 3-tuple provider error on one calendar as a hard failure instead of crashing" do
+      defmodule UnauthorizedOnOneAPI do
+        @spec list_events(any(), binary(), any(), any()) ::
+                {:error, atom(), binary()} | {:ok, list()}
+        def list_events(_integration, "unauthorized_cal", _start_time, _end_time) do
+          {:error, :unauthorized, "Token expired or invalid"}
+        end
+
+        def list_events(_integration, calendar_id, _start_time, _end_time) do
+          {:ok, [%{"id" => "#{calendar_id}-1", "summary" => "Event"}]}
+        end
+      end
+
+      integration = %{
+        calendar_list: [
+          %{"id" => "cal1", "selected" => true},
+          %{"id" => "unauthorized_cal", "selected" => true}
+        ]
+      }
+
+      start_time = DateTime.utc_now()
+      end_time = DateTime.add(start_time, 3600, :second)
+
+      assert {:error,
+              %Outcome{succeeded: 1, failed: [%{source: "unauthorized_cal", reason: reason}]}} =
+               MultiCalendarFetch.list_events_with_selection(
+                 integration,
+                 start_time,
+                 end_time,
+                 UnauthorizedOnOneAPI
+               )
+
+      assert reason == :unauthorized
+    end
+
+    test "classifies a 3-tuple provider error on every calendar as a hard failure instead of crashing" do
+      defmodule UnauthorizedOnAllAPI do
+        @spec list_events(any(), any(), any(), any()) :: {:error, atom(), binary()}
+        def list_events(_integration, _calendar_id, _start_time, _end_time) do
+          {:error, :unauthorized, "Token expired or invalid"}
+        end
+      end
+
+      integration = %{
+        calendar_list: [
+          %{"id" => "cal1", "selected" => true},
+          %{"id" => "cal2", "selected" => true}
+        ]
+      }
+
+      start_time = DateTime.utc_now()
+      end_time = DateTime.add(start_time, 3600, :second)
+
+      assert {:error, %Outcome{succeeded: 0, failed: failed}} =
+               MultiCalendarFetch.list_events_with_selection(
+                 integration,
+                 start_time,
+                 end_time,
+                 UnauthorizedOnAllAPI
+               )
+
+      assert length(failed) == 2
+      assert Enum.all?(failed, &(&1.reason == :unauthorized))
+    end
+
+    test "returns an empty result when every selected calendar is confirmed absent" do
+      defmodule AllDeletedAPI do
+        @spec list_events(any(), any(), any(), any()) :: {:error, atom(), binary()}
+        def list_events(_integration, _calendar_id, _start_time, _end_time) do
+          {:error, :not_found, "Calendar not found"}
+        end
+      end
+
+      integration = %{
+        calendar_list: [
+          %{"id" => "cal1", "selected" => true},
+          %{"id" => "cal2", "selected" => true}
+        ]
+      }
+
+      start_time = DateTime.utc_now()
+      end_time = DateTime.add(start_time, 3600, :second)
+
+      # Every selected calendar was deleted on the provider side. There is no
+      # hard failure here (each 404 is a confirmed-absent source, already
+      # de-selected as a side effect), so this is a known-empty busy set, not
+      # a fetch failure.
+      assert {:ok, []} =
+               MultiCalendarFetch.list_events_with_selection(
+                 integration,
+                 start_time,
+                 end_time,
+                 AllDeletedAPI
+               )
     end
 
     test "respects max concurrency limit" do

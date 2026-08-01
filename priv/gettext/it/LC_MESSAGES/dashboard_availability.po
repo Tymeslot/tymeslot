@@ -194,6 +194,7 @@ msgstr "Disponibilità completa"
 msgid "Grid"
 msgstr "Griglia"
 
+#: lib/tymeslot/availability/input_validation.ex:248
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex:158
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex:253
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex:389
@@ -367,3 +368,53 @@ msgstr "es. Pranzo"
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to clear all settings for %{day}?"
 msgstr "Vuoi davvero cancellare tutte le impostazioni per %{day}?"
+
+#: lib/tymeslot/availability/input_validation.ex:263
+#, elixir-autogen, elixir-format
+msgid "Break label must be 50 characters or less"
+msgstr "L'etichetta della pausa non può superare i 50 caratteri"
+
+#: lib/tymeslot/availability/input_validation.ex:279
+#, elixir-autogen, elixir-format
+msgid "Break label must be text"
+msgstr "L'etichetta della pausa deve essere testo"
+
+#: lib/tymeslot/availability/input_validation.ex:304
+#, elixir-autogen, elixir-format
+msgid "Duration cannot exceed 8 hours (480 minutes)"
+msgstr "La durata non può superare le 8 ore (480 minuti)"
+
+#: lib/tymeslot/availability/input_validation.ex:314
+#, elixir-autogen, elixir-format
+msgid "Duration must be a valid number of minutes"
+msgstr "La durata deve essere un numero di minuti valido"
+
+#: lib/tymeslot/availability/input_validation.ex:297
+#, elixir-autogen, elixir-format
+msgid "Duration must be greater than 0 minutes"
+msgstr "La durata deve essere superiore a 0 minuti"
+
+#: lib/tymeslot/availability/input_validation.ex:245
+#, elixir-autogen, elixir-format
+msgid "End time must be after start time"
+msgstr "L'ora di fine deve essere successiva all'ora di inizio"
+
+#: lib/tymeslot/availability/input_validation.ex:334
+#, elixir-autogen, elixir-format
+msgid "Invalid day selection format"
+msgstr "Formato della selezione dei giorni non valido"
+
+#: lib/tymeslot/availability/input_validation.ex:350
+#, elixir-autogen, elixir-format
+msgid "No valid days selected"
+msgstr "Nessun giorno valido selezionato"
+
+#: lib/tymeslot/availability/input_validation.ex:235
+#, elixir-autogen, elixir-format
+msgid "Time must be a string"
+msgstr "L'orario deve essere una stringa"
+
+#: lib/tymeslot/availability/input_validation.ex:230
+#, elixir-autogen, elixir-format
+msgid "Time must be in HH:MM format (e.g., 09:30)"
+msgstr "L'orario deve essere nel formato HH:MM (es. 09:30)"

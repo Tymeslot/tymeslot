@@ -57,10 +57,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       email =
         AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
 
-      assert email.html_body != nil
-      assert email.text_body != nil
-      assert is_binary(email.html_body)
-      assert is_binary(email.text_body)
+      assert email.html_body =~ "</html>"
+      assert email.html_body =~ "New Appointment Booked!"
+      assert email.text_body =~ "New Appointment Booked!"
+      refute email.text_body =~ "</html>"
     end
 
     test "HTML body contains attendee information" do
@@ -76,7 +76,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
 
       assert email.html_body =~ "Alice Johnson"
       assert email.html_body =~ "alice@company.com"
-      assert email.html_body != nil
+      assert email.html_body =~ "Looking forward to our meeting"
     end
 
     test "HTML body contains meeting details" do
@@ -129,7 +129,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       assert email.html_body =~ "Cancel"
     end
 
-    test "generates email successfully when video meeting URL is present" do
+    # Regression: the organiser HTML body carried no join link at all. The
+    # URL was passed to the hero details table as `video_url`, a key that
+    # module never reads, so the only copy of the link lived in the plain-text
+    # body. An organiser reading the HTML email had no way into the room.
+    test "HTML body includes a join button for a video meeting" do
       details =
         build_appointment_details(%{
           meeting_url: "https://meet.example.com/room-123",
@@ -139,9 +143,60 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       email =
         AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
 
-      assert email.html_body != nil
-      assert is_binary(email.html_body)
-      assert String.length(email.html_body) > 1000
+      assert email.html_body =~ "https://meet.example.com/room-123?role=host"
+      assert email.html_body =~ "Host video call"
+      assert email.html_body =~ "Start Meeting"
+    end
+
+    # The organiser is the host: they must receive the host-scoped join URL,
+    # not the identity-free room URL. `organizer_video_url` is minted with the
+    # organiser's name and email and the "organizer" provider role.
+    test "join link uses the host URL rather than the plain room URL" do
+      details =
+        build_appointment_details(%{
+          meeting_url: "https://meet.example.com/PLAIN-ROOM",
+          organizer_video_url: "https://meet.example.com/HOST-TOKEN",
+          attendee_video_url: "https://meet.example.com/PARTICIPANT-TOKEN"
+        })
+
+      email =
+        AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
+
+      assert email.html_body =~ "HOST-TOKEN"
+      assert email.text_body =~ "HOST-TOKEN"
+      refute email.html_body =~ "PARTICIPANT-TOKEN"
+      refute email.text_body =~ "PARTICIPANT-TOKEN"
+    end
+
+    test "join link falls back to the room URL when no host URL was minted" do
+      details =
+        build_appointment_details(%{
+          meeting_url: "https://meet.example.com/PLAIN-ROOM",
+          organizer_video_url: nil
+        })
+
+      email =
+        AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
+
+      assert email.html_body =~ "PLAIN-ROOM"
+      assert email.text_body =~ "PLAIN-ROOM"
+    end
+
+    test "no join section is rendered for a non-video meeting" do
+      details =
+        build_appointment_details(%{
+          meeting_url: nil,
+          organizer_video_url: nil,
+          attendee_video_url: nil,
+          location: "Conference Room A"
+        })
+
+      email =
+        AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
+
+      refute email.html_body =~ "Host video call"
+      refute email.html_body =~ "Start Meeting"
+      refute email.text_body =~ "JOIN VIDEO MEETING"
     end
 
     test "text body contains key information" do
@@ -221,7 +276,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       refute email.text_body =~ "No reminder emails are scheduled"
     end
 
-    test "handles optional attendee fields gracefully" do
+    test "omits the attendee message section when the optional fields are absent" do
       details =
         build_appointment_details(%{
           attendee_phone: nil,
@@ -232,8 +287,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       email =
         AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
 
-      assert email.html_body != nil
-      assert email.text_body != nil
+      assert email.text_body =~ "ATTENDEE INFORMATION:"
+      assert email.text_body =~ "Name: #{details.attendee_name}"
+      refute email.text_body =~ "MESSAGE FROM ATTENDEE:"
+      assert email.html_body =~ details.attendee_name
     end
 
     test "uses organizer name from details in recipient" do
@@ -248,7 +305,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       assert email.to == [{"Dr. Sarah Chen", "sarah.chen@example.com"}]
     end
 
-    test "handles long attendee messages without errors" do
+    test "renders a long attendee message in full" do
       long_message = String.duplicate("This is a detailed message. ", 50)
 
       details =
@@ -259,13 +316,12 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       email =
         AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
 
-      assert email.html_body != nil
-      assert email.text_body != nil
-      assert is_binary(email.html_body)
-      assert String.length(email.html_body) > 0
+      assert email.text_body =~ "MESSAGE FROM ATTENDEE:"
+      assert email.text_body =~ String.trim(long_message)
+      assert email.html_body =~ "This is a detailed message."
     end
 
-    test "includes meeting type in subject when significant" do
+    test "carries the meeting type in the body, not the subject" do
       details =
         build_appointment_details(%{
           meeting_type: "Executive Strategy Session"
@@ -274,8 +330,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       email =
         AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
 
-      assert email.subject != nil
-      assert String.length(email.subject) > 0
+      assert email.subject ==
+               "New Appointment: #{details.attendee_name} - #{format_date_short(details.date)}"
+
+      assert email.html_body =~ "Executive Strategy Session"
     end
 
     test "email structure is valid Swoosh email" do
@@ -285,10 +343,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
         AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
 
       assert %Swoosh.Email{} = email
-      assert email.subject != nil
-      assert email.to != []
-      assert email.html_body != nil
-      assert email.text_body != nil
+      assert email.subject =~ "New Appointment"
+      assert email.to == [{details.organizer_name, "organizer@example.com"}]
+      assert email.html_body =~ "New Appointment Booked!"
+      assert email.text_body =~ "New Appointment Booked!"
     end
 
     test "subject is free of CR/LF when attendee name contains header-injection payload" do

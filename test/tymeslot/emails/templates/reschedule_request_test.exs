@@ -12,9 +12,8 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       email = RescheduleRequest.render(meeting)
 
       assert %Swoosh.Email{} = email
-      assert email.subject != nil
-      assert email.html_body != nil
-      assert email.text_body != nil
+      assert email.subject =~ "Reschedule Request: Test Meeting"
+      assert String.starts_with?(email.html_body, "<!doctype html>")
       assert email.text_body =~ "Reschedule Request"
       assert email.text_body =~ "Choose a New Time"
     end
@@ -71,33 +70,40 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       meeting = insert(:meeting)
       email = RescheduleRequest.render(meeting)
 
-      assert email.html_body =~ "Choose" || email.html_body =~ "New Time" ||
-               email.html_body =~ "reschedule"
+      assert email.html_body =~ "Choose a New Time"
+      assert email.html_body =~ meeting.reschedule_url
     end
 
     test "converts time to attendee timezone" do
-      meeting = insert(:meeting, attendee_timezone: "America/New_York")
+      meeting =
+        insert(:meeting,
+          start_time: ~U[2025-03-15 14:00:00Z],
+          attendee_timezone: "America/New_York"
+        )
+
       email = RescheduleRequest.render(meeting)
 
-      assert email.html_body != nil
-      # Should contain time information
-      assert String.length(email.html_body) > 1000
+      # 14:00 UTC on 15 March 2025 is 10:00 EDT in New York.
+      assert email.html_body =~ "10:00 AM EDT"
+      assert email.html_body =~ "America/New_York"
+      assert email.text_body =~ "Timezone: America/New_York"
     end
 
     test "handles missing attendee timezone with UTC fallback" do
-      meeting = insert(:meeting, attendee_timezone: nil)
+      meeting = insert(:meeting, start_time: ~U[2025-03-15 14:00:00Z], attendee_timezone: nil)
       email = RescheduleRequest.render(meeting)
 
       assert %Swoosh.Email{} = email
-      assert email.html_body != nil
+      assert email.html_body =~ "02:00 PM UTC"
+      assert email.text_body =~ "Timezone: UTC"
     end
 
     test "includes apology and explanation text" do
       meeting = insert(:meeting)
       email = RescheduleRequest.render(meeting)
 
-      assert email.html_body =~ "apologize" || email.html_body =~ "inconvenience" ||
-               email.html_body =~ "cancelled"
+      assert email.html_body =~ "I apologise for any inconvenience this may cause"
+      assert email.html_body =~ "Your current appointment has been cancelled"
     end
 
     test "includes organizer information in from field" do
@@ -116,7 +122,8 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
         email = RescheduleRequest.render(meeting)
 
         assert %Swoosh.Email{} = email
-        assert email.html_body != nil
+        assert email.html_body =~ type
+        assert email.text_body =~ "Type: #{type}"
       end
     end
 
@@ -192,7 +199,9 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       meeting = insert(:meeting, attendee_name: "<script>steal()</script>")
       email = RescheduleRequest.render(meeting)
 
-      assert is_binary(email.text_body)
+      # Plain text is not HTML: the tags survive as literal characters without
+      # displacing the reschedule call to action.
+      assert email.text_body =~ "<script>steal()</script>"
       assert email.text_body =~ "Choose a New Time"
     end
   end

@@ -36,8 +36,8 @@ defmodule Tymeslot.Integrations.VideoTest do
         "api_key" => "test-key"
       }
 
-      # Mock connection test - called twice
-      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      # Adding an integration still tests the connection, but exactly once.
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200}}
       end)
 
@@ -60,7 +60,7 @@ defmodule Tymeslot.Integrations.VideoTest do
         {:ok, %Req.Response{status: 401, body: "Unauthorized"}}
       end)
 
-      assert {:error, "Invalid API key - Authentication failed"} =
+      assert {:error, {:invalid_api_key, "Invalid API key - Authentication failed"}} =
                Video.create_integration(user.id, :mirotalk, attrs)
     end
 
@@ -239,7 +239,6 @@ defmodule Tymeslot.Integrations.VideoTest do
       end)
 
       assert {:error, message} = Video.oauth_authorization_url(user.id, :zoom)
-      assert is_binary(message)
       assert String.contains?(message, "Zoom")
     end
 

@@ -209,15 +209,26 @@ If you're happy with Cloudron's built-in email and SSO, you can skip sections 3 
 
 #### 3. Email Configuration (Optional Override)
 
-**Option A: Postmark (Recommended)**
+**Option A: a provider API**
 ```bash
 cloudron env set --app tymeslot.yourdomain.com EMAIL_ADAPTER=postmark EMAIL_FROM_NAME=Tymeslot EMAIL_FROM_ADDRESS=noreply@yourdomain.com POSTMARK_API_KEY=your_postmark_api_key
 ```
+
+The other supported API providers take the same shape, with their own variables:
+
+| `EMAIL_ADAPTER` | Additional variables |
+|---|---|
+| `postmark` | `POSTMARK_API_KEY` |
+| `sendgrid` | `SENDGRID_API_KEY` |
+| `mailgun` | `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, optional `MAILGUN_BASE_URL` for EU accounts |
+| `ahasend` | `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID` |
 
 **Option B: SMTP**
 ```bash
 cloudron env set --app tymeslot.yourdomain.com EMAIL_ADAPTER=smtp EMAIL_FROM_NAME=Tymeslot EMAIL_FROM_ADDRESS=noreply@yourdomain.com SMTP_HOST=your_smtp_host SMTP_PORT=587 SMTP_USERNAME=your_smtp_username SMTP_PASSWORD=your_smtp_password
 ```
+
+Any provider without an entry above works over SMTP. An `EMAIL_ADAPTER` value Tymeslot does not recognise stops the app at boot rather than discarding mail silently, so a typo here surfaces immediately in `cloudron logs`.
 
 
 ---

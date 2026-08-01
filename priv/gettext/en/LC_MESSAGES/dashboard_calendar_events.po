@@ -278,7 +278,7 @@ msgstr ""
 msgid "Default"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:65
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:66
 #, elixir-autogen, elixir-format
 msgid "Default calendar"
 msgstr ""
@@ -601,7 +601,7 @@ msgstr ""
 msgid "Previous period"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:53
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:54
 #, elixir-autogen, elixir-format
 msgid "Primary"
 msgstr ""
@@ -902,7 +902,7 @@ msgstr ""
 msgid "You don't have permission to delete this event"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex:74
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex:77
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex:308
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to modify this event"
@@ -980,4 +980,14 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex:98
 #, elixir-autogen, elixir-format
 msgid "Failed to update event - changes reverted"
+msgstr ""
+
+#: lib/tymeslot/calendar_grid/event_creation.ex:178
+#, elixir-autogen, elixir-format
+msgid "Google Calendar saved the event but didn't return a Meet link — please try again or add it manually."
+msgstr ""
+
+#: lib/tymeslot/calendar_grid/event_creation.ex:44
+#, elixir-autogen, elixir-format
+msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
 msgstr ""

@@ -39,6 +39,9 @@ msgstr "Automatisierung"
 msgid "Availability"
 msgstr "Verfügbarkeit"
 
+#: lib/tymeslot/integrations/calendar/display_helpers.ex:98
+#: lib/tymeslot/integrations/calendar/display_helpers.ex:146
+#: lib/tymeslot/integrations/calendar/display_helpers.ex:157
 #: lib/tymeslot_web/components/dashboard_layout.ex:179
 #: lib/tymeslot_web/helpers/page_titles.ex:23
 #, elixir-autogen, elixir-format
@@ -98,7 +101,7 @@ msgstr "Termine"
 msgid "Overview"
 msgstr "Übersicht"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:333
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:332
 #, elixir-autogen, elixir-format
 msgid "Pro"
 msgstr "Pro"
@@ -114,7 +117,7 @@ msgstr "Profil"
 msgid "Scheduling"
 msgstr "Terminplanung"
 
-#: lib/tymeslot_web/components/dashboard_sidebar.ex:312
+#: lib/tymeslot_web/components/dashboard_sidebar.ex:311
 #, elixir-autogen, elixir-format
 msgid "Setup recommended"
 msgstr "Einrichtung empfohlen"
@@ -140,17 +143,17 @@ msgstr "Seite ansehen"
 msgid "Scheduling link copied to clipboard!"
 msgstr "Terminplanungslink in die Zwischenablage kopiert!"
 
-#: lib/tymeslot_web/components/user_dropdown_component.ex:53
+#: lib/tymeslot_web/components/user_dropdown_component.ex:65
 #, elixir-autogen, elixir-format
 msgid "Account Settings"
 msgstr "Kontoeinstellungen"
 
-#: lib/tymeslot_web/components/user_dropdown_component.ex:61
+#: lib/tymeslot_web/components/user_dropdown_component.ex:73
 #, elixir-autogen, elixir-format
 msgid "Admin Settings"
 msgstr "Admin-Einstellungen"
 
-#: lib/tymeslot_web/components/user_dropdown_component.ex:69
+#: lib/tymeslot_web/components/user_dropdown_component.ex:81
 #, elixir-autogen, elixir-format
 msgid "Sign Out"
 msgstr "Abmelden"
@@ -160,12 +163,12 @@ msgstr "Abmelden"
 msgid "This feature (%{feature_name}) is not available on your current plan."
 msgstr "Diese Funktion (%{feature_name}) ist in Ihrem aktuellen Tarif nicht verfügbar."
 
-#: lib/tymeslot_web/components/user_dropdown_component.ex:117
+#: lib/tymeslot_web/components/user_dropdown_component.ex:129
 #, elixir-autogen, elixir-format
 msgid "User"
 msgstr "Nutzer"
 
-#: lib/tymeslot_web/components/icons/provider_icon.ex:50
+#: lib/tymeslot_web/components/icons/provider_icon.ex:59
 #, elixir-autogen, elixir-format
 msgid "%{provider} icon"
 msgstr "%{provider}-Symbol"

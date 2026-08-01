@@ -110,7 +110,14 @@ defmodule TymeslotWeb.Themes.Core.Loader do
         try do
           module.live_view_module()
         rescue
-          _other -> nil
+          error ->
+            Logger.warning("Theme module failed to report its LiveView module",
+              theme_id: theme_id,
+              theme_module: inspect(module),
+              error: inspect(error)
+            )
+
+            nil
         end
 
       {:error, _reason} ->

@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   Nextcloud and CalDAV configuration forms with URL, credential, and path validation.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Shared.InputValidators
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer, UrlValidation}
 
@@ -225,7 +227,11 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
 
   defp validate_server_url(url, metadata) when is_binary(url) do
     case InputValidators.validate_server_url(url, metadata,
-           error_message: "Please enter a valid server URL (e.g., https://cloud.example.com)",
+           error_message:
+             dgettext(
+               "dashboard_calendar_providers",
+               "Please enter a valid server URL (e.g., https://cloud.example.com)"
+             ),
            validate_url_fn: &validate_calendar_url/1
          ) do
       {:ok, sanitized_url} -> {:ok, sanitized_url}
@@ -234,21 +240,28 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   end
 
   defp validate_server_url(_value, _metadata) do
-    {:error, %{url: "Server URL must be text"}}
+    {:error, %{url: dgettext("dashboard_calendar_providers", "Server URL must be text")}}
   end
 
-  defp validate_username(nil, _metadata), do: {:error, %{username: "Username is required"}}
-  defp validate_username("", _metadata), do: {:error, %{username: "Username is required"}}
+  defp validate_username(nil, _metadata), do: {:error, %{username: username_required_message()}}
+  defp validate_username("", _metadata), do: {:error, %{username: username_required_message()}}
 
   defp validate_username(username, metadata) when is_binary(username) do
     case UniversalSanitizer.sanitize_and_validate(username, allow_html: false, metadata: metadata) do
       {:ok, sanitized_username} ->
         cond do
           String.length(sanitized_username) > 255 ->
-            {:error, %{username: "Username must be 255 characters or less"}}
+            {:error,
+             %{
+               username:
+                 dgettext(
+                   "dashboard_calendar_providers",
+                   "Username must be 255 characters or less"
+                 )
+             }}
 
           String.length(String.trim(sanitized_username)) < 1 ->
-            {:error, %{username: "Username is required"}}
+            {:error, %{username: username_required_message()}}
 
           true ->
             {:ok, String.trim(sanitized_username)}
@@ -260,25 +273,29 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   end
 
   defp validate_username(_value, _metadata) do
-    {:error, %{username: "Username must be text"}}
+    {:error, %{username: dgettext("dashboard_calendar_providers", "Username must be text")}}
   end
 
-  defp validate_password(nil, _metadata), do: {:error, %{password: "Password is required"}}
-  defp validate_password("", _metadata), do: {:error, %{password: "Password is required"}}
+  defp validate_password(nil, _metadata), do: {:error, %{password: password_required_message()}}
+  defp validate_password("", _metadata), do: {:error, %{password: password_required_message()}}
 
   defp validate_password(password, _metadata) when is_binary(password) do
     cond do
       not String.valid?(password) ->
-        {:error, %{password: "Password contains invalid characters"}}
+        {:error, %{password: password_invalid_characters_message()}}
 
       String.contains?(password, "\x00") ->
-        {:error, %{password: "Password contains invalid characters"}}
+        {:error, %{password: password_invalid_characters_message()}}
 
       String.length(password) > 500 ->
-        {:error, %{password: "Password must be 500 characters or less"}}
+        {:error,
+         %{
+           password:
+             dgettext("dashboard_calendar_providers", "Password must be 500 characters or less")
+         }}
 
       String.length(String.trim(password)) < 1 ->
-        {:error, %{password: "Password is required"}}
+        {:error, %{password: password_required_message()}}
 
       true ->
         {:ok, password}
@@ -286,7 +303,7 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   end
 
   defp validate_password(_value, _metadata) do
-    {:error, %{password: "Password must be text"}}
+    {:error, %{password: dgettext("dashboard_calendar_providers", "Password must be text")}}
   end
 
   defp validate_calendar_paths(nil, _metadata), do: {:ok, ""}
@@ -316,12 +333,14 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   end
 
   defp validate_calendar_paths(_value, _metadata) do
-    {:error, %{calendar_paths: "Calendar paths must be text"}}
+    {:error,
+     %{calendar_paths: dgettext("dashboard_calendar_providers", "Calendar paths must be text")}}
   end
 
   defp validate_calendar_paths_format(paths) do
     if String.length(paths) > 5000 do
-      {:error, "Calendar paths must be 5000 characters or less"}
+      {:error,
+       dgettext("dashboard_calendar_providers", "Calendar paths must be 5000 characters or less")}
     else
       # Split by newlines OR commas and validate each path/URL
       separators = if String.contains?(paths, ","), do: [","], else: ["\n", "\r\n"]
@@ -343,7 +362,10 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
       :ok
     else
       {:error,
-       "Some calendar paths have invalid format. Use full URLs (https://...) or paths (/calendar/)"}
+       dgettext(
+         "dashboard_calendar_providers",
+         "Some calendar paths have invalid format. Use full URLs (https://...) or paths (/calendar/)"
+       )}
     end
   end
 
@@ -433,8 +455,22 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
     UrlValidation.validate_http_url(url,
       enforce_https_for_public: true,
       block_private_ips: true,
-      https_error_message: "Use HTTPS for non-local calendar servers",
-      private_ip_error_message: "Private or local network addresses are not allowed"
+      https_error_message:
+        dgettext("dashboard_calendar_providers", "Use HTTPS for non-local calendar servers"),
+      private_ip_error_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Private or local network addresses are not allowed"
+        )
     )
   end
+
+  defp username_required_message,
+    do: dgettext("dashboard_calendar_providers", "Username is required")
+
+  defp password_required_message,
+    do: dgettext("dashboard_calendar_providers", "Password is required")
+
+  defp password_invalid_characters_message,
+    do: dgettext("dashboard_calendar_providers", "Password contains invalid characters")
 end

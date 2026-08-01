@@ -295,36 +295,97 @@ defmodule TymeslotWeb.AccountLiveTest do
       assert html =~ ~s(phx-value-locale="de")
       assert html =~ "Automatic"
       assert html =~ "Deutsch"
+      # The Automatic button carries a tooltip explaining what it does.
+      assert html =~ "Follow your browser"
       # No saved locale → the Automatic button is the active selection.
       assert html =~ ~r/phx-value-locale=""[^>]*btn-tag-selector-primary--active/s
     end
 
-    test "clicking a language button auto-saves and immediately marks it active",
+    test "switching language persists it and re-renders the whole page in the new locale",
          %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
-      html =
+      {:ok, _view, html} =
         view
         |> element(~s(button[phx-value-locale="de"]))
         |> render_click()
+        |> follow_redirect(conn)
 
       # Persisted immediately, no separate save step.
       assert Repo.get(UserSchema, user.id).locale == "de"
-      # Immediate feedback: confirmation flash + the German button now active.
-      # Selecting German also switches the dashboard locale, so the flash
-      # renders in German.
+
+      # Confirmation flash renders in the newly selected language.
       assert html =~ "Spracheinstellung gespeichert"
+
+      # The remount re-renders every string in German — including ones that
+      # depend on no assign and would otherwise stay frozen by LiveView change
+      # tracking: the card heading and the "Back to Dashboard" link.
+      assert html =~ ~r/>Sprache</
+      assert html =~ "Zurück zum Dashboard"
+
+      # The German button is now the active selection.
       assert html =~ ~r/phx-value-locale="de"[^>]*btn-tag-selector-primary--active/s
     end
 
-    test "clicking Automatic clears the persisted locale", %{conn: conn, user: user} do
+    test "switching to Automatic clears the persisted locale", %{conn: conn, user: user} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
-      view |> element(~s(button[phx-value-locale="de"])) |> render_click()
+      {:ok, view, _html} =
+        view
+        |> element(~s(button[phx-value-locale="de"]))
+        |> render_click()
+        |> follow_redirect(conn)
+
       assert Repo.get(UserSchema, user.id).locale == "de"
 
-      view |> element(~s(button[phx-value-locale=""])) |> render_click()
+      {:ok, _view, _html} =
+        view
+        |> element(~s(button[phx-value-locale=""]))
+        |> render_click()
+        |> follow_redirect(conn)
+
       assert Repo.get(UserSchema, user.id).locale == nil
+    end
+  end
+
+  describe "Admin menu visibility" do
+    setup do
+      original = Application.get_env(:tymeslot, :enable_admin_ui)
+      on_exit(fn -> Application.put_env(:tymeslot, :enable_admin_ui, original) end)
+      :ok
+    end
+
+    test "shows Admin Settings to an admin when the admin UI is enabled",
+         %{conn: conn, user: user} do
+      Application.put_env(:tymeslot, :enable_admin_ui, true)
+      {:ok, _admin} = user |> Changeset.change(%{is_admin: true}) |> Repo.update()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      assert open_user_menu(view) =~ "Admin Settings"
+    end
+
+    test "hides Admin Settings from an admin when the admin UI is disabled",
+         %{conn: conn, user: user} do
+      Application.put_env(:tymeslot, :enable_admin_ui, false)
+      {:ok, _admin} = user |> Changeset.change(%{is_admin: true}) |> Repo.update()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      # The route 404s when the admin UI is off, so the menu entry must not
+      # dangle as a dead end.
+      refute open_user_menu(view) =~ "Admin Settings"
+    end
+
+    test "hides Admin Settings from a non-admin user", %{conn: conn} do
+      Application.put_env(:tymeslot, :enable_admin_ui, true)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      # Sanity check the menu is actually open, so the refute is meaningful.
+      opened = open_user_menu(view)
+      assert opened =~ "Sign Out"
+      refute opened =~ "Admin Settings"
     end
   end
 
@@ -377,5 +438,13 @@ defmodule TymeslotWeb.AccountLiveTest do
       assert ErrorFormatter.format(%{field: "error"}) == %{field: ["error"]}
       assert ErrorFormatter.format(nil) == %{base: ["An unexpected error occurred"]}
     end
+  end
+
+  # The user dropdown renders its panel (Sign Out, Admin Settings, …) only while
+  # open, so tests that assert on menu items must open it first.
+  defp open_user_menu(view) do
+    view
+    |> element("#user-menu button[aria-haspopup='true']")
+    |> render_click()
   end
 end

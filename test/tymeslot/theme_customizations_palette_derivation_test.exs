@@ -18,7 +18,7 @@ defmodule Tymeslot.ThemeCustomizationsPaletteDerivationTest do
     test "returns the same shape as a static preset" do
       %{name: name, colors: colors} = PaletteDerivation.derive_palette("#06b6d4")
 
-      assert is_binary(name)
+      assert name == "Custom"
 
       assert Enum.sort(Map.keys(colors)) ==
                [

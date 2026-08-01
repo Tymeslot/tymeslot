@@ -10,8 +10,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   - Outlook: Microsoft Outlook Calendar with OAuth
   """
   use Ecto.Schema
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Ecto.Changeset
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Security.Encryption
@@ -29,7 +32,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           token_expires_at: DateTime.t() | nil,
           oauth_scope: String.t() | nil,
           calendar_paths: [String.t()],
-          calendar_list: [map()],
+          calendar_list: [CalendarEntry.t()],
           default_booking_calendar_id: String.t() | nil,
           verify_ssl: boolean(),
           is_active: boolean(),
@@ -72,7 +75,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:token_expires_at, :utc_datetime)
     field(:oauth_scope, :string)
     field(:calendar_paths, {:array, :string}, default: [])
-    field(:calendar_list, {:array, :map}, default: [])
+    field(:calendar_list, {:array, CalendarEntry}, default: [])
     field(:default_booking_calendar_id, :string)
     field(:verify_ssl, :boolean, default: true)
     field(:is_active, :boolean, default: true)
@@ -161,20 +164,27 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     |> check_constraint(:provider, name: :calendar_integrations_provider_check)
     |> unique_constraint([:user_id, :provider, :provider_account_id],
       name: :unique_active_calendar_account_per_user,
-      message: "an integration for this account already exists"
+      # `TymeslotWeb.Components.CoreComponents.Forms.translate_error/1` runs the stored msgid
+      # through the "errors" domain at render time, so the changeset must
+      # carry the untranslated msgid — hence `dgettext_noop/2`, not
+      # `dgettext/2`, which would translate here and miss the lookup there.
+      message: dgettext_noop("errors", "an integration for this account already exists")
     )
     |> unique_constraint([:user_id, :provider],
       name: :unique_active_calendar_null_account_per_user,
-      message: "an integration for this provider already exists"
+      message: dgettext_noop("errors", "an integration for this provider already exists")
     )
   end
 
-  @caldav_based_providers ProviderConfig.caldav_based_provider_strings()
-
+  # Read at runtime rather than bound into a module attribute: the list is only
+  # ever used inside this function body, never in a guard, so compile-time
+  # binding buys nothing and costs a compile-time dependency on
+  # `ProviderConfig` — one of the edges `mix xref --label compile-connected`
+  # caps.
   defp validate_base_url_for_caldav(changeset) do
     provider = get_field(changeset, :provider)
 
-    if provider in @caldav_based_providers do
+    if provider in ProviderConfig.caldav_based_provider_strings() do
       validate_required(changeset, [:base_url])
     else
       changeset
@@ -193,6 +203,39 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
         password: Encryption.decrypt(integration.password_encrypted),
         access_token: Encryption.decrypt(integration.access_token_encrypted),
         refresh_token: Encryption.decrypt(integration.refresh_token_encrypted)
+    }
+  end
+
+  @doc """
+  Converts a persisted integration into the plain, atom-keyed config map that
+  the CalDAV-family `Provider.perform_connection_test/1` callbacks read.
+
+  The struct itself cannot be passed: those callbacks read their config with
+  bracket access, which structs do not support. A plain map supports both
+  bracket and dot access, so this is the one shape every CalDAV-family
+  provider callback can consume. This is `Calendar.Connection.probe/3`'s only
+  caller of `to_provider_config/1`, and that path deliberately never calls
+  `validate_config/1` (see its moduledoc), so only what `perform_connection_test/1`
+  itself reads across all seven CalDAV-family providers needs to survive the
+  conversion: `:base_url`, `:username`, `:password`, `:calendar_paths`, and
+  `:provider`.
+
+  Unlike `Map.from_struct/1`, this never carries the `*_encrypted` ciphertext
+  fields or any other schema field across, so a crash report generated while
+  handling the resulting map can't print more than a CalDAV connection test
+  ever needed.
+
+  Callers must decrypt credentials first (see `decrypt_credentials/1`); this
+  function does not decrypt.
+  """
+  @spec to_provider_config(t()) :: map()
+  def to_provider_config(%__MODULE__{} = integration) do
+    %{
+      base_url: integration.base_url,
+      username: integration.username,
+      password: integration.password,
+      calendar_paths: integration.calendar_paths || [],
+      provider: integration.provider
     }
   end
 

@@ -130,7 +130,6 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
       # Simulate what the router does: call the session function with the conn
       session = Router.scheduling_session(conn)
 
-      assert is_binary(session["embed_token"])
       assert {:ok, {"sessionflow", _parent_origin}} = Token.verify(session["embed_token"])
     end
 

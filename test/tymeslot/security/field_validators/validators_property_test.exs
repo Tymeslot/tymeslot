@@ -17,8 +17,10 @@ defmodule Tymeslot.Security.FieldValidators.ValidatorsPropertyTest do
   describe "EmailValidator" do
     property "never crashes on arbitrary strings" do
       check all(s <- string(:printable)) do
-        result = EmailValidator.validate(s)
-        assert match?(:ok, result) or match?({:error, _reason}, result)
+        case EmailValidator.validate(s) do
+          :ok -> assert String.contains?(s, "@")
+          {:error, reason} -> assert byte_size(reason) > 0
+        end
       end
     end
 
@@ -33,8 +35,8 @@ defmodule Tymeslot.Security.FieldValidators.ValidatorsPropertyTest do
                   list_of(integer(), max_length: 3)
                 ])
             ) do
-        result = EmailValidator.validate(value)
-        assert match?(:ok, result) or match?({:error, _reason}, result)
+        assert {:error, reason} = EmailValidator.validate(value)
+        assert byte_size(reason) > 0
       end
     end
 
@@ -62,8 +64,10 @@ defmodule Tymeslot.Security.FieldValidators.ValidatorsPropertyTest do
   describe "PasswordValidator" do
     property "never crashes on arbitrary strings" do
       check all(s <- string(:printable)) do
-        result = PasswordValidator.validate(s)
-        assert match?(:ok, result) or match?({:error, _reason}, result)
+        case PasswordValidator.validate(s) do
+          :ok -> assert String.length(s) >= 8
+          {:error, reason} -> assert byte_size(reason) > 0
+        end
       end
     end
 
@@ -110,8 +114,10 @@ defmodule Tymeslot.Security.FieldValidators.ValidatorsPropertyTest do
   describe "UsernameValidator" do
     property "never crashes on arbitrary strings" do
       check all(s <- string(:printable)) do
-        result = UsernameValidator.validate(s)
-        assert match?(:ok, result) or match?({:error, _reason}, result)
+        case UsernameValidator.validate(s) do
+          :ok -> assert String.length(String.trim(s)) >= 3
+          {:error, reason} -> assert byte_size(reason) > 0
+        end
       end
     end
 

@@ -126,8 +126,8 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       new_password = "NewSecurePassword123!"
 
       # First use succeeds
-      result = PasswordReset.reset_password(token, new_password, new_password)
-      assert match?({:ok, _, _}, result) or match?({:error, :invalid_token, _}, result)
+      assert {:ok, _user_map, _message} =
+               PasswordReset.reset_password(token, new_password, new_password)
 
       # Second use always fails
       assert {:error, :invalid_token, _message} =

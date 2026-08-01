@@ -1,11 +1,14 @@
 # Tymeslot Docker Compose Configuration
 #
-# IMPORTANT: Create a .env file before starting:
-#   cp .env.example .env
+# Runs the published image, which bundles PostgreSQL. There is nothing to build
+# and nothing to clone: put this file and a .env next to each other and start.
+#
+# IMPORTANT: Create a .env file before starting. Copy .env.example from a clone,
+# or download it on its own:
+#   curl -o .env https://raw.githubusercontent.com/Tymeslot/tymeslot/main/.env.example
 #
 # Then generate required secrets:
 #   openssl rand -base64 64 | tr -d '\n'  # SECRET_KEY_BASE
-#   openssl rand -base64 32 | tr -d '\n'  # POSTGRES_PASSWORD
 #
 # Recommended (decouples data-at-rest encryption from SECRET_KEY_BASE):
 #   openssl rand -base64 48 | tr -d '\n'  # DATA_ENCRYPTION_KEY
@@ -14,13 +17,17 @@
 #
 # Fill in the required values in .env, then run:
 #   docker compose up -d
+#
+# To build the image from source instead of pulling it, use
+# docker-compose.build.yml. To run PostgreSQL as a separate container, use
+# docker-compose.with-postgres.yml.
 
 services:
   tymeslot:
-    build:
-      context: .
-      dockerfile: Dockerfile.docker
-    image: tymeslot:latest
+    # Pin a release tag instead of `latest` for reproducible deployments. The
+    # published tags are listed at
+    # https://hub.docker.com/r/luka1thb/tymeslot/tags
+    image: luka1thb/tymeslot:latest
     container_name: tymeslot
     restart: unless-stopped
     # PORT is the listen port; it is published on the host and inside the

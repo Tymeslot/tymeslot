@@ -102,6 +102,19 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCacheTest do
       assert :ok = IdempotencyCache.release(event_id)
       assert {:ok, :reserved} = IdempotencyCache.reserve(event_id)
     end
+
+    test "a duplicate arriving after ETS is cleared (simulated restart) is still caught via the database tier" do
+      event_id = generate_event_id()
+
+      assert {:ok, :reserved} = IdempotencyCache.reserve(event_id)
+      assert :ok = IdempotencyCache.mark_processed(event_id)
+
+      # Simulate a node restart: the in-memory tier is gone, but the
+      # database row (90-day retention) survives.
+      :ets.delete_all_objects(:webhook_idempotency_cache)
+
+      assert {:ok, :already_processed} = IdempotencyCache.reserve(event_id)
+    end
   end
 
   describe "reserve/1 expiry-recovery" do

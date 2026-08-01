@@ -278,7 +278,7 @@ msgstr "Tagesansicht"
 msgid "Default"
 msgstr "Standard"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:65
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:66
 #, elixir-autogen, elixir-format
 msgid "Default calendar"
 msgstr "Standardkalender"
@@ -601,7 +601,7 @@ msgstr "Vorheriger Monat"
 msgid "Previous period"
 msgstr "Vorheriger Zeitraum"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:53
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:54
 #, elixir-autogen, elixir-format
 msgid "Primary"
 msgstr "Primär"
@@ -902,7 +902,7 @@ msgstr "Ja, senden"
 msgid "You don't have permission to delete this event"
 msgstr "Sie haben keine Berechtigung, dieses Ereignis zu löschen"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex:74
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex:77
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex:308
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to modify this event"
@@ -981,3 +981,13 @@ msgstr "Videoraum konnte nicht bereitgestellt werden - Link nicht aktualisiert"
 #, elixir-autogen, elixir-format
 msgid "Failed to update event - changes reverted"
 msgstr "Ereignis konnte nicht aktualisiert werden - Änderungen zurückgesetzt"
+
+#: lib/tymeslot/calendar_grid/event_creation.ex:178
+#, elixir-autogen, elixir-format
+msgid "Google Calendar saved the event but didn't return a Meet link — please try again or add it manually."
+msgstr "Google Calendar hat das Ereignis gespeichert, aber keinen Meet-Link zurückgegeben – bitte versuchen Sie es erneut oder fügen Sie ihn manuell hinzu."
+
+#: lib/tymeslot/calendar_grid/event_creation.ex:44
+#, elixir-autogen, elixir-format
+msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
+msgstr "Ihr Kalender muss erneut verbunden werden. Bitte verbinden Sie ihn auf der Seite „Integrationen“ erneut."

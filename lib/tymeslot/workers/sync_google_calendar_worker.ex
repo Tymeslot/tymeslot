@@ -21,6 +21,8 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       states: [:available, :scheduled, :executing, :retryable, :suspended]
     ]
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Infrastructure.Config
@@ -196,11 +198,8 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     primary_id = integration.default_booking_calendar_id || "primary"
 
     integration.calendar_list
-    |> Enum.filter(fn cal ->
-      (cal["selected"] || cal[:selected]) == true and
-        (cal["id"] || cal[:id]) != primary_id
-    end)
-    |> Enum.map(fn cal -> cal["id"] || cal[:id] end)
+    |> Enum.filter(fn cal -> cal.selected == true and cal.id != primary_id end)
+    |> Enum.map(& &1.id)
   end
 
   # Iterates each selected secondary calendar, accumulating the ids of any that
@@ -293,7 +292,10 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
     case CalendarManagement.mark_needs_reauth(
            integration,
-           "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
+           dgettext(
+             "dashboard_calendar_providers",
+             "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
+           )
          ) do
       {:ok, _updated} ->
         {:discard, "Booking calendar not found — user action required"}

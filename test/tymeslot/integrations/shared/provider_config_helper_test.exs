@@ -1,11 +1,17 @@
 defmodule Tymeslot.Integrations.Shared.ProviderConfigHelperTest do
-  use ExUnit.Case, async: true
+  # Not async: effective_providers/4 gates dev-only providers on the global
+  # `:tymeslot, :environment`, so these assertions depend on application env.
+  use ExUnit.Case, async: false
   @moduletag :integrations
+
+  import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
 
   describe "effective_providers/4" do
     test "filters by enabled status" do
+      setup_config(:tymeslot, :environment, :test)
+
       providers = [:google, :outlook]
       dev_only = [:local]
 
@@ -24,6 +30,15 @@ defmodule Tymeslot.Integrations.Shared.ProviderConfigHelperTest do
                :google,
                :local
              ]
+    end
+
+    test "excludes dev-only providers in production even when include_dev is true" do
+      setup_config(:tymeslot, :environment, :prod)
+
+      all_enabled = fn _provider -> true end
+
+      assert ProviderConfigHelper.effective_providers([:google], [:local], true, all_enabled) ==
+               [:google]
     end
   end
 

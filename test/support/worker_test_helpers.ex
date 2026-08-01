@@ -221,9 +221,11 @@ defmodule Tymeslot.WorkerTestHelpers do
 
   @spec expect_mirotalk_success(String.t()) :: :ok
   def expect_mirotalk_success(room_url \\ "https://test.mirotalk.com/join/test-room-123") do
-    # First two calls: room creation
+    # One call: room creation. It used to be two, because validate_config/1 ran
+    # a connection test before the create; the provider no longer reaches the
+    # network to validate structure.
     Tymeslot.HTTPClientMock
-    |> expect(:post, 2, fn url, _body, _headers, _opts ->
+    |> expect(:post, 1, fn url, _body, _headers, _opts ->
       body =
         if String.contains?(url, "/api/v1/meeting") do
           Jason.encode!(%{"meeting" => room_url})

@@ -5,7 +5,6 @@ defmodule Tymeslot.CalendarProviderValidationCases do
   """
 
   import ExUnit.Assertions
-  import ExUnit.CaptureLog
 
   @doc """
   Tests basic validation: missing required fields and invalid URL format.
@@ -35,27 +34,27 @@ defmodule Tymeslot.CalendarProviderValidationCases do
     }
 
     assert {:error, message} = provider_module.validate_config(config)
-    assert String.contains?(message, "URL") or String.contains?(message, "url")
+    assert String.contains?(message, "URL")
 
     :ok
   end
 
   @doc """
-  Tests that validation attempts connection when all required fields are present.
+  Tests that a structurally complete config passes `validate_config/1` without
+  touching the network. `validate_config/1` is structural only — the
+  connectivity probe used to run here too, doubling the rate-limit charge
+  across two buckets for a single form submission; the live check now runs
+  separately, through `test_connection/1`.
   """
-  @spec test_validation_attempts_connection(module(), String.t()) :: :ok
-  def test_validation_attempts_connection(provider_module, example_url) do
+  @spec test_validation_accepts_without_network_probe(module(), String.t()) :: :ok
+  def test_validation_accepts_without_network_probe(provider_module, example_url) do
     config = %{
       base_url: example_url,
       username: "user",
       password: "pass"
     }
 
-    # Will fail connection but validates structure
-    capture_log(fn ->
-      result = provider_module.validate_config(config)
-      assert match?({:error, _}, result)
-    end)
+    assert :ok = provider_module.validate_config(config)
 
     :ok
   end

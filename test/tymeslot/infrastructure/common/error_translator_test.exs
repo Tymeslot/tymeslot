@@ -54,8 +54,7 @@ defmodule Tymeslot.Infrastructure.Common.ErrorTranslatorTest do
       assert result.category == :rate_limit
       assert result.retry_after == 120
 
-      assert result.details =~ "120" or
-               Enum.any?(result.resolution_steps, &(&1 =~ "2 minutes"))
+      assert "Wait 2 minutes before trying again" in result.resolution_steps
     end
 
     test "translates 404 http errors" do

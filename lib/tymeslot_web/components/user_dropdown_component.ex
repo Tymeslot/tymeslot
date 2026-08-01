@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Auth.AdminRoles
   alias Tymeslot.Profiles
 
   @impl Phoenix.LiveComponent
@@ -14,6 +15,17 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
       assign(assigns, :display_name, get_display_name(assigns.profile, assigns.current_user))
 
     assigns = assign(assigns, :truncated_name, truncate_display_name(assigns.display_name))
+
+    # Only offer the admin entry when the user is an admin *and* the admin UI is
+    # enabled for this deployment. The SaaS overlay disables it and 404s
+    # `/admin`, so gating on `is_admin` alone would show admins a menu item that
+    # only leads to a dead end.
+    assigns =
+      assign(
+        assigns,
+        :show_admin_link,
+        assigns.current_user.is_admin && AdminRoles.admin_ui_enabled?()
+      )
 
     ~H"""
     <div>
@@ -57,7 +69,7 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
             phx-target={@myself}
           />
           <.dropdown_item
-            :if={@current_user.is_admin}
+            :if={@show_admin_link}
             label={dgettext("dashboard_common", "Admin Settings")}
             icon="hero-shield-check"
             navigate={~p"/admin"}

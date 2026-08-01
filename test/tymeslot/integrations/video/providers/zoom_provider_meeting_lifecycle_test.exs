@@ -31,7 +31,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
         assert decoded["timezone"] == "UTC"
         # Default valid_config uses a 30-minute window
         assert decoded["duration"] == 30
-        assert is_binary(decoded["start_time"])
+        assert decoded["start_time"] == DateTime.to_iso8601(config.meeting_start_time)
 
         {:ok, %Req.Response{status: 204, body: ""}}
       end)
@@ -320,6 +320,51 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
       assert :ok = ZoomProvider.delete_meeting_room("gone", config)
     end
 
+    test "maps Zoom's 4711 scope rejection to :insufficient_scope and flags reauth" do
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Zoom",
+          provider: "zoom",
+          access_token: "valid_token",
+          refresh_token: "valid_refresh",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+          # The stored scope looks sufficient, so validation passes and the
+          # request goes out — this is the token whose *grant* at Zoom predates
+          # the scope being added.
+          oauth_scope: "meeting:write:meeting meeting:delete:meeting"
+        })
+
+      config =
+        Map.merge(valid_config(), %{
+          integration_id: integration.id,
+          user_id: user.id
+        })
+
+      expect(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 400,
+           body:
+             Jason.encode!(%{
+               "code" => 4711,
+               "message" =>
+                 "Invalid access token, does not contain scopes:[meeting:delete:meeting]."
+             })
+         }}
+      end)
+
+      assert {:error, :insufficient_scope} =
+               ZoomProvider.delete_meeting_room("123456789", config)
+
+      {:ok, reloaded} = VideoIntegrationQueries.get(integration.id)
+      assert reloaded.needs_reauth
+    end
+
     test "returns structured error on Zoom API 401 after refresh retry" do
       config = valid_config()
 
@@ -382,14 +427,14 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
           access_token: "expired_token",
           refresh_token: "valid_refresh",
           token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
-          oauth_scope: "meeting:write:meeting"
+          oauth_scope: "meeting:write:meeting meeting:delete:meeting"
         })
 
       config = %{
         access_token: "expired_token",
         refresh_token: "valid_refresh",
         token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
-        oauth_scope: "meeting:write:meeting",
+        oauth_scope: "meeting:write:meeting meeting:delete:meeting",
         integration_id: integration.id,
         user_id: user.id,
         meeting_topic: "Test Meeting",
@@ -441,7 +486,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
       access_token: "valid_token",
       refresh_token: "valid_refresh",
       token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-      oauth_scope: "meeting:write:meeting meeting:read:meeting user:read:user",
+      oauth_scope:
+        "meeting:write:meeting meeting:read:meeting meeting:delete:meeting user:read:user",
       meeting_topic: "Test Meeting",
       meeting_start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
       meeting_end_time: DateTime.add(DateTime.utc_now(), 5400, :second)

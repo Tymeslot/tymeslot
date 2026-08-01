@@ -23,6 +23,8 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   alias Swoosh.Attachment
   alias Tymeslot.Emails.Shared.{AvatarHelper, Frame, Sanitise, Stage, Styles, Urls}
   alias Tymeslot.Emails.Shared.Styles.Tokens
+  alias Tymeslot.Mailer
+  alias Tymeslot.Mailer.Providers
   alias Tymeslot.Security.UrlValidation
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -48,8 +50,8 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   end
 
   @typedoc """
-  Postmark tracking category. Controls open-tracking, link-rewriting and the
-  message stream the email is routed through.
+  Tracking category. Controls open-tracking and link-rewriting, and on
+  Postmark the message stream the email is routed through.
 
     * `:transactional` — confirmations, security alerts, receipts. No opens,
       no link rewriting, sent on the default `outbound` (transactional) stream.
@@ -60,19 +62,29 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     * `:marketing` — bulk newsletters and announcements. Opens on, links
       rewritten in HTML and text, sent on the `broadcast` stream so reputation
       is isolated from transactional mail.
+
+  The category itself is stashed on the email via `Tymeslot.Mailer.put_tracking/2`
+  rather than resolved here: `Tymeslot.Mailer.deliver/2` reads it back at the
+  delivery choke point and applies
+  `Tymeslot.Mailer.Providers.tracking_options/2` for whichever provider is
+  actually configured at send time. Only Postmark has message streams; on the
+  other providers the stream half of the category has no equivalent and
+  isolating bulk from transactional reputation is configured at the provider.
   """
-  @type tracking :: :transactional | :lifecycle | :marketing
+  @type tracking :: Providers.tracking()
 
   @doc """
   Creates a base Swoosh email pre-configured for the given tracking category
-  and with the Tymeslot logo attached inline (CID `tymeslot-logo`) so the
+  and with the Tymeslot logo attached inline (CID `tymeslot-logo.png`) so the
   system layout's logo header renders identically in every email client
   without needing an external URL.
 
   Defaults to `:transactional` — the safe choice for any email tied to a
   specific user action (booking confirmation, password reset, receipt).
   Override with `tracking: :lifecycle` or `tracking: :marketing` at the call
-  site for templates that genuinely benefit from engagement metrics.
+  site for templates that genuinely benefit from engagement metrics. The
+  category is only stashed on the email here; `Tymeslot.Mailer.deliver/2`
+  translates it into provider options at delivery time.
   """
   @spec base_email(keyword()) :: Swoosh.Email.t()
   def base_email(opts \\ []) do
@@ -80,33 +92,16 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
 
     new()
     |> from({fetch_from_name(), fetch_from_email()})
-    |> apply_tracking(tracking)
+    |> Mailer.put_tracking(tracking)
     |> attach_logo()
   end
 
-  @spec apply_tracking(Swoosh.Email.t(), tracking()) :: Swoosh.Email.t()
-  defp apply_tracking(email, :transactional) do
-    email
-    |> put_provider_option(:track_opens, false)
-    |> put_provider_option(:track_links, "None")
-    |> put_provider_option(:message_stream, "outbound")
-  end
-
-  defp apply_tracking(email, :lifecycle) do
-    email
-    |> put_provider_option(:track_opens, true)
-    |> put_provider_option(:track_links, "None")
-    |> put_provider_option(:message_stream, "outbound")
-  end
-
-  defp apply_tracking(email, :marketing) do
-    email
-    |> put_provider_option(:track_opens, true)
-    |> put_provider_option(:track_links, "HtmlAndText")
-    |> put_provider_option(:message_stream, "broadcast")
-  end
-
-  @logo_cid "tymeslot-logo"
+  # Content-ID must match the attachment filename exactly: Swoosh's SendGrid
+  # adapter derives the content_id from the filename (ignoring `cid:`), and
+  # Mailgun drops `cid:` entirely and keys inline images by filename.
+  # Postmark and AhaSend echo the `cid:` we set. Matching filename and cid
+  # is the only value that renders correctly across all four.
+  @logo_cid "tymeslot-logo.png"
 
   @doc "The Content-ID used for the inline Tymeslot logo attachment."
   @spec logo_cid() :: String.t()
@@ -190,8 +185,8 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     stage_subtitle = organizer_details[:stage_subtitle]
 
     Frame.wrap(%{
-      title: "Message from #{organizer_name}",
-      preview: "#{organizer_name} via Tymeslot",
+      title: dgettext("emails", "Message from %{name}", name: organizer_name),
+      preview: dgettext("emails", "%{name} via Tymeslot", name: organizer_name),
       pre_card: logo_header(),
       stage: Stage.stage_band(intent, stage_eyebrow, stage_title, stage_subtitle),
       header: organizer_strip(organizer_avatar_url, organizer_name, organizer_title),

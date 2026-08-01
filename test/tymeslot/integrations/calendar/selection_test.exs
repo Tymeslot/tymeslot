@@ -2,7 +2,9 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
   use Tymeslot.DataCase, async: true
   @moduletag :calendar
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Selection
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Utils.SanitizeMerge
 
   # =====================================
@@ -31,8 +33,8 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
 
       [unified] = Selection.unify_discovered_with_existing(discovered, existing)
 
-      assert unified["selected"] == true
-      assert unified["id"] == "/dav/user%40example.org/Calendar"
+      assert unified.selected == true
+      assert unified.id == "/dav/user%40example.org/Calendar"
     end
 
     test "preserves selection when discovered ID is decoded and existing is percent-encoded" do
@@ -56,7 +58,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
 
       [unified] = Selection.unify_discovered_with_existing(discovered, existing)
 
-      assert unified["selected"] == true
+      assert unified.selected == true
     end
 
     test "marks as unselected when no match at all" do
@@ -80,7 +82,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
 
       [unified] = Selection.unify_discovered_with_existing(discovered, existing)
 
-      assert unified["selected"] == false
+      assert unified.selected == false
     end
 
     test "preserves unselected status when exact key is in map with selected: false" do
@@ -106,7 +108,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
 
       [unified] = Selection.unify_discovered_with_existing(discovered, existing)
 
-      assert unified["selected"] == false
+      assert unified.selected == false
     end
 
     test "preserves unselected status (selected: false) regardless of encoding" do
@@ -130,7 +132,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
 
       [unified] = Selection.unify_discovered_with_existing(discovered, existing)
 
-      assert unified["selected"] == false
+      assert unified.selected == false
     end
 
     test "populates path from id when discovered map omits path (CalDAV shape)" do
@@ -153,8 +155,8 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
 
       [unified] = Selection.unify_discovered_with_existing(discovered, [])
 
-      assert unified["id"] == href
-      assert unified["path"] == href
+      assert unified.id == href
+      assert unified.path == href
     end
   end
 
@@ -178,8 +180,8 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
       result = Selection.prepare_selected_params([encoded_path], discovered)
 
       [cal] = result["calendar_list"]
-      assert cal["id"] == encoded_path
-      assert cal["path"] == encoded_path
+      assert cal.id == encoded_path
+      assert cal.path == encoded_path
     end
 
     test "includes calendar when selected path encoding differs from discovered path" do
@@ -199,8 +201,8 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
 
       assert length(result["calendar_list"]) == 1
       [cal] = result["calendar_list"]
-      assert cal["id"] == encoded_path
-      assert cal["path"] == encoded_path
+      assert cal.id == encoded_path
+      assert cal.path == encoded_path
     end
 
     test "zero-selection merge does not silently erase typed calendar_paths" do
@@ -258,8 +260,8 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
 
       assert result["calendar_paths"] == [href]
       assert [cal] = result["calendar_list"]
-      assert cal["id"] == href
-      assert cal["path"] == href
+      assert cal.id == href
+      assert cal.path == href
     end
 
     test "non-empty selection still wins over user-typed calendar_paths" do
@@ -279,7 +281,46 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
       merged = SanitizeMerge.merge(params, selection)
 
       assert merged["calendar_paths"] == ["/cal1"]
-      assert [%{"path" => "/cal1"}] = merged["calendar_list"]
+      assert [%{path: "/cal1"}] = merged["calendar_list"]
+    end
+
+    test "primary, color, and unrecognised keys survive a full persist/re-read round trip" do
+      # Regression for the write-path data loss: prepare_selected_params/2
+      # used to hand-build a six-key string map, discarding primary, color,
+      # and any unrecognised keys before they ever reached the database.
+      user = insert(:user)
+      path = "/dav/user@example.org/Calendar/"
+
+      discovered = [
+        %{
+          "id" => path,
+          "path" => path,
+          "name" => "Calendar",
+          "type" => "calendar",
+          "primary" => true,
+          "color" => "#123456",
+          "description" => "Team calendar"
+        }
+      ]
+
+      %{"calendar_list" => calendar_list} = Selection.prepare_selected_params([path], discovered)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          calendar_paths: [],
+          calendar_list: []
+        )
+
+      {:ok, _updated} = Selection.persist_calendar_list(integration, calendar_list)
+
+      {:ok, reread} = CalendarManagement.get_calendar_integration(integration.id, user.id)
+      [cal] = reread.calendar_list
+
+      assert cal.primary == true
+      assert cal.color == "#123456"
+      assert cal.raw == %{"description" => "Team calendar"}
     end
   end
 
@@ -309,7 +350,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
         })
 
       [cal] = updated.calendar_list
-      assert cal["selected"] == true
+      assert cal.selected == true
     end
 
     test "rebuilds calendar_paths from the new selection so the sync worker stops touching un-toggled calendars" do
@@ -346,8 +387,8 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
 
       assert updated.calendar_paths == [kept_path]
 
-      assert Enum.find(updated.calendar_list, &(&1["id"] == kept_path))["selected"] == true
-      assert Enum.find(updated.calendar_list, &(&1["id"] == removed_path))["selected"] == false
+      assert Enum.find(updated.calendar_list, &(&1.id == kept_path)).selected == true
+      assert Enum.find(updated.calendar_list, &(&1.id == removed_path)).selected == false
     end
 
     test "empties calendar_paths when every calendar is un-toggled" do
@@ -369,7 +410,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
         Selection.update_calendar_selection(integration, %{"selected_calendars" => []})
 
       assert updated.calendar_paths == []
-      assert [%{"selected" => false}] = updated.calendar_list
+      assert [%CalendarEntry{selected: false}] = updated.calendar_list
     end
   end
 
@@ -440,39 +481,6 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
   end
 
   # =====================================
-  # selected_calendars/1
-  # =====================================
-
-  describe "selected_calendars/1" do
-    test "returns entries with selected: true via string keys" do
-      list = [
-        %{"id" => "a", "selected" => true},
-        %{"id" => "b", "selected" => false},
-        %{"id" => "c", "selected" => true}
-      ]
-
-      assert Selection.selected_calendars(list) == [
-               %{"id" => "a", "selected" => true},
-               %{"id" => "c", "selected" => true}
-             ]
-    end
-
-    test "tolerates atom keys" do
-      list = [%{id: "a", selected: true}, %{id: "b", selected: false}]
-
-      assert Selection.selected_calendars(list) == [%{id: "a", selected: true}]
-    end
-
-    test "returns [] for nil" do
-      assert Selection.selected_calendars(nil) == []
-    end
-
-    test "returns [] when no entry is selected" do
-      assert Selection.selected_calendars([%{"id" => "a", "selected" => false}]) == []
-    end
-  end
-
-  # =====================================
   # event_visible?/2
   # =====================================
 
@@ -491,7 +499,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
       event = %{provider_calendar_id: "primary", provider_event_id: "abc"}
 
       integration = %{
-        calendar_list: [%{"id" => "primary", "selected" => false}]
+        calendar_list: Enum.map([%{id: "primary", selected: false}], &CalendarEntry.normalize/1)
       }
 
       assert Selection.event_visible?(event, integration) == false
@@ -501,10 +509,14 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
       event = %{provider_calendar_id: "work@example.com", provider_event_id: "evt-1"}
 
       integration = %{
-        calendar_list: [
-          %{"id" => "work@example.com", "selected" => true},
-          %{"id" => "personal@example.com", "selected" => false}
-        ]
+        calendar_list:
+          Enum.map(
+            [
+              %{id: "work@example.com", selected: true},
+              %{id: "personal@example.com", selected: false}
+            ],
+            &CalendarEntry.normalize/1
+          )
       }
 
       assert Selection.event_visible?(event, integration) == true
@@ -514,10 +526,14 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
       event = %{provider_calendar_id: "personal@example.com", provider_event_id: "evt-1"}
 
       integration = %{
-        calendar_list: [
-          %{"id" => "work@example.com", "selected" => true},
-          %{"id" => "personal@example.com", "selected" => false}
-        ]
+        calendar_list:
+          Enum.map(
+            [
+              %{id: "work@example.com", selected: true},
+              %{id: "personal@example.com", selected: false}
+            ],
+            &CalendarEntry.normalize/1
+          )
       }
 
       assert Selection.event_visible?(event, integration) == false
@@ -530,18 +546,22 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
       }
 
       integration = %{
-        calendar_list: [
-          %{
-            "id" => "/calendars/user/work/",
-            "path" => "/calendars/user/work/",
-            "selected" => true
-          },
-          %{
-            "id" => "/calendars/user/personal/",
-            "path" => "/calendars/user/personal/",
-            "selected" => true
-          }
-        ]
+        calendar_list:
+          Enum.map(
+            [
+              %{
+                id: "/calendars/user/work/",
+                path: "/calendars/user/work/",
+                selected: true
+              },
+              %{
+                id: "/calendars/user/personal/",
+                path: "/calendars/user/personal/",
+                selected: true
+              }
+            ],
+            &CalendarEntry.normalize/1
+          )
       }
 
       assert Selection.event_visible?(event, integration) == true
@@ -554,18 +574,22 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
       }
 
       integration = %{
-        calendar_list: [
-          %{
-            "id" => "/calendars/user/work/",
-            "path" => "/calendars/user/work/",
-            "selected" => true
-          },
-          %{
-            "id" => "/calendars/user/personal/",
-            "path" => "/calendars/user/personal/",
-            "selected" => false
-          }
-        ]
+        calendar_list:
+          Enum.map(
+            [
+              %{
+                id: "/calendars/user/work/",
+                path: "/calendars/user/work/",
+                selected: true
+              },
+              %{
+                id: "/calendars/user/personal/",
+                path: "/calendars/user/personal/",
+                selected: false
+              }
+            ],
+            &CalendarEntry.normalize/1
+          )
       }
 
       assert Selection.event_visible?(event, integration) == false

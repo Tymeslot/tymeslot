@@ -103,7 +103,7 @@ msgstr "Ecco una panoramica della tua configurazione di pianificazione e delle a
 msgid "In progress"
 msgstr "In corso"
 
-#: lib/tymeslot_web/live/dashboard_live.ex:441
+#: lib/tymeslot_web/live/dashboard_live.ex:442
 #, elixir-autogen, elixir-format
 msgid "Invalid redirect URL"
 msgstr "URL di reindirizzamento non valido"
@@ -125,7 +125,7 @@ msgstr "Luogo"
 msgid "Manage booking"
 msgstr "Gestisci prenotazione"
 
-#: lib/tymeslot_web/live/dashboard_live.ex:210
+#: lib/tymeslot_web/live/dashboard_live.ex:211
 #, elixir-autogen, elixir-format
 msgid "Meeting payments require an upgraded plan."
 msgstr "I pagamenti delle riunioni richiedono un piano superiore."

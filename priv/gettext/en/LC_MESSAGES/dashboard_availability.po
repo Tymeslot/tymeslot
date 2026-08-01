@@ -194,6 +194,7 @@ msgstr ""
 msgid "Grid"
 msgstr ""
 
+#: lib/tymeslot/availability/input_validation.ex:248
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex:158
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex:253
 #: lib/tymeslot_web/live/dashboard/availability/list_component.ex:389
@@ -366,4 +367,54 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/availability/clear_day_modal.ex:60
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to clear all settings for %{day}?"
+msgstr ""
+
+#: lib/tymeslot/availability/input_validation.ex:263
+#, elixir-autogen, elixir-format
+msgid "Break label must be 50 characters or less"
+msgstr ""
+
+#: lib/tymeslot/availability/input_validation.ex:279
+#, elixir-autogen, elixir-format
+msgid "Break label must be text"
+msgstr ""
+
+#: lib/tymeslot/availability/input_validation.ex:304
+#, elixir-autogen, elixir-format
+msgid "Duration cannot exceed 8 hours (480 minutes)"
+msgstr ""
+
+#: lib/tymeslot/availability/input_validation.ex:314
+#, elixir-autogen, elixir-format
+msgid "Duration must be a valid number of minutes"
+msgstr ""
+
+#: lib/tymeslot/availability/input_validation.ex:297
+#, elixir-autogen, elixir-format
+msgid "Duration must be greater than 0 minutes"
+msgstr ""
+
+#: lib/tymeslot/availability/input_validation.ex:245
+#, elixir-autogen, elixir-format
+msgid "End time must be after start time"
+msgstr ""
+
+#: lib/tymeslot/availability/input_validation.ex:334
+#, elixir-autogen, elixir-format
+msgid "Invalid day selection format"
+msgstr ""
+
+#: lib/tymeslot/availability/input_validation.ex:350
+#, elixir-autogen, elixir-format
+msgid "No valid days selected"
+msgstr ""
+
+#: lib/tymeslot/availability/input_validation.ex:235
+#, elixir-autogen, elixir-format
+msgid "Time must be a string"
+msgstr ""
+
+#: lib/tymeslot/availability/input_validation.ex:230
+#, elixir-autogen, elixir-format
+msgid "Time must be in HH:MM format (e.g., 09:30)"
 msgstr ""

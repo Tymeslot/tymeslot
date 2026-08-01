@@ -21,7 +21,10 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
   alias Tymeslot.Security.UrlValidation
@@ -33,6 +36,9 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def display_name, do: "Apple iCloud"
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def connection_test_bucket, do: :caldav
 
   @doc "Returns the LiveComponent module for provider configuration UI"
   @spec setup_component() :: module()
@@ -84,14 +90,16 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
     }
   end
 
+  # Structural validation only, in line with every other provider's
+  # `validate_config/1`: the caller that needs connectivity
+  # (`Calendar.Creation.prevalidate_config/1`) invokes `validate_config/1` first
+  # and then `perform_connection_test/1`. Folding a connectivity probe into this
+  # callback would double-charge a rate-limited connection test that runs both
+  # in sequence.
   @impl Tymeslot.Integrations.Calendar.Provider
   def validate_config(config) do
-    with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]),
-         :ok <- validate_apple_url(config[:base_url]),
-         {:ok, client} <- build_test_client(config) do
-      ProviderCommon.test_caldav_connection(client,
-        error_formatter: &apple_error_formatter/1
-      )
+    with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]) do
+      validate_apple_url(config[:base_url])
     end
   end
 
@@ -115,15 +123,22 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
   @doc """
   Tests connection to an Apple iCloud account with provider-specific messaging.
   """
-  @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
-  def test_connection(integration, opts \\ []) do
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
+  def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      metadata: opts[:metadata],
-      success_message: "Apple iCloud connection successful",
+      success_message:
+        dgettext("dashboard_calendar_providers", "Apple iCloud connection successful"),
       unauthorized_message:
-        "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security, and use it instead of your Apple ID password.",
+        dgettext(
+          "dashboard_calendar_providers",
+          "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security, and use it instead of your Apple ID password."
+        ),
       not_found_message:
-        "Apple iCloud CalDAV endpoint not found. The server URL must be https://caldav.icloud.com",
+        dgettext(
+          "dashboard_calendar_providers",
+          "Apple iCloud CalDAV endpoint not found. The server URL must be https://caldav.icloud.com"
+        ),
       error_formatter: &format_error/1
     )
   end
@@ -131,11 +146,11 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
   @doc """
   Discovers available calendars on the Apple iCloud account.
   """
-  @spec discover_calendars(map(), keyword()) :: {:ok, list(map())} | {:error, String.t()}
-  def discover_calendars(client, opts \\ []) do
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec discover_calendars(map()) :: {:ok, [CalendarEntry.t()]} | {:error, String.t()}
+  def discover_calendars(client) do
     client = Map.put(client, :provider, :apple)
-    CaldavCommon.discover_calendars(client, ip_address: ip_address)
+    CaldavCommon.discover_calendars(client)
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -177,13 +192,14 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
   defp validate_apple_url(url) do
     UrlValidation.validate_http_url(url,
       enforce_https_for_public: true,
-      https_error_message: "Apple iCloud requires HTTPS",
-      invalid_message: "Invalid Apple iCloud URL. The server must be https://caldav.icloud.com."
+      https_error_message:
+        dgettext("dashboard_calendar_providers", "Apple iCloud requires HTTPS"),
+      invalid_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Invalid Apple iCloud URL. The server must be https://caldav.icloud.com."
+        )
     )
-  end
-
-  defp build_test_client(config) do
-    {:ok, new(config)}
   end
 
   defp normalize_base_url(url) do
@@ -191,9 +207,6 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
     |> String.trim()
     |> String.trim_trailing("/")
   end
-
-  defp apple_error_formatter(reason),
-    do: ErrorHandler.sanitize_error_message(reason, :apple)
 
   defp format_error(error), do: ErrorHandler.sanitize_error_message(error, :apple)
 end

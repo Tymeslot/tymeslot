@@ -100,7 +100,7 @@ defmodule Tymeslot.SlackTest do
       # Integration must remain unchanged
       assert {:ok, unchanged} = Slack.get_integration(integration.id, integration.user_id)
       assert unchanged.is_active == false
-      refute is_nil(unchanged.disabled_at)
+      assert %DateTime{} = unchanged.disabled_at
     end
   end
 

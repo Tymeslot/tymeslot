@@ -19,12 +19,18 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
   }
 
   describe "custom_fields_snapshot and custom_field_answers" do
-    test "custom_fields_snapshot defaults to empty list" do
-      assert %Meeting{custom_fields_snapshot: []} = %Meeting{}
+    test "custom_fields_snapshot defaults to empty list when omitted from the changeset" do
+      cs = Meeting.changeset(%Meeting{}, @valid_base_attrs)
+
+      assert cs.valid?
+      assert Changeset.get_field(cs, :custom_fields_snapshot) == []
     end
 
-    test "custom_field_answers defaults to empty map" do
-      assert %Meeting{custom_field_answers: %{}} = %Meeting{}
+    test "custom_field_answers defaults to empty map when omitted from the changeset" do
+      cs = Meeting.changeset(%Meeting{}, @valid_base_attrs)
+
+      assert cs.valid?
+      assert Changeset.get_field(cs, :custom_field_answers) == %{}
     end
 
     test "changeset accepts a snapshot and answers map" do
@@ -43,6 +49,25 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
       assert cs.valid?
       assert Changeset.get_field(cs, :custom_fields_snapshot) == snap
       assert Changeset.get_field(cs, :custom_field_answers) == ans
+    end
+  end
+
+  describe "provider_event_id" do
+    test "accepts an id at Google's 1024-character maximum" do
+      attrs = Map.put(@valid_base_attrs, :provider_event_id, String.duplicate("a", 1024))
+
+      cs = Meeting.changeset(%Meeting{}, attrs)
+
+      assert cs.valid?
+    end
+
+    test "rejects an id longer than 1024 characters with a changeset error" do
+      attrs = Map.put(@valid_base_attrs, :provider_event_id, String.duplicate("a", 1025))
+
+      cs = Meeting.changeset(%Meeting{}, attrs)
+
+      refute cs.valid?
+      assert %{provider_event_id: [_message]} = errors_on(cs)
     end
   end
 

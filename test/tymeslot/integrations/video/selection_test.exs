@@ -7,35 +7,26 @@ defmodule Tymeslot.Integrations.Video.SelectionTest do
 
   describe "providers_with_capability/1" do
     test "returns providers with screen sharing capability" do
-      providers = Selection.providers_with_capability(:screen_sharing)
-
-      assert is_list(providers)
+      assert_capability(:screen_sharing, [:mirotalk, :google_meet, :teams, :zoom])
     end
 
     test "returns providers with recording capability" do
-      providers = Selection.providers_with_capability(:recording)
-
-      assert is_list(providers)
+      assert_capability(:recording, [:google_meet, :teams, :zoom])
     end
 
     test "returns providers with waiting room capability" do
-      providers = Selection.providers_with_capability(:waiting_room)
-
-      assert is_list(providers)
+      assert_capability(:waiting_room, [:teams, :zoom])
     end
 
     test "returns empty list for nonexistent capability" do
-      providers = Selection.providers_with_capability(:nonexistent_capability)
-
-      assert is_list(providers)
+      assert Selection.providers_with_capability(:nonexistent_capability) == []
     end
 
     test "returns valid provider atoms" do
       providers = Selection.providers_with_capability(:screen_sharing)
 
       Enum.each(providers, fn provider ->
-        assert is_atom(provider)
-        assert provider in [:mirotalk, :google_meet, :teams, :custom]
+        assert provider in [:mirotalk, :google_meet, :teams, :zoom, :custom]
       end)
     end
 
@@ -50,14 +41,22 @@ defmodule Tymeslot.Integrations.Video.SelectionTest do
         assert provider in all_types
       end)
     end
+
+    defp assert_capability(capability, supporting) do
+      registered = Enum.map(Discovery.list_available_providers(), & &1.type)
+      expected = supporting |> Enum.filter(&(&1 in registered)) |> Enum.sort()
+
+      assert Enum.sort(Selection.providers_with_capability(capability)) == expected
+    end
   end
 
+  # `recommend_provider/1` currently ignores its requirements and always returns
+  # the registry's default provider. These tests pin that documented contract:
+  # they will fail loudly if requirement-aware selection is ever implemented
+  # without updating the expectations here.
   describe "recommend_provider/1" do
     test "returns recommended provider for default requirements" do
-      provider = Selection.recommend_provider()
-
-      assert is_atom(provider)
-      assert provider in [:mirotalk, :google_meet, :teams, :custom]
+      assert Selection.recommend_provider() == :mirotalk
     end
 
     test "returns recommended provider for small meeting" do
@@ -66,10 +65,7 @@ defmodule Tymeslot.Integrations.Video.SelectionTest do
         recording_required: false
       }
 
-      provider = Selection.recommend_provider(requirements)
-
-      assert is_atom(provider)
-      assert provider in [:mirotalk, :google_meet, :teams, :custom]
+      assert Selection.recommend_provider(requirements) == :mirotalk
     end
 
     test "returns recommended provider for large meeting" do
@@ -78,10 +74,7 @@ defmodule Tymeslot.Integrations.Video.SelectionTest do
         recording_required: true
       }
 
-      provider = Selection.recommend_provider(requirements)
-
-      assert is_atom(provider)
-      assert provider in [:mirotalk, :google_meet, :teams, :custom]
+      assert Selection.recommend_provider(requirements) == :mirotalk
     end
 
     test "returns recommended provider for recording required" do
@@ -89,9 +82,7 @@ defmodule Tymeslot.Integrations.Video.SelectionTest do
         recording_required: true
       }
 
-      provider = Selection.recommend_provider(requirements)
-
-      assert is_atom(provider)
+      assert Selection.recommend_provider(requirements) == :mirotalk
     end
 
     test "returns recommended provider for screen sharing required" do
@@ -99,9 +90,7 @@ defmodule Tymeslot.Integrations.Video.SelectionTest do
         screen_sharing_required: true
       }
 
-      provider = Selection.recommend_provider(requirements)
-
-      assert is_atom(provider)
+      assert Selection.recommend_provider(requirements) == :mirotalk
     end
 
     test "returns consistent recommendation for same requirements" do
@@ -117,10 +106,7 @@ defmodule Tymeslot.Integrations.Video.SelectionTest do
     end
 
     test "returns valid provider even with empty requirements" do
-      provider = Selection.recommend_provider(%{})
-
-      assert is_atom(provider)
-      assert provider in [:mirotalk, :google_meet, :teams, :custom]
+      assert Selection.recommend_provider(%{}) == :mirotalk
     end
 
     test "recommended provider is in available providers list" do

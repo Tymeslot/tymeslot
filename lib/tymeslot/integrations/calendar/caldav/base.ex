@@ -29,12 +29,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   Retryable errors: `:network_error`, `:timeout`, `:server_error`
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalDAV.Http, as: CalDAVHttp
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
   alias Tymeslot.Integrations.Calendar.CalDAV.XmlHandler
   alias Tymeslot.Integrations.Calendar.ICalBuilder
-  alias Tymeslot.Security.RateLimiter
 
   require Logger
 
@@ -82,6 +83,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
           | :forbidden
           | :not_found
           | :precondition_failed
+          | :conditional_not_supported
           | :rate_limited
           | :network_error
           | :invalid_response
@@ -89,6 +91,104 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
           | :server_unresponsive
           | :timeout
           | String.t()
+
+  @doc """
+  Turns an `t:error_reason/0` into a sentence safe to show the account owner.
+
+  One clause per `error_reason/0` member, written for the account owner rather
+  than for an operator. Anything that surfaces a CalDAV failure to a user (the
+  offline queue's `sync_last_error`, for instance) routes through here so an
+  inspected atom can never leak into the product. Raw terms stay in the logs,
+  which is where diagnostics belong.
+
+  String reasons (e.g. `"Unexpected status: 418"`) pass through unchanged;
+  unrecognised terms collapse to a generic sentence rather than being
+  inspected, so internal representations never reach the UI.
+
+  Kept as functions rather than a module attribute: a `dgettext/2` call in an
+  attribute would freeze the locale at compile time.
+  """
+  @spec describe_error(error_reason() | term()) :: String.t()
+  def describe_error(reason) when is_binary(reason), do: reason
+
+  def describe_error(:unauthorized),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server rejected the stored credentials. Please reconnect the calendar."
+      )
+
+  def describe_error(:forbidden),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server refused access to this calendar."
+      )
+
+  def describe_error(:not_found),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The event no longer exists on the calendar server."
+      )
+
+  def describe_error(:precondition_failed),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The event changed on the calendar server since Tymeslot last synced it."
+      )
+
+  def describe_error(:rate_limited),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server is rate-limiting Tymeslot. Tymeslot will retry automatically."
+      )
+
+  def describe_error(:network_error),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "Tymeslot could not reach the calendar server. Tymeslot will retry automatically."
+      )
+
+  def describe_error(:invalid_response),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server returned a response Tymeslot could not understand."
+      )
+
+  def describe_error(:server_error),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server reported an error. Tymeslot will retry automatically."
+      )
+
+  def describe_error(:server_unresponsive),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server did not respond. Tymeslot will retry automatically."
+      )
+
+  def describe_error(:timeout),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server took too long to respond. Tymeslot will retry automatically."
+      )
+
+  def describe_error(_other), do: unknown_error_description()
+
+  defp unknown_error_description do
+    dgettext(
+      "dashboard_calendar_providers",
+      "Tymeslot could not complete the request against the calendar server."
+    )
+  end
 
   # ---------------------------------------------------------------------------
   # HTTP transport delegates
@@ -158,10 +258,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
            })}
           | {:error, error_reason()}
   def discover_calendars(client, opts \\ []) do
-    ip_address = Keyword.get(opts, :ip_address, "127.0.0.1")
-
-    with :ok <- check_rate_limit(:discovery, ip_address),
-         :ok <- validate_client_url(client.base_url) do
+    with :ok <- validate_client_url(client.base_url) do
       with_caldav_breaker(client, opts, fn ->
         discovery_url = UrlBuilder.build_discovery_url(client)
 
@@ -330,12 +427,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
     CalendarCircuitBreaker.with_breaker(provider, opts, fun)
   end
 
-  defp parse_calendar_discovery(xml_body, client) do
-    XmlHandler.parse_calendar_discovery(xml_body,
-      include_id: true,
-      include_selected: false,
-      provider: client.provider
-    )
+  defp parse_calendar_discovery(xml_body, _client) do
+    XmlHandler.parse_calendar_discovery(xml_body)
   end
 
   defp build_ical_data(event_data, uid) do
@@ -344,13 +437,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
 
   defp generate_uid do
     ICalBuilder.generate_uid()
-  end
-
-  defp check_rate_limit(:discovery, ip_address) do
-    case RateLimiter.check_calendar_discovery_rate_limit(ip_address) do
-      :ok -> :ok
-      {:error, :rate_limited, message} -> {:error, message}
-    end
   end
 
   defp validate_client_url(url) when is_binary(url) do

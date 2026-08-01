@@ -39,11 +39,10 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
       flash` — covered at `require_auth_test.exs` (redirect,
       flash-message, halt assertions are all present).
 
-    * `EnsureSaasModePlug: request to SaaS route in Core-only
-      deployment → redirect` — covered at
-      `apps/tymeslot_saas/test/tymeslot_saas_web/plugs/ensure_saas_mode_plug_test.exs`
-      ("halts and redirects to /auth/login when router is not
-      TymeslotSaasWeb.Router").
+    * `Overlay-mode plug: request to an overlay route in a Core-only
+      deployment → redirect` — covered by the overlay's own plug tests
+      (halt and redirect to `/auth/login` when the configured router is
+      not the overlay's).
 
     * Boundary test at exactly 100 vs. 101 real requests — the numeric
       bound lives in `Tymeslot.Security.RateLimiter.Bookings` and is

@@ -13,13 +13,12 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   (dev/test pipeline debugging) are not user-connectable but live in this
   module so the registry, schema validation, and DB constraint list still
   recognise them. Because the runtime toggle defaults to enabled, each is
-  pinned off via `config :tymeslot, :calendar_providers` in all three
-  config sites — `apps/tymeslot/config/config.exs`,
-  `apps/tymeslot/config/test.exs`, and `config/test.exs` — otherwise they
-  surface as cards in the calendars tab of the integrations hub
-  (`/dashboard/integrations?tab=calendars`). Add
-  `<name>: [enabled: false]` to the same three blocks when introducing
-  any further internal-only provider.
+  pinned off via `config :tymeslot, :calendar_providers` in both config
+  sites, `config/config.exs` and `config/test.exs`; otherwise they surface
+  as cards in the calendars tab of the integrations hub
+  (`/dashboard/integrations?tab=calendars`). Add `<name>: [enabled: false]`
+  to both blocks when introducing any further internal-only provider, and
+  to the equivalent block in any downstream overlay that redefines the map.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -47,6 +46,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @oauth_providers [:google, :outlook]
   @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :apple, :baikal]
   @dev_only_providers [:debug]
+
+  # Compile-time lookup from the provider's string form to its atom, covering
+  # every statically known provider regardless of runtime toggles. Parsing
+  # through this table keeps the string entry points total: no
+  # `String.to_existing_atom/1` raise to rescue, and no dependence on whether
+  # the atom happens to have been loaded yet.
+  @provider_atoms Map.new(@providers ++ @dev_only_providers, &{Atom.to_string(&1), &1})
 
   # Providers whose CalDAV server URL is fixed and must never be edited by the
   # user — both during initial connection and reconnection. A provider absent
@@ -353,10 +359,10 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   """
   @spec validate_provider(atom() | String.t()) :: {:ok, atom()} | {:error, String.t()}
   def validate_provider(provider) when is_binary(provider) do
-    validate_provider(String.to_existing_atom(provider))
-  rescue
-    ArgumentError ->
-      {:error, format_invalid_provider_error(provider)}
+    case Map.fetch(@provider_atoms, provider) do
+      {:ok, atom} -> validate_provider(atom)
+      :error -> {:error, format_invalid_provider_error(provider)}
+    end
   end
 
   def validate_provider(provider) when is_atom(provider) do
@@ -389,9 +395,10 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   end
 
   def parse(provider) when is_binary(provider) do
-    parse(String.to_existing_atom(provider))
-  rescue
-    ArgumentError -> {:error, :unknown}
+    case Map.fetch(@provider_atoms, provider) do
+      {:ok, atom} -> parse(atom)
+      :error -> {:error, :unknown}
+    end
   end
 
   def parse(_other), do: {:error, :unknown}
@@ -419,9 +426,10 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   end
 
   def parse_known(provider) when is_binary(provider) do
-    parse_known(String.to_existing_atom(provider))
-  rescue
-    ArgumentError -> {:error, :unknown}
+    case Map.fetch(@provider_atoms, provider) do
+      {:ok, atom} -> parse_known(atom)
+      :error -> {:error, :unknown}
+    end
   end
 
   def parse_known(_other), do: {:error, :unknown}
