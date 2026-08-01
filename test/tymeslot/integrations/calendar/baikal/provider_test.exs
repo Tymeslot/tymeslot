@@ -47,20 +47,21 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
     import Tymeslot.CalendarProviderValidationCases
 
     test "validates basic required fields" do
-      test_basic_validation(Provider, "https://baikal.example.com/dav.php")
+      assert :ok = test_basic_validation(Provider, "https://baikal.example.com/dav.php")
     end
 
-    test "accepts a valid config (connection fails without live server)" do
+    # `validate_config/1` is structural only — it never performs network I/O
+    # (the connectivity probe used to run here too, doubling the rate-limit
+    # charge across two buckets for a single form submission). The live check
+    # now runs separately, through `test_connection/1`.
+    test "accepts a valid config without touching the network" do
       config = %{
         base_url: "https://baikal.example.com/dav.php",
         username: "alice",
         password: "secret"
       }
 
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        assert match?({:error, _}, result)
-      end)
+      assert :ok = Provider.validate_config(config)
     end
   end
 
@@ -153,7 +154,7 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
         {:ok, %Req.Response{status: 207, body: ""}}
       end)
 
-      assert {:ok, message} = Provider.test_connection(integration)
+      assert {:ok, message} = Provider.perform_connection_test(integration)
       assert String.contains?(message, "Baikal")
     end
 
@@ -170,7 +171,7 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
         {:ok, %Req.Response{status: 401, body: ""}}
       end)
 
-      assert {:error, message} = Provider.test_connection(integration)
+      assert {:error, message} = Provider.perform_connection_test(integration)
       assert message =~ "Authentication failed"
     end
 
@@ -193,11 +194,12 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
         {:ok, %Req.Response{status: 404, body: ""}}
       end)
 
-      assert {:error, message} = Provider.test_connection(integration)
-      assert message =~ "not found" or message =~ "not accessible" or message =~ "/dav.php"
+      assert {:error, message} = Provider.perform_connection_test(integration)
+      assert message =~ "Baikal server not found"
+      assert message =~ "/dav.php"
     end
 
-    test "accepts IP metadata option" do
+    test "is pure I/O — takes only the integration, no caller options" do
       integration = %{
         base_url: "https://baikal.example.com/dav.php",
         username: "alice",
@@ -210,12 +212,11 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
         {:ok, %Req.Response{status: 207, body: ""}}
       end)
 
-      assert {:ok, _message} =
-               Provider.test_connection(integration, metadata: %{ip: "192.168.1.1"})
+      assert {:ok, _message} = Provider.perform_connection_test(integration)
     end
   end
 
-  describe "discover_calendars/2" do
+  describe "discover_calendars/1" do
     test "returns error when server is unreachable" do
       client = %{
         base_url: "https://baikal.example.com/dav.php",
@@ -227,23 +228,6 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
 
       capture_log(fn ->
         result = Provider.discover_calendars(client)
-        assert {:error, _message} = result
-      end)
-    end
-
-    test "accepts IP metadata via opts" do
-      client = %{
-        base_url: "https://baikal.example.com/dav.php",
-        username: "alice",
-        password: "secret",
-        calendar_paths: [],
-        provider: :baikal
-      }
-
-      opts = [metadata: %{ip: "10.0.0.1"}]
-
-      capture_log(fn ->
-        result = Provider.discover_calendars(client, opts)
         assert {:error, _message} = result
       end)
     end

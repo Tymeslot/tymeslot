@@ -15,9 +15,8 @@ defmodule TymeslotWeb.HealthcheckControllerTest do
       body = json_response(conn, 200)
 
       assert body["status"] == "ok"
-      assert is_binary(body["timestamp"])
 
-      # Ensure timestamp is ISO8601 parseable
+      # The timestamp must be a parseable ISO8601 instant
       assert {:ok, _datetime, _offset} = DateTime.from_iso8601(body["timestamp"])
 
       # Verify checks are included

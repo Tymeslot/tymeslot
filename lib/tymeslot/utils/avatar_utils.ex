@@ -3,6 +3,8 @@ defmodule Tymeslot.Utils.AvatarUtils do
   Utilities for generating fallback avatars.
   """
 
+  require Logger
+
   @doc """
   Generates a fallback SVG avatar based on user's initials and a consistent color.
   """
@@ -33,7 +35,11 @@ defmodule Tymeslot.Utils.AvatarUtils do
     """
   rescue
     # Fallback to a simple SVG if anything goes wrong
-    _other ->
+    exception ->
+      Logger.warning("Falling back to the generic avatar",
+        error: Exception.message(exception)
+      )
+
       """
       <svg width="#{size}" height="#{size}" viewBox="0 0 #{size} #{size}" xmlns="http://www.w3.org/2000/svg">
         <circle cx="#{size / 2}" cy="#{size / 2}" r="#{size / 2}" fill="#667eea" />
@@ -85,8 +91,12 @@ defmodule Tymeslot.Utils.AvatarUtils do
         "U"
     end
   rescue
-    # Handle any potential errors gracefully
-    _other -> "U"
+    exception ->
+      Logger.warning("Could not derive avatar initials, falling back to \"U\"",
+        error: Exception.message(exception)
+      )
+
+      "U"
   end
 
   @doc """

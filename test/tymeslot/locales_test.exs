@@ -66,13 +66,21 @@ defmodule Tymeslot.LocalesTest do
     test "returns metadata for every supported locale, well-formed" do
       locales = Locales.supported()
 
-      assert is_list(locales)
+      # Derived from config so adding a locale never requires editing this test.
       refute locales == []
 
+      # The default locale must itself be offered, or the language picker can
+      # never render the locale the app falls back to.
+      assert Locales.default_locale() in Enum.map(locales, & &1.code)
+
       Enum.each(locales, fn locale ->
-        assert is_binary(locale.code)
-        assert is_binary(locale.name) and locale.name != ""
-        assert is_atom(locale.country_code)
+        # Each entry carries exactly the three keys callers read: an ISO 639-1
+        # language code, the locale's own endonym, and the ISO 3166-1 alpha-3
+        # country code the flag is picked from.
+        assert Enum.sort(Map.keys(locale)) == [:code, :country_code, :name]
+        assert locale.code =~ ~r/^[a-z]{2}$/
+        assert String.trim(locale.name) != ""
+        assert Atom.to_string(locale.country_code) =~ ~r/^[a-z]{3}$/
       end)
     end
 

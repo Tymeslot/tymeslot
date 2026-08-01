@@ -75,7 +75,7 @@ defmodule Tymeslot.Telegram.InputValidationTest do
   describe "validate_name/2" do
     test "accepts valid name" do
       {name, errors} = InputValidation.validate_name("My Bot", %{})
-      assert is_binary(name)
+      assert name == "My Bot"
       assert errors == %{}
     end
 

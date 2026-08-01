@@ -516,7 +516,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
       end)
 
       assert {:ok, "Google Calendar connection successful"} =
-               Provider.test_connection(integration)
+               Provider.perform_connection_test(integration)
     end
 
     test "test_connection handles unauthorized error" do
@@ -535,7 +535,36 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
         {:error, :unauthorized, "token expired"}
       end)
 
-      assert {:error, :unauthorized} = Provider.test_connection(integration)
+      assert {:error, :unauthorized} = Provider.perform_connection_test(integration)
+    end
+  end
+
+  describe "discover_calendars/1 read_only mapping" do
+    test "marks reader and freeBusyReader calendars as read_only" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "google")
+
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
+        {:ok,
+         [
+           %{"id" => "owner-cal", "summary" => "Owner", "accessRole" => "owner"},
+           %{"id" => "writer-cal", "summary" => "Writer", "accessRole" => "writer"},
+           %{"id" => "reader-cal", "summary" => "Reader", "accessRole" => "reader"},
+           %{
+             "id" => "freebusy-cal",
+             "summary" => "Free/Busy",
+             "accessRole" => "freeBusyReader"
+           }
+         ]}
+      end)
+
+      assert {:ok, calendars} = Provider.discover_calendars(integration)
+
+      by_id = Map.new(calendars, &{&1.id, &1})
+      refute by_id["owner-cal"].read_only
+      refute by_id["writer-cal"].read_only
+      assert by_id["reader-cal"].read_only
+      assert by_id["freebusy-cal"].read_only
     end
   end
 end

@@ -6,6 +6,8 @@ defmodule Tymeslot.Availability.Events do
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.DateTimeUtils
 
+  require Logger
+
   @doc """
   Converts a list of `CalendarEvent` structs to a specific timezone, returning
   lightweight maps with `start_time` / `end_time` (both `DateTime`) that
@@ -80,7 +82,14 @@ defmodule Tymeslot.Availability.Events do
       DateTime.shift_zone(dt, target_timezone)
     end
   rescue
-    _other -> {:error, :invalid_timezone}
+    error ->
+      Logger.warning("Timezone shift raised while converting a calendar event",
+        source_timezone: dt.time_zone,
+        target_timezone: target_timezone,
+        error: inspect(error)
+      )
+
+      {:error, :invalid_timezone}
   end
 
   defp shift_safe(%Date{} = date, owner_timezone, target_timezone) do

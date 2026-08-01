@@ -19,6 +19,8 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   @behaviour Tymeslot.Integrations.Video.Providers.ProviderBehaviour
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Infrastructure.Config
@@ -27,13 +29,32 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.OAuthTokenManager
+  alias Tymeslot.Integrations.Video.Providers.Capabilities
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+
+  @capabilities Capabilities.new!(
+                  recording: true,
+                  screen_sharing: true,
+                  waiting_room: false,
+                  max_participants: 250,
+                  dial_in: true,
+                  chat: true,
+                  breakout_rooms: true
+                )
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def provider_type, do: :google_meet
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def display_name, do: "Google Meet"
+
+  # A per-actor bucket shared across every OAuth-backed provider: the test
+  # itself rides on a token that is already scarce, but without a charge
+  # here it is unbounded and can burn the instance-wide OAuth quota shared
+  # by every user.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def connection_test_bucket, do: :oauth
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do
@@ -54,21 +75,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def capabilities do
-    %{
-      recording: true,
-      screen_sharing: true,
-      waiting_room: false,
-      max_participants: 250,
-      requires_download: false,
-      supports_phone_dial_in: true,
-      supports_chat: true,
-      supports_breakout_rooms: true,
-      end_to_end_encryption: true,
-      supports_live_streaming: true,
-      supports_recording: true
-    }
-  end
+  def capabilities, do: @capabilities
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_meeting_room(config) do
@@ -100,7 +107,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, participant_email, role, _meeting_time) do
-    base_url = room_data[:meeting_url] || room_data["meeting_url"]
+    base_url = room_data.meeting_url
 
     if base_url do
       # Add participant info as URL parameters
@@ -117,7 +124,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
       Logger.debug("Created Google Meet join URL",
         participant: participant_name,
         role: role,
-        room_id: room_data[:room_id]
+        room_id: room_data.room_id
       )
 
       {:ok, join_url}
@@ -139,7 +146,12 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
       nil
     end
   rescue
-    _other -> nil
+    error ->
+      Logger.warning("Failed to extract Google Meet room id from meeting URL",
+        error: Exception.message(error)
+      )
+
+      nil
   end
 
   def extract_room_id(_url), do: nil
@@ -153,22 +165,29 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
       String.length(uri.path) > 1 and
       String.match?(uri.path, ~r|^/[a-z]{3}-[a-z]{4}-[a-z]{3}$|)
   rescue
-    _other -> false
+    error ->
+      Logger.warning("Failed to validate Google Meet meeting URL",
+        error: Exception.message(error)
+      )
+
+      false
   end
 
   def valid_meeting_url?(_url), do: false
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def test_connection(config) do
+  def perform_connection_test(config) do
     Logger.info("Testing Google Meet connection")
 
     with {:ok, valid_token} <- ensure_valid_token(config),
          {:ok, _calendar_list} <- get_calendar_list(valid_token) do
-      {:ok, "Google Meet connection successful"}
+      {:ok, dgettext("dashboard_integrations", "Google Meet connected successfully!")}
     else
       {:error, reason} ->
         Logger.error("Google Meet connection test failed", reason: Redactor.redact(reason))
-        {:error, "Connection test failed: #{reason}"}
+
+        {:error,
+         dgettext("dashboard_integrations", "Connection test failed: %{reason}", reason: reason)}
     end
   end
 
@@ -176,7 +195,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   def handle_meeting_event(event, room_data, additional_data) do
     Logger.info("Handling Google Meet event",
       event: event,
-      room_id: room_data[:room_id],
+      room_id: room_data.room_id,
       additional_data: additional_data
     )
 
@@ -201,12 +220,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def generate_meeting_metadata(room_data) do
-    room_id = room_data[:room_id] || room_data["room_id"]
-    meeting_url = room_data[:meeting_url] || room_data["meeting_url"]
-
     %{
-      room_id: room_id,
-      meeting_url: meeting_url,
+      room_id: room_data.room_id,
+      meeting_url: room_data.meeting_url,
       provider_name: "Google Meet",
       provider_type: :google_meet,
       supports_dial_in: true,
@@ -479,7 +495,10 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
         {:ok, integration} ->
           VideoIntegrationQueries.mark_needs_reauth(
             integration,
-            "Google Meet access was revoked. Please reconnect your Google account."
+            dgettext(
+              "dashboard_integrations",
+              "Google Meet access was revoked. Please reconnect your Google account."
+            )
           )
 
         {:error, :not_found} ->
@@ -501,8 +520,12 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     case Config.http_client_module().request(:get, url, "", headers, []) do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
         case Jason.decode(response_body) do
-          {:ok, list} -> {:ok, list}
-          {:error, _decode_error} -> {:error, "Invalid JSON response from Google Calendar API"}
+          {:ok, list} ->
+            {:ok, list}
+
+          {:error, _decode_error} ->
+            {:error,
+             dgettext("dashboard_integrations", "Invalid JSON response from Google Calendar API")}
         end
 
       {:ok, %Req.Response{status: status, body: body}} ->
@@ -511,7 +534,10 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
           body: Redactor.redact_and_truncate(body)
         )
 
-        {:error, "HTTP #{status} (see logs for details)"}
+        {:error,
+         dgettext("dashboard_integrations", "HTTP %{status} (see logs for details)",
+           status: status
+         )}
 
       {:error, reason} ->
         {:error, inspect(reason)}
@@ -534,7 +560,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
         {:error, "Google Meet did not return a space identifier"}
 
       true ->
-        {:ok, %{room_id: space_id, meeting_url: meeting_url, provider_data: space}}
+        {:ok, %RoomData{room_id: space_id, meeting_url: meeting_url, provider_data: space}}
     end
   end
 

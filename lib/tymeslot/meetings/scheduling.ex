@@ -19,6 +19,7 @@ defmodule Tymeslot.Meetings.Scheduling do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
+  alias Tymeslot.Utils.MapKeys
 
   @doc """
   Atomically creates a meeting with conflict checking using database-level locking.
@@ -47,16 +48,16 @@ defmodule Tymeslot.Meetings.Scheduling do
              | :database_error
              | {:validation_error, Changeset.t()}}
   def create_meeting_with_conflict_check(attrs, opts \\ []) do
-    start_time = attrs[:start_time] || attrs["start_time"]
-    end_time = attrs[:end_time] || attrs["end_time"]
-    organizer_user_id = attrs[:organizer_user_id] || attrs["organizer_user_id"]
+    start_time = MapKeys.get(attrs, :start_time)
+    end_time = MapKeys.get(attrs, :end_time)
+    organizer_user_id = MapKeys.get(attrs, :organizer_user_id)
 
     if start_time && end_time do
       limit_check =
         build_limit_check(
           organizer_user_id,
           start_time,
-          attrs[:meeting_type_id] || attrs["meeting_type_id"],
+          MapKeys.get(attrs, :meeting_type_id),
           nil,
           opts
         )
@@ -102,8 +103,8 @@ defmodule Tymeslot.Meetings.Scheduling do
              | {:validation_error, Changeset.t()}}
   def update_meeting_with_conflict_check(%Meeting{} = meeting, attrs, opts \\ []) do
     # Only check conflicts if time is being changed
-    start_time = attrs[:start_time] || attrs["start_time"]
-    end_time = attrs[:end_time] || attrs["end_time"]
+    start_time = MapKeys.get(attrs, :start_time)
+    end_time = MapKeys.get(attrs, :end_time)
 
     if start_time && end_time do
       execute_update_with_conflict_check(meeting, attrs, start_time, end_time, opts)

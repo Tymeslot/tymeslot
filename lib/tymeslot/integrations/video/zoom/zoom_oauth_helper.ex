@@ -29,7 +29,12 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
 
   require Logger
 
-  @zoom_scope "meeting:write:meeting meeting:read:meeting user:read:user"
+  # Granular scopes split delete out from write: `meeting:write:meeting` covers
+  # creating and rescheduling, but cancelling a booking needs
+  # `meeting:delete:meeting` in its own right. Tokens granted before this scope
+  # was requested keep the old grant, so Zoom rejects their deletes with code
+  # 4711 until the user reconnects.
+  @zoom_scope "meeting:write:meeting meeting:read:meeting meeting:delete:meeting user:read:user"
 
   @authorize_url "https://zoom.us/oauth/authorize"
   @token_url "https://zoom.us/oauth/token"

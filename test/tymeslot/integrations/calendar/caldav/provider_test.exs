@@ -44,11 +44,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
     import Tymeslot.CalendarProviderValidationCases
 
     test "validates basic required fields" do
-      test_basic_validation(Provider, "https://caldav.example.com")
+      assert test_basic_validation(Provider, "https://caldav.example.com") == :ok
     end
 
-    test "attempts connection when all required fields present" do
-      test_validation_attempts_connection(Provider, "https://caldav.example.com")
+    test "accepts a complete config without touching the network" do
+      assert test_validation_accepts_without_network_probe(
+               Provider,
+               "https://caldav.example.com"
+             ) == :ok
     end
   end
 
@@ -176,8 +179,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
       client = Provider.new(config)
 
       # URL should be normalized (trailing slash removed)
-      assert is_binary(client.base_url)
-      assert String.contains?(client.base_url, "caldav.example.com")
+      assert client.base_url == "https://caldav.example.com/dav"
     end
 
     test "sets empty calendar_paths when not provided" do
@@ -207,9 +209,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
       end_time = DateTime.add(start_time, 3600, :second)
 
       capture_log(fn ->
-        result = Provider.list_events(client, start_time: start_time, end_time: end_time)
-        # Should fail immediately with econnrefused or similar
-        assert match?({:error, _}, result) or match?({:ok, []}, result)
+        # Port 1 is closed, so the delegated request fails immediately rather
+        # than being rejected up front for a missing time range.
+        assert {:error, _reason} =
+                 Provider.list_events(client, start_time: start_time, end_time: end_time)
       end)
     end
 
@@ -293,7 +296,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
     end
   end
 
-  describe "test_connection/2" do
+  describe "test_connection/1" do
     test "returns error for invalid credentials" do
       integration = %{
         base_url: "http://localhost:1",
@@ -303,12 +306,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
       }
 
       capture_log(fn ->
-        result = Provider.test_connection(integration)
+        result = Provider.perform_connection_test(integration)
         assert {:error, _message} = result
       end)
     end
 
-    test "accepts options with metadata" do
+    test "is pure I/O — takes only the integration, no caller options" do
       integration = %{
         base_url: "http://localhost:1",
         username: "user",
@@ -316,16 +319,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
         calendar_paths: []
       }
 
-      opts = [metadata: %{ip: "192.168.1.1"}]
-
       capture_log(fn ->
-        result = Provider.test_connection(integration, opts)
+        result = Provider.perform_connection_test(integration)
         assert {:error, _message} = result
       end)
     end
   end
 
-  describe "discover_calendars/2" do
+  describe "discover_calendars/1" do
     test "returns error without valid server" do
       client = %{
         base_url: "http://localhost:1",
@@ -337,23 +338,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
 
       capture_log(fn ->
         result = Provider.discover_calendars(client)
-        assert {:error, _message} = result
-      end)
-    end
-
-    test "accepts options with IP address for rate limiting" do
-      client = %{
-        base_url: "http://localhost:1",
-        username: "user",
-        password: "pass",
-        calendar_paths: [],
-        provider: :caldav
-      }
-
-      opts = [metadata: %{ip: "192.168.1.1"}]
-
-      capture_log(fn ->
-        result = Provider.discover_calendars(client, opts)
         assert {:error, _message} = result
       end)
     end

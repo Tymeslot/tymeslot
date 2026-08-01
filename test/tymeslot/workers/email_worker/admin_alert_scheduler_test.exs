@@ -5,6 +5,8 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertSchedulerTest do
   @moduletag :workers
   @moduletag :unit
 
+  alias Ecto.Changeset
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
 
@@ -56,7 +58,6 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertSchedulerTest do
                )
 
       [job] = all_enqueued(worker: EmailWorker)
-      assert is_binary(job.args["alert_hash"])
       assert String.length(job.args["alert_hash"]) == 64
     end
 
@@ -110,6 +111,37 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertSchedulerTest do
                )
 
       assert [_only_one] = all_enqueued(worker: EmailWorker)
+    end
+
+    # Oban's default unique states stop at :completed, so an alert job that
+    # exhausted its retries used to release the dedup slot the instant it
+    # discarded — and a discard is itself what raises the next alert, so an
+    # email outage produced an unbounded chain rather than one deduplicated job.
+    test "a discarded alert keeps holding the dedup slot" do
+      assert :ok =
+               AdminAlertScheduler.schedule(
+                 "ops@example.com",
+                 "Queue",
+                 :error,
+                 "Oban job EmailWorker (queue: emails) failed permanently",
+                 %{},
+                 dedup_key: "oban_job_failure:EmailWorker:emails"
+               )
+
+      [job] = all_enqueued(worker: EmailWorker)
+      job |> Changeset.change(state: "discarded") |> Repo.update!()
+
+      assert :ok =
+               AdminAlertScheduler.schedule(
+                 "ops@example.com",
+                 "Queue",
+                 :error,
+                 "Oban job EmailWorker (queue: emails) failed permanently, again",
+                 %{},
+                 dedup_key: "oban_job_failure:EmailWorker:emails"
+               )
+
+      assert Repo.aggregate(Oban.Job, :count) == 1
     end
   end
 

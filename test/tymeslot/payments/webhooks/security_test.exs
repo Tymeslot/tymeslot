@@ -77,7 +77,6 @@ defmodule Tymeslot.Payments.Webhooks.SecurityTest do
       assert verified_event.id == "evt_123"
       assert verified_event.data.object.id == "obj_123"
       assert verified_event.data.object.amount == 1000
-      assert is_map(verified_event.data.object)
     end
   end
 end

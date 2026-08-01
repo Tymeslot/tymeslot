@@ -35,7 +35,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
       assert updated.calendar_sync_status == "externally_deleted"
       assert updated.status == "cancelled"
-      assert updated.cancelled_at != nil
+      assert %DateTime{} = updated.cancelled_at
       assert updated.cancellation_reason == "Cancelled externally via calendar sync"
     end
 

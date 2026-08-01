@@ -13,18 +13,21 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
-  alias Tymeslot.Integrations.Calendar.CalDAV.XmlHandler
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.{DiscoveryService, PathUtils, ProviderCommon}
-  alias Tymeslot.Security.RateLimiter
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def provider_type, do: :nextcloud
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def display_name, do: "Nextcloud"
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def connection_test_bucket, do: :nextcloud
 
   @doc "Returns the LiveComponent module for provider configuration UI"
   @spec setup_component() :: module()
@@ -56,6 +59,13 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
     }
   end
 
+  # Structural validation only, in line with every other provider's
+  # `validate_config/1`: the caller that needs connectivity
+  # (`Calendar.Creation.prevalidate_config/1`) invokes `validate_config/1` first
+  # and then `perform_connection_test/1`. This used to run its own connectivity probe
+  # (by calling `perform_connection_test/1` internally), which doubled every rate-limit
+  # charge — one for `validate_config`, one for the real test — across two
+  # separate buckets.
   @impl Tymeslot.Integrations.Calendar.Provider
   def validate_config(config) do
     # Trim credentials so whitespace-only values count as missing rather than
@@ -78,24 +88,20 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
     cond do
       !Enum.empty?(missing_fields) ->
-        {:error, "Missing required fields: #{Enum.join(missing_fields, ", ")}"}
+        {:error,
+         dgettext("dashboard_calendar_providers", "Missing required fields: %{fields}",
+           fields: Enum.join(missing_fields, ", ")
+         )}
 
       !valid_nextcloud_url?(config[:base_url]) ->
         {:error,
-         "Invalid Nextcloud URL. Should be your Nextcloud server URL (e.g., https://cloud.example.com) or calendar URL"}
+         dgettext(
+           "dashboard_calendar_providers",
+           "Invalid Nextcloud URL. Should be your Nextcloud server URL (e.g., https://cloud.example.com) or calendar URL"
+         )}
 
       true ->
-        test_config = %{
-          base_url: normalize_base_url(config[:base_url]),
-          username: config[:username],
-          password: config[:password],
-          calendar_paths: config[:calendar_paths] || []
-        }
-
-        case test_connection(test_config) do
-          {:ok, _message} -> :ok
-          {:error, reason} -> {:error, reason}
-        end
+        :ok
     end
   end
 
@@ -143,88 +149,77 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
   — still resolves to a valid CalDAV principal URL. Without this the discovery
   probe targets `\#{base_url}/calendars/\#{username}/`, which Nextcloud answers
   with HTTP 405 because that path is not WebDAV-mounted.
+
+  Pure I/O — the caller (`Tymeslot.Integrations.Calendar.Connection`) decides
+  whether and to whom the test is rate-limited.
   """
-  @spec test_connection(map(), Keyword.t()) :: {:ok, String.t()} | {:error, term()}
-  def test_connection(integration, opts \\ []) do
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, term()}
+  def perform_connection_test(integration) do
+    client = %{
+      base_url:
+        PathUtils.normalize_url(integration.base_url || "",
+          provider: :nextcloud,
+          ensure_trailing_slash: false
+        ),
+      username: integration.username,
+      password: integration.password,
+      calendar_paths: integration.calendar_paths || [],
+      verify_ssl: true,
+      provider: :nextcloud
+    }
 
-    with :ok <- check_rate_limit(ip_address) do
-      client = %{
-        base_url:
-          PathUtils.normalize_url(integration.base_url || "",
-            provider: :nextcloud,
-            ensure_trailing_slash: false
-          ),
-        username: integration.username,
-        password: integration.password,
-        calendar_paths: integration.calendar_paths || [],
-        verify_ssl: true,
-        provider: :nextcloud
-      }
+    case CaldavCommon.test_connection(client) do
+      {:ok, _message} ->
+        {:ok, dgettext("dashboard_calendar_providers", "Nextcloud connection successful")}
 
-      case CaldavCommon.test_connection(client) do
-        {:ok, _message} ->
-          {:ok, "Nextcloud connection successful"}
+      {:error, :unauthorized} ->
+        {:error,
+         dgettext(
+           "dashboard_calendar_providers",
+           "Authentication failed. Check your Nextcloud username and password. Consider using an app password."
+         )}
 
-        {:error, :unauthorized} ->
-          {:error,
-           "Authentication failed. Check your Nextcloud username and password. Consider using an app password."}
+      {:error, :not_found} ->
+        {:error,
+         dgettext(
+           "dashboard_calendar_providers",
+           "Nextcloud server not found or CalDAV endpoint not accessible. Check your server URL."
+         )}
 
-        {:error, :not_found} ->
-          {:error,
-           "Nextcloud server not found or CalDAV endpoint not accessible. Check your server URL."}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   @doc """
   Discovers available calendars on the Nextcloud server.
+
+  Delegates to `CaldavCommon.discover_calendars/1`, the same shared path every
+  other CalDAV-family provider uses, so Nextcloud discovery gets the SSRF guard
+  (`UrlValidation.validate_http_url/2` with `block_private_ips: true` and
+  `enforce_https_for_public: true`), the circuit breaker, and normalised
+  errors for free — Nextcloud's `base_url` is user-editable from the reconnect
+  modal, so it cannot be trusted without that guard.
+
+  Pure I/O — rate limiting and caching discovery is the caller's job
+  (`Tymeslot.Integrations.Calendar.Discovery`), not this provider's.
   """
-  @spec discover_calendars(map(), Keyword.t()) :: {:ok, list(map())} | {:error, term()}
-  def discover_calendars(client, opts \\ []) do
-    # Extract IP address for rate limiting
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
-
-    with :ok <- check_discovery_rate_limit(ip_address) do
-      # Use CalDAV PROPFIND to discover available calendars
-      # client.base_url already includes /remote.php/dav from normalize_base_url
-      discovery_url = "#{client.base_url}/calendars/#{client.username}/"
-
-      headers = [
-        {"Authorization", "Basic " <> Base.encode64("#{client.username}:#{client.password}")},
-        {"Content-Type", "application/xml"},
-        {"Depth", "1"}
-      ]
-
-      # Use shared XML builder for PROPFIND request
-      propfind_body = XmlHandler.build_propfind_request()
-
-      # Use Finch for custom PROPFIND method with timeout
-      request = Finch.build("PROPFIND", discovery_url, headers, propfind_body)
-
-      # Add a 10 second timeout to prevent hanging
-      options = [receive_timeout: 10_000]
-
-      case Finch.request(request, Tymeslot.Finch, options) do
-        {:ok, %Finch.Response{status: 207, body: body}} ->
-          parse_calendar_discovery_response(body)
-
-        {:ok, %Finch.Response{status: status}} ->
-          {:error, "Calendar discovery failed with status #{status}"}
-
-        {:error, reason} ->
-          {:error, "Network error during calendar discovery: #{inspect(reason)}"}
-      end
-    end
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec discover_calendars(map()) :: {:ok, list(map())} | {:error, term()}
+  def discover_calendars(client) do
+    client = Map.put(client, :provider, :nextcloud)
+    CaldavCommon.discover_calendars(client)
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def discover_calendars_for_integration(integration) do
-    # Nextcloud goes through DiscoveryService for its cache layer and emits
-    # standardized calendar entries (id/path/name/type/selected/provider/metadata).
+    # Pure I/O — rate limiting and caching this call is the caller's job
+    # (`Tymeslot.Integrations.Calendar.Discovery`), not this provider's.
+    # Still emits standardized calendar entries
+    # (id/path/name/type/selected/provider/metadata) via
+    # `DiscoveryService.standardize_calendar_data/2`, since raw Nextcloud
+    # discovery returns unstandardized maps parsed from the PROPFIND response.
     decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
 
     config = %{
@@ -234,7 +229,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
       calendar_paths: integration.calendar_paths
     }
 
-    case DiscoveryService.discover_calendars(:nextcloud, config, force_refresh: true) do
+    case discover_calendars(new(config)) do
       {:ok, calendars} ->
         {:ok, DiscoveryService.standardize_calendar_data(calendars, :nextcloud)}
 
@@ -326,28 +321,5 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
           "/calendars/#{username}/#{calendar_name}/"
       end
     end)
-  end
-
-  defp parse_calendar_discovery_response(xml_body) do
-    # Use shared XML parser - Nextcloud doesn't need ID field by default
-    XmlHandler.parse_calendar_discovery(xml_body,
-      include_id: false,
-      include_selected: false
-    )
-  end
-
-  # Rate limiting helpers
-  defp check_rate_limit(ip_address) do
-    case RateLimiter.check_nextcloud_connection_rate_limit(ip_address) do
-      :ok -> :ok
-      {:error, :rate_limited, message} -> {:error, message}
-    end
-  end
-
-  defp check_discovery_rate_limit(ip_address) do
-    case RateLimiter.check_calendar_discovery_rate_limit(ip_address) do
-      :ok -> :ok
-      {:error, :rate_limited, message} -> {:error, message}
-    end
   end
 end

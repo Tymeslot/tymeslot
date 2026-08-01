@@ -156,7 +156,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
               meeting_type && meeting_type.id
             )
 
-          AvailabilityCache.get_or_compute(cache_key, fn ->
+          AvailabilityCache.get_or_compute_events(cache_key, fn ->
             with {:ok, events} <-
                    CalendarEvents.get_calendar_events_from_context(
                      start_date,

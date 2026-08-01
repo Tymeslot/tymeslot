@@ -72,7 +72,7 @@ defmodule Tymeslot.Meetings.GuestsTest do
     test "accepts via token and stamps responded_at", %{guest: guest} do
       assert {:ok, updated} = Guests.record_rsvp(guest.rsvp_token, "accepted")
       assert updated.status == "accepted"
-      assert updated.responded_at != nil
+      assert %DateTime{} = updated.responded_at
     end
 
     test "declines via token", %{guest: guest} do

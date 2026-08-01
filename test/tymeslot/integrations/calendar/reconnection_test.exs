@@ -188,9 +188,10 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
     end
 
     test "auth-style discovery error maps to :invalid_credentials", %{integration: integration} do
-      # `Calendar.discover_and_filter_calendars/4` surfaces auth failures as
-      # string reasons (e.g. "401 Unauthorized"). The ErrorHandler classifies
-      # them as `:auth`, which Reconnection must translate so the modal can
+      # `Calendar.discover_and_filter_calendars/5` surfaces failures as
+      # `{category, message}`, the category having been derived from the raw
+      # provider error before the message was localised. Reconnection must
+      # turn the `:auth` category into `:invalid_credentials` so the modal can
       # show a credentials-style error rather than a generic "something went
       # wrong" message.
       params = %{
@@ -200,7 +201,7 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
       }
 
       discover_auth_fail = fn _provider, _url, _username, _password ->
-        {:error, "401 Unauthorized"}
+        {:error, {:auth, "Authentication failed for CalDAV server."}}
       end
 
       assert {:error, :invalid_credentials} =
@@ -208,6 +209,40 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
 
       reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert reloaded.needs_reauth == true
+    end
+
+    test "auth mapping ignores the message wording", %{integration: integration} do
+      # Regression: classification used to be re-derived by matching English
+      # keywords against the message, so a translated message silently fell
+      # through to the generic branch. The message below carries no English
+      # keyword at all; only the category may be consulted.
+      params = %{
+        "url" => "https://caldav.example.com",
+        "username" => "alice",
+        "password" => "wrongpass"
+      }
+
+      discover_auth_fail = fn _provider, _url, _username, _password ->
+        {:error, {:auth, "Authentifizierung für CalDAV-Server fehlgeschlagen."}}
+      end
+
+      assert {:error, :invalid_credentials} =
+               Reconnection.reconnect(integration, params, discover: discover_auth_fail)
+    end
+
+    test "non-auth discovery error surfaces its message", %{integration: integration} do
+      params = %{
+        "url" => "https://caldav.example.com",
+        "username" => "alice",
+        "password" => "newpass"
+      }
+
+      discover_fail = fn _provider, _url, _username, _password ->
+        {:error, {:network, "Zeitüberschreitung der Verbindung."}}
+      end
+
+      assert {:error, "Zeitüberschreitung der Verbindung."} =
+               Reconnection.reconnect(integration, params, discover: discover_fail)
     end
 
     test "passes the integration's provider through to discover for non-caldav providers" do
@@ -279,8 +314,8 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
       assert reloaded.base_url == "https://caldav.new.example.com"
       assert reloaded.username == "bob"
       assert reloaded.calendar_paths == ["/a/"]
-      assert Enum.find(reloaded.calendar_list, &(&1["path"] == "/a/"))["selected"] == true
-      assert Enum.find(reloaded.calendar_list, &(&1["path"] == "/b/"))["selected"] == false
+      assert Enum.find(reloaded.calendar_list, &(&1.path == "/a/")).selected == true
+      assert Enum.find(reloaded.calendar_list, &(&1.path == "/b/")).selected == false
     end
   end
 

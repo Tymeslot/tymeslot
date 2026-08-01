@@ -175,7 +175,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
         reason: inspect(reason)
       )
 
-      case flag_for_reauth(type, integration) do
+      case flag_for_reauth(type, integration, reauth_cause(reason)) do
         :ok ->
           maybe_notify_on_reauth(type, integration)
 
@@ -199,34 +199,54 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   defp permanent_auth_error?(reason) when is_atom(reason),
     do: reason in @permanent_auth_error_atoms
 
-  defp permanent_auth_error?(reason) when is_binary(reason) do
-    if String.valid?(reason) do
-      tokens = reason |> String.downcase() |> String.split(~r/[^a-z0-9_]+/, trim: true)
-      Enum.any?(@permanent_auth_error_strings, &(&1 in tokens))
-    else
-      false
-    end
-  end
+  defp permanent_auth_error?(reason) when is_binary(reason),
+    do: Enum.any?(@permanent_auth_error_strings, &(&1 in error_tokens(reason)))
 
   defp permanent_auth_error?({:exception, message}) when is_binary(message),
     do: permanent_auth_error?(message)
 
   defp permanent_auth_error?(_other), do: false
 
+  # Splits the reason into whole-word tokens for matching. Non-UTF-8 reasons
+  # (some providers hand back raw bytes) tokenise to nothing rather than
+  # blowing up `String.downcase/1`.
+  defp error_tokens(reason) do
+    if String.valid?(reason) do
+      reason |> String.downcase() |> String.split(~r/[^a-z0-9_]+/, trim: true)
+    else
+      []
+    end
+  end
+
+  # `invalid_grant` and `:token_expired` mean the grant itself is gone —
+  # expired, or revoked by the user in their provider account. Everything else
+  # on the permanent list is the provider refusing the credentials for some
+  # other reason. The two get different messages because they send the user to
+  # different places, and neither is a decryption problem.
+  defp reauth_cause(reason) when is_binary(reason) do
+    if "invalid_grant" in error_tokens(reason),
+      do: :expired_grant,
+      else: :rejected_credentials
+  end
+
+  defp reauth_cause(:token_expired), do: :expired_grant
+  defp reauth_cause({:exception, message}) when is_binary(message), do: reauth_cause(message)
+  defp reauth_cause(_other), do: :rejected_credentials
+
   # Re-uses the worker entry points on each domain. Their return values are
   # Oban-shaped (`{:discard, _} | {:error, _}`). We normalise to `:ok | {:error, _}`
   # so callers can gate subsequent actions on a successful DB write:
   # `{:discard, _}` means the flag was written (the integration is irrecoverably
   # broken and no retry is needed), which is a success from this module's perspective.
-  defp flag_for_reauth(:video, integration) do
-    case Video.handle_reauth_required(integration) do
+  defp flag_for_reauth(:video, integration, cause) do
+    case Video.handle_reauth_required(integration, cause: cause) do
       {:discard, _msg} -> :ok
       {:error, _reason} = err -> err
     end
   end
 
-  defp flag_for_reauth(:calendar, integration) do
-    case CalendarManagement.handle_reauth_required(integration) do
+  defp flag_for_reauth(:calendar, integration, cause) do
+    case CalendarManagement.handle_reauth_required(integration, cause: cause) do
       {:discard, _msg} -> :ok
       {:error, _reason} = err -> err
     end

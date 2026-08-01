@@ -3,6 +3,8 @@ defmodule Tymeslot.Auth.Registration do
   Handles user registration for Tymeslot.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
   alias Tymeslot.Auth.{AdminBootstrap, ErrorFormatter, Helpers.AccountLogging, UserQueries}
   alias Tymeslot.Infrastructure.{Config, PubSub}
@@ -26,6 +28,10 @@ defmodule Tymeslot.Auth.Registration do
     - opts: Optional parameters including:
       - :return_url - URL to redirect to after registration
       - :metadata - Map of app-specific data to include in PubSub event
+      - :rate_limit_checked - set to `true` when the caller has already
+        consumed a signup rate-limit token for this attempt (e.g.
+        `Tymeslot.Auth.SignupSecurity.gate/2` on the LiveView signup path),
+        so this function skips its own check instead of double-counting
 
   ## Returns
     - {:ok, user, message} on success
@@ -35,19 +41,23 @@ defmodule Tymeslot.Auth.Registration do
           {:ok, term(), String.t()} | {:error, atom(), String.t()} | {:error, :input, map()}
   def register_user(params, socket_or_conn, opts \\ []) do
     with {:ok, validated_params} <- validate_input(params),
-         :ok <- check_rate_limit(params["email"], socket_or_conn),
+         :ok <- check_rate_limit(params["email"], socket_or_conn, opts),
          {:ok, user} <- create_and_verify_user(validated_params, socket_or_conn, opts) do
       {:ok, user,
-       "Account created successfully. Please check your email for verification instructions."}
+       dgettext(
+         "auth",
+         "Account created successfully. Please check your email for verification instructions."
+       )}
     else
       {:error, reason, message} -> {:error, reason, message}
     end
   end
 
+  # The signup form collects an email, a password and the terms checkbox, and
+  # `create_user/1` persists nothing else. There is no name field to validate.
   @signup_field_spec [
     {"email", :email},
-    {"password", :password},
-    {"full_name", :full_name}
+    {"password", :password}
   ]
 
   defp validate_input(params) do
@@ -68,19 +78,28 @@ defmodule Tymeslot.Auth.Registration do
           {:ok, validated_params}
 
         _other ->
-          errors = %{terms_accepted: "Terms of service must be accepted"}
+          errors = %{
+            terms_accepted: dgettext("auth", "Terms of service must be accepted")
+          }
+
           AccountLogging.log_validation_failure("signup", params["email"], errors)
           formatted = ErrorFormatter.format_validation_errors(errors)
-          {:error, :input, "Please correct the following errors: #{formatted}"}
+
+          {:error, :input,
+           dgettext("auth", "Please correct the following errors: %{errors}", errors: formatted)}
       end
     else
       {:ok, validated_params}
     end
   end
 
-  defp check_rate_limit(email, socket_or_conn) do
-    ip = ClientIP.get(socket_or_conn)
-    RateLimiter.check_signup_rate_limit(email, ip)
+  defp check_rate_limit(email, socket_or_conn, opts) do
+    if Keyword.get(opts, :rate_limit_checked, false) do
+      :ok
+    else
+      ip = ClientIP.get(socket_or_conn)
+      RateLimiter.check_signup_rate_limit(email, ip)
+    end
   end
 
   defp create_and_verify_user(validated_params, socket_or_conn, opts) do
@@ -94,7 +113,10 @@ defmodule Tymeslot.Auth.Registration do
         )
 
         {:error, :auth,
-         "This email is already registered. Please use a different email or sign in."}
+         dgettext(
+           "auth",
+           "This email is already registered. Please use a different email or sign in."
+         )}
 
       :ok ->
         case create_user(validated_params) do
@@ -141,12 +163,18 @@ defmodule Tymeslot.Auth.Registration do
             Logger.error("Profile creation failed", user_id: user.id, reason: inspect(reason))
 
             {:error, :profile_creation,
-             "Account created but profile creation failed: #{inspect(reason)}"}
+             dgettext("auth", "Account created but profile creation failed: %{reason}",
+               reason: inspect(reason)
+             )}
         end
 
       {:error, reason} ->
         Logger.error("Verification failed", user_id: user.id, reason: inspect(reason))
-        {:error, :verification, "Account created but verification failed: #{inspect(reason)}"}
+
+        {:error, :verification,
+         dgettext("auth", "Account created but verification failed: %{reason}",
+           reason: inspect(reason)
+         )}
     end
   end
 

@@ -52,8 +52,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
     test "successfully creates room and handles event" do
       config = %{api_key: "key", base_url: "https://mirotalk.test"}
 
-      # Mock MiroTalk API call
-      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      # A single MiroTalk API call: `validate_config/1` runs first but is a
+      # structural check, so creating a room costs the customer's server one
+      # request rather than a pre-flight connection test plus the real one.
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok,
          %Req.Response{
            status: 200,
@@ -104,7 +106,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
   describe "delete_meeting_room/3" do
     test "dispatches to provider callback and propagates return value (Zoom)" do
       config = %{
-        oauth_scope: "meeting:write:meeting",
+        oauth_scope: "meeting:write:meeting meeting:delete:meeting",
         access_token: "test-token",
         refresh_token: "test-refresh",
         token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)

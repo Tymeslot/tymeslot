@@ -16,12 +16,41 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
   import Tymeslot.Factory
 
   alias Phoenix.Component
+  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Video.MeetingContext
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.VideoSync
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest.FakeRooms
+
+  describe "default_calendar_id_for/1" do
+    test "resolves to a calendar the picker actually renders, not an unselected primary" do
+      # A is the provider-primary but has been unselected (e.g. via "Manage
+      # calendars"); B is selected and not read-only. The picker only offers
+      # chips for `Calendar.writable_calendars/1` (selected, not read-only),
+      # so the resolved default must agree with that same subset or the
+      # write path and the highlighted chip diverge.
+      integration = %{
+        default_booking_calendar_id: nil,
+        calendar_list: [
+          %CalendarEntry{id: "cal-a", primary: true, selected: false, read_only: false},
+          %CalendarEntry{id: "cal-b", primary: false, selected: true, read_only: false}
+        ]
+      }
+
+      resolved_id = EditWorkflow.default_calendar_id_for(integration)
+
+      assert resolved_id == "cal-b"
+
+      rendered_ids = Enum.map(Calendar.writable_calendars(integration.calendar_list), & &1.id)
+      assert resolved_id in rendered_ids
+    end
+  end
 
   describe "notify_event_updated/3" do
     test "returns {:needs_confirmation, summary} for a title edit on an event with attendees" do
@@ -166,11 +195,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
 
       FakeRooms.set_response(
         {:ok,
-         %{
-           room_data: %{
+         %MeetingContext{
+           provider_type: :mirotalk,
+           room_data: %RoomData{
              meeting_url: "https://video.example.com/join/abc",
-             room_id: "abc"
-           }
+             room_id: "abc",
+             provider_data: %{}
+           },
+           provider_module: Tymeslot.Integrations.Video.Providers.MiroTalkProvider
          }}
       )
 
@@ -236,6 +268,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
       assert_receive {:video_sync_result, event_id, {:error, :provider_down}}
       assert event_id == event.id
     end
+
+    test "leaves video_link unchanged and sends an error when the provider's room has no URL",
+         %{socket: socket} do
+      video_integration = insert(:video_integration)
+
+      event =
+        build_event(
+          video_integration_id: nil,
+          video_link: "https://old.example.com/join"
+        )
+
+      updated = %{event | video_integration_id: video_integration.id}
+
+      Application.put_env(:tymeslot, :video_rooms_module, FakeRooms)
+
+      FakeRooms.set_response(
+        {:ok,
+         %MeetingContext{
+           provider_type: :mirotalk,
+           room_data: %RoomData{room_id: "r", meeting_url: nil, provider_data: %{}},
+           provider_module: Tymeslot.Integrations.Video.Providers.MiroTalkProvider
+         }}
+      )
+
+      _socket = VideoSync.sync_video_integration_async(socket, event, updated)
+
+      assert_receive {:video_sync_result, event_id, {:error, :missing_meeting_url}}
+      assert event_id == event.id
+
+      assert {:ok, %{video_link: "https://old.example.com/join"}} =
+               ProviderCalendarEventQueries.get_by_uid(event.calendar_integration_id, event.uid)
+    end
   end
 
   # Helpers
@@ -292,7 +356,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest.FakeRooms do
     :ok
   end
 
-  @spec create_meeting_room(integer() | nil, keyword()) :: {:ok, map()} | {:error, term()}
+  @spec create_meeting_room(integer() | nil, keyword()) ::
+          {:ok, Tymeslot.Integrations.Video.MeetingContext.t()} | {:error, term()}
   def create_meeting_room(_user_id, opts) do
     start()
     :ets.insert(__MODULE__, {:last_opts, opts})

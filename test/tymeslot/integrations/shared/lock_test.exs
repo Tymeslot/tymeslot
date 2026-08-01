@@ -72,7 +72,7 @@ defmodule Tymeslot.Integrations.Shared.LockTest do
       eventually(fn ->
         # Ensure the process is registered again and is a NEW pid
         new_pid = Process.whereis(Lock)
-        assert new_pid != nil
+        assert is_pid(new_pid), "Lock GenServer was not restarted"
         assert new_pid != pid
         # New GenServer should have recreated the table
         assert :ets.info(@table) != :undefined

@@ -15,12 +15,12 @@
 #   - POSTGRES_PASSWORD (only needed for an external database — the embedded
 #     one defaults this internally)
 #
-# Run this script from apps/tymeslot/ or from anywhere — it always operates
-# relative to its own directory.
+# Run this script from anywhere — it always operates relative to its own
+# directory.
 
 set -e  # Exit on any error
 
-# Always run from the apps/tymeslot/ directory (where this script lives)
+# Always run from the repository root (where this script lives)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
@@ -119,9 +119,11 @@ echo "Building Docker image..."
 echo "========================================"
 echo ""
 
-# Build the Docker image from Dockerfile.docker and tag it as 'tymeslot'
-# Build context is the current directory (apps/tymeslot/)
-docker build -f Dockerfile.docker -t tymeslot .
+# Build the Docker image from Dockerfile.docker and tag it as 'tymeslot:local'
+# Build context is the current directory (the repository root). The tag matches
+# docker-compose.build.yml, and stays clear of the published luka1thb/tymeslot
+# image that docker-compose.yml pulls.
+docker build -f Dockerfile.docker -t tymeslot:local .
 
 echo ""
 echo "========================================"
@@ -162,8 +164,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         --env-file .env \
         -v tymeslot_data:/app/data \
         -v tymeslot_pg:/var/lib/postgresql/data \
-        tymeslot
-    
+        tymeslot:local
+
     # Display startup information and helpful next steps
     echo ""
     echo "========================================"
@@ -199,10 +201,10 @@ else
     echo "    --env-file .env \\"
     echo "    -v tymeslot_data:/app/data \\"
     echo "    -v tymeslot_pg:/var/lib/postgresql/data \\"
-    echo "    tymeslot"
+    echo "    tymeslot:local"
     echo ""
-    echo "Or using docker-compose (recommended):"
-    echo "  docker-compose up -d"
+    echo "Or using Docker Compose (recommended):"
+    echo "  docker compose -f docker-compose.build.yml up -d"
     echo ""
     echo "========================================"
 fi

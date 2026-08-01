@@ -157,11 +157,11 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
     end
 
     test "carries a non-UTC zone abbreviation through" do
+      # 25 November sits after the autumn DST switch, so New York is on EST and
+      # the abbreviation is not environment-dependent.
       datetime = DateTime.from_naive!(~N[2024-11-25 14:30:00], "America/New_York")
-      result = Formatting.format_time(datetime, "en")
 
-      assert result =~ "02:30 PM"
-      assert result =~ "EST" or result =~ "EDT"
+      assert Formatting.format_time(datetime, "en") == "02:30 PM EST"
     end
   end
 

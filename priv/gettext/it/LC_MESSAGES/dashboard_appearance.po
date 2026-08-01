@@ -21,8 +21,8 @@ msgstr "Tema %{theme_name}"
 msgid "%{theme_name} Theme Preview"
 msgstr "Anteprima del tema %{theme_name}"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:471
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:495
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:464
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:488
 #, elixir-autogen, elixir-format
 msgid "An error occurred. Please refresh the page and try again."
 msgstr "Si è verificato un errore. Ricarica la pagina e riprova."
@@ -195,7 +195,7 @@ msgstr "Seleziona i colori primari per l'interfaccia della tua pagina di prenota
 msgid "Solid Color"
 msgstr "Colore pieno"
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:134
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:127
 #, elixir-autogen, elixir-format
 msgid "Theme Customization"
 msgstr "Personalizzazione del tema"
@@ -216,7 +216,7 @@ msgstr "Tema aggiornato a %{theme_name}"
 msgid "This preview reflects your current color scheme and background."
 msgstr "Questa anteprima riflette lo schema di colori e lo sfondo attuali."
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:348
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:341
 #, elixir-autogen, elixir-format
 msgid "Too many upload attempts. Please wait a few minutes and try again."
 msgstr "Troppi tentativi di caricamento. Attendi qualche minuto e riprova."
@@ -261,3 +261,8 @@ msgstr "Design glass morphism con eleganti effetti di trasparenza e un flusso di
 #, elixir-autogen, elixir-format
 msgid "Modern sliding design with video background and a 4-slide booking flow."
 msgstr "Design moderno a scorrimento con sfondo video e un flusso di prenotazione in 4 diapositive."
+
+#: lib/tymeslot/theme_customizations.ex:454
+#, elixir-autogen, elixir-format
+msgid "Could not save your theme customization. Please try again."
+msgstr "Impossibile salvare la personalizzazione del tema. Riprova."

@@ -3,8 +3,20 @@ defmodule Tymeslot.Emails.DeliveryTest do
 
   @moduletag :emails
 
+  import Tymeslot.ConfigTestHelpers
+
   alias Swoosh.Email
   alias Tymeslot.Emails.Delivery
+  alias Tymeslot.Infrastructure.CircuitBreaker
+  alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
+  alias Tymeslot.Test.FailingMailerAdapter
+
+  @suppressed_recipient {422,
+                         %{
+                           "ErrorCode" => 406,
+                           "Message" =>
+                             "You tried to send to recipient(s) that have been marked as inactive."
+                         }}
 
   # Swoosh.Adapters.Test sends the {:email, email} message to whichever process
   # calls Mailer.deliver/1 — here that is the CircuitBreaker GenServer, not the
@@ -66,6 +78,68 @@ defmodule Tymeslot.Emails.DeliveryTest do
       email = valid_email(html_body: nil)
 
       assert {:ok, _result} = Delivery.deliver(email)
+    end
+  end
+
+  describe "permanent_rejection?/1" do
+    test "recognises the Postmark codes for a dead address" do
+      assert Delivery.permanent_rejection?({422, %{"ErrorCode" => 406}})
+      assert Delivery.permanent_rejection?({422, %{"ErrorCode" => 300}})
+    end
+
+    test "recognises the tuple deliver/1 returns, so it can be applied at either layer" do
+      assert Delivery.permanent_rejection?({:recipient_rejected, @suppressed_recipient})
+    end
+
+    test "leaves operational provider errors retryable" do
+      refute Delivery.permanent_rejection?({422, %{"ErrorCode" => 10}})
+      refute Delivery.permanent_rejection?({500, %{"ErrorCode" => 406}})
+      refute Delivery.permanent_rejection?(:econnrefused)
+      refute Delivery.permanent_rejection?({422, %{}})
+    end
+  end
+
+  describe "deliver/1 — permanent recipient rejection" do
+    setup do
+      setup_config(:tymeslot, Tymeslot.Mailer, adapter: FailingMailerAdapter)
+      CircuitBreaker.reset(CircuitBreakerSupervisor.email_breaker_name())
+      on_exit(fn -> CircuitBreaker.reset(CircuitBreakerSupervisor.email_breaker_name()) end)
+      :ok
+    end
+
+    test "returns a rejection the caller can distinguish from a transient failure" do
+      setup_config(:tymeslot, :test_delivery_error, @suppressed_recipient)
+
+      assert {:error, {:recipient_rejected, @suppressed_recipient}} =
+               Delivery.deliver(valid_email())
+    end
+
+    # The incident this guards against: three notifications to one hard-bounced
+    # address opened the breaker, which then failed every unrelated email —
+    # including the admin alert reporting the failure — for five minutes.
+    test "does not count towards the circuit breaker, however many addresses are dead" do
+      setup_config(:tymeslot, :test_delivery_error, @suppressed_recipient)
+      breaker = CircuitBreakerSupervisor.email_breaker_name()
+      threshold = CircuitBreaker.status(breaker).config.failure_threshold
+
+      for _attempt <- 1..(threshold * 2) do
+        assert {:error, {:recipient_rejected, _reason}} = Delivery.deliver(valid_email())
+      end
+
+      assert CircuitBreaker.status(breaker).status == :closed
+    end
+
+    test "a transient provider failure still opens the breaker" do
+      setup_config(:tymeslot, :test_delivery_error, :econnrefused)
+      breaker = CircuitBreakerSupervisor.email_breaker_name()
+      threshold = CircuitBreaker.status(breaker).config.failure_threshold
+
+      for _attempt <- 1..threshold do
+        assert {:error, :econnrefused} = Delivery.deliver(valid_email())
+      end
+
+      assert CircuitBreaker.status(breaker).status == :open
+      assert {:error, :circuit_open} = Delivery.deliver(valid_email())
     end
   end
 

@@ -230,7 +230,7 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
 
       # Verify onboarding_completed_at is set
       user = Repo.reload!(user)
-      assert user.onboarding_completed_at != nil
+      assert %DateTime{} = user.onboarding_completed_at
     end
 
     test "skip_onboarding works from profile step", %{conn: conn} do
@@ -246,7 +246,7 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
       assert_redirect(view, ~p"/dashboard")
 
       user = Repo.reload!(user)
-      assert user.onboarding_completed_at != nil
+      assert %DateTime{} = user.onboarding_completed_at
     end
 
     test "connect_calendar step has skip choice", %{conn: conn} do

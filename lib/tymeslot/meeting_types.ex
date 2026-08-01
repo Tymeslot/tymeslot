@@ -4,6 +4,7 @@ defmodule Tymeslot.MeetingTypes do
   """
   alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Features
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Video
@@ -21,15 +22,7 @@ defmodule Tymeslot.MeetingTypes do
   """
   @spec get_active_meeting_types(integer()) :: [Ecto.Schema.t()]
   def get_active_meeting_types(user_id) do
-    case MeetingTypeQueries.has_meeting_types?(user_id) do
-      false ->
-        Logger.info("Creating default meeting types for user", user_id: user_id)
-        create_default_meeting_types(user_id)
-        MeetingTypeQueries.list_active_meeting_types(user_id)
-
-      true ->
-        MeetingTypeQueries.list_active_meeting_types(user_id)
-    end
+    list_seeding_defaults(user_id, &MeetingTypeQueries.list_active_meeting_types/1)
   end
 
   @doc """
@@ -37,32 +30,40 @@ defmodule Tymeslot.MeetingTypes do
   """
   @spec get_all_meeting_types(integer()) :: [Ecto.Schema.t()]
   def get_all_meeting_types(user_id) do
-    case MeetingTypeQueries.has_meeting_types?(user_id) do
-      false ->
-        Logger.info("Creating default meeting types for user", user_id: user_id)
-        create_default_meeting_types(user_id)
-        MeetingTypeQueries.list_all_meeting_types(user_id)
-
-      true ->
-        MeetingTypeQueries.list_all_meeting_types(user_id)
-    end
+    list_seeding_defaults(user_id, &MeetingTypeQueries.list_all_meeting_types/1)
   end
 
   @doc """
-  Gets the publicly listed meeting types for a user (active and not private),
-  creating defaults if none exist. This feeds the public booking overview;
-  private types are excluded and reachable only by their direct link.
+  Gets the publicly listed meeting types for a user (active and not private).
+  This feeds the public booking overview; private types are excluded and
+  reachable only by their direct link.
+
+  Deliberately a pure read: unlike the two owner-facing listings above it never
+  seeds the default meeting types. An anonymous page view must not write to the
+  host's account, and a host with no meeting types must show the booking page's
+  empty state rather than be given two bookable durations they never created
+  (which would also silently resurrect defaults a host had deleted on purpose).
   """
   @spec get_public_meeting_types(integer()) :: [Ecto.Schema.t()]
   def get_public_meeting_types(user_id) do
-    case MeetingTypeQueries.has_meeting_types?(user_id) do
-      false ->
-        Logger.info("Creating default meeting types for user", user_id: user_id)
-        create_default_meeting_types(user_id)
-        MeetingTypeQueries.list_public_meeting_types(user_id)
+    MeetingTypeQueries.list_public_meeting_types(user_id)
+  end
 
-      true ->
-        MeetingTypeQueries.list_public_meeting_types(user_id)
+  # The two owner-facing listings above differ only in which query they run;
+  # each seeds the user's default meeting types first if they have none yet.
+  # The public listing deliberately does not go through here.
+  defp list_seeding_defaults(user_id, list_fun) do
+    ensure_default_meeting_types(user_id)
+    list_fun.(user_id)
+  end
+
+  defp ensure_default_meeting_types(user_id) do
+    if MeetingTypeQueries.has_meeting_types?(user_id) do
+      :ok
+    else
+      Logger.info("Creating default meeting types for user", user_id: user_id)
+      create_default_meeting_types(user_id)
+      :ok
     end
   end
 
@@ -320,11 +321,12 @@ defmodule Tymeslot.MeetingTypes do
 
     payment_required = params["payment_required"] == "true"
 
-    with {:ok, reminder_config} <- normalize_reminder_config_params(params["reminder_config"]),
+    with {:ok, duration_minutes} <- parse_duration(params["duration"]),
+         {:ok, reminder_config} <- normalize_reminder_config_params(params["reminder_config"]),
          {:ok, price_cents} <- parse_price_cents(payment_required, params["price"]) do
       attrs = %{
         name: params["name"],
-        duration_minutes: String.to_integer(params["duration"]),
+        duration_minutes: duration_minutes,
         description: params["description"],
         icon: ui_state.selected_icon,
         is_active: params["is_active"] == "true",
@@ -350,10 +352,16 @@ defmodule Tymeslot.MeetingTypes do
 
       {:ok, attrs}
     end
-  rescue
-    ArgumentError ->
-      {:error, :invalid_duration}
   end
+
+  defp parse_duration(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {duration, ""} -> {:ok, duration}
+      _other -> {:error, :invalid_duration}
+    end
+  end
+
+  defp parse_duration(_value), do: {:error, :invalid_duration}
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
@@ -517,11 +525,9 @@ defmodule Tymeslot.MeetingTypes do
 
   defp validate_calendar_integration(_other_attrs, _user_id), do: :ok
 
-  defp validate_target_calendar(nil, _calendar_integration),
-    do: {:error, :target_calendar_required}
+  defp validate_target_calendar(nil, integration), do: target_calendar_missing_error(integration)
 
-  defp validate_target_calendar("", _calendar_integration),
-    do: {:error, :target_calendar_required}
+  defp validate_target_calendar("", integration), do: target_calendar_missing_error(integration)
 
   defp validate_target_calendar(target_calendar_id, integration) do
     calendar_list = integration.calendar_list
@@ -529,9 +535,15 @@ defmodule Tymeslot.MeetingTypes do
     if calendar_list == [] do
       :ok
     else
+      # Only writable calendars are valid save targets — the same set the
+      # picker offers (`Tymeslot.Integrations.Calendar.writable_calendars/1`).
+      # A deselected or read-only id must be rejected here even though it is
+      # still present in the full `calendar_list`, otherwise a stored
+      # `target_calendar_id` that became read-only after a refresh would
+      # keep saving successfully while every booking against it fails later.
       found? =
-        Enum.any?(calendar_list, fn cal ->
-          UriUtils.uri_safe_match?(cal["id"] || cal[:id], target_calendar_id)
+        Enum.any?(Calendar.writable_calendars(calendar_list), fn cal ->
+          UriUtils.uri_safe_match?(cal.id, target_calendar_id)
         end)
 
       if found? do
@@ -539,6 +551,19 @@ defmodule Tymeslot.MeetingTypes do
       else
         {:error, :target_calendar_invalid}
       end
+    end
+  end
+
+  # No target chosen yet. Distinguishes the ordinary "not selected yet" state
+  # from the dead end where every calendar the user selected for this
+  # integration is read-only, so the picker has nothing to offer and
+  # `:target_calendar_required` would leave the user stuck with no way to
+  # comply.
+  defp target_calendar_missing_error(integration) do
+    if Calendar.all_selected_read_only?(integration.calendar_list) do
+      {:error, :no_writable_calendars}
+    else
+      {:error, :target_calendar_required}
     end
   end
 

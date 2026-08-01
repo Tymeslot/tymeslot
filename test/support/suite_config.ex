@@ -1,9 +1,10 @@
 defmodule Tymeslot.Test.SuiteConfig do
   @moduledoc """
-  Shared `test_helper.exs` wiring for both umbrella apps.
+  Shared `test_helper.exs` wiring, reusable by any project that depends on
+  Core.
 
   Keeps the parallelism sizing, default tag exclusions, and analytics
-  completeness gate in one place instead of copy-pasted per app, so the two
+  completeness gate in one place instead of copy-pasted per project, so the
   suites can't drift on how many cases they run or which tags they skip.
   """
 
@@ -17,7 +18,7 @@ defmodule Tymeslot.Test.SuiteConfig do
     migrations: true
   ]
 
-  @doc "Default `:exclude` tags every app's suite skips unless explicitly included."
+  @doc "Default `:exclude` tags every suite skips unless explicitly included."
   @spec default_exclude_tags() :: keyword()
   def default_exclude_tags, do: @default_exclude_tags
 

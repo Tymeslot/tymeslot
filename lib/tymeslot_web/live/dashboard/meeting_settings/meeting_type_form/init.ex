@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
 
   alias Phoenix.Component
   alias Tymeslot.Features
-  alias Tymeslot.Integrations.Calendar.Selection
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Utils.ReminderUtils
 
@@ -35,10 +35,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     |> assign_payment_state(type, Map.get(assigns, :current_user))
     |> then(fn socket ->
       if id = socket.assigns.selected_calendar_integration_id do
-        Component.assign(
-          socket,
+        socket
+        |> Component.assign(
           :available_calendars,
           fetch_available_calendars(id, socket.assigns.calendar_integrations)
+        )
+        |> Component.assign(
+          :no_writable_calendars,
+          all_selected_read_only?(id, socket.assigns.calendar_integrations)
         )
       else
         socket
@@ -206,16 +210,32 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   @doc """
   Fetches the calendars the user may pick as the meeting type's target.
 
-  Only calendars the user has marked `selected: true` in the integration
-  settings are returned — deselected calendars must not appear here, since
-  the integration-level toggle is the single source of truth for which
-  calendars the app may write to or read from.
+  Only calendars the user has marked `selected: true` **and** that are
+  writable are returned (see `Tymeslot.Integrations.Calendar.writable_calendars/1`):
+  deselected calendars must not appear here, since the integration-level
+  toggle is the single source of truth for which calendars the app may
+  write to or read from, and read-only calendars can never accept a new
+  booking regardless of selection state.
   """
   @spec fetch_available_calendars(integer(), list()) :: list()
   def fetch_available_calendars(integration_id, integrations) do
     case Enum.find(integrations, &(&1.id == integration_id)) do
       nil -> []
-      integration -> Selection.selected_calendars(integration.calendar_list)
+      integration -> Calendar.writable_calendars(integration.calendar_list)
+    end
+  end
+
+  @doc """
+  Returns whether the integration has calendars selected but none of them
+  writable, so the picker built from `fetch_available_calendars/2` renders
+  empty even though the user has calendars enabled for this account. See
+  `Tymeslot.Integrations.Calendar.all_selected_read_only?/1`.
+  """
+  @spec all_selected_read_only?(integer(), list()) :: boolean()
+  def all_selected_read_only?(integration_id, integrations) do
+    case Enum.find(integrations, &(&1.id == integration_id)) do
+      nil -> false
+      integration -> Calendar.all_selected_read_only?(integration.calendar_list)
     end
   end
 

@@ -1,13 +1,30 @@
 defmodule Tymeslot.Media.TranscoderTest do
-  use ExUnit.Case, async: true
+  # available?/0 answers from the OS PATH, which is process-global, so the two
+  # tests that narrow it cannot run alongside anything else.
+  use ExUnit.Case, async: false
 
   @moduletag :workers
 
   alias Tymeslot.Media.Transcoder
 
   describe "available?/0" do
-    test "returns true when ffmpeg is installed" do
-      assert Transcoder.available?()
+    # Asserting that ffmpeg is simply present would test the machine running
+    # the suite rather than Tymeslot: it holds on a developer's box and fails
+    # on a CI runner, which ships no ffmpeg. Supplying the PATH makes both
+    # answers reproducible anywhere, and still catches the mistake that
+    # matters, a wrong executable name.
+    @tag :tmp_dir
+    test "finds ffmpeg on the PATH", %{tmp_dir: tmp_dir} do
+      stub = Path.join(tmp_dir, "ffmpeg")
+      File.write!(stub, "#!/bin/sh\nexit 0\n")
+      File.chmod!(stub, 0o755)
+
+      assert with_path(tmp_dir, &Transcoder.available?/0)
+    end
+
+    @tag :tmp_dir
+    test "reports ffmpeg unavailable when the PATH holds no such executable", %{tmp_dir: tmp_dir} do
+      refute with_path(tmp_dir, &Transcoder.available?/0)
     end
   end
 
@@ -47,4 +64,20 @@ defmodule Tymeslot.Media.TranscoderTest do
              ]
     end
   end
+
+  # Runs `fun` with the PATH narrowed to `dir`, restoring the caller's PATH
+  # afterwards so a failure cannot leave the suite unable to find anything.
+  defp with_path(dir, fun) do
+    original = System.get_env("PATH")
+    System.put_env("PATH", dir)
+
+    try do
+      fun.()
+    after
+      restore_path(original)
+    end
+  end
+
+  defp restore_path(nil), do: System.delete_env("PATH")
+  defp restore_path(original), do: System.put_env("PATH", original)
 end

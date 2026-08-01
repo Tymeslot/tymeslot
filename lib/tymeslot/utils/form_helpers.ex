@@ -3,6 +3,8 @@ defmodule Tymeslot.Utils.FormHelpers do
   Utilities for handling form data and errors.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Ecto.Changeset
 
   @doc """
@@ -22,35 +24,66 @@ defmodule Tymeslot.Utils.FormHelpers do
   """
   @spec format_context_error(atom() | any()) :: map()
   def format_context_error(:video_integration_required) do
-    %{video_integration: ["Please select a video provider for video meetings"]}
+    %{
+      video_integration: [
+        dgettext("dashboard_meeting_form", "Please select a video provider for video meetings")
+      ]
+    }
   end
 
   def format_context_error(:invalid_video_integration) do
-    %{video_integration: ["Selected video provider is invalid or inactive"]}
+    %{
+      video_integration: [
+        dgettext("dashboard_meeting_form", "Selected video provider is invalid or inactive")
+      ]
+    }
   end
 
   def format_context_error(:invalid_duration) do
-    %{duration: ["Duration must be a valid number"]}
+    %{duration: [dgettext("dashboard_meeting_form", "Duration must be a valid number")]}
   end
 
   def format_context_error(:calendar_integration_required) do
-    %{calendar_integration: ["Please select a calendar account"]}
+    %{
+      calendar_integration: [
+        dgettext("dashboard_meeting_form", "Please select a calendar account")
+      ]
+    }
   end
 
   def format_context_error(:calendar_integration_invalid) do
-    %{calendar_integration: ["Selected calendar account is invalid"]}
+    %{
+      calendar_integration: [
+        dgettext("dashboard_meeting_form", "Selected calendar account is invalid")
+      ]
+    }
   end
 
   def format_context_error(:target_calendar_required) do
-    %{target_calendar: ["Please select a target calendar"]}
+    %{target_calendar: [dgettext("dashboard_meeting_form", "Please select a target calendar")]}
   end
 
   def format_context_error(:target_calendar_invalid) do
-    %{target_calendar: ["Selected calendar is not available for this account"]}
+    %{
+      target_calendar: [
+        dgettext("dashboard_meeting_form", "Selected calendar is not available for this account")
+      ]
+    }
+  end
+
+  def format_context_error(:no_writable_calendars) do
+    %{
+      target_calendar: [
+        dgettext(
+          "dashboard_meeting_form",
+          "None of the calendars you selected for this account can accept bookings. Update your calendar selection in Integration settings, or choose a different account."
+        )
+      ]
+    }
   end
 
   def format_context_error(:invalid_price) do
-    %{price_cents: ["Enter a valid price"]}
+    %{price_cents: [dgettext("dashboard_meeting_form", "Enter a valid price")]}
   end
 
   def format_context_error(error) when is_atom(error) do

@@ -276,8 +276,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
 
     updated_list =
       Enum.map(integration.calendar_list, fn cal ->
-        if MapSet.member?(ids, cal["id"] || cal[:id]) do
-          Map.put(cal, "selected", false)
+        if MapSet.member?(ids, cal.id) do
+          %{cal | selected: false}
         else
           cal
         end

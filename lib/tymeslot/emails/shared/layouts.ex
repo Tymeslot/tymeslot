@@ -57,9 +57,11 @@ defmodule Tymeslot.Emails.Shared.Layouts do
     title = Sanitise.sanitize_for_email(raw_title)
 
     preview =
-      Sanitise.sanitize_for_email(
-        Keyword.get(opts, :preview, "Important notification from Tymeslot")
-      )
+      opts
+      |> Keyword.get_lazy(:preview, fn ->
+        dgettext("emails", "Important notification from Tymeslot")
+      end)
+      |> Sanitise.sanitize_for_email()
 
     stage_title = Keyword.get(opts, :stage_title, raw_title)
     stage_subtitle = Keyword.get(opts, :stage_subtitle)

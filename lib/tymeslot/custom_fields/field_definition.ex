@@ -167,23 +167,21 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
     end
   end
 
-  defp parse_bound(:number, value) do
+  defp parse_bound(:number, value) when is_binary(value) do
     case Float.parse(value) do
       {n, ""} -> {:ok, n}
       _err -> parse_integer_bound(value)
     end
-  rescue
-    ArgumentError -> :error
   end
 
-  defp parse_bound(:date, value) do
+  defp parse_bound(:date, value) when is_binary(value) do
     case Date.from_iso8601(value) do
       {:ok, date} -> {:ok, date}
       _err -> :error
     end
   end
 
-  defp parse_bound(:time, value) do
+  defp parse_bound(:time, value) when is_binary(value) do
     padded = if length(String.split(value, ":")) == 2, do: value <> ":00", else: value
 
     case Time.from_iso8601(padded) do
@@ -192,13 +190,15 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
     end
   end
 
+  # `min`/`max` are `:string` fields, so a non-binary bound can only come from a
+  # struct built by hand. It is not comparable, so it parses as an error.
+  defp parse_bound(_type, _value), do: :error
+
   defp parse_integer_bound(value) do
     case Integer.parse(value) do
       {n, ""} -> {:ok, n}
       _other -> :error
     end
-  rescue
-    ArgumentError -> :error
   end
 
   defp bound_le?(:number, lo, hi), do: lo <= hi

@@ -214,6 +214,38 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpTest do
                )
     end
 
+    test "sends no conditional header for :force_update operation" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert Conn.get_req_header(conn, "if-match") == []
+        assert Conn.get_req_header(conn, "if-none-match") == []
+        Conn.send_resp(conn, 204, "")
+      end)
+
+      assert {:ok, _response} =
+               Http.put_event(
+                 "https://caldav.example.com/calendars/user/personal/event.ics",
+                 "user",
+                 "pass",
+                 "BEGIN:VCALENDAR\nEND:VCALENDAR",
+                 operation: :force_update
+               )
+    end
+
+    test "maps 409 Conflict to :conditional_not_supported atom" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        Conn.send_resp(conn, 409, "Conflict")
+      end)
+
+      assert {:error, :conditional_not_supported} =
+               Http.put_event(
+                 "https://caldav.example.com/calendars/user/personal/event.ics",
+                 "user",
+                 "pass",
+                 "BEGIN:VCALENDAR\nEND:VCALENDAR",
+                 operation: :update
+               )
+    end
+
     test "maps 412 Precondition Failed to :precondition_failed atom" do
       ReqTest.stub(:tymeslot_http, fn conn ->
         Conn.send_resp(conn, 412, "Precondition Failed")

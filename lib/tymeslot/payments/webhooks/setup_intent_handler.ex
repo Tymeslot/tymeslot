@@ -22,11 +22,10 @@ defmodule Tymeslot.Payments.Webhooks.SetupIntentHandler do
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(event, setup_intent) do
-    event_type = event["type"] || event[:type]
     setup_intent_id = setup_intent["id"]
 
     Logger.info("Processing setup_intent event",
-      event_type: event_type,
+      event_type: Map.get(event, :type),
       setup_intent_id: setup_intent_id
     )
 

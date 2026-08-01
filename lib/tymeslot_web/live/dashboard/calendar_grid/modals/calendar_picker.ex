@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
@@ -21,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
     ~H"""
     <div class="space-y-3">
       <div :for={integration <- @integrations}>
-        <% calendars = selected_calendars(integration) %>
+        <% calendars = Calendar.writable_calendars(integration.calendar_list) %>
         <% is_active_integration = integration.id == @selected_integration_id %>
         <%!-- Integration header --%>
         <div class="flex items-center gap-1.5 mb-1.5">
@@ -33,24 +34,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
         </div>
 
         <%!-- Calendar buttons --%>
-        <% fallback_id = default_calendar_id(calendars) %>
+        <% fallback_id = EditWorkflow.default_calendar_id_for(integration) %>
         <div :if={calendars != []} class="flex flex-wrap gap-1.5 pl-3.5">
-          <% cal_id = fn cal -> cal["id"] || cal[:id] end %>
           <% cal_name = fn cal -> DisplayHelpers.extract_calendar_display_name(cal) end %>
-          <% is_selected = fn cal -> is_active_integration and calendar_selected?(cal_id.(cal), @selected_calendar_id, fallback_id) end %>
+          <% is_selected = fn cal -> is_active_integration and calendar_selected?(cal.id, @selected_calendar_id, fallback_id) end %>
           <button
             :for={cal <- calendars}
             type="button"
             phx-click={@event_name}
             phx-value-integration-id={integration.id}
-            phx-value-calendar-id={cal_id.(cal)}
+            phx-value-calendar-id={cal.id}
             phx-target={@myself}
-            class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_selected.(cal), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
+            aria-pressed={to_string(is_selected.(cal))}
+            class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-token-lg border text-token-xs transition-all #{if is_selected.(cal), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
             title={cal_name.(cal)}
           >
-            <div :if={cal["color"] || cal[:color]} class="w-2 h-2 rounded-full shrink-0" style={"background-color: #{cal["color"] || cal[:color]}"}></div>
+            <div :if={cal.color} class="w-2 h-2 rounded-token-full shrink-0" style={"background-color: #{cal.color}"}></div>
             <span class="truncate max-w-[10rem]"><%= cal_name.(cal) %></span>
-            <span :if={cal["primary"] || cal[:primary]} class="text-token-xs font-bold bg-tymeslot-200 px-1 py-0.5 rounded text-tymeslot-500 uppercase">{dgettext("dashboard_calendar_events", "Primary")}</span>
+            <span :if={cal.primary} class="text-token-xs font-bold bg-tymeslot-200 px-1 py-0.5 rounded-token-md text-tymeslot-500 uppercase">{dgettext("dashboard_calendar_events", "Primary")}</span>
           </button>
         </div>
         <%!-- Fallback: integration with no calendar list (single calendar) --%>
@@ -86,10 +87,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
     derived =
       cond do
         is_map(event.provider_metadata) && is_map(event.provider_metadata["organizer"]) ->
-          find_google_calendar_id(calendars, event.provider_metadata["organizer"]["email"])
+          match =
+            Calendar.find_calendar_by_id(
+              calendars,
+              event.provider_metadata["organizer"]["email"]
+            )
+
+          match && match.id
 
         is_binary(event.provider_event_id) ->
-          find_caldav_calendar_id(calendars, event.provider_event_id)
+          match = Calendar.find_calendar_by_path(calendars, event.provider_event_id)
+          match && match.id
 
         true ->
           nil
@@ -98,37 +106,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
     derived || EditWorkflow.default_calendar_id_for(integration)
   end
 
-  defp selected_calendars(integration) do
-    Enum.filter(integration.calendar_list || [], fn cal ->
-      (cal["selected"] || cal[:selected]) &&
-        not (Map.get(cal, "read_only", false) || Map.get(cal, :read_only, false))
-    end)
-  end
-
   defp calendar_selected?(cal_id, selected_id, default_id) do
     if is_binary(selected_id), do: cal_id == selected_id, else: cal_id == default_id
-  end
-
-  defp default_calendar_id([]), do: nil
-
-  defp default_calendar_id(calendars) do
-    primary = Enum.find(calendars, &(&1["primary"] || &1[:primary]))
-    cal = primary || List.first(calendars)
-    cal["id"] || cal[:id]
-  end
-
-  defp find_google_calendar_id(calendars, organizer_email) do
-    match = Enum.find(calendars, fn c -> (c["id"] || c[:id]) == organizer_email end)
-    if match, do: match["id"] || match[:id]
-  end
-
-  defp find_caldav_calendar_id(calendars, provider_event_id) do
-    match =
-      Enum.find(calendars, fn c ->
-        path = c["path"] || c[:path] || c["id"] || c[:id]
-        is_binary(path) and String.starts_with?(provider_event_id, path)
-      end)
-
-    if match, do: match["id"] || match[:id]
   end
 end

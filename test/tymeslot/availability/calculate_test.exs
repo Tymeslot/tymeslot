@@ -110,7 +110,6 @@ defmodule Tymeslot.Availability.CalculateTest do
       days = Calculate.get_calendar_days("Etc/UTC", 2025, 6, %{})
 
       assert length(days) == 42
-      assert is_list(days)
     end
 
     test "handles different timezones" do
@@ -272,7 +271,6 @@ defmodule Tymeslot.Availability.CalculateTest do
                  %{}
                )
 
-      assert is_map(availability_map)
       # June has 30 days
       assert map_size(availability_map) == 30
     end
@@ -317,7 +315,8 @@ defmodule Tymeslot.Availability.CalculateTest do
                  %{}
                )
 
-      assert is_map(availability_map)
+      # Every day of June is still accounted for once events are supplied.
+      assert map_size(availability_map) == 30
     end
 
     test "respects max_advance_booking_days in config" do

@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
+  alias Tymeslot.Utils.MapKeys
 
   @doc """
   Moves an event from one integration to another via delete + create.
@@ -119,7 +120,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves do
   defp finish_successful_move(ctx, created) do
     CalendarGrid.delete_cached_event(ctx.event.calendar_integration_id, ctx.event.uid)
 
-    uid = if is_binary(created), do: created, else: created[:uid] || created["uid"] || ctx.new_uid
+    uid =
+      if is_binary(created), do: created, else: MapKeys.get_binary(created, :uid) || ctx.new_uid
 
     timing =
       if ctx.event.all_day do

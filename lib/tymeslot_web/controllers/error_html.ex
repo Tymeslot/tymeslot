@@ -5,6 +5,7 @@ defmodule TymeslotWeb.ErrorHTML do
   See config/config.exs.
   """
   use TymeslotWeb, :html
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.Controller
 

@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.HealthCheck.RecoveryTest do
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
+  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Workers.IntegrationHealthWorker
 
   setup do
@@ -66,6 +67,26 @@ defmodule Tymeslot.Integrations.HealthCheck.RecoveryTest do
         worker: IntegrationHealthWorker,
         args: %{"type" => "calendar", "integration_id" => 201}
       )
+    end
+
+    test "leaves a row the very next successful probe keeps healthy", %{user: user} do
+      insert_unhealthy_row(user, "calendar", 202)
+
+      :ok = HealthCheck.mark_user_recovered(:calendar, 202)
+
+      # The three steps HealthCheck runs around a probe: read the state, fold
+      # the result in, persist. A reset row starts at zero successes, below the
+      # recovery threshold, so it is the row's healthy status that keeps the
+      # verification probe just enqueued from knocking the badge back to
+      # :degraded.
+      :calendar
+      |> Monitor.get_state(202, user.id)
+      |> then(&Monitor.update_health(&1, {:ok, :probe_succeeded}))
+      |> then(&Monitor.put_state(:calendar, 202, &1))
+
+      {:ok, row} = IntegrationHealthStateQueries.get(:calendar, 202)
+      assert row.status == "healthy"
+      assert row.successes == 1
     end
 
     test "is safe to call when no row exists" do

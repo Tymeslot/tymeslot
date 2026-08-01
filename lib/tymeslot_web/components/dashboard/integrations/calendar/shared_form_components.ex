@@ -203,7 +203,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
           </p>
         <% else %>
           <%= for calendar <- @discovered_calendars do %>
-            <% calendar_path = calendar.path || calendar.href %>
+            <% calendar_path = calendar.path %>
             <div class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/20 transition-colors">
               <.input
                 type="checkbox"

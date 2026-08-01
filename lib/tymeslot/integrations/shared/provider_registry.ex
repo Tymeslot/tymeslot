@@ -7,6 +7,8 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
   through configuration options.
   """
 
+  require Logger
+
   # Type definitions
   @type provider_type :: atom()
   @type provider_module :: module()
@@ -48,6 +50,8 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
     providers = Keyword.get(opts, :providers, %{})
 
     quote do
+      require Logger
+
       @provider_type_name unquote(provider_type_name)
       @default_provider unquote(default_provider)
       @metadata_fields unquote(metadata_fields)
@@ -161,7 +165,14 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
             end
         end
       rescue
-        _other -> nil
+        exception ->
+          Logger.warning("Provider metadata lookup failed",
+            provider_module: module,
+            field: field,
+            error: Exception.message(exception)
+          )
+
+          nil
       end
 
       # Allow specific registries to override behavior if needed
@@ -196,7 +207,13 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
         provider_type = module.provider_type()
         Map.put(acc, provider_type, module)
       rescue
-        _other -> acc
+        exception ->
+          Logger.warning("Skipping provider module without a usable provider_type/0",
+            provider_module: module,
+            error: Exception.message(exception)
+          )
+
+          acc
       end
     end)
   end

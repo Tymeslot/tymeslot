@@ -1,9 +1,24 @@
+defmodule Tymeslot.Integrations.Calendar.ProviderAdapterTest.LogCapture do
+  @moduledoc false
+  # Minimal :logger handler that forwards each log event (with full
+  # metadata) to a test process. The test-env default formatter only prints
+  # a whitelisted subset of metadata keys, so this is what lets a test
+  # assert on metadata fields the formatter would otherwise hide.
+  @spec log(:logger.log_event(), :logger.handler_config()) :: :ok
+  def log(event, %{config: %{pid: pid}}) do
+    send(pid, {:captured_log, event})
+    :ok
+  end
+end
+
 defmodule Tymeslot.Integrations.Calendar.ProviderAdapterTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.ProviderAdapterTest.LogCapture
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
+  alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
 
   defmodule ErroringProvider do
     @spec list_events(any(), keyword()) :: {:error, :boom}
@@ -17,6 +32,24 @@ defmodule Tymeslot.Integrations.Calendar.ProviderAdapterTest do
 
     @spec delete_event(any(), String.t(), keyword()) :: {:error, :boom}
     def delete_event(_client, _uid, _opts), do: {:error, :boom}
+  end
+
+  # Simulates a provider whose own multi-calendar fetch hard-failed on one
+  # selected calendar while another one succeeded, so the `Outcome` carries
+  # the succeeded calendar's private event content alongside the failure.
+  defmodule PartialSuccessAggregateProvider do
+    @spec list_events(any(), keyword()) :: {:error, Outcome.t()}
+    def list_events(_client, _opts) do
+      {:error,
+       %Outcome{
+         events: [
+           %{uid: "private-1", summary: "Therapy appointment with Dr. Confidential"}
+         ],
+         attempted: 2,
+         succeeded: 1,
+         failed: [%{source: "cal-broken", reason: :timeout}]
+       }}
+    end
   end
 
   defmodule ThreeTupleErrorProvider do
@@ -67,6 +100,35 @@ defmodule Tymeslot.Integrations.Calendar.ProviderAdapterTest do
 
     assert {:error, :network_error, "Connection refused"} =
              ProviderAdapter.delete_event(client, "uid")
+  end
+
+  test "logs failed calendar source and reason but never a succeeded calendar's event content" do
+    client = %{
+      provider_type: :fake,
+      provider_module: PartialSuccessAggregateProvider,
+      client: %{calendar_path: "/cal/partial-success"}
+    }
+
+    handler_id = :provider_adapter_test_partial_success_handler
+    :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
+    on_exit(fn -> :logger.remove_handler(handler_id) end)
+
+    assert {:error, %Outcome{}} =
+             ProviderAdapter.get_events(client, DateTime.utc_now(), DateTime.utc_now())
+
+    assert_receive {:captured_log,
+                    %{
+                      level: :error,
+                      msg: {:string, "Failed to get events in range"},
+                      meta: %{failed: failed} = meta
+                    }}
+
+    refute Map.has_key?(meta, :events)
+    assert failed == [%{source: "cal-broken", reason: ":timeout"}]
+
+    full_dump = inspect(meta)
+    refute full_dump =~ "Therapy appointment"
+    refute full_dump =~ "private-1"
   end
 
   describe "new_client_from_integration/1" do

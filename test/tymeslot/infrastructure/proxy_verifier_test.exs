@@ -48,7 +48,17 @@ defmodule Tymeslot.Infrastructure.ProxyVerifierTest do
       result = ProxyVerifier.verify()
 
       assert result.proxy_configured == true
-      assert result.details.config != nil
+
+      assert result.details.config == %{
+               http_proxy: nil,
+               https_proxy: %{
+                 host: "proxy.example.com",
+                 port: 8080,
+                 scheme: "http",
+                 auth: nil
+               },
+               no_proxy: []
+             }
     end
 
     test "reports error when test URL is in NO_PROXY list" do
@@ -165,7 +175,9 @@ defmodule Tymeslot.Infrastructure.ProxyVerifierTest do
     test "accepts valid HTTPS URLs" do
       # Should not raise, will fail to connect but that's expected in tests
       result = ProxyVerifier.verify(test_url: "https://valid.example.com/path")
-      assert is_map(result)
+
+      assert result.proxy_configured == true
+      assert result.details[:test_url] == "https://valid.example.com/path"
     end
 
     test "rejects timeout below minimum (1000ms)" do
@@ -193,18 +205,18 @@ defmodule Tymeslot.Infrastructure.ProxyVerifierTest do
     end
 
     test "accepts valid timeout at minimum boundary" do
-      result = ProxyVerifier.verify(timeout: 1_000)
-      assert is_map(result)
+      assert %{proxy_configured: true, details: %{config: %{https_proxy: %{port: 8080}}}} =
+               ProxyVerifier.verify(timeout: 1_000)
     end
 
     test "accepts valid timeout at maximum boundary" do
-      result = ProxyVerifier.verify(timeout: 300_000)
-      assert is_map(result)
+      assert %{proxy_configured: true, details: %{config: %{https_proxy: %{port: 8080}}}} =
+               ProxyVerifier.verify(timeout: 300_000)
     end
 
     test "accepts valid timeout in normal range" do
-      result = ProxyVerifier.verify(timeout: 10_000)
-      assert is_map(result)
+      assert %{proxy_configured: true, details: %{config: %{https_proxy: %{port: 8080}}}} =
+               ProxyVerifier.verify(timeout: 10_000)
     end
   end
 end

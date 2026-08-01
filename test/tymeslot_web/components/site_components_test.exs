@@ -91,28 +91,124 @@ defmodule TymeslotWeb.Components.SiteComponentsTest do
       assert html =~ ~s(data-analytics-props="{&quot;source_page&quot;:&quot;footer&quot;}")
     end
 
-    test "renders every configured footer link" do
+    test "renders no link columns when none are supplied" do
       html = render_component(&SiteComponents.site_footer/1, %{})
 
-      # The Product and Legal columns are rendered from a data-driven list, so
-      # each entry should appear whenever its URL is configured. In the umbrella
-      # test environment the SaaS config enables them; in standalone Core they
-      # are nil and the loop simply drops them.
-      for {key, label} <- [
-            {:features_url, "Features"},
-            {:pricing_url, "Pricing"},
-            {:docs_url, "Docs"},
-            {:changelog_url, "Changelog"},
-            {:contact_url, "Contact"},
-            {:privacy_policy_url, "Privacy Policy"},
-            {:terms_and_conditions_url, "Terms and Conditions"},
-            {:sitemap_url, "Sitemap"}
-          ] do
-        if url = Application.get_env(:tymeslot, key) do
-          assert html =~ label
-          assert html =~ url
-        end
-      end
+      refute html =~ "Product"
+      refute html =~ "Legal"
+    end
+
+    test "renders the caller-supplied link columns" do
+      columns = [
+        %{
+          heading: "Product",
+          links: [
+            %{url: "/pricing", label: "Pricing"},
+            %{url: "https://docs.example.com", label: "Docs"}
+          ]
+        },
+        %{heading: "Legal", links: [%{url: "/legal/privacy-policy", label: "Privacy Policy"}]}
+      ]
+
+      html = render_component(&SiteComponents.site_footer/1, link_columns: columns)
+
+      assert html =~ "Product"
+      assert html =~ "Legal"
+      assert html =~ "Privacy Policy"
+      # Internal URL: rendered via navigate (carries the LiveView redirect marker).
+      assert html =~ ~s(href="/pricing")
+      assert html =~ ~s(data-phx-link="redirect")
+      # External URL: plain anchor, no LiveView navigation attribute.
+      assert html =~ ~s(href="https://docs.example.com")
+    end
+  end
+
+  describe "navigation/1 marketing menu" do
+    test "renders no marketing links when no sections are supplied" do
+      html = render_component(&SiteComponents.navigation/1, current_user: nil)
+
+      refute html =~ "Features"
+      refute html =~ "Pricing"
+    end
+
+    test "renders a flat link section" do
+      sections = [%{kind: :link, url: "/pricing", label: "Pricing", icon: "hero-tag"}]
+
+      html =
+        render_component(&SiteComponents.navigation/1, current_user: nil, menu_sections: sections)
+
+      assert html =~ "Pricing"
+      assert html =~ ~s(href="/pricing")
+    end
+
+    test "renders a :menu with no pages as a plain link to its landing page" do
+      sections = [
+        %{
+          kind: :menu,
+          key: "features",
+          label: "Features",
+          icon: "hero-sparkles",
+          url: "/features",
+          overview: nil,
+          pages: []
+        }
+      ]
+
+      html =
+        render_component(&SiteComponents.navigation/1, current_user: nil, menu_sections: sections)
+
+      assert html =~ "Features"
+      assert html =~ ~s(href="/features")
+      refute html =~ "All features"
+    end
+
+    test "renders a populated :menu with its overview row and each page" do
+      sections = [
+        %{
+          kind: :menu,
+          key: "features",
+          label: "Features",
+          icon: "hero-sparkles",
+          url: "/features",
+          overview: %{label: "All features", icon: "hero-squares-2x2-solid", url: "/features"},
+          pages: [
+            %{label: "Calendar Sync", url: "/features/calendar-sync", icon: "hero-calendar"},
+            %{label: "Payments", url: "/features/payments", icon: "hero-credit-card"}
+          ]
+        }
+      ]
+
+      html =
+        render_component(&SiteComponents.navigation/1, current_user: nil, menu_sections: sections)
+
+      assert html =~ "All features"
+      assert html =~ "Calendar Sync"
+      assert html =~ ~s(href="/features/calendar-sync")
+      assert html =~ "Payments"
+      assert html =~ ~s(href="/features/payments")
+    end
+
+    test "keys the mobile accordion by the stable key, not the (translatable) label" do
+      # A label that would slug to nothing (e.g. a non-Latin translation) must
+      # not break the mobile accordion's DOM id — the section's `key` does.
+      sections = [
+        %{
+          kind: :menu,
+          key: "features",
+          label: "Можливості",
+          icon: "hero-sparkles",
+          url: "/features",
+          overview: nil,
+          pages: [
+            %{label: "Calendar Sync", url: "/features/calendar-sync", icon: "hero-calendar"}
+          ]
+        }
+      ]
+
+      html =
+        render_component(&SiteComponents.navigation/1, current_user: nil, menu_sections: sections)
+
+      assert html =~ ~s(id="mobile-nav-features")
     end
   end
 end

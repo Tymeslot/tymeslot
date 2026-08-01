@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.ICalParser
 
   @moduledoc """
@@ -37,7 +38,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   """
   @spec build_propfind_request(keyword()) :: String.t()
   def build_propfind_request(opts \\ []) do
-    properties = Keyword.get(opts, :properties, [:displayname, :resourcetype, :calendar_color])
+    properties =
+      Keyword.get(opts, :properties, [
+        :displayname,
+        :resourcetype,
+        :calendar_color,
+        :current_user_privilege_set,
+        :supported_calendar_component_set
+      ])
 
     prop_elements = Enum.map_join(properties, "\n", &build_prop_element/1)
 
@@ -80,19 +88,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   @doc """
   Parses a calendar discovery response using SweetXML.
 
-  Returns a list of calendars with their properties.
+  Returns the discovered calendars as `CalendarEntry` structs, produced at
+  this discovery boundary so every downstream caller reads a single
+  canonical shape.
   """
   @spec parse_calendar_discovery(String.t(), keyword()) ::
-          {:ok,
-           list(%{
-             required(:id) => String.t(),
-             required(:name) => String.t(),
-             required(:href) => String.t(),
-             required(:color) => String.t(),
-             required(:selected) => boolean(),
-             required(:read_only) => boolean()
-           })}
-          | {:error, String.t()}
+          {:ok, [CalendarEntry.t()]} | {:error, String.t()}
   def parse_calendar_discovery(xml_body, opts \\ []) do
     # Parse with security limits
     doc = parse_with_security(xml_body)
@@ -113,23 +114,33 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
           ),
         component_names:
           ~x".//*[local-name()='supported-calendar-component-set']/*[local-name()='comp']/@name"sl,
+        # Require an actual `<privilege>` child, not merely the element. A
+        # server that does not implement RFC 3744 still echoes the property
+        # NAME back inside a 404 `<propstat>` (RFC 4918 §9.1), and these
+        # xpaths are not scoped to the 200 `<propstat>` — so matching the bare
+        # element would read "privileges reported, none of them write" and
+        # mark every calendar on such a server read-only.
         has_privilege_set:
           transform_by(
-            ~x".//*[local-name()='current-user-privilege-set']",
+            ~x".//*[local-name()='current-user-privilege-set']/*[local-name()='privilege']",
             &(&1 != nil)
           ),
+        # RFC 3744 §3.1 lets a server report the `DAV:all` aggregate, the
+        # `DAV:write` aggregate, or only the leaves that `DAV:write`
+        # aggregates. Any of them means the calendar is writable; matching
+        # `write` alone marks a fully writable calendar read-only.
         has_write_privilege:
           transform_by(
-            ~x".//*[local-name()='current-user-privilege-set']/*[local-name()='privilege']/*[local-name()='write']",
+            ~x".//*[local-name()='current-user-privilege-set']/*[local-name()='privilege']/*[local-name()='write' or local-name()='all' or local-name()='write-content' or local-name()='bind']",
             &(&1 != nil)
           )
       )
       |> Enum.filter(&include_calendar?/1)
       |> Enum.map(fn cal ->
-        %{
+        %CalendarEntry{
           id: cal.href,
           name: determine_calendar_name(cal),
-          href: cal.href,
+          path: cal.href,
           color: cal.calendar_color,
           selected: Keyword.get(opts, :selected_default, false),
           read_only: read_only?(cal)
@@ -310,7 +321,28 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   defp build_prop_element(:calendar_home_set),
     do: "<c:calendar-home-set xmlns:c=\"urn:ietf:params:xml:ns:caldav\"/>"
 
-  defp build_prop_element(other), do: "<d:#{other}/>"
+  defp build_prop_element(:current_user_privilege_set), do: "<d:current-user-privilege-set/>"
+
+  defp build_prop_element(:supported_calendar_component_set),
+    do: "<c:supported-calendar-component-set xmlns:c=\"urn:ietf:params:xml:ns:caldav\"/>"
+
+  # CTag lives in the calendarserver.org namespace, not DAV:. WebDAV property
+  # identity is (namespace URI, local name), so a `<d:getctag/>` request never
+  # matches on the server and Tier 2 CTag sync silently never fires.
+  defp build_prop_element(:getctag),
+    do: "<cs:getctag xmlns:cs=\"http://calendarserver.org/ns/\"/>"
+
+  # The property is `DAV:sync-token` (hyphen); an underscore produces a
+  # nonexistent property name the server can never match.
+  defp build_prop_element(:sync_token), do: "<d:sync-token/>"
+
+  # No further fallback: a new atom reaching here would silently emit a
+  # `<d:...>` element that may not exist in the DAV: namespace at all (as
+  # happened with :getctag and :sync_token above). Raising surfaces the
+  # missing clause immediately instead of producing a request that silently
+  # never matches on the server.
+  defp build_prop_element(other),
+    do: raise(ArgumentError, "unknown CalDAV property atom: #{inspect(other)}")
 
   # Keep only calendar collections that support VEVENT. When the server omits
   # supported-calendar-component-set, accept the calendar by default — RFC 4791
@@ -318,7 +350,20 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   # components without VEVENT are filtered out (e.g. mailbox.org's task-only
   # "Aufgaben" collection).
   defp include_calendar?(%{is_calendar: true, component_names: []}), do: true
-  defp include_calendar?(%{is_calendar: true, component_names: names}), do: "VEVENT" in names
+
+  defp include_calendar?(%{is_calendar: true, component_names: names, href: href}) do
+    if Enum.any?(names, &(String.upcase(&1) == "VEVENT")) do
+      true
+    else
+      Logger.debug("CalDAV calendar excluded: no VEVENT in supported-calendar-component-set",
+        href: href,
+        component_names: names
+      )
+
+      false
+    end
+  end
+
   defp include_calendar?(_other), do: false
 
   # Only mark a calendar read-only when the server explicitly returned a

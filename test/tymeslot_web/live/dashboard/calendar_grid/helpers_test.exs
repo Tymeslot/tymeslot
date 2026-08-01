@@ -4,7 +4,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
   @moduletag :unit
   @moduletag :calendar
 
+  alias Phoenix.LiveView.Socket
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
 
   describe "all_day_events_for_day/2" do
@@ -117,24 +119,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
     end
 
     test "month view with Sunday start begins on Sunday" do
-      first_of_month = Date.new!(2026, 3, 1)
-      grid_start = Date.beginning_of_week(first_of_month, :sunday)
-      [first_day | _rest] = Enum.map(0..41, &Date.add(grid_start, &1))
+      [first_day | _rest] = PreferenceHelpers.month_matrix(~D[2026-03-01], :sunday)
+
+      assert first_day == ~D[2026-03-01]
       assert Date.day_of_week(first_day) == 7
     end
 
     test "month view with Monday start begins on Monday" do
-      first_of_month = Date.new!(2026, 3, 1)
-      grid_start = Date.beginning_of_week(first_of_month, :monday)
-      [first_day | _rest] = Enum.map(0..41, &Date.add(grid_start, &1))
+      [first_day | _rest] = PreferenceHelpers.month_matrix(~D[2026-03-01], :monday)
+
+      assert first_day == ~D[2026-02-23]
       assert Date.day_of_week(first_day) == 1
     end
 
     test "month view always returns 42 days" do
-      first_of_month = Date.new!(2026, 3, 1)
-      grid_start = Date.beginning_of_week(first_of_month, :sunday)
-      days = Enum.map(0..41, &Date.add(grid_start, &1))
-      assert length(days) == 42
+      assert length(PreferenceHelpers.month_matrix(~D[2026-03-01], :sunday)) == 42
     end
   end
 
@@ -171,8 +170,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
   end
 
   describe "DataLoading.range_for_view/1 — three_day" do
-    alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading
-
     test "returns a one-day buffer before and after the three visible days" do
       assigns = %{view: :three_day, date: ~D[2026-03-10]}
       {start_dt, end_dt} = DataLoading.range_for_view(assigns)
@@ -183,14 +180,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
   end
 
   describe "DataLoading.visible_days/1 — three_day" do
-    # visible_days/1 is private. The test validates the expected shape indirectly
-    # by exercising the same arithmetic that the function performs, consistent
-    # with how the existing visible_days computation tests above work (lines 91-139).
+    # visible_days/1 is private; precompute_derived/1 is the public entry point
+    # that assigns its result onto the socket.
     test "three_day anchor date produces three consecutive days" do
-      date = ~D[2026-03-10]
-      days = Enum.map(0..2, &Date.add(date, &1))
+      socket =
+        DataLoading.precompute_derived(%Socket{
+          assigns: %{
+            __changed__: %{},
+            view: :three_day,
+            date: ~D[2026-03-10],
+            events: [],
+            hidden_integration_ids: []
+          }
+        })
 
-      assert days == [~D[2026-03-10], ~D[2026-03-11], ~D[2026-03-12]]
+      assert socket.assigns.visible_days == [~D[2026-03-10], ~D[2026-03-11], ~D[2026-03-12]]
     end
   end
 

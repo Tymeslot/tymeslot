@@ -7,32 +7,31 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     - `WebhookEventHandlers` — all webhook CRUD and operational events
     - `TelegramEventHandlers` — all Telegram CRUD and operational events
     - `SlackEventHandlers` — all Slack CRUD and operational events
+
+  Markup is delegated to focused function-component modules:
+    - `TabNav` — the tab bar
+    - `WebhookTab`, `TelegramTab`, `SlackTab` — the body of each tab
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Dashboard.AutomationSettingsDefaults
-
   alias Phoenix.LiveView.JS
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
-  alias TymeslotWeb.Components.Icons.IconComponents
+  alias TymeslotWeb.Dashboard.Automation.Defaults
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Dashboard.Automation.Modals
   alias TymeslotWeb.Dashboard.Automation.Slack.FormHandlers, as: SlackFormHandlers
-  alias TymeslotWeb.Dashboard.Automation.SlackCard
-  alias TymeslotWeb.Dashboard.Automation.SlackEmptyState
   alias TymeslotWeb.Dashboard.Automation.SlackEventHandlers
   alias TymeslotWeb.Dashboard.Automation.SlackFormComponent
-  alias TymeslotWeb.Dashboard.Automation.TelegramCard
-  alias TymeslotWeb.Dashboard.Automation.TelegramEmptyState
+  alias TymeslotWeb.Dashboard.Automation.SlackTab
+  alias TymeslotWeb.Dashboard.Automation.TabNav
   alias TymeslotWeb.Dashboard.Automation.TelegramEventHandlers
   alias TymeslotWeb.Dashboard.Automation.TelegramFormComponent
-  alias TymeslotWeb.Dashboard.Automation.WebhookCard
-  alias TymeslotWeb.Dashboard.Automation.WebhookDocumentation
-  alias TymeslotWeb.Dashboard.Automation.WebhookEmptyState
+  alias TymeslotWeb.Dashboard.Automation.TelegramTab
   alias TymeslotWeb.Dashboard.Automation.WebhookEventHandlers
   alias TymeslotWeb.Dashboard.Automation.WebhookFormComponent
+  alias TymeslotWeb.Dashboard.Automation.WebhookTab
 
   @impl Phoenix.LiveComponent
   @spec mount(Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
@@ -57,9 +56,9 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
      |> assign(:telegram_enabled, telegram_enabled)
      |> assign(:slack_enabled, slack_enabled)
      |> assign(:slack_oauth_mode_available?, Slack.oauth_mode_available?())
-     |> assign_webhook_defaults()
-     |> assign_telegram_defaults()
-     |> assign_slack_defaults()}
+     |> Defaults.assign_webhook_defaults()
+     |> Defaults.assign_telegram_defaults()
+     |> Defaults.assign_slack_defaults()}
   end
 
   @impl Phoenix.LiveComponent
@@ -336,67 +335,30 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         <.section_header icon={:webhook} title={dgettext("dashboard_automation", "Automation")} />
 
         <%!-- Tabs Navigation --%>
-        <div class="flex flex-wrap gap-4 bg-tymeslot-50/50 p-2 rounded-[2rem] border-2 border-tymeslot-50 mb-10">
-          <button
-            phx-click={JS.push("switch_tab", value: %{"tab" => "webhooks"}, target: @myself)}
-            class={tab_class(@active_tab == :webhooks)}
-          >
-            <IconComponents.icon name={:webhook} class="w-5 h-5" />
-            <span>{dgettext("dashboard_automation", "Webhooks")}</span>
-          </button>
-
-          <%= if @telegram_enabled do %>
-            <button
-              phx-click={JS.push("switch_tab", value: %{"tab" => "telegram"}, target: @myself)}
-              class={tab_class(@active_tab == :telegram)}
-            >
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-              </svg>
-              <span>{dgettext("dashboard_automation", "Telegram")}</span>
-            </button>
-          <% else %>
-            <div class="flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 bg-transparent border-transparent text-tymeslot-400 opacity-60 cursor-not-allowed">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-              </svg>
-              <span>{dgettext("dashboard_automation", "Telegram")}</span>
-              <span class="ml-2 text-token-2xs bg-tymeslot-100 px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                {dgettext("dashboard_automation", "Disabled")}
-              </span>
-            </div>
-          <% end %>
-
-          <%= if @slack_enabled do %>
-            <button
-              phx-click={JS.push("switch_tab", value: %{"tab" => "slack"}, target: @myself)}
-              class={tab_class(@active_tab == :slack)}
-            >
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
-              </svg>
-              <span>{dgettext("dashboard_automation", "Slack")}</span>
-            </button>
-          <% end %>
-        </div>
+        <TabNav.tab_nav
+          active_tab={@active_tab}
+          telegram_enabled={@telegram_enabled}
+          slack_enabled={@slack_enabled}
+          myself={@myself}
+        />
 
         <%!-- Tab Content --%>
         <div class="space-y-12">
           <%= case @active_tab do %>
             <% :webhooks -> %>
-              <.webhook_tab_content
+              <WebhookTab.webhook_tab_content
                 webhooks={@webhooks}
                 testing_connection={@testing_connection}
                 myself={@myself}
               />
             <% :telegram -> %>
-              <.telegram_tab_content
+              <TelegramTab.telegram_tab_content
                 integrations={@telegram_integrations}
                 telegram_testing={@telegram_testing}
                 myself={@myself}
               />
             <% :slack -> %>
-              <.slack_tab_content
+              <SlackTab.slack_tab_content
                 integrations={@slack_integrations}
                 slack_testing={@slack_testing}
                 oauth_mode_available?={@slack_oauth_mode_available?}
@@ -410,162 +372,9 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     """
   end
 
-  defp webhook_tab_content(assigns) do
-    ~H"""
-    <%= if @webhooks != [] do %>
-      <div class="space-y-6">
-        <div class="flex items-center justify-between">
-          <.section_header
-            level={2}
-            title={dgettext("dashboard_automation", "Your Webhooks")}
-            count={length(@webhooks)}
-          />
-          <button phx-click="show_webhook_form" phx-target={@myself} class="btn-primary">
-            {dgettext("dashboard_automation", "Create Webhook")}
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 gap-6">
-          <%= for webhook <- @webhooks do %>
-            <WebhookCard.webhook_card
-              webhook={webhook}
-              testing={@testing_connection == webhook.id}
-              target={@myself}
-              on_edit={JS.push("show_edit_webhook_form", value: %{"id" => webhook.id}, target: @myself)}
-              on_delete={JS.push("show_delete_modal", value: %{"id" => webhook.id}, target: @myself)}
-              on_toggle="toggle_webhook"
-              on_test={JS.push("test_connection", value: %{"id" => webhook.id}, target: @myself)}
-              on_view_deliveries={JS.push("show_deliveries", value: %{"id" => webhook.id}, target: @myself)}
-            />
-          <% end %>
-        </div>
-      </div>
-    <% else %>
-      <WebhookEmptyState.webhook_empty_state on_create={JS.push("show_webhook_form", target: @myself)} />
-    <% end %>
-
-    <WebhookDocumentation.webhook_documentation />
-    """
-  end
-
-  defp telegram_tab_content(assigns) do
-    ~H"""
-    <%= if @integrations != [] do %>
-      <div class="space-y-6">
-        <div class="flex items-center justify-between">
-          <.section_header
-            level={2}
-            title={dgettext("dashboard_automation", "Your Telegram Integrations")}
-            count={length(@integrations)}
-          />
-          <button phx-click="show_telegram_form" phx-target={@myself} class="btn-primary">
-            {dgettext("dashboard_automation", "Add Telegram Account")}
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 gap-6">
-          <%= for integration <- @integrations do %>
-            <TelegramCard.telegram_card
-              integration={integration}
-              testing={@telegram_testing == integration.id}
-              target={@myself}
-              on_edit={JS.push("show_edit_telegram_form", value: %{"id" => integration.id}, target: @myself)}
-              on_delete={JS.push("show_telegram_delete_modal", value: %{"id" => integration.id}, target: @myself)}
-              on_toggle="toggle_telegram"
-              on_test={JS.push("test_telegram", value: %{"id" => integration.id}, target: @myself)}
-              on_view_deliveries={JS.push("show_telegram_deliveries", value: %{"id" => integration.id}, target: @myself)}
-              on_reenable={JS.push("reenable_telegram", value: %{"id" => integration.id}, target: @myself)}
-              on_disconnect={JS.push("disconnect_telegram", value: %{"id" => integration.id}, target: @myself)}
-              on_reconnect={
-                if integration.bot_mode == "shared" do
-                  JS.push("reconnect_telegram", value: %{"id" => integration.id}, target: @myself)
-                end
-              }
-            />
-          <% end %>
-        </div>
-      </div>
-    <% else %>
-      <TelegramEmptyState.telegram_empty_state on_create={JS.push("show_telegram_form", target: @myself)} />
-    <% end %>
-    """
-  end
-
-  attr :integrations, :list, required: true
-  attr :slack_testing, :any, required: true
-  attr :oauth_mode_available?, :boolean, required: true
-  attr :myself, :any, required: true
-
-  defp slack_tab_content(assigns) do
-    ~H"""
-    <%= if @integrations != [] do %>
-      <div class="space-y-6">
-        <div class="flex items-center justify-between">
-          <.section_header
-            level={2}
-            title={dgettext("dashboard_automation", "Your Slack Integrations")}
-            count={length(@integrations)}
-          />
-          <div class="flex items-center gap-3">
-            <%= if @oauth_mode_available? do %>
-              <.link href={~p"/api/slack/oauth/start"} class="btn-primary">
-                {dgettext("dashboard_automation", "Add to Slack")}
-              </.link>
-            <% end %>
-            <button
-              phx-click="slack_show_webhook_form"
-              phx-target={@myself}
-              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-token-xl border-2 bg-white border-tymeslot-200 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all"
-            >
-              {dgettext("dashboard_automation", "Add via webhook URL")}
-            </button>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 gap-6">
-          <%= for integration <- @integrations do %>
-            <SlackCard.slack_card
-              integration={integration}
-              testing={@slack_testing == integration.id}
-              target={@myself}
-              on_edit={JS.push("slack_show_edit_form", value: %{"id" => integration.id}, target: @myself)}
-              on_delete={JS.push("slack_confirm_delete", value: %{"id" => integration.id}, target: @myself)}
-              on_toggle="slack_toggle_active"
-              on_test={JS.push("slack_test", value: %{"id" => integration.id}, target: @myself)}
-              on_view_deliveries={JS.push("slack_show_deliveries", value: %{"id" => integration.id}, target: @myself)}
-              on_reenable={JS.push("slack_reenable", value: %{"id" => integration.id}, target: @myself)}
-              on_pick_channel={JS.push("slack_show_channel_picker", value: %{"id" => integration.id}, target: @myself)}
-              on_disconnect={JS.push("slack_disconnect", value: %{"id" => integration.id}, target: @myself)}
-              on_reconnect={
-                if @oauth_mode_available? do
-                  JS.push("slack_reconnect", value: %{"id" => integration.id}, target: @myself)
-                end
-              }
-            />
-          <% end %>
-        </div>
-      </div>
-    <% else %>
-      <SlackEmptyState.slack_empty_state
-        oauth_mode_available?={@oauth_mode_available?}
-        oauth_start_path={~p"/api/slack/oauth/start"}
-        on_use_webhook_url={JS.push("slack_show_webhook_form", target: @myself)}
-      />
-    <% end %>
-    """
-  end
-
   # ============================================================================
   # Private Helpers
   # ============================================================================
-
-  defp tab_class(true) do
-    "flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 bg-white border-white text-turquoise-600 shadow-xl shadow-tymeslot-200/50 scale-[1.02] cursor-default"
-  end
-
-  defp tab_class(false) do
-    "flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 bg-transparent border-transparent text-tymeslot-400 hover:text-tymeslot-600 hover:bg-white/50 cursor-pointer"
-  end
 
   defp maybe_subscribe_telegram(%{assigns: %{telegram_subscribed: true}} = socket), do: socket
 

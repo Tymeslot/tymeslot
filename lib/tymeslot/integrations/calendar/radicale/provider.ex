@@ -8,15 +8,21 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
-  alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
+  alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def provider_type, do: :radicale
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def display_name, do: "Radicale"
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def connection_test_bucket, do: :caldav
 
   @doc "Returns the LiveComponent module for provider configuration UI"
   @spec setup_component() :: module()
@@ -66,17 +72,21 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
     }
   end
 
+  # Structural validation only, in line with every other provider's
+  # `validate_config/1`: the caller that needs connectivity
+  # (`Calendar.Creation.prevalidate_config/1`) invokes `validate_config/1` first
+  # and then `perform_connection_test/1`. Folding a connectivity probe into this
+  # callback would double-charge a rate-limited connection test that runs both
+  # in sequence.
   @impl Tymeslot.Integrations.Calendar.Provider
   def validate_config(config) do
-    with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]),
-         :ok <-
-           ProviderCommon.validate_url(config[:base_url],
-             message:
-               "Invalid Radicale URL. Should be your Radicale server URL (e.g., https://radicale.example.com:5232)"
-           ),
-         {:ok, client} <- build_test_client(config) do
-      ProviderCommon.test_caldav_connection(client,
-        error_formatter: &radicale_error_formatter/1
+    with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]) do
+      ProviderCommon.validate_url(config[:base_url],
+        message:
+          dgettext(
+            "dashboard_calendar_providers",
+            "Invalid Radicale URL. Should be your Radicale server URL (e.g., https://radicale.example.com:5232)"
+          )
       )
     end
   end
@@ -101,13 +111,21 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
   @doc """
   Tests connection to Radicale server with Radicale-specific messaging.
   """
-  @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
-  def test_connection(integration, opts \\ []) do
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
+  def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      metadata: opts[:metadata],
-      success_message: "Radicale connection successful",
-      unauthorized_message: "Authentication failed. Check your Radicale username and password.",
-      not_found_message: "Radicale server not found. Check your server URL and port if needed.",
+      success_message: dgettext("dashboard_calendar_providers", "Radicale connection successful"),
+      unauthorized_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Authentication failed. Check your Radicale username and password."
+        ),
+      not_found_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Radicale server not found. Check your server URL and port if needed."
+        ),
       error_formatter: &format_error/1
     )
   end
@@ -115,14 +133,13 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
   @doc """
   Discovers available calendars on the Radicale server.
   """
-  @spec discover_calendars(map(), keyword()) :: {:ok, list(map())} | {:error, String.t()}
-  def discover_calendars(client, opts \\ []) do
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
-
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec discover_calendars(map()) :: {:ok, [CalendarEntry.t()]} | {:error, String.t()}
+  def discover_calendars(client) do
     # Ensure provider is set to radicale for proper discovery URL
     client = Map.put(client, :provider, :radicale)
 
-    CaldavCommon.discover_calendars(client, ip_address: ip_address)
+    CaldavCommon.discover_calendars(client)
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -161,21 +178,6 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
 
   # Private helper functions
 
-  defp build_test_client(config) do
-    full_client = new(config)
-
-    client = %{
-      base_url: full_client.base_url,
-      username: full_client.username,
-      password: full_client.password,
-      calendar_paths: full_client.calendar_paths,
-      verify_ssl: true,
-      provider: full_client.provider
-    }
-
-    {:ok, client}
-  end
-
   defp normalize_base_url(url) do
     url
     |> String.trim()
@@ -193,9 +195,6 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
         build_radicale_default_paths(config)
     end
   end
-
-  defp radicale_error_formatter(reason),
-    do: ErrorHandler.sanitize_error_message(reason, :radicale)
 
   defp build_radicale_default_paths(config) do
     username = config[:username]
@@ -217,5 +216,10 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
   end
 
   defp format_error({:error, message}) when is_binary(message), do: message
-  defp format_error(error), do: "Radicale error: #{inspect(error)}"
+
+  defp format_error(error),
+    do:
+      dgettext("dashboard_calendar_providers", "Radicale error: %{detail}",
+        detail: inspect(error)
+      )
 end

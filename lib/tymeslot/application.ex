@@ -10,11 +10,20 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Analytics.Telemetry, as: AnalyticsTelemetry
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth.AdminBootstrap
-  alias Tymeslot.Infrastructure.{CrashReporter, Metrics, ObanFailureAlerter, ObanLogger}
+
+  alias Tymeslot.Infrastructure.{
+    CrashReporter,
+    Metrics,
+    ObanFailureAlerter,
+    ObanLogger,
+    ObanQueues
+  }
+
   alias Tymeslot.Infrastructure.Logging.{FileSink, MetadataRedactor}
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
   alias Tymeslot.Integrations.Shared.Lock
+  alias Tymeslot.Mailer.HealthCheck, as: MailerHealthCheck
   alias Tymeslot.Telegram.BotSetup
   alias TymeslotWeb.Endpoint
 
@@ -133,7 +142,10 @@ defmodule Tymeslot.Application do
         do: [Tymeslot.Integrations.Calendar.DebugStore],
         else: []
 
-    children = base_children ++ production_children ++ dev_children ++ [TymeslotWeb.Endpoint]
+    children =
+      base_children ++
+        production_children ++
+        dev_children ++ [TymeslotWeb.Endpoint] ++ mailer_health_check_children()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
@@ -194,11 +206,10 @@ defmodule Tymeslot.Application do
   end
 
   defp validate_config! do
-    # Validate mailer configuration at startup
-    # This catches SMTP misconfigurations before first email send
-    # Note: Always returns :ok but logs prominent errors if misconfigured
-    mailer_config = Application.get_env(:tymeslot, Tymeslot.Mailer)
-    Tymeslot.Mailer.HealthCheck.validate_startup_config(mailer_config)
+    # Mailer configuration is validated by mailer_health_check_children/0
+    # instead of here: its credential probe needs Tymeslot.Finch, which
+    # doesn't exist yet at this point in start/2, before Supervisor.start_link
+    # has run.
 
     # Validate legal agreements configuration
     if Application.get_env(:tymeslot, :enforce_legal_agreements, false) do
@@ -224,6 +235,34 @@ defmodule Tymeslot.Application do
 
     # Validate database connection pool configuration
     validate_db_pool_config!()
+  end
+
+  # Runs the mailer startup health check as a supervised, transient Task
+  # appended after Tymeslot.Finch (and every other child) so its credential
+  # probe — which requires the Finch pool to be up — actually executes,
+  # instead of always taking the "Finch not started" skip branch. Skipped in
+  # test, mirroring the gating already used for the other startup-only checks
+  # in validate_config!/0. `:transient` stops the supervisor restarting the
+  # task once it exits normally; HealthCheck never raises, so it always does.
+  @spec mailer_health_check_children() :: [Supervisor.child_spec()]
+  defp mailer_health_check_children do
+    if Application.get_env(:tymeslot, :environment) != :test do
+      [
+        Supervisor.child_spec(
+          {Task, &validate_mailer_config!/0},
+          id: Tymeslot.Mailer.HealthCheckTask,
+          restart: :transient
+        )
+      ]
+    else
+      []
+    end
+  end
+
+  @spec validate_mailer_config!() :: :ok
+  defp validate_mailer_config! do
+    mailer_config = Application.get_env(:tymeslot, Tymeslot.Mailer)
+    MailerHealthCheck.validate_startup_config(mailer_config)
   end
 
   # Logs HTTP proxy configuration for visibility
@@ -364,101 +403,13 @@ defmodule Tymeslot.Application do
     :ok
   end
 
-  # Configuration function for Oban
+  # Configuration function for Oban. Queues are read and validated at runtime;
+  # they can't be resolved at config time.
   @spec oban_config() :: keyword()
   defp oban_config do
     base_config = Application.get_env(:tymeslot, Oban) || [repo: Tymeslot.Repo]
 
-    # Read queues at runtime (they can't be read at config time)
-    # Base queue configuration from Core
-    base_queues = Application.get_env(:tymeslot, :oban_queues, [])
-    # Additional queues can be provided via this extension point (e.g., by wrapper applications)
-    additional_queues = Application.get_env(:tymeslot, :oban_additional_queues, [])
-
-    # Validate types before processing
-    unless Keyword.keyword?(base_queues) do
-      raise ArgumentError,
-            ":oban_queues must be a keyword list, got: #{inspect(base_queues)}"
-    end
-
-    unless Keyword.keyword?(additional_queues) do
-      raise ArgumentError,
-            ":oban_additional_queues must be a keyword list, got: #{inspect(additional_queues)}"
-    end
-
-    # Log if additional queues override base queue concurrency
-    base_queue_keys = Keyword.keys(base_queues)
-    additional_queue_keys = Keyword.keys(additional_queues)
-    conflict_keys = Enum.filter(additional_queue_keys, &(&1 in base_queue_keys))
-
-    if conflict_keys != [] do
-      Logger.info("Additional queues overriding Core queue concurrency", queues: conflict_keys)
-    end
-
-    # Validate queue configurations before merging
-    validate_queue_config!(base_queues, "base")
-    validate_queue_config!(additional_queues, "additional")
-
-    # Merge queue configurations (additional takes precedence for conflicts)
-    merged_queues = Keyword.merge(base_queues, additional_queues)
-
-    # Validate that we have at least one queue configured
-    final_queues =
-      if Enum.empty?(merged_queues) do
-        Logger.error("No Oban queues configured, using minimal default")
-        [default: 1]
-      else
-        merged_queues
-      end
-
-    # Merge queues into the base config
-    Keyword.put(base_config, :queues, final_queues)
-  end
-
-  # Validates Oban queue configuration
-  @spec validate_queue_config!(keyword(), String.t()) :: :ok
-  defp validate_queue_config!(queues, source) do
-    # Get pool size for validation
-    repo_config = Application.get_env(:tymeslot, Tymeslot.Repo, [])
-    pool_size = Keyword.get(repo_config, :pool_size, 10)
-
-    Enum.each(queues, fn {queue, concurrency} ->
-      cond do
-        not is_atom(queue) ->
-          raise ArgumentError,
-                "Invalid queue name in #{source} queues: #{inspect(queue)} (must be an atom)"
-
-        not is_integer(concurrency) ->
-          raise ArgumentError,
-                "Invalid concurrency for queue #{queue} in #{source} queues: " <>
-                  "#{inspect(concurrency)} (must be an integer)"
-
-        concurrency <= 0 ->
-          raise ArgumentError,
-                "Invalid concurrency for queue #{queue} in #{source} queues: " <>
-                  "#{concurrency} (must be positive)"
-
-        concurrency > pool_size ->
-          raise ArgumentError,
-                "Queue #{queue} concurrency (#{concurrency}) exceeds pool_size (#{pool_size}). " <>
-                  "Queue concurrency cannot be higher than the database connection pool size."
-
-        concurrency >= 100 ->
-          Logger.warning(
-            "Very high concurrency for queue #{queue} in #{source} queues: #{concurrency}. " <>
-              "Ensure this is intentional and pool_size can support it.",
-            queue: queue,
-            concurrency: concurrency,
-            pool_size: pool_size,
-            source: source
-          )
-
-        true ->
-          :ok
-      end
-    end)
-
-    :ok
+    ObanQueues.build(base_config)
   end
 
   # Schedule periodic jobs using TaskSupervisor for proper error handling

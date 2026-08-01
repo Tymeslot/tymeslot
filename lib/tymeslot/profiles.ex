@@ -5,6 +5,8 @@ defmodule Tymeslot.Profiles do
   specialized tasks to subcomponents.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Availability.WeeklySchedule
@@ -251,7 +253,11 @@ defmodule Tymeslot.Profiles do
       {:ok, updated_profile}
     else
       {:error, :rate_limited} ->
-        {:error, "Too many username change attempts. Please try again later."}
+        {:error,
+         dgettext(
+           "dashboard_profile",
+           "Too many username change attempts. Please try again later."
+         )}
 
       {:error, reason} ->
         {:error, reason}
@@ -390,25 +396,52 @@ defmodule Tymeslot.Profiles do
 
   @doc """
   Gets a display name for greeting text.
+
+  The canonical precedence for "what do we call this person": the profile's
+  `full_name` first, then the name captured at OAuth signup (only available
+  when `:user` is preloaded), then `nil`. Never falls back to the email
+  address.
   """
   @spec display_name(profile | nil) :: String.t() | nil
   def display_name(nil), do: nil
 
-  def display_name(profile) do
-    cond do
-      profile.full_name && String.trim(profile.full_name) != "" ->
-        profile.full_name
+  def display_name(profile), do: presence(profile.full_name) || presence(user_name(profile))
 
-      (name = user_name(profile)) && String.trim(name) != "" ->
-        name
+  @doc """
+  Gets a display name for greeting text, starting from the user side of the
+  association.
 
-      true ->
-        nil
-    end
+  Same precedence as `display_name/1`, for callers that hold a user rather
+  than a profile (the email templates, for instance). `:profile` must be
+  preloaded: raises `ArgumentError` when it is an
+  `Ecto.Association.NotLoaded` struct, since silently falling back to the
+  user's own name is indistinguishable from an email/password signup that
+  legitimately has none. Callers must fetch the user via a function that
+  preloads `:profile`, such as `Auth.UserQueries.get_user_with_profile/1`.
+  """
+  @spec user_display_name(map() | nil) :: String.t() | nil
+  def user_display_name(nil), do: nil
+
+  def user_display_name(%{profile: %ProfileSchema{} = profile} = user),
+    do: display_name(%{profile | user: user})
+
+  def user_display_name(%{profile: %Ecto.Association.NotLoaded{}}) do
+    raise ArgumentError, "user.profile must be preloaded; use get_user_with_profile/1"
   end
+
+  def user_display_name(user), do: presence(user_name(%{user: user}))
 
   defp user_name(%{user: %{name: name}}) when is_binary(name), do: name
   defp user_name(_profile), do: nil
+
+  defp presence(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
+  defp presence(_value), do: nil
 
   # --- Theme & Embed Settings ---
 

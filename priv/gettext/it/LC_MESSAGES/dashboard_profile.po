@@ -88,7 +88,7 @@ msgstr "Impossibile eliminare l'avatar: %{reason}"
 msgid "Failed to update display name"
 msgstr "Impossibile aggiornare il nome visualizzato"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:85
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:79
 #, elixir-autogen, elixir-format
 msgid "Failed to update timezone"
 msgstr "Impossibile aggiornare il fuso orario"
@@ -97,11 +97,6 @@ msgstr "Impossibile aggiornare il fuso orario"
 #, elixir-autogen, elixir-format
 msgid "Invalid"
 msgstr "Non valido"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:57
-#, elixir-autogen, elixir-format
-msgid "Invalid timezone format"
-msgstr "Formato del fuso orario non valido"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:195
 #, elixir-autogen, elixir-format
@@ -143,12 +138,12 @@ msgstr "Occupato"
 msgid "This name will appear to visitors when they book meetings with you. Changes are saved automatically."
 msgstr "Questo nome verrà mostrato ai visitatori quando prenotano riunioni con te. Le modifiche vengono salvate automaticamente."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:103
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:97
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr "Fuso orario"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:79
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:73
 #, elixir-autogen, elixir-format
 msgid "Timezone updated to %{timezone}"
 msgstr "Fuso orario aggiornato a %{timezone}"
@@ -199,3 +194,13 @@ msgstr "Il tuo URL personalizzato"
 #, elixir-autogen, elixir-format
 msgid "yourname"
 msgstr "iltuonome"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:57
+#, elixir-autogen, elixir-format
+msgid "Unknown timezone"
+msgstr "Fuso orario sconosciuto"
+
+#: lib/tymeslot/profiles.ex:257
+#, elixir-autogen, elixir-format
+msgid "Too many username change attempts. Please try again later."
+msgstr "Troppi tentativi di modifica del nome utente. Riprova più tardi."

@@ -11,7 +11,10 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
   alias Tymeslot.Security.UrlValidation
@@ -21,6 +24,9 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def display_name, do: "Zimbra"
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def connection_test_bucket, do: :caldav
 
   @doc "Returns the LiveComponent module for provider configuration UI"
   @spec setup_component() :: module()
@@ -71,14 +77,16 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
     }
   end
 
+  # Structural validation only, in line with every other provider's
+  # `validate_config/1`: the caller that needs connectivity
+  # (`Calendar.Creation.prevalidate_config/1`) invokes `validate_config/1` first
+  # and then `perform_connection_test/1`. Folding a connectivity probe into this
+  # callback would double-charge a rate-limited connection test that runs both
+  # in sequence.
   @impl Tymeslot.Integrations.Calendar.Provider
   def validate_config(config) do
-    with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]),
-         :ok <- validate_zimbra_url(config[:base_url]),
-         {:ok, client} <- build_test_client(config) do
-      ProviderCommon.test_caldav_connection(client,
-        error_formatter: &zimbra_error_formatter/1
-      )
+    with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]) do
+      validate_zimbra_url(config[:base_url])
     end
   end
 
@@ -102,13 +110,21 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   @doc """
   Tests connection to Zimbra server with Zimbra-specific messaging.
   """
-  @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
-  def test_connection(integration, opts \\ []) do
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
+  def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      metadata: opts[:metadata],
-      success_message: "Zimbra connection successful",
-      unauthorized_message: "Authentication failed. Check your Zimbra username and password.",
-      not_found_message: "Zimbra server not found. Check your server URL.",
+      success_message: dgettext("dashboard_calendar_providers", "Zimbra connection successful"),
+      unauthorized_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Authentication failed. Check your Zimbra username and password."
+        ),
+      not_found_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Zimbra server not found. Check your server URL."
+        ),
       error_formatter: &format_error/1
     )
   end
@@ -116,14 +132,13 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   @doc """
   Discovers available calendars on the Zimbra server.
   """
-  @spec discover_calendars(map(), keyword()) :: {:ok, list(map())} | {:error, String.t()}
-  def discover_calendars(client, opts \\ []) do
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
-
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec discover_calendars(map()) :: {:ok, [CalendarEntry.t()]} | {:error, String.t()}
+  def discover_calendars(client) do
     # Ensure provider is set to zimbra for proper discovery URL
     client = Map.put(client, :provider, :zimbra)
 
-    CaldavCommon.discover_calendars(client, ip_address: ip_address)
+    CaldavCommon.discover_calendars(client)
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -165,28 +180,17 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   defp validate_zimbra_url(url) do
     case UrlValidation.validate_http_url(url,
            enforce_https_for_public: true,
-           https_error_message: "Use HTTPS for non-local Zimbra servers",
+           https_error_message:
+             dgettext("dashboard_calendar_providers", "Use HTTPS for non-local Zimbra servers"),
            invalid_message:
-             "Invalid Zimbra URL. Should be your Zimbra server URL (e.g., https://mail.example.com) or full CalDAV URL (e.g., https://mail.example.com/dav/user@example.com)"
+             dgettext(
+               "dashboard_calendar_providers",
+               "Invalid Zimbra URL. Should be your Zimbra server URL (e.g., https://mail.example.com) or full CalDAV URL (e.g., https://mail.example.com/dav/user@example.com)"
+             )
          ) do
       :ok -> :ok
       {:error, message} -> {:error, message}
     end
-  end
-
-  defp build_test_client(config) do
-    full_client = new(config)
-
-    client = %{
-      base_url: full_client.base_url,
-      username: full_client.username,
-      password: full_client.password,
-      calendar_paths: full_client.calendar_paths,
-      verify_ssl: true,
-      provider: full_client.provider
-    }
-
-    {:ok, client}
   end
 
   defp normalize_base_url(url) do
@@ -206,9 +210,6 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
         build_zimbra_default_paths(config)
     end
   end
-
-  defp zimbra_error_formatter(reason),
-    do: ErrorHandler.sanitize_error_message(reason, :zimbra)
 
   defp build_zimbra_default_paths(config) do
     username = config[:username]

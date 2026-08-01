@@ -33,7 +33,18 @@ defmodule TymeslotWeb.Hooks.AppLocaleHook do
 
     Gettext.put_locale(locale)
 
-    {:cont, assign(socket, :locale, locale)}
+    # The same resolution with the user's saved preference removed from the
+    # chain: the locale a remount will resolve to once that preference is
+    # cleared (e.g. switching to "Automatic"). UI actions that build
+    # user-facing text ahead of such a remount (the language switcher's
+    # confirmation flash) read this instead of `:locale` so the flash matches
+    # what the page is about to render.
+    ambient =
+      Locales.acceptable(path_locale(session)) ||
+        Locales.acceptable(session_locale(session)) ||
+        Locales.default_locale()
+
+    {:cont, assign(socket, locale: locale, ambient_locale: ambient)}
   end
 
   # The URL is the most explicit statement of intent — locale-prefixed routes

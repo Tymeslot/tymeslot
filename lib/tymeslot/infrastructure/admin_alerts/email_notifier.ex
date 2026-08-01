@@ -8,7 +8,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
 
     1. `:admin_alerts_enabled` is `true`
     2. `:admin_alert_email` is configured to a valid email address
-    3. The Oban uniqueness constraint allows the job (i.e. an identical alert
+    3. The alert is not about the email pipeline itself (see `self_referential?/2`)
+    4. The Oban uniqueness constraint allows the job (i.e. an identical alert
        has not been enqueued within the last 24 hours)
 
   Metadata is enriched with deployment context (`tymeslot_version`,
@@ -40,9 +41,19 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
       metadata: scrubbed_metadata
     )
 
-    if alerts_enabled?() do
-      dedup_key = AlertTypes.dedup_key(type, scrubbed_metadata)
-      maybe_enqueue_email(category, severity, message, scrubbed_metadata, dedup_key)
+    cond do
+      self_referential?(type, scrubbed_metadata) ->
+        Logger.warning(
+          "Admin alert email suppressed: the alert reports a failure of the email pipeline",
+          category: category
+        )
+
+      alerts_enabled?() ->
+        dedup_key = AlertTypes.dedup_key(type, scrubbed_metadata)
+        maybe_enqueue_email(category, severity, message, scrubbed_metadata, dedup_key)
+
+      true ->
+        :noop
     end
 
     :ok
@@ -51,6 +62,23 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   defp alerts_enabled? do
     Application.get_env(:tymeslot, :admin_alerts_enabled, false) == true
   end
+
+  # An alert about the email pipeline cannot be delivered by the email pipeline.
+  # Enqueuing one is a feedback loop: the alert job fails for the same reason the
+  # original did, its own permanent failure raises another alert, and so on until
+  # the underlying fault clears. The alert is still logged above at its registry
+  # severity, so nothing is lost from the operator's view of the incident; only
+  # the undeliverable email is skipped.
+  defp self_referential?(:oban_job_failure, %{worker: worker}),
+    do: to_string(worker) == email_worker_name()
+
+  defp self_referential?(_type, _metadata), do: false
+
+  # Resolved at runtime rather than into a module attribute: naming the module
+  # at compile time would make every change to the email worker recompile this
+  # one. `inspect/1` rather than `to_string/1` because Oban records the worker
+  # without the `Elixir.` prefix.
+  defp email_worker_name, do: inspect(Tymeslot.Workers.EmailWorker)
 
   defp maybe_enqueue_email(category, severity, message, metadata, dedup_key) do
     recipient = Application.get_env(:tymeslot, :admin_alert_email)

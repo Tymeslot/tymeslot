@@ -55,17 +55,85 @@ docker run -d \
 
 This will pull the image automatically if it is not present locally. For a pinned version, replace `latest` with a release tag — `luka1thb/tymeslot:<VERSION>`, substituting the version number you want. The full list of published tags is on [Docker Hub](https://hub.docker.com/r/luka1thb/tymeslot/tags).
 
+**Prefer Compose?** The repository's `docker-compose.yml` runs the same published image and needs no clone. Download it next to your `.env` and start:
+
+```bash
+curl -O https://raw.githubusercontent.com/Tymeslot/tymeslot/main/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/Tymeslot/tymeslot/main/.env.example
+# edit .env, then:
+docker compose up -d
+```
+
 The embedded PostgreSQL listens only on `localhost` inside the container and is never exposed, so its password is an internal detail — if you omit `POSTGRES_PASSWORD` it defaults to `tymeslot`, which is fine for the embedded database. Set a strong `POSTGRES_PASSWORD` when you point Tymeslot at an [external database](#using-an-external-database).
 
 > **Keep `tymeslot_pg:/var/lib/postgresql/data` as a named volume.** Swapping it for a host path (e.g. `./pgdata:/var/lib/postgresql/data`) can break first-run initialization on Docker Desktop, rootless Docker, userns-remap, or SELinux-enforcing hosts because the mount arrives with ownership the container can't change. If you need the database on a specific host path, use an [external PostgreSQL](#using-an-external-database) instead.
 
-> ⚠️ **Email defaults to silent discard.** Without email configuration, `EMAIL_ADAPTER` defaults to `test`, which **drops every message** — password resets, booking confirmations and reminders all vanish with no error. Configure SMTP or Postmark (below) before going live. See **<https://tymeslot.app/docs/email-smtp>** and **<https://tymeslot.app/docs/email-postmark>**.
+> ⚠️ **Email defaults to silent discard.** Without email configuration, `EMAIL_ADAPTER` defaults to `test`, which **drops every message** — password resets, booking confirmations and reminders all vanish with no error. Configure SMTP, Postmark, SendGrid, Mailgun or AhaSend (below) before going live. See **<https://tymeslot.app/docs/email-smtp>** and **<https://tymeslot.app/docs/email-postmark>**.
 
 ### Option B — Build from source (Docker Compose)
 
-Clone the repository, configure `.env`, then build and run with Docker Compose.
+Build the image yourself instead of pulling the published one. Docker builds
+straight from the repository URL, so cloning is only necessary if you want to
+modify the source.
 
-#### 1. Clone Repository
+#### 1. Get the source
+
+**Without cloning (quickest).** Create an empty directory and put this
+`compose.yaml` in it. Docker does the checkout itself as part of the build:
+
+```yaml
+services:
+  tymeslot:
+    build:
+      # Docker clones the repository itself. The fragment after `#` selects
+      # which branch or tag to build.
+      context: https://github.com/Tymeslot/tymeslot.git#${TYMESLOT_VERSION:-main}
+      dockerfile: Dockerfile.docker
+    image: tymeslot:${TYMESLOT_VERSION:-main}
+    container_name: tymeslot
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    # Forward every variable from .env into the container, so SMTP, OAuth and
+    # DATA_ENCRYPTION_KEY settings reach Tymeslot as well.
+    env_file:
+      - .env
+    environment:
+      DEPLOYMENT_TYPE: docker
+      # Same value .env already supplies. It is repeated here only so Compose
+      # refuses to start with this message rather than booting a broken
+      # container when the secret is missing.
+      SECRET_KEY_BASE: "${SECRET_KEY_BASE:?required, generate one with: openssl rand -base64 64}"
+    volumes:
+      - tymeslot_data:/app/data
+      - tymeslot_pg:/var/lib/postgresql/data
+
+# Volume names are pinned with `name:` so they match the `docker run`
+# quick-start above instead of being prefixed with the Compose project name.
+volumes:
+  tymeslot_data:
+    name: tymeslot_data
+  tymeslot_pg:
+    name: tymeslot_pg
+
+networks:
+  default:
+    name: tymeslot_network
+```
+
+`TYMESLOT_VERSION` decides what gets built. Leave it unset to track `main`, or
+set it in `.env` to a release tag for a reproducible build:
+
+```bash
+TYMESLOT_VERSION=v1.4.4
+```
+
+The published tags are listed on the [releases page](https://github.com/Tymeslot/tymeslot/releases).
+Building from a git URL needs BuildKit, which is the default from Docker 23.0
+onwards.
+
+**With a clone.** Take this path if you intend to modify the source, or to use
+the build script and the repository's own `docker-compose.build.yml`:
 
 ```bash
 git clone https://github.com/Tymeslot/tymeslot.git
@@ -74,9 +142,12 @@ cd tymeslot
 
 #### 2. Configure Environment
 
+Both paths read the same `.env` file, sitting next to your Compose file.
+
 ```bash
-# Copy environment template
-cp .env.example .env
+# Start from the environment template
+cp .env.example .env                # in a clone
+curl -o .env https://raw.githubusercontent.com/Tymeslot/tymeslot/main/.env.example   # without one
 
 # Generate required secrets
 openssl rand -base64 64 | tr -d '\n'  # For SECRET_KEY_BASE
@@ -106,28 +177,43 @@ PORT=4000
 
 #### 3. Build and run
 
-**Method 1 — Docker Compose (recommended):**
+**Method 1 — Docker Compose (recommended, works for both paths):**
 
 ```bash
-docker compose up -d --build
+docker compose up -d --build                              # your own compose.yaml, no clone
+docker compose -f docker-compose.build.yml up -d --build  # in a clone
 ```
 
-Compose reads your `.env`, builds the image, and starts the container with the `tymeslot_data` and `tymeslot_pg` volumes.
+In a clone, pass `-f docker-compose.build.yml` explicitly. The default
+`docker-compose.yml` pulls the published image rather than building one, which
+is Option A above.
 
-**Method 2 — Build script:**
+Compose reads your `.env`, builds the image, and starts the container with the `tymeslot_data` and `tymeslot_pg` volumes. It reads `.env` twice over: once to fill in the `${...}` placeholders in the Compose file, and once through `env_file` to forward every variable into the container. The second part is what carries your SMTP, OAuth and `DATA_ENCRYPTION_KEY` settings through, so keep `env_file` in place if you adapt the file.
+
+To move to a newer release later, set the new tag and rebuild:
 
 ```bash
-# Run from apps/tymeslot/
+TYMESLOT_VERSION=v1.5.0 docker compose up -d --build
+```
+
+(In a clone, `git pull` first and rebuild with
+`docker compose -f docker-compose.build.yml up -d --build`; the build context is
+your working tree, so `TYMESLOT_VERSION` has no effect there.)
+
+**Method 2 — Build script (clone only):**
+
+```bash
+# Run from the repository root
 ./build-docker.sh
 ```
 
 The script validates your `.env`, builds the image, and offers to start the container.
 
-**Method 3 — Manual Docker commands:**
+**Method 3 — Manual Docker commands (clone only):**
 
 ```bash
 # Build image
-docker build -f Dockerfile.docker -t tymeslot .
+docker build -f Dockerfile.docker -t tymeslot:local .
 
 # Run container
 source .env
@@ -137,7 +223,7 @@ docker run -d \
   --env-file .env \
   -v tymeslot_data:/app/data \
   -v tymeslot_pg:/var/lib/postgresql/data \
-  tymeslot
+  tymeslot:local
 ```
 
 #### 4. Access Your Installation
@@ -215,7 +301,20 @@ Email configuration is **required for production deployments** to enable:
 - Calendar event notifications
 - User invitations
 
-**Option 1: SMTP (recommended for most users)**
+`EMAIL_ADAPTER` picks how mail leaves the container. Every option below is equally supported; the API adapters differ from SMTP mainly in reporting failures usefully and in not needing an outbound SMTP port.
+
+| `EMAIL_ADAPTER` | Additional variables |
+|---|---|
+| `smtp` | `SMTP_HOST`, `SMTP_PORT` (default 587), `SMTP_USERNAME`, `SMTP_PASSWORD` |
+| `postmark` | `POSTMARK_API_KEY` |
+| `sendgrid` | `SENDGRID_API_KEY` |
+| `mailgun` | `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, optional `MAILGUN_BASE_URL` for EU accounts |
+| `ahasend` | `AHASEND_API_KEY`, `AHASEND_ACCOUNT_ID` |
+| `test` | none — every message is discarded |
+
+Any provider not listed works over `smtp`; point `SMTP_HOST` at the relay it gives you. An `EMAIL_ADAPTER` value Tymeslot does not recognise stops the container at boot instead of silently discarding mail.
+
+**Option 1: SMTP (works with every provider)**
 ```bash
 EMAIL_ADAPTER=smtp
 EMAIL_FROM_NAME="Your Company"
@@ -226,13 +325,15 @@ SMTP_USERNAME=your-smtp-username
 SMTP_PASSWORD=your-smtp-password
 ```
 
-**Option 2: Postmark (recommended for high reliability)**
+**Option 2: a provider API (clearer delivery errors, no SMTP port needed)**
 ```bash
 EMAIL_ADAPTER=postmark
 EMAIL_FROM_NAME="Your Company"
 EMAIL_FROM_ADDRESS=noreply@yourdomain.com
 POSTMARK_API_KEY=your-postmark-api-key
 ```
+
+Swap in `sendgrid`, `mailgun` or `ahasend` with the variables from the table above. Whichever you choose, Tymeslot validates the credentials once at startup (without sending anything) and logs the result, so a bad key shows up in the container logs immediately rather than on the first booking.
 
 **Development/Testing Only**: You can use `EMAIL_ADAPTER=test` to skip email configuration during development. Emails will be logged to console instead of being sent.
 
@@ -305,25 +406,112 @@ All outbound HTTP/HTTPS requests including:
 
 ### Using an External Database
 
-By default, Tymeslot uses an embedded PostgreSQL database in the Docker container. To use an external database (e.g., from a cloud provider like AWS RDS, Azure Database, or DigitalOcean), set the **discrete** connection variables below. Tymeslot's Docker deployment does **not** read a single `DATABASE_URL` — use `DATABASE_HOST` and friends instead:
+Tymeslot's default image bundles PostgreSQL for a one-command start, but nothing requires you to use it. Point it at any PostgreSQL 14 or newer: another container, another host, or a managed service.
+
+**With a connection string** (what managed providers hand you):
 
 ```bash
-DATABASE_HOST=your-db-host.example.com
-DATABASE_PORT=5432
-POSTGRES_DB=tymeslot
-POSTGRES_USER=your_db_user
-POSTGRES_PASSWORD=your_db_password
+DATABASE_URL=postgres://user:password@db.example.com:5432/tymeslot
+DATABASE_SSL=true
 ```
 
-**Important**: When using an external database:
-- The database and user must already exist
-- Tymeslot will NOT create them automatically
-- Ensure the database accepts connections from your Docker container's IP/network
-- Network/firewall rules must allow the connection
+**With discrete variables:**
 
-The database detection is automatic:
-- If `DATABASE_HOST` is `localhost` or `127.0.0.1`, uses embedded PostgreSQL
-- If `DATABASE_HOST` is any other value, uses external database
+```bash
+DATABASE_HOST=db.example.com
+DATABASE_PORT=5432
+POSTGRES_DB=tymeslot
+POSTGRES_USER=tymeslot
+POSTGRES_PASSWORD=your_db_password
+DATABASE_SSL=true
+```
+
+`DATABASE_URL` wins where the two overlap, so there is no need to set both.
+
+**Important**: When using an external database:
+- The database and user must already exist; Tymeslot creates neither.
+- The database must accept connections from your container's network, and firewall rules must allow it.
+- Migrations run automatically on every start, so the user needs schema privileges on that database.
+
+**TLS.** Set `DATABASE_SSL=true` for managed databases. It verifies the server certificate and hostname against the system trust store. If your provider uses a private CA, download its bundle onto the `/app/data` volume and set `DATABASE_SSL_CACERT_FILE=/app/data/your-ca.pem`. For a self-signed certificate on a network you already trust, `DATABASE_SSL=verify-none` encrypts the connection without verifying it. Omit the variable entirely for a database on the same host or a private Docker network.
+
+An `sslmode` query parameter in `DATABASE_URL` (as issued by most managed providers) is honoured when `DATABASE_SSL` is unset: `require` encrypts without verification, matching its libpq meaning, while `verify-ca` and `verify-full` verify the certificate like `DATABASE_SSL=true`. An explicit `DATABASE_SSL` always wins over the URL parameter.
+
+**Detection.** The container switches to external mode when `DATABASE_URL` names a remote host, or when `DATABASE_HOST` is anything other than `localhost`/`127.0.0.1`. In external mode it never initialises or starts the bundled PostgreSQL.
+
+A `DATABASE_URL` pointing at `localhost`, `127.0.0.1` or `::1` is treated as the bundled database on images that ship one: the container logs a warning, ignores the variable, and connects with the discrete `POSTGRES_*` credentials the bundled cluster is created with. The slim image bundles no server, so there a local URL is honoured as given and expected to reach a PostgreSQL you run yourself.
+
+**Upgrading from 1.4.4 or earlier.** Those releases ignored `DATABASE_URL` on this image and always used the bundled PostgreSQL. If you have a `DATABASE_URL` left over from another deployment and want to keep using the bundled database, remove it before upgrading, or confirm it points at `localhost` so the guard above applies. A `DATABASE_URL` naming a remote host now takes effect and the bundled PostgreSQL is left unused.
+
+### Running PostgreSQL as its own container
+
+If you would rather keep the database separate, for independent backups, an existing backup routine, or plain separation of concerns, use the dedicated Compose file:
+
+```bash
+cp .env.example .env
+# fill in SECRET_KEY_BASE, PHX_HOST and POSTGRES_PASSWORD
+docker compose -f docker-compose.with-postgres.yml up -d
+```
+
+This runs two containers: `tymeslot` (using the slim image described below) and `tymeslot-postgres` (`postgres:17-alpine`), with the app waiting on the database's health check before it starts. The database lives in its own `tymeslot_pgdata` volume, so `docker exec tymeslot-postgres pg_dump …` is all a backup takes.
+
+To use a database you already run elsewhere, delete the `postgres` service and the `depends_on` block from that file and set `DATABASE_URL` in your `.env`.
+
+That file pulls the published slim image. To run one you built yourself, build the slim target from a clone and point `TYMESLOT_IMAGE` at it:
+
+```bash
+docker build -f Dockerfile.docker --target release-slim -t tymeslot:local-slim .
+echo 'TYMESLOT_IMAGE=tymeslot:local-slim' >> .env
+docker compose -f docker-compose.with-postgres.yml up -d
+```
+
+### The slim image
+
+`luka1thb/tymeslot:slim` (and `luka1thb/tymeslot:X.Y.Z-slim`) is the same application without the bundled PostgreSQL server: 1.05 GB against 1.22 GB, so roughly 170 MB smaller. It requires an external database and exits immediately with instructions if none is configured.
+
+```bash
+docker run -d --name tymeslot \
+  -p 4000:4000 \
+  -e SECRET_KEY_BASE=... \
+  -e PHX_HOST=tymeslot.example.com \
+  -e DATABASE_URL=postgres://user:password@db.example.com:5432/tymeslot \
+  -e DATABASE_SSL=true \
+  -v tymeslot_data:/app/data \
+  luka1thb/tymeslot:slim
+```
+
+**Migrating from the bundled database to an external one:**
+
+```bash
+# 1. Dump from the running container's embedded database
+docker exec tymeslot su - postgres -c "pg_dump -Fc tymeslot" > tymeslot.dump
+
+# 2. Restore into the new database
+pg_restore -d "postgres://user:password@db.example.com:5432/tymeslot" tymeslot.dump
+
+# 3. Add DATABASE_URL to your .env, switch the image tag to :slim, and recreate
+docker compose down && docker compose up -d
+```
+
+Keep `DATA_ENCRYPTION_KEY` (and `SECRET_KEY_BASE`, if you never set a separate encryption key) identical across the move, or stored credentials become undecryptable.
+
+### Podman
+
+Everything above works with Podman; `podman` is a drop-in for `docker`, and `podman compose` for `docker compose`. Two things to know:
+
+- **Rootless Podman and the bundled database.** The default image initialises its PostgreSQL cluster inside a named volume as root *within the container's user namespace*, so rootless Podman handles it. Bind-mounting a host path over `/var/lib/postgresql/data` will not work, exactly as with rootless Docker. Use a named volume, or prefer the slim image with a separate database container, which side-steps the question entirely.
+- **SELinux.** On Fedora, RHEL, and derivatives, add `:Z` to bind mounts so they are relabelled: `-v ./data:/app/data:Z`. Named volumes need no such flag.
+
+```bash
+podman compose -f docker-compose.with-postgres.yml up -d
+```
+
+To run it as a system service, generate a systemd unit from the running containers:
+
+```bash
+podman generate systemd --new --name tymeslot > ~/.config/systemd/user/tymeslot.service
+systemctl --user enable --now tymeslot
+```
 
 ### Optional Environment Variables
 
@@ -332,8 +520,11 @@ The database detection is automatic:
 ```bash
 # Application
 PORT=4000                    # HTTP port (default: 4000)
+DATABASE_URL=                # Full connection string (default: unset; wins over the variables below)
 DATABASE_HOST=localhost      # Database host (default: localhost)
 DATABASE_PORT=5432          # Database port (default: 5432)
+DATABASE_SSL=                # TLS: true / verify-full / verify-none / false (default: unset, no TLS)
+DATABASE_SSL_CACERT_FILE=    # CA bundle for certificate verification (default: system trust store)
 DATABASE_POOL_SIZE=10        # DB pool size (default: 10)
 
 # HTTP Proxy (for environments with restricted outbound access)
@@ -557,7 +748,7 @@ This appears on first start when the PostgreSQL volume lands in the container wi
 Fixes, in order of preference:
 
 1. **Use the named volume from the quick-start** (`-v tymeslot_pg:/var/lib/postgresql/data`). Named volumes live inside Docker's own storage and are immune to host filesystem quirks.
-2. **If you need the data on a specific host path**, run PostgreSQL in its own container (or managed externally) and point Tymeslot at it with `DATABASE_HOST` — see [Using an External Database](#using-an-external-database).
+2. **If you need the data on a specific host path**, run PostgreSQL in its own container (or managed externally) and point Tymeslot at it — see [Running PostgreSQL as its own container](#running-postgresql-as-its-own-container), which does exactly that with a ready-made Compose file.
 3. **If you previously attempted a first run that crashed**, remove the partially-initialised volume before retrying: `docker volume rm tymeslot_pg`.
 
 ### Port Already in Use

@@ -58,14 +58,24 @@ defmodule TymeslotWeb.HealthcheckController do
       {:error, _reason} -> "unavailable"
     end
   rescue
-    _db_error -> "unavailable"
+    exception ->
+      Logger.error("Healthcheck database probe raised",
+        error: Exception.message(exception)
+      )
+
+      "unavailable"
   end
 
   defp check_oban do
     queues = Oban.check_all_queues()
     if Enum.any?(queues, & &1.paused), do: "paused", else: "ok"
   rescue
-    _oban_error -> "unavailable"
+    exception ->
+      Logger.error("Healthcheck Oban probe raised",
+        error: Exception.message(exception)
+      )
+
+      "unavailable"
   end
 
   @essential_checks [:database, :oban]

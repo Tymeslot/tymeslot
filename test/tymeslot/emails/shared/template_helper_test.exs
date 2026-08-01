@@ -52,7 +52,6 @@ defmodule Tymeslot.Emails.Shared.TemplateHelperTest do
           eyebrow: "Notice"
         )
 
-      assert is_binary(html)
       assert html =~ "<!doctype html>"
       assert html =~ "Hello World"
     end

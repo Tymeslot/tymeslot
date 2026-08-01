@@ -13,8 +13,9 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
 
       html = EmailVerification.render(user, verification_url)
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      assert html =~ "<html"
+      assert html =~ "</html>"
+      assert html =~ "Welcome to Tymeslot"
     end
 
     test "includes user name in greeting" do
@@ -24,6 +25,27 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       html = EmailVerification.render(user, verification_url)
 
       assert html =~ "Jane Smith"
+    end
+
+    test "escapes an HTML-significant name exactly once" do
+      user = build_user_data(%{name: "O'Brien & Sons", email: "brien@example.com"})
+
+      html = EmailVerification.render(user, "https://example.com/verify/token")
+
+      # Escaped once, so the client renders "Hi O'Brien & Sons,". Escaping it
+      # twice mails out the literal text "Hi O&#39;Brien &amp; Sons,".
+      assert html =~ "Hi O&#39;Brien &amp; Sons,"
+      refute html =~ "&amp;#39;"
+      refute html =~ "&amp;amp;"
+    end
+
+    test "keeps a hostile name inert in the rendered email" do
+      user = build_user_data(%{name: "<script>alert('xss')</script>", email: "x@example.com"})
+
+      html = EmailVerification.render(user, "https://example.com/verify/token")
+
+      refute html =~ "<script>"
+      assert html =~ "&lt;script&gt;"
     end
 
     test "uses a neutral greeting when name is nil, never the email address" do
@@ -61,7 +83,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
 
       html = EmailVerification.render(user, verification_url)
 
-      assert html =~ "24 hours" || html =~ "expire"
+      assert html =~ "this link expires in 24 hours"
     end
 
     test "handles special characters in user name" do
@@ -70,8 +92,11 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
 
       html = EmailVerification.render(user, verification_url)
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      # `&` and `'` are entity-encoded, so match the parts of the name that
+      # escaping leaves untouched rather than a specific entity spelling.
+      assert html =~ "Brien"
+      assert html =~ "Sons"
+      assert html =~ verification_url
     end
   end
 
@@ -103,9 +128,10 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
 
       html = EmailVerification.render(user, verification_url)
 
-      assert is_binary(html)
-      # Script tags should be sanitized
+      # The injected markup is neutralised, and the email is still complete.
+      assert html =~ verification_url
       refute html =~ "<script>"
+      refute html =~ "alert('xss')"
     end
   end
 
@@ -120,7 +146,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerificationTest do
       url = "https://example.com/verify/token"
       text = EmailVerification.render_text(user, url)
 
-      assert is_binary(text)
+      assert text =~ "Hi <script>alert('xss')</script>,"
       assert text =~ url
     end
 
