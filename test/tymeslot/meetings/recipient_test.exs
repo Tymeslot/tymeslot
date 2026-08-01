@@ -79,7 +79,7 @@ defmodule Tymeslot.Meetings.RecipientTest do
       assert length(recipients) == 2
       assert Enum.all?(recipients, &(&1.kind == :participant))
 
-      assert Enum.map(recipients, & &1.email) |> Enum.sort() == [
+      assert recipients |> Enum.map(& &1.email) |> Enum.sort() == [
                "one@example.com",
                "two@example.com"
              ]

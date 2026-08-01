@@ -23,7 +23,7 @@ defmodule Tymeslot.Meetings.ParticipantQueriesTest do
                })
 
       assert participant.meeting_id == meeting.id
-      assert is_binary(participant.management_token)
+      assert byte_size(participant.management_token) > 0
     end
 
     test "returns a changeset error for missing required fields" do

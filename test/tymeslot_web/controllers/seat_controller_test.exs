@@ -79,7 +79,7 @@ defmodule TymeslotWeb.SeatControllerTest do
 
       assert html_response(conn, 200) =~ "Your spot has been cancelled"
       assert {:ok, reloaded} = ParticipantQueries.get_by_token(leaver.management_token)
-      assert reloaded.cancelled_at != nil
+      assert %DateTime{} = reloaded.cancelled_at
     end
 
     test "an unknown token shows the invalid page", %{conn: conn} do
