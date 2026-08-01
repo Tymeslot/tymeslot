@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Themes.Core.PollVotingTest do
 
       assert flash(updated, :info) =~ "saved"
       assert updated.assigns.tallies[slot.id].yes == 1
-      refute is_nil(updated.assigns.participant.voted_at)
+      assert %DateTime{} = updated.assigns.participant.voted_at
     end
 
     test "register with a rate-limited IP flashes without registering" do

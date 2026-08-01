@@ -98,7 +98,7 @@ defmodule Tymeslot.Polls.VotingTest do
       assert responses[slot_a.id] == :yes
       assert responses[slot_b.id] == :if_need_be
 
-      assert PollParticipantQueries.get_by_token(participant.token).voted_at != nil
+      assert %DateTime{} = PollParticipantQueries.get_by_token(participant.token).voted_at
       assert_receive {:poll_updated, poll_id}
       assert poll_id == poll.id
     end

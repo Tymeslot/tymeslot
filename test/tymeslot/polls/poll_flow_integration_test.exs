@@ -130,7 +130,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
       })
 
       alice = Repo.get_by!(PollParticipantSchema, poll_id: poll.id, email: "ada@example.com")
-      refute is_nil(alice.voted_at)
+      assert %DateTime{} = alice.voted_at
 
       # A second participant, on a fresh connection, already sees participant
       # one's tally before casting anything — the tallies are public.
@@ -146,7 +146,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
       })
 
       bob = Repo.get_by!(PollParticipantSchema, poll_id: poll.id, email: "bob@example.com")
-      refute is_nil(bob.voted_at)
+      assert %DateTime{} = bob.voted_at
 
       # Votes persisted and tallies reflect both voters on the winning slot.
       {:ok, reloaded} = Polls.get_poll_for_voting(poll.token)
