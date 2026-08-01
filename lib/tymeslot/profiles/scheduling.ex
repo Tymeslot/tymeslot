@@ -4,13 +4,12 @@ defmodule Tymeslot.Profiles.Scheduling do
   Focuses on validation and coordination with ProfileQueries.
   """
 
-  alias Tymeslot.ChangesetValidators.BookingLimits
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Validation.Constraints
 
   @min_advance_hours_range Constraints.min_advance_hours_range()
-  @booking_limit_fields BookingLimits.fields()
+  @booking_limit_fields Constraints.booking_limit_fields()
 
   @type profile :: ProfileSchema.t()
   @type result(t) :: {:ok, t} | {:error, any()}

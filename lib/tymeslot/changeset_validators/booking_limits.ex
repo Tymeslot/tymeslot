@@ -13,16 +13,12 @@ defmodule Tymeslot.ChangesetValidators.BookingLimits do
 
   alias Tymeslot.Validation.Constraints
 
-  @fields [:max_bookings_per_day, :max_bookings_per_week, :max_bookings_per_month]
+  @fields Constraints.booking_limit_fields()
 
   # Constraint-name atoms are created here at compile time, never at runtime.
   @constraint_names Map.new([:meeting_types, :profiles], fn table ->
                       {table, Map.new(@fields, &{&1, :"#{table}_#{&1}_positive"})}
                     end)
-
-  @doc "The booking-limit fields, in day/week/month order."
-  @spec fields() :: [atom()]
-  def fields, do: @fields
 
   @doc """
   Validates the three limit fields against `Constraints.booking_limit_opts/0`
