@@ -326,9 +326,9 @@ msgid "Per day"
 msgstr "На день"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:328
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Per month"
-msgstr "1 місяць"
+msgstr "На місяць"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/scheduling_settings.ex:312
 #, elixir-autogen, elixir-format
