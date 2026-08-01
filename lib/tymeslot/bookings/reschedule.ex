@@ -6,7 +6,6 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   require Logger
 
-  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, Validation}
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
@@ -50,7 +49,8 @@ defmodule Tymeslot.Bookings.Reschedule do
     with {:ok, original_meeting} <-
            MeetingQueries.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id),
          :ok <- validate_can_reschedule(original_meeting),
-         {:ok, new_times} <- prepare_new_times(new_params, original_meeting.organizer_user_id),
+         {:ok, new_times} <-
+           Validation.prepare_new_times(new_params, original_meeting.organizer_user_id),
          {:ok, updated_meeting} <- apply_time_update_and_schedule_job(original_meeting, new_times) do
       sync_provider_video_room(updated_meeting)
       send_reschedule_notifications(updated_meeting, original_meeting)
@@ -102,29 +102,6 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   defp validate_can_reschedule(meeting) do
     Policy.can_reschedule_meeting?(meeting)
-  end
-
-  defp prepare_new_times(params, organizer_user_id) do
-    with {:ok, {start_datetime, end_datetime}} <-
-           Validation.parse_meeting_times(
-             params.date,
-             params.time,
-             params.duration,
-             params.user_timezone
-           ),
-         :ok <-
-           Validation.validate_booking_time(
-             start_datetime,
-             params.user_timezone,
-             Policy.scheduling_config(organizer_user_id)
-           ) do
-      {:ok,
-       %{
-         start_time: start_datetime,
-         end_time: end_datetime,
-         duration_minutes: TimeSlots.parse_duration(params.duration)
-       }}
-    end
   end
 
   defp update_meeting(meeting, attrs) do

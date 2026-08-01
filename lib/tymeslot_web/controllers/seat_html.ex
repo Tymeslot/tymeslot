@@ -7,7 +7,7 @@ defmodule TymeslotWeb.SeatHTML do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Helpers.LocaleFormat
+  alias TymeslotWeb.Helpers.MeetingTimeFormat
 
   @doc "Landing page shown before the participant confirms the cancellation (GET step)."
   attr :participant, :map, required: true
@@ -143,7 +143,7 @@ defmodule TymeslotWeb.SeatHTML do
       <p class="text-token-base font-semibold text-tymeslot-800">{@meeting.title}</p>
       <p class="flex items-center gap-2 text-token-sm text-tymeslot-600">
         <.icon name="hero-calendar-mini" class="h-4 w-4 text-turquoise-500" />
-        {format_when(@meeting, @timezone)}
+        {MeetingTimeFormat.format_when(@meeting, @timezone)}
       </p>
       <p class="flex items-center gap-2 text-token-sm text-tymeslot-600">
         <.icon name="hero-user-mini" class="h-4 w-4 text-turquoise-500" />
@@ -164,22 +164,5 @@ defmodule TymeslotWeb.SeatHTML do
       </div>
     </main>
     """
-  end
-
-  defp format_when(meeting, timezone) do
-    tz = timezone || "Etc/UTC"
-
-    case DateTime.shift_zone(meeting.start_time, tz) do
-      {:ok, dt} -> format_datetime(dt) <> " (#{tz})"
-      _error -> format_datetime(meeting.start_time) <> " UTC"
-    end
-  end
-
-  defp format_datetime(dt) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    weekday = LocaleFormat.format_weekday_name(Date.day_of_week(dt), locale, :full)
-    month = LocaleFormat.format_month_name(dt.month, locale, :full)
-
-    "#{weekday}, #{dt.day} #{month} #{dt.year} · #{Calendar.strftime(dt, "%H:%M")}"
   end
 end

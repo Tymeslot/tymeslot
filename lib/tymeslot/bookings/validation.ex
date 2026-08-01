@@ -7,6 +7,7 @@ defmodule Tymeslot.Bookings.Validation do
   """
 
   alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
@@ -181,6 +182,40 @@ defmodule Tymeslot.Bookings.Validation do
       meeting.status == "cancelled" -> {:error, "Cannot reschedule a cancelled meeting"}
       meeting.status == "completed" -> {:error, "Cannot reschedule a completed meeting"}
       true -> {:ok, meeting}
+    end
+  end
+
+  @doc """
+  Parses and validates the requested new time for a reschedule, returning the
+  meeting attrs to write.
+
+  Shared by the whole-meeting and single-seat reschedule paths, which must
+  agree on what counts as a valid new slot: a divergence here would let a seat
+  move to a time the meeting itself could not be booked at.
+  """
+  @spec prepare_new_times(map(), integer()) ::
+          {:ok, %{start_time: DateTime.t(), end_time: DateTime.t(), duration_minutes: integer()}}
+          | {:error, term()}
+  def prepare_new_times(params, organizer_user_id) do
+    with {:ok, {start_datetime, end_datetime}} <-
+           parse_meeting_times(
+             params.date,
+             params.time,
+             params.duration,
+             params.user_timezone
+           ),
+         :ok <-
+           validate_booking_time(
+             start_datetime,
+             params.user_timezone,
+             Policy.scheduling_config(organizer_user_id)
+           ) do
+      {:ok,
+       %{
+         start_time: start_datetime,
+         end_time: end_datetime,
+         duration_minutes: TimeSlots.parse_duration(params.duration)
+       }}
     end
   end
 

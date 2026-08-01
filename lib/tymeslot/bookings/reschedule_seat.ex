@@ -16,7 +16,6 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   require Logger
 
-  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Bookings.Policy
@@ -46,7 +45,8 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
          :ok <- ensure_live(participant),
          {:ok, old_meeting} <- MeetingQueries.get_meeting(participant.meeting_id),
          :ok <- Policy.can_reschedule_meeting?(old_meeting),
-         {:ok, new_times} <- prepare_new_times(new_params, old_meeting.organizer_user_id) do
+         {:ok, new_times} <-
+           Validation.prepare_new_times(new_params, old_meeting.organizer_user_id) do
       move_seat(old_meeting, participant, new_times)
     else
       {:error, :not_found} -> {:error, :meeting_not_found}
@@ -56,29 +56,6 @@ defmodule Tymeslot.Bookings.RescheduleSeat do
 
   defp ensure_live(%{cancelled_at: nil}), do: :ok
   defp ensure_live(_participant), do: {:error, :already_cancelled}
-
-  defp prepare_new_times(params, organizer_user_id) do
-    with {:ok, {start_datetime, end_datetime}} <-
-           Validation.parse_meeting_times(
-             params.date,
-             params.time,
-             params.duration,
-             params.user_timezone
-           ),
-         :ok <-
-           Validation.validate_booking_time(
-             start_datetime,
-             params.user_timezone,
-             Policy.scheduling_config(organizer_user_id)
-           ) do
-      {:ok,
-       %{
-         start_time: start_datetime,
-         end_time: end_datetime,
-         duration_minutes: TimeSlots.parse_duration(params.duration)
-       }}
-    end
-  end
 
   defp move_seat(old_meeting, participant, new_times) do
     old_snapshot = %{
