@@ -1917,108 +1917,108 @@ msgstr "Ласкаво просимо до Tymeslot - будь ласка, пі�
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex:100
 #, elixir-autogen, elixir-format
 msgid "%{host} invited you to help pick a time for %{title}. Your vote is still outstanding."
-msgstr ""
+msgstr "%{host} запрошує вас допомогти обрати час для %{title}. Вашого голосу ще немає."
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex:46
 #, elixir-autogen, elixir-format
 msgid "%{host} is waiting for your vote on %{title}."
-msgstr ""
+msgstr "%{host} чекає на ваш голос щодо %{title}."
 
 #: lib/tymeslot/emails/templates/poll_host_nudge.ex:80
 #, elixir-autogen, elixir-format
 msgid "All votes in"
-msgstr ""
+msgstr "Усі голоси зібрано"
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex:79
 #, elixir-autogen, elixir-format
 msgid "Cast Your Vote"
-msgstr ""
+msgstr "Проголосувати"
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex:102
 #, elixir-autogen, elixir-format
 msgid "Cast your vote:"
-msgstr ""
+msgstr "Проголосуйте:"
 
 #: lib/tymeslot/emails/templates/poll_host_nudge.ex:85
 #, elixir-autogen, elixir-format
 msgid "Every participant has cast their vote on %{title}. Review the results and confirm the time that works best."
-msgstr ""
+msgstr "Усі учасники проголосували щодо %{title}. Перегляньте результати та підтвердьте найзручніший час."
 
 #: lib/tymeslot/emails/templates/poll_host_nudge.ex:83
 #, elixir-autogen, elixir-format
 msgid "Everyone has voted on %{title}"
-msgstr ""
+msgstr "Усі проголосували щодо %{title}"
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex:54
 #, elixir-autogen, elixir-format
 msgid "Help %{host} lock in a time for %{title}."
-msgstr ""
+msgstr "Допоможіть %{host} визначити час для %{title}."
 
 #: lib/tymeslot/emails/templates/poll_host_nudge.ex:60
 #, elixir-autogen, elixir-format
 msgid "Pick a Time"
-msgstr ""
+msgstr "Обрати час"
 
 #: lib/tymeslot/emails/templates/poll_host_nudge.ex:45
 #, elixir-autogen, elixir-format
 msgid "Pick a final time so everyone can put it in the diary."
-msgstr ""
+msgstr "Оберіть остаточний час, щоб усі могли внести його до календаря."
 
 #: lib/tymeslot/emails/templates/poll_host_nudge.ex:72
 #, elixir-autogen, elixir-format
 msgid "Pick a time:"
-msgstr ""
+msgstr "Оберіть час:"
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex:65
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex:98
 #, elixir-autogen, elixir-format
 msgid "Reminder: vote on \"%{title}\""
-msgstr ""
+msgstr "Нагадування: проголосуйте щодо «%{title}»"
 
 #: lib/tymeslot/emails/templates/poll_host_nudge.ex:100
 #, elixir-autogen, elixir-format
 msgid "The deadline for %{title} has passed. Review the results and confirm the time that works best."
-msgstr ""
+msgstr "Термін для %{title} минув. Перегляньте результати та підтвердьте найзручніший час."
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex:45
 #, elixir-autogen, elixir-format
 msgid "Vote on %{title}"
-msgstr ""
+msgstr "Проголосувати щодо %{title}"
 
 #: lib/tymeslot/emails/templates/poll_host_nudge.ex:96
 #, elixir-autogen, elixir-format
 msgid "Voting closed"
-msgstr ""
+msgstr "Голосування завершено"
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex:89
 #, elixir-autogen, elixir-format
 msgid "Voting closes"
-msgstr ""
+msgstr "Голосування завершується"
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex:110
 #, elixir-autogen, elixir-format
 msgid "Voting closes:"
-msgstr ""
+msgstr "Голосування завершується:"
 
 #: lib/tymeslot/emails/templates/poll_host_nudge.ex:98
 #, elixir-autogen, elixir-format
 msgid "Voting has closed on %{title}"
-msgstr ""
+msgstr "Голосування щодо %{title} завершено"
 
 #: lib/tymeslot/emails/templates/poll_deadline_reminder.ex:52
 #, elixir-autogen, elixir-format
 msgid "Your vote is needed"
-msgstr ""
+msgstr "Потрібен ваш голос"
 
 #: lib/tymeslot/emails/templates/poll_host_nudge.ex:82
 #, elixir-autogen, elixir-format
 msgid "Everyone has voted on \"%{title}\", pick a time"
-msgstr ""
+msgstr "Усі проголосували щодо «%{title}», оберіть час"
 
 #: lib/tymeslot/emails/templates/poll_host_nudge.ex:97
 #, elixir-autogen, elixir-format
 msgid "Voting has closed on \"%{title}\", pick a time"
-msgstr ""
+msgstr "Голосування щодо «%{title}» завершено, оберіть час"
 
 #: lib/tymeslot/emails/shared/mjml_email.ex:189
 #, elixir-autogen, elixir-format

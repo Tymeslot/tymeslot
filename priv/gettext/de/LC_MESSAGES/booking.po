@@ -1276,114 +1276,114 @@ msgstr "Bitte wählen Sie unten eine Option aus."
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex:151
 #, elixir-autogen, elixir-format
 msgid "Continue to vote"
-msgstr ""
+msgstr "Weiter zur Abstimmung"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex:317
 #, elixir-autogen, elixir-format
 msgid "If need be"
-msgstr ""
+msgstr "Zur Not"
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex:240
 #, elixir-autogen, elixir-format
 msgid "One of the selected times is no longer available. Please refresh and try again."
-msgstr ""
+msgstr "Eine der gewählten Zeiten ist nicht mehr verfügbar. Bitte laden Sie die Seite neu und versuchen Sie es erneut."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex:247
 #, elixir-autogen, elixir-format
 msgid "One of your responses wasn't recognised. Please refresh and try again."
-msgstr ""
+msgstr "Eine Ihrer Antworten wurde nicht erkannt. Bitte laden Sie die Seite neu und versuchen Sie es erneut."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex:230
 #, elixir-autogen, elixir-format
 msgid "Please check your name and email, then try again."
-msgstr ""
+msgstr "Bitte prüfen Sie Ihren Namen und Ihre E-Mail-Adresse und versuchen Sie es erneut."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex:154
 #, elixir-autogen, elixir-format
 msgid "Please register before voting."
-msgstr ""
+msgstr "Bitte registrieren Sie sich, bevor Sie abstimmen."
 
 #: lib/tymeslot_web/themes/core/mount_helpers.ex:227
 #, elixir-autogen, elixir-format
 msgid "Poll not found"
-msgstr ""
+msgstr "Umfrage nicht gefunden"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex:191
 #, elixir-autogen, elixir-format
 msgid "Save my responses"
-msgstr ""
+msgstr "Meine Antworten speichern"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex:220
 #, elixir-autogen, elixir-format
 msgid "Scheduled for %{time}"
-msgstr ""
+msgstr "Geplant für %{time}"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex:234
 #, elixir-autogen, elixir-format
 msgid "This poll has been cancelled and is no longer accepting responses."
-msgstr ""
+msgstr "Diese Umfrage wurde abgesagt und nimmt keine Antworten mehr entgegen."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex:222
 #, elixir-autogen, elixir-format
 msgid "This poll has been scheduled."
-msgstr ""
+msgstr "Diese Umfrage wurde terminiert."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex:227
 #, elixir-autogen, elixir-format
 msgid "This poll has reached its participant limit."
-msgstr ""
+msgstr "Diese Umfrage hat ihre Teilnehmergrenze erreicht."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex:144
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Please wait a moment and try again."
-msgstr ""
+msgstr "Zu viele Versuche. Bitte warten Sie einen Moment und versuchen Sie es erneut."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex:69
 #, elixir-autogen, elixir-format
 msgid "Voting as %{name}"
-msgstr ""
+msgstr "Abstimmung als %{name}"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex:95
 #, elixir-autogen, elixir-format
 msgid "Voting closes %{deadline}"
-msgstr ""
+msgstr "Abstimmung endet %{deadline}"
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex:224
 #: lib/tymeslot_web/themes/core/poll_voting.ex:233
 #, elixir-autogen, elixir-format
 msgid "Voting has closed for this poll."
-msgstr ""
+msgstr "Die Abstimmung für diese Umfrage ist beendet."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex:53
 #, elixir-autogen, elixir-format
 msgid "Voting has closed. Here are the final responses."
-msgstr ""
+msgstr "Die Abstimmung ist beendet. Hier sind die endgültigen Antworten."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex:236
 #, elixir-autogen, elixir-format
 msgid "We couldn't find your registration. Please register again."
-msgstr ""
+msgstr "Wir konnten Ihre Registrierung nicht finden. Bitte registrieren Sie sich erneut."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex:78
 #: lib/tymeslot_web/themes/core/poll_voting.ex:104
 #, elixir-autogen, elixir-format
 msgid "You're registered. Your responses are saved as you vote."
-msgstr ""
+msgstr "Sie sind registriert. Ihre Antworten werden beim Abstimmen gespeichert."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex:138
 #, elixir-autogen, elixir-format
 msgid "Your email"
-msgstr ""
+msgstr "Ihre E-Mail-Adresse"
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex:125
 #, elixir-autogen, elixir-format
 msgid "Your name"
-msgstr ""
+msgstr "Ihr Name"
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex:165
 #, elixir-autogen, elixir-format
 msgid "Your responses have been saved."
-msgstr ""
+msgstr "Ihre Antworten wurden gespeichert."
 
 #: lib/tymeslot_web/live/scheduling/handlers/booking_submission_handler_component.ex:257
 #, elixir-autogen, elixir-format
