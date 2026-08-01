@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Themes.Shared.GuestBooking do
   def assign_seat_cap(socket), do: assign(socket, :max_guests, seat_cap(socket.assigns))
 
   @doc """
-  Effective guest cap: `min(#{Guests.max_guests()}, seats_left - 1)` for group
+  Effective guest cap: `min(Guests.max_guests(), seats_left - 1)` for group
   meeting types with a known selected slot, the flat cap otherwise.
   """
   @spec seat_cap(map()) :: non_neg_integer()
