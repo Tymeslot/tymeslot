@@ -32,6 +32,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     unhandled_crash: %{category: "System", severity: :error},
     reconciliation_discrepancies: %{category: "Payment", severity: :warning},
     subscription_not_in_database: %{category: "Payment", severity: :warning},
+    payment_event_enqueue_failed: %{category: "Payment", severity: :error},
     analytics_tracking_anomaly: %{category: "Analytics", severity: :warning}
   }
 
@@ -78,6 +79,14 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     else
       format_message(:unhandled_crash, metadata)
     end
+  end
+
+  # Enqueue failures embed per-occurrence detail (attempt count, error text),
+  # so dedup on the event family instead — a burst of drops from the same
+  # broken event type collapses into a single alert per 24h window, while a
+  # distinct event family still raises its own alert.
+  def dedup_key(:payment_event_enqueue_failed, metadata) do
+    "payment_event_enqueue_failed:#{Map.get(metadata, :event, "unknown")}"
   end
 
   # Anomaly messages embed per-run counts, so dedup on the anomaly kind instead.
@@ -170,6 +179,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   def format_message(:subscription_not_in_database, metadata) do
     stripe_id = Map.get(metadata, :stripe_subscription_id, "unknown")
     "Active Stripe subscription #{stripe_id} has no matching database record"
+  end
+
+  def format_message(:payment_event_enqueue_failed, metadata) do
+    event = Map.get(metadata, :event, "unknown")
+    detail = Map.get(metadata, :summary) || Map.get(metadata, :reason_message, "unknown")
+    "Payment event enqueue failed for #{event}: #{detail}"
   end
 
   def format_message(:invalid_calendar_event, metadata) do

@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
       assigns
       |> assign(:calendar_list, calendar_list)
       |> assign(:total_count, length(calendar_list))
-      |> assign(:selected_count, Enum.count(calendar_list, &(&1["selected"] || &1[:selected])))
+      |> assign(:selected_count, Enum.count(calendar_list, & &1.selected))
 
     ~H"""
     <div id={@id}>
@@ -41,18 +41,19 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
         on_cancel={@on_cancel}
         size={:medium}
       >
-        <:header>
-          <div>
-            <h2 class="text-token-lg font-semibold text-tymeslot-800">
-              {dgettext("dashboard_calendar_providers", "Manage calendars")}
-            </h2>
-            <p class="mt-1 text-token-sm text-tymeslot-500">
-              {dgettext("dashboard_calendar_providers", "Choose which calendars we check to prevent double bookings.")}
-            </p>
-          </div>
-        </:header>
+        <%!-- The modal wraps this slot in its own heading, so it takes the
+             title text alone: a nested heading is invalid, and the subtitle
+             would otherwise land inside the dialog's accessible name. --%>
+        <:header>{dgettext("dashboard_calendar_providers", "Manage calendars")}</:header>
 
         <div :if={@integration}>
+          <p class="mb-4 text-token-sm text-tymeslot-500">
+            {dgettext(
+              "dashboard_calendar_providers",
+              "Choose which calendars we check to prevent double bookings."
+            )}
+          </p>
+
           <div class="mb-3 flex items-center gap-2">
             <span class="text-token-2xs font-black uppercase tracking-widest text-tymeslot-400">
               {dngettext(
@@ -72,29 +73,30 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelecti
               :for={calendar <- @calendar_list}
               phx-click="toggle_calendar_selection"
               phx-value-integration_id={@integration.id}
-              phx-value-calendar_id={calendar["id"] || calendar[:id]}
+              phx-value-calendar_id={calendar.id}
               phx-target={@target}
+              aria-pressed={to_string(calendar.selected)}
               class={[
                 "inline-flex items-center gap-2.5 rounded-token-xl border-2 px-3.5 py-2 text-token-xs font-bold transition-all",
-                ((calendar["selected"] || calendar[:selected]) &&
+                (calendar.selected &&
                    "border-turquoise-400 bg-turquoise-50 text-turquoise-900 shadow-sm shadow-turquoise-500/5") ||
                   "border-tymeslot-50 bg-white text-tymeslot-400 hover:border-tymeslot-200 hover:bg-tymeslot-50"
               ]}
             >
               <div
-                :if={(calendar["color"] || calendar[:color]) && (calendar["selected"] || calendar[:selected])}
+                :if={calendar.color && calendar.selected}
                 class="h-2.5 w-2.5 rounded-token-full ring-2 ring-white"
-                style={"background-color: #{calendar["color"] || calendar[:color]}"}
+                style={"background-color: #{calendar.color}"}
               />
               <span>{DisplayHelpers.extract_calendar_display_name(calendar)}</span>
               <span
-                :if={calendar["primary"] || calendar[:primary]}
+                :if={calendar.primary}
                 class="rounded-token-sm bg-tymeslot-200 px-1.5 py-0.5 text-token-2xs font-black uppercase tracking-tighter text-tymeslot-600"
               >
                 {dgettext("dashboard_calendar_providers", "Primary")}
               </span>
               <.icon
-                :if={calendar["selected"] || calendar[:selected]}
+                :if={calendar.selected}
                 name="hero-check"
                 class="h-3.5 w-3.5 text-turquoise-600"
               />

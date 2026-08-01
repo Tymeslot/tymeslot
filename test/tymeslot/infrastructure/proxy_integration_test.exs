@@ -8,7 +8,7 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
 
   # This test requires real proxy credentials to be configured
   # Run with: mix test --only integration
-  # Or: HTTPS_PROXY=http://user:pass@proxy:port mix test apps/tymeslot/test/tymeslot/infrastructure/proxy_integration_test.exs
+  # Or: HTTPS_PROXY=http://user:pass@proxy:port mix test test/tymeslot/infrastructure/proxy_integration_test.exs
 
   setup_all do
     # Save original proxy config
@@ -85,25 +85,25 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
         # Use HTTPS URL to force CONNECT tunnel
         test_url = "https://httpbin.org/status/200"
 
-        case HTTPClient.get(test_url) do
-          {:ok, %{status: 200}} ->
-            IO.puts("✓ Proxy authentication successful")
-            IO.puts("  CONNECT tunnel established")
-            IO.puts("  Proxy-Authorization header accepted")
-            assert true
+        response = HTTPClient.get(test_url)
 
+        case response do
           {:ok, %{status: 407}} ->
             flunk(
               "Proxy authentication failed (407). " <>
                 "Check credentials or verify proxy_headers is at connect_options level"
             )
 
-          {:ok, %{status: status}} ->
-            flunk("Unexpected status: #{status}")
-
           {:error, error} ->
             flunk("Request failed: #{inspect(error)}")
+
+          _other ->
+            :ok
         end
+
+        # A 200 over HTTPS proves the CONNECT tunnel was established and the
+        # Proxy-Authorization header was accepted.
+        assert {:ok, %{status: 200}} = response
       end
     end
 

@@ -147,8 +147,7 @@ defmodule TymeslotWeb.OnboardingCompositionTest do
       # the profile received a generated username so the user's
       # booking page is reachable on first dashboard visit.
       {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
-      assert is_binary(profile.username)
-      assert profile.username != ""
+      assert profile.username =~ ~r/\A[a-z0-9][a-z0-9_-]*\z/
     end
   end
 

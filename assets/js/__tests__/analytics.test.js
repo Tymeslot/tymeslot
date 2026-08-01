@@ -23,6 +23,50 @@ describe("installAnalytics", () => {
     installAnalytics();
     expect(() => window.analytics.track("x")).not.toThrow();
   });
+
+  test("buffers events fired before the provider arrives and flushes them on ready", () => {
+    const listeners = {};
+    const target = { addEventListener: (name, fn) => { listeners[name] = fn; } };
+    installAnalytics(target);
+
+    target.analytics.track("booking_page_viewed", { tier: "free" });
+    target.analytics.track("signup_started", { source_page: "marketing" });
+
+    const calls = [];
+    target.umami = { track: (e, p) => calls.push([e, p]) };
+    listeners["tymeslot:analytics-ready"]();
+
+    expect(calls).toEqual([
+      ["booking_page_viewed", { tier: "free" }],
+      ["signup_started", { source_page: "marketing" }],
+    ]);
+  });
+
+  test("flushes buffered events ahead of the first event tracked after the provider arrives", () => {
+    const target = { addEventListener: () => {} };
+    installAnalytics(target);
+    target.analytics.track("early");
+
+    const calls = [];
+    target.umami = { track: (e) => calls.push(e) };
+    target.analytics.track("late");
+
+    expect(calls).toEqual(["early", "late"]);
+  });
+
+  test("bounds the buffer when no provider ever arrives", () => {
+    const target = { addEventListener: () => {} };
+    installAnalytics(target);
+    for (let i = 0; i < 120; i++) target.analytics.track(`e${i}`);
+
+    const calls = [];
+    target.umami = { track: (e) => calls.push(e) };
+    target.analytics.track("last");
+
+    expect(calls).toHaveLength(51);
+    expect(calls[0]).toBe("e0");
+    expect(calls[50]).toBe("last");
+  });
 });
 
 describe("installClickTracking", () => {

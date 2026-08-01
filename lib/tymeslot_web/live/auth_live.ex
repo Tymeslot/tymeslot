@@ -42,7 +42,6 @@ defmodule TymeslotWeb.AuthLive do
       |> assign(:loading, false)
       |> assign(:resend_cooldown, 0)
       |> assign(:errors, %{})
-      |> assign(:flash_messages, %{})
       |> assign(:current_year, DateTime.utc_now().year)
       |> assign(:current_state, :login)
       |> assign(:previous_state, nil)
@@ -226,7 +225,6 @@ defmodule TymeslotWeb.AuthLive do
           socket =
             socket
             |> AuthActions.transition_state(new_state, :reset_password)
-            |> assign(:reset_email, email)
             |> put_flash(:info, message)
 
           {:noreply, push_patch(socket, to: ~p"/auth/reset-password-sent")}

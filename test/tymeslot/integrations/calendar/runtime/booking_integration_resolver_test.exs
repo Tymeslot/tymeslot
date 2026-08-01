@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -51,7 +52,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve(user.id)
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == integration.id
       assert result.default_booking_calendar_id == "/calendars/primary/"
     end
@@ -81,7 +82,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve(user.id)
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == other.id
     end
 
@@ -99,7 +100,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve(user.id)
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == primary.id
     end
 
@@ -122,7 +123,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve(user.id)
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == integration.id
     end
 
@@ -141,7 +142,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve(user.id)
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == integration.id
     end
   end
@@ -169,7 +170,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve({integration.id, user.id})
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == integration.id
     end
 
@@ -195,7 +196,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve({inactive.id, user.id})
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == primary.id
     end
 
@@ -215,7 +216,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve({nonexistent_id, user.id})
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == primary.id
     end
   end
@@ -271,7 +272,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve(meeting)
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == integration.id
       assert result.default_booking_calendar_id == "/calendars/meeting/specific-event.ics"
     end
@@ -304,7 +305,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve(meeting)
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == primary.id
     end
 
@@ -328,7 +329,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve(meeting)
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == primary.id
     end
   end
@@ -374,7 +375,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve(meeting_type)
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == integration.id
       assert result.default_booking_calendar_id == "/calendars/mt/target/"
     end
@@ -407,7 +408,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve(meeting_type)
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == primary.id
     end
 
@@ -431,7 +432,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       result = BookingIntegrationResolver.resolve(meeting_type)
 
-      assert result != nil
+      assert %CalendarIntegrationSchema{} = result
       assert result.id == primary.id
     end
   end

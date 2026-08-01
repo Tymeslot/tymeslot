@@ -154,6 +154,36 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       assert render(view) =~ "Integration name is required"
     end
 
+    test "shows a message when adding a duplicate custom video integration", %{
+      conn: conn,
+      user: user
+    } do
+      insert(:video_integration,
+        user: user,
+        provider: "custom",
+        provider_account_id: "https://meet.jit.si/my-room",
+        custom_meeting_url: "https://meet.jit.si/my-room"
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='custom']")
+      |> render_click()
+
+      html =
+        view
+        |> form("#custom-video-config-modal form", %{
+          "integration" => %{
+            "name" => "Duplicate Custom",
+            "custom_meeting_url" => "https://meet.jit.si/my-room"
+          }
+        })
+        |> render_submit()
+
+      assert html =~ "A video integration with this configuration already exists"
+    end
+
     test "initiates google meet oauth", %{conn: conn} do
       expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _uid, _uri, _scopes ->
         "https://accounts.google.com/o/oauth2/v2/auth"

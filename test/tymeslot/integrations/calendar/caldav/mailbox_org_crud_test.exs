@@ -125,7 +125,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.MailboxOrgCrudTest do
 
       assert {:ok, calendars} = XmlHandler.parse_calendar_discovery(enumeration_xml)
 
-      hrefs = Enum.map(calendars, & &1.href)
+      hrefs = Enum.map(calendars, & &1.path)
       names = Enum.map(calendars, & &1.name)
 
       assert "/caldav/Y2FsOi8vMC8zMg/" in hrefs, "writable VEVENT calendar must be included"
@@ -234,7 +234,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.MailboxOrgCrudTest do
       end)
 
       assert {:ok, [calendar]} = Discovery.discover_calendars(client(), skip_breaker: true)
-      assert calendar.href == "/caldav/Y2FsOi8vMC8zMg/"
+      assert calendar.path == "/caldav/Y2FsOi8vMC8zMg/"
     end
   end
 

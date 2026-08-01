@@ -93,8 +93,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerBootstrapTest do
                })
 
       cached = Repo.get_by(ProviderCalendarEventSchema, uid: "resync-uid@google.com")
-      assert cached != nil
-      assert cached.summary == "After resync"
+      assert %{summary: "After resync"} = cached
 
       {:ok, refreshed} =
         CalendarIntegrationQueries.get(integration.id)
@@ -145,10 +144,8 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerBootstrapTest do
 
       cached_a = Repo.get_by(ProviderCalendarEventSchema, uid: "backfill-1@google.com")
       cached_b = Repo.get_by(ProviderCalendarEventSchema, uid: "backfill-2@google.com")
-      assert cached_a != nil
-      assert cached_a.summary == "Existing event A"
-      assert cached_b != nil
-      assert cached_b.all_day == true
+      assert %{summary: "Existing event A", all_day: false} = cached_a
+      assert %{summary: "Existing event B", all_day: true} = cached_b
 
       {:ok, refreshed} =
         CalendarIntegrationQueries.get(integration.id)

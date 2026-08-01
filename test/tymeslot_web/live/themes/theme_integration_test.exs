@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
+  alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
 
@@ -43,11 +44,10 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
     } do
       {:ok, _result} = update_theme(profile, "1")
 
-      {:ok, view, html} = live(conn, ~p"/#{profile.username}")
+      {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
 
       # Core requirement: visitors must see meeting types
       assert html =~ meeting_type.name, "Theme must show meeting types"
-      assert view
     end
 
     test "visitor can see meeting types with rhythm theme", %{
@@ -57,11 +57,10 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
     } do
       {:ok, _result} = update_theme(profile, "2")
 
-      {:ok, view, html} = live(conn, ~p"/#{profile.username}")
+      {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
 
-      # Theme loads with booking interface
-      assert html =~ profile.username or html =~ meeting_type.name
-      assert view
+      # Theme loads with the booking interface, same core requirement as Quill
+      assert html =~ meeting_type.name, "Theme must show meeting types"
     end
   end
 
@@ -72,20 +71,42 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
       :ok
     end
 
-    test "themes handle no meeting types", %{conn: conn} do
+    for {theme_name, theme_id} <- [{"quill", "1"}, {"rhythm", "2"}] do
+      test "#{theme_name} shows the empty state, not phantom durations, when the host has no meeting types",
+           %{conn: conn} do
+        user = insert(:user)
+
+        profile =
+          insert(:profile,
+            user: user,
+            username: "emptyuser-#{unquote(theme_id)}",
+            booking_theme: unquote(theme_id)
+          )
+
+        # Add calendar integration to pass readiness check
+        insert(:calendar_integration, user: user, is_active: true)
+
+        {:ok, view, html} = live(conn, ~p"/#{profile.username}")
+
+        # Should not crash, should show something
+        assert html =~ profile.username
+
+        # No bookable duration may be offered: the host has none.
+        refute has_element?(view, "[data-testid='duration-option']")
+        refute html =~ "15-minutes"
+        refute html =~ "30-minutes"
+        assert html =~ "No meeting types available"
+      end
+    end
+
+    test "a booking page view does not seed default meeting types for the host", %{conn: conn} do
       user = insert(:user)
-
-      profile =
-        insert(:profile, user: user, username: "emptyuser", booking_theme: "1")
-
-      # Add calendar integration to pass readiness check
+      profile = insert(:profile, user: user, username: "unseeded", booking_theme: "1")
       insert(:calendar_integration, user: user, is_active: true)
 
-      {:ok, view, html} = live(conn, ~p"/#{profile.username}")
+      {:ok, _view, _html} = live(conn, ~p"/#{profile.username}")
 
-      # Should not crash, should show something
-      assert view
-      assert html =~ profile.username or has_element?(view, "[data-testid='duration-option']")
+      refute MeetingTypeQueries.has_meeting_types?(user.id)
     end
 
     test "invalid theme falls back gracefully", %{conn: conn} do

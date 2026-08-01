@@ -447,7 +447,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
         {:ok, %Req.Response{status: 404, body: ""}}
       end)
 
-      assert {:error, :not_found, _msg} = CalendarAPI.list_calendars(integration)
+      assert {:error, :not_found, "Calendar not found"} = CalendarAPI.list_calendars(integration)
+    end
+
+    # As with Google, a 404 on an event-scoped path means the event is gone —
+    # the message must not send the user looking for a missing calendar.
+    test "404 on an event-scoped path names the event", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      assert {:error, :not_found, "Event not found"} =
+               CalendarAPI.update_event(integration, "missing-event-id", %{summary: "Updated"})
     end
 
     test "429 from Graph API surfaces as :rate_limited", %{integration: integration} do

@@ -28,19 +28,11 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver do
   end
 
   defp find_calendar_path_by_id(calendar_list, calendar_id) do
-    calendar = Enum.find(calendar_list, &calendar_matches_id?(&1, calendar_id))
+    calendar = Enum.find(calendar_list, &UriUtils.uri_safe_match?(&1.id, calendar_id))
 
-    if calendar do
-      # CalDAV discovery historically stored only `id` (the href). Fall back to
-      # it so existing integrations whose `calendar_list` entries have a null
-      # `path` can still resolve a booking target.
-      calendar["path"] || calendar[:path] || calendar["id"] || calendar[:id]
-    else
-      nil
-    end
-  end
-
-  defp calendar_matches_id?(calendar, calendar_id) do
-    UriUtils.uri_safe_match?(calendar["id"] || calendar[:id], calendar_id)
+    # CalDAV discovery historically stored only `id` (the href). Fall back to
+    # it so existing integrations whose `calendar_list` entries have a null
+    # `path` can still resolve a booking target.
+    calendar && (calendar.path || calendar.id)
   end
 end

@@ -17,6 +17,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
   setup :set_req_test_to_shared
@@ -163,6 +164,56 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
         Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
 
       assert updated.caldav_sync_token == "stale-sync-token"
+    end
+  end
+
+  describe "perform/1 - deletion circuit breaker" do
+    @empty_multistatus """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+    </D:multistatus>
+    """
+
+    test "discards without retrying when the circuit breaker refuses a bulk deletion" do
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 3,
+          calendar_paths: [path1()]
+        )
+
+      # Confirmed an hour ago, so the refusal is still inside the grace period.
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "cached@test",
+        provider: "caldav",
+        provider_calendar_id: path1(),
+        provider_event_id: "#{path1()}cached.ics",
+        start_at: DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:microsecond),
+        end_at: DateTime.utc_now() |> DateTime.add(31, :day) |> DateTime.truncate(:microsecond),
+        synced_at:
+          DateTime.utc_now() |> DateTime.add(-1, :hour) |> DateTime.truncate(:microsecond)
+      )
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        conn
+        |> Conn.put_resp_header("content-type", "application/xml")
+        |> Conn.send_resp(207, @empty_multistatus)
+      end)
+
+      # Retrying re-fetches the same empty listing and refuses identically, so
+      # the job must not burn its remaining attempts or raise an admin alert.
+      assert {:discard, reason} =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert reason =~ "circuit breaker"
+
+      # The cache survived and the sync token was not advanced.
+      assert {:ok, _event} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "cached@test")
     end
   end
 end

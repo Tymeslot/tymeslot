@@ -46,7 +46,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueriesTest do
       assert row.status == "healthy"
       assert row.failures == 0
       assert row.consecutive_hard_failures == 0
-      assert row.successes == 2
+      assert row.successes == 0
       assert row.last_error_class == nil
       assert row.became_unhealthy_at == nil
       assert row.notification_sent_at == nil

@@ -72,28 +72,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
             class={if @loading, do: "opacity-50 cursor-not-allowed", else: ""}
           >
             <%= if @loading do %>
-              <svg
-                class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                >
-                </circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                >
-                </path>
-              </svg>
+              <.spinner class="-ml-1 mr-3 h-5 w-5 text-white" />
               {dgettext("auth", "Sending...")}
             <% else %>
               {dgettext("auth", "Send Reset Instructions")}
@@ -123,9 +102,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
       <:form>
         <div class="text-center mb-8">
           <div class="mx-auto w-20 h-20 flex items-center justify-center rounded-2xl bg-turquoise-50 border-2 border-turquoise-100 shadow-xl shadow-turquoise-500/10 mb-6 transform hover:scale-105 transition-all duration-300">
-            <svg class="w-10 h-10 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
+            <.icon name="hero-envelope" class="w-10 h-10 text-turquoise-600" />
           </div>
           <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
             {dgettext(
@@ -276,9 +253,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
       <:form>
         <div class="text-center mb-8">
           <div class="mx-auto w-20 h-20 flex items-center justify-center rounded-2xl bg-red-50 border-2 border-red-100 shadow-xl shadow-red-500/10 mb-6 transform hover:scale-105 transition-all duration-300">
-            <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <.icon name="hero-exclamation-circle" class="w-10 h-10 text-red-500" />
           </div>
           <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">
             {dgettext("auth", "Link Expired or Invalid")}
@@ -323,9 +298,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
       <:form>
         <div class="text-center mb-8">
           <div class="mx-auto w-20 h-20 flex items-center justify-center rounded-2xl bg-emerald-50 border-2 border-emerald-100 shadow-xl shadow-emerald-500/10 mb-6 transform hover:scale-105 transition-all duration-300">
-            <svg class="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <.icon name="hero-check-circle" class="w-10 h-10 text-emerald-600" />
           </div>
           <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">
             {dgettext("auth", "Password Changed")}

@@ -20,6 +20,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessor do
 
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Webhooks.WebhookRegistry
+  alias Tymeslot.Utils.MapKeys
 
   @type process_result :: :ok | {:error, term()}
 
@@ -38,7 +39,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessor do
   end
 
   defp dispatch(event) do
-    type = fetch(event, "type")
+    type = MapKeys.get(event, :type)
 
     case WebhookRegistry.handler_for(type) do
       nil ->
@@ -48,20 +49,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessor do
       handler ->
         Logger.info("Dispatching Connect webhook event",
           event_type: type,
-          event_id: fetch(event, "id")
+          event_id: MapKeys.get(event, :id)
         )
 
         handler.handle(event)
     end
-  end
-
-  defp fetch(map, key) when is_map(map) do
-    Map.get(map, key) || atom_lookup(map, key)
-  end
-
-  defp atom_lookup(map, key) do
-    Map.get(map, String.to_existing_atom(key))
-  rescue
-    ArgumentError -> nil
   end
 end

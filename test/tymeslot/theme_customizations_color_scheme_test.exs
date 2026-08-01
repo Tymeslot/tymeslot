@@ -196,7 +196,6 @@ defmodule Tymeslot.ThemeCustomizationsColorSchemeTest do
 
       result = ThemeCustomizations.resolve_active_scheme(customization, presets)
 
-      assert result != nil
       assert result.name == "Custom"
       assert result.colors.primary == "#ff6b35"
     end
@@ -209,7 +208,6 @@ defmodule Tymeslot.ThemeCustomizationsColorSchemeTest do
 
       result = ThemeCustomizations.resolve_active_scheme(customization, presets)
 
-      assert result != nil
       assert result.name == "Purple Dream"
       assert result.colors.primary == "#8b5cf6"
     end

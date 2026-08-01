@@ -3,6 +3,11 @@
 # when the outgoing commits actually touch Elixir code. Docs-only pushes go
 # straight through. CI remains the authoritative gate; this is the fast local
 # safety net.
+#
+# The sibling repository carries a byte-identical copy of this hook. Each repo
+# must be self-contained (Core is cloned standalone by contributors, so it
+# cannot source a shared file from the workspace root), so keep the two in sync
+# by hand when editing either.
 set -euo pipefail
 
 zero=0000000000000000000000000000000000000000
@@ -19,7 +24,16 @@ while read -r _local_ref local_sha _remote_ref remote_sha; do
     range="$remote_sha..$local_sha"
   fi
 
-  if git diff --name-only "$range" 2>/dev/null | grep -qE '\.(ex|exs|heex)$|^mix\.lock$'; then
+  if changed=$(git diff --name-only "$range" 2>/dev/null); then
+    if grep -qE '\.(ex|exs|heex)$|^mix\.lock$' <<<"$changed"; then
+      needs_compile=1
+    fi
+  else
+    # The range would not resolve: a new branch with no local origin/main, an
+    # unfetched remote sha, or a differently named remote. Compile rather than
+    # skip. A gate that silently passes whenever it cannot see the diff is
+    # worse than one that occasionally compiles unnecessarily.
+    echo "pre-push: cannot resolve '$range', compiling rather than skipping the gate." >&2
     needs_compile=1
   fi
 done

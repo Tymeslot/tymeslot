@@ -10,10 +10,10 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
       email = CalendarInvitation.render("guest@example.com", details)
 
       assert %Swoosh.Email{} = email
-      assert email.subject != nil
-      assert email.to != []
-      assert email.html_body != nil
-      assert email.text_body != nil
+      assert email.subject =~ "Team Sync"
+      assert email.to == [{"", "guest@example.com"}]
+      assert email.html_body =~ "Team Sync"
+      assert email.text_body =~ "Team Sync"
     end
 
     test "subject contains event title and formatted date" do
@@ -58,8 +58,9 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
       details = build_invitation_details()
       email = CalendarInvitation.render("guest@example.com", details)
 
-      ics_attachment = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
-      assert ics_attachment
+      assert ics_attachment =
+               Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
+
       assert ics_attachment.filename =~ ".ics"
     end
 
@@ -80,8 +81,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
       details = build_invitation_details(%{location: nil})
       email = CalendarInvitation.render("guest@example.com", details)
 
-      assert %Swoosh.Email{} = email
-      assert email.html_body != nil
+      assert email.html_body =~ "Team Sync"
       refute email.html_body =~ "nil"
     end
 
@@ -89,8 +89,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
       details = build_invitation_details(%{description: nil})
       email = CalendarInvitation.render("guest@example.com", details)
 
-      assert %Swoosh.Email{} = email
-      assert email.html_body != nil
+      assert email.html_body =~ "Team Sync"
       refute email.html_body =~ "nil"
     end
 
@@ -119,13 +118,20 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
       assert email.html_body =~ "Bob"
     end
 
-    test "handles various durations" do
-      for duration <- [15, 30, 45, 60, 90, 120] do
+    test "renders each supported duration in human-readable form" do
+      for {duration, rendered} <- [
+            {15, "15 minutes"},
+            {30, "30 minutes"},
+            {45, "45 minutes"},
+            {60, "1 hour"},
+            {90, "1.5 hours"},
+            {120, "2 hours"}
+          ] do
         details = build_invitation_details(%{duration: duration})
         email = CalendarInvitation.render("guest@example.com", details)
 
-        assert %Swoosh.Email{} = email
-        assert email.html_body != nil
+        assert email.html_body =~ rendered,
+               "expected #{duration} minutes to render as #{rendered}"
       end
     end
 

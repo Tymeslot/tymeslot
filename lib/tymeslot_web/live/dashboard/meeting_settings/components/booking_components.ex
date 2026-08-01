@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+  import TymeslotWeb.Components.CoreComponents, only: [spinner: 1]
   import TymeslotWeb.Components.Icons.ProviderIcon
 
   @doc """
@@ -39,8 +40,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
               "relative rounded-token-md border-2 transition-colors duration-200 group",
               "w-10 h-10 flex items-center justify-center overflow-hidden",
               if(@selected_icon == icon_value,
-                do: "bg-linear-to-br from-teal-50 to-teal-100 border-teal-500 shadow-md",
-                else: "bg-white/50 border-tymeslot-300/50 hover:border-teal-400/50 hover:bg-white/70"
+                do: "bg-linear-to-br from-turquoise-50 to-turquoise-100 border-turquoise-500 shadow-md",
+                else: "bg-white/50 border-tymeslot-300/50 hover:border-turquoise-400/50 hover:bg-white/70"
               )
             ]}
             style="width: 40px; height: 40px; min-width: 40px; min-height: 40px; max-width: 40px; max-height: 40px;"
@@ -66,8 +67,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                 class={
                   "w-8 h-8 block " <>
                     if(@selected_icon == icon_value,
-                      do: "text-teal-600",
-                      else: "text-tymeslot-500 group-hover:text-teal-500"
+                      do: "text-turquoise-600",
+                      else: "text-tymeslot-500 group-hover:text-turquoise-500"
                     )
                 }
               />
@@ -193,6 +194,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   attr :selected_calendar_integration_id, :any, required: true
   attr :refreshing_calendars, :boolean, required: true
   attr :available_calendars, :list, required: true
+  attr :no_writable_calendars, :boolean, required: true
   attr :selected_target_calendar_id, :any, required: true
   attr :form_errors, :map, required: true
   attr :myself, :any, required: true
@@ -270,19 +272,34 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
             </label>
             <%= if @refreshing_calendars do %>
               <div class="flex items-center space-x-2 p-4 bg-tymeslot-50 rounded-token-lg">
-                <svg class="animate-spin h-4 w-4 text-teal-600" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                <.spinner class="h-4 w-4 text-turquoise-600" />
                 <span class="text-token-sm text-tymeslot-600 font-medium italic">
                   {dgettext("dashboard_meeting_form", "Refreshing calendars...")}
                 </span>
               </div>
             <% else %>
               <%= if @available_calendars == [] do %>
-                <p class="text-token-sm text-tymeslot-500 italic">
-                  {dgettext("dashboard_meeting_form", "No calendars found for this account.")}
-                </p>
+                <%= if @no_writable_calendars do %>
+                  <div class="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-token-lg">
+                    <p class="text-token-sm text-yellow-700">
+                      {dgettext(
+                        "dashboard_meeting_form",
+                        "None of the calendars you selected for this account can accept bookings."
+                      )}
+                      <a
+                        href={~p"/dashboard/integrations?tab=calendars"}
+                        class="underline hover:text-yellow-800"
+                      >
+                        {dgettext("dashboard_meeting_form", "Update your calendar selection")}
+                      </a>
+                      {dgettext("dashboard_meeting_form", "or choose a different account.")}
+                    </p>
+                  </div>
+                <% else %>
+                  <p class="text-token-sm text-tymeslot-500 italic">
+                    {dgettext("dashboard_meeting_form", "No calendars found for this account.")}
+                  </p>
+                <% end %>
               <% else %>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <%= for cal <- @available_calendars do %>
@@ -290,26 +307,26 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                       type="button"
                       phx-click={
                         JS.push("select_target_calendar",
-                          value: %{id: cal["id"] || cal[:id]},
+                          value: %{id: cal.id},
                           target: @myself
                         )
                       }
                       class={[
                         "flex items-center p-3 rounded-token-lg border-2 transition-all text-left",
-                        if(@selected_target_calendar_id == (cal["id"] || cal[:id]),
-                          do: "bg-teal-50 border-teal-500 shadow-sm",
-                          else: "bg-white border-tymeslot-100 hover:border-teal-200"
+                        if(@selected_target_calendar_id == (cal.id),
+                          do: "bg-turquoise-50 border-turquoise-500 shadow-sm",
+                          else: "bg-white border-tymeslot-100 hover:border-turquoise-200"
                         )
                       ]}
                     >
                       <div class={[
                         "w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center",
-                        if(@selected_target_calendar_id == (cal["id"] || cal[:id]),
-                          do: "border-teal-50 bg-teal-500",
+                        if(@selected_target_calendar_id == (cal.id),
+                          do: "border-turquoise-50 bg-turquoise-500",
                           else: "border-tymeslot-300"
                         )
                       ]}>
-                        <%= if @selected_target_calendar_id == (cal["id"] || cal[:id]) do %>
+                        <%= if @selected_target_calendar_id == (cal.id) do %>
                           <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
                           </svg>
@@ -317,8 +334,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                       </div>
                       <span class={[
                         "text-token-sm font-medium truncate",
-                        if(@selected_target_calendar_id == (cal["id"] || cal[:id]),
-                          do: "text-teal-900",
+                        if(@selected_target_calendar_id == (cal.id),
+                          do: "text-turquoise-900",
                           else: "text-tymeslot-700"
                         )
                       ]}>

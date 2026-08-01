@@ -91,7 +91,8 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
              Calculate.month_availability(2026, 9, "Asia/Macau", "America/Santiago", [], config)
 
     assert map_size(availability) == 30
-    assert is_boolean(availability["2026-09-06"])
+    # The owner's window still lands on the attendee's DST-gap day, so it stays bookable.
+    assert availability["2026-09-06"] == true
   end
 
   property "available_slots returns valid sorted unique strings for any timezone pair", %{
@@ -129,15 +130,47 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
   end
 
   test "available_slots handles DST spring forward correctly", %{profile: profile} do
-    # ...
-    _config = %{
+    config = %{
       duration_minutes: 30,
       buffer_minutes: 0,
       min_advance_hours: 0,
       profile_id: profile.id
     }
 
-    # ...
+    # America/Santiago springs forward at 2026-09-06 00:00, so 00:00-00:59 does
+    # not exist locally that day. An Asia/Macau owner's window covers it, so the
+    # midnight slots must simply be dropped rather than offered or duplicated.
+    assert {:ok, gap_day_slots} =
+             Calculate.available_slots(
+               ~D[2026-09-06],
+               30,
+               "America/Santiago",
+               "Asia/Macau",
+               [],
+               config
+             )
+
+    refute "12:00 AM" in gap_day_slots
+    refute "12:30 AM" in gap_day_slots
+    assert "1:00 AM" in gap_day_slots
+    assert gap_day_slots == Enum.uniq(gap_day_slots)
+
+    assert gap_day_slots ==
+             Enum.sort_by(gap_day_slots, &TimeSlots.parse_time_slot/1, Time)
+
+    # The following week has no gap, so midnight is offered as normal.
+    assert {:ok, normal_day_slots} =
+             Calculate.available_slots(
+               ~D[2026-09-13],
+               30,
+               "America/Santiago",
+               "Asia/Macau",
+               [],
+               config
+             )
+
+    assert "12:00 AM" in normal_day_slots
+    assert "12:30 AM" in normal_day_slots
   end
 
   property "today's availability correctly respects min_advance_hours", %{profile: profile} do

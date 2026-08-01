@@ -12,7 +12,7 @@ defmodule Mix.Tasks.Tymeslot.ValidateVideoPresets do
 
   @shortdoc "Validates preset video files have faststart (moov before mdat)"
 
-  @video_dir "apps/tymeslot/priv/static/videos/backgrounds"
+  @video_dir "priv/static/videos/backgrounds"
 
   @impl Mix.Task
   def run(_args) do

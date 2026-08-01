@@ -56,6 +56,21 @@ defmodule Tymeslot.Utils.FormHelpersTest do
                %{duration: ["Duration must be a valid number"]}
     end
 
+    test "formats target calendar errors" do
+      assert FormHelpers.format_context_error(:target_calendar_required) ==
+               %{target_calendar: ["Please select a target calendar"]}
+
+      assert FormHelpers.format_context_error(:target_calendar_invalid) ==
+               %{target_calendar: ["Selected calendar is not available for this account"]}
+    end
+
+    test "formats no_writable_calendars with an explanation and a way forward" do
+      assert %{target_calendar: [message]} =
+               FormHelpers.format_context_error(:no_writable_calendars)
+
+      assert message =~ "None of the calendars you selected for this account can accept bookings"
+    end
+
     test "formats generic atoms to capitalized base error" do
       assert FormHelpers.format_context_error(:something_went_wrong) ==
                %{base: ["Something went wrong"]}

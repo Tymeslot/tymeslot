@@ -18,11 +18,6 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
   alias Tymeslot.Integrations.Calendar.Runtime.EventQueries
 
   @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
-  def list_events_in_range(user_id, start_date_or_dt, end_date_or_dt) do
-    EventQueries.list_events_in_range(user_id, start_date_or_dt, end_date_or_dt)
-  end
-
-  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def get_events_for_range_fresh(user_id, start_date, end_date) do
     EventQueries.get_events_for_range_fresh(user_id, start_date, end_date)
   end

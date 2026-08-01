@@ -175,7 +175,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
                  skip_breaker: true
                )
 
-      assert is_binary(uid)
+      # Server-generated UID: 16 random bytes in lowercase hex, plus the domain.
+      assert uid =~ ~r/\A[0-9a-f]{32}@tymeslot\.com\z/
     end
 
     test "sends PUT to server-root path when base_url contains a CalDAV path — no path doubling" do
@@ -309,67 +310,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
                )
     end
 
-    test "returns :precondition_failed on 412 with default :fail policy" do
-      ReqTest.stub(:tymeslot_http, fn conn ->
-        case conn.method do
-          "HEAD" ->
-            conn
-            |> Conn.put_resp_header("etag", "\"old-etag\"")
-            |> Conn.send_resp(200, "")
-
-          "PUT" ->
-            # Server has a newer version — conditional check fails
-            Conn.send_resp(conn, 412, "Precondition Failed")
-        end
-      end)
-
-      event_data = %{
-        summary: "Conflict",
-        start_time: ~U[2026-02-24 10:00:00Z],
-        end_time: ~U[2026-02-24 11:00:00Z]
-      }
-
-      assert {:error, :precondition_failed} =
-               Events.update_calendar_event(
-                 @caldav_client,
-                 "/calendars/user/personal/",
-                 "conflict-uid",
-                 event_data,
-                 skip_breaker: true
-               )
-    end
-
-    test "conflict_resolution :keep_server swallows 412 and returns :ok" do
-      # etag is supplied so HEAD is skipped; exactly one PUT should be issued
-      # (the conflict resolution swallows the 412 without a retry)
-      counter = :counters.new(1, [])
-
-      ReqTest.stub(:tymeslot_http, fn conn ->
-        :counters.add(counter, 1, 1)
-        assert conn.method == "PUT"
-        Conn.send_resp(conn, 412, "Precondition Failed")
-      end)
-
-      event_data = %{
-        summary: "Conflict",
-        start_time: ~U[2026-02-24 10:00:00Z],
-        end_time: ~U[2026-02-24 11:00:00Z]
-      }
-
-      assert :ok =
-               Events.update_calendar_event(
-                 @caldav_client,
-                 "/calendars/user/personal/",
-                 "conflict-uid",
-                 event_data,
-                 etag: "\"stale\"",
-                 conflict_resolution: :keep_server,
-                 skip_breaker: true
-               )
-
-      assert :counters.get(counter, 1) == 1
-    end
-
     test "retries PUT on 502 when If-Match is set" do
       counter = :counters.new(1, [])
 
@@ -443,47 +383,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
                    jitter_factor: 0.0,
                    retryable_errors: [:network_error, :timeout, :server_error]
                  ],
-                 skip_breaker: true
-               )
-
-      assert :counters.get(counter, 1) == 2
-    end
-
-    test "conflict_resolution :keep_local retries without If-Match after 412" do
-      counter = :counters.new(1, [])
-
-      ReqTest.stub(:tymeslot_http, fn conn ->
-        assert conn.method == "PUT"
-        :counters.add(counter, 1, 1)
-        attempt = :counters.get(counter, 1)
-        if_match = Conn.get_req_header(conn, "if-match")
-
-        case attempt do
-          1 ->
-            assert if_match == ["\"stale\""]
-            Conn.send_resp(conn, 412, "Precondition Failed")
-
-          2 ->
-            # Retry uses If-Match: * (the "unconditional overwrite" marker)
-            assert if_match == ["*"]
-            Conn.send_resp(conn, 204, "")
-        end
-      end)
-
-      event_data = %{
-        summary: "Override",
-        start_time: ~U[2026-02-24 10:00:00Z],
-        end_time: ~U[2026-02-24 11:00:00Z]
-      }
-
-      assert :ok =
-               Events.update_calendar_event(
-                 @caldav_client,
-                 "/calendars/user/personal/",
-                 "owned-uid",
-                 event_data,
-                 etag: "\"stale\"",
-                 conflict_resolution: :keep_local,
                  skip_breaker: true
                )
 

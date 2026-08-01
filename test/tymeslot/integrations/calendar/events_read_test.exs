@@ -1,8 +1,23 @@
+defmodule Tymeslot.Integrations.Calendar.EventsReadTest.LogCapture do
+  @moduledoc false
+  # Minimal :logger handler that forwards each log event (with full
+  # metadata) to a test process. The test-env default formatter only prints
+  # a whitelisted subset of metadata keys, so this is what lets a test
+  # assert on metadata fields the formatter would otherwise hide.
+  @spec log(:logger.log_event(), :logger.handler_config()) :: :ok
+  def log(event, %{config: %{pid: pid}}) do
+    send(pid, {:captured_log, event})
+    :ok
+  end
+end
+
 defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.EventsRead
+  alias Tymeslot.Integrations.Calendar.EventsReadTest.LogCapture
+  alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
 
   @base_time ~U[2024-01-01 12:00:00Z]
 
@@ -65,6 +80,79 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
   defmodule ErroringProvider do
     @spec list_events(any(), keyword()) :: {:error, :fail}
     def list_events(_client, _opts), do: {:error, :fail}
+  end
+
+  # Simulates a Google/Outlook provider whose own multi-calendar fetch
+  # (MultiCalendarFetch) hard-failed on at least one selected calendar, on
+  # both the narrow and wide-range call — used to prove the wide-range
+  # fallback is never attempted in this case (see the module attribute
+  # counter). Uses the process dictionary rather than an Agent because
+  # `fetch_events_with_fallback/3` runs both calls synchronously in the
+  # calling test process.
+  defmodule DegradedAggregateProvider do
+    @spec list_events(any(), keyword()) :: {:error, Outcome.t()}
+    def list_events(_client, _opts) do
+      Process.put(:degraded_aggregate_provider_calls, calls() + 1)
+
+      {:error,
+       %Outcome{
+         events: [],
+         attempted: 3,
+         succeeded: 2,
+         failed: [%{source: "cal-x", reason: :timeout}]
+       }}
+    end
+
+    @spec calls() :: non_neg_integer()
+    def calls, do: Process.get(:degraded_aggregate_provider_calls, 0)
+  end
+
+  # Simulates a Google/Outlook provider whose own multi-calendar fetch
+  # hard-failed on one selected calendar while another one succeeded, so the
+  # `Outcome` carries the succeeded calendar's private event content
+  # alongside the failure. Used to prove that content never reaches the log.
+  defmodule PartialSuccessAggregateProvider do
+    @spec list_events(any(), keyword()) :: {:error, Outcome.t()}
+    def list_events(_client, _opts) do
+      {:error,
+       %Outcome{
+         events: [
+           %{uid: "private-1", summary: "Therapy appointment with Dr. Confidential"}
+         ],
+         attempted: 2,
+         succeeded: 1,
+         failed: [%{source: "cal-broken", reason: :timeout}]
+       }}
+    end
+  end
+
+  # Simulates the edge case where every selected calendar was confirmed
+  # absent (404, deleted on the provider side) rather than hard-failed: no
+  # successes and no failures. Unlike `DegradedAggregateProvider`, this is
+  # not a "don't bother retrying" signal, so the wide-range fallback still
+  # runs — and here it succeeds.
+  defmodule AbsentOnlyProvider do
+    @wide_range_days 300
+
+    @spec list_events(any(), keyword()) :: {:ok, list(map())} | {:error, Outcome.t()}
+    def list_events(_client, opts) do
+      start_time = opts[:start_time]
+      end_time = opts[:end_time]
+
+      range_days =
+        if start_time && end_time do
+          DateTime.diff(end_time, start_time, :day)
+        else
+          0
+        end
+
+      if range_days >= @wide_range_days do
+        now = ~U[2024-01-01 12:00:00Z]
+        {:ok, [%{uid: "wide-range-event", start_time: now, end_time: DateTime.add(now, 3600)}]}
+      else
+        {:error, %Outcome{events: [], attempted: 1, succeeded: 0, failed: []}}
+      end
+    end
   end
 
   # Simulates a provider that fails on narrow range queries but succeeds on wide-range
@@ -211,6 +299,70 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
                EventsRead.fetch_events_with_fallback(adapter_client, start_dt, end_dt)
     end
 
+    test "skips the wide-range fallback when the primary fetch reports a degraded multi-calendar outcome" do
+      adapter_client = %{
+        provider_type: :fake,
+        provider_module: DegradedAggregateProvider,
+        client: %{calendar_path: "/cal/aggregate"}
+      }
+
+      start_dt = DateTime.add(@base_time, -3600, :second)
+      end_dt = DateTime.add(@base_time, 3600, :second)
+
+      assert {:error, %Outcome{failed: [%{source: "cal-x", reason: :timeout}]}, "/cal/aggregate"} =
+               EventsRead.fetch_events_with_fallback(adapter_client, start_dt, end_dt)
+
+      assert DegradedAggregateProvider.calls() == 1
+    end
+
+    test "logs failed calendar source and reason but never the succeeded calendars' event content" do
+      adapter_client = %{
+        provider_type: :fake,
+        provider_module: PartialSuccessAggregateProvider,
+        client: %{calendar_path: "/cal/partial-success"}
+      }
+
+      start_dt = DateTime.add(@base_time, -3600, :second)
+      end_dt = DateTime.add(@base_time, 3600, :second)
+
+      handler_id = :events_read_test_partial_success_handler
+      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
+      on_exit(fn -> :logger.remove_handler(handler_id) end)
+
+      assert {:error, %Outcome{}, "/cal/partial-success"} =
+               EventsRead.fetch_events_with_fallback(adapter_client, start_dt, end_dt)
+
+      assert_receive {:captured_log,
+                      %{
+                        level: :error,
+                        msg: {:string, "Failed to fetch from calendar"},
+                        meta: %{failed: failed} = meta
+                      }}
+
+      refute Map.has_key?(meta, :events)
+      assert failed == [%{source: "cal-broken", reason: ":timeout"}]
+
+      full_dump = inspect(meta)
+      refute full_dump =~ "Therapy appointment"
+      refute full_dump =~ "private-1"
+    end
+
+    test "still tries the wide-range fallback when the outcome has no hard failures (all sources confirmed absent)" do
+      adapter_client = %{
+        provider_type: :fake,
+        provider_module: AbsentOnlyProvider,
+        client: %{calendar_path: "/cal/absent-only"}
+      }
+
+      start_dt = DateTime.add(@base_time, -3600, :second)
+      end_dt = DateTime.add(@base_time, 3600, :second)
+
+      assert {:ok, events, "/cal/absent-only"} =
+               EventsRead.fetch_events_with_fallback(adapter_client, start_dt, end_dt)
+
+      assert Enum.map(events, & &1.uid) == ["wide-range-event"]
+    end
+
     test "filters out events with missing start_time or end_time in fallback" do
       adapter_client = %{
         provider_type: :fake,
@@ -261,27 +413,6 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
 
       assert {:ok, _events, "/calendars/user123/home"} =
                EventsRead.fetch_events_with_fallback(adapter_client, start_dt, end_dt)
-    end
-
-    test "handles Date inputs correctly by converting to DateTime" do
-      adapter_client = %{
-        provider_type: :fake,
-        provider_module: SuccessfulProvider,
-        client: %{calendar_path: "/cal/date"}
-      }
-
-      # These will be passed to list_events_in_range which uses ensure_utc
-      start_date = ~D[2024-01-01]
-      end_date = ~D[2024-01-02]
-
-      # Call with injected client list
-      assert {:ok, events} =
-               EventsRead.list_events_in_range(start_date, end_date, fn -> [adapter_client] end)
-
-      # SuccessfulProvider returns events for ~U[2024-01-01 12:00:00Z]
-      # which is inside the range of ~D[2024-01-01] (00:00:00) to ~D[2024-01-02] (00:00:00)
-      assert length(events) == 2
-      assert Enum.any?(events, &(&1.uid == "event-1"))
     end
   end
 

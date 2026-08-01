@@ -100,7 +100,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.ActionsBarTest do
     test "renders an empty mj-text when no actions are supplied" do
       html = ActionsBar.meeting_actions_bar(:confirmed, [])
 
-      assert is_binary(html)
+      assert html =~ "<mj-text"
       refute html =~ "<a href="
     end
   end

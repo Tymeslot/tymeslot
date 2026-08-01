@@ -79,9 +79,10 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
   def validate(subscription_object) when is_map(subscription_object) do
     required_fields = ["id", "customer", "trial_end"]
 
-    case Enum.all?(required_fields, &Map.has_key?(subscription_object, &1)) do
-      true -> :ok
-      false -> {:error, :missing_fields, "Missing required fields in trial_will_end object"}
+    if Enum.all?(required_fields, &Map.has_key?(subscription_object, &1)) do
+      :ok
+    else
+      {:error, :missing_fields, "Missing required fields in trial_will_end object"}
     end
   end
 

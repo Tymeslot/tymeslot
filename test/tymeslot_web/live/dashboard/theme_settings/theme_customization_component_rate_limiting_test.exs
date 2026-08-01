@@ -98,39 +98,30 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponentRateLim
       %{user_id: profile.user_id}
     end
 
-    test "handles concurrent requests atomically", %{user_id: user_id} do
-      # Spawn multiple concurrent tasks trying to exceed the rate limit
-      tasks =
-        for _i <- 1..200 do
-          Task.async(fn ->
-            RateLimiter.check_theme_customization_rate_limit(user_id)
-          end)
-        end
+    test "denies every concurrent hit once the window is already full", %{user_id: user_id} do
+      # Fill the window sequentially first. Hammer's ETS sliding window
+      # inserts a hit before it counts the window, so how far a concurrent
+      # burst overshoots the 150 limit varies with scheduling and does not
+      # hold on a CI runner. Past the limit there is no race left to lose.
+      for _i <- 1..150 do
+        assert :ok = RateLimiter.check_theme_customization_rate_limit(user_id)
+      end
 
-      results = Task.await_many(tasks, 10_000)
-
-      # Count successes and failures
-      successes = Enum.count(results, fn result -> result == :ok end)
-
-      failures =
-        Enum.count(results, fn
-          {:error, :rate_limited, _message} -> true
-          _other -> false
+      results =
+        1..200
+        |> Enum.map(fn _i ->
+          Task.async(fn -> RateLimiter.check_theme_customization_rate_limit(user_id) end)
         end)
+        |> Task.await_many(10_000)
 
-      # Rate limiting should block *some* requests. The exact split is
-      # non-deterministic — Hammer ETS uses non-atomic read-check-increment,
-      # so the overshoot above the 150 limit varies with system load and
-      # scheduler timing. We only assert that the limiter meaningfully engaged:
-      # not all 200 succeeded, and not all 200 failed.
-      assert successes < 200, "Rate limiter never engaged — all 200 requests succeeded"
-      assert failures > 0, "Expected some requests to be rate-limited"
-      assert successes >= 150, "Expected at least the base limit (150) to succeed"
-
-      # All requests should be accounted for
-      assert successes + failures == 200
+      # Every hit is accounted for, and none of them was let through.
+      assert length(results) == 200
+      assert Enum.reject(results, &match?({:error, :rate_limited, _message}, &1)) == []
     end
 
+    # The per-user assertions live inside the shared helper
+    # `RateLimiterTestHelpers.test_multiple_users_operate_independently/3`.
+    # credo:disable-for-next-line Jump.CredoChecks.TestHasNoAssertions
     test "multiple users operate independently", %{user_id: base_user_id} do
       user_2 = insert(:user)
       user_3 = insert(:user)

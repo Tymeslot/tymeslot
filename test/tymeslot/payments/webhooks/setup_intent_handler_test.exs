@@ -29,7 +29,7 @@ defmodule Tymeslot.Payments.Webhooks.SetupIntentHandlerTest do
   describe "process/2" do
     test "acknowledges setup intent event" do
       setup_intent = %{"id" => "seti_123"}
-      event = %{"type" => "setup_intent.created"}
+      event = %{type: "setup_intent.created"}
 
       assert {:ok, :setup_intent_processed} =
                SetupIntentHandler.process(event, setup_intent)

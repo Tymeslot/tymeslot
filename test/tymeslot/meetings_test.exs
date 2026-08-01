@@ -225,7 +225,8 @@ defmodule Tymeslot.MeetingsTest do
       assert {:ok, %MeetingSchema{} = updated_meeting} =
                Meetings.add_video_room_to_meeting(meeting.id)
 
-      assert updated_meeting.video_room_id != nil
+      assert updated_meeting.video_room_id == "test-room"
+      assert updated_meeting.meeting_url == "https://test.mirotalk.com/join/test-room"
       assert updated_meeting.video_room_enabled == true
       assert updated_meeting.id == meeting.id
     end
@@ -258,7 +259,9 @@ defmodule Tymeslot.MeetingsTest do
       assert {:ok, %MeetingSchema{} = updated_meeting} =
                Meetings.add_video_room_to_meeting(meeting.id)
 
-      assert updated_meeting.video_room_id != nil
+      assert updated_meeting.meeting_url == "https://meet.example.com/room/123456789"
+      # The custom provider derives a stable 16-hex-char room id from the URL.
+      assert updated_meeting.video_room_id =~ ~r/^[0-9a-f]{16}$/
       assert updated_meeting.video_room_enabled == true
     end
 

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
   import TymeslotWeb.Components.CoreComponents
   alias Floki
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.MailboxOrgConfig
@@ -30,7 +31,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         name: "My Calendar",
         provider: "google",
         is_active: true,
-        calendar_list: [%{"id" => "cal1", "name" => "Work", "selected" => true}],
+        calendar_list: [%CalendarEntry{id: "cal1", name: "Work", selected: true}],
         default_booking_calendar_id: "cal1",
         provider_account_email: nil,
         needs_reauth: false
@@ -114,14 +115,6 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert Floki.text(doc) =~ "Close"
   end
 
-  test "renders shared loading_spinner correctly" do
-    assigns = %{class: "w-10 h-10"}
-    html = render_component(&UIComponents.loading_spinner/1, assigns)
-    doc = Floki.parse_document!(html)
-    assert html =~ "animate-spin"
-    assert Floki.find(doc, "svg.w-10.h-10.animate-spin") != []
-  end
-
   test "renders shared form_submit_button correctly" do
     # Non-saving state
     assigns = %{saving: false, text: "Save Me"}
@@ -136,7 +129,10 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     html = render_component(&UIComponents.form_submit_button/1, assigns)
     doc = Floki.parse_document!(html)
     assert html =~ "Saving Now..."
-    assert html =~ "animate-spin"
+    # The design-system `<.spinner>` carries the `spinner` class; the spin
+    # animation comes from CSS (`.spinner { @apply animate-spin }`), not from a
+    # utility class in the markup.
+    assert html =~ "spinner"
     assert Floki.find(doc, "button[type='submit'][disabled]") != []
   end
 
@@ -328,10 +324,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
       )
 
     assert socket.assigns.is_saving == false
-    assert is_map(socket.assigns.form_errors)
-
-    assert Map.has_key?(socket.assigns.form_errors, :username) or
-             Map.has_key?(socket.assigns.form_errors, :password)
+    assert socket.assigns.form_errors == %{username: "Username is required"}
   end
 
   test "renders calendar provider config headers and provider hidden fields" do
@@ -412,7 +405,17 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
     [{compiled, _bin}] = Code.compile_string(code)
     assert compiled == module_name
-    assert function_exported?(module_name, :assign_config_defaults, 1)
+
+    # The macro must inject working defaults, not merely define the function.
+    assert %{
+             show_calendar_selection: false,
+             discovered_calendars: [],
+             discovery_credentials: %{},
+             form_values: %{},
+             form_errors: %{},
+             saving: false,
+             metadata: %{}
+           } = module_name.assign_config_defaults(%{__changed__: %{}})
   end
 
   describe "refresh_all_calendars" do

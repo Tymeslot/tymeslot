@@ -13,8 +13,9 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
 
       html = PasswordReset.render(user, reset_url)
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      assert html =~ "<html"
+      assert html =~ "</html>"
+      assert html =~ "Reset your password"
     end
 
     test "includes user name in greeting" do
@@ -61,7 +62,7 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
 
       html = PasswordReset.render(user, reset_url)
 
-      assert html =~ "2 hours" || html =~ "expire"
+      assert html =~ "This link is valid for the next 2 hours."
     end
 
     test "includes security notice" do
@@ -70,9 +71,8 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
 
       html = PasswordReset.render(user, reset_url)
 
-      # Use a more flexible assertion that handles potential HTML escaping
-      assert html =~ "request"
-      assert html =~ "security" || html =~ "secure"
+      # The apostrophe in "didn't" is HTML-escaped, so match either side of it.
+      assert html =~ "request this change, your account is still secure"
     end
   end
 
@@ -104,8 +104,8 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
 
       html = PasswordReset.render(user, reset_url)
 
-      assert is_binary(html)
-      # The malicious img tag should be sanitized
+      # The injected markup is neutralised, and the email is still complete.
+      assert html =~ reset_url
       refute html =~ "<img src=x"
     end
   end
@@ -121,7 +121,7 @@ defmodule Tymeslot.Emails.Templates.PasswordResetTest do
       url = "https://example.com/reset/token"
       text = PasswordReset.render_text(user, url)
 
-      assert is_binary(text)
+      assert text =~ "Hi <img src=x onerror=alert(1)>,"
       assert text =~ url
     end
   end

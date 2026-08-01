@@ -49,7 +49,7 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
       assert_receive {:send_alert, :unhandled_crash, payload}, 1_000
       assert payload.kind == :error
       assert payload.reason_message =~ "boom"
-      assert is_binary(payload.stacktrace)
+      assert payload.stacktrace =~ "Foo.bar/1"
     end
 
     test "a throw crash reports kind :throw" do
@@ -137,10 +137,22 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
       :ok
     end
 
-    test "installs a :logger handler" do
-      assert {:ok, _config} = :logger.get_handler_config(:tymeslot_crash_reporter)
+    test "attach/0 installs the handler and detach/0 removes it" do
+      assert {:ok, config} = :logger.get_handler_config(:tymeslot_crash_reporter)
+      assert config.module == CrashReporter
+
+      assert :ok = CrashReporter.detach()
+
+      assert :logger.get_handler_config(:tymeslot_crash_reporter) ==
+               {:error, {:not_found, :tymeslot_crash_reporter}}
+
+      # attach/0 is idempotent, so restoring it for on_exit/1 is safe.
+      assert :ok = CrashReporter.attach()
     end
 
+    # The crash travels through the :logger handler attach/0 installed, so the
+    # production code under test is invoked by the runtime, not by this body.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
     test "a genuinely crashing supervised task raises an unhandled_crash alert" do
       CaptureLog.capture_log(fn ->
         Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
@@ -179,6 +191,9 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
       :ok
     end
 
+    # The crash travels through the :logger handler attach/0 installed, so the
+    # production code under test is invoked by the runtime, not by this body.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
     test "a real crash whose alert path fails does not re-enter the handler" do
       Application.put_env(:tymeslot, :admin_alerts_impl, RaisingAdminAlerts)
 
@@ -197,6 +212,9 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
       assert {:ok, _config} = :logger.get_handler_config(:tymeslot_crash_reporter)
     end
 
+    # The crash travels through the :logger handler attach/0 installed, so the
+    # production code under test is invoked by the runtime, not by this body.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
     test "a real crash whose alert path exits does not re-enter the handler" do
       Application.put_env(:tymeslot, :admin_alerts_impl, ExitingAdminAlerts)
 

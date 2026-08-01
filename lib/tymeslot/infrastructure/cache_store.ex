@@ -30,8 +30,13 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       @doc """
       Get a value from cache or compute it if missing/expired.
       Coalesces concurrent requests for the same key to prevent cache stampedes.
+
+      Pass `cache_errors: false` in `opts` to skip storing an `{:error, _}`
+      result: the next call recomputes instead of replaying a stale failure
+      for the rest of the TTL. Off by default so existing callers keep their
+      current semantics.
       """
-      def get_or_compute(key, fun, ttl \\ @default_ttl) do
+      def get_or_compute(key, fun, ttl \\ @default_ttl, opts \\ []) do
         case CacheStore.lookup(@table_name, key) do
           {:ok, value} ->
             value
@@ -41,10 +46,10 @@ defmodule Tymeslot.Infrastructure.CacheStore do
             # This ensures that database connections and Mox expectations are preserved.
             if Application.get_env(:tymeslot, :environment) == :test and
                  not Application.get_env(:tymeslot, :force_cache_coalescing, false) do
-              CacheStore.compute_and_store(@table_name, key, fun, ttl)
+              CacheStore.compute_and_store(@table_name, key, fun, ttl, opts)
             else
               # Use GenServer to coalesce concurrent computations
-              GenServer.call(__MODULE__, {:compute_coalesced, key, fun, ttl}, 90_000)
+              GenServer.call(__MODULE__, {:compute_coalesced, key, fun, ttl, opts}, 90_000)
             end
         end
       end
@@ -87,13 +92,13 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       end
 
       @impl GenServer
-      def handle_call({:compute_coalesced, key, fun, ttl}, from, state) do
-        CacheStore.handle_compute_coalesced(@table_name, key, fun, ttl, from, state)
+      def handle_call({:compute_coalesced, key, fun, ttl, opts}, from, state) do
+        CacheStore.handle_compute_coalesced(@table_name, key, fun, ttl, opts, from, state)
       end
 
       @impl GenServer
-      def handle_info({:computation_done, key, value, ttl}, state) do
-        CacheStore.handle_computation_done(@table_name, key, value, ttl, state)
+      def handle_info({:computation_done, key, value, ttl, opts}, state) do
+        CacheStore.handle_computation_done(@table_name, key, value, ttl, opts, state)
       end
 
       @impl GenServer
@@ -134,9 +139,16 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   end
 
   @doc false
-  @spec handle_compute_coalesced(atom(), any(), (-> any()), integer(), GenServer.from(), state()) ::
-          {:reply, any(), state()} | {:noreply, state()}
-  def handle_compute_coalesced(table_name, key, fun, ttl, from, state) do
+  @spec handle_compute_coalesced(
+          atom(),
+          any(),
+          (-> any()),
+          integer(),
+          keyword(),
+          GenServer.from(),
+          state()
+        ) :: {:reply, any(), state()} | {:noreply, state()}
+  def handle_compute_coalesced(table_name, key, fun, ttl, opts, from, state) do
     case lookup(table_name, key) do
       {:ok, value} ->
         {:reply, value, state}
@@ -156,7 +168,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
                       exit({kind, reason, __STACKTRACE__})
                   end
 
-                send(parent, {:computation_done, key, value, ttl})
+                send(parent, {:computation_done, key, value, ttl, opts})
               end)
 
             ref = Process.monitor(pid)
@@ -171,8 +183,9 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   end
 
   @doc false
-  @spec handle_computation_done(atom(), any(), any(), integer(), state()) :: {:noreply, state()}
-  def handle_computation_done(table_name, key, value, ttl, state) do
+  @spec handle_computation_done(atom(), any(), any(), integer(), keyword(), state()) ::
+          {:noreply, state()}
+  def handle_computation_done(table_name, key, value, ttl, opts, state) do
     case Map.pop(state.pending, key) do
       {nil, _value} ->
         {:noreply, state}
@@ -180,8 +193,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       {%{waiters: waiters, ref: ref}, pending} ->
         Process.demonitor(ref, [:flush])
 
-        expiry = System.monotonic_time(:millisecond) + ttl
-        :ets.insert(table_name, {key, value, expiry})
+        maybe_store(table_name, key, value, ttl, opts)
 
         Enum.each(waiters, fn waiter ->
           GenServer.reply(waiter, value)
@@ -224,8 +236,8 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   end
 
   @doc false
-  @spec compute_and_store(atom(), any(), (-> any()), integer()) :: any()
-  def compute_and_store(table_name, key, fun, ttl) do
+  @spec compute_and_store(atom(), any(), (-> any()), integer(), keyword()) :: any()
+  def compute_and_store(table_name, key, fun, ttl, opts \\ []) do
     result =
       try do
         {:ok, fun.()}
@@ -247,8 +259,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
 
     case result do
       {:ok, value} ->
-        expiry = System.monotonic_time(:millisecond) + ttl
-        :ets.insert(table_name, {key, value, expiry})
+        maybe_store(table_name, key, value, ttl, opts)
         value
 
       {:raised, exception, stacktrace} ->
@@ -295,4 +306,17 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   def schedule_cleanup(interval) do
     Process.send_after(self(), :cleanup, interval)
   end
+
+  # `cache_errors: false` (see `get_or_compute/4`) skips the ETS insert for an
+  # `{:error, _}` result so a transient failure is retried on the very next
+  # call instead of being replayed for the rest of the TTL.
+  defp maybe_store(table_name, key, value, ttl, opts) do
+    if cacheable?(value, opts) do
+      expiry = System.monotonic_time(:millisecond) + ttl
+      :ets.insert(table_name, {key, value, expiry})
+    end
+  end
+
+  defp cacheable?({:error, _reason}, opts), do: Keyword.get(opts, :cache_errors, true)
+  defp cacheable?(_value, _opts), do: true
 end

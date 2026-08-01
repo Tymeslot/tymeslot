@@ -38,9 +38,7 @@ defmodule Tymeslot.Security.IPNormaliserTest do
     test "converts an IPv6 tuple to its canonical string representation" do
       # 2001:db8::1
       ipv6 = {8193, 3512, 0, 0, 0, 0, 0, 1}
-      result = IPNormaliser.normalize_for_storage(ipv6)
-      assert is_binary(result)
-      assert String.length(result) > 0
+      assert IPNormaliser.normalize_for_storage(ipv6) == "2001:db8::1"
     end
 
     test "returns nil for unrecognised types" do

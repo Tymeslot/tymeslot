@@ -120,8 +120,21 @@ defmodule Tymeslot.Auth.AdminRoles do
     end
   end
 
+  @doc """
+  Whether the admin UI is enabled for this deployment.
+
+  Reflects the `:enable_admin_ui` feature flag (Core defaults to `true`; the
+  SaaS overlay sets it to `false` to lock down the self-host admin scope). Use
+  this to decide whether admin affordances (menu entries, links) should be
+  offered at all, mirroring the `RequireAdminUiEnabled` route guard.
+  """
+  @spec admin_ui_enabled?() :: boolean()
+  def admin_ui_enabled? do
+    Application.get_env(:tymeslot, :enable_admin_ui, true)
+  end
+
   defp ensure_admin_ui_enabled do
-    if Application.get_env(:tymeslot, :enable_admin_ui, true) do
+    if admin_ui_enabled?() do
       :ok
     else
       {:error, :admin_ui_disabled}

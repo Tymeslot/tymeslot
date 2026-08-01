@@ -21,8 +21,8 @@ msgstr ""
 msgid "%{theme_name} Theme Preview"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:471
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:495
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:464
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:488
 #, elixir-autogen, elixir-format
 msgid "An error occurred. Please refresh the page and try again."
 msgstr ""
@@ -195,7 +195,7 @@ msgstr ""
 msgid "Solid Color"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:134
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:127
 #, elixir-autogen, elixir-format
 msgid "Theme Customization"
 msgstr ""
@@ -216,7 +216,7 @@ msgstr ""
 msgid "This preview reflects your current color scheme and background."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:348
+#: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization_component.ex:341
 #, elixir-autogen, elixir-format
 msgid "Too many upload attempts. Please wait a few minutes and try again."
 msgstr ""
@@ -260,4 +260,9 @@ msgstr ""
 #: lib/tymeslot_web/themes/rhythm/theme.ex:52
 #, elixir-autogen, elixir-format
 msgid "Modern sliding design with video background and a 4-slide booking flow."
+msgstr ""
+
+#: lib/tymeslot/theme_customizations.ex:454
+#, elixir-autogen, elixir-format
+msgid "Could not save your theme customization. Please try again."
 msgstr ""

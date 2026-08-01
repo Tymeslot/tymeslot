@@ -20,7 +20,6 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       domain = Application.get_env(:tymeslot, :email)[:domain]
       ics_content = IcsGenerator.generate_ics(meeting_details)
 
-      assert is_binary(ics_content)
       assert ics_content =~ "BEGIN:VCALENDAR"
       assert ics_content =~ "END:VCALENDAR"
       assert ics_content =~ "BEGIN:VEVENT"
@@ -76,7 +75,6 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       ics_content = IcsGenerator.generate_ics(meeting_details)
 
       # Should still generate valid ICS without attendee
-      assert is_binary(ics_content)
       assert ics_content =~ "BEGIN:VCALENDAR"
     end
 
@@ -247,7 +245,6 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       assert attachment.filename == "meeting.ics"
       assert attachment.content_type =~ "text/calendar"
       assert attachment.content_type =~ "method=PUBLISH"
-      assert is_binary(attachment.data)
       assert attachment.data =~ "BEGIN:VCALENDAR"
     end
 

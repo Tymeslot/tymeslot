@@ -30,10 +30,12 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
   describe "locked_url_for/1" do
     test "atom key returns a map with :url and :tooltip for a locked provider" do
       result = ProviderConfig.locked_url_for(:mailbox_org)
-      assert is_map(result)
-      assert Map.has_key?(result, :url)
-      assert Map.has_key?(result, :tooltip)
-      assert result.url == "https://dav.mailbox.org"
+
+      assert result == %{
+               url: "https://dav.mailbox.org",
+               tooltip:
+                 "mailbox.org always uses this CalDAV server — the address cannot be changed"
+             }
     end
 
     test "string key returns the same map as the atom key" do

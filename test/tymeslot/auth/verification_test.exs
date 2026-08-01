@@ -84,7 +84,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       assert is_nil(user.verified_at)
 
       {:ok, verified_user} = Verification.verify_user(user.id)
-      assert verified_user.verified_at != nil
+      assert %DateTime{} = verified_user.verified_at
     end
   end
 

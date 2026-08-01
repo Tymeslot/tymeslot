@@ -4,7 +4,53 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
   @moduletag :utils
 
   import Phoenix.LiveViewTest
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
+
+  describe "calendar_summary/1" do
+    test "names the booking target when it is confirmed and writable" do
+      integration = %{
+        provider_account_email: nil,
+        is_active: false,
+        last_sync_at: nil,
+        default_booking_calendar_id: "cal-writable",
+        calendar_list: [
+          %CalendarEntry{id: "cal-writable", name: "Work", read_only: false, primary: true}
+        ]
+      }
+
+      assert Components.calendar_summary(integration) == "books into Work"
+    end
+
+    test "surfaces a warning instead of silently dropping the segment when the configured booking target is read-only" do
+      integration = %{
+        provider_account_email: nil,
+        is_active: false,
+        last_sync_at: nil,
+        default_booking_calendar_id: "cal-readonly",
+        calendar_list: [
+          %CalendarEntry{id: "cal-readonly", name: "Holidays", read_only: true, primary: false}
+        ]
+      }
+
+      assert Components.calendar_summary(integration) ==
+               "booking target can no longer accept bookings"
+    end
+
+    test "stays silent (no warning) when no booking target has ever been configured" do
+      integration = %{
+        provider_account_email: nil,
+        is_active: false,
+        last_sync_at: nil,
+        default_booking_calendar_id: nil,
+        calendar_list: [
+          %CalendarEntry{id: "cal-a", name: "A", read_only: false, primary: false}
+        ]
+      }
+
+      assert Components.calendar_summary(integration) == ""
+    end
+  end
 
   describe "connected_calendars_section" do
     test "renders nothing when integrations list is empty" do
@@ -169,7 +215,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
         is_active: true,
         needs_reauth: false,
         calendar_list: [
-          %{"id" => "/a/", "path" => "/a/", "name" => "A", "selected" => true}
+          %CalendarEntry{id: "/a/", path: "/a/", name: "A", selected: true}
         ],
         calendar_paths: ["/a/"],
         base_url: "https://caldav.example.com",
@@ -216,7 +262,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
         is_active: true,
         needs_reauth: true,
         calendar_list: [
-          %{"id" => "/a/", "path" => "/a/", "name" => "A", "selected" => true}
+          %CalendarEntry{id: "/a/", path: "/a/", name: "A", selected: true}
         ],
         calendar_paths: ["/a/"],
         base_url: "https://caldav.example.com",
@@ -247,7 +293,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
         is_active: true,
         needs_reauth: false,
         calendar_list: [
-          %{"id" => "/a/", "path" => "/a/", "name" => "A", "selected" => true}
+          %CalendarEntry{id: "/a/", path: "/a/", name: "A", selected: true}
         ],
         calendar_paths: ["/a/"],
         base_url: "https://caldav.example.com",

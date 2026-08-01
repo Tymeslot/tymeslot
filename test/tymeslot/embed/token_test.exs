@@ -9,7 +9,9 @@ defmodule Tymeslot.Embed.TokenTest do
   describe "sign/2" do
     test "returns a binary token" do
       token = Token.sign("sarah")
-      assert is_binary(token)
+
+      # Phoenix.Token's envelope: "<version>.<payload>.<signature>".
+      assert [_version, _payload, _signature] = String.split(token, ".")
     end
 
     test "different usernames produce different tokens" do

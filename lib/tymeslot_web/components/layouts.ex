@@ -251,7 +251,23 @@ defmodule TymeslotWeb.Layouts do
   Renders analytics scripts based on application configuration.
   Currently supports Umami analytics.
   Returns empty content if no analytics providers are configured.
+
+  The tracker is injected from an idle callback after `load` rather than shipped
+  as a `defer`red tag. A `defer`red tracker runs in the DOMContentLoaded pileup,
+  where the first thing it does is read layout-dependent properties — forcing a
+  synchronous layout of the whole document inside a script task, which counts in
+  full against Total Blocking Time. Injecting it once the page is idle moves that
+  layout back into the normal render pipeline.
+
+  Events fired before the tracker arrives are buffered by the `window.analytics`
+  facade (see `assets/js/analytics.js`) and flushed on the
+  `tymeslot:analytics-ready` event this loader dispatches, so the delay costs no
+  page views.
+
+  Pass `nonce` (the request's `@csp_nonce`) so the inline loader satisfies CSP.
   """
+  attr :nonce, :string, default: nil
+
   @spec analytics_scripts(map()) :: Phoenix.LiveView.Rendered.t()
   def analytics_scripts(assigns) do
     providers = Application.get_env(:tymeslot, :analytics_providers, nil)
@@ -318,8 +334,48 @@ defmodule TymeslotWeb.Layouts do
       |> assign(:url, url)
       |> assign(:id, id)
 
+    # The URL and website id travel as data attributes on the loader tag rather
+    # than interpolated into the script body: HEEx does not interpolate inside a
+    # <script>, and reading them back off `document.currentScript` keeps
+    # configuration values out of the JavaScript source entirely.
     ~H"""
-    <script defer src={@url} data-website-id={@id}></script>
+    <script
+      nonce={assigns[:nonce]}
+      data-analytics-src={@url}
+      data-analytics-website-id={@id}
+    >
+      (function () {
+        var tag = document.currentScript;
+        if (!tag) return;
+
+        function load() {
+          var script = document.createElement("script");
+          script.src = tag.getAttribute("data-analytics-src");
+          script.setAttribute(
+            "data-website-id",
+            tag.getAttribute("data-analytics-website-id")
+          );
+          script.addEventListener("load", function () {
+            window.dispatchEvent(new Event("tymeslot:analytics-ready"));
+          });
+          document.head.appendChild(script);
+        }
+
+        function schedule() {
+          if (window.requestIdleCallback) {
+            window.requestIdleCallback(load, { timeout: 3000 });
+          } else {
+            window.setTimeout(load, 500);
+          }
+        }
+
+        if (document.readyState === "complete") {
+          schedule();
+        } else {
+          window.addEventListener("load", schedule, { once: true });
+        }
+      })();
+    </script>
     """
   end
 

@@ -22,9 +22,8 @@ defmodule CredoChecks.MigrationConstraintSafety do
 
   Migration files are NOT included in Credo's global `included` paths (to
   avoid noisy standard checks like Specs, TrailingWhiteSpace, etc.). Instead,
-  this check discovers migration directories (`apps/*/priv/repo/migrations`
-  and `priv/repo/migrations`) and parses them directly on its first
-  invocation. ETS is used to ensure the scan runs exactly once per Credo
+  this check reads `priv/repo/migrations` and parses the files directly on its
+  first invocation. ETS is used to ensure the scan runs exactly once per Credo
   session, even when Credo processes checks in parallel.
 
   ## Configuration
@@ -106,16 +105,16 @@ defmodule CredoChecks.MigrationConstraintSafety do
 
   # --- Self-scanning ---
 
+  # Relative to the repo Credo runs in: Core owns priv/repo/migrations, and the
+  # SaaS overlay owns priv/saas_repo/migrations. Listing both means the check
+  # covers whichever repo invokes it, rather than silently scanning nothing.
+  @migration_globs ["priv/repo/migrations/*.exs", "priv/saas_repo/migrations/*.exs"]
+
   defp scan_migration_files(params) do
-    find_migration_dirs()
-    |> Enum.flat_map(&Path.wildcard(Path.join(&1, "*.exs")))
+    @migration_globs
+    |> Enum.flat_map(&Path.wildcard/1)
     |> Enum.filter(&after_cutoff?(&1, params))
     |> Enum.flat_map(&analyze_migration(&1, params))
-  end
-
-  defp find_migration_dirs do
-    Path.wildcard("apps/*/priv/repo/migrations") ++
-      Path.wildcard("priv/repo/migrations")
   end
 
   defp analyze_migration(path, params) do

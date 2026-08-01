@@ -24,6 +24,9 @@ defmodule TymeslotWeb.Live.Themes.QuillMeetingTest do
       ThemeMeetingTestCases.setup_cancel_confirmed_view(conn, profile, meeting)
     end
 
+    # The assertions live in the shared ThemeMeetingTestCases helper, which the
+    # check cannot see because the helper name does not start with `assert_`.
+    # credo:disable-for-next-line Jump.CredoChecks.TestHasNoAssertions
     test "renders and handles navigation", %{view: view} do
       ThemeMeetingTestCases.test_cancel_confirmed_page(view)
     end
@@ -42,6 +45,9 @@ defmodule TymeslotWeb.Live.Themes.QuillMeetingTest do
       ThemeMeetingTestCases.assert_meeting_details_rendered(view, meeting, "Jane Smith", 45)
     end
 
+    # The assertions live in the shared ThemeMeetingTestCases helper, which the
+    # check cannot see because the helper name does not start with `assert_`.
+    # credo:disable-for-next-line Jump.CredoChecks.TestHasNoAssertions
     test "Choose New Time button navigates back to profile carrying the reschedule uid", %{
       view: view,
       profile: profile,
@@ -57,6 +63,9 @@ defmodule TymeslotWeb.Live.Themes.QuillMeetingTest do
   end
 
   @tag :capture_log
+  # The assertions live in the shared ThemeMeetingTestCases helper, which the
+  # check cannot see because the helper name does not start with `assert_`.
+  # credo:disable-for-next-line Jump.CredoChecks.TestHasNoAssertions
   test "meeting pages render translated strings in non-English locale", %{conn: conn} = context do
     ThemeMeetingTestCases.test_all_meeting_pages_in_locale(conn, context, "de")
   end

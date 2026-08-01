@@ -24,10 +24,11 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
         calendar_paths: []
       }
 
-      result = Connection.validate(integration, user.id, timeout: 5_000)
+      assert {:error, reason} = Connection.validate(integration, user.id, timeout: 5_000)
 
-      # Localhost port failures can manifest as either timeout or network_error depending on OS/network timing
-      assert result == {:error, :network_error} or result == {:error, :timeout}
+      # Localhost port failures can manifest as either timeout or network_error
+      # depending on OS/network timing; both are legitimate outcomes here.
+      assert reason in [:network_error, :timeout]
     end
 
     test "returns timeout error when validation exceeds timeout", %{user: user} do
@@ -39,10 +40,10 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
       }
 
       # Very short timeout to force timeout error
-      result = Connection.validate(integration, user.id, timeout: 1)
+      assert {:error, reason} = Connection.validate(integration, user.id, timeout: 1)
 
-      # DNS resolution can fail faster than timeout with network_error
-      assert result == {:error, :timeout} or result == {:error, :network_error}
+      # DNS resolution can fail faster than the timeout, yielding network_error.
+      assert reason in [:timeout, :network_error]
     end
 
     test "validates Nextcloud connection", %{user: user} do
@@ -53,11 +54,11 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
         password: "pass"
       }
 
-      result = Connection.validate(integration, user.id)
+      assert {:error, reason} = Connection.validate(integration, user.id)
 
       # Localhost port failures can manifest as either network_error or timeout
       # depending on OS/network timing and load (matches the sibling tests).
-      assert result == {:error, :network_error} or result == {:error, :timeout}
+      assert reason in [:network_error, :timeout]
     end
 
     test "uses default timeout when not specified", %{user: user} do
@@ -138,7 +139,8 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
           provider: "google",
           access_token_encrypted: Encryption.encrypt("access_token"),
           refresh_token_encrypted: Encryption.encrypt("refresh_token"),
-          token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second)
+          token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
+          oauth_scope: "https://www.googleapis.com/auth/calendar"
         )
 
       integration_map = %{
@@ -198,10 +200,13 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
     end
 
     test "tests Google Calendar provider connection" do
+      user = insert(:user)
+
       integration = %{
         provider: "google",
         access_token: "test_token",
-        refresh_token: "refresh_token"
+        refresh_token: "refresh_token",
+        user_id: user.id
       }
 
       # Mock connection test

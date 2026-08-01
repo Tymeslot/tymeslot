@@ -15,9 +15,32 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
 
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Reminder
 
+  require Logger
+
   @timestamps_opts [type: :utc_datetime_usec]
+
+  # Compile-time lookups from the string form of each atom-valued field's
+  # value to its atom. Every calendar provider (regardless of runtime
+  # enable/disable toggles) and the visibility/transparency/status
+  # vocabularies each get their own table, so a value can only ever validate
+  # against the field it belongs to: a `status` string does not accidentally
+  # parse as a `provider`, and vice versa. Parsing through these tables keeps
+  # the string entry point total: no `String.to_existing_atom/1` raise to
+  # rescue, and no dependence on whether the atom happens to have been loaded
+  # yet.
+  @known_providers Map.new(
+                     ProviderConfig.provider_constraint_list(),
+                     &{&1, String.to_existing_atom(&1)}
+                   )
+  @known_visibilities Map.new([:public, :private, :confidential], &{Atom.to_string(&1), &1})
+  @known_transparencies Map.new([:transparent, :opaque], &{Atom.to_string(&1), &1})
+  @known_statuses Map.new(
+                    [:confirmed, :tentative, :cancelled, :declined],
+                    &{Atom.to_string(&1), &1}
+                  )
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -205,14 +228,14 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     %CalendarEvent{
       uid: record.uid,
       calendar_integration_id: record.calendar_integration_id,
-      provider: safe_to_atom(record.provider),
+      provider: safe_to_atom(record.provider, @known_providers),
       provider_calendar_id: record.provider_calendar_id,
       provider_event_id: record.provider_event_id,
       recurring_event_id: record.recurring_event_id,
       summary: record.summary,
       description: record.description,
       location: record.location,
-      visibility: safe_to_atom(record.visibility),
+      visibility: safe_to_atom(record.visibility, @known_visibilities),
       colour: record.colour,
       all_day: record.all_day,
       start_date: record.start_date,
@@ -220,8 +243,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
       start_at: record.start_at,
       end_at: record.end_at,
       timezone: record.timezone,
-      transparency: safe_to_atom(record.transparency) || :opaque,
-      status: safe_to_atom(record.status) || :confirmed,
+      transparency: safe_to_atom(record.transparency, @known_transparencies) || :opaque,
+      status: safe_to_atom(record.status, @known_statuses) || :confirmed,
       organiser: record.organiser,
       attendees: record.attendees || [],
       recurrence_rule: record.recurrence_rule,
@@ -301,13 +324,24 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
 
   defp normalise_reminders(_other), do: []
 
-  defp safe_to_atom(nil), do: nil
-  defp safe_to_atom(value) when is_atom(value), do: value
+  defp safe_to_atom(nil, _known), do: nil
+  defp safe_to_atom(value, _known) when is_atom(value), do: value
 
-  defp safe_to_atom(value) when is_binary(value) do
-    String.to_existing_atom(value)
-  rescue
-    ArgumentError -> nil
+  # Provider, visibility, transparency, and status are each stored as strings
+  # drawn from their own fixed vocabulary. A value absent from the relevant
+  # table means the stored data has drifted from what this application knows
+  # about (or belongs to a different field entirely), so record it before
+  # falling back.
+  defp safe_to_atom(value, known) when is_binary(value) do
+    case Map.fetch(known, value) do
+      {:ok, atom} ->
+        atom
+
+      :error ->
+        Logger.debug("Stored calendar event value is not a known atom", value: value)
+
+        nil
+    end
   end
 
   defp safe_to_string(nil), do: nil

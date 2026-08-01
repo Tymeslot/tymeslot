@@ -8,9 +8,21 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
 
   @moduletag :oauth_integration
 
+  import Mox
   import Tymeslot.Factory
   alias Phoenix.Flash
+  alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
+  alias Tymeslot.Auth.OAuth.HelperMock
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Security.Encryption
+
+  setup do
+    # The controller resolves its callback module from config, which points at
+    # the Mox double in the test environment. Delegate to the real helper so
+    # these tests exercise the genuine callback and state handling.
+    stub_with(HelperMock, OAuthHelper)
+    :ok
+  end
 
   describe "Google OAuth Security" do
     test "prevents CSRF attacks with state parameter validation" do
@@ -29,8 +41,9 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
 
       # Assert: Authentication fails due to state mismatch
       assert redirected_to(conn, 302)
-      flash_error = Flash.get(conn.assigns.flash, :error)
-      assert flash_error =~ "authentication failed" or flash_error =~ "Security validation failed"
+
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Security validation failed. Please try again."
     end
 
     test "rate limits OAuth authentication attempts" do
@@ -75,8 +88,9 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
 
       # Assert: User is redirected with error message
       assert redirected_to(conn, 302)
-      flash_error = Flash.get(conn.assigns.flash, :error)
-      assert flash_error =~ "authentication failed" or flash_error =~ "Security validation failed"
+
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Security validation failed. Please try again."
     end
   end
 
@@ -115,8 +129,10 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
       assert integration.user_id == user.id
       assert integration.provider == "google"
       assert integration.is_active == true
-      refute is_nil(integration.access_token_encrypted)
-      refute is_nil(integration.refresh_token_encrypted)
+      # Tokens are stored encrypted at rest, never as the plaintext given here.
+      refute integration.access_token_encrypted == mock_tokens.access_token
+      assert Encryption.decrypt(integration.access_token_encrypted) == mock_tokens.access_token
+      assert Encryption.decrypt(integration.refresh_token_encrypted) == mock_tokens.refresh_token
     end
 
     test "updates existing integration when reconnecting", %{user: user} do
@@ -137,28 +153,19 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
       refute updated.access_token_encrypted == existing.access_token_encrypted
     end
 
-    test "handles calendar integration errors gracefully", %{conn: conn} do
-      import Mox
-
-      expect(Tymeslot.HTTPClientMock, :request, fn :post,
-                                                   "https://oauth2.googleapis.com/token",
-                                                   _body,
-                                                   _headers,
-                                                   _opts ->
-        {:ok, %{status: 400, body: Jason.encode!(%{"error" => "invalid_grant"})}}
-      end)
-
-      # Act: Attempt calendar callback with invalid code
+    test "rejects a calendar callback whose state is not a valid signed token", %{conn: conn} do
+      # Act: Attempt calendar callback with an unsigned state
       conn =
         get(conn, "/auth/google/calendar/callback", %{
           "code" => "invalid_code",
           "state" => "test_state"
         })
 
-      # Assert: User redirected with error
-      assert redirected_to(conn, 302)
-      flash_error = Flash.get(conn.assigns.flash, :error)
-      assert flash_error =~ "Failed to connect" or flash_error =~ "Authentication failed"
+      # Assert: the state guard rejects it before any token exchange is attempted
+      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
+
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Authentication session mismatch. Please sign in and try again."
     end
   end
 end

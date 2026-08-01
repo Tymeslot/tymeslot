@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :tymeslot
 
+  alias Tymeslot.Infrastructure.StaticCompressors
+
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
@@ -64,7 +66,17 @@ defmodule TymeslotWeb.Endpoint do
     plug Phoenix.Ecto.SQL.Sandbox
   end
 
-  if code_reloading? and Code.ensure_loaded?(Tidewave) do
+  # Tidewave's MCP plug, dev only, and deliberately gated on `code_reloading?`
+  # alone. A `Code.ensure_loaded?(Tidewave)` guard looks safer but silently
+  # drops the plug whenever this app is compiled as a path dependency of another
+  # project: Tidewave is an `only: :dev` dependency, and Mix does not put the
+  # parent's dev dependencies on the code path while this module compiles, so
+  # the check always fails there. For the same reason the compiler cannot
+  # resolve the reference in that build, hence `:no_warn_undefined`; the module
+  # is on the code path at runtime, which is what the plug call needs.
+  @compile {:no_warn_undefined, Tidewave}
+
+  if code_reloading? do
     plug Tidewave
   end
 
@@ -74,15 +86,21 @@ defmodule TymeslotWeb.Endpoint do
   # when deploying your static files in production.
   plug :serve_robots
 
-  # gzip serves precompiled `*.gz` files (written by `mix phx.digest`) in
-  # preference to the plain asset. In dev the Tailwind/esbuild watchers rebuild
-  # the plain file but never the `.gz`, so a stale `.gz` from a prior
-  # `assets.deploy` would be served instead of fresh CSS. Only enable where
-  # phx.digest runs — production.
+  # Precompiled `*.zst` and `*.gz` siblings (written by `mix phx.digest`) are
+  # served in preference to the plain asset, best-first. The list is empty
+  # outside production, where the watchers rebuild the plain file but never its
+  # siblings and a stale one would be served instead of fresh CSS.
   plug Plug.Static,
     at: "/",
     from: :tymeslot,
-    gzip: Application.compile_env(:tymeslot, :environment) == :prod,
+    encodings: StaticCompressors.encodings(Application.compile_env(:tymeslot, :environment)),
+    # Files requested without a `?vsn=` fingerprint (esbuild's code-split
+    # chunks, and anything referenced by a literal path) otherwise answer with
+    # a bare `public`, which browsers treat as "revalidate every time". An
+    # hour of freshness plus the ETag revalidation Plug.Static already sends
+    # keeps them out of the critical path on repeat visits without risking a
+    # stale asset for long.
+    cache_control_for_etags: "public, max-age=3600, must-revalidate",
     only: TymeslotWeb.static_paths() ++ ["embed.js"],
     # embed.js is a standalone file at the root (not under /assets/).
     # `only` handles the canonical /embed.js path.
@@ -123,6 +141,16 @@ defmodule TymeslotWeb.Endpoint do
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
+    # `:phoenix_live_reload` is declared `only: :dev`, and Mix discards a
+    # dependency's dev-only dependencies, so the module is invisible while this
+    # endpoint is compiled from inside a parent application's build. It is
+    # still present at boot there, supplied by that application's own dev
+    # dependency, and `:plug_init_mode` is `:runtime` in dev, so the plug
+    # resolves fine. Only the compiler cannot see it, hence the suppression
+    # rather than a `Code.ensure_loaded?/1` guard, which would silently compile
+    # live reloading out of every such build.
+    @compile {:no_warn_undefined, Phoenix.LiveReloader}
+
     socket "/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket
     plug Phoenix.LiveReloader
     plug Phoenix.CodeReloader

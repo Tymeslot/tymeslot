@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIconTest do
       refute html =~ "debug.png"
     end
 
-    test "branded providers still resolve to their per-size PNG logos" do
+    test "branded providers still resolve to their per-size WebP logos" do
       html =
         render_component(&ProviderIcon.provider_icon/1,
           provider: "caldav",
@@ -27,7 +27,27 @@ defmodule TymeslotWeb.Components.Icons.ProviderIconTest do
         )
 
       # mini maps to the compact icon set.
-      assert html =~ ~s(src="/icons/providers/calendar/compact/caldav.png")
+      assert html =~ ~s(src="/icons/providers/calendar/compact/caldav.webp")
+    end
+
+    test "icons defer loading and reserve their box before the stylesheet lands" do
+      html =
+        render_component(&ProviderIcon.provider_icon/1, provider: "zoom", type: "video")
+
+      assert html =~ ~s(loading="lazy")
+      assert html =~ ~s(width="32")
+      assert html =~ ~s(height="32")
+    end
+
+    test "callers rendering above the fold can opt out of lazy loading" do
+      html =
+        render_component(&ProviderIcon.provider_icon/1,
+          provider: "zoom",
+          type: "video",
+          loading: "eager"
+        )
+
+      assert html =~ ~s(loading="eager")
     end
   end
 end

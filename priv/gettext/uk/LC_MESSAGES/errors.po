@@ -204,3 +204,39 @@ msgstr[2] "має містити щонайбільше %{count} елемент�
 #, elixir-autogen, elixir-format
 msgid "violates an exclusion constraint"
 msgstr "порушує обмеження виключення"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex:42
+#, elixir-autogen, elixir-format
+msgid "Error 404"
+msgstr "Помилка 404"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex:55
+#, elixir-autogen, elixir-format
+msgid "Go to Tymeslot"
+msgstr "Перейти до Tymeslot"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex:7
+#: lib/tymeslot_web/live/scheduling/organizer_helpers.ex:45
+#, elixir-autogen, elixir-format
+msgid "Page not found"
+msgstr "Сторінку не знайдено"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex:48
+#, elixir-autogen, elixir-format
+msgid "The link may be broken, or the page may have moved."
+msgstr "Можливо, посилання пошкоджене або сторінку перенесено."
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex:45
+#, elixir-autogen, elixir-format
+msgid "This page doesn't exist"
+msgstr "Такої сторінки не існує"
+
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:171
+#, elixir-autogen, elixir-format
+msgid "an integration for this account already exists"
+msgstr "інтеграція для цього облікового запису вже існує"
+
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:175
+#, elixir-autogen, elixir-format
+msgid "an integration for this provider already exists"
+msgstr "інтеграція для цього провайдера вже існує"

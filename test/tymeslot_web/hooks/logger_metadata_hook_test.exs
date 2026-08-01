@@ -33,7 +33,9 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHookTest do
 
       correlation_id = updated_socket.assigns[:correlation_id]
 
-      assert is_binary(correlation_id)
+      assert correlation_id =~
+               ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+
       assert CorrelationId.get_from_process() == correlation_id
       assert Logger.metadata()[:correlation_id] == correlation_id
     end
@@ -80,7 +82,7 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHookTest do
 
       fresh_id = updated_socket.assigns[:correlation_id]
 
-      assert is_binary(fresh_id)
+      assert fresh_id =~ ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
       refute fresh_id == stale_id
       assert CorrelationId.get_from_process() == fresh_id
       assert Logger.metadata()[:correlation_id] == fresh_id

@@ -12,6 +12,11 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
   describe "delete_with_primary_reassignment/2" do
     setup do
       user = insert(:user)
+      # The primary calendar is recorded on the profile, so without one
+      # set_primary_calendar_integration/2 is a no-op and the promotion and
+      # clear-primary branches below would never be reached.
+      insert(:profile, user: user)
+
       %{user: user}
     end
 
@@ -47,34 +52,15 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
       # Set first as primary
       CalendarPrimary.set_primary_calendar_integration(user.id, integration1.id)
 
-      # Delete primary integration
-      result = Deletion.delete_with_primary_reassignment(user.id, integration1.id)
+      # Delete primary integration — the remaining one is promoted in its place
+      assert {:ok, {:deleted_promoted, integration2.id}} ==
+               Deletion.delete_with_primary_reassignment(user.id, integration1.id)
 
-      # Should either promote second integration or complete deletion
-      assert match?({:ok, {:deleted_promoted, _}}, result) or match?({:ok, :deleted}, result)
-
-      # Verify deletion
       assert {:error, :not_found} =
                CalendarManagement.get_calendar_integration(integration1.id, user.id)
 
-      # If promotion occurred, verify the promoted integration
-      case result do
-        {:ok, {:deleted_promoted, promoted_id}} ->
-          assert promoted_id == integration2.id
-
-          # Primary should now be the second integration
-          case CalendarPrimary.get_primary_calendar_integration(user.id) do
-            {:ok, primary} ->
-              assert primary.id == integration2.id
-
-            {:error, :not_found} ->
-              :ok
-          end
-
-        {:ok, :deleted} ->
-          # Deletion completed without explicit promotion
-          :ok
-      end
+      assert {:ok, primary} = CalendarPrimary.get_primary_calendar_integration(user.id)
+      assert primary.id == integration2.id
     end
 
     test "deletes last integration and clears primary", %{user: user} do
@@ -83,24 +69,15 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
       # Set as primary
       CalendarPrimary.set_primary_calendar_integration(user.id, integration.id)
 
-      # Delete last integration
-      result = Deletion.delete_with_primary_reassignment(user.id, integration.id)
+      # Delete last integration — nothing left to promote, so primary is cleared
+      assert Deletion.delete_with_primary_reassignment(user.id, integration.id) ==
+               {:ok, {:deleted_cleared_primary}}
 
-      # Should clear primary
-      assert result == {:ok, {:deleted_cleared_primary}} or result == {:ok, :deleted}
-
-      # Verify deletion
       assert {:error, :not_found} =
                CalendarManagement.get_calendar_integration(integration.id, user.id)
 
-      # Primary should be cleared
-      case ProfileQueries.get_by_user_id(user.id) do
-        {:ok, profile} ->
-          assert profile.primary_calendar_integration_id == nil
-
-        {:error, :not_found} ->
-          :ok
-      end
+      assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == nil
     end
 
     test "returns error when integration not found", %{user: user} do
@@ -131,17 +108,15 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
       CalendarPrimary.set_primary_calendar_integration(user.id, integration1.id)
 
       # Delete first (primary) - should promote second
-      result1 = Deletion.delete_with_primary_reassignment(user.id, integration1.id)
-      assert match?({:ok, {:deleted_promoted, _}}, result1) or match?({:ok, :deleted}, result1)
+      assert {:ok, {:deleted_promoted, integration2.id}} ==
+               Deletion.delete_with_primary_reassignment(user.id, integration1.id)
 
       # Delete third (non-primary)
-      result2 = Deletion.delete_with_primary_reassignment(user.id, integration3.id)
-      assert {:ok, :deleted} = result2
+      assert {:ok, :deleted} = Deletion.delete_with_primary_reassignment(user.id, integration3.id)
 
-      # Delete second (now primary) - should clear
-      result3 = Deletion.delete_with_primary_reassignment(user.id, integration2.id)
-
-      assert result3 == {:ok, {:deleted_cleared_primary}} or result3 == {:ok, :deleted}
+      # Delete second (now primary and last) - should clear
+      assert Deletion.delete_with_primary_reassignment(user.id, integration2.id) ==
+               {:ok, {:deleted_cleared_primary}}
 
       # All integrations should be deleted
       assert CalendarManagement.list_calendar_integrations(user.id) == []
@@ -196,16 +171,12 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
       # Delete primary
       result = Deletion.delete_with_primary_reassignment(user.id, integration1.id)
 
-      assert match?({:ok, {:deleted_promoted, _}}, result) or match?({:ok, :deleted}, result)
+      assert {:ok, {:deleted_promoted, promoted_id}} = result
+      assert promoted_id in [integration2.id, integration3.id]
 
-      # Verify integration2 or integration3 was promoted (most recent active)
-      case CalendarPrimary.get_primary_calendar_integration(user.id) do
-        {:ok, primary} ->
-          assert primary.id in [integration2.id, integration3.id]
-
-        {:error, :not_found} ->
-          :ok
-      end
+      # The promoted integration is the one now recorded as primary
+      assert {:ok, primary} = CalendarPrimary.get_primary_calendar_integration(user.id)
+      assert primary.id == promoted_id
     end
 
     test "handles concurrent deletions gracefully", %{user: user} do

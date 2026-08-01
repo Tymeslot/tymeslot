@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
   @moduletag :unit
   @moduletag :security
 
+  alias Tymeslot.Locales
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers
 
   describe "embed_code/2" do
@@ -359,12 +360,17 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
   end
 
   describe "language_options/0" do
-    test "returns a non-empty list of {name, code} tuples including German" do
+    test "returns one {name, code} tuple per supported locale, in config order" do
       options = Helpers.language_options()
 
-      assert is_list(options)
-      assert options != []
-      assert Enum.all?(options, fn {name, code} -> is_binary(name) and is_binary(code) end)
+      # The picker offers exactly the configured booking languages, in the order
+      # config declares them. Derived from config so adding a locale never
+      # requires editing this test.
+      refute Locales.supported_codes() == []
+      assert Enum.map(options, fn {_name, code} -> code end) == Locales.supported_codes()
+
+      # The label is the locale's own endonym, not its English name.
+      assert {"English", "en"} in options
       assert {"Deutsch", "de"} in options
     end
   end

@@ -77,8 +77,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryCompositionTest do
       names = calendars |> Enum.map(& &1.name) |> Enum.sort()
       assert names == ["Personal", "Work"]
 
-      hrefs = calendars |> Enum.map(& &1.href) |> Enum.sort()
-      assert hrefs == ["/calendars/user/personal/", "/calendars/user/work/"]
+      paths = calendars |> Enum.map(& &1.path) |> Enum.sort()
+      assert paths == ["/calendars/user/personal/", "/calendars/user/work/"]
 
       # The controller renders the picker unsaved — none of the returned
       # entries should default to selected without an explicit opt-in.

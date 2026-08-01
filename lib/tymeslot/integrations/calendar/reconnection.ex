@@ -22,9 +22,9 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   """
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Selection
-  alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Integrations.CalendarManagement
 
@@ -71,11 +71,23 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
 
   Options (keyword):
     * `:discover` — `(provider, url, username, password -> {:ok, %{calendars: …, discovery_credentials: …}} | {:error, term()})`.
-      Defaults to `Calendar.discover_and_filter_calendars/4`.
+      Defaults to `Calendar.discover_and_filter_calendars/5`, closed over this
+      integration's owner so the discovery is charged to them. The seam stays
+      arity-4 so callers injecting a double need not know about the actor.
   """
   @spec reconnect(integration(), params(), keyword()) :: reconnect_ok() | reconnect_error()
   def reconnect(%CalendarIntegrationSchema{} = integration, params, opts \\ []) do
-    discover = Keyword.get(opts, :discover, &Calendar.discover_and_filter_calendars/4)
+    default_discover = fn provider, url, username, password ->
+      Calendar.discover_and_filter_calendars(
+        provider,
+        url,
+        username,
+        password,
+        integration.user_id
+      )
+    end
+
+    discover = Keyword.get(opts, :discover, default_discover)
     apply_account_change(integration, params, discover)
   end
 
@@ -107,8 +119,8 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
 
     calendar_list =
       Enum.map(calendars, fn cal ->
-        path = cal["path"] || cal[:path]
-        Map.put(cal, "selected", path in selected_paths)
+        entry = CalendarEntry.normalize(cal)
+        %{entry | selected: entry.path in selected_paths}
       end)
 
     credential_attrs = %{
@@ -139,12 +151,15 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
       {:ok, %{calendars: calendars, discovery_credentials: credentials}} ->
         {:ok, :needs_calendar_selection, %{calendars: calendars, credentials: credentials}}
 
-      {:error, reason} when is_binary(reason) ->
-        if ErrorHandler.categorize_error(reason) == :auth do
-          {:error, :invalid_credentials}
-        else
-          {:error, reason}
-        end
+      # Discovery hands back `{category, message}`, with the category derived
+      # from the raw provider error before the message was localised. Branch
+      # on the category only: `message` is display text and, once translated,
+      # carries no English keywords left to match on.
+      {:error, {:auth, _message}} ->
+        {:error, :invalid_credentials}
+
+      {:error, {_category, message}} when is_binary(message) ->
+        {:error, message}
 
       {:error, reason} ->
         {:error, reason}

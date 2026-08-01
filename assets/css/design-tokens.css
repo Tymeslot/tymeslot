@@ -35,8 +35,8 @@
     @apply inline-flex items-center gap-2 px-3 py-1 rounded-token-xl border-2 font-semibold text-token-sm transition-all duration-300;
   }
 
-  .tag-semantic-teal {
-    @apply bg-teal-50 border-teal-200 text-teal-700;
+  .tag-semantic-turquoise {
+    @apply bg-turquoise-50 border-turquoise-200 text-turquoise-700;
   }
 
   /* Tag Selector Buttons (Quick selection patterns) */
@@ -46,11 +46,11 @@
   }
 
   /* Color Variants for Selectors */
-  .btn-tag-selector-teal {
-    @apply hover:border-teal-100 hover:text-teal-600 hover:bg-tymeslot-50;
+  .btn-tag-selector-turquoise {
+    @apply hover:border-turquoise-100 hover:text-turquoise-600 hover:bg-tymeslot-50;
   }
-  .btn-tag-selector-teal--active {
-    @apply bg-teal-50 text-teal-700 border-teal-200 shadow-sm;
+  .btn-tag-selector-turquoise--active {
+    @apply bg-turquoise-50 text-turquoise-700 border-turquoise-200 shadow-sm;
   }
 
   /* Semantic Variants

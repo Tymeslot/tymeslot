@@ -8,6 +8,8 @@ defmodule Tymeslot.Security.InputProcessor do
 
   alias Tymeslot.Security.{FieldValidators, UniversalSanitizer}
 
+  require Logger
+
   @type form_params :: %{String.t() => term()}
   @type form_errors :: %{atom() => [String.t()]}
 
@@ -18,7 +20,23 @@ defmodule Tymeslot.Security.InputProcessor do
   # the external verification API (e.g. Google reCAPTCHA siteverify).
   # The values are preserved in the returned params map unchanged so that
   # downstream callers (reCAPTCHA verification, etc.) still receive them.
-  @skip_sanitisation_keys ["g-recaptcha-response"]
+  # Passwords are skipped for a different reason: sanitisation MANGLES them.
+  # `:strict` mode strips SQL/path heuristics and percent-decodes, so
+  # "Pa--ssword1!" sanitises to "Pa" and "0xDEADbeef!A" to "!A". Signup and
+  # password reset run params through here, but login compares the RAW string
+  # the user typed — so the mangled value gets hashed at signup and can never
+  # be matched at login, locking the account permanently. Nothing is lost by
+  # skipping: a password is bcrypt-hashed, never rendered or interpolated, so
+  # HTML/SQL stripping protects nothing. Length and strength are still enforced
+  # by the field-specific `PasswordValidator`.
+  @skip_sanitisation_keys [
+    "g-recaptcha-response",
+    "password",
+    "password_confirmation",
+    "current_password",
+    "new_password",
+    "new_password_confirmation"
+  ]
 
   @doc """
   Validates a form with universal sanitization and field-specific validation.
@@ -118,10 +136,18 @@ defmodule Tymeslot.Security.InputProcessor do
 
   defp safe_field_key(key) when is_atom(key), do: key
 
+  # Form errors are keyed by atom. Submitted field names are attacker-controlled,
+  # so an unknown name must never mint an atom; it keeps its string key instead.
   defp safe_field_key(key) when is_binary(key) do
     String.to_existing_atom(key)
   rescue
-    ArgumentError -> key
+    error in ArgumentError ->
+      Logger.debug("Submitted field name has no existing atom; keeping the string key",
+        field: key,
+        error: Exception.message(error)
+      )
+
+      key
   end
 
   defp safe_field_key(key), do: key

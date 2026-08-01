@@ -17,8 +17,13 @@ defmodule TymeslotWeb do
   those modules here.
   """
 
+  # favicon.ico sits at the root rather than being linked from <head>. Chrome
+  # downloads a linked .ico on every page load even alongside an SVG icon it
+  # prefers, and even when the link carries `type`; served from the well-known
+  # root path it is requested only by the browsers that actually need it —
+  # those without SVG favicon support, which look there by default.
   @spec static_paths() :: [String.t()]
-  def static_paths, do: ~w(assets css fonts icons images uploads videos embed.js)
+  def static_paths, do: ~w(assets css fonts icons images uploads videos embed.js favicon.ico)
 
   @spec router() :: Macro.t()
   # The router macro is a declarative list of HTTP/LiveView pipelines; ABC

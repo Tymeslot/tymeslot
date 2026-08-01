@@ -12,7 +12,7 @@ defmodule Tymeslot.Emails.Templates.EmailVerification do
   @spec render(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
   def render(user, verification_url) do
     mjml_content = """
-    #{Text.centered_text(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
+    #{Text.centered_html(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
 
     #{Text.centered_text(dgettext("emails", "We're glad you're here. One quick step and your calendar will be ready to go - please confirm your email below."), padding: "0 0 20px 0")}
 

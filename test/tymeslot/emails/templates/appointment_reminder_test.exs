@@ -22,22 +22,23 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
       assert email.to == [{"John Organizer", "organizer@test.com"}]
     end
 
-    test "may include calendar attachment" do
+    test "carries the inline logo but no calendar attachment" do
       details = build_appointment_details()
       email = AppointmentReminder.render(:organizer, "organizer@example.com", details)
 
-      # Reminder emails may or may not include attachments depending on template design
-      assert is_list(email.attachments)
+      # The reminder points at an already-booked meeting, so it ships no ICS —
+      # the only attachment is the logo the template references inline.
+      assert [%Swoosh.Attachment{filename: "tymeslot-logo.png", content_type: "image/png"}] =
+               email.attachments
     end
 
     test "includes both HTML and text bodies" do
       details = build_appointment_details()
       email = AppointmentReminder.render(:organizer, "organizer@example.com", details)
 
-      assert email.html_body != nil
-      assert email.text_body != nil
-      assert is_binary(email.html_body)
-      assert is_binary(email.text_body)
+      assert email.html_body =~ "<!doctype html"
+      assert email.html_body =~ details.attendee_name
+      assert email.text_body =~ details.attendee_name
     end
 
     test "HTML body contains time until meeting" do
@@ -88,7 +89,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
 
       email = AppointmentReminder.render(:organizer, "organizer@example.com", details)
 
-      assert email.html_body != nil
+      assert email.html_body =~ "https://meet.example.com/reminder-test"
       assert String.length(email.html_body) > 1000
     end
 
@@ -104,9 +105,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
       details = build_appointment_details()
       email = AppointmentReminder.render(:organizer, "organizer@example.com", details)
 
-      assert %Swoosh.Email{} = email
-      assert email.subject != nil
-      assert email.to != []
+      assert %Swoosh.Email{subject: subject, to: to} = email
+      assert subject =~ "Meeting with #{details.attendee_name}"
+      assert to == [{"John Organizer", "organizer@example.com"}]
     end
 
     test "organizer subject is free of CR/LF when attendee name contains header-injection payload" do
@@ -138,22 +139,21 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
       assert email.to == [{"Jane Attendee", "attendee@test.com"}]
     end
 
-    test "may include calendar attachment" do
+    test "carries the inline logo but no calendar attachment" do
       details = build_appointment_details()
       email = AppointmentReminder.render(:attendee, "attendee@example.com", details)
 
-      # Reminder emails may or may not include attachments depending on template design
-      assert is_list(email.attachments)
+      assert [%Swoosh.Attachment{filename: "tymeslot-logo.png", content_type: "image/png"}] =
+               email.attachments
     end
 
     test "includes both HTML and text bodies" do
       details = build_appointment_details()
       email = AppointmentReminder.render(:attendee, "attendee@example.com", details)
 
-      assert email.html_body != nil
-      assert email.text_body != nil
-      assert is_binary(email.html_body)
-      assert is_binary(email.text_body)
+      assert email.html_body =~ "<!doctype html"
+      assert email.html_body =~ details.organizer_name
+      assert email.text_body =~ details.organizer_name
     end
 
     test "HTML body contains time until meeting" do
@@ -204,7 +204,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
 
       email = AppointmentReminder.render(:attendee, "attendee@example.com", details)
 
-      assert email.html_body != nil
+      assert email.html_body =~ "https://meet.example.com/attendee-reminder"
       assert String.length(email.html_body) > 1000
     end
 
@@ -220,9 +220,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
       details = build_appointment_details()
       email = AppointmentReminder.render(:attendee, "attendee@example.com", details)
 
-      assert %Swoosh.Email{} = email
-      assert email.subject != nil
-      assert email.to != []
+      assert %Swoosh.Email{subject: subject, to: to} = email
+      assert subject =~ "Reminder:"
+      assert to == [{"Jane Attendee", "attendee@example.com"}]
     end
 
     test "handles different time_until values correctly" do
@@ -233,7 +233,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
         email = AppointmentReminder.render(:attendee, "attendee@example.com", details)
 
         assert email.html_body =~ time_until
-        assert email.subject != nil
+        assert email.subject =~ time_until
       end
     end
 

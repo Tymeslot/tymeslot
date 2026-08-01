@@ -8,16 +8,13 @@ defmodule Tymeslot.Infrastructure.CorrelationIdTest do
   alias Plug.Test, as: PlugTest
   alias Tymeslot.Infrastructure.CorrelationId
 
+  @uuid_v4 ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
   describe "generate/0" do
     test "returns a UUID v4 format string" do
       id = CorrelationId.generate()
 
-      assert is_binary(id)
-
-      assert String.match?(
-               id,
-               ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-             )
+      assert id =~ @uuid_v4
     end
 
     test "generates unique IDs" do
@@ -100,7 +97,7 @@ defmodule Tymeslot.Infrastructure.CorrelationIdTest do
 
       {updated_conn, id} = CorrelationId.ensure(conn)
 
-      assert is_binary(id)
+      assert id =~ @uuid_v4
       assert updated_conn.assigns[:correlation_id] == id
       assert Conn.get_resp_header(updated_conn, "x-correlation-id") == [id]
     end
@@ -122,7 +119,7 @@ defmodule Tymeslot.Infrastructure.CorrelationIdTest do
 
       {updated_socket, id} = CorrelationId.ensure(socket)
 
-      assert is_binary(id)
+      assert id =~ @uuid_v4
       assert CorrelationId.get_from_socket(updated_socket) == id
     end
 
@@ -173,7 +170,7 @@ defmodule Tymeslot.Infrastructure.CorrelationIdTest do
           end)
         )
 
-      assert is_binary(result)
+      assert result =~ @uuid_v4
     end
 
     test "returns function result" do
@@ -187,7 +184,7 @@ defmodule Tymeslot.Infrastructure.CorrelationIdTest do
 
       id = conn.assigns[:correlation_id]
 
-      assert is_binary(id)
+      assert id =~ @uuid_v4
       assert Conn.get_resp_header(conn, "x-correlation-id") == [id]
     end
 

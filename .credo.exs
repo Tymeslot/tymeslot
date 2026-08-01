@@ -110,11 +110,56 @@
           {CredoChecks.NoMapMetadataInLogger, [priority: :high]},
           {CredoChecks.MigrationConstraintSafety, [priority: :high, enforce_after: "20260329"]},
           {CredoChecks.RepoCallBoundary, [priority: :normal]},
+          {CredoChecks.RateLimiterBoundary, [priority: :normal]},
+          {CredoChecks.ConnectionProbeBoundary, [priority: :normal]},
           {CredoChecks.ClockUsage, [priority: :normal]},
           {CredoChecks.GettextDomainBoundary, [priority: :high]},
           {CredoChecks.NoUnsafeSanitizeMerge, [priority: :normal]},
+          # The three below mechanise rules that CLAUDE.md's prefer/avoid table
+          # already states in prose. Ported from ex_slop and oeditus_credo
+          # (both MIT) rather than taking the dependencies, so each is scoped
+          # to this codebase's conventions and lives beside the other checks.
+          #
+          # The first run found 105 dual-key reads, 56 silent rescues and 8
+          # boolean cases: a backlog worked through deliberately, rather than
+          # fixed under a red gate. (NoSwallowedException's count dropped
+          # from its original 116 once the heuristic learned that passing
+          # the rescued exception on to a helper counts as handling it, not
+          # swallowing it; the residual count was genuine silent rescues.)
+          # All three have now reached zero and are gated.
+          {CredoChecks.NoDualKeyAccess, [priority: :normal]},
+          {CredoChecks.NoCaseOnBoolean, [priority: :low]},
+          {CredoChecks.NoSwallowedException, [priority: :normal]},
           {CredoChecks.NoInlineCaldavList, [priority: :normal]},
           {CredoChecks.AttendeeNotificationsBoundary, []},
+
+          #
+          ## Test Quality Checks (jump_credo_checks)
+          #
+          # A suite stays green whether or not its tests assert anything, so
+          # these are the checks least likely to be noticed missing.
+          #
+          # exit_status: 0 means they report without failing the build. The
+          # first run found 1000 findings across 283 files, which is a backlog
+          # to work through deliberately, not something to fix under a red
+          # gate. Drop exit_status per check as each one reaches zero; that
+          # ratchet is the point, and a check left reporting forever is just
+          # noise nobody reads.
+          #
+          # UnusedLiveViewAssign and AvoidSocketAssignsInTest are deliberately
+          # absent: both are structurally wrong for this codebase rather than
+          # merely noisy. UnusedLiveViewAssign only looks within one module,
+          # so it cannot see an assign written by a component and read by its
+          # sibling event-handler module, nor one consumed by root.html.heex;
+          # 70 of its 77 findings were that. AvoidSocketAssignsInTest wants
+          # user-observable output, but 201 of its 218 findings were in unit
+          # tests of socket-transformer functions, where socket.assigns is
+          # the return value and there is no rendered output to assert on.
+          {Jump.CredoChecks.VacuousTest, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.TestHasNoAssertions, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.WeakAssertion, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.ConditionalAssertion, [priority: :low, exit_status: 0]},
+          {Jump.CredoChecks.AssertElementSelectorCanNeverFail, [priority: :low, exit_status: 0]},
 
           #
           ## Additional Maintainability Checks (low priority, only visible with --strict)

@@ -96,7 +96,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
       assert updated.graph_delta_link =~ "deltatoken=seeded"
 
       cached = Repo.get_by(ProviderCalendarEventSchema, uid: "outlook-bootstrap-1@example.com")
-      assert cached != nil
+      assert %ProviderCalendarEventSchema{} = cached
       assert cached.summary == "Quarterly review"
 
       {:ok, reloaded} = CalendarIntegrationQueries.get(integration.id)

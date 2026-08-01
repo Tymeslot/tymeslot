@@ -61,14 +61,12 @@ defmodule Tymeslot.Analytics.FingerprintTest do
 
     test "returns a hash when ip is present but user_agent is nil" do
       hash = Fingerprint.hash("1.2.3.4", nil)
-      assert is_binary(hash)
-      assert String.length(hash) == 64
+      assert hash =~ ~r/^[0-9a-f]{64}$/
     end
 
     test "returns a hash when user_agent is present but ip is nil" do
       hash = Fingerprint.hash(nil, "Mozilla/5.0")
-      assert is_binary(hash)
-      assert String.length(hash) == 64
+      assert hash =~ ~r/^[0-9a-f]{64}$/
     end
 
     test "produces a 64-char lowercase hex string" do

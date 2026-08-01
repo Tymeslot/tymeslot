@@ -44,7 +44,7 @@ jobs:
               git cliff --tag "$TAG" --strip all > /tmp/release-notes.md
             fi
 
-            if [ -z "$(cat /tmp/release-notes.md | tr -d '[:space:]')" ]; then
+            if [ -z "$(tr -d '[:space:]' < /tmp/release-notes.md)" ]; then
               echo "_No user-facing changes in this release._" > /tmp/release-notes.md
             fi
 

@@ -3,12 +3,13 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
   @moduletag :emails
 
   alias Tymeslot.Emails.AppointmentBuilder
+  alias Tymeslot.Profiles
 
   import Tymeslot.MeetingTestHelpers
 
   describe "from_meeting/1" do
     test "converts meeting to appointment details with all required fields" do
-      %{user: user} = create_user_with_profile()
+      %{user: user, profile: profile} = create_user_with_profile()
       meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
 
       result = AppointmentBuilder.from_meeting(meeting)
@@ -30,38 +31,77 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
       assert result.attendee_name == meeting.attendee_name
       assert result.attendee_email == meeting.attendee_email
 
-      # URLs
-      assert result.view_url != nil
-      assert result.reschedule_url != nil
-      assert result.cancel_url != nil
+      # URLs: only reschedule_url is set by the factory; the other two fall back
+      assert result.view_url == "#"
+      assert result.reschedule_url == meeting.reschedule_url
+      assert result.cancel_url == "#"
 
-      # Timezone conversions
-      assert result.start_time_owner_tz != nil
-      assert result.end_time_owner_tz != nil
-      assert result.start_time_attendee_tz != nil
-      assert result.end_time_attendee_tz != nil
-      assert result.attendee_timezone != nil
+      # Timezone conversions: the same instants, expressed in each party's zone
+      assert result.attendee_timezone == meeting.attendee_timezone
+      assert %DateTime{time_zone: owner_tz} = result.start_time_owner_tz
+      assert owner_tz == profile.timezone
+      assert %DateTime{time_zone: ^owner_tz} = result.end_time_owner_tz
+      assert %DateTime{time_zone: "America/New_York"} = result.start_time_attendee_tz
+      assert %DateTime{time_zone: "America/New_York"} = result.end_time_attendee_tz
+      assert DateTime.compare(result.start_time_owner_tz, meeting.start_time) == :eq
+      assert DateTime.compare(result.end_time_attendee_tz, meeting.end_time) == :eq
     end
 
-    test "includes summary field (uses meeting summary or defaults to title)" do
+    test "uses the meeting summary when the meeting has one" do
       %{user: user} = create_user_with_profile()
-      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          start_offset: 3600,
+          duration: 3600,
+          summary: "Quarterly roadmap review"
+        })
 
       result = AppointmentBuilder.from_meeting(meeting)
 
-      # Summary should be from meeting.summary or fall back to title
-      assert result.summary == meeting.summary || meeting.title
+      assert result.summary == "Quarterly roadmap review"
     end
 
-    test "includes description field (uses meeting description or defaults to empty)" do
+    test "falls back to the title when the meeting has no summary" do
       %{user: user} = create_user_with_profile()
-      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          start_offset: 3600,
+          duration: 3600,
+          summary: nil,
+          title: "Discovery Call"
+        })
 
       result = AppointmentBuilder.from_meeting(meeting)
 
-      # Description should be from meeting or empty string
-      assert result.description == meeting.description || ""
-      assert is_binary(result.description)
+      assert result.summary == "Discovery Call"
+    end
+
+    test "uses the meeting description when the meeting has one" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          start_offset: 3600,
+          duration: 3600,
+          description: "Bring the latest funnel numbers."
+        })
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.description == "Bring the latest funnel numbers."
+    end
+
+    test "falls back to an empty description when the meeting has none" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600, description: nil})
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.description == ""
     end
 
     test "formats location as 'Video Call' when meeting_url is present" do
@@ -253,18 +293,17 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
     end
 
     test "converts times to organizer timezone" do
-      %{user: user} = create_user_with_profile()
+      %{user: user} = create_user_with_profile(%{timezone: "America/Chicago"})
       meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
 
       result = AppointmentBuilder.from_meeting(meeting)
 
-      # Should have timezone-converted times (may be same as UTC for test timezone)
-      assert result.start_time_owner_tz != nil
-      assert result.end_time_owner_tz != nil
+      assert %DateTime{time_zone: "America/Chicago"} = result.start_time_owner_tz
+      assert %DateTime{time_zone: "America/Chicago"} = result.end_time_owner_tz
 
-      # Times should be DateTime structs
-      assert %DateTime{} = result.start_time_owner_tz
-      assert %DateTime{} = result.end_time_owner_tz
+      # Converted, not shifted: the same instants as the stored UTC times
+      assert DateTime.compare(result.start_time_owner_tz, meeting.start_time) == :eq
+      assert DateTime.compare(result.end_time_owner_tz, meeting.end_time) == :eq
     end
 
     test "converts times to attendee timezone" do
@@ -280,16 +319,16 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
       result = AppointmentBuilder.from_meeting(meeting)
 
       assert result.attendee_timezone == "America/New_York"
-      assert result.start_time_attendee_tz != nil
-      assert result.end_time_attendee_tz != nil
+      assert %DateTime{time_zone: "America/New_York"} = result.start_time_attendee_tz
+      assert %DateTime{time_zone: "America/New_York"} = result.end_time_attendee_tz
 
-      # Times should be DateTime structs
-      assert %DateTime{} = result.start_time_attendee_tz
-      assert %DateTime{} = result.end_time_attendee_tz
+      # Converted, not shifted: the same instants as the stored UTC times
+      assert DateTime.compare(result.start_time_attendee_tz, meeting.start_time) == :eq
+      assert DateTime.compare(result.end_time_attendee_tz, meeting.end_time) == :eq
     end
 
     test "uses organizer timezone as fallback when attendee timezone is missing" do
-      %{user: user} = create_user_with_profile()
+      %{user: user, profile: profile} = create_user_with_profile(%{timezone: "America/Chicago"})
 
       meeting =
         insert_meeting_for_user(user, %{
@@ -300,13 +339,13 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
 
       result = AppointmentBuilder.from_meeting(meeting)
 
-      # Should still have timezone conversions
-      assert result.start_time_attendee_tz != nil
-      assert result.end_time_attendee_tz != nil
+      assert result.attendee_timezone == profile.timezone
+      assert %DateTime{time_zone: "America/Chicago"} = result.start_time_attendee_tz
+      assert %DateTime{time_zone: "America/Chicago"} = result.end_time_attendee_tz
     end
 
     test "handles missing organizer_user_id gracefully with default timezone" do
-      %{user: user} = create_user_with_profile()
+      %{user: user} = create_user_with_profile(%{timezone: "America/Chicago"})
 
       meeting =
         Map.put(
@@ -317,9 +356,11 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
 
       result = AppointmentBuilder.from_meeting(meeting)
 
-      # Should still build successfully with default timezone
-      assert result.start_time_owner_tz != nil
-      assert result.end_time_owner_tz != nil
+      # Falls back to the application default rather than the organizer's own zone
+      default_timezone = Profiles.get_default_timezone()
+
+      assert %DateTime{time_zone: ^default_timezone} = result.start_time_owner_tz
+      assert %DateTime{time_zone: ^default_timezone} = result.end_time_owner_tz
     end
 
     test "includes all URL fields with fallback to '#'" do
@@ -384,16 +425,6 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
 
       assert result.time_until == "1 hour"
       assert result.time_until_friendly == "in 1 hour"
-    end
-
-    test "includes attendee_locale in appointment details" do
-      %{user: user} = create_user_with_profile()
-      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
-
-      result = AppointmentBuilder.from_meeting(meeting)
-
-      assert Map.has_key?(result, :attendee_locale)
-      assert is_binary(result.attendee_locale)
     end
 
     test "propagates attendee_locale from meeting to appointment details" do

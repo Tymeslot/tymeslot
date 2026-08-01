@@ -160,7 +160,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   Pass `operation: :create` to add `If-None-Match: *` preventing accidental
   overwrites. Pass `operation: :update` to add `If-Match: *` or
   `If-Match: <etag>` for conditional writes that prevent lost updates on
-  concurrent edits.
+  concurrent edits. Pass `operation: :force_update` to send no conditional
+  header at all — an unconditional overwrite.
   """
   @spec put_event(String.t(), String.t(), String.t(), String.t(), keyword()) ::
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
@@ -283,6 +284,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
           etag -> headers ++ [{"If-Match", etag}]
         end
 
+      # Unconditional overwrite: no If-Match at all. Used by the :keep_local
+      # conflict policy, whose contract is "force the local version through",
+      # and as the fallback when a server rejects the conditional form itself.
+      :force_update ->
+        headers
+
       :create ->
         headers ++ [{"If-None-Match", "*"}]
 
@@ -301,6 +308,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
 
   defp handle_put_event_response(%Req.Response{status: 412}),
     do: {:error, :precondition_failed}
+
+  # RFC 7232 reserves 412 for a failed precondition, but some CalDAV servers
+  # answer a conditional PUT with 409 instead — including servers that reject
+  # the conditional form outright rather than evaluating it. Kept distinct from
+  # :precondition_failed so the caller can tell "the condition did not hold"
+  # from "this server will not honour the condition".
+  defp handle_put_event_response(%Req.Response{status: 409}),
+    do: {:error, :conditional_not_supported}
 
   defp handle_put_event_response(%Req.Response{status: status}) when status >= 500,
     do: {:error, :server_error}

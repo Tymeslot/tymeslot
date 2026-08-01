@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EngineTest do
     [d1, d2] = [build_def("short_text"), build_def("short_text")]
     s = Engine.init([d1, d2])
     assert {:error, s2} = Engine.next(s)
-    assert s2.errors[d1["id"]] != nil
+    assert s2.errors[d1["id"]] == "Text is required"
   end
 
   test "prev/1 goes back without validating" do

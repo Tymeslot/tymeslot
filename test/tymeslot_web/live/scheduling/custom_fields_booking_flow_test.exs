@@ -448,7 +448,7 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
       {:ok, view, html} =
         live(conn, "/#{profile.username}/thank-you?timezone=#{profile.timezone}")
 
-      assert html =~ "meeting" or html =~ "Meeting"
+      assert html =~ "Meeting"
       socket = :sys.get_state(view.pid).socket
       assert socket.assigns.custom_fields_snapshot == []
       assert socket.assigns.custom_field_answers == %{}

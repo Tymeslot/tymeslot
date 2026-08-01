@@ -73,8 +73,20 @@ defmodule Tymeslot.Integrations.Common.OAuthBaseTest do
     end
 
     test "handles error results" do
-      assert {:error, "reason"} = OAuthBase.handle_api_call(fn -> {:error, :type, "reason"} end)
       assert {:error, "reason"} = OAuthBase.handle_api_call(fn -> {:error, "reason"} end)
+    end
+
+    # Callers above this layer dispatch on the atom: CalendarEventSync recreates
+    # an event on :not_found, CalendarEventWorker discards on :unauthorized.
+    # Returning the provider's message instead made those branches unreachable.
+    test "keeps the classification atom from a typed provider error" do
+      assert {:error, :not_found} =
+               OAuthBase.handle_api_call(fn -> {:error, :not_found, "Event not found"} end)
+
+      assert {:error, :unauthorized} =
+               OAuthBase.handle_api_call(fn ->
+                 {:error, :unauthorized, "Token expired or invalid"}
+               end)
     end
   end
 

@@ -88,6 +88,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
           </div>
         </div>
 
+        <%= if error = SharedForm.form_level_error(@form_errors) do %>
+          <SharedForm.error_banner error={error} />
+        <% end %>
+
         <div class="flex justify-between items-center pt-4 border-t border-tymeslot-100">
           <button type="button" phx-click="back_to_providers" phx-target={@target} class="btn-secondary">
             {dgettext("dashboard_integrations", "Cancel")}

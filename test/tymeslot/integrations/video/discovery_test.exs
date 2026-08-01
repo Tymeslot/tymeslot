@@ -8,8 +8,8 @@ defmodule Tymeslot.Integrations.Video.DiscoveryTest do
     test "returns list of available video providers" do
       providers = Discovery.list_available_providers()
 
-      assert is_list(providers)
-      assert providers != []
+      assert Enum.sort(Enum.map(providers, & &1.type)) ==
+               [:custom, :google_meet, :mirotalk, :teams, :zoom]
     end
 
     test "includes provider metadata for each provider" do
@@ -17,11 +17,12 @@ defmodule Tymeslot.Integrations.Video.DiscoveryTest do
 
       # Each provider should have metadata
       Enum.each(providers, fn provider ->
-        assert is_map(provider)
-        assert Map.has_key?(provider, :type)
-        assert Map.has_key?(provider, :module)
-        assert Map.has_key?(provider, :display_name)
-        assert Map.has_key?(provider, :config_schema)
+        assert %{
+                 type: _type,
+                 module: _module,
+                 display_name: _display_name,
+                 config_schema: _config_schema
+               } = provider
       end)
     end
 
@@ -32,13 +33,11 @@ defmodule Tymeslot.Integrations.Video.DiscoveryTest do
       assert :mirotalk in provider_types
     end
 
-    test "includes google_meet provider if available" do
+    test "includes google_meet provider" do
       providers = Discovery.list_available_providers()
 
       provider_types = Enum.map(providers, & &1.type)
-
-      # Google Meet may or may not be available depending on OAuth setup
-      assert is_list(provider_types)
+      assert :google_meet in provider_types
     end
 
     test "includes custom provider" do
@@ -52,9 +51,9 @@ defmodule Tymeslot.Integrations.Video.DiscoveryTest do
       providers = Discovery.list_available_providers()
 
       Enum.each(providers, fn provider ->
-        assert is_map(provider.config_schema)
         # Config schema should have at least one field
-        assert map_size(provider.config_schema) > 0
+        assert map_size(provider.config_schema) > 0,
+               "#{provider.type} has an empty config schema"
       end)
     end
 
@@ -62,8 +61,8 @@ defmodule Tymeslot.Integrations.Video.DiscoveryTest do
       providers = Discovery.list_available_providers()
 
       Enum.each(providers, fn provider ->
-        assert is_binary(provider.display_name)
-        assert String.length(provider.display_name) > 0
+        assert String.length(provider.display_name) > 0,
+               "#{provider.type} has a blank display name"
       end)
     end
 
@@ -71,9 +70,9 @@ defmodule Tymeslot.Integrations.Video.DiscoveryTest do
       providers = Discovery.list_available_providers()
 
       Enum.each(providers, fn provider ->
-        assert is_atom(provider.module)
         # Module should be loaded
-        assert Code.ensure_loaded?(provider.module)
+        assert Code.ensure_loaded?(provider.module),
+               "#{provider.type} points at unloadable module #{inspect(provider.module)}"
       end)
     end
 
@@ -90,17 +89,8 @@ defmodule Tymeslot.Integrations.Video.DiscoveryTest do
   end
 
   describe "default_provider/0" do
-    test "returns default video provider" do
-      provider = Discovery.default_provider()
-
-      assert is_atom(provider)
-    end
-
-    test "returns valid provider atom" do
-      provider = Discovery.default_provider()
-
-      # Should be one of the known providers
-      assert provider in [:mirotalk, :google_meet, :teams, :custom]
+    test "returns mirotalk as the default video provider" do
+      assert Discovery.default_provider() == :mirotalk
     end
 
     test "default provider is in available providers list" do

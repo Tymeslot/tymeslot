@@ -21,6 +21,7 @@ defmodule Tymeslot.Workers.EmailWorker do
     priority: 1
 
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
   alias Tymeslot.Workers.EmailWorkerHandlers
   require Logger
 
@@ -29,6 +30,11 @@ defmodule Tymeslot.Workers.EmailWorker do
   @default_email_timeout_ms 30_000
   # 1 second base for exponential backoff
   @backoff_base_ms 1_000
+  # Extra seconds added on top of the breaker's recovery window when snoozing,
+  # picked at random per job. Without it a queue full of jobs snoozed during the
+  # same outage all wake in the same second and stampede the two half-open probe
+  # slots, so all but two are sent straight back to sleep.
+  @circuit_open_jitter_seconds 30
 
   @doc """
   Performs the email job based on the action specified in the args.
@@ -80,6 +86,36 @@ defmodule Tymeslot.Workers.EmailWorker do
     )
 
     {:snooze, snooze_seconds}
+  end
+
+  # The provider's circuit breaker is open, so every attempt made before it
+  # recovers fails instantly. The backoff below tops out at 16 seconds, which
+  # means all five attempts would be spent within the first twenty seconds of a
+  # five-minute outage and the job would discard while the provider was merely
+  # paused. Snoozing instead waits the breaker out and does not consume an
+  # attempt, so the email still goes out once the provider is back.
+  defp handle_email_error(:circuit_open, _job) do
+    snooze_seconds =
+      CircuitBreakerSupervisor.email_breaker_recovery_seconds() +
+        :rand.uniform(@circuit_open_jitter_seconds)
+
+    Logger.warning("Email circuit breaker open, snoozing past the recovery window",
+      snooze_seconds: snooze_seconds
+    )
+
+    {:snooze, snooze_seconds}
+  end
+
+  # The provider has permanently rejected the address (invalid, or suppressed
+  # after a hard bounce or spam complaint). Retrying cannot change that, and
+  # letting the job exhaust its attempts would raise a permanent-failure admin
+  # alert for what is a recipient problem, not an outage.
+  defp handle_email_error({:recipient_rejected, reason}, _job) do
+    Logger.warning("Recipient permanently undeliverable, discarding job",
+      reason: inspect(reason)
+    )
+
+    {:discard, "Recipient permanently undeliverable"}
   end
 
   defp handle_email_error(:invalid_email, _job) do

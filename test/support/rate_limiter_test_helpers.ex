@@ -60,5 +60,7 @@ defmodule Tymeslot.RateLimiterTestHelpers do
       assert successes == requests_per_user,
              "User #{user_id} should have #{requests_per_user} successes, got #{successes}"
     end
+
+    :ok
   end
 end

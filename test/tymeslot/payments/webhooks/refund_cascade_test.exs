@@ -5,6 +5,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
 
   import Tymeslot.Factory
 
+  alias Swoosh.Email
   alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Payments.Webhooks.RefundHandler
 
@@ -23,10 +24,29 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
     end
   end
 
+  defmodule CapturingTemplate do
+    @spec refund_processed_email(map(), integer(), String.t(), boolean()) :: Swoosh.Email.t()
+    def refund_processed_email(user, refund_amount_cents, currency, revoked?) do
+      send(self(), {:refund_email, user.id, refund_amount_cents, currency, revoked?})
+
+      Email.new(
+        to: user.email,
+        from: "test@tymeslot.app",
+        subject: "test",
+        text_body: "test"
+      )
+    end
+  end
+
   setup do
     original_schema = Application.get_env(:tymeslot, :subscription_schema)
     original_manager = Application.get_env(:tymeslot, :subscription_manager)
     original_repo = Application.get_env(:tymeslot, :repo)
+    original_template = Application.get_env(:tymeslot, :refund_processed_template)
+
+    Application.put_env(:tymeslot, :refund_processed_template, CapturingTemplate)
+
+    on_exit(fn -> restore(:refund_processed_template, original_template) end)
 
     # The test env defaults :repo to Tymeslot.SaasRepo. Subscription lookups in
     # this test live in Tymeslot.Repo (where the factory inserts), so point both
@@ -92,16 +112,22 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       # User-channel broadcast announces access revoked
       assert_received {:refund_processed, %{event_id: _, access_revoked: true}}
 
-      # Global payment event also fired
+      # Global payment event also fired, carrying the revocation decision so
+      # the SaaS consumer doesn't have to re-derive (or skip) it
       assert_received %{
         event: :charge_refunded,
         data: %{
           customer_id: ^customer_id,
           total_refunded: 10_000,
           charge_amount: 10_000,
-          refund_percentage: 100.0
+          refund_percentage: 100.0,
+          should_revoke: true
         }
       }
+
+      user_id = user.id
+      # Email quotes this refund's amount and says access was revoked
+      assert_received {:refund_email, ^user_id, 10_000, "eur", true}
     end
 
     test "partial refund below threshold does NOT revoke access but still notifies" do
@@ -118,6 +144,15 @@ defmodule Tymeslot.Payments.Webhooks.RefundCascadeTest do
       refute_received {:revoked, _customer, _status, _at}
 
       assert_received {:refund_processed, %{event_id: _, access_revoked: false}}
+
+      assert_received %{
+        event: :charge_refunded,
+        data: %{customer_id: ^customer_id, should_revoke: false}
+      }
+
+      user_id = user.id
+      # Email is sent without revocation copy, quoting this refund's amount
+      assert_received {:refund_email, ^user_id, 5_000, "eur", false}
     end
 
     test "refund without a linked subscription is logged and does not broadcast on user channel" do

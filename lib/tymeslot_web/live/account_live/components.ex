@@ -159,6 +159,7 @@ defmodule TymeslotWeb.AccountLive.Components do
           phx-click="change_language"
           phx-value-locale=""
           aria-pressed={is_nil(@current_user.locale)}
+          title={dgettext("account", "Follow your browser's language setting instead of a fixed choice.")}
           class={[
             "btn-tag-selector btn-tag-selector-primary inline-flex items-center gap-2",
             is_nil(@current_user.locale) && "btn-tag-selector-primary--active"

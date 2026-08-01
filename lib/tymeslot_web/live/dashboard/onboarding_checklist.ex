@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
           <h2 class="text-token-xl font-black tracking-tight text-tymeslot-900">
             {dgettext("onboarding_wizard", "Finish setting up")}
           </h2>
-          <p class="text-token-sm font-bold text-tymeslot-500 mt-1">
+          <p class="text-token-sm font-bold text-tymeslot-500 mt-1 text-pretty">
             {dgettext("onboarding_wizard", "A few recommended steps - tick off the ones you don't need.")}
           </p>
         </div>
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
   defp item_row(assigns) do
     ~H"""
     <div class={[
-      "flex items-center gap-4 p-4 rounded-token-2xl border-2 transition-all",
+      "flex flex-wrap items-center gap-3 sm:gap-4 p-4 rounded-token-2xl border-2 transition-all",
       if(@item.done,
         do: "bg-tymeslot-50/50 border-tymeslot-50",
         else: "bg-white border-turquoise-100 hover:border-turquoise-200 hover:shadow-lg hover:shadow-turquoise-500/5"
@@ -145,15 +145,21 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
         <.icon name={@item.icon} class="w-6 h-6" />
       </div>
 
-      <div class="flex-1 min-w-0">
+      <%!-- basis-0 keeps this column shrinking rather than pushing the action
+           control onto the next line at desktop widths; the action's own
+           `w-full` below `sm` is what forces the wrap on phones. --%>
+      <div class="flex-1 basis-0 min-w-0">
         <div class={[
-          "font-black tracking-tight",
+          "font-black tracking-tight text-balance",
           if(@item.done, do: "text-tymeslot-400", else: "text-tymeslot-900")
         ]}>
           {@item.title}
         </div>
+        <%!-- Truncation only pays off once the action sits beside the text and
+             the column is narrow; on phones the row is the description's own,
+             so let it wrap rather than ellipsis away half the sentence. --%>
         <div class={[
-          "text-token-sm font-bold truncate",
+          "text-token-sm font-bold sm:truncate",
           if(@item.done, do: "text-tymeslot-400", else: "text-tymeslot-500")
         ]}>
           {@item.description}
@@ -165,15 +171,23 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
     """
   end
 
-  # The right-hand action, one fixed width so every row lines up. A done item
-  # shows a static "Done"; the share item copies the public booking link when the
-  # page is live (same readiness gate as the sidebar) and greys out otherwise;
-  # every other item links to where it is completed.
+  # Geometry shared by every actionable variant below: full width on phones, so
+  # the control drops onto its own line and leaves the title and description the
+  # whole row; one fixed width from `sm` up, so the actions line up in a column.
+  @cta_class "shrink-0 inline-flex items-center justify-center w-full sm:w-32 px-4 py-2 rounded-token-xl text-token-sm font-black transition-colors"
+  defp cta_class, do: @cta_class
+
+  # The row's action. A done item shows a static "Done"; the share item copies
+  # the public booking link when the page is live (same readiness gate as the
+  # sidebar) and greys out otherwise; every other item links to where it is
+  # completed.
   attr :item, :map, required: true
 
+  # A status rather than an action, so it needs none of the button geometry —
+  # only the same wrap behaviour, so a completed row lines up with the rest.
   defp item_cta(%{item: %{done: true}} = assigns) do
     ~H"""
-    <span class="shrink-0 w-32 text-center text-token-xs font-black uppercase tracking-wider text-emerald-600">
+    <span class="shrink-0 w-full sm:w-32 text-center text-token-xs font-black uppercase tracking-wider text-emerald-600">
       {dgettext("onboarding_wizard", "Done")}
     </span>
     """
@@ -187,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
       phx-hook="CopyOnClick"
       data-copy-text={@item.copy_url}
       data-copy-feedback={dgettext("onboarding_wizard", "Booking link copied to clipboard!")}
-      class="shrink-0 inline-flex items-center justify-center gap-1.5 w-32 px-4 py-2 rounded-token-xl bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-sm font-black transition-colors"
+      class={[cta_class(), "gap-1.5 bg-turquoise-600 hover:bg-turquoise-700 text-white"]}
     >
       <.icon name="hero-clipboard" class="w-4 h-4" /> {@item.cta}
     </button>
@@ -197,7 +211,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
   defp item_cta(%{item: %{action: :copy}} = assigns) do
     ~H"""
     <span
-      class="shrink-0 inline-flex items-center justify-center gap-1.5 w-32 px-4 py-2 rounded-token-xl bg-tymeslot-100 text-tymeslot-400 text-token-sm font-black cursor-not-allowed"
+      class={[cta_class(), "gap-1.5 bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed"]}
       title={@item.disabled_tooltip}
     >
       <.icon name="hero-clipboard" class="w-4 h-4" /> {@item.cta}
@@ -209,7 +223,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
     ~H"""
     <.link
       patch={@item.path}
-      class="shrink-0 inline-flex items-center justify-center gap-1 w-32 px-4 py-2 rounded-token-xl bg-turquoise-600 hover:bg-turquoise-700 text-white text-token-sm font-black transition-colors group"
+      class={[cta_class(), "gap-1 bg-turquoise-600 hover:bg-turquoise-700 text-white group"]}
     >
       {@item.cta} <span class="group-hover:translate-x-0.5 transition-transform">→</span>
     </.link>

@@ -119,45 +119,24 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                     </p>
 
                     <div class="overview-duration-list">
-                      <%= cond do %>
-                        <% @username_context && @meeting_types == [] -> %>
-                          <div class="text-center py-8 text-purple-300">
-                            <p class="text-lg font-medium">{dgettext("booking", "No meeting types available")}</p>
-                            <p class="text-sm mt-1">{dgettext("booking", "Please contact the organizer")}</p>
-                          </div>
-                        <% @username_context && length(@meeting_types) > 0 -> %>
-                          <%= for meeting_type <- @meeting_types do %>
-                            <% slug = MeetingTypes.effective_slug(meeting_type) %>
-                            <.duration_card
-                              duration={slug}
-                              title={meeting_type.name}
-                              badge={LocalizationHelpers.format_duration(meeting_type.duration_minutes)}
-                              description={meeting_type.description}
-                              icon={meeting_type.icon || "hero-clock"}
-                              selected={assigns[:selected_duration] == slug}
-                              target={@myself}
-                            />
-                          <% end %>
-                        <% true -> %>
+                      <%= if @meeting_types == [] do %>
+                        <div class="text-center py-8 text-purple-300">
+                          <p class="text-lg font-medium">{dgettext("booking", "No meeting types available")}</p>
+                          <p class="text-sm mt-1">{dgettext("booking", "Please contact the organizer")}</p>
+                        </div>
+                      <% else %>
+                        <%= for meeting_type <- @meeting_types do %>
+                          <% slug = MeetingTypes.effective_slug(meeting_type) %>
                           <.duration_card
-                            duration="15-minutes"
-                            title={dgettext("booking", "15 Minutes")}
-                            badge={LocalizationHelpers.format_duration(15)}
-                            description={dgettext("booking", "Quick chat or brief consultation")}
-                            icon="hero-bolt"
-                            selected={assigns[:selected_duration] == "15-minutes"}
+                            duration={slug}
+                            title={meeting_type.name}
+                            badge={LocalizationHelpers.format_duration(meeting_type.duration_minutes)}
+                            description={meeting_type.description}
+                            icon={meeting_type.icon || "hero-clock"}
+                            selected={assigns[:selected_duration] == slug}
                             target={@myself}
                           />
-
-                          <.duration_card
-                            duration="30-minutes"
-                            title={dgettext("booking", "30 Minutes")}
-                            badge={LocalizationHelpers.format_duration(30)}
-                            description={dgettext("booking", "In-depth discussion or detailed review")}
-                            icon="hero-rocket-launch"
-                            selected={assigns[:selected_duration] == "30-minutes"}
-                            target={@myself}
-                          />
+                        <% end %>
                       <% end %>
                     </div>
 

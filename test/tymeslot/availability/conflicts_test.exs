@@ -270,14 +270,18 @@ defmodule Tymeslot.Availability.ConflictsTest do
 
   describe "performance" do
     test "date_has_slots_with_events? remains fast with a noisy calendar (500+ events)" do
-      date = ~D[2026-06-15]
+      # Anchored to the next Monday at least 30 days out: a hardcoded date
+      # eventually drifts into the past, where every slot is rejected by the
+      # booking-window check and the scan stops exercising real availability.
+      base = Date.add(Date.utc_today(), 30)
+      date = Date.add(base, rem(8 - Date.day_of_week(base), 7))
       timezone = "UTC"
 
       events =
         Enum.map(1..500, fn i ->
-          day = rem(i, 28) + 1
+          day = Date.add(date, rem(i, 28) - 14)
           hour = rem(i, 24)
-          start_dt = DateTime.new!(Date.new!(2026, 6, day), Time.new!(hour, 0, 0), timezone)
+          start_dt = DateTime.new!(day, Time.new!(hour, 0, 0), timezone)
           end_dt = DateTime.add(start_dt, 30, :minute)
           %{start_time: start_dt, end_time: end_dt}
         end)
@@ -305,7 +309,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
       # Ensure it's reasonably fast (under 50ms for a single day check even with 500 events)
       # Usually this should be < 15ms on modern hardware, but we allow 50ms for slower CI.
       assert micro < 50_000
-      assert is_boolean(result)
+      assert result == true
     end
   end
 end

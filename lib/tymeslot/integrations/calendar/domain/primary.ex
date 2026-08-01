@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Defaults
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Profiles.ProfileQueries
@@ -95,26 +96,26 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   @spec auto_select_primary_calendar(CalendarIntegrationSchema.t(), [map()]) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def auto_select_primary_calendar(integration, calendars) do
-    alias Tymeslot.Integrations.Calendar.ProviderConfig
-
-    provider_atom =
-      try do
-        String.to_existing_atom(integration.provider)
-      rescue
-        ArgumentError -> :unknown
+    oauth? =
+      case ProviderConfig.parse_known(integration.provider) do
+        {:ok, provider_atom} -> ProviderConfig.oauth_provider?(provider_atom)
+        {:error, :unknown} -> false
       end
 
-    oauth? = ProviderConfig.oauth_provider?(provider_atom)
+    # Restrict the ladder to calendars eligible for booking (not read-only)
+    # so the id persisted here is never one `Defaults.resolve_default_calendar_id/1`
+    # — the read path — would then refuse to honour.
+    eligible = Defaults.eligible_for_booking(calendars)
 
     # Find the default booking calendar
     default_calendar_id =
       if oauth? do
         # For OAuth, prefer provider primary, then selected, then first
-        Defaults.primary_id(calendars) || Defaults.selected_id(calendars) ||
-          Defaults.first_id_from_list(calendars)
+        Defaults.primary_id(eligible) || Defaults.selected_id(eligible) ||
+          Defaults.first_id_from_list(eligible)
       else
         # For CalDAV/Radicale, prefer selected, else first
-        Defaults.selected_id(calendars) || Defaults.first_id_from_list(calendars)
+        Defaults.selected_id(eligible) || Defaults.first_id_from_list(eligible)
       end
 
     # Update with calendar list and default booking calendar if found.

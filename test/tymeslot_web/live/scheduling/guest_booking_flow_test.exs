@@ -268,7 +268,7 @@ defmodule TymeslotWeb.Live.Scheduling.GuestBookingFlowTest do
 
       # The confirmation page must be showing.
       html = render(view)
-      assert html =~ "Meeting Confirmed" or html =~ "confirmed" or html =~ "Booking submitted"
+      assert html =~ "Meeting Confirmed"
 
       # The confirmation must acknowledge the invited guests back to the booker.
       assert html =~ "invited1@example.com"

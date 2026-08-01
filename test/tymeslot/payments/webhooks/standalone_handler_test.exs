@@ -51,6 +51,12 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
         email: "test@example.com",
         name: "Test User"
       }
+
+    # `deliver_user_email/5` preloads `:profile` before handing the user to a
+    # template. This stub's user carries its name directly, so there is nothing
+    # to load.
+    @spec preload(any(), any()) :: Tymeslot.Payments.Webhooks.StandaloneHandlerTest.TestUser
+    def preload(user, _assoc), do: user
   end
 
   defp setup_test_configs do

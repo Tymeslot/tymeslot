@@ -6,8 +6,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarBehaviour do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
-  @callback list_events_in_range(pos_integer() | nil, DateTime.t(), DateTime.t()) ::
-              {:ok, list()} | {:error, any()}
   @callback get_events_for_range_fresh(pos_integer(), Date.t(), Date.t()) ::
               {:ok, list()} | {:error, any()}
   @callback get_events_for_month(pos_integer(), pos_integer(), pos_integer(), String.t()) ::

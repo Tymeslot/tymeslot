@@ -5,6 +5,8 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
   Provides consistent, tagged-tuple validation for common fields like integration name.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Security.FieldValidators.IntegrationNameValidator
   alias Tymeslot.Security.{InputProcessor, UniversalSanitizer}
   alias Tymeslot.Validation.Constraints
@@ -23,20 +25,39 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
 
     cond do
       cleaned == "" ->
-        {:error, %{name: "Name is required"}}
+        {:error, %{name: dgettext("dashboard_integrations", "Name is required")}}
 
       String.length(cleaned) < range.first ->
-        {:error, %{name: "Name must be at least #{range.first} characters"}}
+        {:error,
+         %{
+           name:
+             dngettext(
+               "dashboard_integrations",
+               "Name must be at least %{count} character",
+               "Name must be at least %{count} characters",
+               range.first
+             )
+         }}
 
       String.length(cleaned) > range.last ->
-        {:error, %{name: "Name must be #{range.last} characters or less"}}
+        {:error,
+         %{
+           name:
+             dngettext(
+               "dashboard_integrations",
+               "Name must be %{count} character or less",
+               "Name must be %{count} characters or less",
+               range.last
+             )
+         }}
 
       true ->
         {:ok, cleaned}
     end
   end
 
-  def validate_integration_name(_value), do: {:error, %{name: "Name must be text"}}
+  def validate_integration_name(_value),
+    do: {:error, %{name: dgettext("dashboard_integrations", "Name must be text")}}
 
   @doc """
   Strict, centralized validator for integration names with universal sanitization.
@@ -87,7 +108,13 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
   """
   @spec validate_server_url(any(), map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def validate_server_url(url, metadata, opts \\ []) do
-    error_msg = Keyword.get(opts, :error_message, "Please enter a valid server URL")
+    error_msg =
+      Keyword.get(
+        opts,
+        :error_message,
+        dgettext("dashboard_integrations", "Please enter a valid server URL")
+      )
+
     validate_url_fn = Keyword.get(opts, :validate_url_fn, fn _url -> :ok end)
 
     case UniversalSanitizer.sanitize_and_validate(normalize_url_protocol(url),

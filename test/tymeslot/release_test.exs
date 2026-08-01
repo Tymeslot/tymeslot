@@ -9,8 +9,8 @@ defmodule Tymeslot.ReleaseTest do
   import Tymeslot.Factory
 
   setup do
-    # SaaS config (loaded when the umbrella runs) sets enable_admin_ui to
-    # false. Force it back to true for the Release helper happy paths.
+    # A downstream overlay's config can set enable_admin_ui to false. Force it
+    # back to true for the Release helper happy paths.
     Application.put_env(:tymeslot, :enable_admin_ui, true)
     on_exit(fn -> Application.put_env(:tymeslot, :enable_admin_ui, true) end)
     :ok

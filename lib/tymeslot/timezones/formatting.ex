@@ -3,6 +3,8 @@ defmodule Tymeslot.Timezones.Formatting do
   Display formatting for timezones and UTC offsets.
   """
 
+  require Logger
+
   alias Tymeslot.Timezones.Data
 
   @spec format(term()) :: String.t()
@@ -26,7 +28,13 @@ defmodule Tymeslot.Timezones.Formatting do
         "UTC"
     end
   rescue
-    _exception -> "UTC"
+    exception ->
+      Logger.warning("Could not determine UTC offset, falling back to UTC",
+        timezone_id: inspect(timezone_id),
+        error: Exception.message(exception)
+      )
+
+      "UTC"
   end
 
   @spec format_utc_offset(integer()) :: String.t()

@@ -103,12 +103,9 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefundedTest do
       ctx = build_context(%{locale: "de"})
       email = BookingPaymentRefunded.render(ctx)
 
-      # We don't assert exact translations (they may not exist yet — that
-      # arrives in Chunk 11). We assert the call doesn't crash and the body
-      # is a valid string.
-      assert is_binary(email.subject)
-      assert is_binary(email.html_body)
-      assert is_binary(email.text_body)
+      assert email.subject == "Rückerstattung veranlasst – €50.00"
+      assert email.html_body =~ "Rückerstattung"
+      assert email.text_body =~ "Rückerstattung"
       assert String.length(email.html_body) > 100
     end
   end

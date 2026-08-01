@@ -250,7 +250,12 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
         result
     end
   rescue
-    _exception -> result
+    exception ->
+      Logger.warning("Failed to read origin IP from proxy verification response",
+        error: Exception.message(exception)
+      )
+
+      result
   end
 
   defp test_request(url, opts) do

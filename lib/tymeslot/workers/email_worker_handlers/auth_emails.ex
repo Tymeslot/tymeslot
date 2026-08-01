@@ -8,13 +8,14 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
   @spec handle_email_verification(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_email_verification(
         %{"user_id" => user_id, "verification_url" => verification_url} = args
       ) do
-    case UserQueries.get_user(user_id) do
+    case UserQueries.get_user_with_profile(user_id) do
       {:ok, user} ->
         if token_superseded?(args, user.verification_token) do
           Logger.info("Skipping superseded email verification job", user_id: user_id)
@@ -41,14 +42,14 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
           error: inspect(reason)
         )
 
-        {:error, "Failed to send email verification"}
+        DeliveryOutcome.from_error(reason, "Failed to send email verification")
     end
   end
 
   @spec handle_password_reset(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_password_reset(%{"user_id" => user_id, "reset_url" => reset_url} = args) do
-    case UserQueries.get_user(user_id) do
+    case UserQueries.get_user_with_profile(user_id) do
       {:ok, user} ->
         if token_superseded?(args, user.reset_token_hash) do
           Logger.info("Skipping superseded password reset job", user_id: user_id)
@@ -75,7 +76,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
           error: inspect(reason)
         )
 
-        {:error, "Failed to send password reset email"}
+        DeliveryOutcome.from_error(reason, "Failed to send password reset email")
     end
   end
 
@@ -86,7 +87,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
         "new_email" => new_email,
         "verification_url" => verification_url
       }) do
-    case UserQueries.get_user(user_id) do
+    case UserQueries.get_user_with_profile(user_id) do
       {:ok, user} ->
         case Config.email_service_module().send_email_change_verification(
                user,
@@ -108,7 +109,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
               error: inspect(reason)
             )
 
-            {:error, "Failed to send email change verification"}
+            DeliveryOutcome.from_error(reason, "Failed to send email change verification")
         end
 
       {:error, :not_found} ->
@@ -120,7 +121,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
   @spec handle_email_change_notification(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_email_change_notification(%{"user_id" => user_id, "new_email" => new_email}) do
-    case UserQueries.get_user(user_id) do
+    case UserQueries.get_user_with_profile(user_id) do
       {:ok, user} ->
         case Config.email_service_module().send_email_change_notification(user, new_email) do
           {:ok, _result} ->
@@ -138,7 +139,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
               error: inspect(reason)
             )
 
-            {:error, "Failed to send email change notification"}
+            DeliveryOutcome.from_error(reason, "Failed to send email change notification")
         end
 
       {:error, :not_found} ->
@@ -154,7 +155,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
         "old_email" => old_email,
         "new_email" => new_email
       }) do
-    with {:ok, user} <- UserQueries.get_user(user_id),
+    with {:ok, user} <- UserQueries.get_user_with_profile(user_id),
          {old_result, new_result} <-
            Config.email_service_module().send_email_change_confirmations(
              user,

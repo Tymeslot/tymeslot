@@ -68,8 +68,9 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsMigrationTest do
       assert is_nil(state["location"])
       assert state["attendees"] == []
       assert is_nil(state["video_link"])
-      refute is_nil(state["starts_at"])
-      refute is_nil(state["ends_at"])
+      # Non-NULL timestamps take the to_jsonb branch and land as ISO-8601 strings.
+      assert state["starts_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+      assert state["ends_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
     end
 
     test "preserves populated attendee list through the backfill" do
@@ -124,8 +125,9 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsMigrationTest do
       assert is_nil(state["location"])
       assert is_nil(state["video_link"])
       assert state["attendees"] == ["attendee@example.com"]
-      refute is_nil(state["starts_at"])
-      refute is_nil(state["ends_at"])
+      # Non-NULL timestamps take the to_jsonb branch and land as ISO-8601 strings.
+      assert state["starts_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+      assert state["ends_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
     end
 
     test "wraps attendee_email in a single-element JSON array" do

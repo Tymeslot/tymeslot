@@ -45,8 +45,13 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
     RateLimiter.clear_all()
     AvailabilityCache.clear_all()
 
+    # `:meeting_payments_enabled` defaults to false in Core (self-hosters opt
+    # in), and `DefaultAccessChecker` turns that into `:payments_unavailable`
+    # for every checkout attempt. Without it the paid branch never reaches the
+    # Stripe adapter at all, and the embed assertions below test nothing.
     setup_config(:tymeslot,
       feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
+      meeting_payments_enabled: true,
       payment_application_fee_bp: 50
     )
 
@@ -236,8 +241,15 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
       |> render_submit()
 
       # Non-embedded booker keeps the historical redirect contract.
-      # The view shuts down on redirect, so we cannot drain :sys.get_state/1.
-      assert_redirect(view, checkout_url)
+      #
+      # The submit is handled asynchronously: the form component forwards a
+      # `{:step_event, :booking, :submit, _}` message and the redirect is only
+      # issued from the resulting `handle_info`, well after `render_submit/1`
+      # returns. The embed tests drain that with `:sys.get_state/1`, which is
+      # not available here because the view shuts down on redirect, so wait for
+      # the redirect itself instead. The 100 ms `assert_receive_timeout`
+      # default is shorter than a real booking round-trip.
+      assert_redirect(view, checkout_url, 5_000)
     end
   end
 

@@ -88,7 +88,7 @@ msgstr "Не вдалося видалити аватар: %{reason}"
 msgid "Failed to update display name"
 msgstr "Не вдалося оновити відображуване ім'я"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:85
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:79
 #, elixir-autogen, elixir-format
 msgid "Failed to update timezone"
 msgstr "Не вдалося оновити часовий пояс"
@@ -97,11 +97,6 @@ msgstr "Не вдалося оновити часовий пояс"
 #, elixir-autogen, elixir-format
 msgid "Invalid"
 msgstr "Некоректно"
-
-#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:57
-#, elixir-autogen, elixir-format
-msgid "Invalid timezone format"
-msgstr "Некоректний формат часового поясу"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex:195
 #, elixir-autogen, elixir-format
@@ -143,12 +138,12 @@ msgstr "Зайнято"
 msgid "This name will appear to visitors when they book meetings with you. Changes are saved automatically."
 msgstr "Це ім'я бачитимуть відвідувачі під час бронювання зустрічей з вами. Зміни зберігаються автоматично."
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:103
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:97
 #, elixir-autogen, elixir-format
 msgid "Timezone"
 msgstr "Часовий пояс"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:79
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:73
 #, elixir-autogen, elixir-format
 msgid "Timezone updated to %{timezone}"
 msgstr "Часовий пояс оновлено на %{timezone}"
@@ -199,3 +194,13 @@ msgstr "Ваша власна URL-адреса"
 #, elixir-autogen, elixir-format
 msgid "yourname"
 msgstr "vashe_imya"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex:57
+#, elixir-autogen, elixir-format
+msgid "Unknown timezone"
+msgstr "Невідомий часовий пояс"
+
+#: lib/tymeslot/profiles.ex:254
+#, elixir-autogen, elixir-format
+msgid "Too many username change attempts. Please try again later."
+msgstr "Забагато спроб змінити ім'я користувача. Спробуйте пізніше."

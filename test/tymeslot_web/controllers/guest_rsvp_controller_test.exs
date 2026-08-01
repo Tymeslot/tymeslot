@@ -60,7 +60,7 @@ defmodule TymeslotWeb.GuestRsvpControllerTest do
       assert html_response(conn, 200) =~ "going!"
       assert {:ok, reloaded} = GuestQueries.get_by_token(guest.rsvp_token)
       assert reloaded.status == "accepted"
-      assert reloaded.responded_at != nil
+      assert %DateTime{} = reloaded.responded_at
     end
 
     test "declining records the RSVP and shows the success page", %{conn: conn, guest: guest} do

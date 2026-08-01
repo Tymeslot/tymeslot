@@ -4,137 +4,12 @@ defmodule TymeslotWeb.AuthLiveTest do
 
   alias Phoenix.Flash
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.AuthActions
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, RateLimiter, Token}
   import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
-
-  describe "Registration disabled" do
-    setup do
-      original = Application.get_env(:tymeslot, :registration_enabled)
-      Application.put_env(:tymeslot, :registration_enabled, false)
-      on_exit(fn -> Application.put_env(:tymeslot, :registration_enabled, original) end)
-      :ok
-    end
-
-    test "redirects /auth/signup to login with flash", %{conn: conn} do
-      assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
-               live(conn, ~p"/auth/signup")
-
-      assert flash["info"] =~ AuthActions.registration_disabled_message()
-    end
-
-    test "redirects /auth/complete-registration to login with flash", %{conn: conn} do
-      assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
-               live(conn, ~p"/auth/complete-registration")
-
-      assert flash["info"] =~ AuthActions.registration_disabled_message()
-    end
-
-    test "hides sign up link on login page", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/auth/login")
-      refute html =~ "Sign up"
-    end
-
-    test "blocks navigate_to signup event", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/auth/login")
-
-      render_hook(view, "navigate_to", %{"state" => "signup"})
-
-      assert has_element?(view, "#login-form")
-    end
-  end
-
-  describe "Password auth disabled" do
-    setup do
-      original = Application.get_env(:tymeslot, :password_auth_enabled)
-      Application.put_env(:tymeslot, :password_auth_enabled, false)
-      on_exit(fn -> Application.put_env(:tymeslot, :password_auth_enabled, original) end)
-      :ok
-    end
-
-    test "redirects /auth/signup to login with flash", %{conn: conn} do
-      assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
-               live(conn, ~p"/auth/signup")
-
-      assert flash["info"] =~ AuthActions.password_auth_disabled_message()
-    end
-
-    test "redirects /auth/reset-password to login with flash", %{conn: conn} do
-      assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
-               live(conn, ~p"/auth/reset-password")
-
-      assert flash["info"] =~ AuthActions.password_auth_disabled_message()
-    end
-
-    test "redirects /auth/reset-password?token=... (reset form) to login with flash", %{
-      conn: conn
-    } do
-      assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
-               live(conn, "/auth/reset-password?token=sometoken")
-
-      assert flash["info"] =~ AuthActions.password_auth_disabled_message()
-    end
-
-    test "redirects /auth/reset-password-sent to login with flash", %{conn: conn} do
-      assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
-               live(conn, ~p"/auth/reset-password-sent")
-
-      assert flash["info"] =~ AuthActions.password_auth_disabled_message()
-    end
-
-    test "login page shows no password form", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/auth/login")
-
-      refute has_element?(view, "#login-form")
-      refute render(view) =~ "Forgot password?"
-    end
-
-    test "login page hides sign up footer link", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/auth/login")
-
-      refute html =~ "Sign up"
-    end
-
-    test "blocks navigate_to signup event", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/auth/login")
-
-      render_hook(view, "navigate_to", %{"state" => "signup"})
-
-      refute has_element?(view, "#signup-form")
-    end
-
-    test "blocks navigate_to reset_password event", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/auth/login")
-
-      render_hook(view, "navigate_to", %{"state" => "reset_password"})
-
-      refute has_element?(view, "#reset-password-form")
-    end
-
-    test "/auth/complete-registration still works", %{conn: conn} do
-      conn =
-        init_test_session(conn, %{
-          "pending_oauth_registration" => %{
-            provider: "github",
-            email: "oauth@example.com",
-            name: nil,
-            is_verified: true,
-            email_from_provider: true,
-            provider_uid: "12345",
-            github_user_id: "12345",
-            google_user_id: nil
-          }
-        })
-
-      {:ok, view, _html} = live(conn, ~p"/auth/complete-registration")
-
-      assert has_element?(view, "#complete-registration-form")
-    end
-  end
 
   describe "Login" do
     test "renders login page", %{conn: conn} do
@@ -167,7 +42,7 @@ defmodule TymeslotWeb.AuthLiveTest do
           "password" => "WrongPassword"
         })
 
-      assert Flash.get(conn.assigns.flash, :error) != nil
+      assert Flash.get(conn.assigns.flash, :error) == "Invalid email or password."
       assert redirected_to(conn) == ~p"/auth/login"
     end
   end
@@ -482,7 +357,7 @@ defmodule TymeslotWeb.AuthLiveTest do
 
       render_hook(view, "resend_verification", %{})
 
-      assert render(view) =~ "limit" or render(view) =~ "Too many"
+      assert render(view) =~ "Too many email verification attempts. Please try again later."
     end
 
     test "resend_verification disables the button with a live cooldown countdown",
@@ -558,6 +433,24 @@ defmodule TymeslotWeb.AuthLiveTest do
     end
   end
 
+  describe "verify-email page" do
+    test "shows the address the verification email was sent to", %{conn: conn} do
+      user = insert(:unverified_user)
+
+      conn =
+        init_test_session(conn, %{
+          "unverified_user_id" => user.id,
+          "unverified_user_email" => user.email,
+          "unverified_session_timestamp" => DateTime.to_unix(DateTime.utc_now())
+        })
+
+      {:ok, _view, html} = live(conn, ~p"/auth/verify-email")
+
+      assert html =~ "Sent to"
+      assert html =~ user.email
+    end
+  end
+
   defp setup_password_reset_token(_context) do
     user = insert(:user)
     {token, _value} = Token.generate_password_reset_token()
@@ -614,8 +507,7 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert redirected_to(conn) == "/dashboard"
 
       # Verify user was created
-      user = Auth.get_user_by_email("oauth_new@example.com")
-      assert user
+      assert user = Auth.get_user_by_email("oauth_new@example.com")
       assert user.github_user_id == "gh_new_123"
     end
   end

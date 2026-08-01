@@ -127,6 +127,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     summary = extract_property(lines, "SUMMARY")
     description = extract_property(lines, "DESCRIPTION")
     location = extract_property(lines, "LOCATION")
+    organizer = extract_organizer(lines)
     attendees = extract_attendees(lines)
     recurrence_rule = extract_property(lines, "RRULE")
     recurrence_id = extract_recurrence_id(lines)
@@ -148,6 +149,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         summary: summary,
         description: description,
         location: location,
+        organizer: organizer,
         attendees: attendees,
         recurrence_rule: recurrence_rule,
         recurrence_id: recurrence_id,
@@ -196,26 +198,48 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     |> Enum.reject(fn a -> is_nil(a["email"]) end)
   end
 
+  # RFC 5545 §3.8.4.3 — a VEVENT carries at most one ORGANIZER. Returns the
+  # same `"email"`/`"name"` shape as an attendee so downstream normalisers can
+  # treat the two alike, or `nil` when the property is absent.
+  defp extract_organizer(lines) do
+    line =
+      Enum.find(lines, fn line ->
+        String.starts_with?(line, "ORGANIZER:") or String.starts_with?(line, "ORGANIZER;")
+      end)
+
+    case line do
+      nil -> nil
+      line -> %{"email" => calendar_user_address(line), "name" => common_name(line)}
+    end
+  end
+
   defp parse_attendee_line(line) do
-    email =
-      case Regex.run(~r/:mailto:(.+)$/i, line) do
-        [_match, addr] -> String.trim(addr)
-        nil -> nil
-      end
+    %{
+      "email" => calendar_user_address(line),
+      "name" => common_name(line),
+      "status" => partstat(line)
+    }
+  end
 
-    name =
-      case Regex.run(~r/(?:^|;)CN=([^;:]+)/i, line) do
-        [_match, cn] -> cn |> String.trim() |> String.trim("\"")
-        nil -> nil
-      end
+  defp calendar_user_address(line) do
+    case Regex.run(~r/:mailto:(.+)$/i, line) do
+      [_match, addr] -> String.trim(addr)
+      nil -> nil
+    end
+  end
 
-    status =
-      case Regex.run(~r/(?:^|;)PARTSTAT=([^;:]+)/i, line) do
-        [_match, s] -> s |> String.trim() |> String.downcase()
-        nil -> nil
-      end
+  defp common_name(line) do
+    case Regex.run(~r/(?:^|;)CN=([^;:]+)/i, line) do
+      [_match, cn] -> cn |> String.trim() |> String.trim("\"")
+      nil -> nil
+    end
+  end
 
-    %{"email" => email, "name" => name, "status" => status}
+  defp partstat(line) do
+    case Regex.run(~r/(?:^|;)PARTSTAT=([^;:]+)/i, line) do
+      [_match, status] -> status |> String.trim() |> String.downcase()
+      nil -> nil
+    end
   end
 
   defp extract_recurrence_id(lines) do

@@ -96,7 +96,9 @@ defmodule TymeslotWeb.Plugs.LoggerMetadataIsolationTest do
                LoggerMetadataHook.on_mount(:default, %{}, %{}, build_connected_socket())
 
       correlation_a = socket_a.assigns[:correlation_id]
-      assert is_binary(correlation_a)
+
+      assert correlation_a =~
+               ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
       # Next mount on the same process must generate its own id.
       assert {:cont, socket_b} =
@@ -104,7 +106,9 @@ defmodule TymeslotWeb.Plugs.LoggerMetadataIsolationTest do
 
       correlation_b = socket_b.assigns[:correlation_id]
 
-      assert is_binary(correlation_b)
+      assert correlation_b =~
+               ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+
       assert correlation_b != correlation_a
       assert Logger.metadata()[:correlation_id] == correlation_b
     end

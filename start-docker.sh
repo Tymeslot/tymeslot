@@ -94,26 +94,70 @@ echo "========================================"
 echo ""
 
 # ==================== SECTION 2B: Detect Database Configuration ====================
-# Check if using external database or embedded PostgreSQL.
-# External mode is selected solely by DATABASE_HOST pointing somewhere other than
-# this container. The app (config/runtime.exs) reads discrete variables
-# (DATABASE_HOST, DATABASE_PORT, POSTGRES_DB/USER/PASSWORD) — it does NOT read
-# DATABASE_URL, so we must not branch on it here or we would skip the embedded
-# database while the app still tries (and fails) to reach localhost.
+# External mode is selected by either:
+#   - DATABASE_URL naming a host other than this container (a full connection
+#     string is what most managed providers hand you), or
+#   - DATABASE_HOST pointing somewhere other than this container.
+# config/runtime.exs reads both; DATABASE_URL wins because Ecto merges
+# URL-derived options over the discrete ones.
 USING_EXTERNAL_DB=false
-if [ "$DATABASE_HOST" != "localhost" ] && [ "$DATABASE_HOST" != "127.0.0.1" ]; then
+
+# A DATABASE_URL naming localhost keeps the bundled database on images that
+# ship one. Earlier releases ignored DATABASE_URL here entirely, so without this
+# guard an operator upgrading with a stale variable left over from another
+# deployment would find the bundled PostgreSQL silently skipped. Dropping the
+# variable makes the app fall back to the discrete POSTGRES_* credentials the
+# bundled cluster is actually created with. The slim image ships no server, so
+# there a local URL is honoured as given.
+if [ -n "${DATABASE_URL:-}" ] && [ "${TYMESLOT_EMBEDDED_DB:-true}" != "false" ]; then
+    # Strip the scheme, then any user:password@, then the path, then the port.
+    # The bracket rule unwraps an IPv6 literal such as postgres://[::1]:5432/db.
+    DATABASE_URL_HOST=$(printf '%s' "$DATABASE_URL" |
+        sed -E 's#^[^:]+://##; s#^[^@/]*@##; s#[/?].*$##; s#:[0-9]*$##; s#^\[([^]]*)\]$#\1#')
+
+    case "$DATABASE_URL_HOST" in
+        localhost | 127.0.0.1 | ::1)
+            echo "⚠ DATABASE_URL points at $DATABASE_URL_HOST, which is this container."
+            echo "  Using the bundled PostgreSQL and ignoring DATABASE_URL."
+            echo "  For an external database, give DATABASE_URL a remote host or set DATABASE_HOST."
+            unset DATABASE_URL
+            ;;
+    esac
+fi
+
+if [ -n "${DATABASE_URL:-}" ]; then
+    USING_EXTERNAL_DB=true
+    # Redact the credentials before echoing the URL back to the logs.
+    REDACTED_URL=$(echo "$DATABASE_URL" | sed -E 's#://[^@/]+@#://***:***@#')
+    echo "✓ External database detected via DATABASE_URL: $REDACTED_URL"
+    echo "  Skipping embedded PostgreSQL initialization"
+elif [ "$DATABASE_HOST" != "localhost" ] && [ "$DATABASE_HOST" != "127.0.0.1" ]; then
     USING_EXTERNAL_DB=true
     echo "✓ External database detected: $DATABASE_HOST:$DATABASE_PORT"
     echo "  Skipping embedded PostgreSQL initialization"
 fi
 
-# Warn loudly if DATABASE_URL is set: it is silently ignored by this deployment,
-# so a user expecting it to point at an external database would otherwise get the
-# embedded database with no indication anything was wrong.
-if [ -n "${DATABASE_URL:-}" ] && [ "$USING_EXTERNAL_DB" = false ]; then
-    echo "⚠ DATABASE_URL is set but is NOT used by Tymeslot's Docker deployment."
-    echo "  To use an external database, set DATABASE_HOST (plus DATABASE_PORT,"
-    echo "  POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD) instead."
+# The slim image ships no PostgreSQL server, so there is nothing to fall back to.
+if [ "${TYMESLOT_EMBEDDED_DB:-true}" = "false" ] && [ "$USING_EXTERNAL_DB" = false ]; then
+    echo "========================================"
+    echo "✗ ERROR: no database configured"
+    echo "========================================"
+    echo ""
+    echo "This image does not bundle a PostgreSQL server. Point it at one:"
+    echo ""
+    echo "  DATABASE_URL=postgres://user:password@host:5432/tymeslot"
+    echo ""
+    echo "or set the discrete variables:"
+    echo ""
+    echo "  DATABASE_HOST=your-db-host"
+    echo "  POSTGRES_DB=tymeslot"
+    echo "  POSTGRES_USER=tymeslot"
+    echo "  POSTGRES_PASSWORD=<password>"
+    echo ""
+    echo "To use the bundled database instead, pull the default image tag"
+    echo "(luka1thb/tymeslot:latest) rather than the slim one."
+    echo "========================================"
+    exit 1
 fi
 
 echo ""
@@ -213,11 +257,32 @@ else
     echo "Waiting for external database to be ready..."
     RETRY_COUNT=0
     MAX_RETRIES=30
-    until pg_isready -h "$DATABASE_HOST" -p "$DATABASE_PORT" > /dev/null 2>&1; do
+
+    # pg_isready needs no credentials to probe reachability, and passing the
+    # full URL via -d would leave it — password included — visible in the
+    # container's process list for every poll. Probe with host and port only.
+    if [ -n "${DATABASE_URL:-}" ]; then
+        # Strip the scheme, any user:password@, then the path and query; keep
+        # host[:port]. The bracket rule unwraps an IPv6 literal like [::1].
+        PG_PROBE_HOSTPORT=$(printf '%s' "$DATABASE_URL" |
+            sed -E 's#^[^:]+://##; s#^[^@/]*@##; s#[/?].*$##')
+        PG_PROBE_HOST=$(printf '%s' "$PG_PROBE_HOSTPORT" |
+            sed -E 's#:[0-9]*$##; s#^\[([^]]*)\]$#\1#')
+        PG_PROBE_PORT=$(printf '%s' "$PG_PROBE_HOSTPORT" |
+            sed -nE 's#.*:([0-9]+)$#\1#p')
+        PG_ISREADY_ARGS="-h $PG_PROBE_HOST -p ${PG_PROBE_PORT:-5432}"
+        PG_TARGET="$PG_PROBE_HOST:${PG_PROBE_PORT:-5432}"
+    else
+        PG_ISREADY_ARGS="-h $DATABASE_HOST -p $DATABASE_PORT"
+        PG_TARGET="$DATABASE_HOST:$DATABASE_PORT"
+    fi
+
+    # shellcheck disable=SC2086 # deliberate word splitting of the arg string
+    until pg_isready $PG_ISREADY_ARGS > /dev/null 2>&1; do
         RETRY_COUNT=$((RETRY_COUNT + 1))
         if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-            echo "✗ ERROR: External database failed to respond after ${MAX_RETRIES} seconds!"
-            echo "Check your DATABASE_HOST ($DATABASE_HOST) and DATABASE_PORT ($DATABASE_PORT) configuration"
+            echo "✗ ERROR: External database ($PG_TARGET) failed to respond after ${MAX_RETRIES} seconds!"
+            echo "Check your database configuration and that the container can reach it."
             exit 1
         fi
         echo "  Waiting... ($RETRY_COUNT/$MAX_RETRIES)"
@@ -273,13 +338,17 @@ echo "  MIX_ENV: ${MIX_ENV:-not set (will default to prod in release)}"
 echo "  DEPLOYMENT_TYPE: ${DEPLOYMENT_TYPE:-docker}"
 echo "  PHX_HOST: ${PHX_HOST}"
 echo "  PORT: ${PORT}"
-if [ "$USING_EXTERNAL_DB" = true ]; then
+if [ "$USING_EXTERNAL_DB" = true ] && [ -n "${DATABASE_URL:-}" ]; then
+    # Never print DATABASE_URL itself; it carries the password.
+    echo "  Database: EXTERNAL (via DATABASE_URL)"
+elif [ "$USING_EXTERNAL_DB" = true ]; then
     echo "  Database: EXTERNAL ($DATABASE_HOST:$DATABASE_PORT)"
 else
     echo "  Database: EMBEDDED (localhost:5432)"
     echo "  Database Name: ${POSTGRES_DB}"
     echo "  Database User: ${POSTGRES_USER}"
 fi
+echo "  Database TLS: ${DATABASE_SSL:-off}"
 echo "  EMAIL_ADAPTER: ${EMAIL_ADAPTER:-test}"
 echo ""
 echo "Security Configuration:"
@@ -307,6 +376,15 @@ export PORT
 export POSTGRES_DB
 export POSTGRES_USER
 export POSTGRES_PASSWORD
+# Database connection. DATABASE_HOST/PORT were previously only defaulted at the
+# top of this script and never exported, leaving the release to fall back to
+# config/runtime.exs's own identical defaults. Export them so the two cannot
+# drift apart.
+export DATABASE_URL="${DATABASE_URL:-}"
+export DATABASE_HOST
+export DATABASE_PORT
+export DATABASE_SSL="${DATABASE_SSL:-}"
+export DATABASE_SSL_CACERT_FILE="${DATABASE_SSL_CACERT_FILE:-}"
 export DATABASE_POOL_SIZE="${DATABASE_POOL_SIZE:-10}"
 export EMAIL_ADAPTER="${EMAIL_ADAPTER:-test}"
 export EMAIL_FROM_NAME="${EMAIL_FROM_NAME:-Tymeslot}"

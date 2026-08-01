@@ -190,7 +190,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
 
           request = %{user_id: user_id, organizer_profile: organizer_profile, context: context}
 
-          AvailabilityCache.get_or_compute(cache_key, fn ->
+          AvailabilityCache.get_or_compute_events(cache_key, fn ->
             compute_real_range_availability(
               start_date,
               end_date,

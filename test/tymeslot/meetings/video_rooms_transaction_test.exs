@@ -20,6 +20,8 @@ defmodule Tymeslot.Meetings.VideoRoomsTransactionTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Video.MeetingContext
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.VideoRooms
   alias Tymeslot.Repo
@@ -180,7 +182,7 @@ defmodule Tymeslot.Meetings.VideoRoomsTransactionTest do
       :ok
     end
 
-    @spec create_meeting_room(integer() | nil, keyword()) :: {:ok, map()}
+    @spec create_meeting_room(integer() | nil, keyword()) :: {:ok, MeetingContext.t()}
     def create_meeting_room(_user_id, opts) do
       ensure_table()
       :ets.insert(@table, {:in_transaction, Repo.in_transaction?()})
@@ -188,23 +190,24 @@ defmodule Tymeslot.Meetings.VideoRoomsTransactionTest do
       maybe_simulate_race(opts)
 
       {:ok,
-       %{
+       %MeetingContext{
          provider_type: :mirotalk,
-         room_data: %{
+         room_data: %RoomData{
            meeting_url: "https://fake.video/join/abc",
-           room_id: "https://fake.video/join/abc"
+           room_id: "https://fake.video/join/abc",
+           provider_data: %{}
          },
          provider_module: __MODULE__
        }}
     end
 
-    @spec create_join_url(map(), String.t(), String.t(), String.t(), DateTime.t()) ::
+    @spec create_join_url(MeetingContext.t(), String.t(), String.t(), String.t(), DateTime.t()) ::
             {:ok, String.t()}
     def create_join_url(_ctx, _name, _email, role, _start_time) do
       {:ok, "https://fake.video/join/abc?role=#{role}"}
     end
 
-    @spec extract_room_id(map() | String.t()) :: String.t() | nil
+    @spec extract_room_id(MeetingContext.t() | String.t()) :: String.t() | nil
     def extract_room_id(%{room_data: %{meeting_url: url}}), do: url
     def extract_room_id(%{room_data: %{room_id: id}}), do: id
     def extract_room_id(url) when is_binary(url), do: url

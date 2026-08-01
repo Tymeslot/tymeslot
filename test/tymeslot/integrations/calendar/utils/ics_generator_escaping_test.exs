@@ -67,7 +67,6 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorEscapingTest do
 
       ics_content = IcsGenerator.generate_ics(meeting_details)
 
-      assert is_binary(ics_content)
       assert String.length(ics_content) > 3000
     end
   end

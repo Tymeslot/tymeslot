@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ValidationTest d
 
       # Data unchanged on error
       assert data["name"] == "old"
-      assert is_binary(errors[:name])
+      assert errors[:name] == "Meeting name is required"
     end
 
     test "clears previous name error on successful validation" do
@@ -155,7 +155,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ValidationTest d
 
       # Duration below 5-minute minimum
       assert data == %{}
-      assert is_binary(errors[:duration])
+      assert errors[:duration] == "Duration must be at least 5 minutes"
     end
 
     test "validates description field on success" do

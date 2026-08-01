@@ -234,11 +234,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueriesTest do
           {~U[2026-06-01 00:00:00Z], ~U[2026-06-30 23:59:59Z]}
         )
 
+      # The domain struct carries atoms where the schema stores strings.
       assert %CalendarEvent{} = event
-      refute is_struct(event, Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema)
-      assert is_atom(event.provider)
-      assert is_atom(event.status)
-      assert is_atom(event.transparency)
+      assert event.provider == :google
+      assert event.status == :confirmed
+      assert event.transparency == :opaque
     end
   end
 end

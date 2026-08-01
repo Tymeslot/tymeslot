@@ -59,6 +59,12 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
   def classify_error({:error, :rate_limited}), do: :transient
   def classify_error({:error, :rate_limited, _message}), do: :transient
 
+  # Belt-and-braces: `HealthCheck.orchestrate_health_check/2` already
+  # short-circuits on a `ConnectionProbe` rate-limit refusal before this
+  # module ever sees it (a probe that never ran is not a probe that failed),
+  # so this clause only matters if some future caller lets one through.
+  def classify_error({:rate_limited, _message}), do: :transient
+
   def classify_error({:http_error, status, _message}) when status in [408, 425, 429],
     do: :transient
 

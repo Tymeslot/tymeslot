@@ -163,7 +163,6 @@ defmodule Tymeslot.ProfilesContextTest do
       profile = insert(:profile, user: user)
 
       assert {:error, reason} = Profiles.update_username(profile, "admin", user.id)
-      assert is_binary(reason)
       assert reason =~ "reserved"
     end
 
@@ -328,6 +327,26 @@ defmodule Tymeslot.ProfilesContextTest do
       }
 
       assert Profiles.display_name(unloaded) == nil
+    end
+
+    test "user_display_name returns nil for nil user" do
+      assert Profiles.user_display_name(nil) == nil
+    end
+
+    test "user_display_name uses the profile's full name when the profile is loaded" do
+      user = insert(:user, name: "Ada from GitHub")
+      profile = insert(:profile, user: user, full_name: "Ada Lovelace")
+      loaded_user = %{user | profile: profile}
+
+      assert Profiles.user_display_name(loaded_user) == "Ada Lovelace"
+    end
+
+    test "user_display_name raises when the profile association is not loaded" do
+      user = insert(:user, name: "Ada from GitHub")
+
+      assert_raise ArgumentError, ~r/user.profile must be preloaded/, fn ->
+        Profiles.user_display_name(user)
+      end
     end
   end
 
@@ -496,7 +515,7 @@ defmodule Tymeslot.ProfilesContextTest do
       assert {:ok, :published} = Profiles.mark_booking_page_published(profile)
 
       {:ok, reloaded} = ProfileQueries.get_by_user_id(user.id)
-      assert reloaded.booking_page_published_at != nil
+      assert %DateTime{} = reloaded.booking_page_published_at
     end
 
     test "is idempotent — a second call is a no-op" do

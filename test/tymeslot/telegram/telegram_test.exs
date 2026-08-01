@@ -46,7 +46,7 @@ defmodule Tymeslot.TelegramTest do
 
       integrations = Telegram.list_integrations(user.id)
       assert length(integrations) == 1
-      assert hd(integrations).status != nil
+      assert hd(integrations).status == :active
     end
 
     test "get_integration/2 returns integration with status" do
@@ -145,8 +145,9 @@ defmodule Tymeslot.TelegramTest do
   describe "resolve_bot_token/1" do
     test "resolves token for own-bot mode" do
       integration = insert(:telegram_integration)
-      assert {:ok, token} = Telegram.resolve_bot_token(integration)
-      assert is_binary(token)
+      # The factory stores this token encrypted; resolving must decrypt it back.
+      assert {:ok, "1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789"} =
+               Telegram.resolve_bot_token(integration)
     end
 
     test "resolves token for shared-bot mode from app config" do

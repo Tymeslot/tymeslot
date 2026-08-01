@@ -85,8 +85,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ForceFetchTest do
       reloaded = Repo.reload!(integration)
       assert is_nil(reloaded.caldav_sync_token)
       assert is_nil(reloaded.caldav_sync_tier)
-      assert not is_nil(reloaded.last_full_sync_at)
-      assert not is_nil(reloaded.last_external_sync_at)
+      assert %DateTime{} = reloaded.last_full_sync_at
+      assert %DateTime{} = reloaded.last_external_sync_at
     end
 
     test "on fetch failure, leaves sync token and last_full_sync_at unchanged" do
@@ -179,7 +179,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ForceFetchTest do
 
       reloaded = Repo.reload!(integration)
       assert is_nil(reloaded.caldav_sync_tier)
-      assert not is_nil(reloaded.last_full_sync_at)
+      assert %DateTime{} = reloaded.last_full_sync_at
     end
   end
 end

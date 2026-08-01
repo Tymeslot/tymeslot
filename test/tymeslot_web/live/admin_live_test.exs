@@ -17,10 +17,10 @@ defmodule TymeslotWeb.AdminLiveTest do
   alias Tymeslot.Repo
 
   setup do
-    # In the umbrella, the endpoint routes through SaaS by default
-    # (apps/tymeslot_saas/config/runtime.exs). Point it at Core's router so
-    # the admin scope is reachable for these tests — they cover Core
-    # behaviour, not the SaaS lockdown which has its own coverage.
+    # Under a downstream overlay, the endpoint routes through that overlay's
+    # router by default. Point it at Core's router so the admin scope is
+    # reachable for these tests: they cover Core behaviour, not an overlay's
+    # lockdown, which has its own coverage.
     original_router = Application.get_env(:tymeslot, :router)
     Application.put_env(:tymeslot, :router, TymeslotWeb.Router)
     Application.put_env(:tymeslot, :enable_admin_ui, true)

@@ -70,14 +70,12 @@ defmodule Tymeslot.Auth.ValidationTest do
   describe "format_validation_errors/1" do
     test "formats map errors" do
       errors = %{email: ["is invalid"]}
-      result = Validation.format_validation_errors(errors)
-      assert is_map(result) or is_binary(result)
+      assert Validation.format_validation_errors(errors) == "Email is invalid"
     end
 
     test "formats {:error, map} errors" do
       errors = {:error, %{email: ["is invalid"]}}
-      result = Validation.format_validation_errors(errors)
-      assert is_map(result) or is_binary(result)
+      assert Validation.format_validation_errors(errors) == "Email is invalid"
     end
 
     test "formats changeset errors" do
@@ -86,8 +84,7 @@ defmodule Tymeslot.Auth.ValidationTest do
         |> Changeset.change(%{email: "invalid"})
         |> Changeset.validate_format(:email, ~r/@/)
 
-      result = Validation.format_validation_errors(changeset)
-      assert is_map(result) or is_binary(result)
+      assert Validation.format_validation_errors(changeset) == "Email has invalid format"
     end
 
     test "returns default message for unknown error format" do

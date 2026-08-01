@@ -14,7 +14,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotification do
           String.t()
   def render(user, new_email, request_time) do
     mjml_content = """
-    #{Text.centered_text(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
+    #{Text.centered_html(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
 
     #{Text.centered_text(dgettext("emails",
     "A request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you."),

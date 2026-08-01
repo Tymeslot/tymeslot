@@ -122,8 +122,9 @@ defmodule Tymeslot.Mailer.SmtpProbeTest do
 
       capture_log(fn ->
         assert {:error, message} = SmtpProbe.test_connection(valid_config(port))
-        assert message =~ "127.0.0.1"
-        assert message =~ "Invalid SMTP greeting" or message =~ "554"
+        assert message =~ "Cannot connect to 127.0.0.1:#{port}"
+        assert message =~ "Invalid SMTP greeting (expected 220 code)"
+        assert message =~ "554 Service unavailable"
       end)
 
       stop_listener({port, listen_socket, server_task})
@@ -207,18 +208,12 @@ defmodule Tymeslot.Mailer.SmtpProbeTest do
       config = [relay: "127.0.0.1", port: 587, username: "user", password: "pass"]
 
       capture_log(fn ->
-        result = SmtpProbe.test_connection(config)
-
-        case result do
-          {:error, message} ->
-            # econnrefused gives a port-specific suggestion; timeout does not.
-            # Both outcomes are valid depending on OS / timing.
-            assert is_binary(message)
-
-          :ok ->
-            # Unlikely but tolerated if some process is actually listening.
-            :ok
-        end
+        # Loopback with nothing bound refuses immediately, so the port-specific
+        # suggestion arm is the deterministic outcome here.
+        assert {:error, message} = SmtpProbe.test_connection(config)
+        assert message =~ "Cannot connect to 127.0.0.1:587: Connection refused"
+        assert message =~ "Port 587 (STARTTLS) connection refused"
+        assert message =~ "Try port 465 (SSL) instead: SMTP_PORT=465"
       end)
     end
   end

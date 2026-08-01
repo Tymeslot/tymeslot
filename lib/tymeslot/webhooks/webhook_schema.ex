@@ -92,23 +92,26 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
       |> validate_events()
       |> foreign_key_constraint(:user_id)
 
-    changeset =
-      if Map.has_key?(attrs, :webhook_token) or Map.has_key?(attrs, "webhook_token") do
-        val = attrs[:webhook_token] || attrs["webhook_token"]
-
-        if is_nil(val) or val == "" do
-          put_change(changeset, :webhook_token, generate_secure_token())
-        else
-          changeset
-        end
-      else
-        changeset
-      end
-
     changeset
+    |> maybe_seed_webhook_token(attrs)
     |> generate_token()
     |> encrypt_token()
   end
+
+  defp maybe_seed_webhook_token(changeset, attrs) do
+    if blank_token_supplied?(attrs) do
+      put_change(changeset, :webhook_token, generate_secure_token())
+    else
+      changeset
+    end
+  end
+
+  # `attrs` reaches the changeset atom-keyed from internal callers and
+  # string-keyed from form params (`cast/3` above already rejects a mix of the
+  # two), so both shapes are answered here once.
+  defp blank_token_supplied?(%{webhook_token: token}), do: is_nil(token) or token == ""
+  defp blank_token_supplied?(%{"webhook_token" => token}), do: is_nil(token) or token == ""
+  defp blank_token_supplied?(_attrs), do: false
 
   @encrypted_credential_fields [:webhook_token_encrypted]
 

@@ -3,6 +3,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  import TymeslotWeb.Components.CoreComponents
+
   alias Phoenix.LiveView.JS
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
@@ -41,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
           </span>
         <% else %>
           <%= for reminder <- @reminders do %>
-            <span class="tag-semantic tag-semantic-teal">
+            <span class="tag-semantic tag-semantic-turquoise">
               {dgettext("dashboard_meeting_form", "%{label} before",
                 label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
               )}
@@ -51,12 +53,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
                   value: %{value: reminder.value, unit: reminder.unit},
                   target: @myself
                 )}
-                class="inline-flex items-center justify-center rounded-full border border-teal-200 bg-white text-teal-600 hover:text-teal-700 hover:border-teal-300"
+                class="inline-flex items-center justify-center rounded-full border border-turquoise-200 bg-white text-turquoise-600 hover:text-turquoise-700 hover:border-turquoise-300"
                 aria-label={dgettext("dashboard_meeting_form", "Remove reminder")}
               >
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <.icon name="hero-x-mark" class="h-4 w-4" />
               </button>
             </span>
           <% end %>
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
                   do: dgettext("dashboard_meeting_form", "Maximum of 3 reminders allowed"),
                   else: nil
               }
-              class="btn-tag-selector btn-tag-selector-teal"
+              class="btn-tag-selector btn-tag-selector-turquoise"
             >
               + {dgettext("dashboard_meeting_form", "30 min. before")}
             </button>
@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
                   do: dgettext("dashboard_meeting_form", "Maximum of 3 reminders allowed"),
                   else: nil
               }
-              class="btn-tag-selector btn-tag-selector-teal"
+              class="btn-tag-selector btn-tag-selector-turquoise"
             >
               + {dgettext("dashboard_meeting_form", "1 hour before")}
             </button>
@@ -109,8 +109,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
                 else: nil
             }
             class={[
-              "btn-tag-selector btn-tag-selector-teal",
-              if(@show_custom_reminder, do: "btn-tag-selector-teal--active")
+              "btn-tag-selector btn-tag-selector-turquoise",
+              if(@show_custom_reminder, do: "btn-tag-selector-turquoise--active")
             ]}
           >
             {if @show_custom_reminder,
@@ -119,14 +119,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
           </button>
 
           <%= if @reminder_confirmation do %>
-            <span class="text-token-sm text-teal-600 font-bold">
+            <span class="text-token-sm text-turquoise-600 font-bold">
               ✓ {@reminder_confirmation}
             </span>
           <% end %>
         </div>
 
         <%= if @show_custom_reminder && length(@reminders) < 3 do %>
-          <div class="flex items-center gap-2 p-3 bg-teal-50/50 rounded-token-2xl border-2 border-teal-100/50 max-w-sm animate-in slide-in-from-top-2 duration-300">
+          <div class="flex items-center gap-2 p-3 bg-turquoise-50/50 rounded-token-2xl border-2 border-turquoise-100/50 max-w-sm animate-in slide-in-from-top-2 duration-300">
             <div class="flex-1 flex items-center gap-2">
               <input
                 type="number"

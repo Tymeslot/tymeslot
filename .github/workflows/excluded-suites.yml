@@ -1,0 +1,96 @@
+name: Excluded suites
+
+# `test/support/suite_config.ex` excludes a handful of tags from every `mix
+# test` run. They are excluded because they are `async: false` and slow, not
+# because they are flaky, so they are expected to be green at all times and a
+# red run here is a real defect. Nothing ever executed them, and several had
+# rotted into failure unnoticed; this workflow gives them a schedule of their
+# own so that can't happen silently again.
+#
+# Deliberately separate from `verify.yml`: these suites are serial and would
+# slow down every pull request, which is exactly why they are excluded there.
+on:
+  schedule:
+    # Nightly at 03:17 UTC. The run is a couple of minutes on a warm cache, so
+    # nightly costs little and bounds how long a rotted suite can hide to a
+    # single day; weekly would let a break sit through a whole release cycle.
+    # Deliberately off the hour, because GitHub's scheduler is most contended
+    # at :00 and jobs queued there are the ones that get dropped.
+    - cron: "17 3 * * *"
+  # Manual trigger so the whole set can be run by hand before cutting a
+  # release, rather than trusting the last nightly.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  excluded-suites:
+    runs-on: ubuntu-latest
+    # Only run on GitHub, not Gitea
+    if: github.server_url == 'https://github.com'
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      MIX_ENV: test
+      TEST_DB_POOL_SIZE: "10"
+      ELIXIR_VERSION: "1.20.1"
+      OTP_VERSION: "28.3.3"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-elixir-${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-mix-${{ hashFiles('mix.lock') }}
+      - run: mix deps.get
+      # One `mix test` per tag, so a failure names the suite that broke instead
+      # of one opaque red step. `!cancelled()` keeps the later suites reporting
+      # after an earlier one goes red: the job exists to surface every rotted
+      # suite in one pass, not just the first one to fail. The job still fails
+      # overall if any step does.
+      #
+      # `mix test` is aliased to run `ecto.create`/`ecto.migrate` first, so the
+      # database is set up by the first step here.
+      - name: backup_tests
+        if: ${{ !cancelled() }}
+        run: mix test --only backup_tests
+      - name: oauth_integration
+        if: ${{ !cancelled() }}
+        run: mix test --only oauth_integration
+      # Only the hermetic half of `:calendar_integration` runs here, hence the
+      # explicit path. The other module tagged with it,
+      # test/tymeslot/integrations/calendar/baikal_integration_test.exs, drives
+      # a live Baikal CalDAV server on localhost:8800 and expects it to already
+      # hold a `testuser` account and a calendar named "Test Calendar". A plain
+      # `ckulka/baikal:latest` service container has neither — they come from
+      # the web installer — so there is no image to point this at. Until one
+      # exists, running that module here would fail every night for a reason
+      # nobody can act on. Widen this step the moment a seeded image lands.
+      - name: calendar_integration
+        if: ${{ !cancelled() }}
+        run: mix test --only calendar_integration test/tymeslot_web/integration/outlook_calendar_integration_test.exs
+      # Last on purpose: dirty_seed_migration_test.exs drops and recreates the
+      # database outside the sandbox, so anything sharing the run with it can
+      # lose its connection.
+      - name: migrations
+        if: ${{ !cancelled() }}
+        run: mix test --only migrations
+      # `:e2e` is deliberately absent. The 11 Wallaby features need a Chrome
+      # binary and a matching chromedriver, and no workflow in this repo
+      # installs either; config/test.exs also pins the browser to a developer's
+      # snap path with no environment override. Provisioning that is its own
+      # change — a job that cannot pass would only teach people to ignore this
+      # one.

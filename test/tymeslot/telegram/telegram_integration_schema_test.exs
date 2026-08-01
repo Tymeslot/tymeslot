@@ -7,6 +7,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
   import Ecto.Changeset
   import Tymeslot.Factory
 
+  alias Tymeslot.Security.Encryption
   alias Tymeslot.Telegram.TelegramIntegrationSchema
 
   describe "changeset/2" do
@@ -280,7 +281,10 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         })
 
       assert changeset.valid?
-      assert get_change(changeset, :bot_token_encrypted) != nil
+      encrypted = get_change(changeset, :bot_token_encrypted)
+
+      refute encrypted == "test_bot_token_123"
+      assert Encryption.decrypt(encrypted) == "test_bot_token_123"
     end
 
     test "does not set bot_token_encrypted when bot_token is empty string" do
@@ -333,7 +337,7 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
         })
 
       encrypted = get_change(changeset, :bot_token_encrypted)
-      assert encrypted != nil
+      refute encrypted == original_token
 
       integration = %TelegramIntegrationSchema{bot_token_encrypted: encrypted}
       result = TelegramIntegrationSchema.decrypt_token(integration)

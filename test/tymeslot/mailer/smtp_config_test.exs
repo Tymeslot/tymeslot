@@ -25,7 +25,7 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
       assert config[:retries] == 2
       assert config[:timeout] == 10_000
       assert config[:no_mx_lookups] == true
-      assert is_list(config[:tls_options])
+      assert config[:tls_options][:verify] == :verify_peer
     end
 
     test "creates valid SMTP configuration for port 465 (direct SSL)" do
@@ -146,9 +146,7 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
           password: "pass"
         )
 
-      sni = config[:tls_options][:server_name_indication]
-      assert is_list(sni)
-      assert sni == ~c"smtp.example.com"
+      assert config[:tls_options][:server_name_indication] == ~c"smtp.example.com"
     end
 
     test "CA certificates are loaded from system or castore" do
@@ -159,9 +157,10 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
           password: "pass"
         )
 
-      cacerts = config[:tls_options][:cacerts]
-      assert is_list(cacerts)
-      assert cacerts != []
+      # OTP hands back a non-empty list of {:cert, der, otp_cert} entries from
+      # the system trust store (or castore as a fallback).
+      assert [{:cert, der, _otp_cert} | _rest] = config[:tls_options][:cacerts]
+      assert byte_size(der) > 0
     end
   end
 

@@ -29,7 +29,7 @@ jobs:
         id: version
         run: |
           VERSION=$(grep -m 1 'version:' mix.exs | sed 's/.*version: "\(.*\)".*/\1/')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Extracted version: $VERSION"
 
       - name: Extract Docker metadata
@@ -48,6 +48,24 @@ jobs:
           file: ./Dockerfile.docker
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The database-free variant: same application, no bundled PostgreSQL
+      # server. It shares every build-stage layer with the image above, so the
+      # GHA cache makes this step cheap — only the runtime layers differ.
+      - name: Build and push slim Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.docker
+          target: release-slim
+          push: true
+          tags: |
+            luka1thb/tymeslot:${{ steps.version.outputs.version }}-slim
+            luka1thb/tymeslot:slim
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha

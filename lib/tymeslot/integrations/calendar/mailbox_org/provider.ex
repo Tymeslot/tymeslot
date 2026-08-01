@@ -18,7 +18,10 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
   alias Tymeslot.Security.UrlValidation
@@ -30,6 +33,9 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def display_name, do: "mailbox.org"
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def connection_test_bucket, do: :caldav
 
   @doc "Returns the LiveComponent module for provider configuration UI"
   @spec setup_component() :: module()
@@ -81,14 +87,16 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
     }
   end
 
+  # Structural validation only, in line with every other provider's
+  # `validate_config/1`: the caller that needs connectivity
+  # (`Calendar.Creation.prevalidate_config/1`) invokes `validate_config/1` first
+  # and then `perform_connection_test/1`. Folding a connectivity probe into this
+  # callback would double-charge a rate-limited connection test that runs both
+  # in sequence.
   @impl Tymeslot.Integrations.Calendar.Provider
   def validate_config(config) do
-    with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]),
-         :ok <- validate_mailbox_url(config[:base_url]),
-         {:ok, client} <- build_test_client(config) do
-      ProviderCommon.test_caldav_connection(client,
-        error_formatter: &mailbox_error_formatter/1
-      )
+    with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]) do
+      validate_mailbox_url(config[:base_url])
     end
   end
 
@@ -112,15 +120,22 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
   @doc """
   Tests connection to a mailbox.org account with provider-specific messaging.
   """
-  @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
-  def test_connection(integration, opts \\ []) do
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
+  def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
-      metadata: opts[:metadata],
-      success_message: "mailbox.org connection successful",
+      success_message:
+        dgettext("dashboard_calendar_providers", "mailbox.org connection successful"),
       unauthorized_message:
-        "Authentication failed. If 2FA is enabled, generate an application-specific password in mailbox.org Settings → Security.",
+        dgettext(
+          "dashboard_calendar_providers",
+          "Authentication failed. If 2FA is enabled, generate an application-specific password in mailbox.org Settings → Security."
+        ),
       not_found_message:
-        "mailbox.org CalDAV endpoint not found. Confirm the server URL is https://dav.mailbox.org",
+        dgettext(
+          "dashboard_calendar_providers",
+          "mailbox.org CalDAV endpoint not found. Confirm the server URL is https://dav.mailbox.org"
+        ),
       error_formatter: &format_error/1
     )
   end
@@ -128,11 +143,11 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
   @doc """
   Discovers available calendars on the mailbox.org account.
   """
-  @spec discover_calendars(map(), keyword()) :: {:ok, list(map())} | {:error, String.t()}
-  def discover_calendars(client, opts \\ []) do
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
+  @impl Tymeslot.Integrations.Calendar.Provider
+  @spec discover_calendars(map()) :: {:ok, [CalendarEntry.t()]} | {:error, String.t()}
+  def discover_calendars(client) do
     client = Map.put(client, :provider, :mailbox_org)
-    CaldavCommon.discover_calendars(client, ip_address: ip_address)
+    CaldavCommon.discover_calendars(client)
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -174,14 +189,13 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
   defp validate_mailbox_url(url) do
     UrlValidation.validate_http_url(url,
       enforce_https_for_public: true,
-      https_error_message: "mailbox.org requires HTTPS",
+      https_error_message: dgettext("dashboard_calendar_providers", "mailbox.org requires HTTPS"),
       invalid_message:
-        "Invalid mailbox.org URL. Use https://dav.mailbox.org (or your custom mailbox.org-compatible CalDAV endpoint)."
+        dgettext(
+          "dashboard_calendar_providers",
+          "Invalid mailbox.org URL. Use https://dav.mailbox.org (or your custom mailbox.org-compatible CalDAV endpoint)."
+        )
     )
-  end
-
-  defp build_test_client(config) do
-    {:ok, new(config)}
   end
 
   defp normalize_base_url(url) do
@@ -189,9 +203,6 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
     |> String.trim()
     |> String.trim_trailing("/")
   end
-
-  defp mailbox_error_formatter(reason),
-    do: ErrorHandler.sanitize_error_message(reason, :mailbox_org)
 
   defp format_error(error), do: ErrorHandler.sanitize_error_message(error, :mailbox_org)
 end

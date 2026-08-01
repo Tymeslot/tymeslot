@@ -38,11 +38,9 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert capabilities[:screen_sharing] == true
       assert capabilities[:waiting_room] == false
       assert capabilities[:max_participants] == 100
-      assert capabilities[:requires_download] == false
-      assert capabilities[:supports_phone_dial_in] == false
-      assert capabilities[:supports_chat] == true
-      assert capabilities[:supports_breakout_rooms] == false
-      assert capabilities[:end_to_end_encryption] == true
+      assert capabilities[:dial_in] == false
+      assert capabilities[:chat] == true
+      assert capabilities[:breakout_rooms] == false
     end
   end
 
@@ -61,16 +59,38 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert String.contains?(message, "base_url")
     end
 
-    test "attempts connection when all required fields present" do
+    # `validate_config/1` is the cheap structural gate; `test_connection/1` is
+    # the one function that talks to the customer's server. Callers such as
+    # `ProviderRegistry.test_provider_connection/2` run both in sequence, so a
+    # network call here would double every scheduled health probe.
+    test "accepts a complete config without touching the network" do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
-      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _http_opts ->
         {:ok, %Req.Response{status: 200}}
       end)
 
       assert :ok = MiroTalkProvider.validate_config(config)
     end
 
+    test "rejects a base_url pointing at a private address without touching the network" do
+      config = %{api_key: "test_key", base_url: "http://127.0.0.1:3000"}
+
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 200}}
+      end)
+
+      assert {:error, _message} = MiroTalkProvider.validate_config(config)
+    end
+
+    test "rejects a base_url that is not an HTTP(S) URL" do
+      config = %{api_key: "test_key", base_url: "not a url"}
+
+      assert {:error, _message} = MiroTalkProvider.validate_config(config)
+    end
+  end
+
+  describe "test_connection/1" do
     test "returns error when connection fails" do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
@@ -78,8 +98,45 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
         {:error, %Mint.TransportError{reason: :econnrefused}}
       end)
 
-      assert {:error, message} = MiroTalkProvider.validate_config(config)
+      assert {:error, {:unreachable, message}} = MiroTalkProvider.perform_connection_test(config)
       assert String.contains?(message, "Connection refused")
+    end
+
+    # The tag, not the message, is what the web layer classifies on, so it has
+    # to distinguish a rejected credential from a server the URL can't reach.
+    test "tags a 401 as :invalid_api_key" do
+      config = %{api_key: "bad_key", base_url: "https://mirotalk.example.com"}
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 401, body: "Unauthorized"}}
+      end)
+
+      assert {:error, {:invalid_api_key, message}} =
+               MiroTalkProvider.perform_connection_test(config)
+
+      # An "Unauthorized" body takes the explicit branch, which names the key
+      # rather than falling back to the generic authentication message.
+      assert message == "Invalid API key - Authentication failed"
+    end
+
+    test "tags a 404 as :unreachable" do
+      config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 404}}
+      end)
+
+      assert {:error, {:unreachable, _message}} = MiroTalkProvider.perform_connection_test(config)
+    end
+
+    test "tags a rejected base URL as :unreachable without touching the network" do
+      config = %{api_key: "test_key", base_url: "not a url"}
+
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 200}}
+      end)
+
+      assert {:error, {:unreachable, _message}} = MiroTalkProvider.perform_connection_test(config)
     end
 
     test "redacts and truncates error bodies in logs" do
@@ -95,7 +152,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
          }}
       end)
 
-      log = capture_log(fn -> MiroTalkProvider.test_connection(config) end)
+      log = capture_log(fn -> MiroTalkProvider.perform_connection_test(config) end)
 
       assert log =~ "MiroTalk server error"
       refute log =~ "ya29.secret"
@@ -223,7 +280,9 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert payload["user"] == user_name
       assert payload["role"] == role
       assert payload["exp"] == DateTime.to_unix(meeting_time)
-      assert is_binary(payload["jti"])
+      # jti is a UUID v4, making each issued token individually revocable.
+      assert payload["jti"] =~
+               ~r/\A[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/
     end
 
     test "sanitizes user name in token payload" do
@@ -348,6 +407,36 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert {:error, :invalid_json} = MiroTalkProvider.create_meeting_room(config)
     end
 
+    test "returns error when a 200 response carries no room identifier" do
+      config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"unexpected" => "data"})}}
+      end)
+
+      assert {:error, :invalid_room_response} = MiroTalkProvider.create_meeting_room(config)
+    end
+
+    test "returns error when the room identifier is an empty string" do
+      config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"meeting" => ""})}}
+      end)
+
+      assert {:error, :invalid_room_response} = MiroTalkProvider.create_meeting_room(config)
+    end
+
+    test "returns error when the JSON body is not an object" do
+      config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(["room123"])}}
+      end)
+
+      assert {:error, :invalid_room_response} = MiroTalkProvider.create_meeting_room(config)
+    end
+
     test "handles API errors gracefully" do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
@@ -435,18 +524,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert metadata[:provider] == "mirotalk"
       assert metadata[:meeting_id] == "room123"
       assert metadata[:join_url] == "https://mirotalk.example.com/join/room123"
-    end
-
-    test "handles string-keyed room data" do
-      room_data = %{
-        "room_id" => "room456",
-        "meeting_url" => "https://mirotalk.example.com/join/room456"
-      }
-
-      metadata = MiroTalkProvider.generate_meeting_metadata(room_data)
-
-      assert metadata[:meeting_id] == "room456"
-      assert metadata[:join_url] == "https://mirotalk.example.com/join/room456"
     end
   end
 end

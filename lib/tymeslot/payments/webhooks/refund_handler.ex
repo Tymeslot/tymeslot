@@ -29,6 +29,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Payments.CustomerLookup
   alias Tymeslot.Payments.Webhooks.WebhookUtils
+  alias Tymeslot.Utils.MapKeys
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type) when event_type in ["charge.refunded", "charge.refund.updated"] do
@@ -50,9 +51,10 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   def validate(refund_object) when is_map(refund_object) do
     required_fields = ["id"]
 
-    case Enum.all?(required_fields, &Map.has_key?(refund_object, &1)) do
-      true -> :ok
-      false -> {:error, :missing_fields, "Missing required fields in refund object"}
+    if Enum.all?(required_fields, &Map.has_key?(refund_object, &1)) do
+      :ok
+    else
+      {:error, :missing_fields, "Missing required fields in refund object"}
     end
   end
 
@@ -65,6 +67,11 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     charge_amount = get_charge_amount(charge)
     total_refunded = calculate_total_refunded(charge)
     customer_id = charge["customer"]
+    # Check if refund exceeds threshold before revoking access. Computed up
+    # front (it depends only on the charge, not on a local subscription
+    # lookup) so the broadcast below can carry the decision instead of
+    # leaving the SaaS consumer to re-derive — or skip — it.
+    should_revoke = should_revoke_access?(total_refunded, charge_amount)
 
     Logger.info("Refund received",
       charge_id: charge_id,
@@ -82,7 +89,8 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
       customer_id: customer_id,
       total_refunded: total_refunded,
       charge_amount: charge_amount,
-      refund_percentage: calculate_refund_percentage(total_refunded, charge_amount)
+      refund_percentage: calculate_refund_percentage(total_refunded, charge_amount),
+      should_revoke: should_revoke
     })
 
     # Find the subscription by Stripe customer ID for local notifications
@@ -108,9 +116,6 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
         {:ok, :refund_logged}
 
       subscription ->
-        # Check if refund exceeds threshold before revoking access
-        should_revoke = should_revoke_access?(total_refunded, charge_amount)
-
         result =
           if should_revoke do
             ensure_revoked_access(
@@ -147,8 +152,10 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
               }
             )
 
-            # Send email notification to user
-            send_refund_email(subscription, total_refunded, should_revoke, charge)
+            # Send email notification to user, quoting the amount of THIS
+            # refund rather than the cumulative total across the charge.
+            latest_refund_amount = calculate_latest_refund_amount(charge)
+            send_refund_email(subscription, latest_refund_amount, should_revoke, charge)
 
             # Broadcast event for real-time UI updates
             broadcast_refund_event(subscription.user_id, event["id"], should_revoke)
@@ -179,19 +186,36 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @spec calculate_total_refunded(map()) :: non_neg_integer()
   def calculate_total_refunded(charge) do
     # First try to get from amount_refunded (most reliable)
-    case Map.get(charge, "amount_refunded") || Map.get(charge, :amount_refunded) do
+    case MapKeys.get(charge, :amount_refunded) do
       amount when is_integer(amount) and amount > 0 ->
         amount
 
       _amount_other ->
         # Fall back to summing individual refunds
-        refunds = get_in(charge, ["refunds", "data"]) || get_in(charge, [:refunds, :data]) || []
+        refunds = get_refunds(charge)
 
         refunds
-        |> Enum.map(fn refund ->
-          refund["amount"] || refund[:amount] || 0
-        end)
+        |> Enum.map(&(MapKeys.get(&1, :amount) || 0))
         |> Enum.sum()
+    end
+  end
+
+  # Determines the amount refunded by the specific event that triggered this
+  # webhook, rather than the cumulative total across every refund on the
+  # charge. Uses the most recently created entry in the refunds list; when
+  # that list is unavailable (e.g. only the summary `amount_refunded` field
+  # was sent), the cumulative total is the best available approximation —
+  # it equals the delta for a charge's first refund.
+  # Made public for testing purposes but should be considered internal API.
+  @doc false
+  @spec calculate_latest_refund_amount(map()) :: non_neg_integer()
+  def calculate_latest_refund_amount(charge) do
+    latest_refund =
+      Enum.max_by(get_refunds(charge), &(MapKeys.get(&1, :created) || 0), fn -> nil end)
+
+    case latest_refund do
+      nil -> calculate_total_refunded(charge)
+      refund -> MapKeys.get(refund, :amount) || calculate_total_refunded(charge)
     end
   end
 
@@ -200,7 +224,16 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @doc false
   @spec get_charge_amount(map()) :: non_neg_integer()
   def get_charge_amount(charge) do
-    Map.get(charge, "amount") || Map.get(charge, :amount) || 0
+    MapKeys.get(charge, :amount) || 0
+  end
+
+  # The list of individual refunds sits one level below the charge, under
+  # "refunds"/"data" (or their atom-keyed equivalents).
+  defp get_refunds(charge) do
+    case MapKeys.get(charge, :refunds) do
+      nil -> []
+      refunds -> MapKeys.get(refunds, :data) || []
+    end
   end
 
   # Calculates the refund percentage.
@@ -242,7 +275,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   @doc false
   @spec extract_charge_currency(map()) :: String.t()
   def extract_charge_currency(charge) do
-    Map.get(charge, "currency") || Map.get(charge, :currency) || "eur"
+    MapKeys.get(charge, :currency) || "eur"
   end
 
   defp broadcast_refund_event(user_id, event_id, access_revoked) do
@@ -253,14 +286,14 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     )
   end
 
-  defp send_refund_email(subscription, refund_amount_cents, _revoked, charge) do
+  defp send_refund_email(subscription, refund_amount_cents, revoked, charge) do
     currency = extract_charge_currency(charge)
 
     WebhookUtils.deliver_user_email(
       subscription.user_id,
       :refund_processed_template,
       :refund_processed_email,
-      [refund_amount_cents, currency],
+      [refund_amount_cents, currency, revoked],
       success_msg: "Refund notification sent to user #{subscription.user_id}",
       error_msg: "Failed to send refund notification: ",
       standalone_msg: "Refund processed template not configured (Standalone mode)"

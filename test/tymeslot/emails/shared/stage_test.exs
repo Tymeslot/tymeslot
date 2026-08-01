@@ -38,7 +38,6 @@ defmodule Tymeslot.Emails.Shared.StageTest do
     test "returns a non-empty MJML string containing the eyebrow and title" do
       html = Stage.compact_stage(:confirmed, "Notice", "Account verified")
 
-      assert is_binary(html)
       assert html =~ "Notice"
       assert html =~ "Account verified"
     end

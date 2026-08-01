@@ -521,6 +521,80 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       assert {:ok, [event]} = ICalParser.parse(ical_content)
       assert event.attendees == []
     end
+
+    test "parses the ORGANIZER property into an organizer map" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:organizer-event@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300115T110000Z
+      SUMMARY:Team Standup
+      ORGANIZER;CN=Alice Smith:mailto:alice@example.com
+      ATTENDEE;CN=Bob Jones;PARTSTAT=ACCEPTED:mailto:bob@example.com
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.organizer["email"] == "alice@example.com"
+      assert event.organizer["name"] == "Alice Smith"
+    end
+
+    test "parses a bare ORGANIZER without CN" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:bare-organizer@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300115T110000Z
+      SUMMARY:Solo Event
+      ORGANIZER:mailto:carol@example.com
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.organizer["email"] == "carol@example.com"
+      assert is_nil(event.organizer["name"])
+    end
+
+    test "strips surrounding quotes from a quoted ORGANIZER CN" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:quoted-organizer@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300115T110000Z
+      SUMMARY:Meeting
+      ORGANIZER;CN="Doe, Jane":mailto:jane@example.com
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.organizer["name"] == "Doe, Jane"
+    end
+
+    test "returns a nil organizer when no ORGANIZER property is present" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:no-organizer@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300115T110000Z
+      SUMMARY:Solo Event
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert is_nil(event.organizer)
+    end
   end
 
   defp format_ical_datetime(dt) do

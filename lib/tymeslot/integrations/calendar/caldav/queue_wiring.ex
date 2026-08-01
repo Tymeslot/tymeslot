@@ -112,19 +112,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
   end
 
   defp caldav_provider?(%{provider: provider}) when is_binary(provider) do
-    atom =
-      try do
-        String.to_existing_atom(provider)
-      rescue
-        ArgumentError -> nil
-      end
-
-    atom in ProviderConfig.caldav_based_providers()
+    provider in ProviderConfig.caldav_based_provider_strings()
   end
 
   defp build_attrs(meeting, integration, action, event_data) do
     now = DateTime.utc_now(:microsecond)
     sync_state = sync_state_for(action)
+    event_data = normalize_event_data(event_data)
     {all_day, start_at, end_at} = resolve_timing(event_data)
 
     %{
@@ -132,10 +126,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
       calendar_integration_id: integration.id,
       provider: integration.provider,
       provider_calendar_id: List.first(integration.calendar_paths),
-      summary: event_data[:summary] || event_data["summary"],
-      description: event_data[:description] || event_data["description"],
-      location: event_data[:location] || event_data["location"],
-      timezone: event_data[:timezone] || event_data["timezone"],
+      summary: event_data[:summary],
+      description: event_data[:description],
+      location: event_data[:location],
+      timezone: event_data[:timezone],
       all_day: all_day,
       start_at: start_at,
       end_at: end_at,
@@ -152,9 +146,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
   defp sync_state_for(:update), do: "locally_modified"
   defp sync_state_for(:delete), do: "locally_deleted"
 
+  # `event_data` is documented as the atom-keyed map `CalendarEventBuilder`
+  # produces, but it can also arrive from a payload that has been through JSON
+  # and so carries string keys. Answer the question once, here, rather than at
+  # every read below.
+  @event_data_keys ~w(summary description location timezone start_time end_time)a
+
+  defp normalize_event_data(event_data) when is_map(event_data) do
+    Enum.reduce(@event_data_keys, event_data, fn key, acc ->
+      case Map.get(acc, key) do
+        nil -> Map.put(acc, key, Map.get(acc, Atom.to_string(key)))
+        _present -> acc
+      end
+    end)
+  end
+
   defp resolve_timing(event_data) do
-    start = event_data[:start_time] || event_data["start_time"]
-    end_val = event_data[:end_time] || event_data["end_time"]
+    start = event_data[:start_time]
+    end_val = event_data[:end_time]
 
     case {start, end_val} do
       {%DateTime{} = s, %DateTime{} = e} -> {false, ensure_usec(s), ensure_usec(e)}

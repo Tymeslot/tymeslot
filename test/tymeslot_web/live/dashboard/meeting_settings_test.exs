@@ -270,7 +270,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       |> render_click()
 
       assert render(view) =~ "Stays Around"
-      assert MeetingTypes.get_meeting_type(meeting_type.id, user.id) != nil
+      assert %{name: "Stays Around"} = MeetingTypes.get_meeting_type(meeting_type.id, user.id)
     end
   end
 

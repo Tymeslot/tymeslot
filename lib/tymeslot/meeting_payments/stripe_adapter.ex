@@ -51,7 +51,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
 
   @spec create_account_link(map()) :: {:ok, map()} | {:error, term()}
   def create_account_link(params) do
-    Telemetry.span_stripe(:create_account_link, params[:account] || params["account"], fn ->
+    Telemetry.span_stripe(:create_account_link, params[:account], fn ->
       impl().create_account_link(params)
     end)
   end

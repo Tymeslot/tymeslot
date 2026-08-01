@@ -191,7 +191,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
       end)
 
       assert {:ok, response} = CalendarAPI.create_event(integration, "primary", event_data)
-      assert get_in(response, ["conferenceData", "entryPoints"]) != nil
+
+      assert get_in(response, ["conferenceData", "entryPoints"]) == [
+               %{"entryPointType" => "video", "uri" => "https://meet.google.com/abc-defg"}
+             ]
     end
 
     test "issues a follow-up GET when createRequest is pending and returns populated entryPoints" do
@@ -249,9 +252,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
       end)
 
       assert {:ok, response} = CalendarAPI.create_event(integration, "primary", event_data)
-      entry_points = get_in(response, ["conferenceData", "entryPoints"])
-      assert entry_points != nil
-      assert Enum.any?(entry_points, &(&1["uri"] == "https://meet.google.com/pending-resolved"))
+
+      assert get_in(response, ["conferenceData", "entryPoints"]) == [
+               %{
+                 "entryPointType" => "video",
+                 "uri" => "https://meet.google.com/pending-resolved"
+               }
+             ]
     end
 
     test "returns the original pending response when follow-up GET is still pending" do
@@ -509,6 +516,32 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
       end)
 
       assert {:error, :not_found, _msg} = CalendarAPI.list_calendars(integration)
+    end
+
+    test "404 on a calendar-scoped path names the calendar", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      assert {:error, :not_found, "Calendar not found"} =
+               CalendarAPI.list_events(
+                 integration,
+                 "primary",
+                 DateTime.utc_now(),
+                 DateTime.add(DateTime.utc_now(), 3600)
+               )
+    end
+
+    # A 404 on /calendars/<id>/events/<event-id> almost always means the event
+    # is gone, not the calendar — reporting "Calendar not found" there sent
+    # self-hosters looking for a calendar problem that did not exist.
+    test "404 on an event-scoped path names the event", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      assert {:error, :not_found, "Event not found"} =
+               CalendarAPI.delete_event(integration, "primary", "missing-event-id")
     end
 
     test "500 from the Google API surfaces as :network_error", %{integration: integration} do

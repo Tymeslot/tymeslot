@@ -54,6 +54,45 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandlerTest do
     end
   end
 
+  describe "calculate_latest_refund_amount/1" do
+    test "returns the amount of the most recently created refund, not the cumulative total" do
+      charge = %{
+        "amount_refunded" => 5000,
+        "refunds" => %{
+          "data" => [
+            %{"amount" => 2000, "created" => 100},
+            %{"amount" => 3000, "created" => 200}
+          ]
+        }
+      }
+
+      assert RefundHandler.calculate_latest_refund_amount(charge) == 3000
+    end
+
+    test "falls back to the cumulative total when no refunds list is present" do
+      charge = %{"amount_refunded" => 5000}
+      assert RefundHandler.calculate_latest_refund_amount(charge) == 5000
+    end
+
+    test "falls back to the cumulative total for an empty refunds list" do
+      charge = %{"amount_refunded" => 0, "refunds" => %{"data" => []}}
+      assert RefundHandler.calculate_latest_refund_amount(charge) == 0
+    end
+
+    test "handles atom keys" do
+      charge = %{
+        refunds: %{
+          data: [
+            %{amount: 1500, created: 10},
+            %{amount: 2500, created: 20}
+          ]
+        }
+      }
+
+      assert RefundHandler.calculate_latest_refund_amount(charge) == 2500
+    end
+  end
+
   describe "get_charge_amount/1" do
     test "extracts charge amount with string keys" do
       charge = %{"amount" => 10_000}

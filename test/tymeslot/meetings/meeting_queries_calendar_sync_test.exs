@@ -103,14 +103,14 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
 
-      assert %{} = MeetingQueries.list_by_provider_event_ids(integration.id, [])
+      assert MeetingQueries.list_by_provider_event_ids(integration.id, []) == %{}
     end
 
     test "returns empty map for list containing only nil values" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
 
-      assert %{} = MeetingQueries.list_by_provider_event_ids(integration.id, [nil, nil])
+      assert MeetingQueries.list_by_provider_event_ids(integration.id, [nil, nil]) == %{}
     end
 
     test "excludes nil values from lookup but returns matches for non-nil ids" do

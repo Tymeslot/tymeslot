@@ -50,50 +50,45 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
     import Tymeslot.CalendarProviderValidationCases
 
     test "validates basic required fields" do
-      test_basic_validation(Provider, "https://mail.example.com")
+      # The shared case block asserts on each missing/invalid field in turn and
+      # returns :ok only once every one of them has been checked.
+      assert :ok = test_basic_validation(Provider, "https://mail.example.com")
     end
 
-    test "blocks localhost URLs (SSRF protection)" do
+    # `validate_config/1` is structural only — it never performs network I/O
+    # (the connectivity probe used to run here too, doubling the rate-limit
+    # charge across two buckets for a single form submission). HTTP is
+    # allowed for localhost/private/link-local hosts (dev/test environments),
+    # so URL validation passes here; the live check now runs separately,
+    # through `test_connection/1`.
+    test "allows HTTP for localhost URLs without touching the network" do
       config = %{
         base_url: "http://localhost:8080",
         username: "user",
         password: "pass"
       }
 
-      # Should allow HTTP for localhost but still fail connection
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        # Will fail connection but URL validation should pass for local hosts
-        assert match?({:error, _}, result)
-      end)
+      assert :ok = Provider.validate_config(config)
     end
 
-    test "blocks private IP addresses (SSRF protection)" do
+    test "allows HTTP for private IP addresses without touching the network" do
       config = %{
         base_url: "http://10.0.0.1",
         username: "user",
         password: "pass"
       }
 
-      # Should allow HTTP for private IPs but still fail connection
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        assert match?({:error, _}, result)
-      end)
+      assert :ok = Provider.validate_config(config)
     end
 
-    test "blocks AWS metadata endpoint (SSRF protection)" do
+    test "allows HTTP for the AWS metadata endpoint without touching the network" do
       config = %{
         base_url: "http://169.254.169.254",
         username: "user",
         password: "pass"
       }
 
-      # Should allow HTTP for link-local but still fail connection
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        assert match?({:error, _}, result)
-      end)
+      assert :ok = Provider.validate_config(config)
     end
 
     test "enforces HTTPS for public hosts" do
@@ -103,36 +98,28 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
         password: "pass"
       }
 
-      assert {:error, message} = Provider.validate_config(config)
-      assert String.contains?(message, "HTTPS") or String.contains?(message, "https")
+      assert Provider.validate_config(config) ==
+               {:error, "Use HTTPS for non-local Zimbra servers"}
     end
 
-    test "accepts HTTPS for public hosts (connection fails without server)" do
+    test "accepts HTTPS for public hosts without touching the network" do
       config = %{
         base_url: "https://mail.example.com",
         username: "user@example.com",
         password: "pass"
       }
 
-      # URL validation passes but connection test fails without actual server
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        assert match?({:error, _}, result)
-      end)
+      assert :ok = Provider.validate_config(config)
     end
 
-    test "accepts full CalDAV URL format (connection fails without server)" do
+    test "accepts full CalDAV URL format without touching the network" do
       config = %{
         base_url: "https://mail.example.com/dav/user@example.com",
         username: "user@example.com",
         password: "pass"
       }
 
-      # URL validation passes but connection test fails without actual server
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        assert match?({:error, _}, result)
-      end)
+      assert :ok = Provider.validate_config(config)
     end
   end
 
@@ -176,13 +163,8 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
 
       client = Provider.new(config)
 
-      # Calendar paths should be formatted for Zimbra
-      assert is_list(client.calendar_paths)
-      assert length(client.calendar_paths) == 1
-
-      assert Enum.any?(client.calendar_paths, fn path ->
-               String.contains?(path, "/dav/testuser@example.com/Calendar/")
-             end)
+      # Calendar names are turned into Zimbra's /dav/{username}/{name}/ paths
+      assert client.calendar_paths == ["/dav/testuser@example.com/Calendar/"]
     end
 
     test "sets empty calendar_paths when not provided" do
@@ -225,14 +207,14 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
 
       # Will fail but tests interface
       capture_log(fn ->
-        case Provider.test_connection(integration) do
+        case Provider.perform_connection_test(integration) do
           {:ok, message} -> assert String.contains?(message, "Zimbra")
           {:error, _reason} -> :ok
         end
       end)
     end
 
-    test "returns helpful error message for authentication failure" do
+    test "returns a sanitised error message when the server is unreachable" do
       integration = %{
         base_url: "http://localhost:1",
         username: "invalid@example.com",
@@ -242,13 +224,15 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       }
 
       capture_log(fn ->
-        # Without actual server, should return connection error
-        assert {:error, message} = Provider.test_connection(integration)
-        assert is_binary(message)
+        # Nothing is listening on port 1, so the error is the generic connect
+        # message — it must never leak the underlying transport reason.
+        assert Provider.perform_connection_test(integration) ==
+                 {:error,
+                  "Unable to connect to the calendar service. Please check the URL and try again."}
       end)
     end
 
-    test "accepts options with IP metadata" do
+    test "is pure I/O — takes only the integration, no caller options" do
       integration = %{
         base_url: "http://localhost:1",
         username: "user@example.com",
@@ -257,11 +241,9 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
         provider: :zimbra
       }
 
-      opts = [metadata: %{ip: "192.168.1.1"}]
-
       capture_log(fn ->
         # Without actual server, should return connection error
-        assert {:error, _message} = Provider.test_connection(integration, opts)
+        assert {:error, _message} = Provider.perform_connection_test(integration)
       end)
     end
   end
@@ -297,23 +279,6 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
         assert {:error, _message} = result
       end)
     end
-
-    test "accepts options for rate limiting" do
-      client = %{
-        base_url: "https://mail.example.com",
-        username: "user@example.com",
-        password: "pass",
-        calendar_paths: [],
-        provider: :zimbra
-      }
-
-      opts = [metadata: %{ip: "10.0.0.1"}]
-
-      capture_log(fn ->
-        result = Provider.discover_calendars(client, opts)
-        assert {:error, _message} = result
-      end)
-    end
   end
 
   describe "list_events/3" do
@@ -330,9 +295,10 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       end_time = DateTime.add(start_time, 86_400, :second)
 
       capture_log(fn ->
-        # Circuit breaker may return error or empty list depending on state
-        result = Provider.list_events(client, start_time: start_time, end_time: end_time)
-        assert match?({:error, _}, result) or match?({:ok, []}, result)
+        # The circuit breaker is reset in setup, so the CalDAV request is
+        # actually attempted and fails against the dead port.
+        assert {:error, _reason} =
+                 Provider.list_events(client, start_time: start_time, end_time: end_time)
       end)
     end
 

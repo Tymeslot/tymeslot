@@ -9,9 +9,12 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
   import Tymeslot.WorkerTestHelpers
 
   alias Ecto.UUID
+  alias Tymeslot.Bookings.Orchestrator
+  alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
+  alias TymeslotWeb.Themes.Core.MeetingManagement
 
   setup :verify_on_exit!
 
@@ -41,6 +44,20 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       end)
 
       assert :ok = CalendarEventSync.create(meeting.id, 1)
+    end
+
+    test "switches to update when provider_event_id is already persisted" do
+      provider_event_id = "google-event-existing"
+
+      %{meeting: meeting} =
+        setup_calendar_scenario(uid: UUID.generate())
+
+      {:ok, meeting} =
+        MeetingQueries.update_meeting(meeting, %{provider_event_id: provider_event_id})
+
+      expect(Tymeslot.CalendarMock, :update_event, fn ^provider_event_id, _data, _ctx -> :ok end)
+
+      assert :ok = CalendarEventSync.create(meeting.id, 2)
     end
 
     test "returns {:error, :meeting_not_found} for a non-existent meeting" do
@@ -77,6 +94,27 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       assert :ok = CalendarEventSync.update(meeting.id, 1)
     end
 
+    test "uses provider_event_id after create while preserving meeting.uid" do
+      provider_event_id = "google-event-created"
+      %{meeting: meeting} = setup_calendar_scenario(uid: UUID.generate())
+      original_uid = meeting.uid
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
+        {:ok, %{uid: provider_event_id}}
+      end)
+
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
+        {:ok, %{integration_id: meeting.calendar_integration_id, calendar_path: "primary"}}
+      end)
+
+      assert :ok = CalendarEventSync.create(meeting.id, 1)
+
+      expect(Tymeslot.CalendarMock, :update_event, fn ^provider_event_id, _data, _ctx -> :ok end)
+
+      assert :ok = CalendarEventSync.update(meeting.id, 1)
+      assert Repo.get!(MeetingSchema, meeting.id).uid == original_uid
+    end
+
     test "recreates the event when the provider reports it as not found (404 recovery)" do
       %{user: user, integration: integration, meeting: meeting} = setup_calendar_scenario()
       uid = meeting.uid
@@ -88,7 +126,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       # Recovery path creates against the organizer's user id.
       expect(Tymeslot.CalendarMock, :create_event, fn _data, id ->
         assert id == user.id
-        {:ok, "new-uid"}
+        {:ok, %{"uid" => "new-google-event-id"}}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
@@ -96,6 +134,10 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       end)
 
       assert :ok = CalendarEventSync.update(meeting.id, 1)
+
+      updated = Repo.get!(MeetingSchema, meeting.id)
+      assert updated.uid == uid
+      assert updated.provider_event_id == "new-google-event-id"
     end
 
     test "returns {:error, :meeting_not_found} for a non-existent meeting" do
@@ -114,6 +156,22 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       uid = meeting.uid
 
       expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _ctx -> :ok end)
+
+      assert :ok = CalendarEventSync.delete(meeting.id, 1)
+    end
+
+    test "uses provider_event_id when deleting an OAuth event" do
+      provider_event_id = "outlook-event-delete"
+
+      %{meeting: meeting} = setup_calendar_scenario(uid: UUID.generate())
+
+      {:ok, meeting} =
+        MeetingQueries.update_meeting(meeting, %{
+          provider_event_id: provider_event_id,
+          status: "cancelled"
+        })
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn ^provider_event_id, _ctx -> :ok end)
 
       assert :ok = CalendarEventSync.delete(meeting.id, 1)
     end
@@ -159,11 +217,9 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
   end
 
   describe "provider mapping persistence" do
-    test "persists Google-style string-key map as provider_event_id" do
+    test "persists a string-key id map as provider_event_id" do
       %{meeting: meeting} = setup_calendar_scenario(uid: UUID.generate())
 
-      # Direct create path: create_event returns the raw provider map, which is
-      # passed straight to persist_calendar_mapping. Google returns string keys.
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
         {:ok, %{"id" => "google-event-id-abc"}}
       end)
@@ -178,10 +234,9 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       assert updated.provider_event_id == "google-event-id-abc"
     end
 
-    test "persists Outlook-style atom-key map as provider_event_id" do
+    test "persists an atom-key id map as provider_event_id" do
       %{meeting: meeting} = setup_calendar_scenario(uid: UUID.generate())
 
-      # Outlook returns the common-format map with atom keys.
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
         {:ok, %{id: "outlook-event-id-xyz"}}
       end)
@@ -206,6 +261,100 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
 
       updated = Repo.get(MeetingSchema, meeting.id)
       assert updated.uid == "caldav-uid-123"
+    end
+
+    test "persists string-key uid map as provider_event_id and preserves public lookups" do
+      %{meeting: meeting} = setup_calendar_scenario(uid: UUID.generate())
+      original_uid = meeting.uid
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
+        {:ok, %{"uid" => "google-uid-abc"}}
+      end)
+
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
+        {:ok, %{integration_id: meeting.calendar_integration_id, calendar_path: "primary"}}
+      end)
+
+      assert :ok = CalendarEventSync.create(meeting.id, 1)
+
+      updated = Repo.get!(MeetingSchema, meeting.id)
+      assert updated.uid == original_uid
+      assert updated.provider_event_id == "google-uid-abc"
+
+      assert {:ok, %{id: meeting_id}} =
+               MeetingManagement.validate_and_load_meeting(
+                 original_uid,
+                 :cancel,
+                 meeting.organizer_user_id
+               )
+
+      assert meeting_id == meeting.id
+
+      assert {:ok, %{id: ^meeting_id}} =
+               Orchestrator.get_meeting_for_reschedule(
+                 original_uid,
+                 meeting.organizer_user_id
+               )
+    end
+
+    test "persists atom-key uid map as provider_event_id and supports reconciliation" do
+      %{meeting: meeting} = setup_calendar_scenario(uid: UUID.generate())
+      original_uid = meeting.uid
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
+        {:ok, %{uid: "google-uid-atom"}}
+      end)
+
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
+        {:ok, %{integration_id: meeting.calendar_integration_id, calendar_path: "primary"}}
+      end)
+
+      assert :ok = CalendarEventSync.create(meeting.id, 1)
+
+      updated = Repo.get!(MeetingSchema, meeting.id)
+      assert updated.uid == original_uid
+      assert updated.provider_event_id == "google-uid-atom"
+
+      assert {:ok, found} =
+               Sync.find_meeting(
+                 meeting.calendar_integration_id,
+                 "google-uid-atom",
+                 "unrelated-ical-uid"
+               )
+
+      assert found.id == meeting.id
+    end
+
+    test "prefers an explicit id when a provider map also contains uid" do
+      %{meeting: meeting} = setup_calendar_scenario(uid: UUID.generate())
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
+        {:ok, %{id: "provider-id", uid: "ambiguous-uid"}}
+      end)
+
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
+        {:ok, %{integration_id: meeting.calendar_integration_id, calendar_path: "primary"}}
+      end)
+
+      assert :ok = CalendarEventSync.create(meeting.id, 1)
+      assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == "provider-id"
+    end
+
+    test "compensates a map-shaped orphan using the explicit provider id" do
+      %{meeting: meeting} = setup_calendar_scenario(uid: UUID.generate())
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
+        {:ok, %{id: "exact-provider-id", uid: "ambiguous-uid"}}
+      end)
+
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
+        {:ok, %{integration_id: meeting.calendar_integration_id, calendar_path: %{invalid: true}}}
+      end)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn "exact-provider-id", _ctx -> :ok end)
+
+      assert {:error, :calendar_mapping_persistence_failed} =
+               CalendarEventSync.create(meeting.id, 1)
     end
 
     test "surfaces {:error, _} and compensates by deleting the orphaned event when mapping persistence fails" do

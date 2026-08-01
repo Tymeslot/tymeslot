@@ -17,11 +17,13 @@ defmodule Tymeslot.Emails.Templates.AdminAlertTest do
       assert html =~ "Payments"
     end
 
-    test "renders a valid HTML document with substantial content" do
+    test "renders a complete HTML document around the alert" do
       html = AdminAlert.render("General", :warning, "Test alert", %{})
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      assert html =~ "<!doctype html>"
+      assert html =~ "<title>Tymeslot Admin Alert</title>"
+      assert html =~ "Test alert"
+      assert String.ends_with?(String.trim(html), "</html>")
     end
 
     test "empty metadata renders 'No additional context' placeholder" do
@@ -109,11 +111,11 @@ defmodule Tymeslot.Emails.Templates.AdminAlertTest do
       assert text =~ "(none)"
     end
 
-    test "returns a valid binary with the standard header" do
+    test "opens with the standard header" do
       text = AdminAlert.render_text("General", :warning, "Test", %{})
 
-      assert is_binary(text)
       assert text =~ "TYMESLOT ADMIN ALERT"
+      assert text =~ "Test"
     end
   end
 end

@@ -9,7 +9,6 @@ defmodule Tymeslot.Emails.Shared.UrlsTest do
     test "returns a valid URL string" do
       url = Urls.get_app_url()
 
-      assert is_binary(url)
       assert url =~ ~r/^https?:\/\//
     end
 
@@ -107,8 +106,8 @@ defmodule Tymeslot.Emails.Shared.UrlsTest do
       links = Urls.calendar_links(details)
 
       for url <- [links.google, links.outlook, links.yahoo] do
-        assert is_binary(url)
-        assert String.length(url) > 0
+        assert url =~ URI.encode_www_form(details.title)
+        assert url =~ URI.encode_www_form(details.description)
       end
     end
 

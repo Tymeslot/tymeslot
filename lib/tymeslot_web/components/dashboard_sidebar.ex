@@ -252,8 +252,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     not (Map.get(status, :has_calendar, false) and Map.get(status, :has_video, false))
   end
 
-  @spec close_sidebar_js() :: Phoenix.LiveView.JS.t()
-  def close_sidebar_js do
+  defp close_sidebar_js do
     %JS{}
     |> JS.remove_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
     |> JS.add_class("hidden", to: "#dashboard-sidebar-overlay")

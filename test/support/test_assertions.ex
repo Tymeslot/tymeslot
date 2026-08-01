@@ -54,10 +54,12 @@ defmodule Tymeslot.TestAssertions do
 
   defp assert_subject_contains_meeting_info(email, attendee_name) do
     if attendee_name do
-      assert email.subject =~ attendee_name or
-               String.downcase(email.subject) =~ "appointment" or
-               String.downcase(email.subject) =~ "meeting",
-             "Expected subject to contain attendee name or appointment/meeting"
+      subject = String.downcase(email.subject)
+      name = Regex.escape(String.downcase(attendee_name))
+
+      assert subject =~ ~r/#{name}|appointment|meeting/,
+             "Expected subject #{inspect(email.subject)} to name the attendee, " <>
+               "or to mention an appointment or meeting"
     end
   end
 
@@ -105,12 +107,12 @@ defmodule Tymeslot.TestAssertions do
 
   defp assert_date_in_body(email, {year, month, day}) do
     month_name = get_month_name(month)
+    # The abbreviated month name is a prefix of the full one, so matching on it
+    # covers both spellings. Templates render dates in several formats, so any
+    # of the three components is enough to prove the date reached the body.
+    month_abbrev = String.slice(month_name, 0..2)
 
-    # Check for various date formats
-    assert email.html_body =~ to_string(year) or
-             email.html_body =~ month_name or
-             email.html_body =~ String.slice(month_name, 0..2) or
-             email.html_body =~ to_string(day),
+    assert email.html_body =~ ~r/#{month_abbrev}|\b#{year}\b|\b#{day}\b/,
            "Expected email to contain date information (year: #{year}, month: #{month_name}, day: #{day})"
   end
 
@@ -141,9 +143,8 @@ defmodule Tymeslot.TestAssertions do
     form_html = view |> element(form_selector) |> render()
 
     Enum.each(fields, fn field ->
-      assert form_html =~ ~s(name="#{field}") or
-               form_html =~ ~s(name="booking[#{field}]") or
-               form_html =~ ~s(name="meeting[#{field}]"),
+      # Forms name their inputs bare or namespaced under booking[]/meeting[].
+      assert form_html =~ ~r/name="(booking\[|meeting\[)?#{Regex.escape(to_string(field))}\]?"/,
              "Expected form to have field: #{field}"
     end)
   end
@@ -154,11 +155,17 @@ defmodule Tymeslot.TestAssertions do
   @spec assert_field_error(term(), String.t()) :: term()
   def assert_field_error(view, field) do
     html = render(view)
-    # Look for common error patterns without checking exact text
-    assert html =~ ~s(phx-feedback-for="booking[#{field}]") or
-             html =~ ~s(phx-feedback-for="meeting[#{field}]") or
-             html =~ ~r/class="[^"]*invalid[^"]*"[^>]*name="[^"]*#{field}/ or
-             html =~ ~r/class="[^"]*error[^"]*"[^>]*#{field}/,
+
+    # Error feedback is rendered either as a phx-feedback-for marker or as an
+    # invalid/error class on the input itself, depending on the component.
+    error_markers = [
+      ~s(phx-feedback-for="booking[#{field}]"),
+      ~s(phx-feedback-for="meeting[#{field}]"),
+      ~r/class="[^"]*invalid[^"]*"[^>]*name="[^"]*#{field}/,
+      ~r/class="[^"]*error[^"]*"[^>]*#{field}/
+    ]
+
+    assert Enum.any?(error_markers, &(html =~ &1)),
            "Expected error feedback for field: #{field}"
   end
 
@@ -182,11 +189,11 @@ defmodule Tymeslot.TestAssertions do
   """
   @spec assert_meeting_actions_available(String.t(), term()) :: term()
   def assert_meeting_actions_available(html, meeting) do
-    # Check for action links/buttons without relying on exact text
-    assert html =~ ~r/href="[^"]*\/meeting\/#{meeting.uid}\/reschedule/ or
-             html =~ ~r/phx-click="reschedule".*data-uid="#{meeting.uid}"/ or
-             html =~ meeting.uid,
-           "Expected reschedule action for meeting"
+    # Every action markup variant (reschedule link, phx-click button) carries the
+    # meeting uid, so its presence is what distinguishes "actions rendered" from
+    # "actions missing" without pinning the test to one markup shape.
+    assert html =~ meeting.uid,
+           "Expected reschedule action for meeting #{meeting.uid}"
   end
 
   @doc """
@@ -223,7 +230,7 @@ defmodule Tymeslot.TestAssertions do
       _other ->
         html = render(view)
 
-        assert html =~ "success" or html =~ "confirmed" or html =~ "thank",
+        assert html =~ ~r/success|confirmed|thank/,
                "Expected success indication in view"
     end
   end

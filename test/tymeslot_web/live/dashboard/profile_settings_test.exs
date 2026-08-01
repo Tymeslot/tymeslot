@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
 
       # Verify profile was updated in DB
       updated_profile = Repo.reload!(profile)
-      assert updated_profile.avatar != nil
+      assert updated_profile.avatar =~ ".png"
     end
 
     test "uploaded avatar is reachable via /uploads and has nosniff header", %{

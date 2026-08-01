@@ -9,13 +9,13 @@ defmodule TymeslotWeb.Helpers.UploadHandlerTest do
     test "returns correct options for :avatar" do
       opts = UploadHandler.get_upload_opts(:avatar)
       assert opts[:max_entries] == 1
-      assert is_list(opts[:accept])
+      assert opts[:accept] == [".jpg", ".jpeg", ".png", ".gif", ".webp"]
     end
 
     test "returns correct options for :background_image" do
       opts = UploadHandler.get_upload_opts(:background_image)
       assert opts[:max_entries] == 1
-      assert ".jpg" in opts[:accept] or ".png" in opts[:accept]
+      assert opts[:accept] == [".jpg", ".jpeg", ".png", ".webp"]
     end
 
     test "returns correct options for :background_video" do

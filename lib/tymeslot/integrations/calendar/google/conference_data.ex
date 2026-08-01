@@ -31,11 +31,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.ConferenceData do
 
   Returns `nil` when the event carries no Meet link.
   """
+  # Converted events carry atom keys; raw provider payloads that reach here
+  # unconverted carry string keys. This function is the single place that
+  # answers "which key type?", so callers read one way.
   @spec meet_url_from_event(map()) :: String.t() | nil
-  def meet_url_from_event(created) when is_map(created) do
-    created[:meet_url] || created["meet_url"]
-  end
-
+  def meet_url_from_event(%{meet_url: meet_url}) when is_binary(meet_url), do: meet_url
+  def meet_url_from_event(%{"meet_url" => meet_url}) when is_binary(meet_url), do: meet_url
   def meet_url_from_event(_other), do: nil
 
   # ── Private ───────────────────────────────────────────────────────────────

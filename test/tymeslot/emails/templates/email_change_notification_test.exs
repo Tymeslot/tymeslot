@@ -14,8 +14,9 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
 
       html = EmailChangeNotification.render(user, new_email, request_time)
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      assert html =~ "<html"
+      assert html =~ "</html>"
+      assert html =~ "Email change requested"
     end
 
     test "includes user name in greeting" do
@@ -55,7 +56,6 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
 
       html = EmailChangeNotification.render(user, new_email, request_time)
 
-      assert is_binary(html)
       assert html =~ "Just now"
     end
 
@@ -66,9 +66,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
 
       html = EmailChangeNotification.render(user, new_email, request_time)
 
-      assert is_binary(html)
-      # Should contain formatted time
-      assert String.length(html) > 500
+      assert html =~ "January 15, 2025 at 10:30 AM UTC"
     end
 
     test "includes security warning about unauthorized access" do
@@ -78,7 +76,8 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
 
       html = EmailChangeNotification.render(user, new_email, request_time)
 
-      assert html =~ "did NOT request" || html =~ "compromised"
+      assert html =~ "If you did not request this change"
+      assert html =~ "your account may be compromised"
     end
   end
 
@@ -114,8 +113,9 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
       user = build_user_data(%{name: "<script>steal()</script>", email: "test@example.com"})
       text = EmailChangeNotification.render_text(user, "new@example.com", nil)
 
-      assert is_binary(text)
+      assert text =~ "Hi <script>steal()</script>,"
       assert text =~ "new@example.com"
+      assert text =~ "test@example.com"
     end
   end
 end

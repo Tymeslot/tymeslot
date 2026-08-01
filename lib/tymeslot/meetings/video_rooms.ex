@@ -27,7 +27,9 @@ defmodule Tymeslot.Meetings.VideoRooms do
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
+  alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.ProviderConfig
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.Repo
 
@@ -61,6 +63,8 @@ defmodule Tymeslot.Meetings.VideoRooms do
     - {:error, :video_integration_missing} if no video integration configured
     - {:error, :video_integration_inactive} if integration is disabled
     - {:error, :unknown_provider} if provider is unsupported
+    - {:error, :incomplete_video_room} if the provider returned a room carrying
+      neither a room id nor a meeting URL
     - {:error, :database_update_failed} if the final write fails
     - {:error, reason} on other failures
 
@@ -137,7 +141,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
   end
 
   @spec create_provider_meeting_room(MeetingSchema.t(), integer() | nil) ::
-          {:ok, map()} | {:error, term()}
+          {:ok, MeetingContext.t()} | {:error, term()}
   defp create_provider_meeting_room(meeting, user_id) do
     Logger.info("Requesting video room from provider", meeting_id: meeting.id)
 
@@ -159,11 +163,34 @@ defmodule Tymeslot.Meetings.VideoRooms do
     end
   end
 
-  @spec build_video_room_attrs(MeetingSchema.t(), map()) :: {:ok, map()}
+  @spec build_video_room_attrs(MeetingSchema.t(), MeetingContext.t()) ::
+          {:ok, map()} | {:error, :incomplete_video_room}
   defp build_video_room_attrs(meeting, meeting_context) do
-    with meeting_url <- get_meeting_url_from_context(meeting_context),
-         room_id <- video_module().extract_room_id(meeting_context),
-         {:ok, organizer_url} <- create_secure_join_url(meeting, meeting_context, "organizer"),
+    meeting_url = get_meeting_url_from_context(meeting_context)
+    room_id = video_module().extract_room_id(meeting_context)
+
+    case {room_id, meeting_url} do
+      {nil, nil} -> reject_incomplete_room(meeting, meeting_context)
+      _identified -> complete_video_room_attrs(meeting, meeting_context, room_id, meeting_url)
+    end
+  end
+
+  # A provider that answers successfully but hands back neither a room id nor a
+  # meeting URL has given us nothing to join. Refusing it here keeps the booking
+  # free of a room that is flagged as enabled but cannot be entered.
+  defp reject_incomplete_room(meeting, meeting_context) do
+    Logger.error("Video provider returned a room with no identifier or URL",
+      meeting_id: meeting.id,
+      provider_type: Map.get(meeting_context, :provider_type)
+    )
+
+    {:error, :incomplete_video_room}
+  end
+
+  @spec complete_video_room_attrs(MeetingSchema.t(), map(), String.t() | nil, String.t() | nil) ::
+          {:ok, map()}
+  defp complete_video_room_attrs(meeting, meeting_context, room_id, meeting_url) do
+    with {:ok, organizer_url} <- create_secure_join_url(meeting, meeting_context, "organizer"),
          {:ok, attendee_url} <- create_secure_join_url(meeting, meeting_context, "participant") do
       expiry_time = DateTime.add(meeting.end_time, 1800, :second)
 
@@ -325,11 +352,10 @@ defmodule Tymeslot.Meetings.VideoRooms do
     {:ok, fallback_url}
   end
 
-  defp get_meeting_url_from_context(meeting_context) do
-    meeting_context.room_data[:meeting_url] ||
-      meeting_context.room_data["meeting_url"] ||
-      meeting_context.room_data[:room_id] ||
-      meeting_context.room_data["room_id"]
+  # No catch-all clause: `RoomData` enforces both keys, so `MeetingContext.t()`
+  # is covered exhaustively here and Dialyzer rejects an unreachable fallback.
+  defp get_meeting_url_from_context(%{room_data: %{meeting_url: meeting_url, room_id: room_id}}) do
+    meeting_url || room_id
   end
 
   defp check_video_provider_type(meeting, user_id) do
@@ -360,9 +386,9 @@ defmodule Tymeslot.Meetings.VideoRooms do
 
   defp get_meeting_context_from_room_id(room_id) do
     # Create a minimal context for backward compatibility
-    %{
+    %MeetingContext{
       provider_type: :mirotalk,
-      room_data: %{room_id: room_id, meeting_url: room_id},
+      room_data: %RoomData{room_id: room_id, meeting_url: room_id, provider_data: %{}},
       provider_module: Tymeslot.Integrations.Video.Providers.MiroTalkProvider
     }
   end

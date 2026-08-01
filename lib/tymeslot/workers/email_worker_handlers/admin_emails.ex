@@ -6,6 +6,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
   @spec handle_admin_alert(%{String.t() => term()}) ::
           :ok | {:error, term()}
@@ -39,7 +40,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
           error: inspect(reason)
         )
 
-        {:error, "Failed to deliver admin alert"}
+        DeliveryOutcome.from_error(reason, "Failed to deliver admin alert")
     end
   end
 

@@ -13,20 +13,17 @@ defmodule TymeslotWeb.Components.MeetingUtilsTest do
 
     test "formats Time structs" do
       {:ok, time} = Time.new(9, 0, 0)
-      assert {:ok, result} = MeetingUtils.normalize_slot_time(time)
-      assert is_binary(result)
+      assert {:ok, "9:00 AM"} = MeetingUtils.normalize_slot_time(time)
     end
 
     test "formats NaiveDateTime structs using time component" do
       {:ok, ndt} = NaiveDateTime.new(2024, 1, 15, 9, 30, 0)
-      assert {:ok, result} = MeetingUtils.normalize_slot_time(ndt)
-      assert is_binary(result)
+      assert {:ok, "9:30 AM"} = MeetingUtils.normalize_slot_time(ndt)
     end
 
     test "formats DateTime structs using time component" do
       {:ok, dt} = DateTime.new(~D[2024-01-15], ~T[14:00:00])
-      assert {:ok, result} = MeetingUtils.normalize_slot_time(dt)
-      assert is_binary(result)
+      assert {:ok, "2:00 PM"} = MeetingUtils.normalize_slot_time(dt)
     end
 
     test "uses wall-clock time from DateTime, not UTC-shifted" do

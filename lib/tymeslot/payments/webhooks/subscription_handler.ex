@@ -31,7 +31,8 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandler do
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(event, subscription) do
-    event_type = event["type"] || event[:type]
+    # WebhookProcessor stamps an atom :type on every event before dispatch.
+    event_type = Map.get(event, :type)
     subscription_id = subscription["id"]
 
     Logger.info("Processing subscription event",

@@ -10,9 +10,22 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
 
   alias Ecto.UUID
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
   alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
+
+  defp admin_alert_args do
+    %{
+      "action" => "send_admin_alert",
+      "recipient" => "ops@example.com",
+      "category" => "Queue",
+      "severity" => "error",
+      "message" => "Oban job failed permanently",
+      "metadata" => %{"worker" => "Tymeslot.Workers.EmailWorker"},
+      "alert_hash" => String.duplicate("a", 64)
+    }
+  end
 
   describe "perform/1 send_cancellation_emails" do
     test "discards job when meeting is not found" do
@@ -194,6 +207,63 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
                  "message" => "Unhandled webhook event",
                  "metadata" => %{"event_id" => "evt_001"},
                  "alert_hash" => String.duplicate("a", 64)
+               })
+    end
+  end
+
+  describe "perform/1 when the provider's circuit breaker is open" do
+    setup do
+      Mox.expect(Tymeslot.EmailServiceMock, :send_admin_alert, fn _recipient,
+                                                                  _category,
+                                                                  _severity,
+                                                                  _message,
+                                                                  _metadata ->
+        {:error, :circuit_open}
+      end)
+
+      :ok
+    end
+
+    # The exponential backoff tops out at 16 seconds, so before this the five
+    # attempts were spent inside the first twenty seconds of a five-minute
+    # outage and the job discarded while the provider was merely paused.
+    test "snoozes for at least the breaker's recovery window" do
+      assert {:snooze, seconds} = perform_job(EmailWorker, admin_alert_args())
+
+      assert seconds >= CircuitBreakerSupervisor.email_breaker_recovery_seconds()
+      assert seconds > EmailWorker.backoff(%Oban.Job{attempt: 5})
+    end
+  end
+
+  describe "perform/1 when the recipient is permanently rejected" do
+    test "discards rather than retrying an address that can never accept mail" do
+      Mox.expect(Tymeslot.EmailServiceMock, :send_admin_alert, fn _recipient,
+                                                                  _category,
+                                                                  _severity,
+                                                                  _message,
+                                                                  _metadata ->
+        {:error, {:recipient_rejected, {422, %{"ErrorCode" => 406}}}}
+      end)
+
+      assert {:discard, "Recipient permanently undeliverable"} =
+               perform_job(EmailWorker, admin_alert_args())
+    end
+
+    # Each handler flattens delivery failures into its own message; the
+    # classification has to survive that in every one of them, not just the
+    # admin alert path the incident happened to expose.
+    test "applies to the auth handlers too" do
+      user = insert(:user)
+
+      Mox.expect(Tymeslot.EmailServiceMock, :send_email_verification, fn _user, _url ->
+        {:error, {:recipient_rejected, {422, %{"ErrorCode" => 300}}}}
+      end)
+
+      assert {:discard, "Recipient permanently undeliverable"} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_email_verification",
+                 "user_id" => user.id,
+                 "verification_url" => "https://example.com/verify/token"
                })
     end
   end

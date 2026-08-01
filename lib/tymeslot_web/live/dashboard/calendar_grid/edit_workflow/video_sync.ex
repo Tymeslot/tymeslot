@@ -56,10 +56,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.VideoSync do
     opts = [integration_id: integration_id, event_details: EventDetails.from_grid_event(event)]
 
     case video_rooms_module().create_meeting_room(user_id, opts) do
-      {:ok, %{room_data: room_data}} ->
-        url = room_data[:meeting_url] || room_data[:join_url]
-        persist_video_link(event, url)
-        {:ok, url}
+      {:ok, meeting_context} ->
+        persist_meeting_url(event, meeting_context, integration_id, user_id)
 
       {:error, reason} = error ->
         Logger.warning("Failed to provision video room for event edit",
@@ -71,6 +69,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.VideoSync do
 
         error
     end
+  end
+
+  # The provider reported success but the room carries no usable join URL
+  # (e.g. a 2xx response whose body is missing the URL field — `RoomData`
+  # only enforces key presence, not a non-nil value). Persisting `nil` here
+  # would return `{:ok, nil}`, the same shape as an intentional "video
+  # removed", so `CalendarEventHandlers.handle_video_sync_result/3` would
+  # silently wipe the cached row's link with no flash. Leave the existing
+  # `video_link` untouched and surface a distinct error instead so the
+  # LiveView can flash it.
+  defp persist_meeting_url(event, %{room_data: %{meeting_url: url}}, _integration_id, _user_id)
+       when is_binary(url) and url != "" do
+    persist_video_link(event, url)
+    {:ok, url}
+  end
+
+  defp persist_meeting_url(event, _meeting_context, integration_id, user_id) do
+    Logger.warning("Video provider returned no meeting URL for event edit",
+      user_id: user_id,
+      event_id: Map.get(event, :id),
+      video_integration_id: integration_id
+    )
+
+    {:error, :missing_meeting_url}
   end
 
   defp persist_video_link(event, url) do

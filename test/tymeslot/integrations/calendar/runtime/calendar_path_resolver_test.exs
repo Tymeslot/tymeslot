@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolverTest do
   @moduletag :calendar
   @moduletag :unit
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
 
   describe "resolve/1" do
@@ -17,8 +18,8 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolverTest do
       integration = %{
         default_booking_calendar_id: "cal-2",
         calendar_list: [
-          %{"id" => "cal-1", "path" => "/dav/cal-1"},
-          %{"id" => "cal-2", "path" => "/dav/cal-2"}
+          %CalendarEntry{id: "cal-1", path: "/dav/cal-1"},
+          %CalendarEntry{id: "cal-2", path: "/dav/cal-2"}
         ],
         calendar_paths: ["/dav/fallback"]
       }
@@ -39,7 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolverTest do
     test "returns nil when calendar_list is present but no entry matches the default booking calendar" do
       integration = %{
         default_booking_calendar_id: "cal-missing",
-        calendar_list: [%{"id" => "cal-1", "path" => "/dav/cal-1"}],
+        calendar_list: [%CalendarEntry{id: "cal-1", path: "/dav/cal-1"}],
         calendar_paths: ["/dav/fallback"]
       }
 
@@ -49,7 +50,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolverTest do
     test "returns the first calendar_paths entry when no default booking calendar is set" do
       integration = %{
         default_booking_calendar_id: nil,
-        calendar_list: [%{"id" => "cal-1", "path" => "/dav/cal-1"}],
+        calendar_list: [%CalendarEntry{id: "cal-1", path: "/dav/cal-1"}],
         calendar_paths: ["/dav/first", "/dav/second"]
       }
 
@@ -83,11 +84,11 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolverTest do
       integration = %{
         default_booking_calendar_id: "/calendars/MK43327/8538e694/",
         calendar_list: [
-          %{
-            "id" => "/calendars/MK43327/8538e694/",
-            "path" => nil,
-            "name" => "Mark AhaSend",
-            "selected" => true
+          %CalendarEntry{
+            id: "/calendars/MK43327/8538e694/",
+            path: nil,
+            name: "Mark AhaSend",
+            selected: true
           }
         ],
         calendar_paths: []

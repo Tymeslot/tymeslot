@@ -202,6 +202,27 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
     |> Repo.all()
   end
 
+  @doc """
+  Returns the most recent `synced_at` among the given UIDs, or `nil` when no
+  row matches.
+
+  A cached row's `synced_at` only advances when the provider returns that event
+  in a fetch, so the gap between `synced_at` and now is how long the event has
+  been absent from provider responses. The CalDAV deletion circuit breaker uses
+  this to distinguish a transient failed read from a calendar that has genuinely
+  been emptied.
+  """
+  @spec max_synced_at_for_uids(integer(), [String.t()]) :: DateTime.t() | nil
+  def max_synced_at_for_uids(_calendar_integration_id, []), do: nil
+
+  def max_synced_at_for_uids(calendar_integration_id, uids) do
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+    |> where([e], e.uid in ^uids)
+    |> select([e], max(e.synced_at))
+    |> Repo.one()
+  end
+
   @doc "Applies a where clause filtering events that overlap the given DateTime range."
   @spec where_overlapping_range(Ecto.Query.t(), DateTime.t(), DateTime.t()) :: Ecto.Query.t()
   def where_overlapping_range(query, range_start, range_end) do

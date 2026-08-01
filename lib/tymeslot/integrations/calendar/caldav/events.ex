@@ -12,7 +12,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   - **Conflict resolution policy**: on `412 Precondition Failed`, the
     caller chooses one of `:fail | :keep_server | :keep_local` via
     `:conflict_resolution` in `opts`. See `ConflictResolution` for the
-    semantics of each value.
+    semantics of each value. A server that answers a conditional PUT with
+    `409` instead of `412` follows the same policy when a real ETag was
+    sent; when only `If-Match: *` was sent the write is simply replayed
+    unconditionally, since that condition guarded nothing.
   - **iCal construction**: builds valid RFC 5545 event payloads from domain maps.
   - **Per-operation retry policies**: reads retry on transient failures.
   - **Circuit breaker protection** for all operations.
@@ -225,6 +228,21 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
       {:error, :precondition_failed} ->
         handle_precondition_failed(client, url, ical_data, policy, opts)
 
+      # The server rejected the conditional PUT with a 409. When all we sent
+      # was `If-Match: *` there was no ETag and therefore no lost-update
+      # protection to preserve — the condition asserted only that the event
+      # exists — so replaying it unconditionally loses nothing and gets the
+      # write through on servers that mishandle the conditional form.
+      {:error, :conditional_not_supported} when is_nil(etag) ->
+        Logger.warning("CalDAV server rejected If-Match: *, retrying unconditionally")
+        force_put(client, url, ical_data, opts)
+
+      # With a real ETag the condition did carry a guarantee, so treat the 409
+      # as the precondition failure the server meant it to be and let the
+      # configured policy decide.
+      {:error, :conditional_not_supported} ->
+        handle_precondition_failed(client, url, ical_data, policy, opts)
+
       {:error, reason} ->
         {:error, reason}
     end
@@ -239,12 +257,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   defp handle_precondition_failed(_client, _url, _ical, :keep_server, _opts),
     do: :ok
 
-  # :keep_local — force-overwrite by repeating the PUT without If-Match.
-  # We do not supply an :etag here, so add_conditional_headers/2 in Http
-  # falls through to If-Match: *, which is the CalDAV "unconditional
-  # overwrite" marker.
-  defp handle_precondition_failed(client, url, ical_data, :keep_local, opts) do
-    put_opts = Keyword.merge([operation: :update], Keyword.take(opts, [:timeout]))
+  # :keep_local — force-overwrite by repeating the PUT unconditionally.
+  defp handle_precondition_failed(client, url, ical_data, :keep_local, opts),
+    do: force_put(client, url, ical_data, opts)
+
+  # An overwrite carrying no conditional header at all. `If-Match: *` is not a
+  # substitute: it still asserts the resource exists, so a server is entitled
+  # to refuse it.
+  defp force_put(client, url, ical_data, opts) do
+    put_opts = Keyword.merge([operation: :force_update], Keyword.take(opts, [:timeout]))
 
     case Http.put_event(url, client.username, client.password, ical_data, put_opts) do
       {:ok, %Req.Response{status: status}} when status in [200, 201, 204] ->

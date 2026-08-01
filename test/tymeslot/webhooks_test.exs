@@ -8,6 +8,10 @@ defmodule Tymeslot.WebhooksTest do
 
   alias Tymeslot.Webhooks
 
+  # WebhookSchema.generate_secure_token/0: "ts_" plus 24 random bytes in
+  # unpadded Base64.
+  @token_format ~r/^ts_[A-Za-z0-9+\/]{32}$/
+
   setup do
     setup_config(:tymeslot, feature_access_checker: Tymeslot.Features.DefaultAccessChecker)
     :ok
@@ -78,7 +82,11 @@ defmodule Tymeslot.WebhooksTest do
       }
 
       assert {:ok, webhook} = Webhooks.create_webhook(user.id, attrs)
-      assert webhook.webhook_token_encrypted != nil
+
+      # The plaintext token comes back on the virtual field; only the encrypted
+      # form is persisted.
+      assert webhook.webhook_token =~ @token_format
+      refute webhook.webhook_token_encrypted == webhook.webhook_token
     end
 
     test "returns error changeset when name is missing" do
@@ -164,8 +172,7 @@ defmodule Tymeslot.WebhooksTest do
         })
 
       [listed] = Webhooks.list_webhooks(user.id)
-      assert listed.webhook_token != nil
-      assert is_binary(listed.webhook_token)
+      assert listed.webhook_token =~ @token_format
     end
   end
 
@@ -215,8 +222,8 @@ defmodule Tymeslot.WebhooksTest do
         })
 
       assert {:ok, found} = Webhooks.get_webhook(created.id, user.id)
-      assert found.webhook_token != nil
-      assert is_binary(found.webhook_token)
+      assert found.webhook_token == created.webhook_token
+      assert found.webhook_token =~ @token_format
     end
   end
 
@@ -527,8 +534,8 @@ defmodule Tymeslot.WebhooksTest do
 
       assert {:ok, updated} = Webhooks.record_delivery_failure(webhook, "timeout")
       assert updated.is_active == false
-      assert updated.disabled_at != nil
-      assert updated.disabled_reason != nil
+      assert %DateTime{} = updated.disabled_at
+      assert updated.disabled_reason == "Too many consecutive failures: timeout"
     end
 
     test "returns {:error, :not_found} for non-existent webhook" do

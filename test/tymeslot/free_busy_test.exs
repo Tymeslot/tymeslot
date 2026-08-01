@@ -14,7 +14,8 @@ defmodule Tymeslot.FreeBusyTest do
 
       assert {:ok, enabled} = FreeBusy.enable_feed(profile)
       assert FreeBusy.feed_enabled?(enabled)
-      assert is_binary(enabled.freebusy_token)
+      # 24 random bytes, url-safe base64 without padding.
+      assert enabled.freebusy_token =~ ~r/\A[A-Za-z0-9_-]{32}\z/
 
       assert {:ok, again} = FreeBusy.enable_feed(enabled)
       assert again.freebusy_token == enabled.freebusy_token

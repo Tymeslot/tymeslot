@@ -46,10 +46,10 @@ defmodule TymeslotWeb.BrowserCase do
     # server to a different one, making inserted rows invisible to browser requests.
     DataCase.reset_stateful_components()
 
-    # Force-disable legal agreements for Core E2E tests. The SaaS config.exs sets
-    # enforce_legal_agreements: true, which overrides the core test.exs value via
-    # umbrella config load ordering. The runtime override below ensures Core E2E
-    # tests never see the SaaS legal gate.
+    # Force-disable legal agreements for Core E2E tests. A downstream overlay
+    # can set enforce_legal_agreements: true, which overrides Core's test.exs
+    # value when the suite runs under that overlay. The runtime override below
+    # ensures Core E2E tests never see the legal gate.
     with_config(:tymeslot, :enforce_legal_agreements, false)
 
     # Browser requests are handled by a different OS process than the test,

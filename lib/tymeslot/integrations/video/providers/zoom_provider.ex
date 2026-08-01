@@ -8,12 +8,17 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   calendar events created by the user's calendar provider.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.OAuthTokenManager
+  alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Payload
+  alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
 
@@ -24,11 +29,21 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   @api_base_url "https://api.zoom.us/v2"
   @zoom_url_pattern ~r/zoom\.us\/(j|my|w)\//
 
+  @capabilities Capabilities.new!(
+                  waiting_room: true,
+                  recording: true,
+                  dial_in: true,
+                  max_participants: 100,
+                  breakout_rooms: true,
+                  screen_sharing: true,
+                  chat: true
+                )
+
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_meeting_room(config) do
     Logger.info("Creating Zoom meeting room")
 
-    with {:ok, :valid} <- validate_zoom_scope(config),
+    with {:ok, :valid} <- validate_zoom_scope(config, :write),
          {:ok, token} <- get_access_token(config),
          {:ok, {start_time, end_time}} <- Payload.get_meeting_times(config),
          {:ok, meeting} <- create_scheduled_meeting(token, start_time, end_time, config) do
@@ -38,7 +53,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       # only warrants a log line, never a failed booking.
       verify_meeting_created(token, meeting["id"])
 
-      room_data = %{
+      room_data = %RoomData{
         room_id: to_string(meeting["id"]),
         meeting_url: meeting["join_url"],
         provider_data: %{
@@ -85,19 +100,22 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     end
   end
 
-  def extract_room_id(%{room_data: room_data}),
-    do: room_data[:room_id] || room_data["room_id"]
-
   def extract_room_id(_other), do: nil
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def valid_meeting_url?(meeting_url), do: meeting_url =~ @zoom_url_pattern
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def test_connection(config) do
+  def perform_connection_test(config) do
     case get_access_token(config) do
-      {:ok, _token} -> {:ok, "Successfully authenticated with Zoom"}
-      {:error, reason} -> {:error, "Failed to authenticate with Zoom: #{inspect(reason)}"}
+      {:ok, _token} ->
+        {:ok, dgettext("dashboard_integrations", "Zoom connected successfully!")}
+
+      {:error, reason} ->
+        {:error,
+         dgettext("dashboard_integrations", "Failed to authenticate with Zoom: %{reason}",
+           reason: inspect(reason)
+         )}
     end
   end
 
@@ -106,6 +124,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def display_name, do: "Zoom"
+
+  # A per-actor bucket shared across every OAuth-backed provider: the test
+  # itself rides on a token that is already scarce, but without a charge
+  # here it is unbounded and can burn the instance-wide OAuth quota shared
+  # by every user.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def connection_test_bucket, do: :oauth
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do
@@ -126,23 +151,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   end
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def capabilities do
-    %{
-      supports_instant_meetings: true,
-      supports_scheduled_meetings: true,
-      supports_recurring_meetings: true,
-      supports_waiting_room: true,
-      supports_recording: true,
-      supports_dial_in: true,
-      max_participants: 100,
-      requires_account: true,
-      supports_custom_branding: false,
-      supports_breakout_rooms: true,
-      supports_screen_sharing: true,
-      supports_chat: true,
-      requires_work_account: false
-    }
-  end
+  def capabilities, do: @capabilities
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def handle_meeting_event(:meeting_ended, room_data, _additional_data) do
@@ -158,8 +167,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       provider: "zoom",
       meeting_id: room_data.room_id,
       join_url: room_data.meeting_url,
-      passcode: room_data.provider_data[:passcode] || room_data.provider_data["passcode"],
-      host_url: room_data.provider_data[:start_url] || room_data.provider_data["start_url"]
+      passcode: room_data.provider_data[:passcode],
+      host_url: room_data.provider_data[:start_url]
     }
   end
 
@@ -194,7 +203,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   def update_meeting_room(room_id, config) when is_binary(room_id) do
     Logger.info("Updating Zoom meeting room", room_id: room_id)
 
-    with {:ok, :valid} <- validate_zoom_scope(config),
+    with {:ok, :valid} <- validate_zoom_scope(config, :write),
          {:ok, token} <- get_access_token(config),
          {:ok, {start_time, end_time}} <- Payload.get_meeting_times(config),
          :ok <- patch_scheduled_meeting(token, room_id, start_time, end_time, config) do
@@ -215,7 +224,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   def delete_meeting_room(room_id, config) when is_binary(room_id) do
     Logger.info("Deleting Zoom meeting room", room_id: room_id)
 
-    with {:ok, :valid} <- validate_zoom_scope(config),
+    with {:ok, :valid} <- validate_zoom_scope(config, :delete),
          {:ok, token} <- get_access_token(config),
          :ok <- delete_scheduled_meeting(token, room_id, config) do
       Logger.info("Successfully deleted Zoom meeting", room_id: room_id)
@@ -233,35 +242,22 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   # ----- Private -----
 
-  # Zoom apps may be configured with either classic scopes (`meeting:write`) or
-  # the newer granular scopes (`meeting:write:meeting`). Both grant the ability
-  # to create/update meetings, so accept either to avoid locking out classic-
-  # scope apps that can otherwise create meetings perfectly well.
-  defp validate_zoom_scope(config) do
+  # See `Scopes` for why a delete cannot be authorised by the write scope.
+  defp validate_zoom_scope(config, operation) do
     stored_scope = String.downcase(Map.get(config, :oauth_scope) || "")
 
-    granular? = String.contains?(stored_scope, "meeting:write:meeting")
-    classic? = scope_present?(stored_scope, "meeting:write")
-
-    if granular? or classic? do
+    if Scopes.satisfied?(stored_scope, operation) do
       {:ok, :valid}
     else
       Logger.error("Zoom integration missing required scope",
         stored_scope: stored_scope,
-        required_scope: "meeting:write or meeting:write:meeting"
+        operation: operation,
+        required_scope: Scopes.required_description(operation)
       )
 
-      {:error, "Zoom scopes are insufficient. Please reconnect your Zoom account."}
+      flag_missing_scope(config, operation)
+      {:error, :insufficient_scope}
     end
-  end
-
-  # Matches a whole space-delimited scope token exactly, so a search for the
-  # classic `meeting:write` is not satisfied by an unrelated longer scope that
-  # merely contains it as a substring.
-  defp scope_present?(stored_scope, scope) do
-    stored_scope
-    |> String.split(~r/\s+/, trim: true)
-    |> Enum.member?(scope)
   end
 
   defp get_access_token(config) do
@@ -501,13 +497,18 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
             Payload.decode_and_format_error(401, response_body)
 
           response ->
-            handle_verb_response(verb, room_id, response)
+            handle_verb_response(verb, room_id, config, response)
         end
 
       {:error, _reason} ->
         # Refresh itself failed — credentials are no longer usable.
         flag_revoked_token(config)
-        {:error, "Zoom token refresh failed after 401. Please reconnect your Zoom account."}
+
+        {:error,
+         dgettext(
+           "dashboard_integrations",
+           "Zoom token refresh failed after 401. Please reconnect your Zoom account."
+         )}
     end
   end
 
@@ -516,7 +517,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   defp request_headers(:delete, token), do: [{"Authorization", "Bearer #{token}"}]
 
-  defp handle_verb_response(:patch, room_id, response) do
+  defp handle_verb_response(:patch, room_id, config, response) do
     case response do
       {:ok, %Req.Response{status: 204}} ->
         :ok
@@ -528,15 +529,12 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
         {:error, :meeting_not_found}
 
-      {:ok, %Req.Response{status: status, body: body}} ->
-        Payload.decode_and_format_error(status, body)
-
-      {:error, reason} ->
-        {:error, "Network error: #{inspect(reason)}"}
+      other ->
+        handle_error_response(other, config, :write)
     end
   end
 
-  defp handle_verb_response(:delete, room_id, response) do
+  defp handle_verb_response(:delete, room_id, config, response) do
     case response do
       {:ok, %Req.Response{status: status}} when status in [204, 200] ->
         :ok
@@ -545,13 +543,31 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
         Logger.info("Zoom meeting already deleted", room_id: room_id)
         :ok
 
-      {:ok, %Req.Response{status: status, body: body}} ->
-        Payload.decode_and_format_error(status, body)
-
-      {:error, reason} ->
-        {:error, "Network error: #{inspect(reason)}"}
+      other ->
+        handle_error_response(other, config, :delete)
     end
   end
+
+  # Zoom answers a request whose token was granted before a scope was added
+  # with code 4711. Retrying cannot widen an existing grant — only the user
+  # re-consenting can — so flag the integration and return a reason callers can
+  # discard on rather than burning their whole retry budget.
+  defp handle_error_response({:ok, %Req.Response{status: status, body: body}}, config, operation) do
+    if Scopes.rejection?(body) do
+      Logger.error("Zoom rejected the request for missing scope",
+        operation: operation,
+        status: status
+      )
+
+      flag_missing_scope(config, operation)
+      {:error, :insufficient_scope}
+    else
+      Payload.decode_and_format_error(status, body)
+    end
+  end
+
+  defp handle_error_response({:error, reason}, _config, _operation),
+    do: {:error, "Network error: #{inspect(reason)}"}
 
   defp delete_scheduled_meeting(token, room_id, config) do
     url = "#{@api_base_url}/meetings/#{room_id}"
@@ -572,7 +588,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       # 204/200 success, 404 "already gone" (idempotent), and other errors all
       # share the delete-verb handling used by the post-401 retry path.
       response ->
-        handle_verb_response(:delete, room_id, response)
+        handle_verb_response(:delete, room_id, config, response)
     end
   end
 
@@ -580,25 +596,45 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   # a forced token refresh — this indicates server-side revocation at zoom.us.
   # The dashboard surfaces this via the "Reconnect required" badge on the video row.
   defp flag_revoked_token(config) do
+    flag_for_reauth(
+      config,
+      "zoom_token_revoked",
+      dgettext(
+        "dashboard_integrations",
+        "Zoom access was revoked. Please reconnect your Zoom account."
+      )
+    )
+  end
+
+  # A grant that predates a scope change can only be widened by re-consenting,
+  # so it needs the same "Reconnect required" badge as a revoked token.
+  defp flag_missing_scope(config, operation) do
+    flag_for_reauth(
+      config,
+      "zoom_missing_scope",
+      dgettext(
+        "dashboard_integrations",
+        "Zoom is missing the permission needed to %{action}. Please reconnect your Zoom account.",
+        action: Scopes.action_phrase(operation)
+      )
+    )
+  end
+
+  defp flag_for_reauth(config, event, message) do
     integration_id = Map.get(config, :integration_id)
     user_id = Map.get(config, :user_id)
 
     if is_nil(integration_id) or is_nil(user_id) do
-      Logger.warning("Zoom token appears revoked but no integration_id to flag",
-        event: "zoom_token_revoked"
-      )
+      Logger.warning("Zoom integration needs reauth but no integration_id to flag", event: event)
     else
-      Logger.warning("Zoom token revoked; flagging integration for reauth",
-        event: "zoom_token_revoked",
+      Logger.warning("Flagging Zoom integration for reauth",
+        event: event,
         integration_id: integration_id
       )
 
       case Video.fetch_integration_for_user(integration_id, user_id) do
         {:ok, integration} ->
-          VideoIntegrationQueries.mark_needs_reauth(
-            integration,
-            "Zoom access was revoked. Please reconnect your Zoom account."
-          )
+          VideoIntegrationQueries.mark_needs_reauth(integration, message)
 
         {:error, :not_found} ->
           :ok

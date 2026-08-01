@@ -32,7 +32,7 @@ defmodule Tymeslot.Utils.DateTimeUtilsPropertyTest do
         time = Time.new!(hour, minute, 0)
         formatted = Display.format_time_for_display(time)
 
-        assert String.ends_with?(formatted, " AM") or String.ends_with?(formatted, " PM")
+        assert formatted =~ ~r/^\d{1,2}:\d{2} (AM|PM)$/
       end
     end
 
@@ -74,8 +74,10 @@ defmodule Tymeslot.Utils.DateTimeUtilsPropertyTest do
   describe "parse_time_string/1 robustness" do
     property "never crashes on arbitrary strings" do
       check all(s <- string(:printable)) do
-        result = DateTimeUtils.parse_time_string(s)
-        assert match?({:ok, _time}, result) or match?({:error, _reason}, result)
+        # Both outcomes are legal for arbitrary input; what matters is that the
+        # function always answers with a tagged tuple rather than raising.
+        assert {tag, _detail} = DateTimeUtils.parse_time_string(s)
+        assert tag in [:ok, :error]
       end
     end
 

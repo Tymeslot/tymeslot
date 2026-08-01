@@ -155,19 +155,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
 
     missing_uids = Enum.reject(cached_uids, &MapSet.member?(fetched_uids, &1))
 
-    cond do
-      missing_uids == [] ->
+    case deletion_verdict(integration, cached_uids, missing_uids, fetched_uids, sync_started_at) do
+      :nothing_to_delete ->
         :ok
 
-      suspicious_deletion?(cached_uids, missing_uids, fetched_uids) ->
+      :refuse ->
         log_suspicious_deletion(integration, cached_uids, missing_uids, calendar_path)
 
-      true ->
-        Logger.info("CalDAV full fetch detected missing events",
-          calendar_integration_id: integration.id,
-          missing_count: length(missing_uids)
-        )
-
+      verdict ->
+        log_deletions_proceeding(verdict, integration, missing_uids, calendar_path)
         Sync.reconcile_deletions(integration, uid_refs(missing_uids))
     end
 
@@ -188,14 +184,41 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
   # the entire cache as stale — the one non-self-healing damage path in the
   # sync stack.
   #
-  # Refuse the deletions when either: the remote set is empty while the cache
-  # is not (the strongest failed-read signal, applied at any cache size), or a
-  # non-trivial cache would lose more than `@bulk_delete_ratio_threshold` of
-  # its rows in a single sync. Genuine removals are reconciled by a later
-  # healthy fetch; small, ordinary deletions stay below the threshold and are
-  # unaffected.
+  # A deletion batch looks suspicious when either the remote set is empty while
+  # the cache is not (the strongest failed-read signal, applied at any cache
+  # size), or a non-trivial cache would lose more than
+  # `@bulk_delete_ratio_threshold` of its rows in a single sync.
+  #
+  # Suspicion alone cannot refuse forever, though. A failed read and a calendar
+  # the user genuinely emptied produce the *same* listing, so "wait for a later
+  # healthy fetch" never resolves the second case: the refusal blocks the sync
+  # token, the next cycle re-fetches the same empty listing, and the integration
+  # deadlocks. What separates the two is persistence over time — a transient
+  # read failure does not survive dozens of cycles. `synced_at` on the cached
+  # row is frozen at the last fetch that returned the event, so it already
+  # measures exactly that, with no extra state to store.
+  #
+  # So: refuse a suspicious batch only while its rows are still recent. Once
+  # every missing row has gone unconfirmed for `@bulk_delete_grace_hours`, the
+  # absence is treated as real and the deletions are reconciled. Ordinary small
+  # deletions stay below the threshold and are never delayed.
   @bulk_delete_ratio_threshold 0.8
   @bulk_delete_min_cache 5
+  @bulk_delete_grace_hours 24
+
+  # Classifies a deletion batch. `:proceed_after_grace` is `:proceed` that the
+  # circuit breaker held back until the absence was corroborated over time; it
+  # is distinguished only so the release can be logged.
+  @spec deletion_verdict(map(), [String.t()], [String.t()], MapSet.t(), DateTime.t()) ::
+          :nothing_to_delete | :proceed | :proceed_after_grace | :refuse
+  defp deletion_verdict(integration, cached_uids, missing_uids, fetched_uids, sync_started_at) do
+    cond do
+      missing_uids == [] -> :nothing_to_delete
+      not suspicious_deletion?(cached_uids, missing_uids, fetched_uids) -> :proceed
+      absent_beyond_grace?(integration, missing_uids, sync_started_at) -> :proceed_after_grace
+      true -> :refuse
+    end
+  end
 
   defp suspicious_deletion?(cached_uids, missing_uids, fetched_uids) do
     cached_count = length(cached_uids)
@@ -213,12 +236,48 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
 
   defp over_delete_ratio?(_cached_count, _missing_count), do: false
 
+  # True once *every* missing row has gone unconfirmed for longer than the grace
+  # period; the newest of them decides. Measured against `sync_started_at`, the
+  # same reference `list_uids_in_range/5` uses to pick these rows, so the whole
+  # comparison runs off one clock.
+  defp absent_beyond_grace?(integration, missing_uids, sync_started_at) do
+    cutoff = DateTime.add(sync_started_at, -@bulk_delete_grace_hours, :hour)
+
+    case ProviderCalendarEventQueries.max_synced_at_for_uids(integration.id, missing_uids) do
+      nil -> false
+      last_confirmed_at -> DateTime.before?(last_confirmed_at, cutoff)
+    end
+  end
+
+  # Logged at :warning, not :error — the refusal is expected, self-resolving,
+  # and needs no operator action, so it must not read as a page.
   defp log_suspicious_deletion(integration, cached_uids, missing_uids, calendar_path) do
-    Logger.error(
+    Logger.warning(
       "CalDAV full fetch would delete a suspicious share of the cache; refusing to reconcile deletions",
       calendar_integration_id: integration.id,
       calendar_path: calendar_path,
       cached_count: length(cached_uids),
+      missing_count: length(missing_uids),
+      grace_hours: @bulk_delete_grace_hours
+    )
+  end
+
+  # A release is worth an operator-visible line at :warning: real cancellations
+  # and participant emails follow from it, after a batch that looked suspicious.
+  # An ordinary deletion is routine and stays at :info.
+  defp log_deletions_proceeding(:proceed_after_grace, integration, missing_uids, calendar_path) do
+    Logger.warning(
+      "CalDAV deletion circuit breaker released after grace period; reconciling deletions",
+      calendar_integration_id: integration.id,
+      calendar_path: calendar_path,
+      missing_count: length(missing_uids),
+      grace_hours: @bulk_delete_grace_hours
+    )
+  end
+
+  defp log_deletions_proceeding(:proceed, integration, missing_uids, _calendar_path) do
+    Logger.info("CalDAV full fetch detected missing events",
+      calendar_integration_id: integration.id,
       missing_count: length(missing_uids)
     )
   end
@@ -341,22 +400,20 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
 
     missing_uids = Enum.reject(cached_uids, &MapSet.member?(fetched_uids, &1))
 
-    cond do
-      missing_uids == [] ->
+    case deletion_verdict(integration, cached_uids, missing_uids, fetched_uids, sync_started_at) do
+      :nothing_to_delete ->
         []
 
-      suspicious_deletion?(cached_uids, missing_uids, fetched_uids) ->
-        # Roll the whole batch back: the cache is left untouched, the sync
-        # token is not advanced, and Oban retries against a fresh fetch.
+      :refuse ->
+        # Roll the whole batch back: the cache is left untouched and the sync
+        # token is not advanced, so the next cycle re-evaluates against a fresh
+        # fetch. The worker discards rather than retrying — a retry within this
+        # cycle would refuse identically.
         log_suspicious_deletion(integration, cached_uids, missing_uids, calendar_path)
         Repo.rollback(:suspicious_bulk_deletion)
 
-      true ->
-        Logger.info("CalDAV full fetch detected missing events",
-          calendar_integration_id: integration.id,
-          missing_count: length(missing_uids)
-        )
-
+      verdict ->
+        log_deletions_proceeding(verdict, integration, missing_uids, calendar_path)
         ProviderCalendarEventQueries.delete_by_uids(integration.id, missing_uids)
         missing_uids
     end

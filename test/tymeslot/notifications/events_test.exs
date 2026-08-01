@@ -79,15 +79,6 @@ defmodule Tymeslot.Notifications.EventsTest do
     end
   end
 
-  describe "status change handling" do
-    test "meeting_status_changed handles cancellation" do
-      # Note: This will call meeting_cancelled which calls Orchestrator
-      # Since we don't have a mock for Orchestrator, we just check it doesn't crash
-      # if we provide enough data or if it's already tested.
-      # Actually, Orchestrator might fail if it tries to do DB stuff.
-    end
-  end
-
   describe "dispatch wiring" do
     setup do
       setup_config(:tymeslot,

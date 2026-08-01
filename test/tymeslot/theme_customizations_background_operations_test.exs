@@ -104,7 +104,6 @@ defmodule Tymeslot.ThemeCustomizationsBackgroundOperationsTest do
     test "get_gradient_css/1 returns gradient CSS for valid preset" do
       css = ThemeCustomizations.get_gradient_css("gradient_1")
 
-      assert is_binary(css)
       assert String.contains?(css, "linear-gradient")
     end
 

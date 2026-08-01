@@ -97,16 +97,8 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderSanitizationTest do
 
       client = Provider.new(config)
 
-      # Should filter out empty/whitespace-only names
-      assert is_list(client.calendar_paths)
-
-      if client.calendar_paths != [] do
-        # Should only include ValidName
-        assert Enum.all?(client.calendar_paths, fn path ->
-                 String.contains?(path, "ValidName") or
-                   String.length(path) > String.length("/dav/user@example.com/")
-               end)
-      end
+      # Empty and whitespace-only names are dropped; only ValidName survives.
+      assert client.calendar_paths == ["/dav/user@example.com/ValidName/"]
     end
 
     test "sanitizes pre-formatted paths with path traversal (security fix)" do
@@ -158,16 +150,13 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderSanitizationTest do
 
       client = Provider.new(config)
 
-      # Should preserve Unicode or sanitize consistently
-      assert is_list(client.calendar_paths)
-      assert Enum.all?(client.calendar_paths, &is_binary/1)
-
-      # Paths should be valid and not empty
-      if client.calendar_paths != [] do
-        assert Enum.all?(client.calendar_paths, fn path ->
-                 String.length(path) > String.length("/dav/user@example.com/")
-               end)
-      end
+      # Unicode names are preserved verbatim, not stripped or transliterated.
+      assert client.calendar_paths == [
+               "/dav/user@example.com/📅 Calendar/",
+               "/dav/user@example.com/日本語カレンダー/",
+               "/dav/user@example.com/Календарь/",
+               "/dav/user@example.com/Arbeit✓/"
+             ]
     end
 
     test "handles mixed Unicode and ASCII in calendar names" do
@@ -180,13 +169,13 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderSanitizationTest do
 
       client = Provider.new(config)
 
-      assert is_list(client.calendar_paths)
-      assert Enum.all?(client.calendar_paths, &is_binary/1)
+      assert client.calendar_paths == [
+               "/dav/user@example.com/Work🏢/",
+               "/dav/user@example.com/Home🏠/",
+               "/dav/user@example.com/Calendar-2024/"
+             ]
 
-      # All paths should be valid binary strings
-      assert Enum.all?(client.calendar_paths, fn path ->
-               String.valid?(path)
-             end)
+      assert Enum.all?(client.calendar_paths, &String.valid?/1)
     end
   end
 

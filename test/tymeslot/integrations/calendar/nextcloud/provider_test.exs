@@ -67,46 +67,29 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       assert String.contains?(message, "password")
     end
 
-    test "returns error for invalid Nextcloud URL format" do
-      config = %{
-        base_url: "not-a-valid-url",
-        username: "user",
-        password: "pass"
-      }
-
-      assert {:error, message} = Provider.validate_config(config)
-
-      # Scheme is auto-added, so URL becomes valid but connection fails
-      # Message can be atom or string representing connection failure
-      assert is_binary(message) or is_atom(message)
-    end
-
-    test "accepts calendar URL format" do
+    # `validate_config/1` is structural only — it never performs network I/O
+    # (the connectivity probe used to run here too, doubling the rate-limit
+    # charge across two buckets for a single form submission). A structurally
+    # valid config passes even when nothing is listening on the other end;
+    # the live check now runs separately, through `test_connection/1`.
+    test "accepts calendar URL format without touching the network" do
       config = %{
         base_url: "https://cloud.example.com/remote.php/dav/calendars/user/personal",
         username: "user",
         password: "pass"
       }
 
-      # Will fail connection test but URL structure is valid
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        assert match?({:error, _reason}, result)
-      end)
+      assert :ok = Provider.validate_config(config)
     end
 
-    test "accepts standard Nextcloud URL" do
+    test "accepts standard Nextcloud URL without touching the network" do
       config = %{
         base_url: "http://localhost:1",
         username: "user",
         password: "pass"
       }
 
-      # Will fail connection test but URL structure is valid
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        assert match?({:error, _reason}, result)
-      end)
+      assert :ok = Provider.validate_config(config)
     end
   end
 
@@ -152,11 +135,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       client = Provider.new(config)
 
       # Calendar paths should be formatted for Nextcloud
-      assert is_list(client.calendar_paths)
-
-      assert Enum.any?(client.calendar_paths, fn path ->
-               String.contains?(path, "/calendars/testuser/")
-             end)
+      assert client.calendar_paths == ["/calendars/testuser/personal/"]
     end
 
     test "defaults to personal calendar when no paths provided" do
@@ -168,8 +147,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
 
       client = Provider.new(config)
 
-      assert is_list(client.calendar_paths)
-      assert client.calendar_paths != []
+      assert client.calendar_paths == ["/calendars/user/personal/"]
     end
 
     test "extracts username from calendar URL when not provided" do
@@ -181,7 +159,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       client = Provider.new(config)
 
       # Username should be extracted from URL
-      assert is_binary(client.username)
+      assert client.username == "john"
     end
   end
 
@@ -204,7 +182,8 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         {:ok, %Req.Response{status: 207, body: ""}}
       end)
 
-      assert {:ok, "Nextcloud connection successful"} = Provider.test_connection(integration)
+      assert {:ok, "Nextcloud connection successful"} =
+               Provider.perform_connection_test(integration)
     end
 
     test "returns Nextcloud-specific success message" do
@@ -219,7 +198,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         {:ok, %Req.Response{status: 207, body: ""}}
       end)
 
-      assert {:ok, message} = Provider.test_connection(integration)
+      assert {:ok, message} = Provider.perform_connection_test(integration)
       assert String.contains?(message, "Nextcloud")
     end
 
@@ -235,12 +214,12 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         {:ok, %Req.Response{status: 401, body: ""}}
       end)
 
-      assert {:error, message} = Provider.test_connection(integration)
+      assert {:error, message} = Provider.perform_connection_test(integration)
       assert message =~ "Authentication failed"
       assert message =~ "app password"
     end
 
-    test "accepts options with IP metadata" do
+    test "is pure I/O — takes only the integration, no caller options" do
       integration = %{
         base_url: "https://cloud.example.com",
         username: "alice",
@@ -252,8 +231,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         {:ok, %Req.Response{status: 207, body: ""}}
       end)
 
-      assert {:ok, _message} =
-               Provider.test_connection(integration, metadata: %{ip: "192.168.1.1"})
+      assert {:ok, _message} = Provider.perform_connection_test(integration)
     end
 
     test "returns Nextcloud-specific :not_found message when server returns 404" do
@@ -277,8 +255,9 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         {:ok, %Req.Response{status: 404, body: ""}}
       end)
 
-      assert {:error, message} = Provider.test_connection(integration)
-      assert message =~ "server not found" or message =~ "CalDAV endpoint not accessible"
+      assert Provider.perform_connection_test(integration) ==
+               {:error,
+                "Nextcloud server not found or CalDAV endpoint not accessible. Check your server URL."}
     end
 
     test "passes transport errors through unchanged via catch-all clause" do
@@ -291,11 +270,11 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         calendar_paths: []
       }
 
-      assert {:error, _reason} = Provider.test_connection(integration)
+      assert {:error, _reason} = Provider.perform_connection_test(integration)
     end
   end
 
-  describe "discover_calendars/2" do
+  describe "discover_calendars/1" do
     test "returns error without valid Nextcloud server" do
       client = %{
         base_url: "https://cloud.example.com/remote.php/dav",
@@ -311,21 +290,27 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       end)
     end
 
-    test "accepts options for rate limiting" do
-      client = %{
-        base_url: "https://cloud.example.com/remote.php/dav",
-        username: "user",
-        password: "pass",
-        calendar_paths: [],
-        provider: :nextcloud
-      }
+    # Nextcloud's base_url is user-editable from the reconnect modal (it is
+    # not in ProviderConfig's @locked_url_providers), so discovery must go
+    # through the same SSRF guard as every other CalDAV-family provider
+    # (block_private_ips: true, enforce_https_for_public: true) rather than
+    # issuing a PROPFIND straight to whatever host is submitted.
+    for {description, base_url} <- [
+          {"the AWS metadata endpoint", "http://169.254.169.254/"},
+          {"an RFC 1918 private host", "http://10.0.0.1/"},
+          {"a loopback host", "http://localhost:8080/"}
+        ] do
+      test "rejects #{description} without issuing a request" do
+        client = %{
+          base_url: unquote(base_url),
+          username: "user",
+          password: "pass",
+          calendar_paths: [],
+          provider: :nextcloud
+        }
 
-      opts = [metadata: %{ip: "10.0.0.1"}]
-
-      capture_log(fn ->
-        result = Provider.discover_calendars(client, opts)
-        assert {:error, _message} = result
-      end)
+        assert {:error, _reason} = Provider.discover_calendars(client)
+      end
     end
   end
 
@@ -343,9 +328,14 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       end_time = DateTime.add(start_time, 86_400, :second)
 
       capture_log(fn ->
-        result = Provider.list_events(client, start_time: start_time, end_time: end_time)
-        # May return error or empty list depending on circuit breaker state
-        assert match?({:error, _reason}, result) or match?({:ok, []}, result)
+        # The CalDAV REPORT is issued from the circuit breaker's own task, outside
+        # the Mox-owned process, so the response cannot be stubbed here. What this
+        # asserts is the delegation itself: the time range was accepted and a
+        # request attempted, rather than short-circuiting on :missing_time_range.
+        assert {:error, reason} =
+                 Provider.list_events(client, start_time: start_time, end_time: end_time)
+
+        refute reason == :missing_time_range
       end)
     end
 

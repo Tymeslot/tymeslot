@@ -10,6 +10,8 @@ defmodule Tymeslot.Infrastructure.ValidationHelpers do
   alias Phoenix.LiveView.Socket
   alias Plug.Conn
 
+  require Logger
+
   @doc """
   Validates input and executes success or error callbacks.
 
@@ -111,16 +113,7 @@ defmodule Tymeslot.Infrastructure.ValidationHelpers do
         value = Map.get(params, field)
         is_nil(value) or value == ""
       end)
-      |> Enum.map(fn field ->
-        key =
-          try do
-            String.to_existing_atom(field)
-          rescue
-            ArgumentError -> field
-          end
-
-        {key, ["can't be blank"]}
-      end)
+      |> Enum.map(fn field -> {error_key(field), ["can't be blank"]} end)
       |> Enum.into(%{})
 
     if map_size(errors) == 0 do
@@ -163,6 +156,21 @@ defmodule Tymeslot.Infrastructure.ValidationHelpers do
   end
 
   # Private helpers
+
+  # Error maps are keyed by atom so callers can pattern-match on field names.
+  # A field name with no existing atom is not one this application declares, so
+  # it stays a string rather than growing the atom table.
+  defp error_key(field) do
+    String.to_existing_atom(field)
+  rescue
+    error in ArgumentError ->
+      Logger.debug("Required field has no existing atom; keeping the string key",
+        field: field,
+        error: Exception.message(error)
+      )
+
+      field
+  end
 
   defp assign_or_put(socket_or_conn, key, value) do
     case socket_or_conn do

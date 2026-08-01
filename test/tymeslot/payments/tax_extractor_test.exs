@@ -210,7 +210,7 @@ defmodule Tymeslot.Payments.TaxExtractorTest do
     test "returns list of EU country codes" do
       codes = TaxExtractor.eu_country_codes()
 
-      assert is_list(codes)
+      assert Enum.all?(codes, &(is_binary(&1) and String.length(&1) == 2))
       assert "DE" in codes
       assert "FR" in codes
       assert "IT" in codes

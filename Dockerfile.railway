@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Railway Dockerfile build for Core (build context: apps/tymeslot/).
+# Railway Dockerfile build for Core (build context: the repository root).
 # Alternative to the default Railpack build; use when you need more control
 # over the build process.
 
@@ -43,9 +43,9 @@ RUN mix assets.setup
 RUN npm ci --prefix assets
 RUN mix assets.deploy
 
-RUN mix release tymeslot && \
-    mkdir -p _build/prod/rel/tymeslot/apps/tymeslot/config && \
-    cp config/runtime.exs _build/prod/rel/tymeslot/apps/tymeslot/config/
+# mix release embeds config/runtime.exs in the release itself, so no extra
+# copy is needed.
+RUN mix release tymeslot
 
 # --- Runtime ---
 FROM debian:trixie-slim AS runtime

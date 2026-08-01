@@ -29,7 +29,7 @@ jobs:
         id: version
         run: |
           VERSION=$(grep -m 1 'version:' mix.exs | sed 's/.*version: "\(.*\)".*/\1/')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Extracted version: $VERSION"
 
       - name: Extract Docker metadata

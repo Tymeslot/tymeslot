@@ -28,7 +28,7 @@ defmodule Tymeslot.Payments.Webhooks.PaymentMethodHandlerTest do
   describe "process/2" do
     test "acknowledges payment method attachment" do
       payment_method = %{"id" => "pm_123", "customer" => "cus_123"}
-      event = %{"type" => "payment_method.attached"}
+      event = %{type: "payment_method.attached"}
 
       assert {:ok, :payment_method_processed} =
                PaymentMethodHandler.process(event, payment_method)

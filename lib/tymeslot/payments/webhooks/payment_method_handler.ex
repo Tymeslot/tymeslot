@@ -20,12 +20,11 @@ defmodule Tymeslot.Payments.Webhooks.PaymentMethodHandler do
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(event, payment_method) do
-    event_type = event["type"] || event[:type]
     payment_method_id = payment_method["id"]
     customer_id = payment_method["customer"]
 
     Logger.info("Processing payment_method event",
-      event_type: event_type,
+      event_type: Map.get(event, :type),
       payment_method_id: payment_method_id,
       customer_id: customer_id
     )

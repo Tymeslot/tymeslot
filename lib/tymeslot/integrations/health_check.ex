@@ -266,35 +266,25 @@ defmodule Tymeslot.Integrations.HealthCheck do
         :ok
 
       {:ok, integration} ->
-        # Step 1: Get current health state from DB (creates default record if absent)
-        old_health_state = Monitor.get_state(type, id, integration.user_id)
-
         # Step 2: Use Assessor to test the integration
         {check_result, _duration} = Assessor.assess(type, integration)
 
-        # Step 3: Use ErrorAnalysis to classify the result
-        analyzed_result = ErrorAnalysis.analyze(check_result, old_health_state)
-
-        # Step 4: Update health state (pure — does not persist)
-        new_health_state = Monitor.update_health(old_health_state, analyzed_result)
-
-        # Step 5: Detect status transition
-        transition = Monitor.detect_transition(old_health_state, new_health_state)
-
-        # Step 6: Persist new health state to DB
-        Monitor.put_state(type, id, new_health_state)
-
-        # Step 7: Handle transition (logging, user notification after 48h)
-        ResponseHandler.handle_transition(type, integration, transition, new_health_state)
-
-        # Step 8: Fast-path immediate reauth + notification on permanent auth failures
-        # (e.g. Google `invalid_grant`). Bypasses the 48-hour notification threshold
-        # because the integration cannot recover without user action.
-        ResponseHandler.handle_permanent_auth_failure(type, integration, check_result)
-
         case check_result do
-          {:error, _reason} = error -> error
-          _ok -> :ok
+          {:error, {:rate_limited, _message}} ->
+            # `ConnectionProbe` refused to even attempt the probe — a
+            # background scope is unmetered by construction, so this should
+            # be unreachable in practice, but a probe that never ran is not
+            # a probe that failed: never touch health state, backoff, or
+            # failure counters for it.
+            Logger.info("Skipping health state update for rate-limited probe",
+              type: type,
+              integration_id: id
+            )
+
+            :ok
+
+          _other ->
+            update_health_state(type, id, integration, check_result)
         end
 
       {:error, :not_found} ->
@@ -307,6 +297,41 @@ defmodule Tymeslot.Integrations.HealthCheck do
         end
 
         :ok
+    end
+  end
+
+  # Steps 1, 3-8 of the orchestration flow described in the moduledoc, run
+  # for every check result except a rate-limited refusal (see
+  # `orchestrate_health_check/2`).
+  @spec update_health_state(integration_type(), integer(), map(), {:ok, any()} | {:error, any()}) ::
+          :ok | {:error, any()}
+  defp update_health_state(type, id, integration, check_result) do
+    # Step 1: Get current health state from DB (creates default record if absent)
+    old_health_state = Monitor.get_state(type, id, integration.user_id)
+
+    # Step 3: Use ErrorAnalysis to classify the result
+    analyzed_result = ErrorAnalysis.analyze(check_result, old_health_state)
+
+    # Step 4: Update health state (pure — does not persist)
+    new_health_state = Monitor.update_health(old_health_state, analyzed_result)
+
+    # Step 5: Detect status transition
+    transition = Monitor.detect_transition(old_health_state, new_health_state)
+
+    # Step 6: Persist new health state to DB
+    Monitor.put_state(type, id, new_health_state)
+
+    # Step 7: Handle transition (logging, user notification after 48h)
+    ResponseHandler.handle_transition(type, integration, transition, new_health_state)
+
+    # Step 8: Fast-path immediate reauth + notification on permanent auth failures
+    # (e.g. Google `invalid_grant`). Bypasses the 48-hour notification threshold
+    # because the integration cannot recover without user action.
+    ResponseHandler.handle_permanent_auth_failure(type, integration, check_result)
+
+    case check_result do
+      {:error, _reason} = error -> error
+      _ok -> :ok
     end
   end
 

@@ -201,7 +201,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
 
       # Should not crash, response should be stored in an inspected format
       delivery = Repo.one(WebhookDeliverySchema)
-      assert is_binary(delivery.response_body)
+      assert delivery.response_body == ~S("\xFF\xFE\xFD\xFC")
     end
   end
 

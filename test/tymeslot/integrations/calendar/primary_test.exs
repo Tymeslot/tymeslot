@@ -168,5 +168,32 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
       assert updated.calendar_paths == []
       assert length(updated.calendar_list) == 1
     end
+
+    test "skips a read-only calendar that is both first and provider-primary, in favour of the one writable entry",
+         %{user: user} do
+      # Delegated/Workspace resource accounts can have no `primary: true`
+      # entry at all, so both the primary and selected tiers fall through
+      # to `first_id_from_list/1`. If that first entry is a read-only
+      # subscribed/shared calendar, the raw ladder would persist an
+      # unwritable `default_booking_calendar_id`; the eligibility filter
+      # must skip it in favour of the one writable calendar further down
+      # the list.
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_paths: [],
+          calendar_list: []
+        )
+
+      calendars = [
+        %{id: "holidays", name: "Holidays", selected: false, primary: false, read_only: true},
+        %{id: "writable", name: "Writable", selected: false, primary: false, read_only: false}
+      ]
+
+      assert {:ok, updated} = CalendarPrimary.auto_select_primary_calendar(integration, calendars)
+
+      assert updated.default_booking_calendar_id == "writable"
+    end
   end
 end

@@ -278,7 +278,7 @@ msgstr "Vue jour"
 msgid "Default"
 msgstr "Par défaut"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:65
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:66
 #, elixir-autogen, elixir-format
 msgid "Default calendar"
 msgstr "Calendrier par défaut"
@@ -601,7 +601,7 @@ msgstr "Mois précédent"
 msgid "Previous period"
 msgstr "Période précédente"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:53
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/calendar_picker.ex:54
 #, elixir-autogen, elixir-format
 msgid "Primary"
 msgstr "Principal"
@@ -902,7 +902,7 @@ msgstr "Oui, envoyer"
 msgid "You don't have permission to delete this event"
 msgstr "Vous n’avez pas la permission de supprimer cet événement"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex:74
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex:77
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/shared.ex:308
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to modify this event"
@@ -981,3 +981,13 @@ msgstr "Échec de la création de la salle vidéo - lien non mis à jour"
 #, elixir-autogen, elixir-format
 msgid "Failed to update event - changes reverted"
 msgstr "Échec de la mise à jour de l’événement - modifications annulées"
+
+#: lib/tymeslot/calendar_grid/event_creation.ex:178
+#, elixir-autogen, elixir-format
+msgid "Google Calendar saved the event but didn't return a Meet link — please try again or add it manually."
+msgstr "Google Calendar a enregistré l’événement, mais n’a pas renvoyé de lien Meet ; réessayez ou ajoutez-le manuellement."
+
+#: lib/tymeslot/calendar_grid/event_creation.ex:44
+#, elixir-autogen, elixir-format
+msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
+msgstr "Votre calendrier doit être reconnecté. Veuillez le reconnecter depuis la page Intégrations."

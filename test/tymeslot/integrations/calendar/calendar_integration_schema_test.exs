@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
 
   import Ecto.Changeset
   import Tymeslot.Factory
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Security.Encryption
 
@@ -175,7 +176,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
 
       assert changeset.valid?
-      assert changeset.changes.username_encrypted != nil
+      assert Encryption.decrypt(changeset.changes.username_encrypted) == "testuser"
       refute Map.has_key?(changeset.changes, :username)
     end
 
@@ -193,7 +194,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
 
       assert changeset.valid?
-      assert changeset.changes.password_encrypted != nil
+      assert Encryption.decrypt(changeset.changes.password_encrypted) == "secretpass"
       refute Map.has_key?(changeset.changes, :password)
     end
 
@@ -212,8 +213,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
 
       assert changeset.valid?
-      assert changeset.changes.access_token_encrypted != nil
-      assert changeset.changes.refresh_token_encrypted != nil
+      assert Encryption.decrypt(changeset.changes.access_token_encrypted) == "access_token_123"
+      assert Encryption.decrypt(changeset.changes.refresh_token_encrypted) == "refresh_token_456"
       refute Map.has_key?(changeset.changes, :access_token)
       refute Map.has_key?(changeset.changes, :refresh_token)
     end
@@ -253,7 +254,35 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
 
       assert changeset.valid?
-      assert changeset.changes.calendar_list == calendar_list
+
+      assert changeset.changes.calendar_list == [
+               %CalendarEntry{id: "cal1", name: "Personal", selected: true}
+             ]
+    end
+  end
+
+  describe "CalendarEntry.cast/1 and dump/1" do
+    test "round-trips unrecognised keys losslessly" do
+      input = %{
+        "id" => "cal1",
+        "path" => "/cal1",
+        "name" => "Personal",
+        "type" => "calendar",
+        "selected" => true,
+        "read_only" => false,
+        "primary" => true,
+        "color" => "#123456",
+        "description" => "Team calendar",
+        "access_role" => "owner",
+        "can_edit" => true,
+        "owner" => "user@example.com",
+        "metadata" => %{"source" => "discovery"}
+      }
+
+      {:ok, entry} = CalendarEntry.cast(input)
+      {:ok, dumped} = CalendarEntry.dump(entry)
+
+      assert dumped == input
     end
   end
 
@@ -409,6 +438,62 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
 
       assert decrypted.access_token == nil
       assert decrypted.refresh_token == nil
+    end
+  end
+
+  describe "to_provider_config/1" do
+    test "carries only the fields CalDAV-family test_connection/1 callbacks read" do
+      user = insert(:user)
+
+      stored =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          base_url: "https://caldav.example.com",
+          calendar_paths: ["/cal1"],
+          username_encrypted: Encryption.encrypt("secretuser"),
+          password_encrypted: Encryption.encrypt("secretpass"),
+          access_token_encrypted: Encryption.encrypt("secrettoken"),
+          refresh_token_encrypted: Encryption.encrypt("secretrefresh"),
+          google_channel_secret: "secretchannel"
+        )
+
+      integration = CalendarIntegrationSchema.decrypt_credentials(stored)
+
+      config = CalendarIntegrationSchema.to_provider_config(integration)
+
+      assert config == %{
+               base_url: "https://caldav.example.com",
+               username: "secretuser",
+               password: "secretpass",
+               calendar_paths: ["/cal1"],
+               provider: "caldav"
+             }
+    end
+
+    test "never leaks encrypted ciphertext or unrelated schema fields via inspect/1" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          username_encrypted: Encryption.encrypt("secretuser"),
+          password_encrypted: Encryption.encrypt("secretpass"),
+          access_token_encrypted: Encryption.encrypt("secrettoken"),
+          refresh_token_encrypted: Encryption.encrypt("secretrefresh"),
+          google_channel_secret: "secretchannel"
+        )
+
+      inspected = inspect(CalendarIntegrationSchema.to_provider_config(integration))
+
+      refute inspected =~ integration.password_encrypted
+      refute inspected =~ "password_encrypted"
+      refute inspected =~ "username_encrypted"
+      refute inspected =~ "access_token_encrypted"
+      refute inspected =~ "refresh_token_encrypted"
+      refute inspected =~ "secretchannel"
+      refute inspected =~ "google_channel_secret"
     end
   end
 end

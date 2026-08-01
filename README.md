@@ -110,19 +110,19 @@ Every connected calendar is checked the moment someone books. One conflict anywh
 
 <table align="center">
 <tr>
-<td align="center"><img src="./priv/static/icons/providers/calendar/medium/google.png" alt="Google Calendar" height="40" /><br /><sub>Google Calendar</sub></td>
-<td align="center"><img src="./priv/static/icons/providers/calendar/medium/outlook.png" alt="Outlook" height="40" /><br /><sub>Outlook</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/google.webp" alt="Google Calendar" height="40" /><br /><sub>Google Calendar</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/outlook.webp" alt="Outlook" height="40" /><br /><sub>Outlook</sub></td>
 <td align="center"><img src="./priv/static/icons/providers/calendar/apple.svg" alt="Apple iCloud" height="40" /><br /><sub>Apple iCloud</sub></td>
-<td align="center"><img src="./priv/static/icons/providers/calendar/medium/caldav.png" alt="CalDAV" height="40" /><br /><sub>CalDAV</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/caldav.webp" alt="CalDAV" height="40" /><br /><sub>CalDAV</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="40" /><br /><sub>Nextcloud</sub></td>
-<td align="center"><img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="40" /><br /><sub>Radicale</sub></td>
-<td align="center"><img src="./priv/static/icons/providers/calendar/medium/zimbra.png" alt="Zimbra" height="40" /><br /><sub>Zimbra</sub></td>
-<td align="center"><img src="./priv/static/icons/providers/calendar/medium/baikal.png" alt="Baikal" height="40" /><br /><sub>Baikal</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/nextcloud.webp" alt="Nextcloud" height="40" /><br /><sub>Nextcloud</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/radicale.webp" alt="Radicale" height="40" /><br /><sub>Radicale</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/zimbra.webp" alt="Zimbra" height="40" /><br /><sub>Zimbra</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/baikal.webp" alt="Baikal" height="40" /><br /><sub>Baikal</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="./priv/static/icons/providers/calendar/medium/mailbox_org.png" alt="mailbox.org" height="40" /><br /><sub>mailbox.org</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/mailbox_org.webp" alt="mailbox.org" height="40" /><br /><sub>mailbox.org</sub></td>
 <td></td>
 <td></td>
 <td></td>
@@ -133,14 +133,14 @@ Every connected calendar is checked the moment someone books. One conflict anywh
 
 <table align="center">
 <tr>
-<td align="center"><img src="./priv/static/icons/providers/video/medium/google_meet.png" alt="Google Meet" height="40" /><br /><sub>Google Meet</sub></td>
-<td align="center"><img src="./priv/static/icons/providers/video/medium/teams.png" alt="Microsoft Teams" height="40" /><br /><sub>Microsoft Teams</sub></td>
-<td align="center"><img src="./priv/static/icons/providers/video/medium/zoom.png" alt="Zoom" height="40" /><br /><sub>Zoom</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/google_meet.webp" alt="Google Meet" height="40" /><br /><sub>Google Meet</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/teams.webp" alt="Microsoft Teams" height="40" /><br /><sub>Microsoft Teams</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/zoom.webp" alt="Zoom" height="40" /><br /><sub>Zoom</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="./priv/static/icons/providers/video/medium/mirotalk.png" alt="MiroTalk P2P" height="40" /><br /><sub>MiroTalk P2P</sub></td>
-<td align="center"><img src="./priv/static/icons/providers/video/medium/in_person.png" alt="In person / phone" height="40" /><br /><sub>In person / phone</sub></td>
-<td align="center"><img src="./priv/static/icons/providers/video/medium/custom.png" alt="Custom link" height="40" /><br /><sub>Custom link</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/mirotalk.webp" alt="MiroTalk P2P" height="40" /><br /><sub>MiroTalk P2P</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/in_person.webp" alt="In person / phone" height="40" /><br /><sub>In person / phone</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/custom.webp" alt="Custom link" height="40" /><br /><sub>Custom link</sub></td>
 </tr>
 </table>
 

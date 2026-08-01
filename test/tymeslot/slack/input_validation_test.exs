@@ -45,7 +45,7 @@ defmodule Tymeslot.Slack.InputValidationTest do
 
     test "accepts unicode names within length limit" do
       {name, errors} = InputValidation.validate_name("日本語通知", %{}, true)
-      assert is_binary(name)
+      assert name == "日本語通知"
       assert errors == %{}
     end
   end
@@ -158,7 +158,7 @@ defmodule Tymeslot.Slack.InputValidationTest do
 
     test "accepts a valid channel hint" do
       {hint, errors} = InputValidation.validate_channel_hint("#general", %{})
-      assert is_binary(hint)
+      assert hint == "#general"
       assert errors == %{}
     end
   end

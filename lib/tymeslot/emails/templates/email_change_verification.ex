@@ -21,7 +21,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
   @spec render(Tymeslot.Emails.EmailService.user_map(), String.t(), String.t()) :: String.t()
   def render(user, new_email, verification_url) do
     mjml_content = """
-    #{Text.centered_text(Greeting.html(user),
+    #{Text.centered_html(Greeting.html(user),
     font_size: "16px",
     color: Styles.ink(),
     padding: "8px 0 4px 0")}

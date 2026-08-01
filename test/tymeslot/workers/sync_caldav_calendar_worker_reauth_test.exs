@@ -35,7 +35,9 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
 
     reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
     assert reloaded.needs_reauth == true
-    assert reloaded.sync_error != nil
+
+    assert reloaded.sync_error ==
+             "CalDAV server rejected the stored credentials. Please reconnect the integration."
   end
 
   describe "perform/1 when the CalDAV server returns 401" do

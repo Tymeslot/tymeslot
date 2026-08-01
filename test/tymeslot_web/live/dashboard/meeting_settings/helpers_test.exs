@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.HelpersTest do
         Helpers.handle_meeting_type_save_result({:error, :invalid_duration}, socket)
 
       assert_receive {:flash, {:error, "Duration must be a valid number"}}
-      assert is_list(socket.assigns.form_errors[:duration])
+      assert socket.assigns.form_errors[:duration] == ["Duration must be a valid number"]
       refute socket.assigns.saving
     end
 
@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.HelpersTest do
       socket = mock_socket()
       {:noreply, socket} = Helpers.handle_meeting_type_save_result({:error, changeset}, socket)
 
-      assert is_list(socket.assigns.form_errors[:name])
+      assert socket.assigns.form_errors[:name] == ["can't be blank"]
       refute socket.assigns.saving
     end
 
@@ -79,7 +79,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.HelpersTest do
         Helpers.handle_meeting_type_save_result({:error, :something_unexpected}, socket)
 
       assert_receive {:flash, {:error, "Failed to save meeting type"}}
-      assert is_list(socket.assigns.form_errors[:base])
+      assert socket.assigns.form_errors[:base] == ["Something unexpected"]
       refute socket.assigns.saving
     end
   end

@@ -3,9 +3,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   Utilities shared across calendar provider implementations.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Security.UrlValidation
 
   @doc """
@@ -18,7 +22,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
     if Enum.empty?(missing_fields) do
       :ok
     else
-      {:error, "Missing required fields: #{Enum.join(missing_fields, ", ")}"}
+      {:error,
+       dgettext("dashboard_calendar_providers", "Missing required fields: %{fields}",
+         fields: Enum.join(missing_fields, ", ")
+       )}
     end
   end
 
@@ -40,7 +47,12 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   """
   @spec validate_url(String.t(), keyword()) :: :ok | {:error, String.t()}
   def validate_url(url, opts \\ []) do
-    invalid_message = Keyword.get(opts, :message, "Invalid URL format")
+    invalid_message =
+      Keyword.get(
+        opts,
+        :message,
+        dgettext("dashboard_calendar_providers", "Invalid URL format")
+      )
 
     allow_private =
       Keyword.get(
@@ -54,35 +66,28 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       disallowed_protocol_error: invalid_message,
       enforce_https_for_public: true,
       block_private_ips: not allow_private,
-      https_error_message: "Use HTTPS for non-local calendar servers",
-      private_ip_error_message: "Private or local network addresses are not allowed"
+      https_error_message:
+        dgettext("dashboard_calendar_providers", "Use HTTPS for non-local calendar servers"),
+      private_ip_error_message:
+        dgettext(
+          "dashboard_calendar_providers",
+          "Private or local network addresses are not allowed"
+        )
     )
   end
 
   @doc """
-  Runs a CalDAV connection test and normalizes error responses.
-  """
-  @spec test_caldav_connection(CaldavCommon.caldav_client(), keyword()) ::
-          :ok | {:error, String.t()}
-  def test_caldav_connection(client, opts \\ []) do
-    error_formatter = Keyword.get(opts, :error_formatter, &default_caldav_error/1)
-    test_opts = Keyword.get(opts, :test_opts, [])
-
-    case CaldavCommon.test_connection(client, test_opts) do
-      {:ok, _result} -> :ok
-      {:error, reason} -> {:error, error_formatter.(reason)}
-    end
-  end
-
-  @doc """
   Helper for providers to format calendars returned from their API.
+
+  `mapper` normalises each raw provider calendar into a `CalendarEntry`
+  struct, so this always returns the canonical discovery shape.
   """
   @spec discover_calendars(
           CalendarIntegrationSchema.t(),
           (CalendarIntegrationSchema.t() -> {:ok, [map()]} | {:error, term()}),
-          (map() -> map())
+          (map() -> CalendarEntry.t())
         ) ::
-          {:ok, [map()]} | {:error, term()}
+          {:ok, [CalendarEntry.t()]} | {:error, term()}
   def discover_calendars(integration, list_fun, mapper) do
     case list_fun.(integration) do
       {:ok, calendars} -> {:ok, Enum.map(calendars, mapper)}
@@ -115,7 +120,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
         ) ::
           {:ok, String.t()} | {:error, String.t()}
   def test_caldav_provider_connection(integration, opts \\ []) do
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
     success_msg = Keyword.fetch!(opts, :success_message)
     unauthorized_msg = Keyword.fetch!(opts, :unauthorized_message)
     not_found_msg = Keyword.fetch!(opts, :not_found_message)
@@ -130,7 +134,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       provider: normalize_provider(integration.provider)
     }
 
-    case CaldavCommon.test_connection(client, ip_address: ip_address) do
+    case CaldavCommon.test_connection(client) do
       {:ok, _response} ->
         {:ok, success_msg}
 
@@ -152,14 +156,19 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   Common implementation of `discover_calendars_for_integration/1` for
   CalDAV-based providers that store encrypted credentials.
 
-  Decrypts the integration's username/password, builds a config map,
-  constructs a client via `provider_module.new/1`, and calls
-  `provider_module.discover_calendars/1`. Used by Radicale, Zimbra,
-  MailboxOrg, and Baikal — providers whose discovery shim is otherwise
-  identical apart from the module being dispatched to.
+  Decrypts the integration's username/password, builds a config map, and
+  calls `provider_module.new/1` + `provider_module.discover_calendars/1`.
+  Used by Radicale, Zimbra, MailboxOrg, Apple, and Baikal — providers whose
+  discovery shim is otherwise identical apart from the module being
+  dispatched to.
+
+  Pure I/O — rate limiting and caching this call is the caller's job
+  (`Tymeslot.Integrations.Calendar.Discovery`, the single choke point that
+  wraps every CalDAV provider's `discover_calendars_for_integration/1`),
+  not this shim's.
   """
   @spec caldav_discover_from_integration(module(), map()) ::
-          {:ok, list(map())} | {:error, term()}
+          {:ok, [CalendarEntry.t()]} | {:error, term()}
   def caldav_discover_from_integration(provider_module, integration) do
     decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
 
@@ -170,8 +179,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       calendar_paths: integration.calendar_paths
     }
 
-    client = provider_module.new(config)
-    provider_module.discover_calendars(client)
+    provider_module.discover_calendars(provider_module.new(config))
   end
 
   @doc """
@@ -205,11 +213,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   defp caldav_selected_paths(integration) do
     if integration.calendar_list && integration.calendar_list != [] do
       integration.calendar_list
-      |> Enum.filter(fn cal ->
-        (cal["selected"] == true || cal[:selected] == true) &&
-          not (Map.get(cal, "read_only", false) || Map.get(cal, :read_only, false))
-      end)
-      |> Enum.map(fn cal -> cal["path"] || cal[:path] || cal["id"] || cal[:id] end)
+      |> Selection.writable_calendars()
+      |> Enum.map(&(&1.path || &1.id))
       |> Enum.reject(&is_nil/1)
     else
       integration.calendar_paths || []
@@ -226,9 +231,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       verify_ssl: true
     }
   end
-
-  defp default_caldav_error({:error, message}) when is_binary(message), do: message
-  defp default_caldav_error(reason), do: "Connection failed: #{inspect(reason)}"
 
   defp normalize_provider(provider) when is_atom(provider), do: provider
 

@@ -275,4 +275,46 @@ defmodule Tymeslot.Bookings.ValidationTest do
                )
     end
   end
+
+  describe "parse_meeting_times/4 with DST-ambiguous or nonexistent wall-clock times" do
+    # Europe/Berlin: clocks fall back from CEST to CET at 03:00 -> 02:00 on
+    # this date, so 02:30 occurs twice (once at +02:00, once at +01:00).
+    test "resolves an ambiguous autumn DST fallback time to the earlier instant" do
+      assert {:ok, {start_datetime, _end_datetime}} =
+               Validation.parse_meeting_times("2025-10-26", "02:30", 30, "Europe/Berlin")
+
+      {:ambiguous, earlier, _later} =
+        DateTime.new(~D[2025-10-26], ~T[02:30:00], "Europe/Berlin")
+
+      assert DateTime.compare(start_datetime, earlier) == :eq
+      # Earlier occurrence is still on CEST (+02:00), the later one on CET (+01:00).
+      assert start_datetime.utc_offset + start_datetime.std_offset == 7200
+    end
+
+    # Europe/Berlin: clocks spring forward from CET to CEST at 02:00 -> 03:00
+    # on this date, so 02:30 never occurs.
+    test "resolves a spring DST gap time to the instant just after the gap" do
+      assert {:ok, {start_datetime, _end_datetime}} =
+               Validation.parse_meeting_times("2025-03-30", "02:30", 30, "Europe/Berlin")
+
+      assert DateTime.compare(start_datetime, ~U[2025-03-30 01:00:00Z]) == :eq
+    end
+
+    test "still succeeds for a normal, unambiguous time" do
+      assert {:ok, {start_datetime, end_datetime}} =
+               Validation.parse_meeting_times("2025-06-15", "10:00", 30, "Europe/Berlin")
+
+      assert DateTime.compare(
+               start_datetime,
+               DateTime.new!(~D[2025-06-15], ~T[10:00:00], "Europe/Berlin")
+             ) == :eq
+
+      assert DateTime.diff(end_datetime, start_datetime, :minute) == 30
+    end
+
+    test "still rejects an unknown timezone" do
+      assert {:error, "Invalid date or time format"} =
+               Validation.parse_meeting_times("2025-06-15", "10:00", 30, "Not/AZone")
+    end
+  end
 end

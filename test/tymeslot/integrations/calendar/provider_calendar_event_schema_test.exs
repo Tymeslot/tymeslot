@@ -110,6 +110,30 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheSchemaTest do
       event = ProviderCalendarEventSchema.to_calendar_event(record)
       assert event.created_by_tymeslot == false
     end
+
+    test "falls back to :confirmed for a status value that belongs to another vocabulary" do
+      record = base_record(%{status: "google"})
+      event = ProviderCalendarEventSchema.to_calendar_event(record)
+      assert event.status == :confirmed
+    end
+
+    test "falls back to :opaque for a transparency value that belongs to another vocabulary" do
+      record = base_record(%{transparency: "confirmed"})
+      event = ProviderCalendarEventSchema.to_calendar_event(record)
+      assert event.transparency == :opaque
+    end
+
+    test "returns nil for a visibility value that belongs to another vocabulary" do
+      record = base_record(%{visibility: "opaque"})
+      event = ProviderCalendarEventSchema.to_calendar_event(record)
+      assert event.visibility == nil
+    end
+
+    test "returns nil for a provider value that belongs to another vocabulary" do
+      record = base_record(%{provider: "confirmed"})
+      event = ProviderCalendarEventSchema.to_calendar_event(record)
+      assert event.provider == nil
+    end
   end
 
   defp base_calendar_event(overrides) do

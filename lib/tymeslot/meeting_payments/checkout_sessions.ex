@@ -13,6 +13,8 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   URL to redirect the attendee to.
   """
 
+  require Logger
+
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Features
 
@@ -153,7 +155,12 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   defp fetch_meeting_type(id) do
     {:ok, MeetingTypeQueries.get_meeting_type!(id)}
   rescue
-    Ecto.NoResultsError -> {:error, :meeting_type_not_found}
+    Ecto.NoResultsError ->
+      Logger.warning("Checkout session requested for a missing meeting type",
+        meeting_type_id: id
+      )
+
+      {:error, :meeting_type_not_found}
   end
 
   defp resolve_theme_id(user_id) do

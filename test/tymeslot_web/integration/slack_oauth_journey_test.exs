@@ -66,8 +66,9 @@ defmodule TymeslotWeb.Integration.SlackOAuthJourneyTest do
       assert params["client_id"] == "test-client-id"
       assert params["scope"] =~ "chat:write"
       assert params["redirect_uri"] =~ "/api/slack/oauth/callback"
-      assert is_binary(params["state"])
-      assert params["state"] != ""
+      # The state must be a token this endpoint can verify back to the user.
+      assert {:ok, user.id} ==
+               Token.verify(Endpoint, "slack_oauth_state", params["state"], max_age: 600)
     end
   end
 
@@ -177,11 +178,11 @@ defmodule TymeslotWeb.Integration.SlackOAuthJourneyTest do
       assert SlackIntegrationSchema.status(pending) == :pending_oauth
 
       conn = log_in_user(conn, user)
-      {:ok, view, html} = live(conn, "/dashboard/automation?slack_pending=#{pending.id}")
+      {:ok, view, _html} = live(conn, "/dashboard/automation?slack_pending=#{pending.id}")
 
-      # Channel-picker form should be visible
-      assert html =~ "slack_pending" or render(view) =~ "channel" or
-               render(view) =~ "Pick" or render(view) =~ "Channel"
+      # The channel picker opens with a channel field ready to submit.
+      assert has_element?(view, "#slack-form")
+      assert has_element?(view, "#slack-form [name='slack[channel_id]']")
     end
 
     test "submitting the channel form transitions the integration to :active",

@@ -6,13 +6,18 @@ defmodule TymeslotWeb.Themes.Shared.Customization.CapabilityTest do
   alias TymeslotWeb.Themes.Shared.Customization.Capability
 
   test "delegates to Tymeslot.ThemeCustomizations.Capability" do
-    # We use a known theme ID "1" or "2"
-    assert is_map(Capability.get_customization_options("1"))
-    assert is_map(Capability.get_capability_defaults("1"))
-    assert is_boolean(Capability.supports_customization?("1", :background))
+    # Theme ID "1" is Quill, which supports both colour and background overrides.
+    assert %{color: _color, background: _background} = Capability.get_customization_options("1")
 
-    # generate_css returns binary or error
-    result = Capability.generate_css("1", %{})
-    assert is_binary(result) or match?({:error, _}, result)
+    assert Capability.get_capability_defaults("1") == %{
+             "background_type" => "gradient",
+             "background_value" => "gradient_1",
+             "color_scheme" => "default"
+           }
+
+    assert Capability.supports_customization?("1", :background) == true
+
+    # An empty customisation map carries no overrides, so no CSS is emitted.
+    assert Capability.generate_css("1", %{}) == ""
   end
 end

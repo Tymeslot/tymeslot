@@ -1,0 +1,63 @@
+# Tymeslot Docker Compose Configuration — build from source
+#
+# Same single-container setup as docker-compose.yml, but the image is built
+# from this checkout instead of pulled from Docker Hub. Use it when you have
+# modified the source, or when you would rather not run a prebuilt image.
+#
+# This file only works from inside a clone, because the build context is the
+# repository itself:
+#   git clone https://github.com/Tymeslot/tymeslot.git
+#   cd tymeslot
+#
+# IMPORTANT: Create a .env file before starting:
+#   cp .env.example .env
+#
+# Then generate required secrets:
+#   openssl rand -base64 64 | tr -d '\n'  # SECRET_KEY_BASE
+#
+# Recommended (decouples data-at-rest encryption from SECRET_KEY_BASE):
+#   openssl rand -base64 48 | tr -d '\n'  # DATA_ENCRYPTION_KEY
+# Once set it must stay stable across restarts — losing it makes stored
+# credentials undecryptable. See README-Docker.md, "Data-at-rest encryption".
+#
+# Fill in the required values in .env, then run:
+#   docker compose -f docker-compose.build.yml up -d --build
+
+services:
+  tymeslot:
+    build:
+      context: .
+      dockerfile: Dockerfile.docker
+    # A local-only tag: this image is built here, never pulled. The published
+    # image lives at luka1thb/tymeslot and is what docker-compose.yml uses.
+    image: tymeslot:local
+    container_name: tymeslot
+    restart: unless-stopped
+    # PORT is the listen port; it is published on the host and inside the
+    # container so changing it in .env works end-to-end.
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    # Forward every variable from .env into the container. start-docker.sh fills
+    # in sensible defaults for anything left unset, so the only thing pinned here
+    # is the deployment type.
+    env_file:
+      - .env
+    environment:
+      DEPLOYMENT_TYPE: docker
+    volumes:
+      - tymeslot_data:/app/data
+      - tymeslot_pg:/var/lib/postgresql/data
+
+# Volume names are pinned with `name:` so they match the `docker run` quick-start
+# (which uses `tymeslot_data` and `tymeslot_pg`) instead of being prefixed with
+# the Compose project name. This keeps a single set of volumes whether you start
+# Tymeslot with `docker run` or `docker compose`.
+volumes:
+  tymeslot_data:
+    name: tymeslot_data
+  tymeslot_pg:
+    name: tymeslot_pg
+
+networks:
+  default:
+    name: tymeslot_network

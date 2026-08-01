@@ -32,7 +32,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
       end
 
     mjml_content = """
-    #{Text.centered_text(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
+    #{Text.centered_html(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
 
     #{Text.centered_text(intro, padding: "0 0 20px 0")}
 

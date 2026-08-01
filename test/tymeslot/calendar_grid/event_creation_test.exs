@@ -25,6 +25,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
 
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.EmailWorker
 
@@ -57,7 +58,8 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         # Inline strategy attaches a conferenceData.createRequest…
         assert %{conference_data: %{createRequest: cr}} = event_data
         assert cr[:conferenceSolutionKey][:type] == "hangoutsMeet"
-        assert is_binary(cr[:requestId])
+        # 8 random bytes, Base16-encoded — Google's idempotency key.
+        assert cr[:requestId] =~ ~r/^[0-9A-F]{16}$/
 
         # …and the description must NOT carry the Meet URL — that's only
         # known after Google's response. conferenceData carries the URL
@@ -391,7 +393,9 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
       try do
         assert {:ok, result} = EventCreation.run_create_ad_hoc_meeting(params)
 
-        assert result.meeting_id != nil
+        assert %MeetingSchema{title: "Ad-hoc Chat", attendee_email: "alice@example.com"} =
+                 Repo.get!(MeetingSchema, result.meeting_id)
+
         assert result.start_at == start_at
         assert result.end_at == end_at
       after
@@ -481,8 +485,9 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         assert String.contains?(url, "conferenceDataVersion=1")
 
         decoded = Jason.decode!(body)
-        assert Map.has_key?(decoded, "conferenceData")
-        assert get_in(decoded, ["conferenceData", "createRequest"]) != nil
+
+        assert %{"conferenceSolutionKey" => %{"type" => "hangoutsMeet"}} =
+                 get_in(decoded, ["conferenceData", "createRequest"])
 
         {:ok, %Req.Response{status: 200, body: google_response_body}}
       end)

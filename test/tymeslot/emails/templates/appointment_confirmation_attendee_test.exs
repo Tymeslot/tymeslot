@@ -33,8 +33,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendeeTest do
       details = build_appointment_details()
       email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
 
-      ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
-      assert ics
+      assert ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
       assert ics.filename =~ ".ics"
       assert ics.filename =~ details.uid
     end
@@ -63,10 +62,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendeeTest do
       details = build_appointment_details()
       email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
 
-      assert email.html_body != nil
-      assert email.text_body != nil
-      assert is_binary(email.html_body)
-      assert is_binary(email.text_body)
+      assert email.html_body =~ "<!doctype html"
+      assert email.html_body =~ details.meeting_type
+      assert email.text_body =~ "Appointment Confirmed!"
+      assert email.text_body =~ details.meeting_type
     end
 
     test "HTML body contains organizer information" do
@@ -139,7 +138,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendeeTest do
 
       email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
 
-      assert is_binary(email.html_body)
       assert email.html_body =~ "https://meet.example.com/room-456"
       assert email.html_body =~ "https://meet.example.com/room-456?role=guest"
     end
@@ -226,8 +224,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendeeTest do
 
       email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
 
-      assert email.html_body != nil
-      assert email.text_body != nil
+      assert email.html_body =~ details.organizer_name
+      assert email.text_body =~ details.organizer_name
+      refute email.html_body =~ "nil"
+      refute email.text_body =~ "nil"
     end
 
     test "uses attendee name from details in recipient" do
@@ -246,18 +246,19 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendeeTest do
       details = build_appointment_details()
       email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
 
-      assert email.html_body =~ "calendar" || email.html_body =~ "Calendar"
+      assert email.html_body =~ ~r/calendar/i
     end
 
     test "email structure is valid Swoosh email" do
       details = build_appointment_details()
       email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
 
-      assert %Swoosh.Email{} = email
-      assert email.subject != nil
-      assert email.to != []
-      assert email.html_body != nil
-      assert email.text_body != nil
+      assert %Swoosh.Email{subject: subject, to: to, html_body: html, text_body: text} = email
+
+      assert subject =~ "Appointment Confirmed"
+      assert to == [{"Jane Attendee", "attendee@example.com"}]
+      assert html =~ details.organizer_name
+      assert text =~ details.organizer_name
     end
 
     test "handles different meeting types appropriately" do

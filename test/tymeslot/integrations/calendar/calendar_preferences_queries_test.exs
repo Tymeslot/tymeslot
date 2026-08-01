@@ -25,7 +25,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesQueriesTest do
     test "returns persisted preferences when they exist" do
       user = insert(:user)
 
-      {:ok, _prefs} =
+      {:ok, persisted} =
         CalendarPreferencesQueries.upsert(user.id, %{
           default_view: "day",
           time_format: "24h"
@@ -33,7 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesQueriesTest do
 
       prefs = CalendarPreferencesQueries.get_or_create(user.id)
 
-      refute is_nil(prefs.id)
+      assert prefs.id == persisted.id
       assert prefs.user_id == user.id
       assert prefs.default_view == "day"
       assert prefs.time_format == "24h"

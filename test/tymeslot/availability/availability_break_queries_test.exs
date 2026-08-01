@@ -176,7 +176,11 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueriesTest do
       assert count == 2
       assert AvailabilityBreakQueries.get_break(break1.id) == nil
       assert AvailabilityBreakQueries.get_break(break2.id) == nil
-      assert AvailabilityBreakQueries.get_break(other_break.id) != nil
+
+      assert %AvailabilityBreakSchema{id: other_id} =
+               AvailabilityBreakQueries.get_break(other_break.id)
+
+      assert other_id == other_break.id
     end
 
     test "returns zero count when no breaks exist" do

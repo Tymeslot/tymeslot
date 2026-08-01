@@ -19,6 +19,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   flashes.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Bookings.CreateAdHoc
@@ -30,15 +32,19 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
   alias Tymeslot.Meetings.AttendeeNotifications
-
-  @reauth_flash_message "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
+  alias Tymeslot.Utils.MapKeys
 
   @doc """
   Returns the flash message surfaced to the user when an integration's
   credentials require reauthentication during event creation.
   """
   @spec reauth_flash_message() :: String.t()
-  def reauth_flash_message, do: @reauth_flash_message
+  def reauth_flash_message,
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
+      )
 
   @doc """
   Creates a calendar event from a resolved create-form payload.
@@ -169,8 +175,10 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
       {:error, :no_meet_url, video_context} ->
         warning =
-          "Google Calendar saved the event but didn't return a Meet link — " <>
-            "please try again or add it manually."
+          dgettext(
+            "dashboard_calendar_events",
+            "Google Calendar saved the event but didn't return a Meet link — please try again or add it manually."
+          )
 
         {:ok, result} =
           build_create_success(
@@ -210,7 +218,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   defp build_create_success(created, creating, user_id, start_at, end_at, video_context) do
-    uid = if is_binary(created), do: created, else: created[:uid] || created["uid"]
+    uid = if is_binary(created), do: created, else: MapKeys.get_binary(created, :uid)
 
     {provider, default_booking_calendar_id, reauth_required?} =
       lookup_integration_metadata(creating.integration_id)
@@ -263,8 +271,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     case VideoRooms.create_meeting_room(user_id, opts) do
       {:ok, %{room_data: room_data}} ->
         %{
-          meeting_url: room_data[:meeting_url] || room_data[:join_url],
-          room_id: room_data[:room_id],
+          meeting_url: room_data.meeting_url,
+          room_id: room_data.room_id,
           video_integration_id: integration_id
         }
 

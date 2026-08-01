@@ -35,12 +35,19 @@ defmodule TymeslotWeb.Components.UIExtendedTest do
     end
 
     test "helper functions return correct values" do
-      assert is_list(Assets.video_sources(:rhythm))
-      assert is_binary(Assets.video_poster(:rhythm))
-      assert is_binary(Assets.fallback_gradient(:rhythm))
+      sources = Assets.video_sources(:rhythm)
+      assert length(sources) == 4
+      assert Enum.all?(sources, &String.starts_with?(&1.src, "/videos/backgrounds/rhythm-"))
+
+      assert Assets.video_poster(:rhythm) == "/images/ui/posters/rhythm-background-poster.webp"
+      assert Assets.fallback_gradient(:rhythm) =~ "linear-gradient("
       assert Assets.crossfade_enabled?(:rhythm) == true
       assert Assets.crossfade_enabled?(:quill) == false
-      assert is_list(Assets.video_ids(:rhythm))
+
+      assert Assets.video_ids(:rhythm) == [
+               "rhythm-background-video-1",
+               "rhythm-background-video-2"
+             ]
     end
   end
 

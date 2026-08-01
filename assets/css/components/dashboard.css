@@ -366,13 +366,16 @@
   }
   
   .dashboard-sidebar.dashboard-sidebar-open {
-    transform: translateX(0);
+    translate: 0 0;
   }
   
+  /* The nudge being cancelled here is `hover:translate-x-1`, which Tailwind v4
+     emits through the standalone `translate` property; resetting `transform`
+     leaves it untouched. */
   .dashboard-nav-link:hover {
     backdrop-filter: var(--glass-blur-light);
     -webkit-backdrop-filter: var(--glass-blur-light);
-    transform: none;
+    translate: none;
   }
   
   .dashboard-nav-link--active {
@@ -433,9 +436,9 @@
   }
   
   .dashboard-nav-link:hover {
-    transform: none;
+    translate: none;
   }
-  
+
   .dashboard-nav-link--active::before {
     display: none;
   }

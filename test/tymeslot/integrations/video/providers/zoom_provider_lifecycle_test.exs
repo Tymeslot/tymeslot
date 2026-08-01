@@ -535,8 +535,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderLifecycleTest do
     test "rejects a config that grants neither meeting-write scope" do
       config = Map.put(valid_config(), :oauth_scope, "user:read:user")
 
-      assert {:error, message} = ZoomProvider.create_meeting_room(config)
-      assert String.contains?(message, "scopes are insufficient")
+      assert {:error, :insufficient_scope} = ZoomProvider.create_meeting_room(config)
     end
 
     test "does not accept a longer unrelated scope that merely contains meeting:write" do
@@ -545,8 +544,28 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderLifecycleTest do
       # meeting:write:meeting should pass. This guards the whole-token check.
       config = Map.put(valid_config(), :oauth_scope, "meeting:write:registrant")
 
-      assert {:error, message} = ZoomProvider.create_meeting_room(config)
-      assert String.contains?(message, "scopes are insufficient")
+      assert {:error, :insufficient_scope} = ZoomProvider.create_meeting_room(config)
+    end
+
+    test "rejects a delete when the granular grant omits meeting:delete:meeting" do
+      # The exact production shape: a token granted before the delete scope was
+      # requested. Writes still work, so only the delete path may reject it.
+      config = Map.put(valid_config(), :oauth_scope, "meeting:write:meeting user:read:user")
+
+      assert {:error, :insufficient_scope} =
+               ZoomProvider.delete_meeting_room("123456789", config)
+    end
+
+    test "accepts a delete under the classic meeting:write scope" do
+      config = Map.put(valid_config(), :oauth_scope, "meeting:write user:read")
+
+      expect(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok = ZoomProvider.delete_meeting_room("123456789", config)
     end
   end
 

@@ -21,24 +21,9 @@ msgstr ""
 msgid "A unique security token will be automatically generated for this webhook once created. You'll use it to verify requests in your automation tool."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:462
-#, elixir-autogen, elixir-format
-msgid "Add Telegram Account"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:74
 #, elixir-autogen, elixir-format
 msgid "Add actions to process the webhook data"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:512
-#, elixir-autogen, elixir-format
-msgid "Add to Slack"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:520
-#, elixir-autogen, elixir-format
-msgid "Add via webhook URL"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex:65
@@ -66,7 +51,7 @@ msgstr ""
 msgid "Attempt %{count}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:336
+#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:335
 #, elixir-autogen, elixir-format
 msgid "Automation"
 msgstr ""
@@ -138,7 +123,7 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:109
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:73
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:260
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:424
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex:31
 #, elixir-autogen, elixir-format
 msgid "Create Webhook"
 msgstr ""
@@ -175,7 +160,7 @@ msgid "Delete Telegram Integration?"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:167
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:234
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:185
 #, elixir-autogen, elixir-format
 msgid "Delete Webhook"
 msgstr ""
@@ -185,20 +170,19 @@ msgstr ""
 msgid "Delete Webhook?"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:72
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:365
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:65
 #, elixir-autogen, elixir-format
 msgid "Disabled"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/automation/modals.ex:36
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:218
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:176
 #: lib/tymeslot_web/live/dashboard/automation/webhook_form_component.ex:74
 #, elixir-autogen, elixir-format
 msgid "Edit Webhook"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:167
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:146
 #, elixir-autogen, elixir-format
 msgid "Enable webhook to test"
 msgstr ""
@@ -253,12 +237,12 @@ msgstr ""
 msgid "Insert a Webhook node and copy its URL"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:113
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:99
 #, elixir-autogen, elixir-format
 msgid "Last triggered: %{time}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:210
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:168
 #, elixir-autogen, elixir-format
 msgid "Logs"
 msgstr ""
@@ -268,7 +252,7 @@ msgstr ""
 msgid "Never"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:133
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:112
 #, elixir-autogen, elixir-format
 msgid "Never triggered"
 msgstr ""
@@ -361,7 +345,7 @@ msgstr ""
 msgid "Set up webhooks to automatically trigger actions in n8n, Zapier, or your custom tools when bookings are created, cancelled, or rescheduled."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:378
+#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex:56
 #, elixir-autogen, elixir-format
 msgid "Slack"
 msgstr ""
@@ -376,18 +360,18 @@ msgstr ""
 msgid "Success"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:356
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:363
+#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex:38
+#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex:43
 #, elixir-autogen, elixir-format
 msgid "Telegram"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:192
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:157
 #, elixir-autogen, elixir-format
 msgid "Test"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:169
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:148
 #, elixir-autogen, elixir-format
 msgid "Test Connection"
 msgstr ""
@@ -407,12 +391,12 @@ msgstr ""
 msgid "Test failed: %{reason}"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:182
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:154
 #, elixir-autogen, elixir-format
 msgid "Testing"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:168
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:147
 #, elixir-autogen, elixir-format
 msgid "Testing..."
 msgstr ""
@@ -484,7 +468,7 @@ msgstr ""
 msgid "Verify the webhook is working correctly"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:200
+#: lib/tymeslot_web/live/dashboard/automation/webhook_card.ex:165
 #, elixir-autogen, elixir-format
 msgid "View Delivery Logs"
 msgstr ""
@@ -556,7 +540,7 @@ msgstr ""
 msgid "Webhook updated successfully"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:345
+#: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex:29
 #, elixir-autogen, elixir-format
 msgid "Webhooks"
 msgstr ""
@@ -571,17 +555,7 @@ msgstr ""
 msgid "What are webhooks?"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:506
-#, elixir-autogen, elixir-format
-msgid "Your Slack Integrations"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:458
-#, elixir-autogen, elixir-format
-msgid "Your Telegram Integrations"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/automation_settings_component.ex:420
+#: lib/tymeslot_web/live/dashboard/automation/webhook_tab.ex:27
 #, elixir-autogen, elixir-format
 msgid "Your Webhooks"
 msgstr ""

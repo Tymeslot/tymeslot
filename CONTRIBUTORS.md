@@ -29,6 +29,9 @@ landed differently:
   diagnosing the Google OAuth calendar scope issue.
 - **[@fbartels](https://github.com/fbartels)** (Felix Bartels) — build/asset
   housekeeping.
+- **[@stormbyte](https://github.com/stormbyte)** — building the Docker image
+  straight from the repository URL, with a pinnable version, so trying Tymeslot
+  from source needs no clone.
 
 ## Bug reports & feedback
 

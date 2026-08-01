@@ -81,10 +81,11 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
   describe "when clearing OAuth state" do
     test "removes state from session" do
       conn = build_test_conn()
-      {conn, _state} = State.generate_and_store_state(conn)
+      {conn, state} = State.generate_and_store_state(conn)
 
-      # Verify state exists
-      assert Conn.get_session(conn, "_oauth_state") != nil
+      # Verify state exists — stored alongside the issue timestamp
+      assert {^state, issued_at} = Conn.get_session(conn, "_oauth_state")
+      assert is_integer(issued_at)
 
       # Clear state
       conn = State.clear_oauth_state(conn)
@@ -196,8 +197,7 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
 
       client = OAuthHelper.build_oauth_client(:github, redirect_uri, state)
 
-      assert client != nil
-      assert client.redirect_uri == redirect_uri
+      assert %OAuth2.Client{redirect_uri: ^redirect_uri, params: %{"state" => ^state}} = client
     end
 
     test "builds Google OAuth client with state" do
@@ -206,8 +206,7 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
 
       client = OAuthHelper.build_oauth_client(:google, redirect_uri, state)
 
-      assert client != nil
-      assert client.redirect_uri == redirect_uri
+      assert %OAuth2.Client{redirect_uri: ^redirect_uri, params: %{"state" => ^state}} = client
     end
   end
 

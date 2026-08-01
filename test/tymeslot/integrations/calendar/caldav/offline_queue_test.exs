@@ -93,7 +93,32 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       reloaded = Repo.reload!(row)
       assert reloaded.sync_state == "locally_modified"
       assert reloaded.sync_attempts == 1
-      assert reloaded.sync_last_error != nil
+
+      # `sync_last_error` is a human-readable field, not a dump of the internal
+      # error term: an inspected atom such as `":server_error"` must never
+      # reach it.
+      assert reloaded.sync_last_error ==
+               "The calendar server reported an error. Tymeslot will retry automatically."
+
+      refute reloaded.sync_last_error =~ ":server_error"
+    end
+
+    test "records a human-readable message when the server rejects the credentials",
+         %{integration: integration} do
+      row = insert_pending_row(integration, sync_state: "locally_modified")
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        Conn.send_resp(conn, 401, "Unauthorized")
+      end)
+
+      assert :ok = OfflineQueue.flush(integration, @client)
+
+      reloaded = Repo.reload!(row)
+
+      assert reloaded.sync_last_error ==
+               "The calendar server rejected the stored credentials. Please reconnect the calendar."
+
+      refute reloaded.sync_last_error =~ ":unauthorized"
     end
 
     test "force-overwrites on 412 for a Tymeslot-owned event (keep_local)",
@@ -117,7 +142,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
             Conn.send_resp(conn, 412, "Precondition Failed")
 
           2 ->
-            assert if_match == ["*"]
+            # A forced overwrite carries no condition at all.
+            assert if_match == []
             Conn.send_resp(conn, 204, "")
         end
       end)

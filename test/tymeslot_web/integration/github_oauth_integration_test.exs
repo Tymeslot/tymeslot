@@ -8,7 +8,21 @@ defmodule TymeslotWeb.Integration.GitHubOAuthIntegrationTest do
 
   @moduletag :oauth_integration
 
+  import Mox
+
   alias Phoenix.Flash
+  alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
+  alias Tymeslot.Auth.OAuth.HelperMock
+
+  # The controller resolves its callback handler through
+  # `:oauth_callback_module`, which test config points at `HelperMock`. Without
+  # a stub the callback raises `Mox.UnexpectedCallError` before any flash is
+  # set, so stub the mock with the real implementation and let these tests
+  # exercise genuine state validation.
+  setup do
+    stub_with(HelperMock, OAuthHelper)
+    :ok
+  end
 
   describe "GitHub OAuth Security" do
     test "prevents CSRF attacks with state parameter validation" do
@@ -26,9 +40,10 @@ defmodule TymeslotWeb.Integration.GitHubOAuthIntegrationTest do
         })
 
       # Assert: Authentication fails due to state mismatch
-      assert redirected_to(conn, 302)
-      flash_error = Flash.get(conn.assigns.flash, :error)
-      assert flash_error =~ "authentication failed" or flash_error =~ "Security validation failed"
+      assert redirected_to(conn, 302) == "/?auth=login"
+
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Security validation failed. Please try again."
     end
 
     test "rate limits OAuth authentication attempts" do
@@ -63,18 +78,20 @@ defmodule TymeslotWeb.Integration.GitHubOAuthIntegrationTest do
       assert redirected_to(conn, 302)
     end
 
-    test "user sees error when authentication fails" do
-      # Act: GitHub redirects back with invalid code
+    test "user sees error when the callback carries a state the server never issued" do
+      # Act: GitHub redirects back on a session that never started a flow, so
+      # there is no stored state to compare against.
       conn =
         get(build_conn(), ~p"/auth/github/callback", %{
           "code" => "invalid_code",
           "state" => "test-state"
         })
 
-      # Assert: User is redirected with error message
-      assert redirected_to(conn, 302)
-      flash_error = Flash.get(conn.assigns.flash, :error)
-      assert flash_error =~ "authentication failed" or flash_error =~ "Security validation failed"
+      # Assert: Rejected at state validation, before any token exchange
+      assert redirected_to(conn, 302) == "/?auth=login"
+
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Security validation failed. Please try again."
     end
   end
 end

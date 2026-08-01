@@ -159,24 +159,6 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
     end
   end
 
-  describe "component_for_action/1" do
-    test "returns default component for unknown action without extensions", %{conn: _conn} do
-      Application.put_env(:tymeslot, :dashboard_sidebar_extensions, [])
-      Application.put_env(:tymeslot, :dashboard_action_components, %{})
-
-      # This would normally error, but DashboardLive should fall back
-      # to DashboardOverviewComponent for unknown actions
-      # We can't directly test the private function, but we can verify
-      # the behavior by checking that accessing an unknown route doesn't crash
-    end
-
-    test "uses registered component for extension action" do
-      # This is implicitly tested by the routing tests above
-      # The component_for_action/1 function looks up the action
-      # in the :dashboard_action_components config
-    end
-  end
-
   describe "page titles with extensions" do
     setup do
       Application.put_env(:tymeslot, :dashboard_sidebar_extensions, [

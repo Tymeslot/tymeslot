@@ -24,8 +24,7 @@ defmodule Tymeslot.CustomFieldsTest do
       ]
 
       assert {:error, errs} = CustomFields.validate_answers(snapshot, %{})
-      assert is_map(errs)
-      assert Map.has_key?(errs, "a")
+      assert errs == %{"a" => "Text is required"}
     end
 
     test "errors when a required answer is invalid" do

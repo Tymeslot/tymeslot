@@ -35,7 +35,6 @@ defmodule Tymeslot.Security.TokenPropertyTest do
     test "returns a {token, expiry} tuple" do
       {token, expiry} = Token.generate_session_token(1)
 
-      assert is_binary(token)
       assert %DateTime{} = expiry
       assert String.length(token) == 43
     end
@@ -53,7 +52,6 @@ defmodule Tymeslot.Security.TokenPropertyTest do
     test "returns a {token, expiry, purpose} tuple" do
       {token, expiry, purpose} = Token.generate_email_verification_token(1)
 
-      assert is_binary(token)
       assert %DateTime{} = expiry
       assert purpose == "email_verification"
       assert String.length(token) == 43

@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Plugs.WebhookBodyCachePlugTest do
       assert {:more, partial, returned_conn} =
                WebhookBodyCachePlug.read_body(conn, length: 1)
 
-      assert is_binary(partial)
+      assert partial == "a"
       refute Map.has_key?(returned_conn.assigns, :raw_body)
     end
   end

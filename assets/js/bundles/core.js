@@ -207,8 +207,9 @@ document.addEventListener("click", (e) => {
   window.__tymeslot_suppress_lv_disconnect_until = Date.now() + 2500;
 }, true);
 
-// Vendor-neutral analytics: facade (no-op unless an analytics script is loaded)
-// plus the bridge that forwards server-pushed `ts:analytics` events to it.
+// Vendor-neutral analytics: facade (buffers until a provider arrives, and is a
+// bounded no-op when none ever does) plus the bridge that forwards
+// server-pushed `ts:analytics` events to it.
 installAnalytics();
 installEventBridge();
 installClickTracking();

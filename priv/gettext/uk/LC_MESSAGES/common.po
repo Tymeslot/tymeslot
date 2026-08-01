@@ -31,7 +31,7 @@ msgstr "✓ Підтверджено (%{at})"
 msgid "At least 8 characters"
 msgstr "Щонайменше 8 символів"
 
-#: lib/tymeslot_web/components/core_components/flash.ex:163
+#: lib/tymeslot_web/components/core_components/flash.ex:164
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr "Відновлення з'єднання"
@@ -51,7 +51,7 @@ msgstr "Скасувати"
 msgid "Change language"
 msgstr "Змінити мову"
 
-#: lib/tymeslot_web/components/core_components/flash.ex:85
+#: lib/tymeslot_web/components/core_components/flash.ex:86
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Закрити"
@@ -66,7 +66,7 @@ msgstr "Закрити модальне вікно"
 msgid "Confirm"
 msgstr "Підтвердити"
 
-#: lib/tymeslot_web/components/core_components/flash.ex:155
+#: lib/tymeslot_web/components/core_components/flash.ex:156
 #, elixir-autogen, elixir-format
 msgid "Connection Lost"
 msgstr "З'єднання втрачено"
@@ -138,12 +138,12 @@ msgstr "Вкладки"
 msgid "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge."
 msgstr "Зверніть увагу: %{context} потребує сучасного браузера з підтримкою ES-модулів. Оновіть Chrome, Firefox, Safari або Edge до останньої версії."
 
-#: lib/tymeslot_web/components/layouts/root.html.heex:51
+#: lib/tymeslot_web/components/layouts/root.html.heex:50
 #, elixir-autogen, elixir-format
 msgid "This app requires JavaScript to function. Please enable it in your browser settings."
 msgstr "Для роботи застосунку потрібен JavaScript. Увімкніть його в налаштуваннях браузера."
 
-#: lib/tymeslot_web/components/timezone_dropdown.ex:166
+#: lib/tymeslot_web/components/timezone_dropdown.ex:154
 #, elixir-autogen, elixir-format
 msgid "This timezone will be used for your availability and scheduling."
 msgstr "Цей часовий пояс використовуватиметься для визначення вашої доступності та планування зустрічей."
@@ -169,7 +169,7 @@ msgid "application"
 msgstr "застосунок"
 
 #: lib/tymeslot_web/components/timezone_dropdown.ex:74
-#: lib/tymeslot_web/components/timezone_dropdown.ex:154
+#: lib/tymeslot_web/components/timezone_dropdown.ex:142
 #, elixir-autogen, elixir-format
 msgid "local time"
 msgstr "місцевий час"
@@ -183,3 +183,52 @@ msgstr "сторінка планування"
 #, elixir-autogen, elixir-format
 msgid "Made with %{heart} by the %{team}"
 msgstr "Створено з %{heart} %{team}"
+
+#: lib/tymeslot_web/components/site_components.ex:89
+#: lib/tymeslot_web/components/site_components.ex:151
+#, elixir-autogen, elixir-format
+msgid "Dashboard"
+msgstr "Панель керування"
+
+#: lib/tymeslot_web/components/site_components.ex:113
+#: lib/tymeslot_web/components/site_components.ex:175
+#, elixir-autogen, elixir-format
+msgid "Get Started"
+msgstr "Почати"
+
+#: lib/tymeslot_web/components/site_components.ex:104
+#: lib/tymeslot_web/components/site_components.ex:165
+#, elixir-autogen, elixir-format
+msgid "Login"
+msgstr "Увійти"
+
+#: lib/tymeslot_web/components/site_components.ex:97
+#: lib/tymeslot_web/components/site_components.ex:158
+#, elixir-autogen, elixir-format
+msgid "Logout"
+msgstr "Вийти"
+
+#: lib/tymeslot_web/components/site_components.ex:125
+#, elixir-autogen, elixir-format
+msgid "Toggle menu"
+msgstr "Перемкнути меню"
+
+#: lib/tymeslot_web/components/site_components.ex:419
+#, elixir-autogen, elixir-format
+msgid "Beautiful, on-brand meeting scheduling. No ads, no tracking."
+msgstr "Красиве, брендоване планування зустрічей. Без реклами й відстеження."
+
+#: lib/tymeslot_web/components/site_components.ex:437
+#, elixir-autogen, elixir-format
+msgid "View on GitHub"
+msgstr "Переглянути на GitHub"
+
+#: lib/tymeslot_web/components/site_components.ex:450
+#, elixir-autogen, elixir-format
+msgid "© %{year} Tymeslot. All rights reserved."
+msgstr "© %{year} Tymeslot. Усі права захищено."
+
+#: lib/tymeslot_web/components/core_components/containers.ex:156
+#, elixir-autogen, elixir-format
+msgid "Saving changes..."
+msgstr "Збереження змін..."

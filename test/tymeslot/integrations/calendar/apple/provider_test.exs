@@ -2,7 +2,6 @@ defmodule Tymeslot.Integrations.Calendar.Apple.ProviderTest do
   use Tymeslot.MockCase, async: true
   @moduletag :integrations
 
-  import ExUnit.CaptureLog
   import Tymeslot.CalDAVTestHelpers
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
@@ -58,16 +57,18 @@ defmodule Tymeslot.Integrations.Calendar.Apple.ProviderTest do
       assert String.contains?(message, "HTTPS")
     end
 
-    test "accepts HTTPS but reports a connection failure when no server is reachable" do
+    # `validate_config/1` is structural only — it never performs network I/O
+    # (the connectivity probe used to run here too, doubling the rate-limit
+    # charge across two buckets for a single form submission). The live check
+    # now runs separately, through `test_connection/1`.
+    test "accepts HTTPS without touching the network" do
       config = %{
         base_url: "https://caldav.icloud.com",
         username: "you@icloud.com",
         password: "abcd-efgh-ijkl-mnop"
       }
 
-      capture_log(fn ->
-        assert match?({:error, _}, Provider.validate_config(config))
-      end)
+      assert :ok = Provider.validate_config(config)
     end
   end
 

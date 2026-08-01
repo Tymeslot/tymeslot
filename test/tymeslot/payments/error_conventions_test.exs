@@ -7,7 +7,6 @@ defmodule Tymeslot.Payments.ErrorConventionsTest do
   describe "error_atoms/0" do
     test "returns a list of atoms" do
       atoms = ErrorConventions.error_atoms()
-      assert is_list(atoms)
       assert Enum.all?(atoms, &is_atom/1)
       assert :invalid_amount in atoms
       assert :transaction_not_found in atoms

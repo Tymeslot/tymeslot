@@ -79,14 +79,16 @@ defmodule Tymeslot.Profiles.EmbedDomainsTest do
       assert {:error, changeset} =
                Profiles.update_allowed_embed_domains(profile, ["example.com/path"])
 
-      assert changeset.errors[:allowed_embed_domains] != nil
+      assert {"Invalid domain format (e.g. example.com)", _opts} =
+               changeset.errors[:allowed_embed_domains]
     end
 
     test "rejects domains with ports", %{profile: profile} do
       assert {:error, changeset} =
                Profiles.update_allowed_embed_domains(profile, ["example.com:8080"])
 
-      assert changeset.errors[:allowed_embed_domains] != nil
+      assert {"Invalid domain format (e.g. example.com)", _opts} =
+               changeset.errors[:allowed_embed_domains]
     end
 
     test "accepts wildcard subdomain patterns", %{profile: profile} do
@@ -100,21 +102,22 @@ defmodule Tymeslot.Profiles.EmbedDomainsTest do
       assert {:error, changeset} =
                Profiles.update_allowed_embed_domains(profile, ["*.com"])
 
-      assert changeset.errors[:allowed_embed_domains] != nil
+      assert {"Invalid domain format (e.g. *.example.com)", _opts} =
+               changeset.errors[:allowed_embed_domains]
     end
 
     test "rejects domains with @ symbol", %{profile: profile} do
       assert {:error, changeset} =
                Profiles.update_allowed_embed_domains(profile, ["user@example.com"])
 
-      assert changeset.errors[:allowed_embed_domains] != nil
+      assert {"Invalid domain format (e.g. example.com)", _opts} =
+               changeset.errors[:allowed_embed_domains]
     end
 
     test "rejects domains exceeding 255 characters", %{profile: profile} do
       long_domain = String.duplicate("a", 256) <> ".com"
 
       assert {:error, changeset} = Profiles.update_allowed_embed_domains(profile, [long_domain])
-      assert changeset.errors[:allowed_embed_domains] != nil
       assert elem(changeset.errors[:allowed_embed_domains], 0) =~ "exceed maximum length"
     end
 
@@ -122,7 +125,6 @@ defmodule Tymeslot.Profiles.EmbedDomainsTest do
       domains = for i <- 1..21, do: "example#{i}.com"
 
       assert {:error, changeset} = Profiles.update_allowed_embed_domains(profile, domains)
-      assert changeset.errors[:allowed_embed_domains] != nil
       assert elem(changeset.errors[:allowed_embed_domains], 0) =~ "cannot have more than 20"
     end
 
@@ -145,7 +147,8 @@ defmodule Tymeslot.Profiles.EmbedDomainsTest do
       assert {:error, changeset} =
                Profiles.update_allowed_embed_domains(profile, ["example😀.com"])
 
-      assert changeset.errors[:allowed_embed_domains] != nil
+      assert {"Invalid domain format (e.g. example.com)", _opts} =
+               changeset.errors[:allowed_embed_domains]
     end
 
     test "handles domains with hyphens", %{profile: profile} do
@@ -169,21 +172,25 @@ defmodule Tymeslot.Profiles.EmbedDomainsTest do
 
     test "rejects single-label domains (except localhost)", %{profile: profile} do
       assert {:error, changeset} = Profiles.update_allowed_embed_domains(profile, ["example"])
-      assert changeset.errors[:allowed_embed_domains] != nil
+
+      assert {"Invalid domain format (e.g. example.com)", _opts} =
+               changeset.errors[:allowed_embed_domains]
     end
 
     test "rejects domains starting with hyphen", %{profile: profile} do
       assert {:error, changeset} =
                Profiles.update_allowed_embed_domains(profile, ["-example.com"])
 
-      assert changeset.errors[:allowed_embed_domains] != nil
+      assert {"Invalid domain format (e.g. example.com)", _opts} =
+               changeset.errors[:allowed_embed_domains]
     end
 
     test "rejects domains ending with hyphen", %{profile: profile} do
       assert {:error, changeset} =
                Profiles.update_allowed_embed_domains(profile, ["example-.com"])
 
-      assert changeset.errors[:allowed_embed_domains] != nil
+      assert {"Invalid domain format (e.g. example.com)", _opts} =
+               changeset.errors[:allowed_embed_domains]
     end
 
     test "filters out empty strings from list", %{profile: profile} do

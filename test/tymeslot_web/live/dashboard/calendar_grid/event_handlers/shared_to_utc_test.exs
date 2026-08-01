@@ -82,22 +82,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SharedToUtcTest do
     test "compose_recurrence_rule returns a rule when until == start date" do
       params = %{"freq" => "weekly", "end_type" => "until", "until" => "2026-06-01"}
       context = %{start_date: ~D[2026-06-01], all_day: false}
-      result = Shared.compose_recurrence_rule(params, context)
-      assert is_binary(result)
-      assert String.contains?(result, "UNTIL=20260601")
+
+      assert Shared.compose_recurrence_rule(params, context) ==
+               "FREQ=WEEKLY;UNTIL=20260601T235959Z"
     end
 
     test "compose_recurrence_rule returns a rule when until > start date" do
       params = %{"freq" => "daily", "end_type" => "until", "until" => "2026-12-31"}
       context = %{start_date: ~D[2026-06-01], all_day: false}
-      result = Shared.compose_recurrence_rule(params, context)
-      assert is_binary(result)
-      assert String.contains?(result, "UNTIL=20261231T235959Z")
+
+      assert Shared.compose_recurrence_rule(params, context) ==
+               "FREQ=DAILY;UNTIL=20261231T235959Z"
     end
 
     test "compose_recurrence_rule accepts no context (backward compatible)" do
       params = %{"freq" => "daily"}
-      assert is_binary(Shared.compose_recurrence_rule(params))
+      assert Shared.compose_recurrence_rule(params) == "FREQ=DAILY"
     end
   end
 
@@ -105,10 +105,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SharedToUtcTest do
     test "emits UNTIL as YYYYMMDD (no time) for all-day events" do
       params = %{"freq" => "weekly", "end_type" => "until", "until" => "2026-12-31"}
       context = %{all_day: true, start_date: ~D[2026-06-01]}
-      result = Shared.compose_recurrence_rule(params, context)
-      assert is_binary(result)
-      assert String.contains?(result, "UNTIL=20261231")
-      refute String.contains?(result, "T235959Z")
+      assert Shared.compose_recurrence_rule(params, context) == "FREQ=WEEKLY;UNTIL=20261231"
     end
 
     test "emits UNTIL as UTC timestamp for timed events" do

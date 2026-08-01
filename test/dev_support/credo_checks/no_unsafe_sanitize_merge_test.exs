@@ -108,7 +108,7 @@ defmodule CredoChecks.NoUnsafeSanitizeMergeTest do
         end
       end
       """
-      |> to_source_file("apps/tymeslot/lib/tymeslot/utils/sanitize_merge.ex")
+      |> to_source_file("lib/tymeslot/utils/sanitize_merge.ex")
       |> run_check(NoUnsafeSanitizeMerge)
       |> refute_issues()
     end

@@ -93,11 +93,13 @@ defmodule Tymeslot.Payments.PaymentModulesTest do
     test "ValidationError can be created" do
       error = %ValidationError{message: "test", reason: :invalid}
       assert error.message == "test"
+      assert ValidationError.message(error) == "test"
     end
 
     test "ProcessingError can be created" do
       error = %ProcessingError{message: "test", reason: :failed}
       assert error.message == "test"
+      assert ProcessingError.message(error) == "test"
     end
   end
 end

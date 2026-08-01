@@ -66,14 +66,17 @@ defmodule Tymeslot.Infrastructure.ObanFailureAlerterTest do
       :ok
     end
 
-    test "attaches a telemetry handler for the oban job exception event" do
-      assert {:ok, _config} =
-               :telemetry.list_handlers([:oban, :job, :exception])
-               |> Enum.find(:not_found, &(&1.id == "tymeslot-oban-failure-alerter"))
-               |> then(fn
-                 :not_found -> {:error, :not_found}
-                 handler -> {:ok, handler}
-               end)
+    test "attaches handle_event/4 once for the oban job exception event" do
+      handler =
+        [:oban, :job, :exception]
+        |> :telemetry.list_handlers()
+        |> Enum.find(&(&1.id == "tymeslot-oban-failure-alerter"))
+
+      assert handler.event_name == [:oban, :job, :exception]
+      assert handler.function == (&ObanFailureAlerter.handle_event/4)
+
+      # Attaching again must not install a duplicate handler that would double-alert.
+      assert {:error, :already_exists} = ObanFailureAlerter.attach()
     end
 
     test "emitting a discard exception event raises an oban_job_failure alert" do

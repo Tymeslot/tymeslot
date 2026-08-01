@@ -8,6 +8,22 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
     cleanup_interval: :timer.minutes(5)
 
   @doc """
+  Like `get_or_compute/3`, but never caches an `{:error, _}` result.
+
+  Calendar fetch failures (`:some_calendars_unavailable`,
+  `:all_calendars_unavailable`) are meant to be transient and retried on the
+  very next request, not memoised for the full TTL — otherwise a single
+  timed-out CalDAV request would blank the booking page for up to
+  #{div(:timer.minutes(2), :timer.seconds(1))} seconds with no way to recover
+  before the entry expires.
+  """
+  @spec get_or_compute_events(term(), (-> {:ok, any()} | {:error, any()})) ::
+          {:ok, any()} | {:error, any()}
+  def get_or_compute_events(key, fun) do
+    get_or_compute(key, fun, @default_ttl, cache_errors: false)
+  end
+
+  @doc """
   Cache key helpers for consistent key generation.
   """
   @spec month_availability_key(integer(), integer(), integer(), String.t(), integer() | nil) ::

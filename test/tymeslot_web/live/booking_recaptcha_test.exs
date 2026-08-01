@@ -109,8 +109,12 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
     |> form("form[data-testid='booking-form']", %{"booking" => params})
     |> render_submit()
 
-    # Should stay on booking form with error
-    assert render(view) =~ "Security verification failed"
+    # Should stay on booking form with error. The booking form lives in a
+    # LiveComponent, so its flashes reach the parent LiveView through
+    # `send(self(), {:flash, …})` (see `TymeslotWeb.Live.Shared.Flash`). Both
+    # that message and the resulting diff land after `render_submit/1` has
+    # returned, so poll rather than reading the socket once.
+    eventually(fn -> assert render(view) =~ "Security verification failed" end)
     # Should not create booking
     assert Repo.aggregate(MeetingSchema, :count, :id) == 0
   end
@@ -198,7 +202,7 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
     |> render_submit()
 
     # Honeypot triggers before reCAPTCHA check
-    assert render(view) =~ "Booking submitted successfully"
+    eventually(fn -> assert render(view) =~ "Booking submitted successfully" end)
     # Honeypot: no booking created
     assert Repo.aggregate(MeetingSchema, :count, :id) == 0
   end
@@ -266,8 +270,10 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
     |> render_submit()
 
     # Should show rate limit message
-    rendered = render(view)
-    assert rendered =~ "Too many" or rendered =~ "try again later"
+    eventually(fn ->
+      rendered = render(view)
+      assert rendered =~ "Too many booking attempts. Please try again later."
+    end)
   end
 
   describe "Edge cases - Token and data handling" do

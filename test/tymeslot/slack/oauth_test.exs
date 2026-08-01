@@ -36,8 +36,8 @@ defmodule Tymeslot.Slack.OAuthTest do
       assert params["redirect_uri"] == "https://example.test/cb"
       assert params["scope"] =~ "chat:write"
       assert params["scope"] =~ "channels:read"
-      assert is_binary(params["state"])
-      assert params["state"] != ""
+      # The state is a signed token binding the user it was issued for.
+      assert {:ok, 42} = OAuth.verify_state(params["state"])
     end
 
     test "raises when slack_client_id is not configured" do

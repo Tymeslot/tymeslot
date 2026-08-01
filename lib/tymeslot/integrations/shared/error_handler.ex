@@ -303,7 +303,14 @@ defmodule Tymeslot.Integrations.Common.ErrorHandler do
   defp decode_json(body) when is_binary(body) do
     Jason.decode(body)
   rescue
-    _other -> {:error, :invalid_json}
+    error ->
+      # Bodies come from external providers and may carry credentials, so log
+      # the exception only, never the payload.
+      Logger.warning("JSON decoding raised while parsing a provider error body",
+        error: inspect(error)
+      )
+
+      {:error, :invalid_json}
   end
 
   defp decode_json(body) when is_map(body), do: {:ok, body}

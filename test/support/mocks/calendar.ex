@@ -15,7 +15,6 @@ defmodule Tymeslot.Mocks.Calendar do
     result = Keyword.get(opts, :result, {:ok, events})
 
     Tymeslot.CalendarMock
-    |> stub(:list_events_in_range, fn _user_id, _start_time, _end_time -> result end)
     |> stub(:get_events_for_range_fresh, fn _user_id, _start_date, _end_date -> result end)
     |> stub(:get_booking_integration_info, fn _user_id ->
       {:error, :no_integration}
@@ -49,9 +48,11 @@ defmodule Tymeslot.Mocks.Calendar do
   """
   @spec stub_no_events() :: term()
   def stub_no_events do
-    Tymeslot.CalendarMock
-    |> stub(:list_events_in_range, fn _user_id, _start_time, _end_time -> {:ok, []} end)
-    |> stub(:get_events_for_range_fresh, fn _user_id, _start_date, _end_date -> {:ok, []} end)
+    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id,
+                                                                _start_date,
+                                                                _end_date ->
+      {:ok, []}
+    end)
   end
 
   @spec event(keyword()) :: map()

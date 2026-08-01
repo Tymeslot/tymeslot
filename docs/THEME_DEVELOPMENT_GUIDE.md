@@ -126,7 +126,7 @@ assets/css/scheduling/themes/[theme_name]/
 Create the following directory structure for your new theme:
 
 ```
-apps/tymeslot/lib/tymeslot_web/themes/aurora/
+lib/tymeslot_web/themes/aurora/
 ├── scheduling/
 │   ├── components/
 │   │   ├── booking_component.ex
@@ -142,7 +142,7 @@ apps/tymeslot/lib/tymeslot_web/themes/aurora/
 │   └── reschedule.ex
 └── theme.ex
 
-apps/tymeslot/assets/css/scheduling/themes/aurora/
+assets/css/scheduling/themes/aurora/
 ├── modules/
 │   ├── variables.css           # Design tokens (colors, spacing, typography)
 │   ├── base.css                # Root layout, theme wrapper
@@ -170,7 +170,7 @@ Theme registration is split across **two** modules so the dependency only ever
 flows web → domain:
 
 **a. Theme facts** — add an entry to `@themes` in
-`apps/tymeslot/lib/tymeslot/themes/catalog.ex` (pure domain data: no module, CSS,
+`lib/tymeslot/themes/catalog.ex` (pure domain data: no module, CSS,
 or image references):
 
 ```elixir
@@ -192,7 +192,7 @@ aurora: %{
 ```
 
 **b. Presentation bindings** — add an entry to `@bindings` (keyed by theme **id**)
-in `apps/tymeslot/lib/tymeslot_web/themes/core/registry.ex`:
+in `lib/tymeslot_web/themes/core/registry.ex`:
 
 ```elixir
 "3" => %{
@@ -340,10 +340,10 @@ This will verify:
 
 ### Modular Structure
 
-Themes use a **modular CSS architecture** located in `apps/tymeslot/assets/css/scheduling/themes/`:
+Themes use a **modular CSS architecture** located in `assets/css/scheduling/themes/`:
 
 ```
-apps/tymeslot/assets/css/scheduling/themes/
+assets/css/scheduling/themes/
 ├── shared/                        # Shared structural primitives only
 │   ├── reset.css                 # CSS reset
 │   ├── layout.css                # Border-radius scale, Tailwind import, display helpers
@@ -533,7 +533,7 @@ The embedder can supply `data-initial-height` (px) on the container as a placeho
 
 ### Creating Theme CSS
 
-1. **Create theme directory**: `apps/tymeslot/assets/css/scheduling/themes/your-theme/`
+1. **Create theme directory**: `assets/css/scheduling/themes/your-theme/`
 2. **Create main theme.css** that imports shared primitives and your modules
 3. **Create modular CSS files** in a `modules/` subdirectory — each component file is self-contained
 4. **Set container query context** on the primary content container (`container-type: inline-size; container-name: scheduling;`)
@@ -547,7 +547,7 @@ The embedder can supply `data-initial-height` (px) on the container as a placeho
 - Theme module implementing `TymeslotWeb.Themes.Core.Behaviour`
 - LiveView module that renders without crashing (using the `SchedulingLive` macro)
 - Wrapper component for theme layout
-- CSS file in `apps/tymeslot/assets/css/scheduling/themes/your-theme/theme.css`
+- CSS file in `assets/css/scheduling/themes/your-theme/theme.css`
 - `modules/iframe.css` with `[data-embedded]`-scoped iframe shell rules
 - Container query context (`container-type: inline-size`) on the primary content container
 - The 4 core booking flow states: **overview**, **schedule**, **booking**, **confirmation**
@@ -1390,10 +1390,10 @@ Run the production checklist to validate your theme:
 
 ```bash
 # Test all registered themes
-mix test apps/tymeslot/test/tymeslot_web/live/themes/theme_production_checklist_test.exs
+mix test test/tymeslot_web/live/themes/theme_production_checklist_test.exs
 
 # Or test a specific theme
-mix test apps/tymeslot/test/tymeslot_web/live/themes/theme_production_checklist_test.exs -t theme_id:3
+mix test test/tymeslot_web/live/themes/theme_production_checklist_test.exs -t theme_id:3
 ```
 
 The checklist automatically verifies:

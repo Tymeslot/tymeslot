@@ -14,6 +14,23 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
   # A recurring issue produces at most one email per day for the same content.
   @dedup_period_seconds 86_400
 
+  # The terminal states are included deliberately. Oban's default omits
+  # `:discarded` and `:cancelled`, so an alert job that exhausted its retries
+  # stopped holding the dedup slot the moment it discarded — and since a discard
+  # is itself what raises the next `oban_job_failure` alert, one email outage
+  # produced an unbounded chain of alert jobs instead of a single deduplicated
+  # one. The Pruner's `max_age` is a week in dev and production, comfortably
+  # longer than this window, so terminal jobs are still present to match against.
+  @dedup_states [
+    :available,
+    :scheduled,
+    :executing,
+    :retryable,
+    :completed,
+    :discarded,
+    :cancelled
+  ]
+
   @doc """
   Builds the args map for an admin alert job, including the SHA-256 dedup hash.
 
@@ -70,7 +87,8 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
         unique: [
           period: @dedup_period_seconds,
           fields: [:args, :queue],
-          keys: [:action, :recipient, :alert_hash]
+          keys: [:action, :recipient, :alert_hash],
+          states: @dedup_states
         ]
       )
       |> Oban.insert()

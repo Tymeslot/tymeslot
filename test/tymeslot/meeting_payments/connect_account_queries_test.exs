@@ -63,6 +63,6 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountQueriesTest do
     # Second insert for the same user must hit the partial unique index and
     # surface a changeset error rather than crashing or silently inserting.
     assert {:error, changeset} = ConnectAccountQueries.insert_placeholder(user.id, "de")
-    assert changeset.errors[:user_id] != nil
+    assert {"has already been taken", _opts} = changeset.errors[:user_id]
   end
 end

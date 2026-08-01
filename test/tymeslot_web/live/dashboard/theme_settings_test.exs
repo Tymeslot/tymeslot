@@ -310,9 +310,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> element("button[phx-click='theme:toggle_palette_picker']")
       |> render_click()
 
-      saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
-      assert saved != nil
-      assert saved.custom_palette_seed == ThemeCustomizations.default_custom_palette_seed()
+      assert %{custom_palette_seed: seed} =
+               ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
+
+      assert seed == ThemeCustomizations.default_custom_palette_seed()
 
       # Picker button should now be expanded (seed was written so toggle_open = true)
       assert render(view) =~ ~s(aria-expanded="true")

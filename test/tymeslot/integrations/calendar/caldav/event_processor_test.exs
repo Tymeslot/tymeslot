@@ -462,4 +462,68 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       assert event.created_by_tymeslot == false
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # Organiser round-trip
+  #
+  # The parser and the normaliser have to agree on the key carrying ORGANIZER.
+  # They previously did not: the parser never extracted the property at all, so
+  # every CalDAV-synced event landed with `organiser: nil`. These tests drive
+  # the real pipeline (iCal string → parser → normaliser) so a key rename on
+  # either side fails here.
+  # ---------------------------------------------------------------------------
+
+  describe "organiser round-trip through the CalDAV pipeline" do
+    @roundtrip_context %{
+      calendar_integration_id: 42,
+      provider_calendar_id: "default",
+      synced_at: ~U[2026-04-08 12:00:00Z]
+    }
+
+    test "carries ORGANIZER from the iCalendar payload onto the CalendarEvent" do
+      ical = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      PRODID:-//Test//Test//EN
+      BEGIN:VEVENT
+      UID:with-organizer@example.com
+      DTSTART:20300315T100000Z
+      DTEND:20300315T110000Z
+      SUMMARY:Group Meeting
+      ORGANIZER;CN=Alice Smith:mailto:alice@example.com
+      ATTENDEE;CN=Bob;PARTSTAT=ACCEPTED:mailto:bob@example.com
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, raw} = EventProcessor.parse_ical_from_string(ical)
+
+      assert {:ok, [%CalendarEvent{} = event]} =
+               EventProcessor.normalise_events([raw], @roundtrip_context)
+
+      assert event.organiser == %{email: "alice@example.com", display_name: "Alice Smith"}
+    end
+
+    test "leaves the organiser nil when the payload carries no ORGANIZER" do
+      ical = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      PRODID:-//Test//Test//EN
+      BEGIN:VEVENT
+      UID:no-organizer@example.com
+      DTSTART:20300315T100000Z
+      DTEND:20300315T110000Z
+      SUMMARY:Solo Event
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, raw} = EventProcessor.parse_ical_from_string(ical)
+
+      assert {:ok, [%CalendarEvent{} = event]} =
+               EventProcessor.normalise_events([raw], @roundtrip_context)
+
+      assert is_nil(event.organiser)
+    end
+  end
 end

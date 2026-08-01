@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModalTest do
 
   import Phoenix.LiveViewTest
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal
 
   @integration %{
@@ -13,7 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModalTest do
     name: "Work Calendar",
     default_booking_calendar_id: nil,
     calendar_list: [
-      %{"id" => "primary", "selected" => true, "primary" => true, "summary" => "Work"}
+      %CalendarEntry{id: "primary", selected: true, primary: true, name: "Work"}
     ]
   }
 
@@ -63,7 +64,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModalTest do
   test "renders time range" do
     html = render_component(&EventDetailModal.event_detail_modal/1, base_assigns())
 
-    assert html =~ "CEST" or html =~ "CET"
+    # 08:00–08:30 UTC on 6 April 2026 is 10:00–10:30 in Europe/Berlin, which is
+    # on summer time (CEST) that day.
+    assert html =~ "10:00"
+    assert html =~ "10:30"
+    assert html =~ "CEST"
   end
 
   test "shows all day label for all-day events" do

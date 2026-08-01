@@ -15,6 +15,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
   @spec handle_integration_unhealthy_notification(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -54,7 +55,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
             error: inspect(reason)
           )
 
-          {:error, "Failed to send notification"}
+          DeliveryOutcome.from_error(reason, "Failed to send notification")
       end
     else
       {:error, :not_found} ->
@@ -101,7 +102,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
             error: inspect(reason)
           )
 
-          {:error, "Failed to send notification"}
+          DeliveryOutcome.from_error(reason, "Failed to send notification")
       end
     else
       {:error, :not_found} ->
@@ -142,7 +143,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
           error: inspect(reason)
         )
 
-        {:error, "Failed to send calendar invitation"}
+        DeliveryOutcome.from_error(reason, "Failed to send calendar invitation")
     end
   end
 

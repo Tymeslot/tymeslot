@@ -49,10 +49,11 @@ config :tymeslot, Tymeslot.Security.Encryption,
       "RsxoYoIVSu/K+QDV2yukDwTFD3wDyDSFxuGmoauNAX0FcXJF58dAz5LhEyiNqhFP"
 
 # Configure the database.
-# NOTE: the SaasRepo copy of this pool-size formula lives in the umbrella
-# `config/test.exs` (SaasRepo can't be configured from Core). Keep the two in
-# sync — the Core/SaaS boundary forces the duplication.
-default_pool_size = min(max(System.schedulers_online() * 2, 5), 10)
+# The pool is a fixed 10 rather than derived from the scheduler count: the old
+# formula capped at 10 anyway, so scaling only ever produced smaller pools on
+# smaller machines, making suite parallelism (see Tymeslot.Test.SuiteConfig)
+# depend on the host. TEST_DB_POOL_SIZE overrides it.
+default_pool_size = 10
 
 test_pool_size =
   case System.get_env("TEST_DB_POOL_SIZE") do

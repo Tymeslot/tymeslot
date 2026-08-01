@@ -44,6 +44,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       states: [:available, :scheduled, :executing, :retryable, :suspended]
     ]
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Events, as: CalDAVEvents
@@ -73,7 +75,9 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        sync_integration(integration, force_full_fetch?)
+        integration
+        |> sync_integration(force_full_fetch?)
+        |> handle_sync_result()
 
       {:error, :not_found} ->
         Logger.warning("CalDAV integration not found, discarding sync job",
@@ -86,6 +90,19 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         CalendarManagement.handle_reauth_required(integration)
     end
   end
+
+  # The deletion circuit breaker refuses a listing, not an attempt: a retry
+  # within the same cycle re-fetches the same data and refuses identically, so
+  # retrying costs three times the work for a guaranteed identical outcome and
+  # raises a permanent-failure admin alert every cycle. Discard instead — the
+  # refusal needs no operator action and resolves itself once the absence is
+  # corroborated over time (see `SyncReconciler`'s grace period). The next
+  # scheduled sync re-evaluates from scratch.
+  defp handle_sync_result({:error, :suspicious_bulk_deletion}) do
+    {:discard, "CalDAV deletion circuit breaker refused a suspicious bulk deletion"}
+  end
+
+  defp handle_sync_result(result), do: result
 
   # ---------------------------------------------------------------------------
   # Orchestration
@@ -496,7 +513,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
     case CalendarManagement.mark_needs_reauth(
            integration,
-           "The booking calendar no longer exists on the CalDAV server. Please reconnect the integration and select a different calendar."
+           dgettext(
+             "dashboard_calendar_providers",
+             "The booking calendar no longer exists on the CalDAV server. Please reconnect the integration and select a different calendar."
+           )
          ) do
       {:ok, _updated} ->
         {:discard, "CalDAV booking calendar not found — user action required"}
@@ -598,7 +618,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
     case CalendarManagement.mark_needs_reauth(
            integration,
-           "CalDAV server rejected the stored credentials. Please reconnect the integration."
+           dgettext(
+             "dashboard_calendar_providers",
+             "CalDAV server rejected the stored credentials. Please reconnect the integration."
+           )
          ) do
       {:ok, _updated} ->
         {:discard, "CalDAV server rejected credentials — reauthentication required"}

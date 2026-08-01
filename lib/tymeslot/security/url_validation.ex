@@ -19,9 +19,12 @@ defmodule Tymeslot.Security.UrlValidation do
     invalid_message = Keyword.get(opts, :invalid_message, @default_invalid_message)
 
     case URI.parse(url) do
-      %URI{scheme: scheme, host: host}
+      %URI{scheme: scheme, host: host, authority: authority}
       when scheme in ["http", "https"] and is_binary(host) and host != "" ->
-        validate_url_checks(url, scheme, host, opts)
+        case authority_host(authority, host) do
+          {:ok, real_host} -> validate_url_checks(url, scheme, real_host, opts)
+          :error -> {:error, invalid_message}
+        end
 
       %URI{scheme: scheme} when scheme not in ["http", "https"] ->
         disallowed_protocol_error =
@@ -75,6 +78,67 @@ defmodule Tymeslot.Security.UrlValidation do
     Enum.any?(disallowed_protocols, &String.contains?(url, &1))
   end
 
+  # `URI.parse/1` mangles IPv6 authorities: it truncates `[fe80::1%eth0]` to
+  # the host "fe80" and reads the `::1` of an unbracketed `fe80::1` as a port.
+  # Either way the private-address checks below would never see the real
+  # address, so the host is re-derived from the raw authority instead.
+  defp authority_host(authority, _host) when is_binary(authority) do
+    authority
+    |> strip_userinfo()
+    |> host_from_authority()
+  end
+
+  defp authority_host(_authority, host), do: {:ok, host}
+
+  # The host cannot contain "@", so userinfo runs up to the last one.
+  defp strip_userinfo(authority) do
+    authority |> String.split("@") |> List.last()
+  end
+
+  # RFC 3986 reserves the bracketed form for IP literals. Anything bracketed
+  # that is not a parseable IPv6 address is rejected rather than guessed at.
+  defp host_from_authority("[" <> rest) do
+    with [literal, port] when literal != "" <- String.split(rest, "]", parts: 2),
+         true <- valid_port_suffix?(port),
+         true <- ipv6_literal?(literal) do
+      {:ok, literal}
+    else
+      _unparseable -> :error
+    end
+  end
+
+  defp host_from_authority(authority) do
+    case String.split(authority, ":") do
+      [host] when host != "" -> {:ok, host}
+      [host, port] when host != "" -> if valid_port_suffix?(port), do: {:ok, host}, else: :error
+      # Several colons without brackets is not a valid authority. An
+      # unbracketed IPv6 literal lands here; reject it rather than guess.
+      _ambiguous -> :error
+    end
+  end
+
+  defp valid_port_suffix?(""), do: true
+  defp valid_port_suffix?(":" <> port), do: valid_port_suffix?(port)
+  defp valid_port_suffix?(port), do: Regex.match?(~r/^\d+$/, port)
+
+  defp ipv6_literal?(literal) do
+    case parse_ipv6(literal) do
+      {:ok, _tuple} -> true
+      :error -> false
+    end
+  end
+
+  # Strips the zone ID (`fe80::1%eth0`, or its RFC 6874 `%25eth0` encoding)
+  # before parsing, since `:inet` does not accept one.
+  defp parse_ipv6(literal) do
+    bare = literal |> String.split("%") |> hd()
+
+    case :inet.parse_strict_address(to_charlist(bare)) do
+      {:ok, tuple} when tuple_size(tuple) == 8 -> {:ok, tuple}
+      _other -> :error
+    end
+  end
+
   defp run_extra_checks(nil, _context), do: :ok
 
   defp run_extra_checks(fun, context) when is_function(fun, 1), do: fun.(context)
@@ -84,10 +148,21 @@ defmodule Tymeslot.Security.UrlValidation do
 
     cond do
       host == "localhost" -> true
+      zoned_host?(host) -> true
       ambiguous_numeric_host?(host) -> true
       ipv4_tuple_private?(host) -> true
       ipv6_local_or_private?(host) -> true
       true -> false
+    end
+  end
+
+  # A zone ID scopes an address to a single local interface, so a zoned
+  # literal is never publicly routable — not even when the address itself
+  # sits outside the private ranges.
+  defp zoned_host?(host) do
+    case String.split(host, "%", parts: 2) do
+      [_unzoned] -> false
+      [address, _zone] -> match?({:ok, _tuple}, parse_ipv6(address))
     end
   end
 
@@ -128,23 +203,11 @@ defmodule Tymeslot.Security.UrlValidation do
   end
 
   defp ipv6_local_or_private?(host) do
-    # host is already lowercased by local_or_private_host?/1.
-    # Strip brackets (e.g. [::1] → ::1) and zone ID (e.g. fe80::1%eth0 → fe80::1).
-    bare =
-      host
-      |> String.trim_leading("[")
-      |> String.trim_trailing("]")
-      |> String.split("%")
-      |> hd()
-
-    case :inet.parse_strict_address(to_charlist(bare)) do
-      {:ok, tuple} when tuple_size(tuple) == 8 ->
+    case parse_ipv6(host) do
+      {:ok, tuple} ->
         PrivateIPv6.private?(tuple)
 
-      {:ok, _tuple} ->
-        false
-
-      {:error, _reason} ->
+      :error ->
         # Not a parseable IPv6 literal — it's a domain name; let DNS resolution handle it
         false
     end

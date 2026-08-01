@@ -5,6 +5,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPickerTest do
 
   import Phoenix.LiveViewTest
 
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
 
   @integration %{
@@ -13,17 +15,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPickerTest do
     name: "Work Calendar",
     default_booking_calendar_id: nil,
     calendar_list: [
-      %{
-        "id" => "primary@gmail.com",
-        "selected" => true,
-        "primary" => true,
-        "summary" => "Primary"
+      %CalendarEntry{
+        id: "primary@gmail.com",
+        selected: true,
+        primary: true,
+        name: "Primary"
       },
-      %{
-        "id" => "meetings@gmail.com",
-        "selected" => true,
-        "primary" => false,
-        "summary" => "Meetings"
+      %CalendarEntry{
+        id: "meetings@gmail.com",
+        selected: true,
+        primary: false,
+        name: "Meetings"
       }
     ]
   }
@@ -69,12 +71,43 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPickerTest do
     assert html =~ "Default calendar"
   end
 
+  test "highlights the calendar the resolver actually returns, not an unselected primary" do
+    # Calendar A is the provider-primary but unselected (e.g. after
+    # unticking it in "Manage calendars"); B is selected instead. The
+    # highlighted chip must land on B, the same calendar
+    # `EditWorkflow.default_calendar_id_for/1` resolves for the write path.
+    integration = %{
+      @integration
+      | default_booking_calendar_id: nil,
+        calendar_list: [
+          %CalendarEntry{id: "cal-a", primary: true, selected: false, name: "A"},
+          %CalendarEntry{id: "cal-b", primary: false, selected: true, name: "B"}
+        ]
+    }
+
+    html =
+      render_component(
+        &CalendarPicker.calendar_picker/1,
+        base_assigns(%{integrations: [integration], selected_calendar_id: nil})
+      )
+
+    resolved_id = EditWorkflow.default_calendar_id_for(integration)
+
+    assert resolved_id == "cal-b"
+
+    # Only B is rendered as a chip (A is unselected, so writable_calendars
+    # excludes it) and it carries the highlighted styling.
+    refute html =~ ">A<"
+    assert html =~ ">B<"
+    assert html =~ "border-turquoise-400"
+  end
+
   test "renders multiple integrations" do
     second = %{
       id: 2,
       provider: :caldav,
       name: "Personal CalDAV",
-      calendar_list: [%{"id" => "personal", "selected" => true, "summary" => "Personal"}]
+      calendar_list: [%CalendarEntry{id: "personal", selected: true, name: "Personal"}]
     }
 
     html =
@@ -105,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPickerTest do
       integration = %{
         id: 1,
         calendar_list: [
-          %{"id" => "/caldav/personal/", "path" => "/caldav/personal/", "selected" => true}
+          %CalendarEntry{id: "/caldav/personal/", path: "/caldav/personal/", selected: true}
         ],
         default_booking_calendar_id: nil
       }

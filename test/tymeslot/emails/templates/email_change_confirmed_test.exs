@@ -16,8 +16,9 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
 
       html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      assert String.starts_with?(html, "<!doctype html>")
+      assert html =~ "Hi Grace Lee"
+      assert html =~ "Email change complete"
     end
 
     test "generates valid HTML output for old email" do
@@ -29,8 +30,9 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
 
       html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      assert String.starts_with?(html, "<!doctype html>")
+      assert html =~ "Hi Henry Taylor"
+      assert html =~ "Email change complete"
     end
 
     test "includes both old and new email addresses" do
@@ -55,7 +57,9 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
 
       html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
 
-      assert html =~ "Previous email" || html =~ "previous address"
+      # "Previous email" is a card label present in both variants; the intro copy
+      # about the previous address is what distinguishes the old-address notice.
+      assert html =~ "This confirmation is being sent to your previous address"
     end
 
     test "handles nil confirmed_time" do
@@ -67,7 +71,6 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
 
       html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
 
-      assert is_binary(html)
       assert html =~ "Just now"
     end
 
@@ -80,9 +83,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
 
       html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
 
-      assert is_binary(html)
-      # Should contain formatted time
-      assert String.length(html) > 500
+      assert html =~ "January 15, 2025 at 11:00 AM UTC"
     end
 
     test "includes instructions for using new email" do
@@ -94,7 +95,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
 
       html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
 
-      assert html =~ "sign in" || html =~ "Sign in"
+      assert html =~ "Use new@example.com to sign in from now on"
     end
 
     test "uses default value for is_old_email parameter" do
@@ -106,8 +107,10 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
       # Call without is_old_email parameter (should default to false)
       html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time)
 
-      assert is_binary(html)
-      assert String.length(html) > 500
+      assert html ==
+               EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, false)
+
+      assert html =~ "a copy of this confirmation was sent to your previous email address"
     end
   end
 
@@ -152,7 +155,9 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
       text =
         EmailChangeConfirmed.render_text(user, "old@example.com", "new@example.com", nil, false)
 
-      assert is_binary(text)
+      # Plain text is not HTML: the tags survive as literal characters, and the
+      # surrounding change details are not displaced by them.
+      assert text =~ "<script>steal()</script>"
       assert text =~ "old@example.com"
       assert text =~ "new@example.com"
     end
