@@ -44,6 +44,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   # that never reach the wire.
   @no_primary_path_message "No calendar is selected for this connection, so the change could not be sent to the calendar server."
   @unsendable_change_message "Tymeslot could not send this change to the calendar server."
+  @incomplete_event_message "This change is missing the event's start or end time, so it could not be sent to the calendar server."
 
   @spec flush(map(), CalDAVBase.client()) :: :ok
   def flush(integration, client) do
@@ -63,19 +64,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
          integration,
          client
        ) do
-    case primary_path(integration) do
-      nil ->
-        record_skip(integration, row, "no primary calendar path", @no_primary_path_message)
+    with {:ok, path} <- primary_path(integration),
+         {:ok, event_data} <- sendable_event_data(row) do
+      case Events.create_calendar_event(client, path, event_data, events_opts()) do
+        {:ok, _uid} ->
+          ProviderCalendarEventQueries.mark_synced(integration.id, row.uid, nil)
+          log_success(row, :created)
 
-      path ->
-        case Events.create_calendar_event(client, path, row_to_event_data(row), events_opts()) do
-          {:ok, _uid} ->
-            ProviderCalendarEventQueries.mark_synced(integration.id, row.uid, nil)
-            log_success(row, :created)
-
-          {:error, reason} ->
-            record_failure(integration, row, :created, reason)
-        end
+        {:error, reason} ->
+          record_failure(integration, row, :created, reason)
+      end
+    else
+      {:error, reason} -> record_skip(integration, row, reason)
     end
   end
 
@@ -84,26 +84,25 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
          integration,
          client
        ) do
-    case primary_path(integration) do
-      nil ->
-        record_skip(integration, row, "no primary calendar path", @no_primary_path_message)
+    with {:ok, path} <- primary_path(integration),
+         {:ok, event_data} <- sendable_event_data(row) do
+      opts =
+        events_opts() ++
+          [
+            etag: row.etag,
+            conflict_resolution: conflict_policy_for(row)
+          ]
 
-      path ->
-        opts =
-          events_opts() ++
-            [
-              etag: row.etag,
-              conflict_resolution: conflict_policy_for(row)
-            ]
+      case Events.update_calendar_event(client, path, row.uid, event_data, opts) do
+        :ok ->
+          ProviderCalendarEventQueries.mark_synced(integration.id, row.uid, nil)
+          log_success(row, :modified)
 
-        case Events.update_calendar_event(client, path, row.uid, row_to_event_data(row), opts) do
-          :ok ->
-            ProviderCalendarEventQueries.mark_synced(integration.id, row.uid, nil)
-            log_success(row, :modified)
-
-          {:error, reason} ->
-            record_failure(integration, row, :modified, reason)
-        end
+        {:error, reason} ->
+          record_failure(integration, row, :modified, reason)
+      end
+    else
+      {:error, reason} -> record_skip(integration, row, reason)
     end
   end
 
@@ -113,10 +112,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
          client
        ) do
     case primary_path(integration) do
-      nil ->
-        record_skip(integration, row, "no primary calendar path", @no_primary_path_message)
+      {:error, reason} ->
+        record_skip(integration, row, reason)
 
-      path ->
+      {:ok, path} ->
         case Events.delete_calendar_event(client, path, row.uid, events_opts()) do
           :ok ->
             ProviderCalendarEventQueries.delete_by_uid(integration.id, row.uid)
@@ -162,13 +161,25 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
       summary: event.summary,
       description: event.description,
       location: event.location,
-      start_time: event.start_at,
-      end_time: event.end_at,
+      start_time: start_time(event),
+      end_time: end_time(event),
       all_day: event.all_day,
       timezone: event.timezone,
       provider_event_id: event.provider_event_id
     }
   end
+
+  # All-day events are modelled with `start_date`/`end_date` only, leaving
+  # `start_at`/`end_at` NULL — the 20260408110831 migration dropped those
+  # columns' NOT NULL constraints for exactly that reason. Reading `start_at`
+  # unconditionally therefore yields `nil` for every all-day row, which
+  # `ICalBuilder.Properties.build_dtstart/1` has no clause for. The `Date` is
+  # what it wants regardless: it emits DATE-form DTSTART/DTEND from one.
+  defp start_time(%{all_day: true, start_date: %Date{} = date}), do: date
+  defp start_time(event), do: event.start_at
+
+  defp end_time(%{all_day: true, end_date: %Date{} = date}), do: date
+  defp end_time(event), do: event.end_at
 
   defp conflict_policy_for(%ProviderCalendarEventSchema{created_by_tymeslot: true}),
     do: :keep_local
@@ -183,10 +194,38 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
   defp primary_path(integration) do
     case integration.calendar_paths do
-      [path | _rest] when is_binary(path) -> path
-      _other -> nil
+      [path | _rest] when is_binary(path) -> {:ok, path}
+      _other -> {:error, :no_primary_path}
     end
   end
+
+  # `Events.create_calendar_event/4` and `update_calendar_event/5` build the
+  # outgoing iCalendar payload via `ICalBuilder` *before* any HTTP call, and
+  # `ICalBuilder.Properties.build_dtstart/1` has no clause for a missing start
+  # time. A cache row written without one therefore raises `FunctionClauseError`
+  # rather than returning an error tuple, which would crash the whole sync job.
+  # Since `flush/2` runs before the remote fetch, that also blocks every other
+  # queued row and the integration's own remote sync behind it — and because
+  # the row is replayed every cycle, it never clears on its own.
+  #
+  # No retry can make such a row sendable, so it is skipped permanently
+  # instead: the owner sees why on the row, and the rest of the sync proceeds.
+  defp sendable_event_data(%ProviderCalendarEventSchema{} = row) do
+    event_data = row_to_event_data(row)
+
+    if usable_time?(event_data.start_time) and usable_time?(event_data.end_time) do
+      {:ok, event_data}
+    else
+      {:error, :incomplete_event_data}
+    end
+  end
+
+  defp usable_time?(%DateTime{}), do: true
+  defp usable_time?(%Date{}), do: true
+  defp usable_time?(_other), do: false
+
+  defp skip_message(:no_primary_path), do: @no_primary_path_message
+  defp skip_message(:incomplete_event_data), do: @incomplete_event_message
 
   # The log keeps the raw term for diagnosis; `sync_last_error` is a
   # user-facing column, so it gets the sentence from `CalDAVBase.describe_error/1`
@@ -206,14 +245,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
     )
   end
 
-  defp record_skip(integration, row, reason, message) do
+  defp record_skip(integration, row, reason) do
     Logger.warning("CalDAV offline queue replay skipped",
       calendar_integration_id: integration.id,
       uid: row.uid,
       reason: reason
     )
 
-    ProviderCalendarEventQueries.mark_sync_failed(integration.id, row.uid, message)
+    ProviderCalendarEventQueries.mark_sync_failed(integration.id, row.uid, skip_message(reason))
   end
 
   defp log_success(row, operation) do
