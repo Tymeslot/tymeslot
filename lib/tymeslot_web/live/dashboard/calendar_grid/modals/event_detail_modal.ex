@@ -5,8 +5,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias TymeslotWeb.Components.Dashboard.ColourSwatches
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -410,7 +410,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         <.icon name="hero-swatch" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
         <div class="flex-1">
           <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">{dgettext("dashboard_calendar_events", "Colour")}</p>
-          <.colour_swatches selected={Map.get(@selected_event, :colour)} target={@myself} />
+          <ColourSwatches.colour_swatches
+            selected={Map.get(@selected_event, :colour)}
+            event="update_event_colour"
+            target={@myself}
+            clear_label={dgettext("dashboard_calendar_events", "Default")}
+            group_label={dgettext("dashboard_calendar_events", "Colour")}
+          />
         </div>
       </div>
 
@@ -439,42 +445,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       _none ->
         nil
     end
-  end
-
-  attr :selected, :any, default: nil
-  attr :target, :any, required: true
-
-  # Palette swatch picker. A "Default" pill clears the override (falling back to
-  # the per-calendar colour); each swatch pushes the palette key. The active
-  # option is ringed.
-  defp colour_swatches(assigns) do
-    assigns = assign(assigns, :palette, EventColour.palette())
-
-    ~H"""
-    <div class="flex flex-wrap items-center gap-1.5">
-      <button
-        type="button"
-        phx-click="update_event_colour"
-        phx-value-colour="default"
-        phx-target={@target}
-        class={"inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-token-xs transition-all #{if is_nil(@selected), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
-      >
-        {dgettext("dashboard_calendar_events", "Default")}
-      </button>
-      <button
-        :for={{key, label, swatch_class} <- @palette}
-        type="button"
-        phx-click="update_event_colour"
-        phx-value-colour={key}
-        phx-target={@target}
-        title={label}
-        aria-label={label}
-        aria-pressed={to_string(@selected == key)}
-        class={"w-6 h-6 rounded-full #{swatch_class} ring-2 ring-offset-1 transition-all #{if @selected == key, do: "ring-turquoise-500", else: "ring-transparent hover:ring-tymeslot-300"}"}
-      >
-      </button>
-    </div>
-    """
   end
 
   attr :video_integrations, :list, required: true

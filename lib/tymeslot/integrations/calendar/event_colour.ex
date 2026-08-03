@@ -1,13 +1,19 @@
 defmodule Tymeslot.Integrations.Calendar.EventColour do
   @moduledoc """
-  The single source of truth for Tymeslot's per-event colour palette.
+  The single source of truth for Tymeslot's calendar colour palette.
 
-  An event may carry a stable, provider-independent palette **key** (e.g.
-  `"tomato"`) in its `:colour` field. This module maps that key to:
+  An event or a calendar integration may carry a stable, provider-independent
+  palette **key** (e.g. `"tomato"`) in its `:colour` field. This module maps
+  that key to:
 
     * a Tailwind display class for the calendar grid (`tailwind_class/1`)
     * a Google Calendar `colorId` (`google_color_id/1`)
     * a CSS3 colour name for the CalDAV/iCal `COLOR` property (`css_colour/1`)
+
+  It also owns the rotation an integration falls back to when its owner has
+  picked no colour (`rotation_class/1`, `rotation_size/0`), so every
+  `bg-calendar-*` class the grid can paint is named in this one module and the
+  `@source inline(…)` safelist in `app.css` has a single counterpart in Elixir.
 
   Mapping to a provider's colour space happens only at the mapper boundary; the
   database stores the palette key. Inbound provider colours (e.g. a raw Google
@@ -31,6 +37,23 @@ defmodule Tymeslot.Integrations.Calendar.EventColour do
     {"blueberry", "Blueberry", "bg-calendar-2"},
     {"grape", "Grape", "bg-calendar-3"},
     {"graphite", "Graphite", "bg-calendar-fallback"}
+  ]
+
+  # Classes the per-integration rotation cycles through when an integration has
+  # no colour of its own. Spelled out rather than interpolated so the set is
+  # greppable and matches `@source inline("bg-calendar-{1,…,8} …")` in
+  # `app.css` one for one. It is not the palette above: the rotation covers
+  # every numbered token, while the palette leaves one unused and adds the
+  # neutral fallback.
+  @rotation_classes [
+    "bg-calendar-1",
+    "bg-calendar-2",
+    "bg-calendar-3",
+    "bg-calendar-4",
+    "bg-calendar-5",
+    "bg-calendar-6",
+    "bg-calendar-7",
+    "bg-calendar-8"
   ]
 
   # Palette key → Google Calendar event `colorId` ("1".."11").
@@ -253,6 +276,31 @@ defmodule Tymeslot.Integrations.Calendar.EventColour do
   """
   @spec keys() :: [key()]
   def keys, do: Enum.map(@palette, fn {key, _label, _class} -> key end)
+
+  @doc """
+  Returns the neutral class painted when no colour can be resolved.
+  """
+  @spec fallback_class() :: String.t()
+  def fallback_class, do: @fallback_class
+
+  @doc """
+  Returns how many classes the per-integration colour rotation cycles through.
+  """
+  @spec rotation_size() :: pos_integer()
+  def rotation_size, do: length(@rotation_classes)
+
+  @doc """
+  Returns the rotation class at `index`, counting from 1.
+
+  Callers rotate with `rem(n, rotation_size()) + 1`, so the index is always in
+  range; anything else is a caller bug and gets the neutral fallback rather
+  than an exception, on the same principle as `tailwind_class/1`.
+  """
+  @spec rotation_class(term()) :: String.t()
+  def rotation_class(index) when is_integer(index) and index > 0,
+    do: Enum.at(@rotation_classes, index - 1, @fallback_class)
+
+  def rotation_class(_other), do: @fallback_class
 
   @doc """
   Returns `true` when `key` is a recognised palette key.

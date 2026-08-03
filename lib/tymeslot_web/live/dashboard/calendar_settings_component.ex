@@ -14,12 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
-  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnectModal
-  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelectionModal
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
-  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerModal
-  alias TymeslotWeb.Dashboard.CalendarSettings.Components
-  alias TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent
+  alias TymeslotWeb.Dashboard.CalendarSettings.ComponentView
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.Flash
@@ -245,37 +240,58 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         %{"integration_id" => id, "calendar_id" => cal_id},
         socket
       ) do
-    user_id = socket.assigns.current_user.id
+    with_owned_integration(socket, id, :write, fn integration ->
+      case Calendar.toggle_calendar_selection(integration, cal_id) do
+        {:ok, _result} ->
+          {:noreply, load_integrations(socket)}
 
-    # Re-fetch the integration by id before updating: the struct in
-    # socket assigns can be stale if the row was deleted between mount
-    # and this click, and CalendarIntegrationSchema has no
-    # optimistic_lock — Repo.update on a stale struct returns
-    # {:ok, stale_struct} (0 rows affected, no exception) and the user
-    # would see a silent no-op.
-    with :ok <- RateLimiter.check_integration_write_rate_limit(user_id),
-         {:ok, int_id} <- parse_int(id),
-         {:ok, integration} <- Calendar.get_integration(int_id, user_id),
-         {:ok, _result} <- Calendar.toggle_calendar_selection(integration, cal_id) do
-      {:noreply, load_integrations(socket)}
+        _error ->
+          Flash.error(dgettext("dashboard_calendar_settings", "Failed to update selection"))
+          {:noreply, socket}
+      end
+    end)
+  end
+
+  def handle_event("rename_integration", %{"integration_id" => id, "name" => name}, socket) do
+    with_owned_integration(socket, id, :appearance, fn integration ->
+      case Calendar.rename_integration(integration, name, socket.assigns.security_metadata) do
+        {:ok, _updated} ->
+          Flash.info(dgettext("dashboard_calendar_settings", "Calendar renamed"))
+          send(self(), {:integration_updated, :calendar})
+          {:noreply, load_integrations(socket)}
+
+        {:error, %{name: message}} ->
+          Flash.error(message)
+          {:noreply, socket}
+
+        {:error, _changeset} ->
+          Flash.error(dgettext("dashboard_calendar_settings", "Failed to rename calendar"))
+          {:noreply, socket}
+      end
+    end)
+  end
+
+  def handle_event(
+        "set_integration_colour",
+        %{"integration_id" => id, "colour" => colour},
+        socket
+      ) do
+    colour = palette_key(colour)
+
+    if already_coloured?(socket, id, colour) do
+      {:noreply, socket}
     else
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
+      with_owned_integration(socket, id, :appearance, fn integration ->
+        case Calendar.update_integration(integration, %{colour: colour}) do
+          {:ok, _updated} ->
+            send(self(), {:integration_updated, :calendar})
+            {:noreply, load_integrations(socket)}
 
-      {:error, :not_found} ->
-        Flash.error(
-          dgettext(
-            "dashboard_calendar_settings",
-            "This calendar integration is no longer available."
-          )
-        )
-
-        {:noreply, load_integrations(socket)}
-
-      _other ->
-        Flash.error(dgettext("dashboard_calendar_settings", "Failed to update selection"))
-        {:noreply, socket}
+          {:error, _changeset} ->
+            Flash.error(dgettext("dashboard_calendar_settings", "Failed to update colour"))
+            {:noreply, socket}
+        end
+      end)
     end
   end
 
@@ -409,31 +425,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     |> assign(:health_states, health_states)
   end
 
-  # Builds the grouped provider list for the picker modal: OAuth providers
-  # (Google, Outlook) first, then all CalDAV presets — no nested reveal.
-  defp picker_groups(available, integrations) do
-    entries = Enum.map(available, &provider_entry(&1, integrations))
-    {oauth, caldav} = Enum.split_with(entries, & &1.oauth?)
-
-    [
-      %{label: nil, providers: oauth},
-      %{label: dgettext("dashboard_calendar_settings", "CalDAV servers"), providers: caldav}
-    ]
-  end
-
-  defp provider_entry(descriptor, integrations) do
-    provider = Atom.to_string(descriptor.type)
-
-    %{
-      provider: provider,
-      title: descriptor.display_name,
-      description: descriptor.description,
-      click_event: ProviderConfig.click_event(descriptor.type),
-      connected?: Enum.any?(integrations, &(&1.provider == provider)),
-      oauth?: descriptor.oauth
-    }
-  end
-
   defp format_refresh_failures(names) when length(names) <= 3 do
     Enum.join(names, ", ")
   end
@@ -452,6 +443,71 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     )
   end
 
+  # Every write to one integration goes through here: rate limit, parse the id
+  # off the DOM, then re-fetch the row scoped to the current user before
+  # handing it to `fun`. Re-fetching is not belt-and-braces — the struct in
+  # socket assigns can be stale if the row was deleted between mount and this
+  # click, and `CalendarIntegrationSchema` has no `optimistic_lock`, so
+  # `Repo.update` on a stale struct returns `{:ok, stale_struct}` (0 rows
+  # affected, no exception) and the user sees a silent no-op. Keeping the
+  # preamble in one place is also what stops a new action from shipping with
+  # the rate limit or the ownership check quietly missing.
+  #
+  # `bucket` says which budget the write draws on. `:write` is the shared
+  # integration budget; `:appearance` is the looser one for changes that only
+  # affect how a connection is presented. Naming it at the call site is what
+  # keeps the choice a visible decision per action rather than a default.
+  defp with_owned_integration(socket, id, bucket, fun) do
+    user_id = socket.assigns.current_user.id
+
+    with :ok <- check_write_rate_limit(bucket, user_id),
+         {:ok, int_id} <- parse_int(id),
+         {:ok, integration} <- Calendar.get_integration(int_id, user_id) do
+      fun.(integration)
+    else
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+
+      {:error, :not_found} ->
+        Flash.error(
+          dgettext(
+            "dashboard_calendar_settings",
+            "This calendar integration is no longer available."
+          )
+        )
+
+        {:noreply, load_integrations(socket)}
+
+      :error ->
+        Flash.error(dgettext("dashboard_calendar_settings", "Invalid calendar ID"))
+        {:noreply, socket}
+    end
+  end
+
+  defp check_write_rate_limit(:write, user_id),
+    do: RateLimiter.check_integration_write_rate_limit(user_id)
+
+  defp check_write_rate_limit(:appearance, user_id),
+    do: RateLimiter.check_integration_appearance_rate_limit(user_id)
+
+  # Clicking the swatch that is already ringed is what someone does while
+  # comparing colours, and it asks for nothing. Answering it from the rendered
+  # state costs no query and no budget; that state is what the click was aimed
+  # at, and if it has drifted from the row the only write skipped is one that
+  # would have set what the swatches already show.
+  defp already_coloured?(socket, id, colour) do
+    Enum.any?(socket.assigns.integrations, fn integration ->
+      to_string(integration.id) == to_string(id) and integration.colour == colour
+    end)
+  end
+
+  # The swatch picker pushes "default" for its clear pill; everything else is a
+  # palette key the changeset validates. Mapping the sentinel here keeps it a
+  # detail of the picker rather than something the schema has to know about.
+  defp palette_key("default"), do: nil
+  defp palette_key(colour), do: colour
+
   defp parse_int(id) when is_integer(id), do: {:ok, id}
 
   defp parse_int(id) when is_binary(id) do
@@ -464,161 +520,5 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   defp parse_int(_arg), do: :error
 
   @impl Phoenix.LiveComponent
-  def render(assigns) do
-    ~H"""
-    <div class="space-y-12 pb-24">
-      <div class="flex items-center justify-between gap-4 flex-wrap">
-        <.section_header
-          icon="hero-calendar-days"
-          title={dgettext("dashboard_calendar_settings", "Calendar Settings")}
-        />
-        <button
-          phx-click="show_picker"
-          phx-target={@myself}
-          class="inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600 shrink-0"
-        >
-          <.icon name="hero-plus" class="w-4 h-4" /> {dgettext(
-            "dashboard_calendar_settings",
-            "Connect a calendar"
-          )}
-        </button>
-      </div>
-
-      <div class="space-y-12">
-        <div>
-          <%= if @integrations == [] do %>
-            <div class="card-glass p-10 text-center">
-              <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-token-2xl bg-turquoise-50 text-turquoise-500">
-                <.icon name="hero-calendar-days" class="h-7 w-7" />
-              </div>
-              <h3 class="text-token-lg font-semibold text-tymeslot-800">
-                {dgettext("dashboard_calendar_settings", "No calendars connected yet")}
-              </h3>
-              <p class="mx-auto mt-1 max-w-md text-token-sm text-tymeslot-500">
-                {dgettext(
-                  "dashboard_calendar_settings",
-                  "Connect a calendar so Tymeslot can read your availability and stop meetings being booked when you're already busy."
-                )}
-              </p>
-              <button
-                phx-click="show_picker"
-                phx-target={@myself}
-                class="mt-5 inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600"
-              >
-                <.icon name="hero-plus" class="w-4 h-4" /> {dgettext(
-                  "dashboard_calendar_settings",
-                  "Connect a calendar"
-                )}
-              </button>
-            </div>
-          <% else %>
-            <Components.connected_calendars_section
-              integrations={@integrations}
-              is_refreshing={@is_refreshing}
-              myself={@myself}
-              health_states={@health_states}
-            />
-          <% end %>
-        </div>
-
-        <section class="space-y-4">
-          <div class="flex items-center gap-2">
-            <.icon name="hero-link" class="w-5 h-5 text-turquoise-500" />
-            <h3 class="text-token-base font-semibold text-tymeslot-800">
-              {dgettext("dashboard_calendar_settings", "Free/busy feed")}
-            </h3>
-          </div>
-
-          <div class="card-glass p-4 space-y-3">
-            <p class="text-token-sm text-tymeslot-500">
-              {dgettext(
-                "dashboard_calendar_settings",
-                "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
-              )}
-            </p>
-
-            <%= if @freebusy_enabled do %>
-              <code class="block w-full overflow-x-auto rounded-token-md bg-tymeslot-50 px-3 py-2 text-token-sm text-tymeslot-700 select-all">
-                {@freebusy_url}
-              </code>
-              <div class="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  class="btn btn-secondary"
-                  phx-click="regenerate_freebusy"
-                  phx-target={@myself}
-                >
-                  {dgettext("dashboard_calendar_settings", "Regenerate link")}
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-ghost"
-                  phx-click="disable_freebusy"
-                  phx-target={@myself}
-                >
-                  {dgettext("dashboard_calendar_settings", "Disable feed")}
-                </button>
-              </div>
-            <% else %>
-              <button
-                type="button"
-                class="btn btn-primary"
-                phx-click="enable_freebusy"
-                phx-target={@myself}
-              >
-                {dgettext("dashboard_calendar_settings", "Enable free/busy feed")}
-              </button>
-            <% end %>
-          </div>
-        </section>
-      </div>
-
-      <ProviderPickerModal.provider_picker_modal
-        id="calendar-provider-picker"
-        show={@show_picker}
-        title={dgettext("dashboard_calendar_settings", "Connect a calendar")}
-        subtitle={
-          dgettext("dashboard_calendar_settings", "Sync your availability to prevent double bookings.")
-        }
-        target={@myself}
-        on_cancel={JS.push("hide_picker", target: @myself)}
-        groups={picker_groups(@available_calendar_providers, @integrations)}
-        config_active={@selected_provider != nil}
-        back_event="back_to_grid"
-      >
-        <:config>
-          <.live_component
-            :if={@selected_provider != nil}
-            module={ConfigViewComponent}
-            id="calendar-config-view-component"
-            selected_provider={@selected_provider}
-            current_user={@current_user}
-            security_metadata={@security_metadata}
-          />
-        </:config>
-      </ProviderPickerModal.provider_picker_modal>
-
-      <CalendarSelectionModal.calendar_selection_modal
-        id="calendar-selection"
-        show={@managing_calendar_id != nil}
-        integration={Enum.find(@integrations, &(&1.id == @managing_calendar_id))}
-        target={@myself}
-        on_cancel={JS.push("close_manage_calendars", target: @myself)}
-      />
-
-      <.live_component
-        module={DeleteIntegrationModal}
-        id="delete-calendar-modal"
-        integration_type={:calendar}
-        current_user={@current_user}
-      />
-
-      <.live_component
-        module={CaldavReconnectModal}
-        id="caldav-reconnect-modal"
-        current_user={@current_user}
-      />
-    </div>
-    """
-  end
+  def render(assigns), do: ComponentView.settings(assigns)
 end

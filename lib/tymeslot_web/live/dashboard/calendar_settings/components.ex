@@ -145,6 +145,71 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   end
 
   @doc """
+  Renders the free/busy feed section: the read-only iCalendar link that
+  publishes when the user is busy, and the controls to enable, regenerate, or
+  disable it.
+  """
+  attr :enabled, :boolean, required: true
+  attr :url, :string, default: nil
+  attr :myself, :any, required: true
+
+  @spec freebusy_section(map()) :: Phoenix.LiveView.Rendered.t()
+  def freebusy_section(assigns) do
+    ~H"""
+    <section class="space-y-4">
+      <div class="flex items-center gap-2">
+        <.icon name="hero-link" class="w-5 h-5 text-turquoise-500" />
+        <h3 class="text-token-base font-semibold text-tymeslot-800">
+          {dgettext("dashboard_calendar_settings", "Free/busy feed")}
+        </h3>
+      </div>
+
+      <div class="card-glass p-4 space-y-3">
+        <p class="text-token-sm text-tymeslot-500">
+          {dgettext(
+            "dashboard_calendar_settings",
+            "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
+          )}
+        </p>
+
+        <%= if @enabled do %>
+          <code class="block w-full overflow-x-auto rounded-token-md bg-tymeslot-50 px-3 py-2 text-token-sm text-tymeslot-700 select-all">
+            {@url}
+          </code>
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              phx-click="regenerate_freebusy"
+              phx-target={@myself}
+            >
+              {dgettext("dashboard_calendar_settings", "Regenerate link")}
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost"
+              phx-click="disable_freebusy"
+              phx-target={@myself}
+            >
+              {dgettext("dashboard_calendar_settings", "Disable feed")}
+            </button>
+          </div>
+        <% else %>
+          <button
+            type="button"
+            class="btn btn-primary"
+            phx-click="enable_freebusy"
+            phx-target={@myself}
+          >
+            {dgettext("dashboard_calendar_settings", "Enable free/busy feed")}
+          </button>
+        <% end %>
+      </div>
+    </section>
+    """
+  end
+
+  @doc """
   Renders the section for already connected calendars.
   """
   attr :integrations, :list, required: true
@@ -302,13 +367,14 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
         >
           <.icon name="hero-bolt" class="w-4 h-4" /> {dgettext("dashboard_calendar_settings", "Upgrade")}
         </button>
+        <%!-- Shown even when no calendars have been discovered yet: the modal
+             also carries the name and colour, which apply to any connection. --%>
         <button
-          :if={@calendar_list != []}
           phx-click="manage_calendars"
           phx-value-id={@integration.id}
           phx-target={@myself}
           class="flex items-center justify-center gap-1.5 px-3 py-1.5 lg:h-9 lg:w-9 lg:px-0 lg:py-0 bg-tymeslot-50 text-tymeslot-700 rounded-token-lg font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
-          title={dgettext("dashboard_calendar_settings", "Choose which calendars sync")}
+          title={dgettext("dashboard_calendar_settings", "Rename, recolour, and choose which calendars sync")}
           aria-label={dgettext("dashboard_calendar_settings", "Manage calendars")}
         >
           <.icon name="hero-squares-2x2" class="w-4 h-4" /><span class="lg:hidden">{dgettext(

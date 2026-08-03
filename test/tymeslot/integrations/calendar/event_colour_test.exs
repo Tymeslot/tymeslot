@@ -48,6 +48,25 @@ defmodule Tymeslot.Integrations.Calendar.EventColourTest do
     end
   end
 
+  describe "rotation_class/1 and rotation_size/0" do
+    test "returns a distinct class for every index in the rotation" do
+      classes = Enum.map(1..EventColour.rotation_size(), &EventColour.rotation_class/1)
+
+      assert length(Enum.uniq(classes)) == EventColour.rotation_size()
+      assert Enum.all?(classes, &String.starts_with?(&1, "bg-calendar-"))
+    end
+
+    test "falls back to the neutral class for an index outside the rotation" do
+      assert EventColour.rotation_class(EventColour.rotation_size() + 1) ==
+               EventColour.fallback_class()
+
+      assert EventColour.rotation_class(0) == EventColour.fallback_class()
+      assert EventColour.rotation_class(-1) == EventColour.fallback_class()
+      assert EventColour.rotation_class(nil) == EventColour.fallback_class()
+      assert EventColour.rotation_class("2") == EventColour.fallback_class()
+    end
+  end
+
   describe "tailwind_class/1" do
     test "maps a palette key to its Tailwind class" do
       assert EventColour.tailwind_class("tomato") == "bg-calendar-7"

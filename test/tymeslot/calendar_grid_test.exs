@@ -6,39 +6,71 @@ defmodule Tymeslot.CalendarGridTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
-  describe "get_integration_color_indices/1" do
+  describe "integration_colour_classes/1" do
     test "returns empty map for empty list" do
-      assert CalendarGrid.get_integration_color_indices([]) == %{}
+      assert CalendarGrid.integration_colour_classes([]) == %{}
     end
 
-    test "assigns index 1 to a single integration" do
-      result = CalendarGrid.get_integration_color_indices([%{id: 42}])
-      assert result == %{42 => 1}
+    test "assigns the first rotation class to a single integration" do
+      result = CalendarGrid.integration_colour_classes([%{id: 42, colour: nil}])
+      assert result == %{42 => "bg-calendar-1"}
     end
 
-    test "assigns indices by sorted id, not input order" do
-      integrations = [%{id: 30}, %{id: 10}, %{id: 20}]
-      result = CalendarGrid.get_integration_color_indices(integrations)
+    test "assigns rotation classes by sorted id, not input order" do
+      integrations = [%{id: 30, colour: nil}, %{id: 10, colour: nil}, %{id: 20, colour: nil}]
+      result = CalendarGrid.integration_colour_classes(integrations)
 
-      # id 10 is first when sorted → index 1
-      # id 20 is second → index 2
-      # id 30 is third → index 3
-      assert result == %{10 => 1, 20 => 2, 30 => 3}
+      assert result == %{
+               10 => "bg-calendar-1",
+               20 => "bg-calendar-2",
+               30 => "bg-calendar-3"
+             }
     end
 
-    test "rotates indices after palette size (8)" do
-      integrations = Enum.map(1..10, &%{id: &1})
-      result = CalendarGrid.get_integration_color_indices(integrations)
+    test "wraps the rotation once the classes run out" do
+      integrations = Enum.map(1..10, &%{id: &1, colour: nil})
+      result = CalendarGrid.integration_colour_classes(integrations)
 
-      # First 8 get indices 1..8, then wrap
-      assert result[1] == 1
-      assert result[8] == 8
-      assert result[9] == 1
-      assert result[10] == 2
+      assert result[1] == "bg-calendar-1"
+      assert result[8] == "bg-calendar-8"
+      assert result[9] == "bg-calendar-1"
+      assert result[10] == "bg-calendar-2"
+    end
+
+    test "a chosen colour wins over the rotation" do
+      integrations = [%{id: 10, colour: nil}, %{id: 20, colour: "peacock"}]
+      result = CalendarGrid.integration_colour_classes(integrations)
+
+      assert result[20] == EventColour.tailwind_class("peacock")
+      refute result[20] == "bg-calendar-2"
+    end
+
+    test "a chosen colour does not shift the rotation for the others" do
+      unpicked = [%{id: 10, colour: nil}, %{id: 20, colour: nil}, %{id: 30, colour: nil}]
+      picked = [%{id: 10, colour: nil}, %{id: 20, colour: "grape"}, %{id: 30, colour: nil}]
+
+      assert CalendarGrid.integration_colour_classes(unpicked)[30] ==
+               CalendarGrid.integration_colour_classes(picked)[30]
+    end
+
+    test "an unrecognised stored colour paints neutral rather than crashing" do
+      result = CalendarGrid.integration_colour_classes([%{id: 10, colour: "burnt-sienna"}])
+      assert result[10] == EventColour.fallback_class()
+    end
+
+    test "a blank stored colour falls back to the rotation" do
+      result = CalendarGrid.integration_colour_classes([%{id: 10, colour: ""}])
+      assert result[10] == "bg-calendar-1"
+    end
+
+    test "an integration map without the colour key still rotates" do
+      result = CalendarGrid.integration_colour_classes([%{id: 10}])
+      assert result[10] == "bg-calendar-1"
     end
   end
 

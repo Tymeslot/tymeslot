@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   def load_integrations(socket) do
     user_id = socket.assigns.current_user.id
     integrations = CalendarGrid.list_active_integrations(user_id)
-    colors = CalendarGrid.get_integration_color_indices(integrations)
+    colors = CalendarGrid.integration_colour_classes(integrations)
     prefs = CalendarGrid.get_or_create_preferences(user_id)
 
     owned_ids = MapSet.new(integrations, & &1.id)

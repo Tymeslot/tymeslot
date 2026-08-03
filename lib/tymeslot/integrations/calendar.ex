@@ -40,6 +40,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
   alias Tymeslot.Integrations.Providers.Directory
+  alias Tymeslot.Integrations.Shared.InputValidators
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Workers.ColourWriteBackWorker
 
@@ -110,6 +111,22 @@ defmodule Tymeslot.Integrations.Calendar do
           {:ok, integration()} | {:error, Ecto.Changeset.t()}
   def update_integration(integration, attrs) do
     CalendarManagement.update_calendar_integration(integration, attrs)
+  end
+
+  @doc """
+  Renames an integration to a name a person typed.
+
+  Sanitises and length-checks it exactly as the connection form does, rather
+  than trusting the caller, so a rename cannot store a name that could not have
+  been created. The `{:error, %{name: message}}` shape is the validator's, and
+  carries a message already translated for display.
+  """
+  @spec rename_integration(integration(), term(), map()) ::
+          {:ok, integration()} | {:error, Ecto.Changeset.t() | %{name: String.t()}}
+  def rename_integration(integration, name, metadata \\ %{}) do
+    with {:ok, sanitised} <- InputValidators.validate_integration_name(name, metadata) do
+      CalendarManagement.update_calendar_integration(integration, %{name: sanitised})
+    end
   end
 
   @doc """

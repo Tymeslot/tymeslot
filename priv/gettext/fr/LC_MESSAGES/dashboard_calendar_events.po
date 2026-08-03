@@ -224,6 +224,7 @@ msgid "Close modal"
 msgstr "Fermer la fenêtre modale"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:412
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:418
 #, elixir-autogen, elixir-format
 msgid "Colour"
 msgstr "Couleur"
@@ -273,7 +274,7 @@ msgstr "Jour"
 msgid "Day view"
 msgstr "Vue jour"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:462
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:417
 #, elixir-autogen, elixir-format
 msgid "Default"
 msgstr "Par défaut"
@@ -294,7 +295,7 @@ msgid "Delete"
 msgstr "Supprimer"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex:23
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:425
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:431
 #, elixir-autogen, elixir-format
 msgid "Delete event"
 msgstr "Supprimer l’événement"
@@ -552,7 +553,7 @@ msgid "No calendars to sync"
 msgstr "Aucun calendrier à synchroniser"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex:188
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:495
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex:465
 #, elixir-autogen, elixir-format
 msgid "None"
 msgstr "Aucune"

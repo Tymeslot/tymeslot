@@ -22,7 +22,7 @@ msgstr "Kalender erneut verbunden"
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:51
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:101
 #, elixir-autogen, elixir-format
 msgid "Choose which calendars we check to prevent double bookings."
 msgstr "Wählen Sie aus, welche Kalender wir prüfen, um Doppelbuchungen zu vermeiden."
@@ -47,7 +47,7 @@ msgstr "Speichern fehlgeschlagen: %{reason}"
 msgid "Could not sign in with those credentials"
 msgstr "Anmeldung mit diesen Anmeldedaten fehlgeschlagen"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:120
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:170
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr "Fertig"
@@ -79,7 +79,7 @@ msgstr "Ungültige Kalender-ID"
 msgid "Lightweight CalDAV server integration"
 msgstr "Leichtgewichtige CalDAV-Server-Integration"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:47
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:50
 #, elixir-autogen, elixir-format
 msgid "Manage calendars"
 msgstr "Kalender verwalten"
@@ -161,7 +161,7 @@ msgstr "Mein mailbox.org"
 msgid "My mailbox.org Calendar"
 msgstr "Mein mailbox.org-Kalender"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:108
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:158
 #, elixir-autogen, elixir-format
 msgid "No calendars found. Try refreshing the integration."
 msgstr "Keine Kalender gefunden. Versuchen Sie, die Integration zu aktualisieren."
@@ -188,7 +188,7 @@ msgstr "Passwort / App-Passwort"
 msgid "Please select at least one calendar to sync."
 msgstr "Bitte wählen Sie mindestens einen Kalender zum Synchronisieren aus."
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:96
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:146
 #, elixir-autogen, elixir-format
 msgid "Primary"
 msgstr "Primär"
@@ -285,7 +285,7 @@ msgstr "Kalender von Ihrem Zimbra-Server synchronisieren"
 msgid "Sync calendars from your mailbox.org account"
 msgstr "Kalender aus Ihrem mailbox.org-Konto synchronisieren"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:59
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:109
 #, elixir-autogen, elixir-format
 msgid "Syncing %{selected} of %{count} calendar"
 msgid_plural "Syncing %{selected} of %{count} calendars"
@@ -1007,3 +1007,29 @@ msgstr "Verbindung zu mailbox.org erfolgreich"
 #, elixir-autogen, elixir-format
 msgid "mailbox.org requires HTTPS"
 msgstr "mailbox.org erfordert HTTPS"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:94
+#, elixir-autogen, elixir-format
+msgid "Automatic"
+msgstr "Automatisch"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:82
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:95
+#, elixir-autogen, elixir-format
+msgid "Colour"
+msgstr "Farbe"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:85
+#, elixir-autogen, elixir-format
+msgid "How this calendar's events are shown in your Tymeslot calendar."
+msgstr "So werden die Termine dieses Kalenders in Ihrem Tymeslot-Kalender angezeigt."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:62
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Name"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/calendar_selection_modal.ex:76
+#, elixir-autogen, elixir-format
+msgid "Rename"
+msgstr "Umbenennen"
