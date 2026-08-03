@@ -33,6 +33,7 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.Ics.Feed
   alias Tymeslot.Integrations.Calendar.Ics.Provider
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -167,28 +168,10 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
       error: inspect(reason)
     )
 
-    CalendarIntegrationQueries.mark_sync_error(integration, failure_message(reason))
+    CalendarIntegrationQueries.mark_sync_error(integration, Feed.error_message(reason))
 
     {:error, reason}
   end
-
-  defp failure_message(:not_found), do: "The calendar feed URL returned 404. Check the link."
-
-  defp failure_message(:invalid_ics),
-    do: "The calendar feed did not return valid iCalendar data."
-
-  defp failure_message(:too_large), do: "The calendar feed is too large to process."
-
-  defp failure_message(:too_many_redirects),
-    do: "The calendar feed redirected too many times."
-
-  defp failure_message({:blocked, _reason}),
-    do: "The calendar feed URL points at a blocked address."
-
-  defp failure_message({:http_status, status}),
-    do: "The calendar feed returned HTTP #{status}."
-
-  defp failure_message(_reason), do: "Could not reach the calendar feed."
 
   defp feed_url(%{subscription_url: url}) when is_binary(url), do: url
   defp feed_url(_integration), do: nil

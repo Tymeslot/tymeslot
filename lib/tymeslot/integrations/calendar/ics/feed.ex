@@ -17,7 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
 
   require Logger
 
-  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Security.SsrfBlockedError
 
@@ -73,6 +73,38 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
   @spec max_feed_bytes() :: pos_integer()
   def max_feed_bytes, do: @max_feed_bytes
 
+  @doc """
+  User-facing copy for a fetch failure.
+
+  Lives here, next to the error type it describes, so the connect form and
+  the sync worker say the same thing about the same failure instead of
+  drifting into two vocabularies for one problem.
+  """
+  @spec error_message(error()) :: String.t()
+  def error_message(:unauthorised),
+    do: "The calendar feed rejected the link. It may have been revoked or reset."
+
+  def error_message(:not_found),
+    do: "The calendar feed URL returned 404. Check that the link is complete and still published."
+
+  def error_message(:invalid_ics),
+    do: "That URL did not return a calendar feed. Make sure it points at an .ics file."
+
+  def error_message(:too_large), do: "That calendar feed is too large to process."
+
+  def error_message(:too_many_redirects), do: "The calendar feed redirected too many times."
+
+  def error_message(:missing_url), do: "Enter the calendar feed URL."
+
+  def error_message({:blocked, _reason}),
+    do: "That URL points at a blocked address and cannot be reached."
+
+  def error_message({:http_status, status}),
+    do: "The calendar feed returned HTTP #{status}."
+
+  def error_message(_reason),
+    do: "Could not reach the calendar feed. Check the URL and try again."
+
   defp fetch_body(_url, _opts, redirects_left) when redirects_left < 0 do
     {:error, :too_many_redirects}
   end
@@ -83,7 +115,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
       |> Keyword.take([:ssrf_allow_private, :receive_timeout])
       |> Keyword.put(:ssrf_protect, true)
 
-    case HTTPClient.get(
+    case Config.http_client_module().get(
            url,
            [{"accept", "text/calendar, text/plain;q=0.9, */*;q=0.8"}],
            request_opts

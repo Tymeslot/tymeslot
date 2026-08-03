@@ -23,7 +23,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.Flash
 
-  @caldav_provider_strings ProviderConfig.caldav_based_provider_strings()
+  # Providers whose setup happens in an in-app form rather than an OAuth
+  # redirect: the CalDAV family plus feed subscriptions.
+  @form_provider_strings ProviderConfig.caldav_based_provider_strings() ++
+                           ProviderConfig.subscription_provider_strings()
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -180,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   def handle_event("connect_provider", %{"provider" => provider}, socket)
-      when provider in @caldav_provider_strings do
+      when provider in @form_provider_strings do
     {:noreply,
      assign(socket, selected_provider: String.to_existing_atom(provider), show_picker: true)}
   end
@@ -373,15 +376,25 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   # Builds the grouped provider list for the picker modal: OAuth providers
-  # (Google, Outlook) first, then all CalDAV presets — no nested reveal.
+  # (Google, Outlook) first, then CalDAV presets, then feed subscriptions —
+  # no nested reveal. Grouping is by the descriptor's family rather than by
+  # its `oauth` boolean: a subscribed feed speaks no CalDAV, so listing it
+  # under "CalDAV servers" would describe it as something it isn't.
   defp picker_groups(available, integrations) do
-    entries = Enum.map(available, &provider_entry(&1, integrations))
-    {oauth, caldav} = Enum.split_with(entries, & &1.oauth?)
+    by_family =
+      available
+      |> Enum.map(&provider_entry(&1, integrations))
+      |> Enum.group_by(& &1.family)
 
-    [
-      %{label: nil, providers: oauth},
-      %{label: "CalDAV servers", providers: caldav}
-    ]
+    Enum.reject(
+      [
+        %{label: nil, providers: Map.get(by_family, :oauth, [])},
+        %{label: "CalDAV servers", providers: Map.get(by_family, :caldav, [])},
+        %{label: "Calendar subscriptions", providers: Map.get(by_family, :subscription, [])},
+        %{label: "Other", providers: Map.get(by_family, :other, [])}
+      ],
+      &(&1.providers == [])
+    )
   end
 
   defp provider_entry(descriptor, integrations) do
@@ -393,7 +406,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
       description: descriptor.description,
       click_event: ProviderConfig.click_event(descriptor.type),
       connected?: Enum.any?(integrations, &(&1.provider == provider)),
-      oauth?: descriptor.oauth
+      oauth?: descriptor.oauth,
+      family: descriptor.family
     }
   end
 

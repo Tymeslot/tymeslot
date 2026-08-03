@@ -179,6 +179,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
       description: description_for(domain, type, provider_config),
       button_text: button_text_for(domain, type, provider_config),
       oauth: oauth_flag(domain, type, mod),
+      family: family_for(domain, type, oauth_flag(domain, type, mod)),
       capabilities: capabilities_for(mod),
       config_schema: schema_for(mod),
       provider_module: mod,
@@ -234,6 +235,18 @@ defmodule Tymeslot.Integrations.Providers.Directory do
       type in Tymeslot.Integrations.Calendar.ProviderConfig.oauth_providers()
     end
   end
+
+  defp family_for(_domain, _type, true), do: :oauth
+
+  defp family_for(:calendar, type, _oauth) do
+    cond do
+      Tymeslot.Integrations.Calendar.ProviderConfig.caldav_based?(type) -> :caldav
+      Tymeslot.Integrations.Calendar.ProviderConfig.subscription?(type) -> :subscription
+      true -> :other
+    end
+  end
+
+  defp family_for(:video, _type, _oauth), do: :other
 
   defp setup_component_for(mod) do
     if callback_exported?(mod, :setup_component, 0) do

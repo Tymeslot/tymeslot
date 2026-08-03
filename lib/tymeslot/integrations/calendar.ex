@@ -310,6 +310,17 @@ defmodule Tymeslot.Integrations.Calendar do
   end
 
   @doc """
+  Validates and creates a read-only calendar subscription from a feed URL.
+  """
+  @spec create_subscription_with_validation(user_id(), %{String.t() => term()}, keyword()) ::
+          {:ok, integration()}
+          | {:error,
+             {:form_errors, %{String.t() => term()}} | {:changeset, Ecto.Changeset.t()} | any()}
+  def create_subscription_with_validation(user_id, params, opts \\ []) do
+    Creation.create_subscription_with_validation(user_id, params, opts)
+  end
+
+  @doc """
   Prepare selection params from selected paths and discovered calendars.
   """
   @spec prepare_selection_params([String.t()], list()) ::

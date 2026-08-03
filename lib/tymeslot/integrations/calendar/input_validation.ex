@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   Nextcloud and CalDAV configuration forms with URL, credential, and path validation.
   """
 
+  alias Tymeslot.Integrations.Calendar.Ics.Feed
   alias Tymeslot.Integrations.Shared.InputValidators
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer, UrlValidation}
 
@@ -119,6 +120,56 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   end
 
   def validate_single_field(_field, _value, _opts), do: {:ok, nil}
+
+  @doc """
+  Validates the calendar subscription form (name and feed URL).
+
+  Deliberately separate from `validate_calendar_integration_form/2` rather
+  than a credentials-optional mode of it: a subscription has no username or
+  password to make optional, and threading a "are credentials required here?"
+  flag through the shared path would put every CalDAV provider's credential
+  checks one wrong argument away from being skipped.
+
+  The `webcal://` scheme every vendor's "subscribe" button hands out is
+  rewritten to `https://` before validation, since that is what it means and
+  what we will actually request.
+  """
+  @spec validate_ics_subscription_form(map(), keyword()) :: {:ok, map()} | {:error, map()}
+  def validate_ics_subscription_form(params, opts \\ []) do
+    metadata = Keyword.get(opts, :metadata, %{})
+    url = params["url"] |> to_string() |> Feed.normalise_url()
+
+    with {:ok, sanitized_name} <-
+           InputValidators.validate_integration_name(params["name"], metadata),
+         {:ok, sanitized_url} <- validate_subscription_url(url, metadata) do
+      SecurityLogger.log_security_event("calendar_subscription_form_validation_success", %{
+        ip_address: metadata[:ip],
+        user_agent: metadata[:user_agent],
+        user_id: metadata[:user_id],
+        url: sanitize_url_for_logging(sanitized_url)
+      })
+
+      {:ok, %{"name" => sanitized_name, "url" => sanitized_url}}
+    else
+      {:error, errors} when is_map(errors) ->
+        SecurityLogger.log_security_event("calendar_subscription_form_validation_failure", %{
+          ip_address: metadata[:ip],
+          user_agent: metadata[:user_agent],
+          user_id: metadata[:user_id],
+          errors: Map.keys(errors)
+        })
+
+        {:error, errors}
+    end
+  end
+
+  # Unlike a CalDAV server address, a feed URL is required: without it there
+  # is nothing at all to subscribe to.
+  defp validate_subscription_url(url, _metadata) when url in [nil, ""] do
+    {:error, %{url: "Enter the calendar feed URL"}}
+  end
+
+  defp validate_subscription_url(url, metadata), do: validate_server_url(url, metadata)
 
   @doc """
   Validates Nextcloud calendar discovery parameters.

@@ -128,6 +128,25 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
     end
   end
 
+  def handle_event("add_subscription", %{"integration" => params}, socket) do
+    user_id = socket.assigns.current_user.id
+
+    case RateLimiter.check_integration_write_rate_limit(user_id) do
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+
+      :ok ->
+        socket = assign(socket, is_saving: true, form_values: params)
+
+        user_id
+        |> Calendar.create_subscription_with_validation(params,
+          metadata: socket.assigns.security_metadata
+        )
+        |> handle_create_integration_result(socket)
+    end
+  end
+
   def handle_event("add_integration", %{"integration" => params} = full_params, socket) do
     user_id = socket.assigns.current_user.id
 
