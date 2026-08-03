@@ -170,6 +170,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   defp build_descriptor(domain, type) do
     mod = domain_provider_module(domain, type)
     provider_config = domain_provider_config_module(domain)
+    oauth = oauth_flag(domain, type, mod)
 
     %Descriptor{
       domain: domain,
@@ -178,8 +179,8 @@ defmodule Tymeslot.Integrations.Providers.Directory do
       icon: icon_for(domain, type, provider_config),
       description: description_for(domain, type, provider_config),
       button_text: button_text_for(domain, type, provider_config),
-      oauth: oauth_flag(domain, type, mod),
-      family: family_for(domain, type, oauth_flag(domain, type, mod)),
+      oauth: oauth,
+      family: family_for(domain, type, oauth),
       capabilities: capabilities_for(mod),
       config_schema: schema_for(mod),
       provider_module: mod,

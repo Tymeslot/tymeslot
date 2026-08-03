@@ -134,7 +134,10 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
       description: "Subscribe to a published calendar feed, read-only",
       button_text: "Subscribe to a feed",
       click_event: "connect_provider",
-      circuit_breaker_enabled: true
+      # A provider-global breaker is the wrong shape for arbitrary per-user
+      # feed hosts, and nothing in the ICS path calls CalendarCircuitBreaker
+      # today; a breaker process for it would only ever report :closed.
+      circuit_breaker_enabled: false
     },
     google: %{
       icon: "google",

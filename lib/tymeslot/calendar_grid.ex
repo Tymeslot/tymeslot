@@ -101,6 +101,8 @@ defmodule Tymeslot.CalendarGrid do
   - `"outlook"` → `RefreshOutlookCalendarWorker` (delta sync or bootstrap; the
     standard webhook-driven `SyncOutlookCalendarWorker` is per-event and can't
     service a manual refresh on its own)
+  - `"debug"` → `SyncDebugCalendarWorker`
+  - `"ics_url"` → `SyncIcsCalendarWorker`
   - any provider returned by `ProviderConfig.caldav_based_providers/0` →
     `SyncCalDavCalendarWorker`
 
