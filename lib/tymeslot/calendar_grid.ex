@@ -15,6 +15,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Reminder
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncDebugCalendarWorker
@@ -252,6 +253,25 @@ defmodule Tymeslot.CalendarGrid do
   @spec get_or_create_preferences(integer()) :: term()
   def get_or_create_preferences(user_id) do
     CalendarPreferencesQueries.get_or_create(user_id)
+  end
+
+  @doc """
+  The clock format to render times in for the given organiser: their stored
+  choice, or the preset `locale` implies when they have never set one.
+
+  For callers that hold only a user id, such as email templates. Anything
+  already holding the preferences struct should resolve it directly through
+  `Tymeslot.Utils.DateTimeUtils.TimeFormat.resolve/2` instead of paying for
+  another query.
+  """
+  @spec get_user_time_format(integer() | nil, String.t() | nil) :: String.t()
+  def get_user_time_format(nil, locale), do: TimeFormat.for_locale(locale)
+
+  def get_user_time_format(user_id, locale) do
+    user_id
+    |> CalendarPreferencesQueries.get_or_create()
+    |> Map.get(:time_format)
+    |> TimeFormat.resolve(locale)
   end
 
   @doc """

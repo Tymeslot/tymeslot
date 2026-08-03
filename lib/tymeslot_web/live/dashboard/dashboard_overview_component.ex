@@ -211,6 +211,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           <.agenda_cockpit
             entry={@agenda.next}
             timezone={@agenda.timezone}
+            time_format={@time_format}
             then_entry={@then_entry}
             more_count={@more_count}
             myself={@myself}
@@ -253,6 +254,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
               row={row}
               now={@now}
               timezone={@agenda.timezone}
+              time_format={@time_format}
               myself={@myself}
             />
           </div>
@@ -266,6 +268,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
               :for={entry <- @tomorrow_entries}
               entry={entry}
               timezone={@agenda.timezone}
+              time_format={@time_format}
               myself={@myself}
             />
           </div>
@@ -300,6 +303,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
         :if={@selected_entry}
         entry={@selected_entry}
         timezone={@agenda.timezone}
+        time_format={@time_format}
         now={@now}
         myself={@myself}
       />
@@ -325,6 +329,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
 
   attr :entry, :map, required: true
   attr :timezone, :string, required: true
+  attr :time_format, :string, required: true
   attr :then_entry, :map, default: nil
   attr :more_count, :integer, default: 0
   attr :myself, :any, required: true
@@ -351,7 +356,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           <div class="min-w-0">
             <h3 class="text-token-2xl font-black tracking-tight truncate">{@entry.title}</h3>
             <p class="mt-1 text-white/90 font-semibold text-token-sm">
-              {time_label(@entry, @timezone)}<span :if={@entry.who}> · {@entry.who}</span>
+              {time_label(@entry, @timezone, @time_format)}<span :if={@entry.who}> · {@entry.who}</span>
             </p>
             <p
               :if={@entry.location}
@@ -400,7 +405,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
               "dashboard_home",
               "then"
             )}</span>
-          {@then_entry.title} · {time_label(@then_entry, @timezone)}<span :if={@more_count > 0}>
+          {@then_entry.title} · {time_label(@then_entry, @timezone, @time_format)}<span :if={@more_count > 0}>
             ·
             {dngettext(
               "dashboard_home",
@@ -419,6 +424,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   attr :row, :any, required: true
   attr :now, :map, required: true
   attr :timezone, :string, required: true
+  attr :time_format, :string, required: true
   attr :myself, :any, required: true
 
   defp spine_row(%{row: {:event, _entry, _meta}} = assigns) do
@@ -435,7 +441,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
     ~H"""
     <div class="flex gap-3">
       <div class="w-12 shrink-0 pt-3.5 text-right text-token-xs font-black tabular-nums text-tymeslot-400">
-        {time_label(@entry, @timezone)}
+        {time_label(@entry, @timezone, @time_format)}
       </div>
       <.rail node={if @in_progress?, do: :live, else: :event} colour_class={@colour_class} />
       <div
@@ -516,7 +522,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
     ~H"""
     <div class="flex gap-3">
       <div class="w-12 shrink-0 pt-1.5 text-right text-token-xs font-black tabular-nums text-turquoise-600">
-        {now_time_label(@now, @timezone)}
+        {now_time_label(@now, @timezone, @time_format)}
       </div>
       <.rail node={:now} />
       <div class="flex-1 py-1 text-token-xs font-black uppercase tracking-widest text-turquoise-600">
@@ -567,6 +573,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
 
   attr :entry, :map, required: true
   attr :timezone, :string, required: true
+  attr :time_format, :string, required: true
   attr :myself, :any, required: true
 
   defp peek_row(assigns) do
@@ -578,7 +585,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
       class="flex items-center gap-3 py-1.5 px-2 -mx-2 rounded-token-xl cursor-pointer hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400 transition-colors"
     >
       <div class="w-14 shrink-0 text-token-xs font-black tabular-nums text-tymeslot-400">
-        {if @entry.all_day?, do: dgettext("dashboard_home", "All day"), else: time_label(@entry, @timezone)}
+        {if @entry.all_day?, do: dgettext("dashboard_home", "All day"), else: time_label(@entry, @timezone, @time_format)}
       </div>
       <span
         :if={EventColour.tailwind_class(@entry.colour)}

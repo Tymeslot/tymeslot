@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
   alias TymeslotWeb.Dashboard.Automation.SlackEmptyState
 
   attr :integrations, :list, required: true
+  attr :time_format, :string, required: true
   attr :slack_testing, :any, required: true
   attr :oauth_mode_available?, :boolean, required: true
   attr :myself, :any, required: true
@@ -46,6 +47,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackTab do
         <div class="grid grid-cols-1 gap-6">
           <%= for integration <- @integrations do %>
             <SlackCard.slack_card
+              time_format={@time_format}
               integration={integration}
               testing={@slack_testing == integration.id}
               target={@myself}

@@ -16,7 +16,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesQueriesTest do
       assert prefs.default_view == "week"
       assert prefs.hidden_integration_ids == []
       assert prefs.week_start_day == "monday"
-      assert prefs.time_format == "12h"
+      # nil, not "12h": a user who has never opened settings has chosen no
+      # clock, so their language supplies it at render time.
+      assert is_nil(prefs.time_format)
       assert prefs.show_week_numbers == false
       assert prefs.show_weekends == true
       assert is_nil(prefs.id)

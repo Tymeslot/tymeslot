@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewFormatters do
 
   alias Tymeslot.Agenda.Entry
   alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Helpers.LocaleFormat
 
   # Server-rendered starting text for the cockpit countdown; the AgendaCountdown
@@ -42,23 +43,24 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewFormatters do
     "#{weekday} #{day.day} #{month}"
   end
 
-  @spec time_label(Entry.t(), String.t()) :: String.t()
-  def time_label(%{all_day?: true}, _timezone), do: dgettext("dashboard_home", "All day")
+  @spec time_label(Entry.t(), String.t(), String.t()) :: String.t()
+  def time_label(%{all_day?: true}, _timezone, _time_format),
+    do: dgettext("dashboard_home", "All day")
 
-  def time_label(entry, timezone) do
-    now_time_label(entry.start_at, timezone)
+  def time_label(entry, timezone, time_format) do
+    now_time_label(entry.start_at, timezone, time_format)
   end
 
   @doc """
-  Formats a UTC datetime as a locale-aware clock label in the given timezone.
+  Formats a UTC datetime as a clock label in the given timezone, using the
+  organiser's resolved clock format. The agenda is theirs, so the format is
+  taken explicitly rather than inferred, and every label on the page agrees.
   """
-  @spec now_time_label(DateTime.t(), String.t()) :: String.t()
-  def now_time_label(datetime, timezone) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-
+  @spec now_time_label(DateTime.t(), String.t(), String.t()) :: String.t()
+  def now_time_label(datetime, timezone, time_format) do
     datetime
     |> DateTimeUtils.convert_to_timezone(timezone)
-    |> LocaleFormat.format_time(locale)
+    |> TimeFormat.format(time_format)
   end
 
   @spec local_date(DateTime.t(), String.t()) :: Date.t()

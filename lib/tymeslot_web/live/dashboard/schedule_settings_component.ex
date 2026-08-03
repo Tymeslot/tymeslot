@@ -137,6 +137,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
             id="availability-grid"
             current_user={@current_user}
             profile={@profile}
+            time_format={@time_format}
             weekly_schedule={@weekly_schedule}
           />
         <% end %>

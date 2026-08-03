@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
   alias TymeslotWeb.Dashboard.Automation.WebhookEmptyState
 
   attr :webhooks, :list, required: true
+  attr :time_format, :string, required: true
   attr :testing_connection, :any, required: true
   attr :myself, :any, required: true
 
@@ -35,6 +36,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookTab do
         <div class="grid grid-cols-1 gap-6">
           <%= for webhook <- @webhooks do %>
             <WebhookCard.webhook_card
+              time_format={@time_format}
               webhook={webhook}
               testing={@testing_connection == webhook.id}
               target={@myself}
