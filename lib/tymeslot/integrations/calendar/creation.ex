@@ -264,7 +264,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   """
   @spec prevalidate_config(%{required(:provider) => String.t(), optional(atom()) => term()}) ::
           {:ok, %{required(:provider) => String.t(), optional(atom()) => term()}}
-          | {:error, Ecto.Changeset.t() | {:rate_limited, String.t()} | :unattributable}
+          | {:error, %{discovery: String.t()} | {:rate_limited, String.t()} | :unattributable}
   def prevalidate_config(%{provider: provider} = attrs)
       when provider in @caldav_provider_strings do
     config = %{
@@ -290,9 +290,14 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
         {:error, :unattributable} ->
           {:error, :unattributable}
 
+        # Reported against `:discovery`, the key both CalDAV forms already use
+        # for "the connection attempt itself failed". A probe failure is never
+        # attributable to one input: the reason arrives as a sanitised sentence,
+        # not a field, so it is shown form-level rather than guessed onto a
+        # field from the wording of its message.
         {:error, reason} ->
           message = ErrorHandler.sanitize_error_message(reason, provider_atom)
-          {:error, ErrorHandler.create_validation_error(message)}
+          {:error, %{discovery: message}}
       end
     else
       # If provider validation/lookup fails, skip pre-validation and allow creation to proceed

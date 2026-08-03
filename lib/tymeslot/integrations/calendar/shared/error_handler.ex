@@ -320,26 +320,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   defp get_other_suggestion(_category), do: nil
 
   @doc """
-  Creates a validation error in the format expected by the UI.
-
-  ## Parameters
-  - `message` - The error message
-  - `field` - The field that caused the error (optional)
-
-  ## Returns
-  - Pseudo-changeset error structure
-  """
-  @spec create_validation_error(String.t(), atom() | nil) :: Ecto.Changeset.t()
-  def create_validation_error(message, field \\ nil) do
-    error_field = field || detect_error_field(message)
-
-    %Ecto.Changeset{
-      errors: [{error_field, {message, []}}],
-      valid?: false
-    }
-  end
-
-  @doc """
   Wraps an operation with error handling and formatting.
 
   ## Parameters
@@ -433,27 +413,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
       :google -> "Google Calendar"
       :outlook -> "Outlook Calendar"
       _other_provider -> "calendar provider"
-    end
-  end
-
-  defp detect_error_field(message) do
-    message_lower = String.downcase(message)
-
-    cond do
-      String.contains?(message_lower, ["password", "authentication", "unauthorized"]) ->
-        :password
-
-      String.contains?(message_lower, ["username", "user"]) ->
-        :username
-
-      String.contains?(message_lower, ["url", "domain", "endpoint", "server"]) ->
-        :base_url
-
-      String.contains?(message_lower, ["calendar", "path"]) ->
-        :calendar_paths
-
-      true ->
-        :base
     end
   end
 end
