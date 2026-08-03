@@ -95,6 +95,19 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     "analytics_tracking_anomaly:#{Map.get(metadata, :kind, "unknown")}"
   end
 
+  # The message embeds the offending event's id, so a feed carrying many events
+  # that are all malformed the same way would raise one alert per event. Dedup
+  # on the integration and reason instead: the operator needs to know that one
+  # integration is producing unusable events, not which ones. Matched on the
+  # shape the provider normalisers send, so other callers of this type keep the
+  # default message-based key.
+  def dedup_key(:invalid_calendar_event, %{calendar_integration_id: integration_id} = metadata) do
+    provider = Map.get(metadata, :provider, "unknown")
+    reason = Map.get(metadata, :reason, "unknown")
+
+    "invalid_calendar_event:#{provider}:#{integration_id}:#{reason}"
+  end
+
   def dedup_key(type, metadata), do: format_message(type, metadata)
 
   @doc "Formats a human-readable message for the given alert type and metadata."

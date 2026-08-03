@@ -103,33 +103,14 @@ defmodule Tymeslot.Payments.Webhooks.HandlersTest do
                CheckoutSessionHandler.validate(%{"id" => ""})
     end
 
-    test "process/2 handles payment mode" do
+    test "process/2 ignores an unexpected (non-subscription) mode" do
       session = %{"id" => "cs_123", "mode" => "payment"}
 
-      # We need to mock Tymeslot.Payments.process_successful_payment indirectly
-      # or just mock the stripe provider it uses.
-      # Actually CheckoutSessionHandler calls Tymeslot.Payments.process_successful_payment
-      # which calls Config.stripe_provider().verify_session(stripe_id)
-
-      Application.put_env(:tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock)
-
-      expect(Tymeslot.Payments.StripeMock, :verify_session, fn "cs_123" ->
-        {:ok, %{id: "cs_123"}}
-      end)
-
-      # It also calls DatabaseOperations.process_successful_payment
-      # which we can't easily mock as it's not a behaviour.
-      # But we can use the real one if we have a transaction in the DB.
-
-      user = Factory.insert(:user)
-
-      Factory.insert(:payment_transaction,
-        user: user,
-        stripe_id: "cs_123",
-        status: "pending"
-      )
-
-      assert {:ok, :payment_processed} =
+      # The platform account only ever creates subscription-mode sessions;
+      # paid bookings run through the separate Connect checkout and its own
+      # webhook endpoint. Any other mode here is unexpected and must not be
+      # silently treated as a processed payment.
+      assert {:ok, :ignored} =
                CheckoutSessionHandler.process(%{type: "checkout.session.completed"}, session)
     end
 

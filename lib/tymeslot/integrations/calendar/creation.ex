@@ -222,10 +222,10 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
       {:error, reason} ->
         # Feed failures get their own copy rather than the CalDAV-shaped
         # "check your credentials" phrasing: there are no credentials here,
-        # only a URL the user can fix. Returned field-scoped (rather than run
-        # through `ErrorHandler.create_validation_error/1`) so the message
-        # renders as-is under the Feed URL input, with no guessed field
-        # prefix.
+        # only a URL the user can fix. Scoped to `:url` rather than the
+        # form-level `:discovery` key the CalDAV probe reports against,
+        # because this form has exactly one input and the failure is always
+        # attributable to it.
         {:error, %{url: Feed.error_message(reason)}}
     end
   end
@@ -421,7 +421,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   """
   @spec prevalidate_config(%{required(:provider) => String.t(), optional(atom()) => term()}) ::
           {:ok, %{required(:provider) => String.t(), optional(atom()) => term()}}
-          | {:error, Ecto.Changeset.t() | {:rate_limited, String.t()} | :unattributable}
+          | {:error, %{discovery: String.t()} | {:rate_limited, String.t()} | :unattributable}
   def prevalidate_config(%{provider: provider} = attrs)
       when provider in @caldav_provider_strings do
     config = %{
@@ -447,9 +447,14 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
         {:error, :unattributable} ->
           {:error, :unattributable}
 
+        # Reported against `:discovery`, the key both CalDAV forms already use
+        # for "the connection attempt itself failed". A probe failure is never
+        # attributable to one input: the reason arrives as a sanitised sentence,
+        # not a field, so it is shown form-level rather than guessed onto a
+        # field from the wording of its message.
         {:error, reason} ->
           message = ErrorHandler.sanitize_error_message(reason, provider_atom)
-          {:error, ErrorHandler.create_validation_error(message)}
+          {:error, %{discovery: message}}
       end
     else
       # If provider validation/lookup fails, skip pre-validation and allow creation to proceed

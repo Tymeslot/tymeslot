@@ -193,10 +193,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
 
   defp resolve_timing_values(start_val, end_val) do
     cond do
-      is_struct(start_val, Date) and not is_struct(start_val, DateTime) ->
+      is_struct(start_val, Date) ->
         # RFC 5545 §3.8.2.2: when DTEND is absent for a DATE-valued event,
         # it defaults to DTSTART + P1D (one day later).
-        effective_end = end_val || Date.add(start_val, 1)
+        effective_end = end_date(end_val) || Date.add(start_val, 1)
         {true, start_val, effective_end, nil}
 
       radicale_all_day?(start_val, end_val) ->
@@ -204,15 +204,53 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
 
       is_struct(start_val, DateTime) ->
         tz = start_val.time_zone
-        {false, DateTime.shift_zone!(start_val, "Etc/UTC"), shift_end(end_val), tz}
+        {false, DateTime.shift_zone!(start_val, "Etc/UTC"), end_datetime(end_val, tz), tz}
 
       true ->
         {false, start_val, end_val, nil}
     end
   end
 
-  defp shift_end(%DateTime{} = dt), do: DateTime.shift_zone!(dt, "Etc/UTC")
-  defp shift_end(other), do: other
+  # RFC 5545 §3.8.2.2 requires DTSTART and DTEND to share a value type, but
+  # producers do emit a `VALUE=DATE` DTSTART against a `DATE-TIME` DTEND (and the
+  # reverse). The iCal parser types each property independently, so the mismatch
+  # reaches here intact. DTSTART decides the representation and DTEND is
+  # converted to match; otherwise the event carries a `%DateTime{}` in a `:date`
+  # column (or the reverse) and is dropped by `CalendarEvent.validate_timing/1`.
+  #
+  # DTEND is exclusive in both representations, so the conversions preserve the
+  # instant the event stops blocking: a DTEND carrying a time of day rounds up to
+  # the following date rather than truncating away that final part-day.
+  defp end_date(nil), do: nil
+  defp end_date(%Date{} = date), do: date
+
+  defp end_date(%DateTime{} = dt) do
+    date = DateTime.to_date(dt)
+
+    if Time.compare(DateTime.to_time(dt), ~T[00:00:00]) == :eq do
+      date
+    else
+      Date.add(date, 1)
+    end
+  end
+
+  defp end_datetime(%DateTime{} = dt, _timezone), do: DateTime.shift_zone!(dt, "Etc/UTC")
+
+  # A DATE-valued DTEND carries no zone, so it means midnight local to the event
+  # and is resolved in DTSTART's zone. Reading it as UTC instead would end the
+  # event early anywhere east of Greenwich, freeing time the user is still busy.
+  # A DST transition can leave that midnight ambiguous or missing; both take the
+  # later instant, which keeps the longer of the two readings blocked.
+  defp end_datetime(%Date{} = date, timezone) do
+    case DateTime.new(date, ~T[00:00:00], timezone) do
+      {:ok, dt} -> DateTime.shift_zone!(dt, "Etc/UTC")
+      {:ambiguous, _first, second} -> DateTime.shift_zone!(second, "Etc/UTC")
+      {:gap, _just_before, just_after} -> DateTime.shift_zone!(just_after, "Etc/UTC")
+      {:error, _reason} -> DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
+    end
+  end
+
+  defp end_datetime(other, _timezone), do: other
 
   defp radicale_all_day?(
          %DateTime{hour: 0, minute: 0, second: 0, time_zone: "Etc/UTC"},

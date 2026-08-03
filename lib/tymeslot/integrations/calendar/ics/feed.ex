@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.ResponseTooLargeError
   alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Security.SsrfBlockedError
 
@@ -125,6 +126,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
       opts
       |> Keyword.take([:ssrf_allow_private, :receive_timeout])
       |> Keyword.put(:ssrf_protect, true)
+      |> Keyword.put(:max_response_bytes, @max_feed_bytes)
 
     case Config.http_client_module().get(
            url,
@@ -133,6 +135,9 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
          ) do
       {:ok, %Req.Response{status: status, body: body, headers: headers}} ->
         handle_response(status, body, headers, url, opts, redirects_left)
+
+      {:error, %ResponseTooLargeError{}} ->
+        {:error, :too_large}
 
       {:error, %SsrfBlockedError{reason: reason}} ->
         {:error, {:blocked, reason}}
@@ -185,8 +190,9 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
     end
   end
 
-  # Servers are free to omit content-length, so the cap is enforced on what
-  # actually arrived rather than on what was advertised.
+  # The transfer itself is capped at `@max_feed_bytes` by the HTTP client, which
+  # aborts at the chunk that crosses the budget. This second check costs nothing
+  # and keeps the limit honest for a client that hands back a whole body anyway.
   defp within_size_limit(body) when is_binary(body) do
     if byte_size(body) > @max_feed_bytes do
       {:error, :too_large}
