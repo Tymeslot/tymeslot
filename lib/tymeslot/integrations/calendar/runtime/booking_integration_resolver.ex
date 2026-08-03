@@ -97,28 +97,29 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver do
   def resolve(user_id) when is_integer(user_id) do
     case CalendarPrimary.get_primary_calendar_integration(user_id) do
       {:ok, integration} when is_binary(integration.default_booking_calendar_id) ->
-        if bookable?(integration), do: integration, else: fallback_integration(user_id)
+        if bookable?(integration),
+          do: integration,
+          else: fallback_integration(bookable_integrations(user_id))
 
       {:ok, integration} ->
-        find_integration_with_booking_calendar(user_id) ||
-          if bookable?(integration), do: integration, else: fallback_integration(user_id)
+        integrations = bookable_integrations(user_id)
+
+        find_integration_with_booking_calendar(integrations) ||
+          if bookable?(integration), do: integration, else: fallback_integration(integrations)
 
       {:error, _reason} ->
-        fallback_integration(user_id)
+        fallback_integration(bookable_integrations(user_id))
     end
   end
 
   def resolve(_other), do: nil
 
-  defp fallback_integration(user_id) do
-    integrations = bookable_integrations(user_id)
+  defp fallback_integration(integrations) do
     Enum.find(integrations, & &1.default_booking_calendar_id) || List.first(integrations)
   end
 
-  defp find_integration_with_booking_calendar(user_id) do
-    user_id
-    |> bookable_integrations()
-    |> Enum.find(& &1.default_booking_calendar_id)
+  defp find_integration_with_booking_calendar(integrations) do
+    Enum.find(integrations, & &1.default_booking_calendar_id)
   end
 
   # Subscriptions are read-only, so they must never be picked up by any of the

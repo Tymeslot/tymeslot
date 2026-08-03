@@ -25,7 +25,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   """
   @spec set_primary_calendar_integration(user_id(), integration_id()) ::
           {:ok, CalendarIntegrationSchema.t()}
-          | {:error, :not_found | :unauthorized | Ecto.Changeset.t()}
+          | {:error, :not_found | :unauthorized | :not_bookable | Ecto.Changeset.t()}
   def set_primary_calendar_integration(user_id, integration_id) do
     with {:ok, integration} <- validate_and_prepare_integration(user_id, integration_id),
          {:ok, _profile} <- update_profile_primary(user_id, integration_id) do
@@ -170,10 +170,24 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   defp validate_and_prepare_integration(user_id, integration_id) do
     with {:ok, integration} <-
            CalendarManagement.get_calendar_integration(integration_id, user_id),
-         :ok <- verify_integration_ownership(integration, user_id) do
+         :ok <- verify_integration_ownership(integration, user_id),
+         :ok <- verify_bookable(integration) do
       {:ok, integration}
     else
       {:error, error_reason} -> {:error, error_reason}
+    end
+  end
+
+  # A subscription is read-only, so it can never be the calendar bookings are
+  # written to. This is the single choke point every caller of
+  # `set_primary_calendar_integration/2` goes through, so the invariant holds
+  # regardless of whether the caller reached here from creation, a toggle, or
+  # a deletion promotion.
+  defp verify_bookable(%CalendarIntegrationSchema{provider: provider}) do
+    if ProviderConfig.subscription?(provider) do
+      {:error, :not_bookable}
+    else
+      :ok
     end
   end
 
@@ -204,11 +218,14 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   end
 
   defp handle_primary_deletion(user_id) do
-    remaining_integrations = CalendarManagement.list_calendar_integrations(user_id)
+    eligible_integrations =
+      user_id
+      |> CalendarManagement.list_calendar_integrations()
+      |> Enum.reject(&ProviderConfig.subscription?(&1.provider))
 
-    case remaining_integrations do
+    case eligible_integrations do
       [] ->
-        # No more calendars, clear the primary in the profile
+        # No bookable calendars left, clear the primary in the profile
         ProfileQueries.clear_primary_calendar_integration(user_id)
         :ok
 

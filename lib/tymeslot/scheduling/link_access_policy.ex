@@ -6,6 +6,7 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
   """
 
   alias Tymeslot.Demo
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.CalendarManagement
 
   @type dashboard_reason :: :no_username | :no_calendar
@@ -91,7 +92,8 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
 
       true ->
         integrations = CalendarManagement.list_active_calendar_integrations(profile.user_id)
-        if integrations != [], do: {:ok, :ready}, else: {:error, :no_calendar}
+        bookable = Enum.reject(integrations, &ProviderConfig.subscription?(&1.provider))
+        if bookable != [], do: {:ok, :ready}, else: {:error, :no_calendar}
     end
   end
 
