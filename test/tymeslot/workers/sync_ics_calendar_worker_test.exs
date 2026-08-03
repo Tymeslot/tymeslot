@@ -17,6 +17,7 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorkerTest do
   alias Plug.Conn
   alias Req.Test, as: ReqTest
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.SyncIcsCalendarWorker
@@ -71,6 +72,28 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorkerTest do
     |> Enum.map(& &1.uid)
   end
 
+  defp feed_with_events(count) do
+    events =
+      Enum.map_join(1..count, "\n", fn n ->
+        """
+        BEGIN:VEVENT
+        UID:event-#{n}@example.com
+        DTSTART:2026081#{n}T090000Z
+        DTEND:2026081#{n}T100000Z
+        SUMMARY:Event #{n}
+        END:VEVENT\
+        """
+      end)
+
+    """
+    BEGIN:VCALENDAR
+    VERSION:2.0
+    PRODID:-//Example Corp//Publisher//EN
+    #{events}
+    END:VCALENDAR
+    """
+  end
+
   describe "perform/1 on success" do
     test "caches the feed's events", %{integration: integration} do
       stub_feed(@ics)
@@ -101,24 +124,32 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorkerTest do
       assert cached_uids(integration) == ["from-feed@example.com"]
     end
 
-    test "empties the cache when the feed no longer holds any events", %{
-      integration: integration
-    } do
-      insert(:provider_calendar_event,
-        calendar_integration: integration,
-        provider: "ics_url",
-        provider_calendar_id: "subscription",
-        uid: "stale-event",
-        start_at: ~U[2026-08-09 09:00:00.000000Z],
-        end_at: ~U[2026-08-09 10:00:00.000000Z]
-      )
-
+    test "empties the cache when the feed no longer holds any events and the cache was already empty",
+         %{integration: integration} do
       stub_feed("BEGIN:VCALENDAR\nVERSION:2.0\nEND:VCALENDAR\n")
 
       assert :ok =
                perform_job(SyncIcsCalendarWorker, %{"calendar_integration_id" => integration.id})
 
       assert cached_uids(integration) == []
+    end
+
+    test "a feed shrinking from 5 to 4 events still reconciles normally", %{
+      integration: integration
+    } do
+      stub_feed(feed_with_events(5))
+
+      assert :ok =
+               perform_job(SyncIcsCalendarWorker, %{"calendar_integration_id" => integration.id})
+
+      assert length(cached_uids(integration)) == 5
+
+      stub_feed(feed_with_events(4))
+
+      assert :ok =
+               perform_job(SyncIcsCalendarWorker, %{"calendar_integration_id" => integration.id})
+
+      assert length(cached_uids(integration)) == 4
     end
 
     test "stamps its own sync timestamps and clears a previous error", %{
@@ -157,6 +188,99 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorkerTest do
     end
   end
 
+  describe "perform/1 guards an empty feed against a populated cache" do
+    test "keeps the cache and retries when the feed comes back empty but the cache is populated",
+         %{integration: integration} do
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        provider: "ics_url",
+        provider_calendar_id: "subscription",
+        uid: "stale-event",
+        start_at: ~U[2026-08-09 09:00:00.000000Z],
+        end_at: ~U[2026-08-09 10:00:00.000000Z]
+      )
+
+      stub_feed("BEGIN:VCALENDAR\nVERSION:2.0\nEND:VCALENDAR\n")
+
+      assert {:error, _reason} =
+               perform_job(SyncIcsCalendarWorker, %{"calendar_integration_id" => integration.id})
+
+      # The suspicious empty read must not wipe the diary.
+      assert cached_uids(integration) == ["stale-event"]
+
+      {:ok, guarded} = CalendarIntegrationQueries.get(integration.id)
+      refute guarded.needs_reauth
+      assert guarded.sync_error =~ "empty"
+    end
+  end
+
+  describe "perform/1 recovers from a crash while writing the cache" do
+    test "records a sync error and preserves the cache when a poisoned event raises", %{
+      integration: integration
+    } do
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        provider: "ics_url",
+        provider_calendar_id: "subscription",
+        uid: "known-good",
+        start_at: ~U[2026-08-09 09:00:00.000000Z],
+        end_at: ~U[2026-08-09 10:00:00.000000Z]
+      )
+
+      # DTSTART is a bare DATE while DTEND is a DATE-TIME: the normaliser's
+      # timing resolution (deliberately left untouched — see the reviewer
+      # notes) treats this as all-day but keeps DTEND as a DateTime, so
+      # `end_date` reaches the insert as a DateTime against a `:date` column
+      # and Ecto raises while writing the batch.
+      stub_feed("""
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      PRODID:-//Example Corp//Publisher//EN
+      BEGIN:VEVENT
+      UID:poison@example.com
+      DTSTART:20260810
+      DTEND:20260810T100000Z
+      SUMMARY:Poison event
+      END:VEVENT
+      END:VCALENDAR
+      """)
+
+      assert {:error, _reason} =
+               perform_job(SyncIcsCalendarWorker, %{"calendar_integration_id" => integration.id})
+
+      # The transaction must have rolled back rather than crash-looping with
+      # a half-applied wipe.
+      assert cached_uids(integration) == ["known-good"]
+
+      {:ok, failed} = CalendarIntegrationQueries.get(integration.id)
+      refute failed.needs_reauth
+      assert failed.sync_error =~ "Ecto.ChangeError"
+    end
+  end
+
+  describe "perform/1 when credentials cannot be decrypted" do
+    test "routes through the shared reauth path instead of silently discarding", %{
+      user: user
+    } do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "ics_url",
+          base_url: "https://feeds.example.com",
+          username_encrypted: nil,
+          password_encrypted: nil,
+          subscription_url_encrypted: :crypto.strong_rand_bytes(40)
+        )
+
+      assert {:discard, _reason} =
+               perform_job(SyncIcsCalendarWorker, %{"calendar_integration_id" => integration.id})
+
+      flagged = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert flagged.needs_reauth
+      assert flagged.sync_error
+    end
+  end
+
   describe "perform/1 on failure" do
     test "discards and flags for reauth when the feed rejects the link", %{
       integration: integration
@@ -168,7 +292,9 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorkerTest do
 
       {:ok, flagged} = CalendarIntegrationQueries.get(integration.id)
       assert flagged.needs_reauth
-      assert flagged.sync_error =~ "revoked"
+
+      assert flagged.sync_error ==
+               "The calendar feed rejected the stored link. It was probably revoked or reset — subscribe again with a fresh URL."
     end
 
     test "retries and records the error when the feed is temporarily unavailable", %{

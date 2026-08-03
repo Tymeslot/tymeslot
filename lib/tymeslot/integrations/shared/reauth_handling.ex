@@ -32,8 +32,15 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   * `:expired_grant` — the OAuth grant has expired or the user revoked it.
   * `:rejected_credentials` — the provider rejected the credentials for some
     other permanent reason (`invalid_client`, `access_denied`, a bare 401).
+  * `:rejected_subscription_url` — a published calendar feed rejected the
+    stored subscription link (401/403), which means it was revoked or
+    rotated rather than that any credentials expired.
   """
-  @type cause :: :credentials_undecryptable | :expired_grant | :rejected_credentials
+  @type cause ::
+          :credentials_undecryptable
+          | :expired_grant
+          | :rejected_credentials
+          | :rejected_subscription_url
 
   @default_cause :credentials_undecryptable
 
@@ -56,6 +63,11 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
       log: "Integration credentials were rejected by the provider — flagging for reauth",
       message:
         "The provider rejected the stored credentials for this integration. Please reconnect the integration."
+    },
+    rejected_subscription_url: %{
+      log: "Calendar subscription feed rejected the stored link — flagging for reauth",
+      message:
+        "The calendar feed rejected the stored link. It was probably revoked or reset — subscribe again with a fresh URL."
     }
   }
 

@@ -37,14 +37,13 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Ics.Provider
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck
 
   @calendar_id "subscription"
-
-  @reauth_message "The calendar feed rejected the stored link. It was probably revoked or reset — subscribe again with a fresh URL."
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
@@ -59,8 +58,8 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
 
         {:discard, "Integration not found"}
 
-      {:error, :requires_reencryption, _integration} ->
-        {:discard, "Integration requires re-encryption"}
+      {:error, :requires_reencryption, integration} ->
+        CalendarManagement.handle_reauth_required(integration)
     end
   end
 
@@ -70,7 +69,7 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
         refresh_cache(integration, raw_events)
 
       {:error, :unauthorised} ->
-        flag_reauth_required(integration)
+        CalendarManagement.handle_reauth_required(integration, cause: :rejected_subscription_url)
 
       {:error, :missing_url} ->
         Logger.error("Calendar subscription has no feed URL stored",
@@ -92,6 +91,30 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
     }
 
     {:ok, events} = Provider.normalise_events(raw_events, context)
+
+    if events == [] and cache_populated?(integration) do
+      record_failure(integration, :empty_feed_with_populated_cache)
+    else
+      write_cache(integration, events)
+    end
+  end
+
+  # A syntactically valid but empty feed is far more likely a bad read than a
+  # genuinely emptied calendar once the cache already holds events for this
+  # integration — see the moduledoc. Wiping on that signal alone is the one
+  # non-self-healing damage path in this worker, so it is refused: the cache
+  # is left as-is and the job retries.
+  defp cache_populated?(integration) do
+    now = DateTime.utc_now()
+    range_start = DateTime.add(now, -ProviderConfig.sync_window_past_days(), :day)
+    range_end = DateTime.add(now, ProviderConfig.sync_window_future_days(), :day)
+
+    [integration.id]
+    |> ProviderCalendarEventQueries.list_for_range(range_start, range_end, limit: 1)
+    |> Enum.any?()
+  end
+
+  defp write_cache(integration, events) do
     attrs = Enum.map(events, &ProviderCalendarEventSchema.from_calendar_event/1)
 
     case ProviderCalendarEventQueries.full_refresh_for_integration(integration.id, attrs) do
@@ -110,6 +133,8 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
       {:error, reason} ->
         record_failure(integration, reason)
     end
+  rescue
+    error -> record_failure(integration, error)
   end
 
   # Stamps its own timestamps rather than going through
@@ -148,29 +173,32 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
     end
   end
 
-  defp flag_reauth_required(integration) do
-    Logger.warning("Calendar subscription feed rejected the stored link; flagging for reauth",
-      calendar_integration_id: integration.id
-    )
-
-    case CalendarManagement.mark_needs_reauth(integration, @reauth_message) do
-      {:ok, _updated} ->
-        {:discard, "Calendar feed rejected the stored link — a fresh URL is required"}
-
-      {:error, _changeset} ->
-        {:error, "Failed to flag subscription for reauth"}
-    end
-  end
-
   defp record_failure(integration, reason) do
     Logger.error("Calendar subscription sync failed",
       calendar_integration_id: integration.id,
       error: inspect(reason)
     )
 
-    CalendarIntegrationQueries.mark_sync_error(integration, Feed.error_message(reason))
+    CalendarIntegrationQueries.mark_sync_error(integration, error_message(reason))
 
     {:error, reason}
+  end
+
+  # A rescued exception never reaches `Feed.error_message/1` — it only knows
+  # the feed-fetch vocabulary — so it gets its own message naming the failure
+  # class instead, and the guarded empty-feed case gets one of its own too.
+  defp error_message(exception) when is_exception(exception) do
+    "Calendar subscription sync failed while writing a fetched event to the cache " <>
+      "(#{inspect(exception.__struct__)}): #{Exception.message(exception)}"
+  end
+
+  defp error_message(:empty_feed_with_populated_cache) do
+    "The calendar feed came back empty, but the cache still holds previously synced events. " <>
+      "Keeping the cache in place and retrying rather than emptying your diary."
+  end
+
+  defp error_message(reason) do
+    Feed.error_message(reason)
   end
 
   defp feed_url(%{subscription_url: url}) when is_binary(url), do: url
