@@ -9,6 +9,7 @@ defmodule Tymeslot.Payments.Stripe do
 
   alias Ecto.UUID
   alias Stripe.{BillingPortal, Checkout.Session, Customer, Subscription, Webhook}
+  alias Tymeslot.Payments.Behaviours.StripeProvider
   alias Tymeslot.Payments.RetryHelper
 
   @type stripe_result :: {:ok, map()} | {:error, any()}
@@ -27,6 +28,7 @@ defmodule Tymeslot.Payments.Stripe do
   @doc """
   Creates a Stripe customer for the given email.
   """
+  @impl StripeProvider
   @spec create_customer(String.t()) :: stripe_result()
   def create_customer(email) when is_binary(email) do
     create_customer(%{email: email})
@@ -51,38 +53,6 @@ defmodule Tymeslot.Payments.Stripe do
     RetryHelper.execute_with_retry(fn ->
       customer_mod().create(customer_params, api_key_opts(idempotency_key))
     end)
-  end
-
-  @doc """
-  Creates a Stripe checkout session for payment processing.
-  """
-  @spec create_session(map(), integer(), map(), String.t(), String.t()) :: stripe_result()
-  def create_session(customer, amount, transaction, success_url, cancel_url)
-      when is_integer(amount) do
-    Logger.info("Creating Stripe session", customer_id: customer.id)
-
-    session_params = build_session_params(customer, amount, transaction, success_url, cancel_url)
-    idempotency_key = generate_idempotency_key("session_create", transaction.id)
-
-    RetryHelper.execute_with_retry(fn ->
-      session_mod().create(session_params, api_key_opts(idempotency_key))
-    end)
-  end
-
-  @doc """
-  Verifies a Stripe session by ID.
-  """
-  @spec verify_session(String.t()) :: stripe_result()
-  def verify_session(session_id) when is_binary(session_id) do
-    case session_mod().retrieve(session_id, %{}, api_key_opts()) do
-      {:ok, session} ->
-        Logger.info("Session verified successfully", session_id: session_id)
-        {:ok, session}
-
-      error ->
-        Logger.error("Failed to verify session", error: inspect(error))
-        error
-    end
   end
 
   # Private functions
@@ -160,46 +130,10 @@ defmodule Tymeslot.Payments.Stripe do
     "#{operation}_#{hashed_id}_#{date}"
   end
 
-  defp build_session_params(customer, amount, transaction, success_url, cancel_url) do
-    currency = Application.get_env(:tymeslot, :currency, "eur")
-
-    %{
-      mode: :payment,
-      payment_method_types: [:card],
-      line_items: [
-        %{
-          quantity: 1,
-          price_data: %{
-            currency: currency,
-            unit_amount: amount,
-            product_data: %{
-              name: transaction.product_identifier || "Tymeslot Pro"
-            }
-          }
-        }
-      ],
-      success_url: success_url,
-      cancel_url: cancel_url,
-      customer: customer.id,
-      client_reference_id: to_string(transaction.id),
-      tax_id_collection: %{enabled: true},
-      billing_address_collection: :required,
-      payment_intent_data: %{
-        metadata: %{"transaction_id" => to_string(transaction.id)}
-      },
-      allow_promotion_codes: true,
-      automatic_tax: %{enabled: true},
-      customer_update: %{
-        address: "auto",
-        name: "auto",
-        shipping: "auto"
-      }
-    }
-  end
-
   @doc """
   Expires a Stripe checkout session, preventing it from being completed.
   """
+  @impl StripeProvider
   @spec expire_checkout_session(String.t()) :: stripe_result()
   def expire_checkout_session(session_id) when is_binary(session_id) do
     Logger.info("Expiring Stripe checkout session", session_id: session_id)
@@ -212,6 +146,7 @@ defmodule Tymeslot.Payments.Stripe do
   @doc """
   Creates a Stripe checkout session for subscription processing.
   """
+  @impl StripeProvider
   @spec create_checkout_session_for_subscription(map()) :: stripe_result()
   def create_checkout_session_for_subscription(params) when is_map(params) do
     Logger.info("Creating Stripe subscription checkout session")
@@ -231,6 +166,7 @@ defmodule Tymeslot.Payments.Stripe do
   @doc """
   Cancels a Stripe subscription.
   """
+  @impl StripeProvider
   @spec cancel_subscription(String.t(), keyword()) :: stripe_result()
   def cancel_subscription(subscription_id, opts \\ []) when is_binary(subscription_id) do
     Logger.info("Canceling Stripe subscription", subscription_id: subscription_id)
@@ -259,6 +195,7 @@ defmodule Tymeslot.Payments.Stripe do
   @doc """
   Updates a Stripe subscription to a new price.
   """
+  @impl StripeProvider
   @spec update_subscription(String.t(), String.t(), map()) :: stripe_result()
   def update_subscription(subscription_id, new_price_id, opts \\ %{})
       when is_binary(subscription_id) and is_binary(new_price_id) do
@@ -287,6 +224,7 @@ defmodule Tymeslot.Payments.Stripe do
   @doc """
   Retrieves a Stripe subscription.
   """
+  @impl StripeProvider
   @spec get_subscription(String.t()) :: stripe_result()
   def get_subscription(subscription_id) when is_binary(subscription_id) do
     Logger.info("Retrieving Stripe subscription", subscription_id: subscription_id)
@@ -299,6 +237,7 @@ defmodule Tymeslot.Payments.Stripe do
   @doc """
   Retrieves a Stripe charge.
   """
+  @impl StripeProvider
   @spec get_charge(String.t()) :: stripe_result()
   def get_charge(charge_id) when is_binary(charge_id) do
     Logger.info("Retrieving Stripe charge", charge_id: charge_id)
@@ -312,6 +251,7 @@ defmodule Tymeslot.Payments.Stripe do
   Constructs and verifies a webhook event from Stripe.
   This is primarily used by the webhook signature verifier.
   """
+  @impl StripeProvider
   @spec construct_webhook_event(binary(), String.t(), String.t()) :: stripe_result()
   def construct_webhook_event(payload, signature, secret)
       when is_binary(payload) and is_binary(signature) and is_binary(secret) do
@@ -321,6 +261,7 @@ defmodule Tymeslot.Payments.Stripe do
   @doc """
   Lists subscriptions from Stripe with optional filters.
   """
+  @impl StripeProvider
   @spec list_subscriptions(map()) :: stripe_result()
   def list_subscriptions(params \\ %{}) when is_map(params) do
     Logger.info("Listing Stripe subscriptions", params: inspect(params))
@@ -333,6 +274,7 @@ defmodule Tymeslot.Payments.Stripe do
   @doc """
   Returns the Stripe webhook secret from configuration or environment.
   """
+  @impl StripeProvider
   @spec webhook_secret() :: String.t() | nil
   def webhook_secret do
     Application.get_env(:stripity_stripe, :webhook_secret) ||
@@ -342,6 +284,7 @@ defmodule Tymeslot.Payments.Stripe do
   @doc """
   Creates a Stripe billing portal session for subscription management.
   """
+  @impl StripeProvider
   @spec create_billing_portal_session(String.t(), String.t()) :: stripe_result()
   def create_billing_portal_session(customer_id, return_url)
       when is_binary(customer_id) and is_binary(return_url) do
