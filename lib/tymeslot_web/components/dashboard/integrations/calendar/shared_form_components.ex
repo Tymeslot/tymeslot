@@ -264,7 +264,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   attr :type, :string, default: "text"
   attr :icon, :string, default: nil
 
-  defp text_field(assigns) do
+  @spec text_field(map()) :: Phoenix.LiveView.Rendered.t()
+  def text_field(assigns) do
     ~H"""
     <.input
       id={@id}

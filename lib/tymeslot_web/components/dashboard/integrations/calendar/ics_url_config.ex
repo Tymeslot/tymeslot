@@ -9,9 +9,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.IcsUrlConfig do
 
   use TymeslotWeb, :live_component
 
-  alias Phoenix.LiveView.JS
-  alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
-
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents,
     as: SharedForm
 
@@ -22,11 +19,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.IcsUrlConfig do
   @default_name "My subscribed calendar"
 
   @impl Phoenix.LiveComponent
-  def mount(socket) do
-    {:ok, socket}
-  end
-
-  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     {:ok,
      socket
@@ -35,52 +27,16 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.IcsUrlConfig do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("track_form_change", %{"integration" => params}, socket) do
-    {:noreply, assign(socket, :form_values, params)}
-  end
-
-  def handle_event("validate_field", %{"field" => field} = params, socket) do
-    form_values = socket.assigns.form_values || %{}
-    value = params["integration"][field] || form_values[field] || ""
-    field_atom = if field == "url", do: :url, else: :name
-
-    if String.trim(to_string(value)) == "" do
-      {:noreply, clear_error(socket, field_atom)}
-    else
-      case CalendarInputValidation.validate_single_field(field_atom, value,
-             metadata: socket.assigns.metadata
-           ) do
-        {:ok, _sanitized} ->
-          {:noreply, clear_error(socket, field_atom)}
-
-        {:error, error} ->
-          {:noreply,
-           assign(socket, :form_errors, Map.put(socket.assigns.form_errors, field_atom, error))}
-      end
-    end
-  end
-
-  defp clear_error(socket, field_atom) do
-    assign(
-      socket,
-      :form_errors,
-      FormValidationHelpers.delete_field_error(socket.assigns.form_errors, field_atom)
-    )
-  end
-
-  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div id={"ics-url-config-#{@id}"} class="space-y-6">
-      <div class="flex items-start justify-between gap-4 mb-2">
-        <div class="flex items-center gap-4">
-          <ProviderIcon.provider_icon provider="ics_url" type="calendar" size="large" />
-          <div>
-            <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">Calendar subscription</h3>
-            <p class="text-sm text-tymeslot-500 font-medium">
-              Subscribe to a published calendar feed
-            </p>
-          </div>
+      <div class="flex items-center gap-4">
+        <ProviderIcon.provider_icon provider="ics_url" type="calendar" size="large" />
+        <div>
+          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">Calendar subscription</h3>
+          <p class="text-sm text-tymeslot-500 font-medium">
+            Subscribe to a published calendar feed
+          </p>
         </div>
       </div>
 
@@ -108,21 +64,20 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.IcsUrlConfig do
             target={@target}
           />
 
-          <.input
+          <SharedForm.text_field
             id="subscription_url"
             name="integration[url]"
-            type="text"
             label="Feed URL"
             value={Map.get(@form_values, "url", "")}
-            required
-            phx-blur={JS.push("validate_field", value: %{"field" => "url"}, target: @target)}
             placeholder="https://outlook.office365.com/owa/calendar/.../calendar.ics"
             errors={FormValidationHelpers.field_errors(@form_errors, :url)}
+            target={@target}
+            field="url"
             icon="hero-link"
           />
         </div>
 
-        <.info_box variant={:info} class="mb-0">
+        <.info_box variant={:info}>
           This calendar stays read-only: it blocks the times you're already busy, and
           bookings are never written to it. Choose another calendar as your booking
           destination.

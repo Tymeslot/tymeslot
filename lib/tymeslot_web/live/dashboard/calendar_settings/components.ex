@@ -125,7 +125,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               module={IcsUrlConfig}
               id="ics-url-config"
               target={@myself}
-              metadata={@security_metadata}
               form_errors={@form_errors}
               form_values={@form_values}
               saving={@is_saving}

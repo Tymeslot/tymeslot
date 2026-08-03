@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
     google_calendar outlook outlook_calendar nextcloud nextcloud_calendar
     caldav radicale zimbra mailbox_org apple baikal ics_url
   )
+  @alt_labels %{"ics_url" => "Calendar subscription"}
 
   @doc """
   Renders a provider icon for calendar, video, and OAuth providers.
@@ -50,12 +51,13 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
       assigns
       |> assign(:icon_path, icon_path && Endpoint.static_path(icon_path))
       |> assign(:icon_px, icon_pixels(assigns.size))
+      |> assign(:alt_text, Map.get(@alt_labels, assigns.provider, "#{assigns.provider} icon"))
 
     ~H"""
     <img
       src={@icon_path}
       class={build_icon_classes(@size, @class)}
-      alt={"#{@provider} icon"}
+      alt={@alt_text}
       width={@icon_px}
       height={@icon_px}
       loading={@loading}
