@@ -28,8 +28,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   @expansion_past_days 365
   @expansion_future_days 365
 
-  @provider_labels %{caldav: "CalDAV", ics_url: "calendar subscription"}
-
   @doc """
   Expands and normalises `raw_events` into `CalendarEvent` structs.
 
@@ -61,7 +59,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   end
 
   defp record_skip(raw, context, provider, reason) do
-    Logger.warning("Skipping invalid #{provider_label(provider)} calendar event",
+    Logger.warning("Skipping invalid calendar event",
+      provider: provider,
       reason: reason,
       event_uid: raw[:uid],
       calendar_integration_id: context.calendar_integration_id
@@ -74,8 +73,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
       calendar_integration_id: context.calendar_integration_id
     })
   end
-
-  defp provider_label(provider), do: Map.get(@provider_labels, provider, "calendar")
 
   # ---------------------------------------------------------------------------
   # Recurrence expansion

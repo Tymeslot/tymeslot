@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   @oauth_only_providers ~w(github oauth)
   @calendar_providers ~w(
     google_calendar outlook outlook_calendar nextcloud nextcloud_calendar
-    caldav radicale zimbra mailbox_org apple baikal
+    caldav radicale zimbra mailbox_org apple baikal ics_url
   )
 
   @doc """
@@ -73,6 +73,10 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   # multi-size branded PNGs the other providers use. Point at the bundled SVG —
   # which scales to any size — instead of a non-existent apple.png.
   defp build_icon_path("apple", _type, _size), do: "/icons/providers/calendar/apple.svg"
+
+  # A subscription has no vendor behind it — the feed can come from anywhere —
+  # so there is no logo to size-tier. Point at the bundled generic SVG.
+  defp build_icon_path("ics_url", _type, _size), do: "/icons/providers/calendar/ics_url.svg"
 
   defp build_icon_path(provider, type, size) do
     # Determine the type based on provider if not explicitly set

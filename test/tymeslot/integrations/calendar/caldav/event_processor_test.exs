@@ -361,7 +361,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
           assert hd(events).uid == "good-001@example.com"
         end)
 
-      assert log =~ "Skipping invalid CalDAV calendar event"
+      assert log =~ "Skipping invalid calendar event"
     end
 
     test "skips event with no UID" do
@@ -376,7 +376,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
           assert {:ok, []} = EventProcessor.normalise_events([raw], @context)
         end)
 
-      assert log =~ "Skipping invalid CalDAV calendar event"
+      assert log =~ "Skipping invalid calendar event"
     end
 
     test "handles empty event list" do

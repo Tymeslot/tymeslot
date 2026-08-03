@@ -37,12 +37,20 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
     :mailbox_org,
     :apple,
     :baikal,
+    :ics_url,
     :google,
     :outlook,
     :demo
   ]
   @oauth_providers [:google, :outlook]
   @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :apple, :baikal]
+
+  # Providers that subscribe to a published feed rather than talking a
+  # calendar protocol. They are deliberately *not* CalDAV-family: they carry
+  # no credentials, discover nothing, and can never be written to, so every
+  # "is this CalDAV?" branch must answer no for them rather than yes with a
+  # carve-out.
+  @subscription_providers [:ics_url]
   @dev_only_providers [:debug]
 
   # Compile-time lookup from the provider's string form to its atom, covering
@@ -121,6 +129,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
       click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
+    ics_url: %{
+      icon: "ics_url",
+      description: "Subscribe to a published calendar feed, read-only",
+      button_text: "Subscribe to a feed",
+      click_event: "connect_provider",
+      circuit_breaker_enabled: true
+    },
     google: %{
       icon: "google",
       description: "Full OAuth integration with Google Meet support",
@@ -191,6 +206,35 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   """
   @spec caldav_based_providers() :: list(atom())
   def caldav_based_providers, do: @caldav_based_providers
+
+  @doc """
+  Returns feed-subscription providers.
+  """
+  @spec subscription_providers() :: list(atom())
+  def subscription_providers, do: @subscription_providers
+
+  @subscription_provider_strings Enum.map(@subscription_providers, &Atom.to_string/1)
+
+  @doc """
+  Returns feed-subscription providers as strings, for matching against
+  database string values such as `integration.provider`.
+  """
+  @spec subscription_provider_strings() :: list(String.t())
+  def subscription_provider_strings, do: @subscription_provider_strings
+
+  @doc """
+  Checks if a provider subscribes to a published feed.
+
+  Subscriptions are read-only by construction: they can block availability
+  but can never receive a booking.
+  """
+  @spec subscription?(atom() | String.t()) :: boolean()
+  def subscription?(provider) when is_atom(provider), do: provider in @subscription_providers
+
+  def subscription?(provider) when is_binary(provider),
+    do: provider in @subscription_provider_strings
+
+  def subscription?(_provider), do: false
 
   @caldav_based_provider_strings Enum.map(@caldav_based_providers, &Atom.to_string/1)
 
@@ -416,6 +460,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def display_name(:mailbox_org), do: "mailbox.org"
   def display_name(:apple), do: "Apple iCloud"
   def display_name(:baikal), do: "Baikal"
+  def display_name(:ics_url), do: "Calendar subscription"
   def display_name(:google), do: "Google Calendar"
   def display_name(:outlook), do: "Outlook Calendar"
   def display_name(:debug), do: "Debug Provider"
@@ -437,6 +482,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def get_provider_module(:apple), do: Tymeslot.Integrations.Calendar.Apple.Provider
 
   def get_provider_module(:baikal), do: Tymeslot.Integrations.Calendar.Baikal.Provider
+
+  def get_provider_module(:ics_url), do: Tymeslot.Integrations.Calendar.Ics.Provider
 
   def get_provider_module(:google), do: Tymeslot.Integrations.Calendar.Google.Provider
   def get_provider_module(:outlook), do: Tymeslot.Integrations.Calendar.Outlook.Provider
