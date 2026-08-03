@@ -16,6 +16,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
 
   setup :verify_on_exit!
 
@@ -121,6 +122,72 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
       assert :ok = perform_job(FallbackSyncSweepWorker, %{})
 
       assert_enqueued(
+        worker: SyncCalDavCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+  end
+
+  describe "perform/1 - active calendar subscription" do
+    test "enqueues a SyncIcsCalendarWorker job for a subscription that has never synced" do
+      integration =
+        insert(:calendar_integration,
+          provider: "ics_url",
+          is_active: true,
+          last_external_sync_at: nil
+        )
+
+      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+
+      assert_enqueued(
+        worker: SyncIcsCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+
+    test "enqueues a job once the subscription is older than its 30 minute interval" do
+      integration =
+        insert(:calendar_integration,
+          provider: "ics_url",
+          is_active: true,
+          last_external_sync_at: DateTime.add(DateTime.utc_now(), -31, :minute)
+        )
+
+      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+
+      assert_enqueued(
+        worker: SyncIcsCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+
+    test "leaves a recently synced subscription alone" do
+      integration =
+        insert(:calendar_integration,
+          provider: "ics_url",
+          is_active: true,
+          last_external_sync_at: DateTime.add(DateTime.utc_now(), -5, :minute)
+        )
+
+      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+
+      refute_enqueued(
+        worker: SyncIcsCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+
+    test "never sends a subscription down the CalDAV path" do
+      integration =
+        insert(:calendar_integration,
+          provider: "ics_url",
+          is_active: true,
+          last_external_sync_at: nil
+        )
+
+      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+
+      refute_enqueued(
         worker: SyncCalDavCalendarWorker,
         args: %{"calendar_integration_id" => integration.id}
       )
