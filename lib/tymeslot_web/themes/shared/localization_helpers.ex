@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   alias Calendar
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.Display
+  alias TymeslotWeb.Helpers.LocaleFormat
 
   @doc """
   Groups time slots by period of day with translated period names.
@@ -249,14 +250,20 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   @doc """
-  Formats time based on the current locale's preferred format (24h/12h).
+  Formats a time on the clock the visitor's language uses.
+
+  The booking page is read by attendees, who never saw the organiser's clock
+  setting and are frequently reading in a different language, so the visitor's
+  own locale decides here. `LocaleFormat` holds that mapping and is what the
+  confirmation email already uses, so the page and the email agree.
+
+  This previously resolved the clock through a `"time_format_type"` msgid, which
+  meant any translator could change how times render by editing what looked like
+  a normal string, and several catalogues had: "24 Std.", "24 год".
   """
   @spec format_time_by_locale(DateTime.t()) :: String.t()
   def format_time_by_locale(dt) do
-    case dgettext("booking", "time_format_type") do
-      "12h" -> Calendar.strftime(dt, "%-I:%M %p")
-      _other -> Calendar.strftime(dt, "%H:%M")
-    end
+    LocaleFormat.format_time(dt, Gettext.get_locale(TymeslotWeb.Gettext))
   end
 
   @doc """

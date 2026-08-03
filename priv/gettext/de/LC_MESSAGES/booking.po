@@ -982,10 +982,6 @@ msgstr "Nur am selben Tag"
 msgid "submit"
 msgstr "Absenden"
 
-#: lib/tymeslot_web/themes/shared/localization_helpers.ex:256
-#, elixir-autogen, elixir-format
-msgid "time_format_type"
-msgstr "24 Std."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex:265
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex:187
