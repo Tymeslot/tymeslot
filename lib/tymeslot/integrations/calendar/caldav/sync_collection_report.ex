@@ -40,21 +40,27 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
     sync_token = integration.caldav_sync_token
     report_body = build_report(sync_token)
 
-    case CalDAVHttp.report(calendar_url, client.username, client.password, report_body) do
+    # RFC 6578, Section 3.2: the sync-collection report is defined only for
+    # `Depth: 0`, and a compliant server answers any other value with 400. The
+    # scope the client wants travels in `<d:sync-level>`, which `build_report/1`
+    # already sends. A 410 answers a token the server no longer recognises, so
+    # it means something here that it does not mean on a calendar-query.
+    case CalDAVHttp.report(calendar_url, client.username, client.password, report_body,
+           depth: "0",
+           status_overrides: %{410 => :sync_token_expired}
+         ) do
       {:ok, %Req.Response{status: 207, body: body}} ->
         parse_response(body)
 
-      {:ok, %Req.Response{status: 410}} ->
-        {:error, :sync_token_expired}
+      # Some servers answer with plain 200 instead of the mandated 207
+      # Multi-Status. The body is a multistatus document either way.
+      {:ok, %Req.Response{status: status, body: body}} ->
+        Logger.warning("CalDAV sync-collection REPORT returned unexpected status",
+          status: status,
+          expected: 207
+        )
 
-      {:ok, %Req.Response{status: 401}} ->
-        {:error, :unauthorized}
-
-      {:ok, %Req.Response{status: 403}} ->
-        {:error, :forbidden}
-
-      {:error, :unauthorized} ->
-        {:error, :unauthorized}
+        parse_response(body)
 
       {:error, reason} ->
         {:error, reason}

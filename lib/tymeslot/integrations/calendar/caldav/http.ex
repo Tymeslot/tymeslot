@@ -7,6 +7,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   constructs method-specific headers, and maps raw HTTP status codes and
   transport exceptions into the typed `error_reason()` vocabulary.
 
+  Every method maps statuses through one shared classifier (`classify/4`), so a
+  status can only mean one thing across the stack. A method declares which
+  statuses count as success and, via `:status_overrides`, the few whose meaning
+  is genuinely its own: a DELETE is idempotent so 404 succeeds, a
+  sync-collection REPORT answers 410 when its token has expired.
+
   This is the only module in the CalDAV stack that communicates with the HTTP
   client. All modules above it work with domain types, not `Req.Response`.
   """
@@ -19,6 +25,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   alias Tymeslot.Integrations.Calendar.CalDAV.XmlHandler
 
   require Logger
+
+  # Statuses whose meaning is the same whichever CalDAV method produced them.
+  # Anything absent is either declared a success by the calling method, given a
+  # method-specific meaning via `:status_overrides`, or falls through to
+  # `unexpected_status/3`.
+  @status_reasons %{
+    401 => :unauthorized,
+    403 => :forbidden,
+    404 => :not_found,
+    408 => :timeout,
+    429 => :rate_limited
+  }
+
+  # Enough of an unmodelled error body to carry the server's explanation (they
+  # answer 4xx with a short XML or plain-text sentence) without pouring a whole
+  # response into the logs.
+  @body_excerpt_chars 500
 
   @doc """
   Performs a PROPFIND request with configurable retry logic.
@@ -60,8 +83,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
            receive_timeout: timeout,
            ssrf_protect: true
          ) do
-      {:ok, response} -> handle_propfind_response(response)
-      {:error, reason} -> handle_propfind_error(reason)
+      {:ok, response} -> classify(response, :propfind, url, success: 200..299)
+      {:error, reason} -> handle_read_transport_error(reason, "PROPFIND")
     end
   end
 
@@ -72,36 +95,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     ])
   end
 
-  defp handle_propfind_response(%Req.Response{status: 207} = response), do: {:ok, response}
-
-  defp handle_propfind_response(%Req.Response{status: status} = response)
-       when status in 200..299,
-       do: {:ok, response}
-
-  defp handle_propfind_response(%Req.Response{status: 401}), do: {:error, :unauthorized}
-  defp handle_propfind_response(%Req.Response{status: 403}), do: {:error, :forbidden}
-  defp handle_propfind_response(%Req.Response{status: 404}), do: {:error, :not_found}
-
-  defp handle_propfind_response(%Req.Response{status: status}) when status >= 500,
-    do: {:error, :server_error}
-
-  defp handle_propfind_response(%Req.Response{status: status}),
-    do: {:error, "Unexpected status: #{status}"}
-
-  defp handle_propfind_error(%Mint.TransportError{reason: :timeout}), do: {:error, :timeout}
-  defp handle_propfind_error(%Req.TransportError{reason: :timeout}), do: {:error, :timeout}
-  defp handle_propfind_error(%Mint.HTTPError{reason: :timeout}), do: {:error, :timeout}
-
-  defp handle_propfind_error(reason) do
-    Logger.debug("CalDAV PROPFIND network error", reason: inspect(reason))
-    {:error, :network_error}
-  end
-
   @doc """
   Performs a REPORT request for fetching calendar data (e.g., calendar-query).
 
   No retry logic at this level — callers that need retry wrap this function
   themselves (see `Events.fetch_events/5`).
+
+  Options:
+
+    * `:depth` — the WebDAV Depth header, default `"1"`. A sync-collection
+      REPORT must pass `"0"`; see RFC 6578, Section 3.2.
+    * `:status_overrides` — a `%{status => reason}` map applied before the
+      shared table, for statuses that mean something specific to the report
+      being sent (410 as an expired sync token, say).
   """
   @spec report(String.t(), String.t(), String.t(), String.t(), keyword()) ::
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
@@ -109,7 +115,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     headers =
       build_headers(username, password, [
         {"Content-Type", "application/xml; charset=utf-8"},
-        {"Depth", "1"}
+        {"Depth", Keyword.get(opts, :depth, "1")}
       ])
 
     timeout = Keyword.get(opts, :timeout, CalDAVBase.report_timeout_ms())
@@ -118,39 +124,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
            receive_timeout: timeout,
            ssrf_protect: true
          ) do
-      {:ok, %Req.Response{status: 207} = response} ->
-        {:ok, response}
-
-      {:ok, %Req.Response{status: status} = response} when status in 200..299 ->
-        {:ok, response}
-
-      {:ok, %Req.Response{status: 401}} ->
-        {:error, :unauthorized}
-
-      {:ok, %Req.Response{status: 403}} ->
-        {:error, :forbidden}
-
-      {:ok, %Req.Response{status: 404}} ->
-        {:error, :not_found}
-
-      {:ok, %Req.Response{status: status}} when status >= 500 ->
-        {:error, :server_error}
-
-      {:ok, %Req.Response{status: status}} ->
-        {:error, "Unexpected status: #{status}"}
-
-      {:error, %Mint.TransportError{reason: :timeout}} ->
-        {:error, :timeout}
-
-      {:error, %Req.TransportError{reason: :timeout}} ->
-        {:error, :timeout}
-
-      {:error, %Mint.HTTPError{reason: :timeout}} ->
-        {:error, :timeout}
+      {:ok, response} ->
+        classify(response, :report, url,
+          success: 200..299,
+          status_overrides: Keyword.get(opts, :status_overrides, %{})
+        )
 
       {:error, reason} ->
-        Logger.debug("CalDAV REPORT network error", reason: inspect(reason))
-        {:error, :network_error}
+        handle_read_transport_error(reason, "REPORT")
     end
   end
 
@@ -181,10 +162,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
            ssrf_protect: true
          ) do
       {:ok, response} ->
-        handle_put_event_response(response)
+        classify(response, :put, url,
+          success: [200, 201, 204],
+          # RFC 7232 reserves 412 for a failed precondition, but some CalDAV
+          # servers answer a conditional PUT with 409 instead — including
+          # servers that reject the conditional form outright rather than
+          # evaluating it. Kept distinct from :precondition_failed so the
+          # caller can tell "the condition did not hold" from "this server
+          # will not honour the condition".
+          status_overrides: %{409 => :conditional_not_supported, 412 => :precondition_failed}
+        )
 
       {:error, reason} ->
-        handle_write_network_error(reason)
+        handle_write_transport_error(reason)
     end
   end
 
@@ -204,24 +194,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
            receive_timeout: timeout,
            ssrf_protect: true
          ) do
-      {:ok, %Req.Response{status: status} = response} when status in [200, 204, 404] ->
-        # 404 is ok for delete — event may already be gone
-        {:ok, response}
-
-      {:ok, %Req.Response{status: 401}} ->
-        {:error, :unauthorized}
-
-      {:ok, %Req.Response{status: 403}} ->
-        {:error, :forbidden}
-
-      {:ok, %Req.Response{status: status}} when status >= 500 ->
-        {:error, :server_error}
-
-      {:ok, %Req.Response{status: status}} ->
-        {:error, "Unexpected status: #{status}"}
+      {:ok, response} ->
+        # 404 counts as success — the event may already be gone.
+        classify(response, :delete, url, success: [200, 204, 404])
 
       {:error, reason} ->
-        handle_write_network_error(reason)
+        handle_write_transport_error(reason)
     end
   end
 
@@ -238,24 +216,71 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
            receive_timeout: timeout,
            ssrf_protect: true
          ) do
-      {:ok, %Req.Response{status: status} = response} when status in [200, 204] ->
-        {:ok, response}
-
-      {:ok, %Req.Response{status: 404}} ->
-        {:error, :not_found}
-
-      {:ok, %Req.Response{status: 401}} ->
-        {:error, :unauthorized}
-
-      {:ok, %Req.Response{status: status}} when status >= 500 ->
-        {:error, :server_error}
-
-      {:error, _error_reason} ->
-        {:error, :network_error}
+      {:ok, response} -> classify(response, :head, url, success: [200, 204])
+      {:error, _error_reason} -> {:error, :network_error}
     end
   end
 
   # Private helpers
+
+  # One status vocabulary for every CalDAV method. `:success` declares the
+  # statuses this method treats as a result, `:status_overrides` the few whose
+  # meaning is method-specific; everything else resolves through the shared
+  # table so no method can quietly grow its own dialect.
+  @spec classify(Req.Response.t(), atom(), String.t(), keyword()) ::
+          {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
+  defp classify(%Req.Response{status: status} = response, method, url, opts) do
+    overrides = Keyword.get(opts, :status_overrides, %{})
+
+    cond do
+      status in Keyword.fetch!(opts, :success) -> {:ok, response}
+      is_map_key(overrides, status) -> {:error, Map.fetch!(overrides, status)}
+      is_map_key(@status_reasons, status) -> {:error, Map.fetch!(@status_reasons, status)}
+      status >= 500 -> {:error, :server_error}
+      true -> {:error, unexpected_status(response, method, url)}
+    end
+  end
+
+  # The server's own explanation is the only thing that makes an unmodelled
+  # status diagnosable: a bare 415 covers a dozen causes, and the body says
+  # which one. Without the excerpt the failure reaches the operator as a status
+  # code and nothing else.
+  defp unexpected_status(%Req.Response{status: status, body: body}, method, url) do
+    Logger.warning("CalDAV request returned an unhandled status",
+      method: method,
+      url: loggable_url(url),
+      status: status,
+      body: body_excerpt(body)
+    )
+
+    {:unexpected_status, status}
+  end
+
+  # Origin and path only: a CalDAV URL should carry no credentials, but a
+  # server-supplied href reaching here could, and a log line is the wrong place
+  # to find out.
+  defp loggable_url(url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme, host: host} = uri when is_binary(scheme) and is_binary(host) ->
+        "#{scheme}://#{host}#{uri.path}"
+
+      _unparseable ->
+        "(unparseable url)"
+    end
+  end
+
+  defp body_excerpt(body) when is_binary(body) do
+    if String.valid?(body) do
+      body
+      |> String.slice(0, @body_excerpt_chars)
+      |> String.replace(~r/\s+/, " ")
+      |> String.trim()
+    else
+      "(non-text body)"
+    end
+  end
+
+  defp body_excerpt(_other), do: ""
 
   defp build_headers(username, password, additional_headers)
        when is_binary(username) and is_binary(password) do
@@ -298,41 +323,30 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     end
   end
 
-  defp handle_put_event_response(%Req.Response{status: status} = response)
-       when status in [200, 201, 204],
-       do: {:ok, response}
+  defp handle_read_transport_error(%Mint.TransportError{reason: :timeout}, _method),
+    do: {:error, :timeout}
 
-  defp handle_put_event_response(%Req.Response{status: 401}), do: {:error, :unauthorized}
-  defp handle_put_event_response(%Req.Response{status: 403}), do: {:error, :forbidden}
-  defp handle_put_event_response(%Req.Response{status: 404}), do: {:error, :not_found}
+  defp handle_read_transport_error(%Req.TransportError{reason: :timeout}, _method),
+    do: {:error, :timeout}
 
-  defp handle_put_event_response(%Req.Response{status: 412}),
-    do: {:error, :precondition_failed}
+  defp handle_read_transport_error(%Mint.HTTPError{reason: :timeout}, _method),
+    do: {:error, :timeout}
 
-  # RFC 7232 reserves 412 for a failed precondition, but some CalDAV servers
-  # answer a conditional PUT with 409 instead — including servers that reject
-  # the conditional form outright rather than evaluating it. Kept distinct from
-  # :precondition_failed so the caller can tell "the condition did not hold"
-  # from "this server will not honour the condition".
-  defp handle_put_event_response(%Req.Response{status: 409}),
-    do: {:error, :conditional_not_supported}
+  defp handle_read_transport_error(reason, method) do
+    Logger.debug("CalDAV read network error", method: method, reason: inspect(reason))
+    {:error, :network_error}
+  end
 
-  defp handle_put_event_response(%Req.Response{status: status}) when status >= 500,
-    do: {:error, :server_error}
-
-  defp handle_put_event_response(%Req.Response{status: status}),
-    do: {:error, "Unexpected status: #{status}"}
-
-  defp handle_write_network_error(%Mint.TransportError{reason: :timeout}),
+  defp handle_write_transport_error(%Mint.TransportError{reason: :timeout}),
     do: write_timeout_error()
 
-  defp handle_write_network_error(%Req.TransportError{reason: :timeout}),
+  defp handle_write_transport_error(%Req.TransportError{reason: :timeout}),
     do: write_timeout_error()
 
-  defp handle_write_network_error(%Mint.HTTPError{reason: :timeout}),
+  defp handle_write_transport_error(%Mint.HTTPError{reason: :timeout}),
     do: write_timeout_error()
 
-  defp handle_write_network_error(reason) do
+  defp handle_write_transport_error(reason) do
     Logger.debug("CalDAV PUT/DELETE network error", reason: inspect(reason))
     {:error, :network_error}
   end

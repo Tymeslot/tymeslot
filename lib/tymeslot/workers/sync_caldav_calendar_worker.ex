@@ -46,6 +46,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   require Logger
 
+  alias Tymeslot.Integrations.Calendar.CalDAV.Base, as: CalDAVBase
   alias Tymeslot.Integrations.Calendar.CalDAV.Events, as: CalDAVEvents
   alias Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport
@@ -98,6 +99,19 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # scheduled sync re-evaluates from scratch.
   defp handle_sync_result({:error, :suspicious_bulk_deletion}) do
     {:discard, "CalDAV deletion circuit breaker refused a suspicious bulk deletion"}
+  end
+
+  # A 4xx the transport layer does not model (415, 405, 400…) is the server
+  # refusing the request itself: the remaining attempts re-send the same bytes
+  # for the same refusal, then page an operator about a server-side condition
+  # no operator action can fix. `Http` has already logged the status and the
+  # server's own explanation, and the health check surfaces the integration.
+  defp handle_sync_result({:error, reason} = result) do
+    if CalDAVBase.terminal_error?(reason) do
+      {:discard, "CalDAV server refused the sync request: #{CalDAVBase.describe_error(reason)}"}
+    else
+      result
+    end
   end
 
   defp handle_sync_result(result), do: result
