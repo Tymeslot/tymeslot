@@ -526,4 +526,86 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       assert is_nil(event.organiser)
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # Recurrence across a DST transition
+  #
+  # The parser resolves DTSTART to UTC, which throws the TZID away. Expanding
+  # from that bare UTC instant made every occurrence inherit the master's
+  # original offset, so a weekly "10:00" meeting silently became 11:00 once the
+  # clocks changed. This drives the real pipeline (iCal string → parser →
+  # normaliser) so the zone cannot be dropped on either side again.
+  # ---------------------------------------------------------------------------
+
+  describe "recurring events across a DST transition" do
+    @dst_context %{
+      calendar_integration_id: 42,
+      provider_calendar_id: "default",
+      synced_at: ~U[2026-04-08 12:00:00Z]
+    }
+
+    @dst_zone "Europe/Prague"
+
+    test "holds every occurrence at the same local time" do
+      transition = next_dst_transition(@dst_zone)
+      first_occurrence = Date.add(transition, -7)
+
+      ical = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      PRODID:-//Test//Test//EN
+      BEGIN:VEVENT
+      UID:weekly-across-dst@example.com
+      DTSTART;TZID=#{@dst_zone}:#{ical_date(first_occurrence)}T100000
+      DTEND;TZID=#{@dst_zone}:#{ical_date(first_occurrence)}T110000
+      RRULE:FREQ=WEEKLY;COUNT=3
+      SUMMARY:Weekly Standup
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, raw} = EventProcessor.parse_ical_from_string(ical)
+      assert {:ok, events} = EventProcessor.normalise_events([raw], @dst_context)
+
+      assert length(events) == 3
+
+      local_times =
+        Enum.map(events, fn event ->
+          event.start_at |> DateTime.shift_zone!(@dst_zone) |> DateTime.to_time()
+        end)
+
+      assert Enum.uniq(local_times) == [~T[10:00:00]]
+
+      # The series has to genuinely straddle the transition, or holding the
+      # local time fixed would prove nothing.
+      assert Enum.any?(events, &before?(&1, transition))
+      refute Enum.all?(events, &before?(&1, transition))
+    end
+  end
+
+  defp before?(event, date),
+    do: Date.compare(DateTime.to_date(event.start_at), date) == :lt
+
+  # `normalise_events/2` expands within ±365 days of now, so a hard-coded
+  # transition date would quietly fall out of that window as time passes. Every
+  # observing zone has one within a few months, so the next one is found rather
+  # than named.
+  defp next_dst_transition(zone) do
+    today = Date.utc_today()
+
+    offset = fn date ->
+      {:ok, datetime} = DateTime.new(date, ~T[12:00:00], zone)
+      datetime.utc_offset + datetime.std_offset
+    end
+
+    days =
+      Enum.find(1..200, fn day ->
+        date = Date.add(today, day)
+        offset.(date) != offset.(Date.add(date, -1))
+      end)
+
+    Date.add(today, days)
+  end
+
+  defp ical_date(date), do: Calendar.strftime(date, "%Y%m%d")
 end

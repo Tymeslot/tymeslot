@@ -106,9 +106,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
     rrule = raw[:rrule] || raw[:recurrence_rule]
 
     if rrule && rrule != "" do
+      timezone = raw[:timezone]
+
       expander_event = %{
-        start_time: raw[:dtstart] || raw[:start_time],
-        end_time: raw[:dtend] || raw[:end_time],
+        start_time: in_event_zone(raw[:dtstart] || raw[:start_time], timezone),
+        end_time: in_event_zone(raw[:dtend] || raw[:end_time], timezone),
         recurrence_rule: rrule
       }
 
@@ -129,6 +131,25 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
 
   defp parse_exdates(exdates) when is_list(exdates), do: exdates
   defp parse_exdates(_other), do: []
+
+  # `ICalParser` resolves DTSTART/DTEND to UTC and drops the TZID, so a
+  # recurring event reaches `RecurrenceExpander` as a bare UTC instant. The
+  # expander advances each occurrence in the wall clock of whatever zone its
+  # DateTime carries (see `shift_calendar_days/2` there), so a UTC one keeps the
+  # master's original offset for the whole series: a weekly event created in
+  # winter still lands an hour late once the clocks go forward. Restoring the
+  # event's own zone first is what lets the expander re-resolve the correct
+  # offset per occurrence. Falls back to the value as-is when there is no zone
+  # to restore or it cannot be resolved, matching the expander's own
+  # never-lose-an-occurrence policy.
+  defp in_event_zone(%DateTime{} = datetime, timezone) when is_binary(timezone) do
+    case DateTime.shift_zone(datetime, timezone) do
+      {:ok, shifted} -> shifted
+      {:error, _reason} -> datetime
+    end
+  end
+
+  defp in_event_zone(value, _timezone), do: value
 
   # The canonical CalendarEvent schema stores recurrence_exceptions as
   # `{:array, :date}`, while EXDATE values from the iCal parser are DateTimes
