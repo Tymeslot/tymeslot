@@ -120,6 +120,39 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert render(view) =~ "Acme Corp"
     end
 
+    test "renders the attendee's own message as the meeting notes",
+         %{conn: conn, user: user} do
+      insert(:meeting,
+        organizer_user: user,
+        organizer_email: user.email,
+        attendee_name: "Nadia Okafor",
+        attendee_message: "Hoping to cover the Q3 rollout."
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      assert render(view) =~ "Meeting Notes"
+      assert render(view) =~ "Hoping to cover the Q3 rollout."
+    end
+
+    test "does not show the internal description in place of the attendee's message",
+         %{conn: conn, user: user} do
+      insert(:meeting,
+        organizer_user: user,
+        organizer_email: user.email,
+        attendee_name: "Nadia Okafor",
+        attendee_message: nil,
+        description: "Internal booking description"
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+      html = render(view)
+
+      assert html =~ "Nadia Okafor"
+      refute html =~ "Internal booking description"
+      refute html =~ "Meeting Notes"
+    end
+
     test "renders custom-field answers when the booking has them", %{conn: conn, user: user} do
       field_id = UUID.generate()
 
