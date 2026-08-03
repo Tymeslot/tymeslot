@@ -287,6 +287,27 @@
   --color-calendar-8: #f59e0b;   /* amber */
   --color-calendar-fallback: #a1a1aa;  /* neutral — unmatched integrations */
 
+  /* Calendar Palette Colors
+     The colour a person picks for one calendar or one event, keyed by palette
+     name (see Tymeslot.Integrations.Calendar.EventColour).
+     Mapped to Tailwind as bg-calendar-tomato … bg-calendar-graphite.
+
+     Deliberately separate from the numbered rotation above. The rotation only
+     has to keep adjacent calendars apart, so any eight distinct hues will do;
+     these have to look like what they are called, because the name is the
+     swatch's accessible label and a "Banana" that paints teal misdescribes the
+     control it labels. Each hue follows that key's CSS3 anchor in EventColour
+     (gold, yellowgreen, teal, …) held at the rotation's lightness, so white
+     event text stays as legible over these as it is over the rotation. */
+  --color-calendar-tomato: #f43f5e;     /* rose */
+  --color-calendar-tangerine: #f97316;  /* orange */
+  --color-calendar-banana: #eab308;     /* yellow */
+  --color-calendar-sage: #65a30d;       /* yellow-green */
+  --color-calendar-peacock: #06b6d4;    /* cyan */
+  --color-calendar-blueberry: #3b82f6;  /* blue */
+  --color-calendar-grape: #a855f7;      /* purple */
+  --color-calendar-graphite: #71717a;   /* neutral — darker than the unmatched fallback */
+
   /* Mode Tab Bar */
   --mode-tab-active-from: #0d9488;
   --mode-tab-active-to: #0891b2;

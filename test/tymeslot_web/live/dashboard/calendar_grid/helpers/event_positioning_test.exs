@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioningTest do
   @moduletag :unit
   @moduletag :calendar
 
+  alias Tymeslot.Integrations.Calendar.EventColour
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioning
 
   describe "top_rem/2" do
@@ -71,7 +72,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.EventPositioningTest do
       assigns = %{integration_colors: %{42 => "bg-calendar-3"}}
       event = %{calendar_integration_id: 42, colour: "tomato"}
 
-      assert EventPositioning.color_for_event(assigns, event) == "bg-calendar-7"
+      assert EventPositioning.color_for_event(assigns, event) ==
+               EventColour.tailwind_class("tomato")
     end
 
     test "falls back to a neutral class for an unrecognised stored colour value" do

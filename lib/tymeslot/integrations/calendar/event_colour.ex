@@ -25,26 +25,29 @@ defmodule Tymeslot.Integrations.Calendar.EventColour do
   @typedoc "A palette colour key, e.g. `\"tomato\"`."
   @type key :: String.t()
 
-  # Ordered palette. Each entry is `{key, label, tailwind_class}`. The Tailwind
-  # classes reuse the existing safelisted `bg-calendar-*` tokens (see
-  # `app.css`), so no new CSS is required.
+  # Ordered palette, `{key, label, tailwind_class}`. Each key has a display
+  # token of its own (`bg-calendar-<key>`, defined in `base/variables.css`)
+  # rather than borrowing one from the rotation below: a key's name is the
+  # swatch's accessible label, so what it paints has to match what it is
+  # called. The anchors in `@rgb_anchors` are the same statement in RGB — both
+  # say a "banana" is yellow.
   @palette [
-    {"tomato", "Tomato", "bg-calendar-7"},
-    {"tangerine", "Tangerine", "bg-calendar-8"},
-    {"banana", "Banana", "bg-calendar-1"},
-    {"sage", "Sage", "bg-calendar-4"},
-    {"peacock", "Peacock", "bg-calendar-5"},
-    {"blueberry", "Blueberry", "bg-calendar-2"},
-    {"grape", "Grape", "bg-calendar-3"},
-    {"graphite", "Graphite", "bg-calendar-fallback"}
+    {"tomato", "Tomato", "bg-calendar-tomato"},
+    {"tangerine", "Tangerine", "bg-calendar-tangerine"},
+    {"banana", "Banana", "bg-calendar-banana"},
+    {"sage", "Sage", "bg-calendar-sage"},
+    {"peacock", "Peacock", "bg-calendar-peacock"},
+    {"blueberry", "Blueberry", "bg-calendar-blueberry"},
+    {"grape", "Grape", "bg-calendar-grape"},
+    {"graphite", "Graphite", "bg-calendar-graphite"}
   ]
 
   # Classes the per-integration rotation cycles through when an integration has
   # no colour of its own. Spelled out rather than interpolated so the set is
   # greppable and matches `@source inline("bg-calendar-{1,…,8} …")` in
-  # `app.css` one for one. It is not the palette above: the rotation covers
-  # every numbered token, while the palette leaves one unused and adds the
-  # neutral fallback.
+  # `app.css` one for one. It is not the palette above: the rotation only has to
+  # keep adjacent calendars apart, so it is free to be any eight distinct hues
+  # and carries no names.
   @rotation_classes [
     "bg-calendar-1",
     "bg-calendar-2",

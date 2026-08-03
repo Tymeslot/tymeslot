@@ -16,7 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.EventColourTest do
         assert {key, label, class} = entry
         assert key in EventColour.keys()
         assert label == String.capitalize(key)
-        assert String.starts_with?(class, "bg-calendar-")
+        assert class == "bg-calendar-#{key}"
       end)
     end
 
@@ -68,9 +68,19 @@ defmodule Tymeslot.Integrations.Calendar.EventColourTest do
   end
 
   describe "tailwind_class/1" do
-    test "maps a palette key to its Tailwind class" do
-      assert EventColour.tailwind_class("tomato") == "bg-calendar-7"
-      assert EventColour.tailwind_class("blueberry") == "bg-calendar-2"
+    test "maps a palette key to its own Tailwind class" do
+      assert EventColour.tailwind_class("tomato") == "bg-calendar-tomato"
+      assert EventColour.tailwind_class("blueberry") == "bg-calendar-blueberry"
+    end
+
+    test "no palette key borrows a class from the rotation" do
+      # The two sets are separate on purpose: a palette class has to look like
+      # the name it is labelled with, a rotation class only has to differ from
+      # its neighbours. Sharing one would tie the two constraints together.
+      rotation = Enum.map(1..EventColour.rotation_size(), &EventColour.rotation_class/1)
+      palette = Enum.map(EventColour.palette(), fn {_key, _label, class} -> class end)
+
+      assert palette -- rotation == palette
     end
 
     test "every palette entry maps to a distinct Tailwind class" do
