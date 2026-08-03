@@ -304,3 +304,43 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Next 30 days"
 msgstr ""
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex:293
+#, elixir-autogen, elixir-format
+msgid "Banana"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex:296
+#, elixir-autogen, elixir-format
+msgid "Blueberry"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex:297
+#, elixir-autogen, elixir-format
+msgid "Grape"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex:298
+#, elixir-autogen, elixir-format
+msgid "Graphite"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex:295
+#, elixir-autogen, elixir-format
+msgid "Peacock"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex:294
+#, elixir-autogen, elixir-format
+msgid "Sage"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex:292
+#, elixir-autogen, elixir-format
+msgid "Tangerine"
+msgstr ""
+
+#: lib/tymeslot/integrations/calendar/event_colour.ex:291
+#, elixir-autogen, elixir-format
+msgid "Tomato"
+msgstr ""

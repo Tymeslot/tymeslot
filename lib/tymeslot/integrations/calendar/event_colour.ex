@@ -22,24 +22,26 @@ defmodule Tymeslot.Integrations.Calendar.EventColour do
   crashes the grid.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @typedoc "A palette colour key, e.g. `\"tomato\"`."
   @type key :: String.t()
 
-  # Ordered palette, `{key, label, tailwind_class}`. Each key has a display
-  # token of its own (`bg-calendar-<key>`, defined in `base/variables.css`)
-  # rather than borrowing one from the rotation below: a key's name is the
-  # swatch's accessible label, so what it paints has to match what it is
-  # called. The anchors in `@rgb_anchors` are the same statement in RGB — both
-  # say a "banana" is yellow.
+  # Ordered palette, `{key, tailwind_class}`. Each key has a display token of
+  # its own (`bg-calendar-<key>`, defined in `base/variables.css`) rather than
+  # borrowing one from the rotation below: a key's name is the swatch's
+  # accessible label, so what it paints has to match what it is called. The
+  # anchors in `@rgb_anchors` are the same statement in RGB — both say a
+  # "banana" is yellow.
   @palette [
-    {"tomato", "Tomato", "bg-calendar-tomato"},
-    {"tangerine", "Tangerine", "bg-calendar-tangerine"},
-    {"banana", "Banana", "bg-calendar-banana"},
-    {"sage", "Sage", "bg-calendar-sage"},
-    {"peacock", "Peacock", "bg-calendar-peacock"},
-    {"blueberry", "Blueberry", "bg-calendar-blueberry"},
-    {"grape", "Grape", "bg-calendar-grape"},
-    {"graphite", "Graphite", "bg-calendar-graphite"}
+    {"tomato", "bg-calendar-tomato"},
+    {"tangerine", "bg-calendar-tangerine"},
+    {"banana", "bg-calendar-banana"},
+    {"sage", "bg-calendar-sage"},
+    {"peacock", "bg-calendar-peacock"},
+    {"blueberry", "bg-calendar-blueberry"},
+    {"grape", "bg-calendar-grape"},
+    {"graphite", "bg-calendar-graphite"}
   ]
 
   # Classes the per-integration rotation cycles through when an integration has
@@ -270,15 +272,36 @@ defmodule Tymeslot.Integrations.Calendar.EventColour do
 
   @doc """
   Returns the ordered palette as a list of `{key, label, tailwind_class}` tuples.
+
+  Built per call rather than held in the module attribute: the labels are
+  translated, and a `dgettext/2` call in an attribute would freeze them at the
+  compile-time locale.
   """
   @spec palette() :: [{key(), String.t(), String.t()}]
-  def palette, do: @palette
+  def palette, do: Enum.map(@palette, fn {key, class} -> {key, label(key), class} end)
+
+  @doc """
+  Returns the display name for a palette key, in the caller's locale.
+
+  This is the swatch's accessible name, not decoration: the swatches carry no
+  visible text, so for anyone using a screen reader it is the only thing
+  distinguishing one colour from another.
+  """
+  @spec label(key()) :: String.t()
+  def label("tomato"), do: dgettext("dashboard_calendar", "Tomato")
+  def label("tangerine"), do: dgettext("dashboard_calendar", "Tangerine")
+  def label("banana"), do: dgettext("dashboard_calendar", "Banana")
+  def label("sage"), do: dgettext("dashboard_calendar", "Sage")
+  def label("peacock"), do: dgettext("dashboard_calendar", "Peacock")
+  def label("blueberry"), do: dgettext("dashboard_calendar", "Blueberry")
+  def label("grape"), do: dgettext("dashboard_calendar", "Grape")
+  def label("graphite"), do: dgettext("dashboard_calendar", "Graphite")
 
   @doc """
   Returns the list of valid palette keys.
   """
   @spec keys() :: [key()]
-  def keys, do: Enum.map(@palette, fn {key, _label, _class} -> key end)
+  def keys, do: Enum.map(@palette, fn {key, _class} -> key end)
 
   @doc """
   Returns the neutral class painted when no colour can be resolved.
@@ -379,9 +402,7 @@ defmodule Tymeslot.Integrations.Calendar.EventColour do
 
   def nearest_key(_other), do: nil
 
-  defp class_map do
-    Map.new(@palette, fn {key, _label, class} -> {key, class} end)
-  end
+  defp class_map, do: Map.new(@palette)
 
   defp to_rgb(value) do
     value = value |> String.trim() |> String.downcase()

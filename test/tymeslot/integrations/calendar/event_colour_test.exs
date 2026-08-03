@@ -15,8 +15,21 @@ defmodule Tymeslot.Integrations.Calendar.EventColourTest do
       Enum.each(palette, fn entry ->
         assert {key, label, class} = entry
         assert key in EventColour.keys()
-        assert label == String.capitalize(key)
+        assert label == EventColour.label(key)
         assert class == "bg-calendar-#{key}"
+      end)
+    end
+
+    test "labels follow the caller's locale" do
+      # The swatches carry no visible text, so the label is the whole
+      # accessible name of the control — it cannot stay English.
+      assert EventColour.label("blueberry") == "Blueberry"
+
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert EventColour.label("blueberry") == "Blaubeere"
+
+        assert {"blueberry", "Blaubeere", _class} =
+                 Enum.find(EventColour.palette(), &(elem(&1, 0) == "blueberry"))
       end)
     end
 
