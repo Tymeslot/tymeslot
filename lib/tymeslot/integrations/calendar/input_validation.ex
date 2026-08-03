@@ -85,8 +85,9 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
 
   def validate_single_field(:url, value, opts) do
     metadata = Keyword.get(opts, :metadata, %{})
+    normalised = if is_binary(value), do: Feed.normalise_url(value), else: value
 
-    case validate_server_url(value, metadata) do
+    case validate_server_url(normalised, metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
       {:error, %{url: error}} -> {:error, error}
     end
@@ -137,11 +138,10 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   @spec validate_ics_subscription_form(map(), keyword()) :: {:ok, map()} | {:error, map()}
   def validate_ics_subscription_form(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
-    url = params["url"] |> to_string() |> Feed.normalise_url()
 
     with {:ok, sanitized_name} <-
            InputValidators.validate_integration_name(params["name"], metadata),
-         {:ok, sanitized_url} <- validate_subscription_url(url, metadata) do
+         {:ok, sanitized_url} <- validate_subscription_url(params["url"], metadata) do
       SecurityLogger.log_security_event("calendar_subscription_form_validation_success", %{
         ip_address: metadata[:ip],
         user_agent: metadata[:user_agent],
@@ -165,11 +165,43 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
 
   # Unlike a CalDAV server address, a feed URL is required: without it there
   # is nothing at all to subscribe to.
-  defp validate_subscription_url(url, _metadata) when url in [nil, ""] do
+  defp validate_subscription_url(nil, _metadata) do
     {:error, %{url: "Enter the calendar feed URL"}}
   end
 
-  defp validate_subscription_url(url, metadata), do: validate_server_url(url, metadata)
+  # Deliberately does not go through `validate_server_url/2`: that path runs
+  # `UniversalSanitizer` in `:strict` mode, which recursively percent-decodes
+  # and then strips SQL-injection-shaped substrings (`--...`, `0x...`) from the
+  # URL before it is ever probed or stored. Feed URLs routinely contain those
+  # exact shapes as legitimate tokens (iCloud's `--` suffix, Google's `%40`
+  # secret address, hex-looking path segments), so a feed URL is validated
+  # directly against its raw bytes instead of through the text sanitiser.
+  defp validate_subscription_url(url, _metadata) when is_binary(url) do
+    case Feed.normalise_url(url) do
+      "" -> {:error, %{url: "Enter the calendar feed URL"}}
+      normalised -> validate_subscription_url_format(normalised)
+    end
+  end
+
+  defp validate_subscription_url(_value, _metadata) do
+    {:error, %{url: "Server URL must be text"}}
+  end
+
+  defp validate_subscription_url_format(url) do
+    cond do
+      not String.valid?(url) or String.contains?(url, "\x00") ->
+        {:error, %{url: "URL contains invalid characters"}}
+
+      String.length(url) > 2000 ->
+        {:error, %{url: "URL must be 2000 characters or less"}}
+
+      true ->
+        case validate_calendar_url(url) do
+          :ok -> {:ok, url}
+          {:error, error} -> {:error, %{url: error}}
+        end
+    end
+  end
 
   @doc """
   Validates Nextcloud calendar discovery parameters.

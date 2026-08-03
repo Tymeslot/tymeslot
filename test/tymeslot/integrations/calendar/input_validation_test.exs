@@ -113,4 +113,100 @@ defmodule Tymeslot.Integrations.Calendar.InputValidationTest do
       assert {:error, _errors} = InputValidation.validate_single_field(:password, "")
     end
   end
+
+  describe "validate_ics_subscription_form/2" do
+    @subscription_params %{
+      "name" => "My subscribed calendar",
+      "url" => "https://feeds.example.com/calendar.ics"
+    }
+
+    test "accepts a valid name and feed URL" do
+      assert {:ok, result} = InputValidation.validate_ics_subscription_form(@subscription_params)
+      assert result["name"] == "My subscribed calendar"
+      assert result["url"] == "https://feeds.example.com/calendar.ics"
+    end
+
+    test "rejects a blank URL" do
+      params = Map.put(@subscription_params, "url", "")
+
+      assert {:error, %{url: _error}} = InputValidation.validate_ics_subscription_form(params)
+    end
+
+    test "rejects a nil URL" do
+      params = Map.put(@subscription_params, "url", nil)
+
+      assert {:error, %{url: _error}} = InputValidation.validate_ics_subscription_form(params)
+    end
+
+    test "rejects a file:// scheme" do
+      params = Map.put(@subscription_params, "url", "file:///etc/passwd")
+
+      assert {:error, %{url: _error}} = InputValidation.validate_ics_subscription_form(params)
+    end
+
+    test "rejects an invalid name" do
+      params = Map.put(@subscription_params, "name", "")
+
+      assert {:error, %{name: _error}} = InputValidation.validate_ics_subscription_form(params)
+    end
+
+    test "rewrites webcal:// to https://" do
+      params = Map.put(@subscription_params, "url", "webcal://feeds.example.com/calendar.ics")
+
+      assert {:ok, result} = InputValidation.validate_ics_subscription_form(params)
+      assert result["url"] == "https://feeds.example.com/calendar.ics"
+    end
+
+    test "does not crash on a non-binary url param" do
+      params = Map.put(@subscription_params, "url", %{"nested" => "value"})
+
+      assert {:error, %{url: _error}} = InputValidation.validate_ics_subscription_form(params)
+    end
+
+    test "preserves a Google-style %40-encoded secret address byte-for-byte" do
+      url = "https://calendar.google.com/calendar/ical/user%40gmail.com/private-abc123/basic.ics"
+      params = Map.put(@subscription_params, "url", url)
+
+      assert {:ok, result} = InputValidation.validate_ics_subscription_form(params)
+      assert result["url"] == url
+    end
+
+    test "preserves an iCloud-style token containing --" do
+      url = "https://p01-caldav.icloud.com/published/2/abc--def--123"
+      params = Map.put(@subscription_params, "url", url)
+
+      assert {:ok, result} = InputValidation.validate_ics_subscription_form(params)
+      assert result["url"] == url
+    end
+
+    test "preserves a token containing 0x" do
+      url = "https://feeds.example.com/calendar/0xdeadbeef.ics"
+      params = Map.put(@subscription_params, "url", url)
+
+      assert {:ok, result} = InputValidation.validate_ics_subscription_form(params)
+      assert result["url"] == url
+    end
+
+    test "preserves a query string with %26 and %23" do
+      url = "https://feeds.example.com/calendar.ics?token=a%26b%23c"
+      params = Map.put(@subscription_params, "url", url)
+
+      assert {:ok, result} = InputValidation.validate_ics_subscription_form(params)
+      assert result["url"] == url
+    end
+
+    test "accepts a webcal URL with leading whitespace" do
+      params = Map.put(@subscription_params, "url", "  webcal://feeds.example.com/calendar.ics")
+
+      assert {:ok, result} = InputValidation.validate_ics_subscription_form(params)
+      assert result["url"] == "https://feeds.example.com/calendar.ics"
+    end
+
+    test "accepts WebCal:// regardless of casing" do
+      params = Map.put(@subscription_params, "url", "WebCal://feeds.example.com/calendar.ics")
+
+      assert {:ok, result} = InputValidation.validate_ics_subscription_form(params)
+      assert result["url"] == "https://feeds.example.com/calendar.ics"
+    end
+  end
 end

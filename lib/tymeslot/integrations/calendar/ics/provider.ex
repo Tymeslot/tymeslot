@@ -134,7 +134,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Provider do
   the connection test. Everything on the read path goes through
   `list_events/2` and the local cache instead.
   """
-  @spec fetch_feed(String.t() | nil) :: {:ok, [map()]} | {:error, Feed.error() | :missing_url}
+  @spec fetch_feed(String.t() | nil) :: {:ok, [map()]} | {:error, Feed.error()}
   def fetch_feed(url) when is_binary(url) and url != "", do: Feed.fetch_events(url)
   def fetch_feed(_url), do: {:error, :missing_url}
 

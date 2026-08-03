@@ -4,9 +4,10 @@ defmodule Tymeslot.Integrations.Calendar.Ics.FeedTest do
 
   alias Tymeslot.Integrations.Calendar.Ics.Feed
 
-  # Exercises the real HTTPClient → Req → Req.Test path, so SSRF guarding,
-  # redirect handling, and status classification are covered as they actually
-  # run rather than through a stubbed client module.
+  # Exercises the real HTTPClient → Req → Req.Test path, so redirect handling
+  # and status classification are covered as they actually run rather than
+  # through a stubbed client module. SSRF guarding itself is covered by
+  # FeedSsrfTest, alongside this module.
 
   @ics """
   BEGIN:VCALENDAR
@@ -120,6 +121,53 @@ defmodule Tymeslot.Integrations.Calendar.Ics.FeedTest do
     test "leaves an https URL untouched" do
       assert Feed.normalise_url("https://feeds.example.com/calendar.ics") ==
                "https://feeds.example.com/calendar.ics"
+    end
+
+    test "rewrites the webcal scheme regardless of casing" do
+      assert Feed.normalise_url("WebCal://feeds.example.com/calendar.ics") ==
+               "https://feeds.example.com/calendar.ics"
+
+      assert Feed.normalise_url("WEBCAL://feeds.example.com/calendar.ics") ==
+               "https://feeds.example.com/calendar.ics"
+    end
+
+    test "trims surrounding whitespace before rewriting the scheme" do
+      assert Feed.normalise_url("  webcal://feeds.example.com/calendar.ics  ") ==
+               "https://feeds.example.com/calendar.ics"
+    end
+
+    test "trims surrounding whitespace on non-webcal URLs" do
+      assert Feed.normalise_url("  https://feeds.example.com/calendar.ics  ") ==
+               "https://feeds.example.com/calendar.ics"
+    end
+  end
+
+  describe "error_message/1" do
+    @error_cases [
+      {:unauthorised, "revoked"},
+      {:not_found, "404"},
+      {:invalid_ics, ".ics"},
+      {:too_large, "too large"},
+      {:too_many_redirects, "redirected too many"},
+      {:missing_url, "Enter"},
+      {{:blocked, "URL resolves to a private or local network address"}, "blocked"},
+      {{:http_status, 503}, "503"},
+      {:some_unmapped_reason, "Could not reach"}
+    ]
+
+    for {error, expected_fragment} <- @error_cases do
+      test "#{inspect(error)} returns a message mentioning #{inspect(expected_fragment)}" do
+        message = Feed.error_message(unquote(Macro.escape(error)))
+
+        assert message != ""
+        assert message =~ unquote(expected_fragment)
+      end
+    end
+
+    test "every declared error value gets a distinct message" do
+      messages = Enum.map(@error_cases, fn {error, _fragment} -> Feed.error_message(error) end)
+
+      assert Enum.uniq(messages) == messages
     end
   end
 end

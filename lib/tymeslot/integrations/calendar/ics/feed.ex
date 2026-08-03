@@ -42,6 +42,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
           | :too_large
           | :invalid_ics
           | :too_many_redirects
+          | :missing_url
           | {:http_status, pos_integer()}
           | {:transport, term()}
           | {:blocked, term()}
@@ -62,12 +63,22 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
 
   @doc """
   Rewrites the `webcal://` scheme every calendar vendor hands out in its
-  "subscribe" UI to `https://`. Anything else is returned untouched.
+  "subscribe" UI to `https://`, regardless of casing (`WebCal://`,
+  `WEBCAL://`, ...) or surrounding whitespace. Anything else is returned
+  trimmed but otherwise untouched.
   """
   @spec normalise_url(String.t()) :: String.t()
-  def normalise_url("webcal://" <> rest), do: "https://" <> rest
-  def normalise_url("WEBCAL://" <> rest), do: "https://" <> rest
-  def normalise_url(url), do: url
+  def normalise_url(url) do
+    trimmed = String.trim(url)
+
+    case String.split(trimmed, "://", parts: 2) do
+      [scheme, rest] ->
+        if String.downcase(scheme) == "webcal", do: "https://" <> rest, else: trimmed
+
+      _no_scheme ->
+        trimmed
+    end
+  end
 
   @doc "The largest feed body this module will accept, in bytes."
   @spec max_feed_bytes() :: pos_integer()
