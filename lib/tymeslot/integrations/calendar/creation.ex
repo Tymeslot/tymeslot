@@ -17,6 +17,9 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Utils.SanitizeMerge
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
+
+  require Logger
 
   @type user_id :: pos_integer()
 
@@ -91,8 +94,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
              {:form_errors, %{String.t() => term()}}
              | {:changeset, Ecto.Changeset.t()}
              | {:rate_limited, String.t()}
-             | :unattributable
-             | term()}
+             | :unattributable}
   def create_subscription_with_validation(user_id, params, opts \\ [])
       when is_integer(user_id) and is_map(params) do
     metadata = Keyword.get(opts, :metadata, %{})
@@ -101,12 +103,14 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
            CalendarInputValidation.validate_ics_subscription_form(params, metadata: metadata),
          :ok <- check_no_duplicate_subscription(user_id, sanitized["url"]),
          attrs <- subscription_attrs(user_id, sanitized),
-         {:ok, attrs} <- probe_subscription(attrs, user_id) do
-      # Deliberately no `ensure_primary_on_first/3`: a subscription can never
-      # receive a booking, so promoting one to primary would leave a user whose
-      # only calendar is a subscription with a primary that silently fails
-      # every booking write.
-      CalendarManagement.create_calendar_integration(attrs)
+         {:ok, attrs} <- probe_subscription(attrs, user_id),
+         # Deliberately no `ensure_primary_on_first/3`: a subscription can never
+         # receive a booking, so promoting one to primary would leave a user whose
+         # only calendar is a subscription with a primary that silently fails
+         # every booking write.
+         {:ok, integration} <- CalendarManagement.create_calendar_integration(attrs) do
+      enqueue_initial_sync(integration)
+      {:ok, integration}
     else
       {:error, :duplicate_integration} ->
         {:error, :duplicate_integration}
@@ -122,6 +126,27 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
 
       {:error, validation_errors} when is_map(validation_errors) ->
         {:error, {:form_errors, validation_errors}}
+    end
+  end
+
+  # A fresh subscription contributes zero busy time until the fallback sweep
+  # next runs, up to `@subscription_interval` later, while showing as
+  # connected. Enqueueing here closes that gap; a failure to enqueue is
+  # non-fatal since the sweep will still pick the integration up.
+  defp enqueue_initial_sync(integration) do
+    case %{"calendar_integration_id" => integration.id}
+         |> SyncIcsCalendarWorker.new()
+         |> Oban.insert() do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to enqueue initial subscription sync",
+          calendar_integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        :ok
     end
   end
 
@@ -197,8 +222,11 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
       {:error, reason} ->
         # Feed failures get their own copy rather than the CalDAV-shaped
         # "check your credentials" phrasing: there are no credentials here,
-        # only a URL the user can fix.
-        {:error, ErrorHandler.create_validation_error(Feed.error_message(reason))}
+        # only a URL the user can fix. Returned field-scoped (rather than run
+        # through `ErrorHandler.create_validation_error/1`) so the message
+        # renders as-is under the Feed URL input, with no guessed field
+        # prefix.
+        {:error, %{url: Feed.error_message(reason)}}
     end
   end
 

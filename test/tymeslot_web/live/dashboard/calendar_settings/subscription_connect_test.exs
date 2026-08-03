@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionConnectTest do
   """
 
   use TymeslotWeb.LiveCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :integration
   @moduletag :integrations
@@ -26,6 +27,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionConnectTest do
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
 
   setup :verify_on_exit!
   setup :setup_dashboard_user
@@ -62,7 +64,27 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionConnectTest do
     })
     |> render_submit()
 
-    render(view)
+    # `add_subscription` runs the feed probe off the socket's process (see
+    # `ConfigViewComponent.handle_event/3`), which comfortably exceeds
+    # `render_async/1`'s 100ms default under load.
+    render_async(view, 5000)
+  end
+
+  # `picker_groups/2` (`CalendarSettingsComponent`) files each provider under
+  # its group's `<h3>` label, followed by the grid `<div>` holding that
+  # group's tiles. `has_element?/2` can't scope on that adjacency — LiveView
+  # 1.2's test selector engine (`LazyHTML`) has no text-matching pseudo-class
+  # — so this parses the markup directly with `Floki` (which does) and finds
+  # the provider button inside the `<div>` immediately following the group's
+  # `<h3>`, rather than trusting the page-wide text a mislabelled tile would
+  # still satisfy.
+  defp group_tile?(html, group_label, provider) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find(
+      ~s|h3:fl-contains("#{group_label}") + div button[phx-value-provider='#{provider}']|
+    )
+    |> Enum.any?()
   end
 
   describe "subscribing to a feed" do
@@ -71,6 +93,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionConnectTest do
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
 
       assert html =~ "Calendar subscriptions"
+      assert group_tile?(html, "Calendar subscriptions", "ics_url")
+      refute group_tile?(html, "CalDAV servers", "ics_url")
+      refute group_tile?(html, "Calendar subscriptions", "caldav")
     end
 
     @tag :capture_log
@@ -91,6 +116,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionConnectTest do
                Repo.get_by(CalendarIntegrationSchema, user_id: user.id, provider: "ics_url")
 
       assert integration.name == "Work calendar"
+
+      assert_enqueued(
+        worker: SyncIcsCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
     end
 
     @tag :capture_log
@@ -199,6 +229,43 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.SubscriptionConnectTest do
       result = subscribe(second_view)
 
       assert result =~ "already exists"
+
+      subscriptions =
+        Enum.count(
+          Repo.all(CalendarIntegrationSchema),
+          &(&1.user_id == user.id and &1.provider == "ics_url")
+        )
+
+      assert subscriptions == 1
+    end
+
+    @tag :capture_log
+    test "a genuine double submission is refused with a changeset error rather than a crash", %{
+      user: user
+    } do
+      # Widens the gap between the duplicate check and the insert enough that
+      # both concurrent submissions pass the check before either commits,
+      # reproducing the race a double-submit (or two browser tabs) can hit.
+      stub(Tymeslot.HTTPClientMock, :get, fn _url, _headers, _opts ->
+        Process.sleep(50)
+        {:ok, %Req.Response{status: 200, body: @ics, headers: %{}}}
+      end)
+
+      params = %{"name" => "Race calendar", "url" => @feed_url}
+      test_pid = self()
+
+      results =
+        [1, 2]
+        |> Enum.map(fn _attempt ->
+          Task.async(fn ->
+            allow(Tymeslot.HTTPClientMock, test_pid, self())
+            Calendar.create_subscription_with_validation(user.id, params)
+          end)
+        end)
+        |> Enum.map(&Task.await(&1, 5_000))
+
+      assert Enum.count(results, &match?({:ok, _integration}, &1)) == 1
+      assert Enum.count(results, &match?({:error, {:changeset, _changeset}}, &1)) == 1
 
       subscriptions =
         Enum.count(

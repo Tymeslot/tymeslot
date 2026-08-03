@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnectModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelectionModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
@@ -218,7 +219,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
                |> Task.Supervisor.async_stream_nolink(
                  active,
                  fn integration ->
-                   {integration.name, Calendar.update_integration_with_discovery(integration)}
+                   {integration.name, refresh_one(integration)}
                  end,
                  max_concurrency: 5,
                  timeout: 30_000,
@@ -359,6 +360,20 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   # --- Private Helpers ---
+
+  # A subscription has no discoverable calendar list to refresh — discovery
+  # returns the same synthetic entry every time — so "refresh" means
+  # re-fetching the feed instead, through the same worker the scheduled sync
+  # sweep uses.
+  defp refresh_one(%{provider: provider} = integration) do
+    if ProviderConfig.subscription?(provider) do
+      %{"calendar_integration_id" => integration.id}
+      |> SyncIcsCalendarWorker.new()
+      |> Oban.insert()
+    else
+      Calendar.update_integration_with_discovery(integration)
+    end
+  end
 
   defp load_integrations(socket) do
     user_id = socket.assigns.current_user.id

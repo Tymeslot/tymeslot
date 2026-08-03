@@ -315,7 +315,10 @@ defmodule Tymeslot.Integrations.Calendar do
   @spec create_subscription_with_validation(user_id(), %{String.t() => term()}, keyword()) ::
           {:ok, integration()}
           | {:error,
-             {:form_errors, %{String.t() => term()}} | {:changeset, Ecto.Changeset.t()} | any()}
+             {:form_errors, %{String.t() => term()}}
+             | {:changeset, Ecto.Changeset.t()}
+             | {:rate_limited, String.t()}
+             | :unattributable}
   def create_subscription_with_validation(user_id, params, opts \\ []) do
     Creation.create_subscription_with_validation(user_id, params, opts)
   end

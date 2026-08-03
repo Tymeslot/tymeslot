@@ -23,6 +23,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
+  require Logger
+
   @caldav_providers ProviderConfig.caldav_based_providers()
   @parent_component_id "calendar-settings"
 
@@ -137,13 +139,16 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
         {:noreply, socket}
 
       :ok ->
-        socket = assign(socket, is_saving: true, form_values: params)
+        metadata = socket.assigns.security_metadata
 
-        user_id
-        |> Calendar.create_subscription_with_validation(params,
-          metadata: socket.assigns.security_metadata
-        )
-        |> handle_create_integration_result(socket)
+        socket =
+          socket
+          |> assign(is_saving: true, form_values: params)
+          |> start_async(:create_subscription, fn ->
+            Calendar.create_subscription_with_validation(user_id, params, metadata: metadata)
+          end)
+
+        {:noreply, socket}
     end
   end
 
@@ -179,6 +184,25 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
 
         handle_create_integration_result(result, socket)
     end
+  end
+
+  # The feed probe behind `add_subscription` can take up to a few network
+  # round trips, so it runs off the socket's process via `start_async/3`
+  # rather than blocking `handle_event/3`: `is_saving` renders immediately
+  # and the LiveView stays responsive while it waits.
+  @impl Phoenix.LiveComponent
+  def handle_async(:create_subscription, {:ok, result}, socket) do
+    handle_create_integration_result(result, socket)
+  end
+
+  def handle_async(:create_subscription, {:exit, reason}, socket) do
+    Logger.error("Calendar subscription creation task crashed", reason: inspect(reason))
+
+    {:noreply,
+     assign(socket,
+       form_errors: %{generic: ["Something went wrong. Please try again."]},
+       is_saving: false
+     )}
   end
 
   defp handle_create_integration_result({:ok, _integration}, socket) do
