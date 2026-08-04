@@ -30,6 +30,43 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       assert %DateTime{} = event.end_time
     end
 
+    test "keeps the DTSTART TZID alongside the UTC-converted times" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:zoned-123@example.com
+      DTSTART;TZID=Europe/Prague:20300115T100000
+      DTEND;TZID=Europe/Prague:20300115T110000
+      SUMMARY:Zoned Meeting
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+
+      assert event.timezone == "Europe/Prague"
+      assert event.start_time == ~U[2030-01-15 09:00:00Z]
+    end
+
+    test "carries no timezone for events written in UTC" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:utc-123@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300115T110000Z
+      SUMMARY:UTC Meeting
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+
+      assert event.timezone == nil
+    end
+
     test "parses multiple events" do
       ical_content = """
       BEGIN:VCALENDAR

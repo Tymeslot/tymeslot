@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimarySelection do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
 
@@ -29,7 +30,18 @@ defmodule Tymeslot.Integrations.Calendar.PrimarySelection do
     end)
   end
 
-  defp maybe_set_as_primary(integration) do
+  # A subscription is read-only, so it can never be the calendar bookings are
+  # written to. Promoting one would leave a user whose only calendar is a
+  # subscription with a primary that fails every booking write.
+  defp maybe_set_as_primary(%{provider: provider} = integration) do
+    if ProviderConfig.subscription?(provider) do
+      integration
+    else
+      do_maybe_set_as_primary(integration)
+    end
+  end
+
+  defp do_maybe_set_as_primary(integration) do
     user_id = integration.user_id
 
     # Acquire an advisory lock scoped to this user to prevent two concurrent

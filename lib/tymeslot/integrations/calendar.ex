@@ -27,6 +27,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
   alias Tymeslot.Integrations.Calendar.ColourResolver
+  alias Tymeslot.Integrations.Calendar.ColourWriteBack
   alias Tymeslot.Integrations.Calendar.Connection
   alias Tymeslot.Integrations.Calendar.Creation
   alias Tymeslot.Integrations.Calendar.Defaults
@@ -42,9 +43,6 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Integrations.Shared.InputValidators
   alias Tymeslot.Profiles.ProfileQueries
-  alias Tymeslot.Workers.ColourWriteBackWorker
-
-  require Logger
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
@@ -327,6 +325,20 @@ defmodule Tymeslot.Integrations.Calendar do
   end
 
   @doc """
+  Validates and creates a read-only calendar subscription from a feed URL.
+  """
+  @spec create_subscription_with_validation(user_id(), %{String.t() => term()}, keyword()) ::
+          {:ok, integration()}
+          | {:error,
+             {:form_errors, %{String.t() => term()}}
+             | {:changeset, Ecto.Changeset.t()}
+             | {:rate_limited, String.t()}
+             | :unattributable}
+  def create_subscription_with_validation(user_id, params, opts \\ []) do
+    Creation.create_subscription_with_validation(user_id, params, opts)
+  end
+
+  @doc """
   Prepare selection params from selected paths and discovered calendars.
   """
   @spec prepare_selection_params([String.t()], list()) ::
@@ -575,7 +587,7 @@ defmodule Tymeslot.Integrations.Calendar do
   def set_event_colour(user_id, {:external, integration_id, uid}, colour) do
     with {:ok, override} <-
            ColourOverrideQueries.set_external(user_id, integration_id, uid, colour) do
-      maybe_enqueue_colour_write_back(user_id, integration_id, uid, colour)
+      ColourWriteBack.enqueue(user_id, integration_id, uid, colour)
       {:ok, override}
     end
   end
@@ -610,30 +622,4 @@ defmodule Tymeslot.Integrations.Calendar do
           String.t() | nil
   def resolve_event_colour(override, provider_colour),
     do: ColourResolver.resolve(override, provider_colour)
-
-  # Best-effort provider write-back for a *set*. The worker patches only the
-  # provider's colour field; Outlook and read-only calendars are handled
-  # inside the worker. `replace: [:args]` ensures that when a user changes the
-  # colour again before the previous job has run, the pending job's args are
-  # replaced in place to carry the newest colour — without it, `unique` alone
-  # would keep the *older* job (and its stale colour) and silently drop the
-  # newer enqueue.
-  defp maybe_enqueue_colour_write_back(user_id, integration_id, uid, colour) do
-    %{"user_id" => user_id, "integration_id" => integration_id, "uid" => uid, "colour" => colour}
-    |> ColourWriteBackWorker.new(replace: [:args])
-    |> Oban.insert()
-    |> log_colour_write_back_enqueue_error(user_id, integration_id)
-
-    :ok
-  end
-
-  defp log_colour_write_back_enqueue_error({:ok, _job}, _user_id, _integration_id), do: :ok
-
-  defp log_colour_write_back_enqueue_error({:error, reason}, user_id, integration_id) do
-    Logger.warning("Failed to enqueue colour write-back",
-      user_id: user_id,
-      integration_id: integration_id,
-      reason: inspect(reason)
-    )
-  end
 end

@@ -325,6 +325,27 @@ config :phoenix, :static_compressors, [
 # Configure timezone database
 config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 
+# Pin the IANA time zone database to a release we vendor ourselves, rather than
+# whichever one the `tz` package happens to bundle. `tz` 0.28.2 ships 2026b,
+# which predates two transitions that fall inside the default 90-day booking
+# window: Morocco moving to permanent UTC on 2026-09-20, and Alberta moving to
+# permanent -06 on 2026-11-01. Both would put slots an hour out.
+#
+# The files live in Core's priv so builds stay hermetic (no fetch from
+# data.iana.org at image build). `__DIR__` keeps the path anchored to Core even
+# when the SaaS overlay imports this file. Refresh with:
+#
+#     mix tz.download <version> && mix deps.compile tz --force
+#
+# then bump :iana_version to match. Tz.WatchPeriodically logs when a newer
+# release appears upstream; see Tymeslot.Application.
+config :tz, :data_dir, Path.expand("../priv/tz", __DIR__)
+config :tz, :iana_version, "2026c"
+
+# Watch data.iana.org for time zone releases newer than the pinned one. Logs
+# only; enabled in prod.exs so dev and test make no outbound calls.
+config :tymeslot, :tz_watch_enabled, false
+
 # Authentication configuration
 config :tymeslot, :auth, success_redirect_path: "/dashboard"
 

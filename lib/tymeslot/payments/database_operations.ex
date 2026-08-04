@@ -6,7 +6,7 @@ defmodule Tymeslot.Payments.DatabaseOperations do
 
   require Logger
 
-  alias Tymeslot.Payments.{ErrorHandler, PaymentQueries, PubSub}
+  alias Tymeslot.Payments.{ErrorHandler, PaymentQueries, PubSub, SubscriptionNotifications}
   alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
 
   @type transaction :: PaymentTransaction.t()
@@ -19,48 +19,6 @@ defmodule Tymeslot.Payments.DatabaseOperations do
   @spec create_payment_transaction(map()) :: {:ok, transaction()} | {:error, term()}
   def create_payment_transaction(attrs) do
     PaymentQueries.create_transaction(attrs)
-  end
-
-  @doc """
-  Updates a transaction with Stripe session information.
-  """
-  @spec update_transaction_session(transaction(), map()) ::
-          {:ok, transaction()} | {:error, term()}
-  def update_transaction_session(transaction, session) do
-    attrs = %{
-      stripe_id: session.id,
-      stripe_customer_id: Map.get(session, :customer),
-      metadata:
-        Map.merge(transaction.metadata, %{
-          checkout_session: session.id
-        })
-    }
-
-    PaymentQueries.update_transaction(transaction, attrs)
-  end
-
-  @doc """
-  Updates all necessary records when a payment is successful.
-  Includes tax information processing.
-
-  Accepts either a transaction struct (avoids a redundant DB lookup) or a Stripe ID string.
-  """
-  @spec process_successful_payment(transaction() | stripe_id(), map(), non_neg_integer()) ::
-          {:ok, :payment_processed}
-          | {:error, :transaction_not_found}
-          | {:error, any()}
-  def process_successful_payment(transaction_or_id, tax_info \\ %{}, discount_amount \\ 0) do
-    case PaymentQueries.coordinate_successful_payment(
-           transaction_or_id,
-           tax_info,
-           discount_amount
-         ) do
-      {:ok, updated_transaction} ->
-        {:ok, process_payment_updates(updated_transaction)}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
   end
 
   @doc """
@@ -84,18 +42,6 @@ defmodule Tymeslot.Payments.DatabaseOperations do
           {:error, changeset} ->
             handle_payment_processing_error(transaction, {:status_update_failed, changeset})
         end
-    end
-  end
-
-  @doc """
-  Gets a transaction by Stripe ID.
-  """
-  @spec get_transaction_by_stripe_id(stripe_id()) ::
-          {:ok, transaction()} | {:error, :transaction_not_found}
-  def get_transaction_by_stripe_id(stripe_id) do
-    case PaymentQueries.get_transaction_by_stripe_id(stripe_id) do
-      {:error, :transaction_not_found} -> {:error, :transaction_not_found}
-      {:ok, transaction} -> {:ok, transaction}
     end
   end
 
@@ -128,7 +74,7 @@ defmodule Tymeslot.Payments.DatabaseOperations do
               subscription_id: subscription_id
             )
 
-            _result = process_subscription_updates(updated_transaction)
+            _result = SubscriptionNotifications.processed(updated_transaction)
             {:ok, updated_transaction}
 
           {:error, changeset} ->
@@ -136,46 +82,6 @@ defmodule Tymeslot.Payments.DatabaseOperations do
               transaction,
               {:transaction_update_failed, changeset}
             )
-        end
-    end
-  end
-
-  @doc """
-  Creates a subscription transaction record.
-  """
-  @spec create_subscription_transaction(map()) :: {:ok, transaction()} | {:error, term()}
-  def create_subscription_transaction(attrs) do
-    PaymentQueries.create_transaction(attrs)
-  end
-
-  @doc """
-  Processes a successful subscription renewal payment.
-  """
-  @spec process_subscription_renewal(String.t(), map()) ::
-          {:ok, :subscription_processed | :already_processed} | {:error, term()}
-  def process_subscription_renewal(subscription_id, invoice_data) do
-    Logger.info("Processing subscription renewal", subscription_id: subscription_id)
-
-    case PaymentQueries.coordinate_subscription_renewal(subscription_id, invoice_data) do
-      {:ok, :already_processed} ->
-        {:ok, :already_processed}
-
-      {:ok, updated_transaction} ->
-        {:ok, process_subscription_updates(updated_transaction)}
-
-      {:error, :subscription_not_found} ->
-        {:error, :subscription_not_found}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        if duplicate_stripe_id_error?(changeset) do
-          Logger.info("Subscription renewal already processed",
-            subscription_id: subscription_id,
-            stripe_id: invoice_data["id"]
-          )
-
-          {:ok, :already_processed}
-        else
-          {:error, changeset}
         end
     end
   end
@@ -220,31 +126,6 @@ defmodule Tymeslot.Payments.DatabaseOperations do
     end
   end
 
-  @doc """
-  Gets the active subscription transaction for a user.
-  """
-  @spec get_active_subscription_transaction(integer()) :: transaction() | nil
-  def get_active_subscription_transaction(user_id) do
-    case PaymentQueries.get_active_subscription_transaction(user_id) do
-      {:ok, transaction} -> transaction
-      {:error, :subscription_not_found} -> nil
-    end
-  end
-
-  # Private helper functions kept for future use in payment processing
-  # and error handling scenarios. These functions provide essential
-  # utilities for transaction processing and error management.
-
-  @spec process_payment_updates(transaction()) :: :payment_processed
-  defp process_payment_updates(transaction) do
-    Logger.info("Payment updates processed", stripe_id: transaction.stripe_id)
-
-    # Broadcast payment success event for apps to handle their own business logic
-    PubSub.broadcast_payment_successful(transaction)
-
-    :payment_processed
-  end
-
   # Error handling utility for future expansion of payment processing
   # capabilities. This function will be used when we implement more
   # sophisticated error handling strategies.
@@ -265,16 +146,6 @@ defmodule Tymeslot.Payments.DatabaseOperations do
   end
 
   # Subscription-specific helper functions
-
-  @spec process_subscription_updates(transaction()) :: :subscription_processed
-  defp process_subscription_updates(transaction) do
-    Logger.info("Subscription updates processed", stripe_id: transaction.stripe_id)
-
-    # Broadcast subscription success event for apps to handle their own business logic
-    PubSub.broadcast_subscription_successful(transaction)
-
-    :subscription_processed
-  end
 
   @spec process_subscription_failure_updates(transaction()) :: :failure_processed
   defp process_subscription_failure_updates(transaction) do
@@ -300,12 +171,5 @@ defmodule Tymeslot.Payments.DatabaseOperations do
       )
 
     {:error, error_message}
-  end
-
-  defp duplicate_stripe_id_error?(%Ecto.Changeset{} = changeset) do
-    Enum.any?(changeset.errors, fn
-      {:stripe_id, {_error_message, opts}} -> Keyword.get(opts, :constraint) == :unique
-      _other_error -> false
-    end)
   end
 end

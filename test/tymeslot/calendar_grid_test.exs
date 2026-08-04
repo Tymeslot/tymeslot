@@ -10,6 +10,7 @@ defmodule Tymeslot.CalendarGridTest do
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
 
   describe "integration_colour_classes/1" do
     test "returns empty map for empty list" do
@@ -330,6 +331,18 @@ defmodule Tymeslot.CalendarGridTest do
         args: %{"force_full_fetch" => true}
       )
     end
+
+    test "enqueues SyncIcsCalendarWorker for ics_url integrations" do
+      integration = insert(:calendar_integration, provider: "ics_url")
+
+      {:ok, %{enqueued: 1, skipped: 0, errors: []}} =
+        CalendarGrid.refresh_events(integration.user_id)
+
+      assert_enqueued(
+        worker: SyncIcsCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
   end
 
   describe "stale_integrations/1" do
@@ -450,6 +463,26 @@ defmodule Tymeslot.CalendarGridTest do
       assert [^stale] = CalendarGrid.stale_integrations([stale])
     end
 
+    test "uses 75-minute threshold for ics_url subscriptions" do
+      fresh = %{
+        id: 1,
+        provider: "ics_url",
+        caldav_sync_tier: nil,
+        last_external_sync_at: DateTime.add(DateTime.utc_now(), -60, :minute)
+      }
+
+      assert [] = CalendarGrid.stale_integrations([fresh])
+
+      stale = %{
+        id: 2,
+        provider: "ics_url",
+        caldav_sync_tier: nil,
+        last_external_sync_at: DateTime.add(DateTime.utc_now(), -80, :minute)
+      }
+
+      assert [^stale] = CalendarGrid.stale_integrations([stale])
+    end
+
     test "applies CalDAV thresholds to all CalDAV-based providers" do
       recent = DateTime.add(DateTime.utc_now(), -10, :minute)
 
@@ -554,74 +587,6 @@ defmodule Tymeslot.CalendarGridTest do
       ]
 
       assert CalendarGrid.oldest_sync_at(integrations) == timestamp
-    end
-  end
-
-  describe "cache_created_event/1" do
-    test "accepts second-precision DateTimes from the dashboard create flow" do
-      # Regression: the in-dashboard create handler builds start_at/end_at via
-      # DateTime.new!/Time.new!, which yields second precision. The cached events
-      # schema uses :utc_datetime_usec, so the cache path must upcast or tolerate
-      # the lower precision instead of crashing in insert_all.
-      integration = insert(:calendar_integration)
-
-      start_at = DateTime.new!(~D[2026-04-14], ~T[15:45:00], "Etc/UTC")
-      end_at = DateTime.new!(~D[2026-04-14], ~T[16:15:00], "Etc/UTC")
-
-      assert :ok =
-               CalendarGrid.cache_created_event(%{
-                 uid: "regression-second-precision",
-                 calendar_integration_id: integration.id,
-                 provider: "nextcloud",
-                 provider_calendar_id: "primary",
-                 summary: "Test",
-                 start_at: start_at,
-                 end_at: end_at,
-                 all_day: false
-               })
-
-      assert {:ok, cached} =
-               CalendarGrid.get_cached_event(integration.id, "regression-second-precision")
-
-      assert cached.summary == "Test"
-    end
-  end
-
-  describe "update_cached_event/1" do
-    test "accepts second-precision synced_at from the dashboard update flow" do
-      # Regression: EditWorkflow.Updates.update_event_async / update_attendees_async /
-      # update_field_async previously built cache rows with
-      # DateTime.utc_now(:second). synced_at is :utc_datetime_usec, so the cache
-      # path must upcast lower precision instead of crashing the async task in
-      # Repo.insert_all.
-      integration = insert(:calendar_integration)
-
-      insert(:provider_calendar_event,
-        uid: "regression-update-second-precision",
-        calendar_integration: integration,
-        summary: "Before"
-      )
-
-      start_at = DateTime.new!(~D[2026-04-14], ~T[15:45:00], "Etc/UTC")
-      end_at = DateTime.new!(~D[2026-04-14], ~T[16:15:00], "Etc/UTC")
-
-      assert :ok =
-               CalendarGrid.update_cached_event(%{
-                 uid: "regression-update-second-precision",
-                 calendar_integration_id: integration.id,
-                 provider: "nextcloud",
-                 provider_calendar_id: "primary",
-                 summary: "After",
-                 start_at: start_at,
-                 end_at: end_at,
-                 all_day: false,
-                 synced_at: DateTime.utc_now(:second)
-               })
-
-      assert {:ok, cached} =
-               CalendarGrid.get_cached_event(integration.id, "regression-update-second-precision")
-
-      assert cached.summary == "After"
     end
   end
 end

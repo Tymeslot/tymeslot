@@ -14,12 +14,16 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
   alias TymeslotWeb.Dashboard.CalendarSettings.ComponentView
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.Flash
 
-  @caldav_provider_strings ProviderConfig.caldav_based_provider_strings()
+  # Providers whose setup happens in an in-app form rather than an OAuth
+  # redirect: the CalDAV family plus feed subscriptions.
+  @form_provider_strings ProviderConfig.caldav_based_provider_strings() ++
+                           ProviderConfig.subscription_provider_strings()
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -187,7 +191,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   def handle_event("connect_provider", %{"provider" => provider}, socket)
-      when provider in @caldav_provider_strings do
+      when provider in @form_provider_strings do
     {:noreply,
      assign(socket, selected_provider: String.to_existing_atom(provider), show_picker: true)}
   end
@@ -222,7 +226,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
                |> Task.Supervisor.async_stream_nolink(
                  active,
                  fn integration ->
-                   {integration.name, Calendar.update_integration_with_discovery(integration)}
+                   {integration.name, refresh_one(integration)}
                  end,
                  max_concurrency: 5,
                  timeout: 30_000,
@@ -409,6 +413,20 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   # --- Private Helpers ---
+
+  # A subscription has no discoverable calendar list to refresh — discovery
+  # returns the same synthetic entry every time — so "refresh" means
+  # re-fetching the feed instead, through the same worker the scheduled sync
+  # sweep uses.
+  defp refresh_one(%{provider: provider} = integration) do
+    if ProviderConfig.subscription?(provider) do
+      %{"calendar_integration_id" => integration.id}
+      |> SyncIcsCalendarWorker.new()
+      |> Oban.insert()
+    else
+      Calendar.update_integration_with_discovery(integration)
+    end
+  end
 
   defp load_integrations(socket) do
     user_id = socket.assigns.current_user.id

@@ -12,8 +12,13 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver do
   3. If the primary has no booking calendar configured, the first
      integration with a booking calendar is used.
   4. Finally, any integration is used.
+
+  Read-only subscriptions (`ics_url`) are excluded from every fallback tier:
+  they can block availability but can never receive a booking, so resolving
+  one would hand the booking flow an integration that builds no client.
   """
 
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Meetings.MeetingSchema
@@ -92,22 +97,39 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver do
   def resolve(user_id) when is_integer(user_id) do
     case CalendarPrimary.get_primary_calendar_integration(user_id) do
       {:ok, integration} when is_binary(integration.default_booking_calendar_id) ->
-        integration
+        if bookable?(integration),
+          do: integration,
+          else: fallback_integration(bookable_integrations(user_id))
 
       {:ok, integration} ->
-        find_integration_with_booking_calendar(user_id) || integration
+        integrations = bookable_integrations(user_id)
+
+        find_integration_with_booking_calendar(integrations) ||
+          if bookable?(integration), do: integration, else: fallback_integration(integrations)
 
       {:error, _reason} ->
-        integrations = CalendarManagement.list_active_calendar_integrations(user_id)
-        Enum.find(integrations, & &1.default_booking_calendar_id) || List.first(integrations)
+        fallback_integration(bookable_integrations(user_id))
     end
   end
 
   def resolve(_other), do: nil
 
-  defp find_integration_with_booking_calendar(user_id) do
+  defp fallback_integration(integrations) do
+    Enum.find(integrations, & &1.default_booking_calendar_id) || List.first(integrations)
+  end
+
+  defp find_integration_with_booking_calendar(integrations) do
+    Enum.find(integrations, & &1.default_booking_calendar_id)
+  end
+
+  # Subscriptions are read-only, so they must never be picked up by any of the
+  # fallback tiers: resolving one would hand the booking flow an integration
+  # that cannot build a client at all.
+  defp bookable_integrations(user_id) do
     user_id
     |> CalendarManagement.list_active_calendar_integrations()
-    |> Enum.find(& &1.default_booking_calendar_id)
+    |> Enum.filter(&bookable?/1)
   end
+
+  defp bookable?(%{provider: provider}), do: not ProviderConfig.subscription?(provider)
 end

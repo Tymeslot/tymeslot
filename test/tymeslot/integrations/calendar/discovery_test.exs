@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
   use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
+  alias Tymeslot.Integrations.Calendar.Creation
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.Reconnection
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
@@ -160,20 +161,21 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
                Reconnection.reconnect(integration, params, discover: discover)
     end
 
-    test "the form field for a validation error comes from the raw error too" do
-      assert ErrorHandler.error_field(:unauthorized) == :password
-      assert ErrorHandler.error_field(:not_found) == :base_url
-      assert ErrorHandler.error_field(:rate_limited) == :base
+    test "a failed probe stays form-level rather than being blamed on a field" do
+      # A probe failure is reported against `:discovery` regardless of locale.
+      # The message is localised, so the field it lands on must never be
+      # derived from its wording — under the pseudo locale none of the English
+      # keywords a wording-based guess would look for survive.
+      attrs = %{
+        provider: "caldav",
+        user_id: 1,
+        base_url: "https://caldav.example.com",
+        username: "invalid",
+        password: "wrong"
+      }
 
-      # `sanitize_error_message/2` is pseudo-localised here, and the field is
-      # still the one the raw error implies.
-      message = ErrorHandler.sanitize_error_message(:unauthorized, :caldav)
+      assert {:error, %{discovery: message}} = Creation.prevalidate_config(attrs)
       assert String.starts_with?(message, "⟦")
-
-      changeset =
-        ErrorHandler.create_validation_error(message, ErrorHandler.error_field(:unauthorized))
-
-      assert changeset.errors == [password: {message, []}]
     end
   end
 

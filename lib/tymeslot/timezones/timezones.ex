@@ -10,6 +10,25 @@ defmodule Tymeslot.Timezones do
 
   alias Tymeslot.Timezones.{Data, Formatting}
 
+  # Fail the build if `tz` compiled against a different IANA release than the
+  # one Core pins. The pin only takes effect when config/ and priv/tz/ are both
+  # in place before `mix deps.compile`; when they are not, `tz` quietly falls
+  # back to its own bundled release and every conversion drifts by whatever DST
+  # rules changed in between. That is invisible at runtime, so catch it here.
+  @pinned_iana_version Application.compile_env!(:tz, :iana_version)
+
+  if Tz.iana_version() != @pinned_iana_version do
+    raise """
+    IANA time zone data mismatch: `tz` compiled #{Tz.iana_version()}, but Core \
+    pins #{@pinned_iana_version}.
+
+    In a container build this usually means config/ and priv/tz/ were copied \
+    after `mix deps.compile` rather than before it. Locally, run:
+
+        mix tz.download #{@pinned_iana_version} && mix deps.compile tz --force
+    """
+  end
+
   defdelegate all_options(), to: Data
   defdelegate search(term), to: Data
   defdelegate country_code(timezone_id), to: Data

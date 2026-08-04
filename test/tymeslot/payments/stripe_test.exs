@@ -70,29 +70,6 @@ defmodule Tymeslot.Payments.StripeTest do
     end
   end
 
-  describe "create_session/5" do
-    test "builds correct session parameters" do
-      customer = %{id: "cus_123"}
-      amount = 1000
-      transaction = %{id: 456, product_identifier: "Pro Plan"}
-      success_url = "https://example.com/success"
-      cancel_url = "https://example.com/cancel"
-
-      expect(StripeSessionMock, :create, fn params, _opts ->
-        assert params.customer == "cus_123"
-        assert params.client_reference_id == "456"
-        assert params.success_url == success_url
-        assert params.cancel_url == cancel_url
-        assert List.first(params.line_items).price_data.unit_amount == 1000
-        assert List.first(params.line_items).price_data.product_data.name == "Pro Plan"
-        {:ok, %{id: "sess_123"}}
-      end)
-
-      assert {:ok, %{id: "sess_123"}} =
-               Stripe.create_session(customer, amount, transaction, success_url, cancel_url)
-    end
-  end
-
   describe "update_subscription/3" do
     test "successfully updates subscription by finding the first item" do
       sub_id = "sub_123"

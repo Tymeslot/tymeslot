@@ -11,17 +11,32 @@ config :tymeslot, :pseudo_locale_enabled, true
 # Configure upload directory for development
 config :tymeslot, :upload_directory, Path.expand("../uploads", __DIR__)
 
+# Generated URLs (email links, OAuth redirect URIs) come from the endpoint's
+# :url config, so a dev server reached through a reverse proxy must know the
+# domain the browser actually used. These read the same variables runtime.exs
+# reads in production; unset, they collapse to the previous http://localhost:PORT
+# behaviour exactly.
+port = String.to_integer(System.get_env("PORT") || "4000")
+host = System.get_env("PHX_HOST") || "localhost"
+url_scheme = System.get_env("URL_SCHEME") || "http"
+
+# As in runtime.exs, a TLS scheme means the proxy terminates on the standard
+# port, so generated links carry no port suffix. Direct access instead needs the
+# listen port to appear in the URL, which is the default path here.
+url_port = if url_scheme == "https", do: 443, else: port
+
 config :tymeslot, TymeslotWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("PORT") || "4000")],
-  url: [
-    host: "localhost",
-    port: String.to_integer(System.get_env("PORT") || "4000"),
-    scheme: "http"
-  ],
-  check_origin: [
-    "http://localhost:#{System.get_env("PORT") || "4000"}",
-    "http://127.0.0.1:#{System.get_env("PORT") || "4000"}"
-  ],
+  http: [ip: {127, 0, 0, 1}, port: port],
+  url: [host: host, port: url_port, scheme: url_scheme],
+  # The proxied origin has to be allowed too, or the LiveView socket is rejected
+  # under the very domain PHX_HOST just enabled. Deduplicated so the default case
+  # produces the same two entries it always did.
+  check_origin:
+    Enum.uniq([
+      "#{url_scheme}://#{host}:#{url_port}",
+      "http://localhost:#{port}",
+      "http://127.0.0.1:#{port}"
+    ]),
   code_reloader: true,
   debug_errors: true,
   secret_key_base:

@@ -135,13 +135,13 @@ defmodule Tymeslot.Security.RateLimiter do
   @doc """
   Rate limit a provider's connection-test attempts, in the bucket the
   provider draws its budget from (`:caldav`, `:nextcloud`, `:mirotalk`,
-  `:custom`, `:oauth`, or `:discovery` for calendar discovery, which is
-  metered exactly like a connection test but isn't tied to any one
+  `:custom`, `:ics_url`, `:oauth`, or `:discovery` for calendar discovery,
+  which is metered exactly like a connection test but isn't tied to any one
   provider's own bucket).
 
   Limit: 20 tests per 10 minutes per scope (30 for `:discovery`), except
-  `:custom` — which probes an arbitrary user-supplied host — at 5 per 10
-  minutes. The bucket is always charged to `{:user, user_id}` — an
+  `:custom` and `:ics_url` — which probe an arbitrary user-supplied host — at
+  5 per 10 minutes. The bucket is always charged to `{:user, user_id}` — an
   interactive "Test connection" click or integration setup. A scheduled
   background health probe never reaches this function at all: see
   `Tymeslot.Integrations.Shared.ConnectionProbe`'s `:background` clause

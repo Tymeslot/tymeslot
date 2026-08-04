@@ -147,15 +147,34 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
   end
 
   # Builds the grouped provider list for the picker modal: OAuth providers
-  # (Google, Outlook) first, then all CalDAV presets — no nested reveal.
+  # (Google, Outlook) first, then CalDAV presets, then feed subscriptions —
+  # no nested reveal. Grouping is by the descriptor's family rather than by
+  # its `oauth` boolean: a subscribed feed speaks no CalDAV, so listing it
+  # under "CalDAV servers" would describe it as something it isn't.
   defp picker_groups(available, integrations) do
-    entries = Enum.map(available, &provider_entry(&1, integrations))
-    {oauth, caldav} = Enum.split_with(entries, & &1.oauth?)
+    by_family =
+      available
+      |> Enum.map(&provider_entry(&1, integrations))
+      |> Enum.group_by(& &1.family)
 
-    [
-      %{label: nil, providers: oauth},
-      %{label: dgettext("dashboard_calendar_settings", "CalDAV servers"), providers: caldav}
-    ]
+    Enum.reject(
+      [
+        %{label: nil, providers: Map.get(by_family, :oauth, [])},
+        %{
+          label: dgettext("dashboard_calendar_settings", "CalDAV servers"),
+          providers: Map.get(by_family, :caldav, [])
+        },
+        %{
+          label: dgettext("dashboard_calendar_settings", "Calendar subscriptions"),
+          providers: Map.get(by_family, :subscription, [])
+        },
+        %{
+          label: dgettext("dashboard_calendar_settings", "Other"),
+          providers: Map.get(by_family, :other, [])
+        }
+      ],
+      &(&1.providers == [])
+    )
   end
 
   defp provider_entry(descriptor, integrations) do
@@ -167,7 +186,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentView do
       description: descriptor.description,
       click_event: ProviderConfig.click_event(descriptor.type),
       connected?: Enum.any?(integrations, &(&1.provider == provider)),
-      oauth?: descriptor.oauth
+      oauth?: descriptor.oauth,
+      family: descriptor.family
     }
   end
 end
