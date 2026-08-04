@@ -157,6 +157,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         exdates: exdates,
         start_time: start_time,
         end_time: end_time,
+        # The DTSTART TZID as written on the wire, already sanitised to an IANA
+        # name. `start_time`/`end_time` above are converted to UTC, which throws
+        # the zone away — recurring events need it back to expand occurrences in
+        # local wall-clock time across a DST transition (see
+        # `Tymeslot.Integrations.Calendar.ICalNormaliser.expand_event/3`). `nil` for UTC, floating, and
+        # DATE-valued events, none of which have a zone to restore.
+        timezone: dtstart_timezone(dtstart),
         transparency: normalize_transp(extract_property(lines, "TRANSP")),
         status: extract_property(lines, "STATUS"),
         class: extract_property(lines, "CLASS"),
@@ -173,6 +180,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
       nil
     end
   end
+
+  defp dtstart_timezone(%{timezone: timezone}) when is_binary(timezone), do: timezone
+  defp dtstart_timezone(_dtstart), do: nil
 
   defp unfold_lines(content) do
     content

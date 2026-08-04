@@ -2,6 +2,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpTest do
   use Tymeslot.CalDAVCase, async: false
   @moduletag :integrations
 
+  import ExUnit.CaptureLog
+
   alias Tymeslot.Integrations.Calendar.CalDAV.Http
 
   # These tests exercise the real HTTPClient → Req → Req.Test path so that
@@ -144,6 +146,80 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpTest do
                  "pass",
                  "<calendar-query/>"
                )
+    end
+
+    test "maps an unmodelled status to {:unexpected_status, status}" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        Conn.send_resp(conn, 415, "Unsupported Media Type")
+      end)
+
+      assert {:error, {:unexpected_status, 415}} =
+               Http.report(
+                 "https://caldav.example.com/calendars/user/personal/",
+                 "user",
+                 "pass",
+                 "<calendar-query/>"
+               )
+    end
+
+    test "logs the server's explanation for an unmodelled status" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        Conn.send_resp(conn, 415, "<error>only text/xml is supported here</error>")
+      end)
+
+      # Production logs the metadata (JSON, `:all_except`), so the excerpt is
+      # asserted where it actually lands rather than in the message.
+      log =
+        capture_log([format: "$message $metadata\n", metadata: [:status, :body]], fn ->
+          assert {:error, {:unexpected_status, 415}} =
+                   Http.report(
+                     "https://caldav.example.com/calendars/user/personal/",
+                     "user",
+                     "pass",
+                     "<calendar-query/>"
+                   )
+        end)
+
+      assert log =~ "only text/xml is supported here"
+      assert log =~ "status=415"
+    end
+
+    test "sends Depth: 1 by default and the caller's value when given" do
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        send(test_pid, {:depth, Conn.get_req_header(conn, "depth")})
+
+        conn
+        |> Conn.put_resp_header("content-type", "application/xml")
+        |> Conn.send_resp(207, "<xml/>")
+      end)
+
+      url = "https://caldav.example.com/calendars/user/personal/"
+
+      assert {:ok, _default} = Http.report(url, "user", "pass", "<calendar-query/>")
+      assert_received {:depth, ["1"]}
+
+      assert {:ok, _depth_0} = Http.report(url, "user", "pass", "<sync-collection/>", depth: "0")
+      assert_received {:depth, ["0"]}
+    end
+
+    test "applies a caller's status override before the shared status table" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        Conn.send_resp(conn, 410, "Gone")
+      end)
+
+      url = "https://caldav.example.com/calendars/user/personal/"
+
+      assert {:error, :sync_token_expired} =
+               Http.report(url, "user", "pass", "<sync-collection/>",
+                 status_overrides: %{410 => :sync_token_expired}
+               )
+
+      # Without the override the same status stays unmodelled: a calendar-query
+      # answered with 410 says nothing about a sync token.
+      assert {:error, {:unexpected_status, 410}} =
+               Http.report(url, "user", "pass", "<calendar-query/>")
     end
   end
 

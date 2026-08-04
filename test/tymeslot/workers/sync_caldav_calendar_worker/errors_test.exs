@@ -1,7 +1,9 @@
 defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
   @moduledoc """
   Covers the CalDAV sync worker's error handling: provider authentication
-  failures (401) and sync-token expiry (410) responses.
+  failures (401), missing calendar paths (404), refused requests (415),
+  sync-token expiry (410), the deletion circuit breaker, and a delta the
+  server answered without any event data.
   """
 
   use Tymeslot.DataCase, async: false
@@ -136,12 +138,59 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
     end
   end
 
+  describe "perform/1 - the server refuses the request" do
+    test "discards on a 4xx the transport layer does not model" do
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 3,
+          calendar_paths: [path1()]
+        )
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        Conn.send_resp(conn, 415, "Unsupported Media Type")
+      end)
+
+      # Retrying re-sends the same bytes for the same refusal, so the job must
+      # not burn its remaining attempts and raise an admin alert on the last.
+      assert {:discard, reason} =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert reason =~ "HTTP 415"
+
+      updated =
+        Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
+
+      # The refusal says nothing about the credentials, so it must not push the
+      # user through a reconnection they do not need.
+      assert updated.needs_reauth == false
+    end
+
+    test "still retries a 5xx" do
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 3,
+          calendar_paths: [path1()]
+        )
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        Conn.send_resp(conn, 503, "Service Unavailable")
+      end)
+
+      assert {:error, :server_error} =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+    end
+  end
+
   describe "perform/1 - sync token expiry" do
-    test "410 from server is treated as generic error because CalDAVHttp.report does not pass through 410" do
-      # BUG: CalDAVHttp.report/5 converts 410 to {:error, "Unexpected status: 410"}
-      # before the worker can match {:ok, %Req.Response{status: 410}} in
-      # fetch_sync_collection. The sync_token_expired fallback path is unreachable.
-      # Fix by adding a 410 clause to CalDAVHttp.report that returns the raw response.
+    test "410 clears the stale token and falls back to a full fetch" do
       integration =
         insert(:calendar_integration,
           provider: "caldav",
@@ -151,11 +200,22 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
           caldav_sync_token: "stale-sync-token"
         )
 
+      # The server no longer recognises the stored token, so it answers the
+      # sync-collection REPORT with 410 and serves the calendar-query REPORT
+      # the worker falls back to.
       ReqTest.stub(:tymeslot_http, fn conn ->
-        Conn.send_resp(conn, 410, "Gone")
+        {:ok, body, conn} = Conn.read_body(conn)
+
+        if body =~ "sync-collection" do
+          Conn.send_resp(conn, 410, "Gone")
+        else
+          conn
+          |> Conn.put_resp_header("content-type", "application/xml")
+          |> Conn.send_resp(207, caldav_report_xml("#{path1()}event1.ics", ical_path1()))
+        end
       end)
 
-      assert {:error, "Unexpected status: 410"} =
+      assert :ok =
                perform_job(SyncCalDavCalendarWorker, %{
                  "calendar_integration_id" => integration.id
                })
@@ -163,7 +223,42 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
       updated =
         Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
 
-      assert updated.caldav_sync_token == "stale-sync-token"
+      assert updated.caldav_sync_token == nil
+
+      assert {:ok, _event} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "event-from-path1@test")
+    end
+
+    test "sends the sync-collection REPORT with Depth: 0 as RFC 6578 requires" do
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 1,
+          calendar_paths: [path1()],
+          caldav_sync_token: "known-token"
+        )
+
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        {:ok, body, conn} = Conn.read_body(conn)
+
+        if body =~ "sync-collection" do
+          send(test_pid, {:depth, Conn.get_req_header(conn, "depth")})
+        end
+
+        conn
+        |> Conn.put_resp_header("content-type", "application/xml")
+        |> Conn.send_resp(207, caldav_report_xml("#{path1()}event1.ics", ical_path1()))
+      end)
+
+      assert :ok =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert_received {:depth, ["0"]}
     end
   end
 
@@ -214,6 +309,68 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
       # The cache survived and the sync token was not advanced.
       assert {:ok, _event} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, "cached@test")
+    end
+  end
+
+  describe "perform/1 - sync-collection returned without event data" do
+    test "an etag-only delta falls back to a full fetch instead of cancelling the meetings it names" do
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 1,
+          calendar_paths: [path1()],
+          caldav_sync_token: "known-token"
+        )
+
+      href = "#{path1()}event1.ics"
+
+      # Booked at the time `ical_path1/0` reports, so the fallback full fetch
+      # finds the meeting unchanged and every status below stays untouched.
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: href,
+          status: "confirmed",
+          start_time: ~U[2099-12-15 10:00:00Z],
+          end_time: ~U[2099-12-15 11:00:00Z]
+        )
+
+      # A strict server names the changed resource and its etag but declines
+      # to inline the calendar data. Reading that as a deletion would cancel
+      # the booking this href belongs to and email both parties.
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        {:ok, body, conn} = Conn.read_body(conn)
+
+        if body =~ "sync-collection" do
+          conn
+          |> Conn.put_resp_header("content-type", "application/xml")
+          |> Conn.send_resp(207, sync_collection_etag_only_xml(href, "new-token"))
+        else
+          conn
+          |> Conn.put_resp_header("content-type", "application/xml")
+          |> Conn.send_resp(207, caldav_report_xml(href, ical_path1()))
+        end
+      end)
+
+      assert :ok =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      reloaded = Repo.get!(Tymeslot.Meetings.MeetingSchema, meeting.id)
+      assert reloaded.status == "confirmed"
+      assert is_nil(reloaded.calendar_sync_status)
+
+      # The full fetch the worker fell back to is what actually refreshed the
+      # calendar, and the token stayed valid so the same delta is offered again.
+      assert {:ok, _event} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "event-from-path1@test")
+
+      updated =
+        Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
+
+      assert updated.caldav_sync_token == "known-token"
     end
   end
 end

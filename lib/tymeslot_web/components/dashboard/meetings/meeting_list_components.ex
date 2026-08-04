@@ -213,7 +213,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             </ul>
           </div>
 
-          <div :if={@meeting.description && @meeting.description != ""} class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50 flex gap-4 items-start">
+          <div :if={@meeting.attendee_message && @meeting.attendee_message != ""} class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50 flex gap-4 items-start">
             <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-tymeslot-100">
               <CoreComponents.icon name="hero-pencil-square" class="w-4 h-4 text-tymeslot-400" />
             </div>
@@ -221,7 +221,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mb-1">
                 {dgettext("dashboard_bookings", "Meeting Notes")}
               </p>
-              <p class="text-tymeslot-600 font-medium leading-relaxed">{@meeting.description}</p>
+              <p class="text-tymeslot-600 font-medium leading-relaxed">{@meeting.attendee_message}</p>
             </div>
           </div>
 

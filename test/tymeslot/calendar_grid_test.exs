@@ -9,6 +9,7 @@ defmodule Tymeslot.CalendarGridTest do
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
 
   describe "get_integration_color_indices/1" do
     test "returns empty map for empty list" do
@@ -298,6 +299,18 @@ defmodule Tymeslot.CalendarGridTest do
         args: %{"force_full_fetch" => true}
       )
     end
+
+    test "enqueues SyncIcsCalendarWorker for ics_url integrations" do
+      integration = insert(:calendar_integration, provider: "ics_url")
+
+      {:ok, %{enqueued: 1, skipped: 0, errors: []}} =
+        CalendarGrid.refresh_events(integration.user_id)
+
+      assert_enqueued(
+        worker: SyncIcsCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
   end
 
   describe "stale_integrations/1" do
@@ -413,6 +426,26 @@ defmodule Tymeslot.CalendarGridTest do
         provider: "caldav",
         caldav_sync_tier: nil,
         last_external_sync_at: DateTime.add(DateTime.utc_now(), -30, :minute)
+      }
+
+      assert [^stale] = CalendarGrid.stale_integrations([stale])
+    end
+
+    test "uses 75-minute threshold for ics_url subscriptions" do
+      fresh = %{
+        id: 1,
+        provider: "ics_url",
+        caldav_sync_tier: nil,
+        last_external_sync_at: DateTime.add(DateTime.utc_now(), -60, :minute)
+      }
+
+      assert [] = CalendarGrid.stale_integrations([fresh])
+
+      stale = %{
+        id: 2,
+        provider: "ics_url",
+        caldav_sync_tier: nil,
+        last_external_sync_at: DateTime.add(DateTime.utc_now(), -80, :minute)
       }
 
       assert [^stale] = CalendarGrid.stale_integrations([stale])

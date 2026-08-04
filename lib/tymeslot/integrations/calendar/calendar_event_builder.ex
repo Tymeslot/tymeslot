@@ -10,14 +10,22 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
 
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Utils.MapKeys
+  alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Endpoint
+
+  # Tymeslot's own reminder pipeline sends the reminder emails, so alarms
+  # written out to a provider are always `:popup`. An EMAIL alarm would make
+  # the calendar server send its own copy on top of the one Tymeslot already
+  # schedules, so the attendee would be reminded twice.
+  @alarm_method :popup
 
   @doc """
   Builds a calendar event data map from a meeting record.
 
   Returns a map with `:uid`, `:summary`, `:description`, `:start_time`,
   `:end_time`, `:timezone`, `:location`, `:organizer_name`,
-  `:organizer_email`, `:attendee_name`, and `:attendee_email` keys.
+  `:organizer_email`, `:attendee_name`, `:attendee_email`, and `:reminders`
+  keys.
 
   The organiser fields are emitted so `ICalBuilder` can tag the resulting
   `ORGANIZER` line with `SCHEDULE-AGENT=CLIENT` (RFC 6638 §7.1) — without
@@ -41,8 +49,36 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
       organizer_name: meeting.organizer_name,
       organizer_email: meeting.organizer_email,
       attendee_name: meeting.attendee_name,
-      attendee_email: meeting.attendee_email
+      attendee_email: meeting.attendee_email,
+      reminders: build_reminders(meeting)
     }
+  end
+
+  # The meeting stores the reminders chosen at booking time as `%{value:,
+  # unit:}` (e.g. 30 "minutes" before). The provider adapters — `ICalBuilder`'s
+  # VALARM writer, Google's `EventMapper`, Outlook's Graph mapping — all
+  # consume `Tymeslot.Integrations.Calendar.Reminder`'s canonical
+  # `%{method:, minutes_before:}` shape instead, so the two are reconciled
+  # here. Reminders round-tripped through a JSONB column come back
+  # string-keyed; `ReminderUtils.normalize_reminder/1` accepts either form and
+  # rejects anything it can't read, which is dropped rather than written out
+  # as a malformed alarm.
+  defp build_reminders(meeting) do
+    meeting
+    |> Map.get(:reminders)
+    |> List.wrap()
+    |> Enum.flat_map(&to_alarm/1)
+  end
+
+  defp to_alarm(reminder) do
+    case ReminderUtils.normalize_reminder(reminder) do
+      {:ok, %{value: value, unit: unit}} ->
+        minutes_before = div(ReminderUtils.reminder_interval_seconds(value, unit), 60)
+        [%{method: @alarm_method, minutes_before: minutes_before}]
+
+      {:error, :invalid_reminder} ->
+        []
+    end
   end
 
   @doc """

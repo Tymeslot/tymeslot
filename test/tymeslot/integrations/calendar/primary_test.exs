@@ -6,11 +6,143 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Security.Encryption
 
   setup do
     user = insert(:user)
     _profile = insert(:profile, user: user)
     %{user: user}
+  end
+
+  defp insert_subscription(user) do
+    insert(:calendar_integration,
+      user: user,
+      provider: "ics_url",
+      base_url: "https://feeds.example.com",
+      username_encrypted: nil,
+      password_encrypted: nil,
+      subscription_url_encrypted: Encryption.encrypt("https://feeds.example.com/feed.ics")
+    )
+  end
+
+  describe "the subscription-never-primary invariant" do
+    test "toggling a subscription-only account off and on leaves the primary unset", %{
+      user: user
+    } do
+      subscription = insert_subscription(user)
+
+      assert {:ok, toggled_off} =
+               CalendarManagement.toggle_with_primary_rebalance(subscription)
+
+      refute toggled_off.is_active
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == nil
+
+      assert {:ok, toggled_on} =
+               CalendarManagement.toggle_with_primary_rebalance(toggled_off)
+
+      assert toggled_on.is_active
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == nil
+    end
+
+    test "deactivating a writable primary promotes the remaining writable integration over a subscription",
+         %{user: user} do
+      primary =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_list: [%{"id" => "primary", "selected" => true}]
+        )
+
+      fallback =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          calendar_paths: ["/dav/fallback"]
+        )
+
+      _subscription = insert_subscription(user)
+
+      assert {:ok, _result} =
+               CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert {:ok, toggled} = CalendarManagement.toggle_with_primary_rebalance(primary)
+      refute toggled.is_active
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == fallback.id
+    end
+
+    test "deactivating a writable primary with only a subscription remaining clears the primary",
+         %{user: user} do
+      primary =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_list: [%{"id" => "primary", "selected" => true}]
+        )
+
+      _subscription = insert_subscription(user)
+
+      assert {:ok, _result} =
+               CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert {:ok, toggled} = CalendarManagement.toggle_with_primary_rebalance(primary)
+      refute toggled.is_active
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == nil
+    end
+
+    test "delete_with_primary_handling promotes the writable integration over a subscription",
+         %{user: user} do
+      primary =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_list: [%{"id" => "primary", "selected" => true}]
+        )
+
+      fallback =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          calendar_paths: ["/dav/fallback"]
+        )
+
+      _subscription = insert_subscription(user)
+
+      assert {:ok, _result} =
+               CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert {:ok, _result} = CalendarPrimary.delete_with_primary_handling(primary)
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == fallback.id
+    end
+
+    test "delete_with_primary_handling clears the primary when only a subscription remains",
+         %{user: user} do
+      primary =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_list: [%{"id" => "primary", "selected" => true}]
+        )
+
+      _subscription = insert_subscription(user)
+
+      assert {:ok, _result} =
+               CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert {:ok, _result} = CalendarPrimary.delete_with_primary_handling(primary)
+
+      {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == nil
+    end
   end
 
   test "set_primary_calendar_integration sets default booking calendar from list", %{user: user} do
