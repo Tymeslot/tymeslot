@@ -141,6 +141,92 @@ defmodule Tymeslot.Payments.SubscriptionInvoiceQueriesTest do
 
       assert paid.status == :paid
     end
+
+    test "a redelivered finalisation cannot drag a paid invoice back to open", %{user: user} do
+      assert {:ok, paid} =
+               SubscriptionInvoiceQueries.upsert(%{
+                 stripe_invoice_id: "in_paid_then_redelivered",
+                 user_id: user.id,
+                 status: :paid,
+                 paid_at: ~U[2026-03-01 12:00:00Z]
+               })
+
+      # invoice.finalized redelivered (or committed) after invoice.paid: it
+      # carries the invoice as it stood when finalised, so writing its status
+      # verbatim would withdraw a receipt the customer already had.
+      assert {:ok, still_paid} =
+               SubscriptionInvoiceQueries.upsert(%{
+                 stripe_invoice_id: "in_paid_then_redelivered",
+                 user_id: user.id,
+                 status: :open
+               })
+
+      assert still_paid.id == paid.id
+      assert still_paid.status == :paid
+      assert still_paid.paid_at == ~U[2026-03-01 12:00:00Z]
+
+      assert [listed] = SubscriptionInvoiceQueries.list_for_user(user.id)
+      assert listed.id == paid.id
+    end
+
+    test "a settled status is not reopened by a stale draft or open event", %{user: user} do
+      for {stripe_invoice_id, settled, stale} <- [
+            {"in_void_then_open", :void, :open},
+            {"in_uncollectible_then_draft", :uncollectible, :draft}
+          ] do
+        {:ok, _settled} =
+          SubscriptionInvoiceQueries.upsert(%{
+            stripe_invoice_id: stripe_invoice_id,
+            user_id: user.id,
+            status: settled
+          })
+
+        {:ok, merged} =
+          SubscriptionInvoiceQueries.upsert(%{
+            stripe_invoice_id: stripe_invoice_id,
+            user_id: user.id,
+            status: stale
+          })
+
+        assert merged.status == settled
+      end
+    end
+
+    test "an uncollectible invoice still converges to paid once it is settled", %{user: user} do
+      {:ok, _uncollectible} =
+        SubscriptionInvoiceQueries.upsert(%{
+          stripe_invoice_id: "in_uncollectible_then_paid",
+          user_id: user.id,
+          status: :uncollectible
+        })
+
+      assert {:ok, paid} =
+               SubscriptionInvoiceQueries.upsert(%{
+                 stripe_invoice_id: "in_uncollectible_then_paid",
+                 user_id: user.id,
+                 status: :paid
+               })
+
+      assert paid.status == :paid
+    end
+
+    test "an event carrying no status leaves the captured one intact", %{user: user} do
+      {:ok, _paid} =
+        SubscriptionInvoiceQueries.upsert(%{
+          stripe_invoice_id: "in_status_absent",
+          user_id: user.id,
+          status: :paid
+        })
+
+      assert {:ok, merged} =
+               SubscriptionInvoiceQueries.upsert(%{
+                 stripe_invoice_id: "in_status_absent",
+                 user_id: user.id,
+                 amount_cents: 1500
+               })
+
+      assert merged.status == :paid
+    end
   end
 
   describe "list_for_user/2" do

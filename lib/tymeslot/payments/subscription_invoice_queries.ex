@@ -23,10 +23,21 @@ defmodule Tymeslot.Payments.SubscriptionInvoiceQueries do
   can still be filled in later if the first capture couldn't resolve it yet.
 
   `status` is the one exception to the `COALESCE` rule: Stripe includes it on
-  every invoice payload, and it must be free to move backward through the
-  same values Stripe itself reports (`open` -> `void`, `open` ->
-  `uncollectible`), not just forward to `paid` — a `COALESCE` would only ever
-  overwrite a `nil`, so it is set unconditionally from `EXCLUDED` instead.
+  every invoice payload, and it must be free to move sideways through the
+  values Stripe itself reports (`open` -> `void`, `open` ->
+  `uncollectible`, `uncollectible` -> `paid`), not just forward to `paid` —
+  a `COALESCE` would only ever overwrite a `nil`. It is written from
+  `EXCLUDED` with one guard: a row that already reached a settled status
+  (`paid`, `void`, `uncollectible`) is never dragged back to `draft` or
+  `open`. Stripe delivers webhooks at least once and in no guaranteed order,
+  so `invoice.finalized` (carrying `open`) can be redelivered, or simply
+  commit, after `invoice.paid` — and nothing later would correct the row,
+  because a paid invoice generates no further events. Since `list_for_user/2`
+  lists paid invoices only, that regression silently withdraws a VAT receipt
+  the customer already had. None of the guarded transitions exist at Stripe:
+  a paid invoice cannot be voided, and neither a void nor an uncollectible
+  one reopens.
+
   `paid_at` stays `COALESCE`d like the rest of the row: it is only ever set
   once, and a later status change must not erase the historical fact that
   the invoice was paid at that moment.
@@ -67,7 +78,19 @@ defmodule Tymeslot.Payments.SubscriptionInvoiceQueries do
           hosted_invoice_url:
             fragment("COALESCE(EXCLUDED.hosted_invoice_url, ?)", pi.hosted_invoice_url),
           invoice_pdf_url: fragment("COALESCE(EXCLUDED.invoice_pdf_url, ?)", pi.invoice_pdf_url),
-          status: fragment("EXCLUDED.status"),
+          status:
+            fragment(
+              """
+              CASE
+                WHEN ? IN ('paid', 'void', 'uncollectible')
+                     AND EXCLUDED.status IN ('draft', 'open') THEN ?
+                ELSE COALESCE(EXCLUDED.status, ?)
+              END
+              """,
+              pi.status,
+              pi.status,
+              pi.status
+            ),
           paid_at: fragment("COALESCE(EXCLUDED.paid_at, ?)", pi.paid_at),
           updated_at: ^now
         ]
