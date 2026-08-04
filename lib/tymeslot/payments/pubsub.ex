@@ -12,60 +12,6 @@ defmodule Tymeslot.Payments.PubSub do
   alias Tymeslot.Infrastructure.AdminAlerts
 
   @doc """
-  Broadcasts a payment success event via PubSub.
-
-  Apps can subscribe to "payment:payment_successful" topic to handle app-specific
-  post-payment logic.
-
-  ## Parameters
-  - `transaction`: The completed transaction struct
-
-  ## Example
-      Tymeslot.Payments.PubSub.broadcast_payment_successful(transaction)
-  """
-  @spec broadcast_payment_successful(struct()) :: :ok
-  def broadcast_payment_successful(transaction) do
-    pubsub_server = get_pubsub_server()
-
-    if pubsub_server do
-      message =
-        {:payment_successful,
-         %{
-           user_id: transaction.user_id,
-           transaction: transaction
-         }}
-
-      case PubSub.broadcast(pubsub_server, "payment:payment_successful", message) do
-        :ok ->
-          Logger.info("Broadcasted payment_successful event", user_id: transaction.user_id)
-          :ok
-
-        {:error, reason} ->
-          Logger.error("PubSub broadcast failed for payment_successful",
-            user_id: transaction.user_id,
-            reason: inspect(reason)
-          )
-
-          # Alert monitoring system - repeated failures indicate infrastructure issues
-          AdminAlerts.report(:pubsub_broadcast_failed,
-            summary: "PubSub broadcast failed for payment_successful",
-            reason: reason,
-            context: %{
-              event: :payment_successful,
-              topic: "payment:payment_successful",
-              user_id: transaction.user_id
-            }
-          )
-
-          :ok
-      end
-    else
-      Logger.warning("No PubSub server configured, skipping payment_successful broadcast")
-      :ok
-    end
-  end
-
-  @doc """
   General broadcast function to send any event to PubSub.
   """
   @spec broadcast(String.t(), any()) :: :ok | {:error, any()}

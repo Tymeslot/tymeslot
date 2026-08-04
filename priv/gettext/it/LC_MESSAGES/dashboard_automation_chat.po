@@ -11,7 +11,7 @@ msgstr ""
 "Language: it\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:288
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:289
 #, elixir-autogen, elixir-format
 msgid "%{workspace} · #%{channel}"
 msgstr "%{workspace} · #%{channel}"
@@ -26,7 +26,7 @@ msgstr "(privato)"
 msgid "A label shown in your dashboard. Useful if you connect more than one Slack workspace."
 msgstr "Un'etichetta mostrata nella tua dashboard. Utile se colleghi più di un workspace Slack."
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:234
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:235
 #, elixir-autogen, elixir-format
 msgid "Active"
 msgstr "Attivo"
@@ -39,24 +39,24 @@ msgstr "Aggiungi Slack tramite URL webhook"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram_empty_state.ex:24
 #: lib/tymeslot_web/live/dashboard/automation/telegram_form_component.ex:338
-#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex:30
+#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex:31
 #, elixir-autogen, elixir-format
 msgid "Add Telegram Account"
 msgstr "Aggiungi account Telegram"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex:29
-#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex:33
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex:34
 #, elixir-autogen, elixir-format
 msgid "Add to Slack"
 msgstr "Aggiungi a Slack"
 
 #: lib/tymeslot_web/live/dashboard/automation/slack_empty_state.ex:35
-#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex:41
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex:42
 #, elixir-autogen, elixir-format
 msgid "Add via webhook URL"
 msgstr "Aggiungi tramite URL webhook"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:213
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:214
 #, elixir-autogen, elixir-format
 msgid "Awaiting connection"
 msgstr "In attesa di connessione"
@@ -108,7 +108,7 @@ msgstr "Canale"
 msgid "Channel hint (optional)"
 msgstr "Suggerimento canale (facoltativo)"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:225
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:226
 #, elixir-autogen, elixir-format
 msgid "Channel needed"
 msgstr "Canale necessario"
@@ -118,7 +118,7 @@ msgstr "Canale necessario"
 msgid "Chat ID"
 msgstr "ID chat"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:57
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:58
 #, elixir-autogen, elixir-format
 msgid "Chat: %{chat_id}"
 msgstr "Chat: %{chat_id}"
@@ -139,7 +139,7 @@ msgstr "Chiudi"
 msgid "Configure your Telegram notification settings."
 msgstr "Configura le impostazioni di notifica di Telegram."
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:148
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:149
 #, elixir-autogen, elixir-format
 msgid "Connect"
 msgstr "Collega"
@@ -160,12 +160,12 @@ msgstr "Collega Telegram"
 msgid "Connect Telegram to receive instant notifications when meetings are booked, cancelled, or rescheduled."
 msgstr "Collega Telegram per ricevere notifiche istantanee quando le riunioni vengono prenotate, annullate o riprogrammate."
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:77
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:78
 #, elixir-autogen, elixir-format
 msgid "Connect Telegram to start receiving notifications."
 msgstr "Collega Telegram per iniziare a ricevere notifiche."
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:222
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:223
 #, elixir-autogen, elixir-format
 msgid "Connected"
 msgstr "Collegato"
@@ -175,48 +175,48 @@ msgstr "Collegato"
 msgid "Could not load Slack channels. Try again."
 msgstr "Impossibile caricare i canali Slack. Riprova."
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:298
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:301
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:299
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:302
 #, elixir-autogen, elixir-format
 msgid "Custom webhook"
 msgstr "Webhook personalizzato"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:304
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:305
 #, elixir-autogen, elixir-format
 msgid "Custom webhook · #%{channel}"
 msgstr "Webhook personalizzato · #%{channel}"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:210
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:198
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:211
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:199
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Elimina"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:252
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:253
 #: lib/tymeslot_web/live/dashboard/automation/tab_nav.ex:45
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:240
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:241
 #, elixir-autogen, elixir-format
 msgid "Disabled"
 msgstr "Disattivato"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:93
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:95
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:94
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:96
 #, elixir-autogen, elixir-format
 msgid "Disabled: %{reason}"
 msgstr "Disattivato: %{reason}"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:200
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:201
 #, elixir-autogen, elixir-format
 msgid "Disconnect Slack"
 msgstr "Scollega Slack"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:188
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:189
 #, elixir-autogen, elixir-format
 msgid "Disconnect Telegram"
 msgstr "Scollega Telegram"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:189
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:177
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:190
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:178
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr "Modifica"
@@ -358,8 +358,8 @@ msgstr "Stato dell'integrazione aggiornato"
 msgid "Integration updated successfully"
 msgstr "Integrazione aggiornata correttamente"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:82
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:84
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:83
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:85
 #, elixir-autogen, elixir-format
 msgid "Last triggered: %{time}"
 msgstr "Ultima attivazione: %{time}"
@@ -384,14 +384,14 @@ msgstr "Link scaduto"
 msgid "Loading channels from Slack..."
 msgstr "Caricamento dei canali da Slack..."
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:179
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:168
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:180
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:169
 #, elixir-autogen, elixir-format
 msgid "Logs"
 msgstr "Log"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:87
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:89
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:88
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:90
 #, elixir-autogen, elixir-format
 msgid "Never triggered"
 msgstr "Mai attivato"
@@ -421,13 +421,13 @@ msgstr "Apri in Telegram"
 msgid "Paste the Incoming Webhook URL Slack generated for your channel."
 msgstr "Incolla l'URL dell'Incoming Webhook generato da Slack per il tuo canale."
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:243
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:231
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:244
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:232
 #, elixir-autogen, elixir-format
 msgid "Paused"
 msgstr "In pausa"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:123
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:124
 #, elixir-autogen, elixir-format
 msgid "Pick a channel"
 msgstr "Scegli un canale"
@@ -437,7 +437,7 @@ msgstr "Scegli un canale"
 msgid "Pick a channel for Tymeslot to post booking notifications to."
 msgstr "Scegli un canale in cui Tymeslot pubblicherà le notifiche di prenotazione."
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:76
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:77
 #, elixir-autogen, elixir-format
 msgid "Pick a channel to finish setup."
 msgstr "Scegli un canale per completare la configurazione."
@@ -447,13 +447,13 @@ msgstr "Scegli un canale per completare la configurazione."
 msgid "Pick a channel..."
 msgstr "Scegli un canale..."
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:166
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:158
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:167
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:159
 #, elixir-autogen, elixir-format
 msgid "Re-enable"
 msgstr "Riattiva"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:133
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:134
 #, elixir-autogen, elixir-format
 msgid "Reconnect"
 msgstr "Ricollega"
@@ -560,7 +560,7 @@ msgstr "Integrazione Slack aggiornata"
 msgid "Slack notifications are not enabled on this deployment."
 msgstr "Le notifiche Slack non sono abilitate su questa installazione."
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:281
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:282
 #, elixir-autogen, elixir-format
 msgid "Slack workspace"
 msgstr "Workspace Slack"
@@ -580,8 +580,8 @@ msgstr "Integrazione Telegram creata"
 msgid "Telegram integration saved"
 msgstr "Integrazione Telegram salvata"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:155
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:137
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:156
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:138
 #, elixir-autogen, elixir-format
 msgid "Test"
 msgstr "Prova"
@@ -606,8 +606,8 @@ msgstr "Messaggio di prova inviato! Controlla Slack."
 msgid "Test message sent! Check Telegram."
 msgstr "Messaggio di prova inviato! Controlla Telegram."
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:152
-#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:134
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:153
+#: lib/tymeslot_web/live/dashboard/automation/telegram_card.ex:135
 #, elixir-autogen, elixir-format
 msgid "Testing"
 msgstr "Prova in corso"
@@ -644,13 +644,13 @@ msgstr "Aggiorna l'URL del webhook o le sottoscrizioni agli eventi per questa in
 msgid "Waiting for Telegram connection... (link expires in 10 minutes)"
 msgstr "In attesa della connessione a Telegram... (il link scade tra 10 minuti)"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:312
 #: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:313
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:314
 #, elixir-autogen, elixir-format
 msgid "auto-disabled"
 msgstr "disattivato automaticamente"
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:316
+#: lib/tymeslot_web/live/dashboard/automation/slack_card.ex:317
 #, elixir-autogen, elixir-format
 msgid "webhook URL was revoked in Slack"
 msgstr "l'URL del webhook è stato revocato in Slack"
@@ -716,12 +716,12 @@ msgstr "Slack collegato: scegli un canale per completare la configurazione."
 msgid "Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created - see the full setup guide on %{guide}."
 msgstr "Tymeslot pubblica le notifiche su questo URL. Il canale di destinazione viene impostato da Slack al momento della creazione del webhook: consulta la guida completa alla configurazione su %{guide}."
 
-#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex:27
+#: lib/tymeslot_web/live/dashboard/automation/slack_tab.ex:28
 #, elixir-autogen, elixir-format
 msgid "Your Slack Integrations"
 msgstr "Le tue integrazioni Slack"
 
-#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex:26
+#: lib/tymeslot_web/live/dashboard/automation/telegram_tab.ex:27
 #, elixir-autogen, elixir-format
 msgid "Your Telegram Integrations"
 msgstr "Le tue integrazioni Telegram"

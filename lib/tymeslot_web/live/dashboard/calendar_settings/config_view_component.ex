@@ -24,6 +24,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
+  require Logger
+
   @caldav_providers ProviderConfig.caldav_based_providers()
   @parent_component_id "calendar-settings"
 
@@ -129,6 +131,28 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
     end
   end
 
+  def handle_event("add_subscription", %{"integration" => params}, socket) do
+    user_id = socket.assigns.current_user.id
+
+    case RateLimiter.check_integration_write_rate_limit(user_id) do
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+
+      :ok ->
+        metadata = socket.assigns.security_metadata
+
+        socket =
+          socket
+          |> assign(is_saving: true, form_values: params)
+          |> start_async(:create_subscription, fn ->
+            Calendar.create_subscription_with_validation(user_id, params, metadata: metadata)
+          end)
+
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("add_integration", %{"integration" => params} = full_params, socket) do
     user_id = socket.assigns.current_user.id
 
@@ -161,6 +185,29 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
 
         handle_create_integration_result(result, socket)
     end
+  end
+
+  # The feed probe behind `add_subscription` can take up to a few network
+  # round trips, so it runs off the socket's process via `start_async/3`
+  # rather than blocking `handle_event/3`: `is_saving` renders immediately
+  # and the LiveView stays responsive while it waits.
+  @impl Phoenix.LiveComponent
+  def handle_async(:create_subscription, {:ok, result}, socket) do
+    handle_create_integration_result(result, socket)
+  end
+
+  def handle_async(:create_subscription, {:exit, reason}, socket) do
+    Logger.error("Calendar subscription creation task crashed", reason: inspect(reason))
+
+    {:noreply,
+     assign(socket,
+       form_errors: %{
+         generic: [
+           dgettext("dashboard_calendar_settings", "Something went wrong. Please try again.")
+         ]
+       },
+       is_saving: false
+     )}
   end
 
   defp handle_create_integration_result({:ok, _integration}, socket) do

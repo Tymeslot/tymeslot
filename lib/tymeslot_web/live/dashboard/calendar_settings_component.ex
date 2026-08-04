@@ -14,17 +14,22 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnectModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CalendarSelectionModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerModal
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
   alias TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent
+  alias TymeslotWeb.Dashboard.CalendarSettings.ProviderPicker
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.Flash
 
-  @caldav_provider_strings ProviderConfig.caldav_based_provider_strings()
+  # Providers whose setup happens in an in-app form rather than an OAuth
+  # redirect: the CalDAV family plus feed subscriptions.
+  @form_provider_strings ProviderConfig.caldav_based_provider_strings() ++
+                           ProviderConfig.subscription_provider_strings()
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -192,7 +197,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   def handle_event("connect_provider", %{"provider" => provider}, socket)
-      when provider in @caldav_provider_strings do
+      when provider in @form_provider_strings do
     {:noreply,
      assign(socket, selected_provider: String.to_existing_atom(provider), show_picker: true)}
   end
@@ -227,7 +232,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
                |> Task.Supervisor.async_stream_nolink(
                  active,
                  fn integration ->
-                   {integration.name, Calendar.update_integration_with_discovery(integration)}
+                   {integration.name, refresh_one(integration)}
                  end,
                  max_concurrency: 5,
                  timeout: 30_000,
@@ -394,6 +399,20 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   # --- Private Helpers ---
 
+  # A subscription has no discoverable calendar list to refresh — discovery
+  # returns the same synthetic entry every time — so "refresh" means
+  # re-fetching the feed instead, through the same worker the scheduled sync
+  # sweep uses.
+  defp refresh_one(%{provider: provider} = integration) do
+    if ProviderConfig.subscription?(provider) do
+      %{"calendar_integration_id" => integration.id}
+      |> SyncIcsCalendarWorker.new()
+      |> Oban.insert()
+    else
+      Calendar.update_integration_with_discovery(integration)
+    end
+  end
+
   defp load_integrations(socket) do
     user_id = socket.assigns.current_user.id
     integrations = Calendar.list_integrations(user_id)
@@ -407,31 +426,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     socket
     |> assign(:integrations, integrations)
     |> assign(:health_states, health_states)
-  end
-
-  # Builds the grouped provider list for the picker modal: OAuth providers
-  # (Google, Outlook) first, then all CalDAV presets — no nested reveal.
-  defp picker_groups(available, integrations) do
-    entries = Enum.map(available, &provider_entry(&1, integrations))
-    {oauth, caldav} = Enum.split_with(entries, & &1.oauth?)
-
-    [
-      %{label: nil, providers: oauth},
-      %{label: dgettext("dashboard_calendar_settings", "CalDAV servers"), providers: caldav}
-    ]
-  end
-
-  defp provider_entry(descriptor, integrations) do
-    provider = Atom.to_string(descriptor.type)
-
-    %{
-      provider: provider,
-      title: descriptor.display_name,
-      description: descriptor.description,
-      click_event: ProviderConfig.click_event(descriptor.type),
-      connected?: Enum.any?(integrations, &(&1.provider == provider)),
-      oauth?: descriptor.oauth
-    }
   end
 
   defp format_refresh_failures(names) when length(names) <= 3 do
@@ -582,7 +576,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         }
         target={@myself}
         on_cancel={JS.push("hide_picker", target: @myself)}
-        groups={picker_groups(@available_calendar_providers, @integrations)}
+        groups={ProviderPicker.groups(@available_calendar_providers, @integrations)}
         config_active={@selected_provider != nil}
         back_event="back_to_grid"
       >

@@ -1,14 +1,15 @@
 defmodule Tymeslot.Security.RateLimiterConnectionTestBucketsTest do
   @moduledoc """
-  Pins the two connection-test buckets with non-default behaviour that no
-  other suite exercises directly: `:custom` (the tightest budget, because it
-  probes an arbitrary user-supplied host) and `:nextcloud` (its own bucket,
-  separate from CalDAV's, even though both are calendar providers).
+  Pins the connection-test buckets with non-default behaviour that no other
+  suite exercises directly: `:custom` and `:ics_url` (the tightest budget,
+  because both probe an arbitrary user-supplied host) and `:nextcloud` (its
+  own bucket, separate from CalDAV's, even though both are calendar
+  providers).
 
   Every other bucket already has its own connection-rate-limit suite (see
   `test/tymeslot/integrations/video/mirotalk_connection_rate_limit_test.exs`
   and `test/tymeslot/integrations/calendar/caldav_connection_rate_limit_test.exs`);
-  this file covers the two the others leave untouched.
+  this file covers the ones the others leave untouched.
   """
 
   # Synchronous like the other rate-limiter suites: several tests call
@@ -41,6 +42,24 @@ defmodule Tymeslot.Security.RateLimiterConnectionTestBucketsTest do
                RateLimiter.check_connection_test_rate_limit(:custom, {:user, user.id})
 
       assert message =~ "reached the limit"
+    end
+  end
+
+  describe ":ics_url bucket" do
+    test "is limited to 5 attempts per actor, independent of :caldav" do
+      user = insert(:user)
+
+      for _i <- 1..@custom_limit do
+        assert :ok = RateLimiter.check_connection_test_rate_limit(:ics_url, {:user, user.id})
+      end
+
+      assert {:error, :rate_limited, message} =
+               RateLimiter.check_connection_test_rate_limit(:ics_url, {:user, user.id})
+
+      assert message =~ "reached the limit"
+
+      # Exhausting :ics_url must not have drawn from :caldav's own budget.
+      assert :ok = RateLimiter.check_connection_test_rate_limit(:caldav, {:user, user.id})
     end
   end
 

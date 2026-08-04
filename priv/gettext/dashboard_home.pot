@@ -11,12 +11,12 @@
 msgid ""
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:270
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:273
 #, elixir-autogen, elixir-format
 msgid "%{hours} hr"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:273
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:276
 #, elixir-autogen, elixir-format
 msgid "%{hours} hr %{mins} min"
 msgstr ""
@@ -31,7 +31,7 @@ msgstr ""
 msgid "%{hours}h free"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:265
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:268
 #, elixir-autogen, elixir-format
 msgid "%{minutes} min"
 msgstr ""
@@ -41,39 +41,39 @@ msgstr ""
 msgid "%{minutes}m free"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:405
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:410
 #, elixir-autogen, elixir-format
 msgid "+%{count} more"
 msgid_plural "+%{count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:249
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:581
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex:46
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:252
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:588
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex:48
 #, elixir-autogen, elixir-format
 msgid "All day"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:187
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:616
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:189
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:623
 #, elixir-autogen, elixir-format
 msgid "Booking"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:75
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:195
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:624
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:77
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:197
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:631
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:82
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:84
 #, elixir-autogen, elixir-format
 msgid "Colour"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:294
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:297
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar to see your whole schedule here"
 msgstr ""
@@ -83,12 +83,12 @@ msgstr ""
 msgid "Couldn't save that colour. Please try again."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:120
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:122
 #, elixir-autogen, elixir-format
 msgid "Default"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:230
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:232
 #, elixir-autogen, elixir-format
 msgid "External calendar"
 msgstr ""
@@ -98,29 +98,29 @@ msgstr ""
 msgid "Here's an overview of your scheduling setup and recent activity."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:282
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:285
 #, elixir-autogen, elixir-format
 msgid "In progress"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard_live.ex:441
+#: lib/tymeslot_web/live/dashboard_live.ex:451
 #, elixir-autogen, elixir-format
 msgid "Invalid redirect URL"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:145
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:387
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:490
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:147
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:392
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:496
 #, elixir-autogen, elixir-format
 msgid "Join"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:68
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:70
 #, elixir-autogen, elixir-format
 msgid "Location"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:133
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:135
 #, elixir-autogen, elixir-format
 msgid "Manage booking"
 msgstr ""
@@ -130,13 +130,13 @@ msgstr ""
 msgid "Meeting payments require an upgraded plan."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:283
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:286
 #, elixir-autogen, elixir-format
 msgid "Nothing on your plate today or tomorrow."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:466
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:523
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:472
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:529
 #, elixir-autogen, elixir-format
 msgid "Now"
 msgstr ""
@@ -146,34 +146,34 @@ msgstr ""
 msgid "Overview"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:54
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:56
 #, elixir-autogen, elixir-format
 msgid "Time"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:222
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex:32
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:223
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex:33
 #, elixir-autogen, elixir-format
 msgid "Today"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:263
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex:33
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:265
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex:34
 #, elixir-autogen, elixir-format
 msgid "Tomorrow"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:345
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:350
 #, elixir-autogen, elixir-format
 msgid "Up next"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:216
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:218
 #, elixir-autogen, elixir-format
 msgid "Video call"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:61
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:63
 #, elixir-autogen, elixir-format
 msgid "Video meeting"
 msgstr ""
@@ -183,9 +183,9 @@ msgstr ""
 msgid "View calendar"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:337
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:444
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:577
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:342
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:450
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:584
 #, elixir-autogen, elixir-format
 msgid "View details for %{title}"
 msgstr ""
@@ -200,12 +200,12 @@ msgstr ""
 msgid "Welcome back"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:51
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:53
 #, elixir-autogen, elixir-format
 msgid "When"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:72
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:74
 #, elixir-autogen, elixir-format
 msgid "With"
 msgstr ""
@@ -215,30 +215,30 @@ msgstr ""
 msgid "Your day"
 msgstr ""
 
+#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:297
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex:24
+#, elixir-autogen, elixir-format
+msgid "in %{days}d"
+msgstr ""
+
 #: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:294
 #: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex:23
 #, elixir-autogen, elixir-format
-msgid "in %{days}d"
+msgid "in %{hours}h"
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:291
 #: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex:22
 #, elixir-autogen, elixir-format
-msgid "in %{hours}h"
-msgstr ""
-
-#: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex:288
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex:21
-#, elixir-autogen, elixir-format
 msgid "in %{minutes}m"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex:20
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex:21
 #, elixir-autogen, elixir-format
 msgid "now"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:399
+#: lib/tymeslot_web/live/dashboard/dashboard_overview_component.ex:404
 #, elixir-autogen, elixir-format
 msgid "then"
 msgstr ""

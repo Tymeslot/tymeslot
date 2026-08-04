@@ -26,9 +26,15 @@ RUN mix local.hex --force && \
 
 # Install dependencies (cached if mix.exs/mix.lock haven't changed)
 COPY mix.exs mix.lock ./
+# config/ and priv/tz/ must precede deps.compile: `tz` reads :data_dir and
+# :iana_version at dep-compile time and loads the vendored IANA release from
+# priv/tz. Without them it would silently compile in its own bundled release
+# instead, putting every timezone conversion on stale DST rules.
+COPY config ./config
+COPY priv/tz ./priv/tz
 
 RUN mix deps.get --only $MIX_ENV
-# Compile dependencies (cached if mix.exs/mix.lock unchanged)
+# Compile dependencies (cached if mix.exs/mix.lock/config/tz data unchanged)
 RUN mix deps.compile
 
 # Copy source and compile. Wipe any locally-built assets first so the

@@ -1,4 +1,21 @@
 
+[1.7.0]
+* core: Keep a settled invoice from reverting to unpaid
+* core: Stop CalDAV sync from deleting events the server withheld
+* core: Correct booking times for 2026 Morocco and Alberta clock changes
+* core: Repair CalDAV delta sync on servers that track changes by token
+* core: Redact secret tokens from HTTP request logs
+* core: Show the real reason when a calendar connection test fails
+* core: Keep a calendar syncing when one event mixes date and date-time
+* core: Show the attendee's message on dashboard meeting cards
+* core: Keep recurring calendar events at their local time across DST
+* core: Stop an all-day event from blocking all CalDAV sync
+* core: Sync meeting reminders to the connected calendar event
+* core: Record Stripe subscription invoices for customer retrieval
+* core: Issue invoices for paid meeting bookings
+* core: Subscribe to a published calendar feed by URL
+
+
 [1.6.0]
 * core: Handle CalDAV servers that answer conditional PUT with 409
 * core: Stop a dead recipient address from blocking all outbound email
