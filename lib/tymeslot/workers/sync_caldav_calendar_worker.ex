@@ -303,6 +303,18 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         persist_sync_state(integration, sync_token: nil)
         sync_tier3(integration, client)
 
+      # The server named the changed resources but did not inline their
+      # calendar data, so the delta cannot be applied on its own. The token is
+      # deliberately kept: it stays valid, and the next cycle is offered the
+      # same changes again, so nothing is lost if this fetch fails.
+      {:error, :calendar_data_withheld} ->
+        Logger.info(
+          "CalDAV sync-collection returned no event data; falling back to full fetch",
+          calendar_integration_id: integration.id
+        )
+
+        sync_tier3(integration, client)
+
       {:error, :unauthorized} ->
         flag_reauth_required(integration)
 
