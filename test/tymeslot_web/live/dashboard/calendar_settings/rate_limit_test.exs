@@ -13,6 +13,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.RateLimitTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
 
@@ -112,6 +114,41 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.RateLimitTest do
       assert {:noreply, _socket} = click.()
       assert_received {:flash, {:error, msg}}
       assert msg =~ "reached the limit"
+    end
+  end
+
+  describe "add_subscription rate limit" do
+    test "a rate-limited subscription submission is refused without writing a row", %{
+      conn: conn,
+      user: user
+    } do
+      # Exhaust the per-user integration write limit (30 per 30 minutes)
+      # `add_subscription` checks up front, before the feed probe ever runs.
+      for _i <- 1..30 do
+        assert :ok = RateLimiter.check_integration_write_rate_limit(user.id)
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      view
+      |> element("button[phx-click='connect_provider'][phx-value-provider='ics_url']")
+      |> render_click()
+
+      view
+      |> form("#calendar-subscription-form", %{
+        "integration" => %{
+          "name" => "Work calendar",
+          "url" => "https://feeds.example.com/secret-token/calendar.ics"
+        }
+      })
+      |> render_submit()
+
+      # `add_subscription`'s rate-limit refusal is forwarded to the parent
+      # LiveView via `Flash.error/1` (a `send/2`, handled in `handle_info/2`),
+      # so it only shows up on a render taken after `render_submit/1` settles.
+      assert render(view) =~ "reached the limit"
+
+      refute Repo.get_by(CalendarIntegrationSchema, user_id: user.id, provider: "ics_url")
     end
   end
 end

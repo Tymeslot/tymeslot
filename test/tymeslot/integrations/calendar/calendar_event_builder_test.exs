@@ -223,6 +223,58 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
     end
   end
 
+  describe "build_event_data/1 — reminders" do
+    test "carries the meeting's reminders through as provider alarms" do
+      meeting = Map.put(@base_meeting, :reminders, [%{value: 30, unit: "minutes"}])
+
+      result = CalendarEventBuilder.build_event_data(meeting)
+
+      assert result.reminders == [%{method: :popup, minutes_before: 30}]
+    end
+
+    test "expresses hour and day lead times in minutes" do
+      meeting =
+        Map.put(@base_meeting, :reminders, [
+          %{value: 2, unit: "hours"},
+          %{value: 1, unit: "days"}
+        ])
+
+      result = CalendarEventBuilder.build_event_data(meeting)
+
+      assert result.reminders == [
+               %{method: :popup, minutes_before: 120},
+               %{method: :popup, minutes_before: 1440}
+             ]
+    end
+
+    test "reads reminders that round-tripped through the JSONB column as string keys" do
+      meeting = Map.put(@base_meeting, :reminders, [%{"value" => 15, "unit" => "minutes"}])
+
+      result = CalendarEventBuilder.build_event_data(meeting)
+
+      assert result.reminders == [%{method: :popup, minutes_before: 15}]
+    end
+
+    test "drops an unreadable reminder rather than emitting a malformed alarm" do
+      meeting =
+        Map.put(@base_meeting, :reminders, [
+          %{value: 10, unit: "fortnights"},
+          %{value: 10, unit: "minutes"}
+        ])
+
+      result = CalendarEventBuilder.build_event_data(meeting)
+
+      assert result.reminders == [%{method: :popup, minutes_before: 10}]
+    end
+
+    test "emits no alarms when the meeting carries no reminders" do
+      assert CalendarEventBuilder.build_event_data(@base_meeting).reminders == []
+
+      assert CalendarEventBuilder.build_event_data(Map.put(@base_meeting, :reminders, nil)).reminders ==
+               []
+    end
+  end
+
   describe "build_event_description/1" do
     test "prepends attendee identity and returns only the base description otherwise" do
       meeting = %{@base_meeting | attendee_message: nil, meeting_url: nil}

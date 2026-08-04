@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.PrimarySelection
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
@@ -369,7 +370,12 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   defp maybe_rebalance_primary(_updated, _current_primary_id), do: :ok
 
   defp promote_or_clear_primary(user_id) do
-    case list_active_calendar_integrations(user_id) do
+    eligible =
+      user_id
+      |> list_active_calendar_integrations()
+      |> Enum.reject(&ProviderConfig.subscription?(&1.provider))
+
+    case eligible do
       [] ->
         ProfileQueries.clear_primary_calendar_integration(user_id)
 

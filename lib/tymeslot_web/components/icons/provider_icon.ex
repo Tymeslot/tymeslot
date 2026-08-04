@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   @oauth_only_providers ~w(github oauth)
   @calendar_providers ~w(
     google_calendar outlook outlook_calendar nextcloud nextcloud_calendar
-    caldav radicale zimbra mailbox_org apple baikal
+    caldav radicale zimbra mailbox_org apple baikal ics_url
   )
 
   @doc """
@@ -51,12 +51,13 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
       assigns
       |> assign(:icon_path, icon_path && Endpoint.static_path(icon_path))
       |> assign(:icon_px, icon_pixels(assigns.size))
+      |> assign(:alt_text, alt_text(assigns.provider))
 
     ~H"""
     <img
       src={@icon_path}
       class={build_icon_classes(@size, @class)}
-      alt={dgettext("dashboard_common", "%{provider} icon", provider: @provider)}
+      alt={@alt_text}
       width={@icon_px}
       height={@icon_px}
       loading={@loading}
@@ -64,6 +65,15 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
     />
     """
   end
+
+  # A subscription is named for what it is rather than for its provider key,
+  # which would read as "ics_url icon". Kept as functions rather than a lookup
+  # attribute: a `dgettext/2` call in an attribute would freeze the locale at
+  # compile time.
+  defp alt_text("ics_url"), do: dgettext("dashboard_common", "Calendar subscription")
+
+  defp alt_text(provider),
+    do: dgettext("dashboard_common", "%{provider} icon", provider: provider)
 
   # The in-memory debug calendar (dev only) has no branded logo. Point at a
   # bundled demo SVG — which scales to any size — so it renders an icon instead
@@ -74,6 +84,10 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   # multi-size branded PNGs the other providers use. Point at the bundled SVG —
   # which scales to any size — instead of a non-existent apple.png.
   defp build_icon_path("apple", _type, _size), do: "/icons/providers/calendar/apple.svg"
+
+  # A subscription has no vendor behind it — the feed can come from anywhere —
+  # so there is no logo to size-tier. Point at the bundled generic SVG.
+  defp build_icon_path("ics_url", _type, _size), do: "/icons/providers/calendar/ics_url.svg"
 
   defp build_icon_path(provider, type, size) do
     # Determine the type based on provider if not explicitly set

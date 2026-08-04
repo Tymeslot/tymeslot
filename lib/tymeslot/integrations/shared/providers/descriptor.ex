@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Providers.Descriptor do
             description: nil,
             button_text: nil,
             oauth: false,
+            family: :other,
             capabilities: %{},
             config_schema: %{},
             provider_module: nil,
@@ -21,6 +22,14 @@ defmodule Tymeslot.Integrations.Providers.Descriptor do
             setup_component: nil
 
   @type domain :: :calendar | :video
+
+  @typedoc """
+  How a provider connects, for grouping in the picker. `oauth` alone cannot
+  answer this: a CalDAV server and a subscribed feed are both "not OAuth" but
+  belong under different headings, and filing a feed under "CalDAV servers"
+  tells the user something untrue about what it is.
+  """
+  @type family :: :oauth | :caldav | :subscription | :other
 
   @type t :: %__MODULE__{
           domain: domain(),
@@ -30,6 +39,7 @@ defmodule Tymeslot.Integrations.Providers.Descriptor do
           description: String.t() | nil,
           button_text: String.t() | nil,
           oauth: boolean(),
+          family: family(),
           capabilities: map(),
           config_schema: map(),
           provider_module: module(),

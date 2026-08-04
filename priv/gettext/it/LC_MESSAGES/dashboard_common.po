@@ -168,7 +168,7 @@ msgstr "Questa funzionalità (%{feature_name}) non è disponibile nel tuo piano 
 msgid "User"
 msgstr "Utente"
 
-#: lib/tymeslot_web/components/icons/provider_icon.ex:59
+#: lib/tymeslot_web/components/icons/provider_icon.ex:76
 #, elixir-autogen, elixir-format
 msgid "%{provider} icon"
 msgstr "Icona di %{provider}"
@@ -183,12 +183,12 @@ msgstr "%{section} - Dashboard"
 msgid "Calendar Integration"
 msgstr "Integrazione del calendario"
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:78
+#: lib/tymeslot/scheduling/link_access_policy.ex:79
 #, elixir-autogen, elixir-format
 msgid "Complete setup to enable this feature"
 msgstr "Completa la configurazione per attivare questa funzionalità"
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:72
+#: lib/tymeslot/scheduling/link_access_policy.ex:73
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar in Calendar settings to enable this feature"
 msgstr "Collega un calendario nelle impostazioni del calendario per attivare questa funzionalità"
@@ -209,7 +209,7 @@ msgstr "Impostazioni delle riunioni"
 msgid "Payments"
 msgstr "Pagamenti"
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:69
+#: lib/tymeslot/scheduling/link_access_policy.ex:70
 #, elixir-autogen, elixir-format
 msgid "Set a username in Settings to enable this feature"
 msgstr "Imposta un nome utente nelle impostazioni per attivare questa funzionalità"
@@ -563,3 +563,8 @@ msgstr "Sì"
 #, elixir-autogen, elixir-format
 msgid "e.g., Team sync"
 msgstr "es. sincronizzazione del team"
+
+#: lib/tymeslot_web/components/icons/provider_icon.ex:73
+#, elixir-autogen, elixir-format
+msgid "Calendar subscription"
+msgstr "Abbonamento a un calendario"

@@ -51,6 +51,36 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     }
   end
 
+  # The provider is a string on the integration row and an atom on the client,
+  # so the mapping belongs here, next to the client it feeds. Anything outside
+  # the CalDAV family never reaches this module and falls back to plain
+  # `:caldav`.
+  @provider_atoms %{
+    "radicale" => :radicale,
+    "nextcloud" => :nextcloud,
+    "zimbra" => :zimbra,
+    "mailbox_org" => :mailbox_org,
+    "apple" => :apple,
+    "baikal" => :baikal
+  }
+
+  @doc """
+  Builds a client from a stored calendar integration row.
+  """
+  @spec client_for_integration(map()) :: caldav_client()
+  def client_for_integration(integration) do
+    build_client(
+      %{
+        base_url: integration.base_url,
+        username: integration.username,
+        password: integration.password,
+        calendar_paths: integration.calendar_paths,
+        verify_ssl: Map.get(integration, :verify_ssl, true)
+      },
+      provider: Map.get(@provider_atoms, integration.provider, :caldav)
+    )
+  end
+
   @doc """
   Quick connectivity probe via a PROPFIND request with a short timeout.
 
