@@ -121,7 +121,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # ---------------------------------------------------------------------------
 
   defp sync_integration(integration, force_full_fetch?) do
-    client = build_client(integration)
+    client = CaldavCommon.client_for_integration(integration)
 
     # Replay any pending local changes BEFORE fetching remote changes.
     # This ordering is what preserves local edits across transient network
@@ -584,35 +584,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     case Keyword.fetch(opts, opt_key) do
       {:ok, value} -> Map.put(attrs, attr_key, value)
       :error -> attrs
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # Client construction
-  # ---------------------------------------------------------------------------
-
-  defp build_client(integration) do
-    CaldavCommon.build_client(
-      %{
-        base_url: integration.base_url,
-        username: integration.username,
-        password: integration.password,
-        calendar_paths: integration.calendar_paths,
-        verify_ssl: Map.get(integration, :verify_ssl, true)
-      },
-      provider: provider_atom(integration.provider)
-    )
-  end
-
-  defp provider_atom(provider) when is_binary(provider) do
-    case provider do
-      "radicale" -> :radicale
-      "nextcloud" -> :nextcloud
-      "zimbra" -> :zimbra
-      "mailbox_org" -> :mailbox_org
-      "apple" -> :apple
-      "baikal" -> :baikal
-      _other -> :caldav
     end
   end
 
