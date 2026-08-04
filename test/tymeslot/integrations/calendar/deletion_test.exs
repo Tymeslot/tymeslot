@@ -8,6 +8,18 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Security.Encryption
+
+  defp insert_subscription(user) do
+    insert(:calendar_integration,
+      user: user,
+      provider: "ics_url",
+      base_url: "https://feeds.example.com",
+      username_encrypted: nil,
+      password_encrypted: nil,
+      subscription_url_encrypted: Encryption.encrypt("https://feeds.example.com/feed.ics")
+    )
+  end
 
   describe "delete_with_primary_reassignment/2" do
     setup do
@@ -177,6 +189,38 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
       # The promoted integration is the one now recorded as primary
       assert {:ok, primary} = CalendarPrimary.get_primary_calendar_integration(user.id)
       assert primary.id == promoted_id
+    end
+
+    test "deleting the primary with a subscription and a writable integration promotes the writable one",
+         %{user: user} do
+      primary = insert(:calendar_integration, user: user)
+      writable = insert(:calendar_integration, user: user)
+      _subscription = insert_subscription(user)
+
+      CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert {:ok, {:deleted_promoted, promoted_id}} =
+               Deletion.delete_with_primary_reassignment(user.id, primary.id)
+
+      assert promoted_id == writable.id
+
+      assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == writable.id
+    end
+
+    test "deleting the primary with only a subscription remaining clears the primary", %{
+      user: user
+    } do
+      primary = insert(:calendar_integration, user: user)
+      _subscription = insert_subscription(user)
+
+      CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+
+      assert Deletion.delete_with_primary_reassignment(user.id, primary.id) ==
+               {:ok, {:deleted_cleared_primary}}
+
+      assert {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
+      assert profile.primary_calendar_integration_id == nil
     end
 
     test "handles concurrent deletions gracefully", %{user: user} do

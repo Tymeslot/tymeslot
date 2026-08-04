@@ -292,6 +292,40 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
     # two payloads with the same :kind but different per-run counts must produce
     # an identical key so that a recurring daily anomaly collapses to one alert
     # per dedup window.
+    test "invalid_calendar_event is stable across the events that failed" do
+      base = %{provider: :caldav, calendar_integration_id: 7, reason: "all_day is required"}
+
+      key_a = AlertTypes.dedup_key(:invalid_calendar_event, Map.put(base, :event_uid, "evt-1"))
+      key_b = AlertTypes.dedup_key(:invalid_calendar_event, Map.put(base, :event_uid, "evt-9999"))
+
+      assert key_a == key_b
+      assert key_a =~ "invalid_calendar_event"
+      assert key_a =~ "caldav"
+    end
+
+    test "invalid_calendar_event differs across integrations and reasons" do
+      base = %{provider: :caldav, calendar_integration_id: 7, reason: "all_day is required"}
+
+      refute AlertTypes.dedup_key(:invalid_calendar_event, base) ==
+               AlertTypes.dedup_key(
+                 :invalid_calendar_event,
+                 Map.put(base, :calendar_integration_id, 8)
+               )
+
+      refute AlertTypes.dedup_key(:invalid_calendar_event, base) ==
+               AlertTypes.dedup_key(
+                 :invalid_calendar_event,
+                 Map.put(base, :reason, "uid missing")
+               )
+    end
+
+    test "invalid_calendar_event without an integration keeps the message-based key" do
+      metadata = %{provider: :caldav, scenario: "audit"}
+
+      assert AlertTypes.dedup_key(:invalid_calendar_event, metadata) ==
+               AlertTypes.format_message(:invalid_calendar_event, metadata)
+    end
+
     test "analytics_tracking_anomaly is stable across different per-run counts" do
       key_a =
         AlertTypes.dedup_key(:analytics_tracking_anomaly, %{

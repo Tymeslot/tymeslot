@@ -8,11 +8,11 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
   @connection_test_limit 20
   @connection_test_window_ms 600_000
 
-  # The custom provider probes an arbitrary user-supplied host (raw URL, up
-  # to 3 redirects followed), unlike the other buckets which only ever reach
-  # a server the operator configured. Give it the tightest budget of the
-  # bunch, over the same window as everything else.
-  @custom_connection_test_limit 5
+  # The custom video provider and ICS subscriptions both probe an arbitrary
+  # user-supplied host (raw URL, redirects followed), unlike the other buckets
+  # which only ever reach a server the operator configured. Give them the
+  # tightest budget of the bunch, over the same window as everything else.
+  @arbitrary_host_connection_test_limit 5
 
   # Unchanged from when discovery was keyed on an IP — only the key changed,
   # so the budget a single actor gets stays what it always was. Discovery
@@ -41,7 +41,7 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
   same window), it just isn't tied to any one provider's own bucket.
   """
   @type connection_bucket ::
-          :caldav | :nextcloud | :mirotalk | :custom | :oauth | :discovery
+          :caldav | :nextcloud | :mirotalk | :custom | :ics_url | :oauth | :discovery
 
   @doc """
   Rate limit a provider's connection-test attempts, in the bucket it draws
@@ -80,10 +80,12 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
   defp bucket_info(:nextcloud), do: {"nextcloud_connection", "Nextcloud connection test"}
   defp bucket_info(:mirotalk), do: {"mirotalk_connection", "MiroTalk connection test"}
   defp bucket_info(:custom), do: {"custom_video_connection", "Custom video connection test"}
+  defp bucket_info(:ics_url), do: {"ics_url_connection", "Calendar subscription test"}
   defp bucket_info(:oauth), do: {"oauth_connection", "OAuth connection test"}
   defp bucket_info(:discovery), do: {"calendar_discovery", "calendar discovery"}
 
-  defp bucket_limit(:custom), do: @custom_connection_test_limit
+  defp bucket_limit(:custom), do: @arbitrary_host_connection_test_limit
+  defp bucket_limit(:ics_url), do: @arbitrary_host_connection_test_limit
   defp bucket_limit(:discovery), do: @discovery_limit
   defp bucket_limit(_bucket), do: @connection_test_limit
 

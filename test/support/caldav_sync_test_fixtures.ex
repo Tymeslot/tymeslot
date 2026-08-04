@@ -92,6 +92,29 @@ defmodule Tymeslot.CalDAVSyncTestFixtures do
     """
   end
 
+  @doc """
+  A sync-collection response that names a changed resource and its etag but
+  withholds the calendar data, as a server is free to do under RFC 6578.
+  """
+  @spec sync_collection_etag_only_xml(String.t(), String.t()) :: String.t()
+  def sync_collection_etag_only_xml(href, sync_token) do
+    """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+      <D:response>
+        <D:href>#{href}</D:href>
+        <D:propstat>
+          <D:prop>
+            <D:getetag>"test-etag"</D:getetag>
+          </D:prop>
+          <D:status>HTTP/1.1 200 OK</D:status>
+        </D:propstat>
+      </D:response>
+      <D:sync-token>#{sync_token}</D:sync-token>
+    </D:multistatus>
+    """
+  end
+
   @spec ctag_xml(String.t()) :: String.t()
   def ctag_xml(ctag) do
     """

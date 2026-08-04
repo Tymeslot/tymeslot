@@ -89,7 +89,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
           | :invalid_response
           | :server_error
           | :server_unresponsive
+          | :sync_token_expired
           | :timeout
+          | {:unexpected_status, pos_integer()}
           | String.t()
 
   @doc """
@@ -110,6 +112,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   """
   @spec describe_error(error_reason() | term()) :: String.t()
   def describe_error(reason) when is_binary(reason), do: reason
+
+  def describe_error({:unexpected_status, status}),
+    do:
+      dgettext(
+        "dashboard_calendar_providers",
+        "The calendar server refused the request (HTTP %{status}).",
+        status: status
+      )
 
   def describe_error(:unauthorized),
     do:
@@ -189,6 +199,21 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
       "Tymeslot could not complete the request against the calendar server."
     )
   end
+
+  @doc """
+  Tells whether a failure would fail identically on an identical retry.
+
+  Only the statuses the transport layer does not model qualify, and only in the
+  4xx range: the server understood the request and refused it, so replaying it
+  costs another round trip for a guaranteed identical answer. Retryable
+  conditions (timeouts, 5xx, rate limits) and the failures with their own
+  handling (`:unauthorized` flags the integration for reconnection,
+  `:not_found` removes the calendar path) are deliberately not terminal here —
+  each has a caller that already knows what to do with it.
+  """
+  @spec terminal_error?(error_reason() | term()) :: boolean()
+  def terminal_error?({:unexpected_status, status}) when status in 400..499, do: true
+  def terminal_error?(_other), do: false
 
   # ---------------------------------------------------------------------------
   # HTTP transport delegates

@@ -5,11 +5,9 @@ defmodule TymeslotWeb.StripeWebhookControllerTest do
   import Mox
   import Tymeslot.ConfigTestHelpers
 
-  alias Stripe.Error, as: StripeError
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.Repo
-  alias Tymeslot.TestFixtures
   alias Tymeslot.Webhooks.WebhookEventSchema, as: WebhookEvent
 
   setup :verify_on_exit!
@@ -147,25 +145,20 @@ defmodule TymeslotWeb.StripeWebhookControllerTest do
     end
 
     test "returns 503 and allows retry on transient Stripe errors", %{conn: _conn} do
-      user = TestFixtures.create_user_fixture()
-      session_id = "cs_test_retry"
+      # A renewal invoice whose subscription has no completed transaction yet is
+      # the handler's transient case: it returns `:retry_later` so Stripe
+      # redelivers, rather than acknowledging an event it could not process.
+      invoice = %{
+        "id" => "in_test_retry",
+        "subscription" => "sub_test_retry",
+        "billing_reason" => "subscription_cycle",
+        "amount_paid" => 900,
+        "total" => 900,
+        "currency" => "eur",
+        "created" => System.system_time(:second)
+      }
 
-      session =
-        PaymentTestHelpers.mock_stripe_checkout_session(%{
-          session_id: session_id
-        })
-
-      PaymentTestHelpers.create_test_transaction(%{
-        user_id: user.id,
-        stripe_id: session_id,
-        status: "pending"
-      })
-
-      expect(Tymeslot.Payments.StripeMock, :verify_session, 2, fn ^session_id ->
-        {:error, %StripeError{source: :network, message: "timeout", code: :network_error}}
-      end)
-
-      event = PaymentTestHelpers.mock_stripe_webhook_event("checkout.session.completed", session)
+      event = PaymentTestHelpers.mock_stripe_webhook_event("invoice.paid", invoice)
       payload = Jason.encode!(event)
 
       conn1 =

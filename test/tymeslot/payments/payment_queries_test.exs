@@ -141,6 +141,81 @@ defmodule Tymeslot.Payments.PaymentQueriesTest do
     end
   end
 
+  describe "get_active_subscription_transaction_by_subscription_id/1" do
+    test "breaks a tied inserted_at with id, deterministically returning the newest row", %{
+      user: user
+    } do
+      first =
+        PaymentTestHelpers.create_test_transaction(%{
+          user_id: user.id,
+          status: "completed",
+          subscription_id: "sub_tie"
+        })
+
+      second =
+        PaymentTestHelpers.create_test_transaction(%{
+          user_id: user.id,
+          status: "completed",
+          subscription_id: "sub_tie"
+        })
+
+      tie = DateTime.utc_now(:second)
+
+      Repo.update_all(
+        from(t in PaymentTransactionSchema, where: t.id in ^[first.id, second.id]),
+        set: [inserted_at: tie]
+      )
+
+      assert {:ok, found} =
+               PaymentQueries.get_active_subscription_transaction_by_subscription_id("sub_tie")
+
+      assert found.id == second.id
+    end
+  end
+
+  describe "get_transaction_by_stripe_customer_id/1" do
+    test "returns the most recent completed transaction for the customer", %{
+      user: user
+    } do
+      older =
+        PaymentTestHelpers.create_test_transaction(%{
+          user_id: user.id,
+          status: "completed",
+          stripe_id: "cs_older",
+          stripe_customer_id: "cus_shared"
+        })
+
+      # Newer than `older`, but still pending: not an ownership signal, so
+      # the completed row must win even though it isn't the latest.
+      PaymentTestHelpers.create_test_transaction(%{
+        user_id: user.id,
+        status: "pending",
+        stripe_id: "cs_newer",
+        stripe_customer_id: "cus_shared"
+      })
+
+      assert {:ok, found} = PaymentQueries.get_transaction_by_stripe_customer_id("cus_shared")
+      assert found.id == older.id
+    end
+
+    test "returns error when the only match is not completed", %{user: user} do
+      PaymentTestHelpers.create_test_transaction(%{
+        user_id: user.id,
+        status: "pending",
+        stripe_id: "cs_pending_only",
+        stripe_customer_id: "cus_pending_only"
+      })
+
+      assert {:error, :transaction_not_found} =
+               PaymentQueries.get_transaction_by_stripe_customer_id("cus_pending_only")
+    end
+
+    test "returns error when no transaction matches the customer" do
+      assert {:error, :transaction_not_found} =
+               PaymentQueries.get_transaction_by_stripe_customer_id("cus_missing")
+    end
+  end
+
   describe "update_transaction/2" do
     test "updates transaction status", %{user: user} do
       transaction = PaymentTestHelpers.create_test_transaction(%{user_id: user.id})
@@ -164,69 +239,6 @@ defmodule Tymeslot.Payments.PaymentQueriesTest do
       assert updated.tax_amount == 50
       assert Decimal.equal?(updated.tax_rate, Decimal.new("0.10"))
       assert updated.country_code == "DE"
-    end
-  end
-
-  describe "get_transactions_by_status/1" do
-    test "returns transactions with given status", %{user: user} do
-      other_user = TestFixtures.create_user_fixture()
-
-      _pending1 =
-        PaymentTestHelpers.create_test_transaction(%{user_id: user.id, status: "pending"})
-
-      _pending2 =
-        PaymentTestHelpers.create_test_transaction(%{user_id: other_user.id, status: "pending"})
-
-      _completed =
-        PaymentTestHelpers.create_test_transaction(%{user_id: user.id, status: "completed"})
-
-      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status("pending")
-      assert length(transactions) == 2
-      assert Enum.all?(transactions, fn t -> t.status == "pending" end)
-    end
-
-    test "returns empty list when no transactions match", %{user: _user} do
-      assert {:ok, transactions} = PaymentQueries.get_transactions_by_status("pending")
-      assert transactions == []
-    end
-  end
-
-  describe "coordinate_successful_payment/3" do
-    test "updates transaction with tax info and marks as completed", %{user: user} do
-      transaction =
-        PaymentTestHelpers.create_test_transaction(%{
-          user_id: user.id,
-          status: "pending",
-          stripe_id: "ch_test_success"
-        })
-
-      tax_info = %{
-        tax_amount: 100,
-        tax_rate: Decimal.new("0.20"),
-        country_code: "FR",
-        is_eu_business: true
-      }
-
-      assert {:ok, updated} =
-               PaymentQueries.coordinate_successful_payment(
-                 transaction.stripe_id,
-                 tax_info,
-                 50
-               )
-
-      assert updated.status == "completed"
-      assert updated.tax_amount == 100
-      assert Decimal.equal?(updated.tax_rate, Decimal.new("0.20"))
-      assert updated.country_code == "FR"
-      assert updated.is_eu_business == true
-      assert updated.discount_amount == 50
-    end
-
-    test "returns error when transaction not found" do
-      tax_info = %{tax_amount: 100}
-
-      assert {:error, :transaction_not_found} =
-               PaymentQueries.coordinate_successful_payment("nonexistent", tax_info, 0)
     end
   end
 

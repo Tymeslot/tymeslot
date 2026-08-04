@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.HealthCheck
 
@@ -14,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     AppleConfig,
     BaikalConfig,
     CaldavConfig,
+    IcsUrlConfig,
     MailboxOrgConfig,
     NextcloudConfig,
     RadicaleConfig,
@@ -117,6 +119,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               discovered_calendars={@discovered_calendars}
               show_calendar_selection={@show_calendar_selection}
               discovery_credentials={@discovery_credentials}
+              saving={@is_saving}
+            />
+          <% :ics_url -> %>
+            <.live_component
+              module={IcsUrlConfig}
+              id="ics-url-config"
+              target={@myself}
+              form_errors={@form_errors}
+              form_values={@form_values}
               saving={@is_saving}
             />
           <% :apple -> %>
@@ -269,11 +280,14 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     provider_name = Helpers.format_provider_name(integration.provider)
     calendar_list = integration.calendar_list || []
 
+    subscription? = ProviderConfig.subscription?(integration.provider)
+
     assigns =
       assigns
       |> assign(:calendar_list, calendar_list)
       |> assign(:status, integration_status(integration, assigns.health_state))
       |> assign(:summary, calendar_summary(integration))
+      |> assign(:subscription?, subscription?)
       |> assign(
         :display_name,
         if(integration.name == provider_name, do: provider_name, else: integration.name)
@@ -285,6 +299,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       icon={@integration.provider}
       icon_type={:calendar}
       title={@display_name}
+      type_tag={if @subscription?, do: dgettext("dashboard_calendar_settings", "Read-only")}
       summary={@summary}
       status={@status}
       active?={@integration.is_active}
@@ -302,8 +317,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
         >
           <.icon name="hero-bolt" class="w-4 h-4" /> {dgettext("dashboard_calendar_settings", "Upgrade")}
         </button>
+        <%!-- A subscription has exactly one calendar, always selected, so the
+        selection modal would offer a choice that does not exist. --%>
         <button
-          :if={@calendar_list != []}
+          :if={@calendar_list != [] and not @subscription?}
           phx-click="manage_calendars"
           phx-value-id={@integration.id}
           phx-target={@myself}
@@ -316,7 +333,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             "Manage calendars"
           )}</span>
         </button>
+        <%!-- Reconnecting a subscription means pasting a new feed URL, not
+        re-entering credentials, so the CalDAV reconnect modal does not apply.
+        A revoked feed is replaced by removing this row and subscribing again. --%>
         <.reconnect_button
+          :if={not @subscription?}
           provider={@integration.provider}
           integration_id={@integration.id}
           myself={@myself}

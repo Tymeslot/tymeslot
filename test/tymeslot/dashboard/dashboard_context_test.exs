@@ -8,6 +8,7 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
 
   alias Tymeslot.Agenda.Day
   alias Tymeslot.Dashboard.DashboardContext
+  alias Tymeslot.Security.Encryption
 
   setup do
     user = insert(:user)
@@ -65,6 +66,38 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
     test "returns defaults for non-integer user_id" do
       assert DashboardContext.get_integration_status("not_an_id") ==
                DashboardContext.default_integration_status()
+    end
+
+    test "reports has_calendar: false when the only integration is a read-only subscription" do
+      user = insert(:user)
+
+      insert(:calendar_integration,
+        user: user,
+        provider: "ics_url",
+        base_url: "https://feeds.example.com",
+        username_encrypted: nil,
+        password_encrypted: nil,
+        subscription_url_encrypted: Encryption.encrypt("https://feeds.example.com/feed.ics")
+      )
+
+      assert %{has_calendar: false} = DashboardContext.get_integration_status(user.id)
+    end
+
+    test "reports has_calendar: true with a CalDAV integration present" do
+      user = insert(:user)
+
+      insert(:calendar_integration,
+        user: user,
+        provider: "ics_url",
+        base_url: "https://feeds.example.com",
+        username_encrypted: nil,
+        password_encrypted: nil,
+        subscription_url_encrypted: Encryption.encrypt("https://feeds.example.com/feed.ics")
+      )
+
+      insert(:calendar_integration, user: user, provider: "caldav")
+
+      assert %{has_calendar: true} = DashboardContext.get_integration_status(user.id)
     end
   end
 end

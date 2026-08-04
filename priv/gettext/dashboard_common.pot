@@ -168,7 +168,7 @@ msgstr ""
 msgid "User"
 msgstr ""
 
-#: lib/tymeslot_web/components/icons/provider_icon.ex:59
+#: lib/tymeslot_web/components/icons/provider_icon.ex:76
 #, elixir-autogen, elixir-format
 msgid "%{provider} icon"
 msgstr ""
@@ -183,12 +183,12 @@ msgstr ""
 msgid "Calendar Integration"
 msgstr ""
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:78
+#: lib/tymeslot/scheduling/link_access_policy.ex:79
 #, elixir-autogen, elixir-format
 msgid "Complete setup to enable this feature"
 msgstr ""
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:72
+#: lib/tymeslot/scheduling/link_access_policy.ex:73
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar in Calendar settings to enable this feature"
 msgstr ""
@@ -209,7 +209,7 @@ msgstr ""
 msgid "Payments"
 msgstr ""
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:69
+#: lib/tymeslot/scheduling/link_access_policy.ex:70
 #, elixir-autogen, elixir-format
 msgid "Set a username in Settings to enable this feature"
 msgstr ""
@@ -227,4 +227,9 @@ msgstr ""
 #: lib/tymeslot_web/helpers/page_titles.ex:29
 #, elixir-autogen, elixir-format
 msgid "Video Integration"
+msgstr ""
+
+#: lib/tymeslot_web/components/icons/provider_icon.ex:73
+#, elixir-autogen, elixir-format
+msgid "Calendar subscription"
 msgstr ""

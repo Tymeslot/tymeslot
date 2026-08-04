@@ -17,6 +17,11 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     - Tier 2 (CTag check): every 30 minutes
     - Tier 3 (full fetch): every hour
     - Undetected (nil): every 15 minutes (detect tier ASAP)
+  - **Calendar subscriptions (`ics_url`)** — enqueues a `SyncIcsCalendarWorker`
+    job every 30 minutes. There is no tier to detect: a published feed offers
+    no delta mechanism, so every run is a full fetch, and the publisher
+    regenerates the file on its own schedule anyway. Polling harder would cost
+    a third party bandwidth for data that has not changed.
 
   Jobs are enqueued in batches of 50, each batch scheduled one second after
   the previous via `scheduled_at`, to avoid thundering-herd load on provider
@@ -36,6 +41,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
 
   @batch_size 50
   @batch_stagger_seconds 1
@@ -48,6 +54,10 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     3 => 3_600
   }
   @caldav_default_interval 900
+
+  # Subscribed feeds have no tier: every run is a full fetch of a file the
+  # publisher regenerates on its own schedule.
+  @subscription_interval 1_800
 
   # Forced full fetch: every 24 hours to recover events missed by Tier 1/2
   # delta-based optimisations. Was 12 hours before the reconcile transaction
@@ -87,13 +97,16 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     caldav_count = enqueue_batched(due_integrations, SyncCalDavCalendarWorker)
     caldav_skipped = length(caldav_integrations) - length(due_integrations)
 
+    subscription_count = enqueue_due_subscriptions(by_provider)
+
     Logger.info("FallbackSyncSweep complete",
       google_scheduled: google_count,
       outlook_scheduled: outlook_count,
       caldav_scheduled: caldav_count,
       caldav_skipped: caldav_skipped,
       caldav_forced_full_scheduled: forced_full_count,
-      caldav_forced_full_conflicts: forced_full_conflicts
+      caldav_forced_full_conflicts: forced_full_conflicts,
+      subscription_scheduled: subscription_count
     )
 
     :ok
@@ -191,6 +204,24 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
       end)
 
     scheduled
+  end
+
+  # ---------------------------------------------------------------------------
+  # Subscribed feed scheduling
+  # ---------------------------------------------------------------------------
+
+  defp enqueue_due_subscriptions(by_provider) do
+    ProviderConfig.subscription_provider_strings()
+    |> Enum.flat_map(&Map.get(by_provider, &1, []))
+    |> Enum.filter(&subscription_due?/1)
+    |> enqueue_batched(SyncIcsCalendarWorker)
+  end
+
+  defp subscription_due?(%{last_external_sync_at: nil}), do: true
+
+  defp subscription_due?(integration) do
+    cutoff = DateTime.add(DateTime.utc_now(), -@subscription_interval, :second)
+    DateTime.before?(integration.last_external_sync_at, cutoff)
   end
 
   # ---------------------------------------------------------------------------

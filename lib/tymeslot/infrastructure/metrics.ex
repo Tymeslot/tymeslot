@@ -276,10 +276,16 @@ defmodule Tymeslot.Infrastructure.Metrics do
   defp request_target(_url), do: %{host: nil, path: nil}
 
   # Replace path segments that look like identifiers with `:id` so that
-  # calendar ids and email addresses are never written to structured logs.
-  # Two rules apply (in priority order):
+  # calendar ids, email addresses, and feed-subscription secrets (Google's
+  # private ical addresses, Outlook GUIDs, iCloud published tokens) are never
+  # written to structured logs. Rules apply in priority order:
   #   1. Any segment immediately following a `calendars` segment is an id.
-  #   2. Any segment containing `@` is an email address / calendar identifier.
+  #   2. Any segment containing `@` (raw or percent-encoded as `%40`) is an
+  #      email address / calendar identifier.
+  #   3. Any segment starting with `private-` is a Google ical feed secret.
+  #   4. Any long, mixed alphanumeric segment (>20 chars) is a token/GUID.
+  @token_pattern ~r/^[A-Za-z0-9_-]{21,}$/
+
   defp redact_path(nil), do: nil
 
   defp redact_path(path) do
@@ -290,12 +296,26 @@ defmodule Tymeslot.Infrastructure.Metrics do
         cond do
           redact_next -> {acc ++ [":id"], false}
           segment == "calendars" -> {acc ++ [segment], true}
-          String.contains?(segment, "@") -> {acc ++ [":id"], false}
+          sensitive_segment?(segment) -> {acc ++ [":id"], false}
           true -> {acc ++ [segment], false}
         end
       end)
 
     redacted |> elem(0) |> Enum.join("/")
+  end
+
+  defp sensitive_segment?(segment) do
+    String.contains?(segment, "@") or
+      String.contains?(String.downcase(segment), "%40") or
+      String.starts_with?(segment, "private-") or
+      token_like?(segment)
+  end
+
+  defp token_like?(segment) do
+    String.length(segment) > 20 and
+      Regex.match?(@token_pattern, segment) and
+      Regex.match?(~r/[0-9]/, segment) and
+      Regex.match?(~r/[A-Za-z]/, segment)
   end
 
   @spec handle_circuit_breaker_event(

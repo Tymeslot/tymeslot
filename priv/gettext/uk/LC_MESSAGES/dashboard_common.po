@@ -168,7 +168,7 @@ msgstr "Ця функція (%{feature_name}) недоступна у вашом
 msgid "User"
 msgstr "Користувач"
 
-#: lib/tymeslot_web/components/icons/provider_icon.ex:59
+#: lib/tymeslot_web/components/icons/provider_icon.ex:76
 #, elixir-autogen, elixir-format
 msgid "%{provider} icon"
 msgstr "Піктограма %{provider}"
@@ -183,12 +183,12 @@ msgstr "%{section} - Панель керування"
 msgid "Calendar Integration"
 msgstr "Інтеграція з календарем"
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:78
+#: lib/tymeslot/scheduling/link_access_policy.ex:79
 #, elixir-autogen, elixir-format
 msgid "Complete setup to enable this feature"
 msgstr "Завершіть налаштування, щоб увімкнути цю функцію"
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:72
+#: lib/tymeslot/scheduling/link_access_policy.ex:73
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar in Calendar settings to enable this feature"
 msgstr "Підключіть календар у налаштуваннях календаря, щоб увімкнути цю функцію"
@@ -209,7 +209,7 @@ msgstr "Налаштування зустрічей"
 msgid "Payments"
 msgstr "Платежі"
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:69
+#: lib/tymeslot/scheduling/link_access_policy.ex:70
 #, elixir-autogen, elixir-format
 msgid "Set a username in Settings to enable this feature"
 msgstr "Встановіть ім'я користувача в налаштуваннях, щоб увімкнути цю функцію"
@@ -228,3 +228,8 @@ msgstr "Вибір теми"
 #, elixir-autogen, elixir-format
 msgid "Video Integration"
 msgstr "Інтеграція відеозв'язку"
+
+#: lib/tymeslot_web/components/icons/provider_icon.ex:73
+#, elixir-autogen, elixir-format
+msgid "Calendar subscription"
+msgstr "Підписка на календар"

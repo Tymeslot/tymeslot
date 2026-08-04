@@ -304,6 +304,47 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
       refute meta.path =~ "maxResults"
       refute meta.path =~ "@"
     end
+
+    test "redacts a Google ical feed secret on a 401 response" do
+      handler_id = :metrics_http_ics_secret
+
+      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
+      on_exit(fn -> :logger.remove_handler(handler_id) end)
+
+      Metrics.handle_http_event(
+        [:tymeslot, :http, :request],
+        %{duration: 100},
+        %{
+          method: "GET",
+          url:
+            "https://calendar.google.com/calendar/ical/user%40gmail.com/private-abc123def456/basic.ics",
+          status_code: 401
+        },
+        nil
+      )
+
+      assert_receive {:captured_log, %{meta: %{status_code: 401} = meta}}
+      refute meta.path =~ "private-abc123def456"
+      refute meta.path =~ "%40"
+      refute meta.path =~ "user@gmail.com"
+    end
+
+    test "leaves an ordinary API path unredacted on a slow response" do
+      handler_id = :metrics_http_slow_ordinary
+
+      :ok = :logger.add_handler(handler_id, LogCapture, %{config: %{pid: self()}})
+      on_exit(fn -> :logger.remove_handler(handler_id) end)
+
+      Metrics.handle_http_event(
+        [:tymeslot, :http, :request],
+        %{duration: 5001},
+        %{method: "GET", url: "https://api.example.com/api/v1/meetings/123", status_code: 200},
+        nil
+      )
+
+      assert_receive {:captured_log, %{meta: meta}}
+      assert meta.path == "/api/v1/meetings/123"
+    end
   end
 
   describe "handle_pool_event/4" do

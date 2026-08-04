@@ -186,7 +186,12 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       assert {:ok, ^attrs} = Creation.prevalidate_config(attrs)
     end
 
-    test "returns error for invalid credentials" do
+    # A probe failure is never attributable to a single input: the reason comes
+    # back as a sanitised sentence, so it is reported against `:discovery`, the
+    # form-level key both CalDAV forms already render. It used to be wrapped in
+    # a pseudo-changeset whose field was guessed from keywords in that sentence,
+    # which prefixed the generic message with "Calendar paths".
+    test "reports a failed connection probe form-level rather than against a field" do
       attrs = %{
         provider: "caldav",
         user_id: 1,
@@ -195,8 +200,9 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
         password: "wrong"
       }
 
-      result = Creation.prevalidate_config(attrs)
-      assert {:error, %Ecto.Changeset{}} = result
+      assert {:error, %{discovery: message}} = Creation.prevalidate_config(attrs)
+      assert byte_size(message) > 0
+      refute message =~ "Calendar paths"
     end
 
     test "handles provider that doesn't exist" do
@@ -305,6 +311,25 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
 
       # Security validation should catch malicious URL
       assert {:error, _reason} = result
+    end
+
+    test "surfaces a failed connection probe as a form-level error", %{user: user} do
+      params = %{
+        "name" => "Test Calendar",
+        "provider" => "caldav",
+        "url" => "https://caldav.example.com",
+        "username" => "testuser",
+        "password" => "testpass",
+        "calendar_paths" => ""
+      }
+
+      # `:discovery` is the key both the dashboard and the onboarding CalDAV
+      # forms render form-level, so the sanitised reason reaches the user on
+      # either surface instead of being logged and replaced with "try again".
+      assert {:error, {:form_errors, %{discovery: message}}} =
+               Creation.create_with_validation(user.id, params)
+
+      assert byte_size(message) > 0
     end
 
     test "accepts metadata option for rate limiting", %{user: user} do

@@ -27,6 +27,9 @@ RUN mix local.hex --force && mix local.rebar --force
 # Dependency layer (cached unless mix.exs/mix.lock change)
 COPY mix.exs mix.lock ./
 COPY config ./config
+# priv/tz/ must precede deps.compile: `tz` loads the vendored IANA release from
+# :data_dir at dep-compile time, and raises if the directory is absent.
+COPY priv/tz ./priv/tz
 RUN mix deps.get --only $MIX_ENV
 RUN mix deps.compile
 

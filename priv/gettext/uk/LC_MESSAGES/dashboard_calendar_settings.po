@@ -11,7 +11,7 @@ msgstr ""
 "Language: uk\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:445
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:439
 #, elixir-autogen, elixir-format
 msgid "%{shown} and %{count} more"
 msgid_plural "%{shown} and %{count} more"
@@ -19,263 +19,283 @@ msgstr[0] "%{shown} і ще %{count}"
 msgstr[1] "%{shown} і ще %{count}"
 msgstr[2] "%{shown} і ще %{count}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:373
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:378
 #, elixir-autogen, elixir-format
 msgid "%{successes} refreshed, %{failures} failed: %{detail}"
 msgstr "%{successes} оновлено, %{failures} з помилкою: %{detail}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex:178
+#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex:225
 #, elixir-autogen, elixir-format
 msgid "A calendar integration with this configuration already exists"
 msgstr "Інтеграція календаря з такими налаштуваннями вже існує"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:173
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:184
 #, elixir-autogen, elixir-format
 msgid "Active for Conflict Checking"
 msgstr "Активно для перевірки конфліктів"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:383
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:388
 #, elixir-autogen, elixir-format
 msgid "All calendar refreshes failed."
 msgstr "Не вдалося оновити жоден календар."
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:366
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:371
 #, elixir-autogen, elixir-format
 msgid "All calendars refreshed successfully"
 msgstr "Усі календарі успішно оновлено"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:420
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex:35
 #, elixir-autogen, elixir-format
 msgid "CalDAV servers"
 msgstr "Сервери CalDAV"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:473
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:467
 #, elixir-autogen, elixir-format
 msgid "Calendar Settings"
 msgstr "Налаштування календаря"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex:168
+#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex:215
 #, elixir-autogen, elixir-format
 msgid "Calendar integration added successfully"
 msgstr "Інтеграцію з календарем успішно додано"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:143
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:148
 #, elixir-autogen, elixir-format
 msgid "Calendar status updated"
 msgstr "Статус календаря оновлено"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:311
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:328
 #, elixir-autogen, elixir-format
 msgid "Choose which calendars sync"
 msgstr "Виберіть календарі для синхронізації"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:137
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:148
 #, elixir-autogen, elixir-format
 msgid "Configuration form not available for this provider."
 msgstr "Форма налаштування недоступна для цього провайдера."
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:480
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:508
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:579
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:474
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:502
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:573
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar"
 msgstr "Підключити календар"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:498
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:492
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar so Tymeslot can read your availability and stop meetings being booked when you're already busy."
 msgstr "Підключіть календар, щоб Tymeslot міг перевіряти вашу доступність і запобігати бронюванню зустрічей на час, коли ви вже зайняті."
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:423
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:444
 #, elixir-autogen, elixir-format
 msgid "Connection issues"
 msgstr "Проблеми з підключенням"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:309
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:314
 #, elixir-autogen, elixir-format
 msgid "Connection test failed: %{reason}"
 msgstr "Помилка перевірки підключення: %{reason}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:559
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:553
 #, elixir-autogen, elixir-format
 msgid "Disable feed"
 msgstr "Вимкнути фід"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:569
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:563
 #, elixir-autogen, elixir-format
 msgid "Enable free/busy feed"
 msgstr "Увімкнути фід статусу зайнятості"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:277
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:282
 #, elixir-autogen, elixir-format
 msgid "Failed to update selection"
 msgstr "Не вдалося оновити вибір"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:163
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:168
 #, elixir-autogen, elixir-format
 msgid "Failed to update status: %{reason}"
 msgstr "Не вдалося оновити статус: %{reason}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:528
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:522
 #, elixir-autogen, elixir-format
 msgid "Free/busy feed"
 msgstr "Фід статусу зайнятості"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:424
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:445
 #, elixir-autogen, elixir-format
 msgid "Healthy"
 msgstr "Працює справно"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:296
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:334
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:301
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:339
 #, elixir-autogen, elixir-format
 msgid "Integration not found"
 msgstr "Інтеграцію не знайдено"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:171
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:317
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:176
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:322
 #, elixir-autogen, elixir-format
 msgid "Invalid calendar ID"
 msgstr "Некоректний ідентифікатор календаря"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:342
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:347
 #, elixir-autogen, elixir-format
 msgid "Invalid request"
 msgstr "Некоректний запит"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:312
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:314
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:329
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:331
 #, elixir-autogen, elixir-format
 msgid "Manage calendars"
 msgstr "Керувати календарями"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:495
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:489
 #, elixir-autogen, elixir-format
 msgid "No calendars connected yet"
 msgstr "Жодного календаря ще не підключено"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:330
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:335
 #, elixir-autogen, elixir-format
 msgid "Not a Google Calendar"
 msgstr "Це не Google Календар"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:421
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:442
 #, elixir-autogen, elixir-format
 msgid "Paused"
 msgstr "Призупинено"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:230
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:241
 #, elixir-autogen, elixir-format
 msgid "Paused Calendars"
 msgstr "Призупинені календарі"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:362
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:376
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:422
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:383
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:397
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:443
 #, elixir-autogen, elixir-format
 msgid "Reconnect"
 msgstr "Перепідключити"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:359
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:360
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:373
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:374
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:380
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:381
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:394
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:395
 #, elixir-autogen, elixir-format
 msgid "Reconnect integration"
 msgstr "Перепідключити інтеграцію"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:210
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:221
 #, elixir-autogen, elixir-format
 msgid "Refresh All"
 msgstr "Оновити всі"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:391
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:396
 #, elixir-autogen, elixir-format
 msgid "Refresh process failed unexpectedly."
 msgstr "Під час оновлення сталася непередбачена помилка."
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:209
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:220
 #, elixir-autogen, elixir-format
 msgid "Refreshing..."
 msgstr "Оновлення..."
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:551
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:545
 #, elixir-autogen, elixir-format
 msgid "Regenerate link"
 msgstr "Згенерувати нове посилання"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:330
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:331
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:351
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:352
 #, elixir-autogen, elixir-format
 msgid "Remove connection"
 msgstr "Видалити підключення"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:534
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:528
 #, elixir-autogen, elixir-format
 msgid "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
 msgstr "Поділіться посиланням лише для перегляду, яке транслює ваш статус зайнятості (без деталей подій) у форматі стандартного фіду iCalendar. Це дозволить іншим календарним системам враховувати вашу доступність."
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:581
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:575
 #, elixir-autogen, elixir-format
 msgid "Sync your availability to prevent double bookings."
 msgstr "Синхронізуйте свою доступність, щоб уникнути накладок у розкладі."
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:233
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:244
 #, elixir-autogen, elixir-format
 msgid "These calendars are currently ignored during conflict checking."
 msgstr "Ці календарі наразі ігноруються під час перевірки конфліктів."
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:268
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:273
 #, elixir-autogen, elixir-format
 msgid "This calendar integration is no longer available."
 msgstr "Ця інтеграція з календарем більше недоступна."
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:201
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:206
 #, elixir-autogen, elixir-format
 msgid "Unsupported provider"
 msgstr "Провайдер не підтримується"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:303
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:318
 #, elixir-autogen, elixir-format
 msgid "Upgrade"
 msgstr "Розширити"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:301
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:316
 #, elixir-autogen, elixir-format
 msgid "Upgrade Google Calendar permissions"
 msgstr "Розширити дозволи для Google Календаря"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:176
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:187
 #, elixir-autogen, elixir-format
 msgid "We'll check these calendars to prevent double bookings automatically."
 msgstr "Ми перевірятимемо ці календарі, щоб автоматично запобігати накладкам у розкладі."
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:451
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:472
 #, elixir-autogen, elixir-format
 msgid "books into %{calendar}"
 msgstr "додає записи в %{calendar}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:431
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:452
 #, elixir-autogen, elixir-format
 msgid "conflict-checks %{selected} of %{total} calendars"
 msgstr "перевіряє на конфлікти %{selected} з %{total} календарів"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:476
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:497
 #, elixir-autogen, elixir-format
 msgid "synced %{time}"
 msgstr "синхронізовано %{time}"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:153
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:158
 #, elixir-autogen, elixir-format
 msgid "Cannot reactivate - another active integration already uses this account"
 msgstr "Неможливо активувати повторно - цей обліковий запис уже використовується іншою активною інтеграцією"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:467
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:488
 #, elixir-autogen, elixir-format
 msgid "booking target can no longer accept bookings"
 msgstr "цільовий календар більше не може приймати бронювання"
 
-#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:358
+#: lib/tymeslot_web/live/dashboard/calendar_settings_component.ex:363
 #, elixir-autogen, elixir-format
 msgid "unknown calendar"
 msgstr "невідомий календар"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex:39
+#, elixir-autogen, elixir-format
+msgid "Calendar subscriptions"
+msgstr "Підписки на календарі"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/provider_picker.ex:43
+#, elixir-autogen, elixir-format
+msgid "Other"
+msgstr "Інше"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex:302
+#, elixir-autogen, elixir-format
+msgid "Read-only"
+msgstr "Лише для перегляду"
+
+#: lib/tymeslot_web/live/dashboard/calendar_settings/config_view_component.ex:206
+#, elixir-autogen, elixir-format
+msgid "Something went wrong. Please try again."
+msgstr "Щось пішло не так. Спробуйте ще раз."

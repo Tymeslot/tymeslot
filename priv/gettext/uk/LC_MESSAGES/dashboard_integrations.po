@@ -978,7 +978,7 @@ msgstr "Ключ API має бути текстом"
 msgid "Access forbidden - API key may lack required permissions"
 msgstr "Доступ заборонено - можливо, ключу API бракує потрібних дозволів"
 
-#: lib/tymeslot/integrations/shared/reauth_handling.ex:60
+#: lib/tymeslot/integrations/shared/reauth_handling.ex:67
 #, elixir-autogen, elixir-format
 msgid "Access to the connected account has expired or been revoked. Please reconnect the integration."
 msgstr "Термін дії доступу до підключеного облікового запису минув або доступ було відкликано. Перепідключіть інтеграцію."
@@ -1191,7 +1191,7 @@ msgstr "Введіть коректну URL-адресу сервера (нап�
 msgid "Processed URL exceeds maximum length of %{max_length} characters (got %{url_length})"
 msgstr "Оброблена URL-адреса перевищує максимальну довжину в %{max_length} символів (отримано %{url_length})"
 
-#: lib/tymeslot/integrations/shared/reauth_handling.ex:52
+#: lib/tymeslot/integrations/shared/reauth_handling.ex:59
 #, elixir-autogen, elixir-format
 msgid "Stored credentials could not be decrypted with the current encryption key. Please reconnect the integration."
 msgstr "Не вдалося розшифрувати збережені облікові дані поточним ключем шифрування. Перепідключіть інтеграцію."
@@ -1206,7 +1206,7 @@ msgstr "Інтеграції з Teams бракує потрібних дозво
 msgid "Template variable cannot be used in URL fragment (#). Fragments are not sent to the server, so all meetings would use the same room. Use the template in the path instead: https://example.com/{{meeting_id}}"
 msgstr "Змінну шаблону не можна використовувати у фрагменті URL-адреси (#). Фрагменти не надсилаються на сервер, тому всі зустрічі потрапляли б до однієї кімнати. Використайте шаблон у шляху: https://example.com/{{meeting_id}}"
 
-#: lib/tymeslot/integrations/shared/reauth_handling.ex:68
+#: lib/tymeslot/integrations/shared/reauth_handling.ex:75
 #, elixir-autogen, elixir-format
 msgid "The provider rejected the stored credentials for this integration. Please reconnect the integration."
 msgstr "Провайдер відхилив збережені облікові дані для цієї інтеграції. Перепідключіть інтеграцію."
@@ -1297,3 +1297,8 @@ msgstr "✓ Підключення до Microsoft Teams перевірено - %
 #, elixir-autogen, elixir-format
 msgid "✓ MiroTalk connection verified - %{message}"
 msgstr "✓ Підключення до MiroTalk перевірено - %{message}"
+
+#: lib/tymeslot/integrations/shared/reauth_handling.ex:83
+#, elixir-autogen, elixir-format
+msgid "The calendar feed rejected the stored link. It was probably revoked or reset — subscribe again with a fresh URL."
+msgstr "Фід календаря відхилив збережене посилання. Ймовірно, його було відкликано або скинуто — підпишіться знову з новою URL-адресою."

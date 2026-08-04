@@ -21,6 +21,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
       mailbox_org: Tymeslot.Integrations.Calendar.MailboxOrg.Provider,
       apple: Tymeslot.Integrations.Calendar.Apple.Provider,
       baikal: Tymeslot.Integrations.Calendar.Baikal.Provider,
+      ics_url: Tymeslot.Integrations.Calendar.Ics.Provider,
       google: Tymeslot.Integrations.Calendar.Google.Provider,
       outlook: Tymeslot.Integrations.Calendar.Outlook.Provider,
       debug: Tymeslot.Integrations.Calendar.DebugCalendarProvider,

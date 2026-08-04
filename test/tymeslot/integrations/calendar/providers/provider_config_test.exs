@@ -157,6 +157,12 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
       refute :demo in breakers
     end
 
+    test "excludes ics_url: a provider-global breaker is the wrong shape for arbitrary per-user feed hosts" do
+      breakers = ProviderConfig.providers_with_circuit_breakers()
+
+      refute :ics_url in breakers
+    end
+
     test "stays in sync with metadata's circuit_breaker_enabled flag" do
       breakers = ProviderConfig.providers_with_circuit_breakers()
 

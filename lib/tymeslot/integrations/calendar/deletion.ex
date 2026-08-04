@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
   calendar invariant (promote another or clear primary).
   """
 
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
@@ -64,7 +65,9 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
 
   defp promote_next_or_clear(user_id, exclude_id) do
     others =
-      Enum.reject(CalendarManagement.list_calendar_integrations(user_id), &(&1.id == exclude_id))
+      user_id
+      |> CalendarManagement.list_calendar_integrations()
+      |> Enum.reject(&(&1.id == exclude_id or ProviderConfig.subscription?(&1.provider)))
 
     case others do
       [next | _rest] ->

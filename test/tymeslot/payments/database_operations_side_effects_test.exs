@@ -10,70 +10,9 @@ defmodule Tymeslot.Payments.DatabaseOperationsSideEffectsTest do
   alias Tymeslot.Repo
 
   setup do
-    Phoenix.PubSub.subscribe(Tymeslot.PubSub, "payment:payment_successful")
     Phoenix.PubSub.subscribe(Tymeslot.PubSub, "payment:subscription_successful")
     Phoenix.PubSub.subscribe(Tymeslot.PubSub, "payment:subscription_failed")
     :ok
-  end
-
-  describe "process_successful_payment/3" do
-    test "marks the transaction completed, persists tax/discount, and broadcasts" do
-      user = insert(:user)
-
-      tx =
-        insert(:payment_transaction,
-          user: user,
-          status: "pending",
-          stripe_id: "cs_ok_1"
-        )
-
-      tax_info = %{
-        tax_amount: 200,
-        tax_rate: Decimal.new("0.2"),
-        tax_id: "EU123",
-        is_eu_business: true,
-        country_code: "DE",
-        billing_address: %{"line1" => "Test Strasse"}
-      }
-
-      assert {:ok, :payment_processed} =
-               DatabaseOperations.process_successful_payment(tx, tax_info, 50)
-
-      reloaded = Repo.reload(tx)
-      assert reloaded.status == "completed"
-      assert reloaded.tax_amount == 200
-      assert Decimal.equal?(reloaded.tax_rate, Decimal.new("0.2"))
-      assert reloaded.tax_id == "EU123"
-      assert reloaded.is_eu_business == true
-      assert reloaded.country_code == "DE"
-      assert reloaded.discount_amount == 50
-
-      assert_received {:payment_successful, %{user_id: user_id, transaction: broadcast_tx}}
-      assert user_id == user.id
-      assert broadcast_tx.status == "completed"
-    end
-
-    test "looks up the transaction by stripe_id when given a string" do
-      user = insert(:user)
-
-      insert(:payment_transaction,
-        user: user,
-        status: "pending",
-        stripe_id: "cs_lookup_2"
-      )
-
-      assert {:ok, :payment_processed} =
-               DatabaseOperations.process_successful_payment("cs_lookup_2")
-
-      assert_received {:payment_successful, _payload}
-    end
-
-    test "returns :transaction_not_found for an unknown stripe_id" do
-      assert {:error, :transaction_not_found} =
-               DatabaseOperations.process_successful_payment("cs_does_not_exist")
-
-      refute_received {:payment_successful, _payload}
-    end
   end
 
   describe "process_subscription_failure/2" do

@@ -31,7 +31,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
 
   Returns `{:ok, {events, deleted_hrefs, new_sync_token}}` on success,
   `{:error, :sync_token_expired}` when the server responds with 410 Gone,
-  or `{:error, reason}` for other failures.
+  `{:error, :calendar_data_withheld}` when the server reported changes
+  without inlining their calendar data (see `parse_response/1`), or
+  `{:error, reason}` for other failures.
   """
   @spec fetch(map(), map(), String.t()) ::
           {:ok, {list(map()), list(String.t()), String.t() | nil}}
@@ -40,21 +42,27 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
     sync_token = integration.caldav_sync_token
     report_body = build_report(sync_token)
 
-    case CalDAVHttp.report(calendar_url, client.username, client.password, report_body) do
+    # RFC 6578, Section 3.2: the sync-collection report is defined only for
+    # `Depth: 0`, and a compliant server answers any other value with 400. The
+    # scope the client wants travels in `<d:sync-level>`, which `build_report/1`
+    # already sends. A 410 answers a token the server no longer recognises, so
+    # it means something here that it does not mean on a calendar-query.
+    case CalDAVHttp.report(calendar_url, client.username, client.password, report_body,
+           depth: "0",
+           status_overrides: %{410 => :sync_token_expired}
+         ) do
       {:ok, %Req.Response{status: 207, body: body}} ->
         parse_response(body)
 
-      {:ok, %Req.Response{status: 410}} ->
-        {:error, :sync_token_expired}
+      # Some servers answer with plain 200 instead of the mandated 207
+      # Multi-Status. The body is a multistatus document either way.
+      {:ok, %Req.Response{status: status, body: body}} ->
+        Logger.warning("CalDAV sync-collection REPORT returned unexpected status",
+          status: status,
+          expected: 207
+        )
 
-      {:ok, %Req.Response{status: 401}} ->
-        {:error, :unauthorized}
-
-      {:ok, %Req.Response{status: 403}} ->
-        {:error, :forbidden}
-
-      {:error, :unauthorized} ->
-        {:error, :unauthorized}
+        parse_response(body)
 
       {:error, reason} ->
         {:error, reason}
@@ -99,12 +107,30 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   @doc """
   Parses a 207 Multi-Status sync-collection response body.
 
-  Separates changed events (with calendar data) from deleted resources
-  (404 status or empty calendar data) and extracts the new sync token.
+  Separates changed events (carrying calendar data) from removed resources
+  and extracts the new sync token.
+
+  A resource counts as removed only when the server says so, with a 404 on
+  the `response` element itself — the signal RFC 6578, Section 3.2 defines
+  for a member that left the collection. Missing calendar data is
+  deliberately *not* read as a removal: a server is free to answer with the
+  etag alone, or to report the data property in its own 404 `propstat`
+  because it declines to inline it, and RFC 6578 expects the client to fetch
+  those resources separately. Inferring deletion from an absent property
+  would hand `SyncReconciler` a list of live events to delete, and a
+  deletion auto-cancels the linked meeting and emails both parties — with no
+  bulk-deletion circuit breaker on this path, unlike the full fetch.
+
+  So a response that is neither a removal nor a carrier of calendar data
+  fails the whole delta with `{:error, :calendar_data_withheld}`, rather than
+  being applied in part or read as a deletion: the caller falls back
+  to a full fetch, which reads the calendar authoritatively and reconciles
+  deletions behind that circuit breaker. The stored sync token is left
+  untouched, so the same changes are offered again next cycle.
   """
   @spec parse_response(String.t()) ::
           {:ok, {list(map()), list(String.t()), String.t() | nil}}
-          | {:error, :invalid_response}
+          | {:error, :invalid_response | :calendar_data_withheld}
   def parse_response(xml_body) do
     doc = SweetXml.parse(xml_body, namespace_conformant: true, dtd: :none)
 
@@ -117,32 +143,30 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
         doc,
         ~x"//*[local-name()='response']"l,
         href: ~x"./*[local-name()='href']/text()"s,
-        status: ~x".//*[local-name()='status']/text()"s,
+        status: ~x"./*[local-name()='status']/text()"s,
         etag: ~x".//*[local-name()='getetag']/text()"s,
         calendar_data: ~x".//*[local-name()='calendar-data']/text()"s
       )
 
-    {changed, deleted} =
-      Enum.split_with(responses, fn r ->
-        r.calendar_data != "" and not String.contains?(r.status, "404")
-      end)
+    {removed, present} = Enum.split_with(responses, &removed?/1)
+    {changed, withheld} = Enum.split_with(present, &(&1.calendar_data != ""))
 
-    events =
-      changed
-      |> Enum.map(fn r ->
-        case EventProcessor.parse_ical_from_string(r.calendar_data) do
-          {:ok, event} ->
-            Map.merge(event, %{href: r.href, etag: EventProcessor.clean_etag(r.etag)})
+    if withheld == [] do
+      events =
+        changed
+        |> Enum.map(&parse_event/1)
+        |> Enum.reject(&is_nil/1)
 
-          {:error, _reason} ->
-            nil
-        end
-      end)
-      |> Enum.reject(&is_nil/1)
+      {:ok, {events, Enum.map(removed, & &1.href), new_sync_token}}
+    else
+      Logger.warning("CalDAV sync-collection response withheld event data",
+        withheld_count: length(withheld),
+        changed_count: length(changed),
+        removed_count: length(removed)
+      )
 
-    deleted_hrefs = Enum.map(deleted, & &1.href)
-
-    {:ok, {events, deleted_hrefs, new_sync_token}}
+      {:error, :calendar_data_withheld}
+    end
   rescue
     e ->
       Logger.error("Failed to parse sync-collection response", error: inspect(e))
@@ -151,6 +175,29 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
     :exit, reason ->
       Logger.error("Failed to parse sync-collection response", error: inspect(reason))
       {:error, :invalid_response}
+  end
+
+  # A 404 (or 410) on the `response` element itself, not on a nested
+  # `propstat`: the latter reports one property the server could not return,
+  # which says nothing about the resource still existing.
+  defp removed?(%{status: status}) do
+    String.contains?(status, "404") or String.contains?(status, "410")
+  end
+
+  # An event whose iCalendar body fails to parse is dropped rather than
+  # failing the batch: it is malformed at the source, so re-fetching it in
+  # full would produce the same result every cycle.
+  defp parse_event(response) do
+    case EventProcessor.parse_ical_from_string(response.calendar_data) do
+      {:ok, event} ->
+        Map.merge(event, %{
+          href: response.href,
+          etag: EventProcessor.clean_etag(response.etag)
+        })
+
+      {:error, _reason} ->
+        nil
+    end
   end
 
   # ---------------------------------------------------------------------------

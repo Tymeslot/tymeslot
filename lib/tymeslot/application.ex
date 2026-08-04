@@ -145,7 +145,8 @@ defmodule Tymeslot.Application do
     children =
       base_children ++
         production_children ++
-        dev_children ++ [TymeslotWeb.Endpoint] ++ mailer_health_check_children()
+        dev_children ++
+        tz_watcher_children() ++ [TymeslotWeb.Endpoint] ++ mailer_health_check_children()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
@@ -254,6 +255,21 @@ defmodule Tymeslot.Application do
           restart: :transient
         )
       ]
+    else
+      []
+    end
+  end
+
+  # The IANA time zone database is pinned to a vendored release (see
+  # `config :tz, :iana_version`), so nothing tells us a newer one exists unless
+  # we ask. This watcher only logs a warning when data.iana.org publishes a
+  # release newer than the one compiled in; it never downloads or recompiles,
+  # which would fail on a read-only release filesystem anyway. Off by default so
+  # dev and test make no outbound calls; `config/prod.exs` turns it on.
+  @spec tz_watcher_children() :: [{module(), keyword()}]
+  defp tz_watcher_children do
+    if Application.get_env(:tymeslot, :tz_watch_enabled, false) do
+      [{Tz.WatchPeriodically, interval_in_days: 7}]
     else
       []
     end

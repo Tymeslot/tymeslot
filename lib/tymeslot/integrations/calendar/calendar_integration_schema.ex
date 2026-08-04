@@ -8,6 +8,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   - Nextcloud: Nextcloud/ownCloud with remote.php/dav endpoint
   - Google: Google Calendar with OAuth
   - Outlook: Microsoft Outlook Calendar with OAuth
+  - ICS subscription: a published iCalendar feed, read-only
+
+  A subscription's feed URL lives in `subscription_url_encrypted`, not in
+  `base_url`, because for this provider the URL *is* the credential: Google's
+  "secret address in iCal format" and Outlook's published link grant anyone
+  holding them full read access to the calendar. `base_url` carries only the
+  feed's origin, which is what the dashboard renders.
   """
   use Ecto.Schema
   use Gettext, backend: TymeslotWeb.Gettext
@@ -29,6 +36,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           password_encrypted: binary() | nil,
           access_token_encrypted: binary() | nil,
           refresh_token_encrypted: binary() | nil,
+          subscription_url_encrypted: binary() | nil,
           token_expires_at: DateTime.t() | nil,
           oauth_scope: String.t() | nil,
           calendar_paths: [String.t()],
@@ -72,6 +80,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:password_encrypted, :binary)
     field(:access_token_encrypted, :binary)
     field(:refresh_token_encrypted, :binary)
+    field(:subscription_url_encrypted, :binary)
     field(:token_expires_at, :utc_datetime)
     field(:oauth_scope, :string)
     field(:calendar_paths, {:array, :string}, default: [])
@@ -117,6 +126,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:password, :string, virtual: true, redact: true)
     field(:access_token, :string, virtual: true, redact: true)
     field(:refresh_token, :string, virtual: true, redact: true)
+    field(:subscription_url, :string, virtual: true, redact: true)
 
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 
@@ -139,6 +149,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
       :password,
       :access_token,
       :refresh_token,
+      :subscription_url,
       :token_expires_at,
       :oauth_scope,
       :calendar_paths,
@@ -193,7 +204,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
 
   @doc """
   Decrypts the username and password fields.
-  Also decrypts OAuth tokens if present.
+  Also decrypts OAuth tokens and a subscription feed URL if present.
   """
   @spec decrypt_credentials(t()) :: t()
   def decrypt_credentials(%__MODULE__{} = integration) do
@@ -202,7 +213,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
       | username: Encryption.decrypt(integration.username_encrypted),
         password: Encryption.decrypt(integration.password_encrypted),
         access_token: Encryption.decrypt(integration.access_token_encrypted),
-        refresh_token: Encryption.decrypt(integration.refresh_token_encrypted)
+        refresh_token: Encryption.decrypt(integration.refresh_token_encrypted),
+        subscription_url: Encryption.decrypt(integration.subscription_url_encrypted)
     }
   end
 
@@ -255,7 +267,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     :username_encrypted,
     :password_encrypted,
     :access_token_encrypted,
-    :refresh_token_encrypted
+    :refresh_token_encrypted,
+    :subscription_url_encrypted
   ]
 
   @doc """
@@ -297,6 +310,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     |> encrypt_field(:password, :password_encrypted)
     |> encrypt_field(:access_token, :access_token_encrypted)
     |> encrypt_field(:refresh_token, :refresh_token_encrypted)
+    |> encrypt_field(:subscription_url, :subscription_url_encrypted)
   end
 
   defp encrypt_field(changeset, virtual_field, encrypted_field) do

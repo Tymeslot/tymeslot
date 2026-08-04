@@ -973,7 +973,7 @@ msgstr "Der API-Schlüssel muss Text sein"
 msgid "Access forbidden - API key may lack required permissions"
 msgstr "Zugriff verweigert - dem API-Schlüssel fehlen möglicherweise die erforderlichen Berechtigungen"
 
-#: lib/tymeslot/integrations/shared/reauth_handling.ex:60
+#: lib/tymeslot/integrations/shared/reauth_handling.ex:67
 #, elixir-autogen, elixir-format
 msgid "Access to the connected account has expired or been revoked. Please reconnect the integration."
 msgstr "Der Zugriff auf das verbundene Konto ist abgelaufen oder wurde widerrufen. Bitte verbinden Sie die Integration erneut."
@@ -1184,7 +1184,7 @@ msgstr "Bitte geben Sie eine gültige Server-URL ein (z. B. https://mirotalk.exa
 msgid "Processed URL exceeds maximum length of %{max_length} characters (got %{url_length})"
 msgstr "Die verarbeitete URL überschreitet die maximale Länge von %{max_length} Zeichen (erhalten: %{url_length})"
 
-#: lib/tymeslot/integrations/shared/reauth_handling.ex:52
+#: lib/tymeslot/integrations/shared/reauth_handling.ex:59
 #, elixir-autogen, elixir-format
 msgid "Stored credentials could not be decrypted with the current encryption key. Please reconnect the integration."
 msgstr "Die gespeicherten Anmeldedaten konnten mit dem aktuellen Verschlüsselungsschlüssel nicht entschlüsselt werden. Bitte verbinden Sie die Integration erneut."
@@ -1199,7 +1199,7 @@ msgstr "Der Teams-Integration fehlen erforderliche Berechtigungen. Bitte trennen
 msgid "Template variable cannot be used in URL fragment (#). Fragments are not sent to the server, so all meetings would use the same room. Use the template in the path instead: https://example.com/{{meeting_id}}"
 msgstr "Die Vorlagenvariable kann nicht im URL-Fragment (#) verwendet werden. Fragmente werden nicht an den Server gesendet, sodass alle Meetings denselben Raum nutzen würden. Verwenden Sie die Vorlage stattdessen im Pfad: https://example.com/{{meeting_id}}"
 
-#: lib/tymeslot/integrations/shared/reauth_handling.ex:68
+#: lib/tymeslot/integrations/shared/reauth_handling.ex:75
 #, elixir-autogen, elixir-format
 msgid "The provider rejected the stored credentials for this integration. Please reconnect the integration."
 msgstr "Der Anbieter hat die gespeicherten Anmeldedaten für diese Integration abgelehnt. Bitte verbinden Sie die Integration erneut."
@@ -1290,3 +1290,8 @@ msgstr "✓ Microsoft Teams-Verbindung überprüft - %{message}"
 #, elixir-autogen, elixir-format
 msgid "✓ MiroTalk connection verified - %{message}"
 msgstr "✓ MiroTalk-Verbindung überprüft - %{message}"
+
+#: lib/tymeslot/integrations/shared/reauth_handling.ex:83
+#, elixir-autogen, elixir-format
+msgid "The calendar feed rejected the stored link. It was probably revoked or reset — subscribe again with a fresh URL."
+msgstr "Der Kalender-Feed hat den gespeicherten Link abgelehnt. Er wurde vermutlich widerrufen oder zurückgesetzt — abonnieren Sie erneut mit einer neuen URL."

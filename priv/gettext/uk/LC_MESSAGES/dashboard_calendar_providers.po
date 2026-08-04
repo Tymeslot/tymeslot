@@ -258,12 +258,12 @@ msgid "Sign-In and Security → App-Specific Passwords"
 msgstr "Вхід і безпека → Паролі застосунків"
 
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex:434
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:358
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex:359
 #, elixir-autogen, elixir-format
 msgid "Something went wrong. Please try again."
 msgstr "Щось пішло не так. Спробуйте ще раз."
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:123
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:131
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/apple_config.ex:41
 #, elixir-autogen, elixir-format
 msgid "Sync calendars from your Apple iCloud account"
@@ -279,7 +279,7 @@ msgstr "Синхронізація календарів із сервера Next
 msgid "Sync calendars from your Zimbra server"
 msgstr "Синхронізація календарів із сервера Zimbra"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:112
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:120
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/mailbox_org_config.ex:41
 #, elixir-autogen, elixir-format
 msgid "Sync calendars from your mailbox.org account"
@@ -382,42 +382,42 @@ msgstr "https://mail.example.com"
 msgid "https://radicale.example.com:5232"
 msgstr "https://radicale.example.com:5232"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:104
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:112
 #, elixir-autogen, elixir-format
 msgid "Enterprise Zimbra calendar integration"
 msgstr "Корпоративна інтеграція з календарем Zimbra"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:145
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:167
 #, elixir-autogen, elixir-format
 msgid "Full OAuth integration with Google Meet support"
 msgstr "Повна інтеграція OAuth із підтримкою Google Meet"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:163
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:185
 #, elixir-autogen, elixir-format
 msgid "Homepage demo provider"
 msgstr "Демонстраційний провайдер для головної сторінки"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:88
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:96
 #, elixir-autogen, elixir-format
 msgid "Lightweight self-hosted calendar server"
 msgstr "Полегшений власний сервер календарів"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:156
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:178
 #, elixir-autogen, elixir-format
 msgid "Microsoft 365 and Outlook.com integration"
 msgstr "Інтеграція з Microsoft 365 та Outlook.com"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:134
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:142
 #, elixir-autogen, elixir-format
 msgid "PHP-based CalDAV/CardDAV server integration"
 msgstr "Інтеграція із сервером CalDAV/CardDAV на базі PHP"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:96
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:104
 #, elixir-autogen, elixir-format
 msgid "Self-hosted Nextcloud calendar sync"
 msgstr "Синхронізація з власним календарем Nextcloud"
 
-#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:80
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:88
 #, elixir-autogen, elixir-format
 msgid "Universal CalDAV server support"
 msgstr "Універсальна підтримка серверів CalDAV"
@@ -559,17 +559,17 @@ msgid "Baikal server not found. Confirm the URL includes /dav.php (e.g., https:/
 msgstr "Сервер Baikal не знайдено. Переконайтеся, що URL-адреса містить /dav.php (наприклад, https://baikal.example.com/dav.php)."
 
 #: lib/tymeslot/integrations/calendar/caldav/discovery.ex:118
-#: lib/tymeslot/integrations/calendar/providers/caldav_common.ex:335
+#: lib/tymeslot/integrations/calendar/providers/caldav_common.ex:365
 #, elixir-autogen, elixir-format
 msgid "CalDAV connection successful"
 msgstr "Підключення до CalDAV успішне"
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:617
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:568
 #, elixir-autogen, elixir-format
 msgid "CalDAV server"
 msgstr "сервер CalDAV"
 
-#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex:621
+#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex:618
 #, elixir-autogen, elixir-format
 msgid "CalDAV server rejected the stored credentials. Please reconnect the integration."
 msgstr "Сервер CalDAV відхилив збережені облікові дані. Перепідключіть інтеграцію."
@@ -590,12 +590,12 @@ msgstr "Не вдалося виконати пошук календарів"
 msgid "Calendar discovery failed. Please check your credentials and try again."
 msgstr "Не вдалося виконати пошук календарів. Перевірте свої облікові дані та спробуйте ще раз."
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:343
+#: lib/tymeslot/integrations/calendar/input_validation.ex:426
 #, elixir-autogen, elixir-format
 msgid "Calendar paths must be 5000 characters or less"
 msgstr "Шляхи до календарів мають містити не більше 5000 символів"
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:337
+#: lib/tymeslot/integrations/calendar/input_validation.ex:420
 #, elixir-autogen, elixir-format
 msgid "Calendar paths must be text"
 msgstr "Шляхи до календарів мають бути текстом"
@@ -702,7 +702,7 @@ msgid "Network connection failed. Please check your internet connection."
 msgstr "Не вдалося встановити мережеве з'єднання. Перевірте своє підключення до інтернету."
 
 #: lib/tymeslot/integrations/calendar/nextcloud/provider.ex:174
-#: lib/tymeslot/integrations/calendar/providers/caldav_common.ex:329
+#: lib/tymeslot/integrations/calendar/providers/caldav_common.ex:359
 #, elixir-autogen, elixir-format
 msgid "Nextcloud connection successful"
 msgstr "Підключення до Nextcloud успішне"
@@ -712,7 +712,7 @@ msgstr "Підключення до Nextcloud успішне"
 msgid "Nextcloud server not found or CalDAV endpoint not accessible. Check your server URL."
 msgstr "Сервер Nextcloud не знайдено або кінцева точка CalDAV недоступна. Перевірте URL-адресу сервера."
 
-#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:232
+#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:270
 #, elixir-autogen, elixir-format
 msgid "No calendar is selected for this connection, so the change could not be sent to the calendar server."
 msgstr "Для цього підключення не вибрано календар, тому зміну не вдалося надіслати на сервер календаря."
@@ -722,38 +722,38 @@ msgstr "Для цього підключення не вибрано кален�
 msgid "Outlook Calendar connected successfully!"
 msgstr "Календар Outlook успішно підключено!"
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:475
+#: lib/tymeslot/integrations/calendar/input_validation.ex:558
 #, elixir-autogen, elixir-format
 msgid "Password contains invalid characters"
 msgstr "Пароль містить недопустимі символи"
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:472
+#: lib/tymeslot/integrations/calendar/input_validation.ex:555
 #, elixir-autogen, elixir-format
 msgid "Password is required"
 msgstr "Потрібно ввести пароль"
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:294
+#: lib/tymeslot/integrations/calendar/input_validation.ex:377
 #, elixir-autogen, elixir-format
 msgid "Password must be 500 characters or less"
 msgstr "Пароль має містити не більше 500 символів"
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:306
+#: lib/tymeslot/integrations/calendar/input_validation.ex:389
 #, elixir-autogen, elixir-format
 msgid "Password must be text"
 msgstr "Пароль має бути текстом"
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:231
+#: lib/tymeslot/integrations/calendar/input_validation.ex:314
 #, elixir-autogen, elixir-format
 msgid "Please enter a valid server URL (e.g., https://cloud.example.com)"
 msgstr "Введіть коректну URL-адресу сервера (наприклад, https://cloud.example.com)"
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:461
+#: lib/tymeslot/integrations/calendar/input_validation.ex:544
 #: lib/tymeslot/integrations/calendar/shared/provider_common.ex:72
 #, elixir-autogen, elixir-format
 msgid "Private or local network addresses are not allowed"
 msgstr "Приватні або локальні мережеві адреси не дозволені"
 
-#: lib/tymeslot/integrations/calendar/providers/caldav_common.ex:332
+#: lib/tymeslot/integrations/calendar/providers/caldav_common.ex:362
 #: lib/tymeslot/integrations/calendar/radicale/provider.ex:118
 #, elixir-autogen, elixir-format
 msgid "Radicale connection successful"
@@ -786,12 +786,12 @@ msgstr "Ресурс не знайдено. Перевірте свої нала
 msgid "Secure connection failed. Please check your server configuration."
 msgstr "Не вдалося встановити захищене з'єднання. Перевірте налаштування свого сервера."
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:243
+#: lib/tymeslot/integrations/calendar/input_validation.ex:326
 #, elixir-autogen, elixir-format
 msgid "Server URL must be text"
 msgstr "URL-адреса сервера має бути текстом"
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:365
+#: lib/tymeslot/integrations/calendar/input_validation.ex:448
 #, elixir-autogen, elixir-format
 msgid "Some calendar paths have invalid format. Use full URLs (https://...) or paths (/calendar/)"
 msgstr "Деякі шляхи до календарів мають неправильний формат. Використовуйте повні URL-адреси (https://...) або шляхи (/calendar/)"
@@ -801,42 +801,42 @@ msgstr "Деякі шляхи до календарів мають неправ�
 msgid "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
 msgstr "Календаря для бронювань більше немає в Google. Перепідключіть інтеграцію та виберіть інший календар."
 
-#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex:516
+#: lib/tymeslot/workers/sync_caldav_calendar_worker.ex:542
 #, elixir-autogen, elixir-format
 msgid "The booking calendar no longer exists on the CalDAV server. Please reconnect the integration and select a different calendar."
 msgstr "Календаря для бронювань більше немає на сервері CalDAV. Перепідключіть інтеграцію та виберіть інший календар."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:172
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:182
 #, elixir-autogen, elixir-format
 msgid "The calendar server did not respond. Tymeslot will retry automatically."
 msgstr "Сервер календаря не відповів. Tymeslot повторить спробу автоматично."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:144
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:154
 #, elixir-autogen, elixir-format
 msgid "The calendar server is rate-limiting Tymeslot. Tymeslot will retry automatically."
 msgstr "Сервер календаря обмежує кількість запитів від Tymeslot. Tymeslot повторить спробу автоматично."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:123
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:133
 #, elixir-autogen, elixir-format
 msgid "The calendar server refused access to this calendar."
 msgstr "Сервер календаря відмовив у доступі до цього календаря."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:116
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:126
 #, elixir-autogen, elixir-format
 msgid "The calendar server rejected the stored credentials. Please reconnect the calendar."
 msgstr "Сервер календаря відхилив збережені облікові дані. Перепідключіть календар."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:165
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:175
 #, elixir-autogen, elixir-format
 msgid "The calendar server reported an error. Tymeslot will retry automatically."
 msgstr "Сервер календаря повідомив про помилку. Tymeslot повторить спробу автоматично."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:158
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:168
 #, elixir-autogen, elixir-format
 msgid "The calendar server returned a response Tymeslot could not understand."
 msgstr "Сервер календаря повернув відповідь, яку Tymeslot не зміг розпізнати."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:179
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:189
 #, elixir-autogen, elixir-format
 msgid "The calendar server took too long to respond. Tymeslot will retry automatically."
 msgstr "Сервер календаря відповідав надто довго. Tymeslot повторить спробу автоматично."
@@ -851,12 +851,12 @@ msgstr "У службі календаря сталася помилка. Спр
 msgid "The calendar service is temporarily unavailable. Please try again later."
 msgstr "Служба календаря тимчасово недоступна. Спробуйте пізніше."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:137
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:147
 #, elixir-autogen, elixir-format
 msgid "The event changed on the calendar server since Tymeslot last synced it."
 msgstr "Подія змінилася на сервері календаря після останньої синхронізації з Tymeslot."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:130
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:140
 #, elixir-autogen, elixir-format
 msgid "The event no longer exists on the calendar server."
 msgstr "Цієї події більше немає на сервері календаря."
@@ -881,17 +881,17 @@ msgstr "Забагато запитів. Зачекайте трохи та сп
 msgid "Try using an app password instead of your regular password. You can create one in Nextcloud's security settings"
 msgstr "Спробуйте скористатися паролем застосунку замість звичайного пароля. Створити його можна в налаштуваннях безпеки Nextcloud"
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:187
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:197
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not complete the request against the calendar server."
 msgstr "Tymeslot не зміг виконати запит до сервера календаря."
 
-#: lib/tymeslot/integrations/calendar/caldav/base.ex:151
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:161
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not reach the calendar server. Tymeslot will retry automatically."
 msgstr "Tymeslot не зміг зв'язатися із сервером календаря. Tymeslot повторить спробу автоматично."
 
-#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:239
+#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:277
 #, elixir-autogen, elixir-format
 msgid "Tymeslot could not send this change to the calendar server."
 msgstr "Tymeslot не зміг надіслати цю зміну на сервер календаря."
@@ -928,23 +928,23 @@ msgstr "Непідтримуваний провайдер: %{provider}"
 msgid "Use HTTPS for non-local Zimbra servers"
 msgstr "Для нелокальних серверів Zimbra використовуйте HTTPS"
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:459
+#: lib/tymeslot/integrations/calendar/input_validation.ex:542
 #: lib/tymeslot/integrations/calendar/shared/provider_common.ex:70
 #, elixir-autogen, elixir-format
 msgid "Use HTTPS for non-local calendar servers"
 msgstr "Для нелокальних серверів календаря використовуйте HTTPS"
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:469
+#: lib/tymeslot/integrations/calendar/input_validation.ex:552
 #, elixir-autogen, elixir-format
 msgid "Username is required"
 msgstr "Ім'я користувача обов'язкове"
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:257
+#: lib/tymeslot/integrations/calendar/input_validation.ex:340
 #, elixir-autogen, elixir-format
 msgid "Username must be 255 characters or less"
 msgstr "Ім'я користувача має містити не більше 255 символів"
 
-#: lib/tymeslot/integrations/calendar/input_validation.ex:276
+#: lib/tymeslot/integrations/calendar/input_validation.ex:359
 #, elixir-autogen, elixir-format
 msgid "Username must be text"
 msgstr "Ім'я користувача має бути текстом"
@@ -984,7 +984,7 @@ msgstr "Підключення до Zimbra успішне"
 msgid "Zimbra server not found. Check your server URL."
 msgstr "Сервер Zimbra не знайдено. Перевірте URL-адресу сервера."
 
-#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:625
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex:576
 #, elixir-autogen, elixir-format
 msgid "calendar provider"
 msgstr "провайдер календаря"
@@ -1008,3 +1008,114 @@ msgstr "Підключення до mailbox.org успішне"
 #, elixir-autogen, elixir-format
 msgid "mailbox.org requires HTTPS"
 msgstr "Для mailbox.org потрібен HTTPS"
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:503
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:40
+#, elixir-autogen, elixir-format
+msgid "Calendar subscription"
+msgstr "Підписка на календар"
+
+#: lib/tymeslot/workers/sync_ics_calendar_worker.ex:193
+#, elixir-autogen, elixir-format
+msgid "Calendar subscription sync failed while writing a fetched event to the cache (%{type}): %{detail}"
+msgstr "Не вдалося синхронізувати підписку на календар під час запису отриманої події в кеш (%{type}): %{detail}"
+
+#: lib/tymeslot/integrations/calendar/ics/feed.ex:145
+#, elixir-autogen, elixir-format
+msgid "Could not reach the calendar feed. Check the URL and try again."
+msgstr "Не вдалося отримати доступ до фіду календаря. Перевірте URL-адресу та спробуйте ще раз."
+
+#: lib/tymeslot/integrations/calendar/ics/feed.ex:126
+#, elixir-autogen, elixir-format
+msgid "Enter the calendar feed URL."
+msgstr "Введіть URL-адресу фіду календаря."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:75
+#, elixir-autogen, elixir-format
+msgid "Feed URL"
+msgstr "URL-адреса фіду"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:30
+#, elixir-autogen, elixir-format
+msgid "My subscribed calendar"
+msgstr "Мій підписаний календар"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:58
+#, elixir-autogen, elixir-format
+msgid "Paste the feed link your calendar gives you when you publish a calendar: Google's secret address in iCal format, Outlook's published calendar link, or any .ics URL. We check it for busy time only, and never write to it."
+msgstr "Вставте посилання на фід, яке ваш календар надає під час публікації календаря: секретну адресу Google у форматі iCal, посилання на опублікований календар Outlook або будь-яку URL-адресу .ics. Ми перевіряємо його лише на зайнятий час і ніколи не записуємо до нього."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:101
+#, elixir-autogen, elixir-format
+msgid "Subscribe"
+msgstr "Підписатися"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:43
+#, elixir-autogen, elixir-format
+msgid "Subscribe to a published calendar feed"
+msgstr "Підпишіться на опублікований фід календаря"
+
+#: lib/tymeslot/integrations/calendar/providers/provider_config.ex:153
+#, elixir-autogen, elixir-format
+msgid "Subscribe to a published calendar feed, read-only"
+msgstr "Підпишіться на опублікований фід календаря, лише для перегляду"
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:102
+#, elixir-autogen, elixir-format
+msgid "Subscribing..."
+msgstr "Підписка…"
+
+#: lib/tymeslot/integrations/calendar/ics/feed.ex:114
+#, elixir-autogen, elixir-format
+msgid "That URL did not return a calendar feed. Make sure it points at an .ics file."
+msgstr "Ця URL-адреса не повернула фід календаря. Переконайтеся, що вона вказує на файл .ics."
+
+#: lib/tymeslot/integrations/calendar/ics/feed.ex:130
+#, elixir-autogen, elixir-format
+msgid "That URL points at a blocked address and cannot be reached."
+msgstr "Ця URL-адреса вказує на заблоковану адресу, і доступ до неї неможливий."
+
+#: lib/tymeslot/integrations/calendar/ics/feed.ex:120
+#, elixir-autogen, elixir-format
+msgid "That calendar feed is too large to process."
+msgstr "Цей фід календаря завеликий для обробки."
+
+#: lib/tymeslot/integrations/calendar/ics/feed.ex:107
+#, elixir-autogen, elixir-format
+msgid "The calendar feed URL returned 404. Check that the link is complete and still published."
+msgstr "URL-адреса фіду календаря повернула 404. Перевірте, чи посилання повне та все ще опубліковане."
+
+#: lib/tymeslot/workers/sync_ics_calendar_worker.ex:202
+#, elixir-autogen, elixir-format
+msgid "The calendar feed came back empty, but the cache still holds previously synced events. Keeping the cache in place and retrying rather than emptying your diary."
+msgstr "Фід календаря повернувся порожнім, але кеш досі містить раніше синхронізовані події. Кеш збережено, і спробу буде повторено, замість очищення вашого розкладу."
+
+#: lib/tymeslot/integrations/calendar/ics/feed.ex:123
+#, elixir-autogen, elixir-format
+msgid "The calendar feed redirected too many times."
+msgstr "Фід календаря переспрямовував забагато разів."
+
+#: lib/tymeslot/integrations/calendar/ics/feed.ex:100
+#, elixir-autogen, elixir-format
+msgid "The calendar feed rejected the link. It may have been revoked or reset."
+msgstr "Фід календаря відхилив посилання. Можливо, його було відкликано або скинуто."
+
+#: lib/tymeslot/integrations/calendar/ics/feed.ex:137
+#, elixir-autogen, elixir-format
+msgid "The calendar feed returned HTTP %{status}."
+msgstr "Фід календаря повернув HTTP %{status}."
+
+#: lib/tymeslot/integrations/calendar/caldav/base.ex:118
+#, elixir-autogen, elixir-format
+msgid "The calendar server refused the request (HTTP %{status})."
+msgstr "Сервер календаря відхилив запит (HTTP %{status})."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/ics_url_config.ex:86
+#, elixir-autogen, elixir-format
+msgid "This calendar stays read-only: it blocks the times you're already busy, and bookings are never written to it. Choose another calendar as your booking destination."
+msgstr "Цей календар залишається доступним лише для перегляду: він блокує час, коли ви вже зайняті, і бронювання ніколи не записуються до нього. Виберіть інший календар як місце призначення для бронювань."
+
+#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex:284
+#, elixir-autogen, elixir-format
+msgid "This change is missing the event's start or end time, so it could not be sent to the calendar server."
+msgstr "У цій зміні відсутній час початку або завершення події, тому її не вдалося надіслати на сервер календаря."

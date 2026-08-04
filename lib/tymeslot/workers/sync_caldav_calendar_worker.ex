@@ -48,6 +48,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   require Logger
 
+  alias Tymeslot.Integrations.Calendar.CalDAV.Base, as: CalDAVBase
   alias Tymeslot.Integrations.Calendar.CalDAV.Events, as: CalDAVEvents
   alias Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport
@@ -102,6 +103,19 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     {:discard, "CalDAV deletion circuit breaker refused a suspicious bulk deletion"}
   end
 
+  # A 4xx the transport layer does not model (415, 405, 400…) is the server
+  # refusing the request itself: the remaining attempts re-send the same bytes
+  # for the same refusal, then page an operator about a server-side condition
+  # no operator action can fix. `Http` has already logged the status and the
+  # server's own explanation, and the health check surfaces the integration.
+  defp handle_sync_result({:error, reason} = result) do
+    if CalDAVBase.terminal_error?(reason) do
+      {:discard, "CalDAV server refused the sync request: #{CalDAVBase.describe_error(reason)}"}
+    else
+      result
+    end
+  end
+
   defp handle_sync_result(result), do: result
 
   # ---------------------------------------------------------------------------
@@ -109,7 +123,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # ---------------------------------------------------------------------------
 
   defp sync_integration(integration, force_full_fetch?) do
-    client = build_client(integration)
+    client = CaldavCommon.client_for_integration(integration)
 
     # Replay any pending local changes BEFORE fetching remote changes.
     # This ordering is what preserves local edits across transient network
@@ -289,6 +303,18 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         )
 
         persist_sync_state(integration, sync_token: nil)
+        sync_tier3(integration, client)
+
+      # The server named the changed resources but did not inline their
+      # calendar data, so the delta cannot be applied on its own. The token is
+      # deliberately kept: it stays valid, and the next cycle is offered the
+      # same changes again, so nothing is lost if this fetch fails.
+      {:error, :calendar_data_withheld} ->
+        Logger.info(
+          "CalDAV sync-collection returned no event data; falling back to full fetch",
+          calendar_integration_id: integration.id
+        )
+
         sync_tier3(integration, client)
 
       {:error, :unauthorized} ->
@@ -575,35 +601,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     case Keyword.fetch(opts, opt_key) do
       {:ok, value} -> Map.put(attrs, attr_key, value)
       :error -> attrs
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # Client construction
-  # ---------------------------------------------------------------------------
-
-  defp build_client(integration) do
-    CaldavCommon.build_client(
-      %{
-        base_url: integration.base_url,
-        username: integration.username,
-        password: integration.password,
-        calendar_paths: integration.calendar_paths,
-        verify_ssl: Map.get(integration, :verify_ssl, true)
-      },
-      provider: provider_atom(integration.provider)
-    )
-  end
-
-  defp provider_atom(provider) when is_binary(provider) do
-    case provider do
-      "radicale" -> :radicale
-      "nextcloud" -> :nextcloud
-      "zimbra" -> :zimbra
-      "mailbox_org" -> :mailbox_org
-      "apple" -> :apple
-      "baikal" -> :baikal
-      _other -> :caldav
     end
   end
 

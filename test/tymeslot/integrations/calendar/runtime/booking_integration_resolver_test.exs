@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
   alias Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.Security.Encryption
 
   # ---------------------------------------------------------------------------
   # resolve(user_id)
@@ -144,6 +145,79 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
 
       assert %CalendarIntegrationSchema{} = result
       assert result.id == integration.id
+    end
+  end
+
+  describe "resolve(user_id) — mixed with an ics_url subscription" do
+    setup do
+      user = insert(:user)
+      %{user: user}
+    end
+
+    test "returns the writable integration when it has a default_booking_calendar_id", %{
+      user: user
+    } do
+      writable =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          calendar_paths: ["/calendars/writable/"],
+          default_booking_calendar_id: "/calendars/writable/"
+        )
+
+      insert(:calendar_integration,
+        user: user,
+        provider: "ics_url",
+        is_active: true,
+        subscription_url_encrypted: Encryption.encrypt("https://example.com/feed.ics")
+      )
+
+      insert(:profile, user: user, primary_calendar_integration_id: writable.id)
+
+      result = BookingIntegrationResolver.resolve(user.id)
+
+      assert %CalendarIntegrationSchema{} = result
+      assert result.id == writable.id
+    end
+
+    test "falls back to the writable integration without a booking calendar over the subscription",
+         %{user: user} do
+      writable =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          calendar_paths: ["/calendars/writable/"],
+          default_booking_calendar_id: nil
+        )
+
+      insert(:calendar_integration,
+        user: user,
+        provider: "ics_url",
+        is_active: true,
+        subscription_url_encrypted: Encryption.encrypt("https://example.com/feed.ics")
+      )
+
+      insert(:profile, user: user, primary_calendar_integration_id: writable.id)
+
+      result = BookingIntegrationResolver.resolve(user.id)
+
+      assert %CalendarIntegrationSchema{} = result
+      assert result.id == writable.id
+    end
+
+    test "returns nil when the user only has an ics_url subscription", %{user: user} do
+      insert(:calendar_integration,
+        user: user,
+        provider: "ics_url",
+        is_active: true,
+        subscription_url_encrypted: Encryption.encrypt("https://example.com/feed.ics")
+      )
+
+      insert(:profile, user: user)
+
+      assert BookingIntegrationResolver.resolve(user.id) == nil
     end
   end
 

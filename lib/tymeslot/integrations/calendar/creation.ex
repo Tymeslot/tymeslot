@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Connection
+  alias Tymeslot.Integrations.Calendar.Ics.Feed
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
@@ -16,6 +17,9 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Utils.SanitizeMerge
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
+
+  require Logger
 
   @type user_id :: pos_integer()
 
@@ -70,6 +74,159 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
 
       {:error, validation_errors} when is_map(validation_errors) ->
         {:error, {:form_errors, validation_errors}}
+    end
+  end
+
+  @doc """
+  Validates and creates a calendar subscription from the feed URL form.
+
+  Separate from `create_with_validation/3` because a subscription shares
+  almost nothing with the CalDAV-family path: no credentials, no discovery
+  round trip, no calendar selection, and a feed URL that must be stored
+  encrypted rather than in `base_url`. Its single calendar is built here,
+  read-only, so it can never be resolved as a booking target.
+
+  Returns the same result shapes as `create_with_validation/3`.
+  """
+  @spec create_subscription_with_validation(user_id(), %{String.t() => term()}, keyword()) ::
+          {:ok, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()}
+          | {:error,
+             {:form_errors, %{String.t() => term()}}
+             | {:changeset, Ecto.Changeset.t()}
+             | {:rate_limited, String.t()}
+             | :unattributable}
+  def create_subscription_with_validation(user_id, params, opts \\ [])
+      when is_integer(user_id) and is_map(params) do
+    metadata = Keyword.get(opts, :metadata, %{})
+
+    with {:ok, sanitized} <-
+           CalendarInputValidation.validate_ics_subscription_form(params, metadata: metadata),
+         :ok <- check_no_duplicate_subscription(user_id, sanitized["url"]),
+         attrs <- subscription_attrs(user_id, sanitized),
+         {:ok, attrs} <- probe_subscription(attrs, user_id),
+         # Deliberately no `ensure_primary_on_first/3`: a subscription can never
+         # receive a booking, so promoting one to primary would leave a user whose
+         # only calendar is a subscription with a primary that silently fails
+         # every booking write.
+         {:ok, integration} <- CalendarManagement.create_calendar_integration(attrs) do
+      enqueue_initial_sync(integration)
+      {:ok, integration}
+    else
+      {:error, :duplicate_integration} ->
+        {:error, :duplicate_integration}
+
+      {:error, %Ecto.Changeset{} = cs} ->
+        {:error, {:changeset, cs}}
+
+      {:error, {:rate_limited, _message} = refusal} ->
+        {:error, refusal}
+
+      {:error, :unattributable} ->
+        {:error, :unattributable}
+
+      {:error, validation_errors} when is_map(validation_errors) ->
+        {:error, {:form_errors, validation_errors}}
+    end
+  end
+
+  # A fresh subscription contributes zero busy time until the fallback sweep
+  # next runs, up to `@subscription_interval` later, while showing as
+  # connected. Enqueueing here closes that gap; a failure to enqueue is
+  # non-fatal since the sweep will still pick the integration up.
+  defp enqueue_initial_sync(integration) do
+    case %{"calendar_integration_id" => integration.id}
+         |> SyncIcsCalendarWorker.new()
+         |> Oban.insert() do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to enqueue initial subscription sync",
+          calendar_integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        :ok
+    end
+  end
+
+  # A feed URL is a credential, so it is never stored in a plaintext column —
+  # including the one used for duplicate detection. Matching on its digest
+  # dedupes exactly as well without writing the secret twice.
+  defp check_no_duplicate_subscription(user_id, url) do
+    account_id = subscription_account_id(url)
+
+    case CalendarIntegrationQueries.get_any_by_account_for_user(user_id, "ics_url", account_id) do
+      {:ok, _existing} -> {:error, :duplicate_integration}
+      {:error, :not_found} -> :ok
+    end
+  end
+
+  defp subscription_account_id(url) do
+    :sha256 |> :crypto.hash(url) |> Base.encode16(case: :lower)
+  end
+
+  defp subscription_attrs(user_id, %{"name" => name, "url" => url}) do
+    %{
+      user_id: user_id,
+      name: name,
+      provider: "ics_url",
+      # Only the origin is stored in the clear: enough for the dashboard to
+      # show where the feed comes from, useless to anyone who reads the row.
+      base_url: subscription_origin(url),
+      subscription_url: url,
+      provider_account_id: subscription_account_id(url),
+      calendar_paths: [],
+      calendar_list: [subscription_calendar()],
+      is_active: true
+    }
+  end
+
+  defp subscription_origin(url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme, host: host, port: port} when is_binary(host) ->
+        port_suffix = if port && port not in [80, 443], do: ":#{port}", else: ""
+        "#{scheme}://#{host}#{port_suffix}"
+
+      _unparseable ->
+        nil
+    end
+  end
+
+  defp subscription_calendar do
+    %CalendarEntry{
+      id: "subscription",
+      path: "subscription",
+      name: "Subscribed calendar",
+      type: "calendar",
+      selected: true,
+      read_only: true
+    }
+  end
+
+  # Checks the feed is reachable and parses before the integration is saved,
+  # through the same rate-limited choke point the CalDAV-family path uses.
+  defp probe_subscription(attrs, user_id) do
+    config = %{subscription_url: attrs.subscription_url}
+
+    case Connection.probe(:ics_url, config, {:user, user_id}) do
+      {:ok, _message} ->
+        {:ok, attrs}
+
+      {:error, {:rate_limited, _message} = refusal} ->
+        {:error, refusal}
+
+      {:error, :unattributable} ->
+        {:error, :unattributable}
+
+      {:error, reason} ->
+        # Feed failures get their own copy rather than the CalDAV-shaped
+        # "check your credentials" phrasing: there are no credentials here,
+        # only a URL the user can fix. Scoped to `:url` rather than the
+        # form-level `:discovery` key the CalDAV probe reports against,
+        # because this form has exactly one input and the failure is always
+        # attributable to it.
+        {:error, %{url: Feed.error_message(reason)}}
     end
   end
 
@@ -264,7 +421,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   """
   @spec prevalidate_config(%{required(:provider) => String.t(), optional(atom()) => term()}) ::
           {:ok, %{required(:provider) => String.t(), optional(atom()) => term()}}
-          | {:error, Ecto.Changeset.t() | {:rate_limited, String.t()} | :unattributable}
+          | {:error, %{discovery: String.t()} | {:rate_limited, String.t()} | :unattributable}
   def prevalidate_config(%{provider: provider} = attrs)
       when provider in @caldav_provider_strings do
     config = %{
@@ -290,14 +447,16 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
         {:error, :unattributable} ->
           {:error, :unattributable}
 
+        # Reported against `:discovery`, the key both CalDAV forms already use
+        # for "the connection attempt itself failed". A probe failure is never
+        # attributable to one input: the reason arrives as a sanitised sentence,
+        # not a field, so it is shown form-level rather than guessed onto a
+        # field from the wording of its message. Guessing would also be locale
+        # dependent: `message` is localised, so parsing it back would pick the
+        # right field in English only.
         {:error, reason} ->
-          # Which field to blame is decided from the raw `reason`, never from
-          # `message`: the latter is localised, so parsing it back would pick
-          # the right field in English only.
           message = ErrorHandler.sanitize_error_message(reason, provider_atom)
-
-          {:error,
-           ErrorHandler.create_validation_error(message, ErrorHandler.error_field(reason))}
+          {:error, %{discovery: message}}
       end
     else
       # If provider validation/lookup fails, skip pre-validation and allow creation to proceed

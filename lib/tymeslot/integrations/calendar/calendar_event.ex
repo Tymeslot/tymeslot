@@ -10,7 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
   @type t :: %__MODULE__{
           uid: String.t(),
           calendar_integration_id: integer(),
-          provider: :google | :outlook | :caldav | :debug,
+          provider: :google | :outlook | :caldav | :ics_url | :debug,
           provider_calendar_id: String.t(),
           provider_event_id: String.t() | nil,
           recurring_event_id: String.t() | nil,
@@ -153,27 +153,34 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
 
   defp validate_provider_event_id(_attrs), do: :ok
 
-  defp validate_timing(%{all_day: true} = attrs) do
-    has_dates = attrs[:start_date] != nil and attrs[:end_date] != nil
-    has_times = attrs[:start_at] != nil or attrs[:end_at] != nil
-
-    cond do
-      not has_dates -> {:error, "all-day events require start_date and end_date"}
-      has_times -> {:error, "all-day events must not have start_at or end_at"}
-      true -> :ok
+  # The timing fields are asserted by struct type, not merely by presence. The
+  # storage columns are typed (`:date` for the all-day pair, `:utc_datetime_usec`
+  # for the timed pair), so a `%DateTime{}` sitting in `end_date` (which an iCal
+  # feed mixing `VALUE=DATE` and `DATE-TIME` in one VEVENT produces) is rejected
+  # here rather than failing the whole batch insert further down. Each provider
+  # already skips events this refuses, so one malformed event costs that event
+  # instead of the entire calendar's sync.
+  defp validate_timing(%{all_day: true, start_date: %Date{}, end_date: %Date{}} = attrs) do
+    if attrs[:start_at] != nil or attrs[:end_at] != nil do
+      {:error, "all-day events must not have start_at or end_at"}
+    else
+      :ok
     end
   end
 
-  defp validate_timing(%{all_day: false} = attrs) do
-    has_times = attrs[:start_at] != nil and attrs[:end_at] != nil
-    has_dates = attrs[:start_date] != nil or attrs[:end_date] != nil
+  defp validate_timing(%{all_day: true}),
+    do: {:error, "all-day events require Date values for start_date and end_date"}
 
-    cond do
-      not has_times -> {:error, "timed events require start_at and end_at"}
-      has_dates -> {:error, "timed events must not have start_date or end_date"}
-      true -> :ok
+  defp validate_timing(%{all_day: false, start_at: %DateTime{}, end_at: %DateTime{}} = attrs) do
+    if attrs[:start_date] != nil or attrs[:end_date] != nil do
+      {:error, "timed events must not have start_date or end_date"}
+    else
+      :ok
     end
   end
+
+  defp validate_timing(%{all_day: false}),
+    do: {:error, "timed events require DateTime values for start_at and end_at"}
 
   defp validate_timing(_attrs), do: {:error, "all_day is required"}
 

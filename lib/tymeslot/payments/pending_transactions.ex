@@ -3,26 +3,11 @@ defmodule Tymeslot.Payments.PendingTransactions do
 
   require Logger
 
+  alias Tymeslot.Payments.Config
   alias Tymeslot.Payments.PaymentQueries
   alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
 
   @type transaction :: PaymentTransaction.t()
-
-  @spec get_pending_transaction_for_user(pos_integer()) ::
-          {:ok, transaction() | nil} | {:error, :transaction_lookup_failed}
-  def get_pending_transaction_for_user(user_id) do
-    case PaymentQueries.get_transactions_by_status("pending", user_id) do
-      {:ok, [transaction | _rest]} ->
-        {:ok, transaction}
-
-      {:ok, []} ->
-        {:ok, nil}
-
-      {:error, reason} ->
-        Logger.error("Failed to fetch pending transaction", error: inspect(reason))
-        {:error, :transaction_lookup_failed}
-    end
-  end
 
   @spec get_pending_transactions_for_user(pos_integer()) ::
           {:ok, [transaction()]} | {:error, :transaction_lookup_failed}
@@ -61,7 +46,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
   end
 
   defp expire_checkout_session_if_present(%{stripe_id: "cs_" <> _rest = session_id}) do
-    case stripe_provider().expire_checkout_session(session_id) do
+    case Config.stripe_provider().expire_checkout_session(session_id) do
       {:ok, _session} ->
         :ok
 
@@ -74,10 +59,6 @@ defmodule Tymeslot.Payments.PendingTransactions do
   end
 
   defp expire_checkout_session_if_present(_transaction), do: :ok
-
-  defp stripe_provider do
-    Application.get_env(:tymeslot, :stripe_provider, Tymeslot.Payments.Stripe)
-  end
 
   @spec supersede_pending_transaction_if_needed(pos_integer()) ::
           :ok | {:error, :transaction_lookup_failed | term()}

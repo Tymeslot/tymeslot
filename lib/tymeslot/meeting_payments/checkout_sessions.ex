@@ -219,6 +219,11 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
         }
       ],
       payment_intent_data: payment_intent_data,
+      # These are direct charges on the host's connected account, so Stripe
+      # issues the invoice in the host's name under their own tax settings,
+      # which is what an attendee needs for expensing. Without this the
+      # attendee gets only a charge receipt.
+      invoice_creation: %{enabled: true},
       customer_email: meeting.attendee_email,
       client_reference_id: meeting.id,
       expires_at: System.os_time(:second) + @session_expiry_seconds,

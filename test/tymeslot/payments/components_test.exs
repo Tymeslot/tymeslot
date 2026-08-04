@@ -49,27 +49,6 @@ defmodule Tymeslot.Payments.ComponentsTest do
   end
 
   describe "PendingTransactions" do
-    test "returns nil when no pending transaction exists" do
-      user = Factory.insert(:user)
-
-      assert {:ok, nil} = PendingTransactions.get_pending_transaction_for_user(user.id)
-    end
-
-    test "returns the pending transaction for a user" do
-      user = Factory.insert(:user)
-
-      pending_tx =
-        Factory.insert(:payment_transaction,
-          user: user,
-          status: "pending"
-        )
-
-      assert {:ok, %{id: pending_id}} =
-               PendingTransactions.get_pending_transaction_for_user(user.id)
-
-      assert pending_id == pending_tx.id
-    end
-
     test "returns pending transactions and supersedes them" do
       user = Factory.insert(:user)
 

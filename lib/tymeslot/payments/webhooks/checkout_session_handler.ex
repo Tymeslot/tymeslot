@@ -5,10 +5,6 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionHandler do
   use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
-  alias DBConnection.ConnectionError
-  alias Stripe.Error, as: StripeError
-  alias Tymeslot.Payments
-  alias Tymeslot.Payments.TaxExtractor
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type), do: event_type == "checkout.session.completed"
@@ -34,32 +30,17 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionHandler do
         handle_subscription_completion(session)
 
       _other ->
-        handle_payment_completion(session)
-    end
-  end
-
-  defp handle_payment_completion(session) do
-    session_id = session["id"]
-    tax_info = TaxExtractor.extract_tax_info(session)
-
-    case Payments.process_successful_payment(session_id, tax_info) do
-      {:ok, :payment_processed} ->
-        {:ok, :payment_processed}
-
-      {:error, %StripeError{} = error} ->
-        handle_retryable_error(error, session_id)
-
-      {:error, %ConnectionError{} = error} ->
-        {:error, :retry_later, "Database connection error: #{Exception.message(error)}"}
-
-      {:error, reason} ->
-        Logger.error("Payment processing failed",
+        # The platform account only ever creates subscription-mode sessions
+        # (Payments.Stripe.create_checkout_session_for_subscription/1); paid
+        # bookings run through the separate Connect checkout and its own
+        # webhook endpoint. A non-subscription mode here is unexpected, so
+        # it is logged loudly rather than silently treated as a success.
+        Logger.warning("Ignoring checkout.session.completed for unexpected mode",
           session_id: session_id,
-          error: inspect(reason),
-          session_data: Map.take(session, ["id", "metadata", "total_details", "customer_details"])
+          mode: mode
         )
 
-        {:error, :payment_failed, "Payment processing failed: #{inspect(reason)}"}
+        {:ok, :ignored}
     end
   end
 
@@ -84,25 +65,4 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionHandler do
       {:error, :subscriptions_not_supported, "Subscription manager not configured"}
     end
   end
-
-  defp handle_retryable_error(error, session_id) do
-    if retryable_stripe_error?(error) do
-      {:error, :retry_later, "Stripe error for session #{session_id}: #{error.message}"}
-    else
-      Logger.error("Payment processing failed",
-        session_id: session_id,
-        error: inspect(error)
-      )
-
-      {:error, :payment_failed, "Payment processing failed: #{inspect(error)}"}
-    end
-  end
-
-  defp retryable_stripe_error?(%StripeError{extra: %{http_status: status}})
-       when is_integer(status) do
-    status >= 500 or status == 429
-  end
-
-  defp retryable_stripe_error?(%StripeError{source: :network}), do: true
-  defp retryable_stripe_error?(_error), do: false
 end

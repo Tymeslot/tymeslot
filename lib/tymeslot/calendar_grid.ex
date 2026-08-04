@@ -19,6 +19,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncDebugCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
 
   @palette_size 8
 
@@ -34,6 +35,10 @@ defmodule Tymeslot.CalendarGrid do
   }
   @caldav_default_stale_minutes 25
   @debug_stale_minutes 15
+  # Subscriptions are swept every 30 minutes; the buffer is wider than the
+  # CalDAV ones because the publisher's own regeneration schedule sits on top
+  # of ours, so a feed being an hour old is normal rather than a symptom.
+  @subscription_stale_minutes 75
 
   @doc """
   Returns all cached calendar events for the given integration IDs within a time range.
@@ -96,6 +101,8 @@ defmodule Tymeslot.CalendarGrid do
   - `"outlook"` → `RefreshOutlookCalendarWorker` (delta sync or bootstrap; the
     standard webhook-driven `SyncOutlookCalendarWorker` is per-event and can't
     service a manual refresh on its own)
+  - `"debug"` → `SyncDebugCalendarWorker`
+  - `"ics_url"` → `SyncIcsCalendarWorker`
   - any provider returned by `ProviderConfig.caldav_based_providers/0` →
     `SyncCalDavCalendarWorker`
 
@@ -153,6 +160,7 @@ defmodule Tymeslot.CalendarGrid do
   - CalDAV Tier 1 (sync-token, syncs every 15 min): #{@caldav_tier_stale_minutes[1]} min
   - CalDAV Tier 2 (CTag, syncs every 30 min): #{@caldav_tier_stale_minutes[2]} min
   - CalDAV Tier 3 (full fetch, syncs every 60 min): #{@caldav_tier_stale_minutes[3]} min
+  - Calendar subscriptions (full fetch, syncs every 30 min): #{@subscription_stale_minutes} min
   """
   @spec stale_integrations([CalendarIntegrationSchema.t()]) :: [CalendarIntegrationSchema.t()]
   def stale_integrations(integrations) do
@@ -280,6 +288,8 @@ defmodule Tymeslot.CalendarGrid do
 
   defp stale_threshold_minutes(%{provider: "debug"}), do: @debug_stale_minutes
 
+  defp stale_threshold_minutes(%{provider: "ics_url"}), do: @subscription_stale_minutes
+
   defp stale_threshold_minutes(%{provider: provider, caldav_sync_tier: tier})
        when provider in @caldav_providers do
     Map.get(@caldav_tier_stale_minutes, tier, @caldav_default_stale_minutes)
@@ -302,6 +312,14 @@ defmodule Tymeslot.CalendarGrid do
   defp enqueue_sync_worker(%{provider: "debug"} = integration) do
     %{"calendar_integration_id" => integration.id}
     |> SyncDebugCalendarWorker.new()
+    |> Oban.insert()
+  end
+
+  # A subscription refresh is always a full re-fetch of the feed; there is no
+  # delta mode to force past.
+  defp enqueue_sync_worker(%{provider: "ics_url"} = integration) do
+    %{"calendar_integration_id" => integration.id}
+    |> SyncIcsCalendarWorker.new()
     |> Oban.insert()
   end
 

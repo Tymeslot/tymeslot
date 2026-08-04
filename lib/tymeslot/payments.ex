@@ -9,128 +9,16 @@ defmodule Tymeslot.Payments do
   alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
 
   alias Tymeslot.Payments.{
-    Config,
     DatabaseOperations,
-    Initiation,
+    PaymentQueries,
     SubscriptionFlow,
+    SubscriptionInvoice,
+    SubscriptionInvoices,
     Subscriptions
   }
 
   @type transaction :: PaymentTransaction.t()
   @type stripe_id :: String.t()
-
-  @completed_status "completed"
-
-  @doc """
-  Initiates a payment transaction for a user.
-
-  This function only handles the payment processing and creates a transaction record.
-  The calling application is responsible for any business logic such as updating
-  user access levels, sending notifications, etc.
-
-  ## Behavior for existing transactions
-  - If a pending transaction exists for the user, it will be updated
-    with the new amount, product_identifier, and metadata, and a new Stripe session
-    will be created
-  - If only completed or failed transactions exist, a new transaction will be created
-  - This allows users to retry payments or change their selection without being blocked
-
-  ## Parameters
-    * amount - The amount to charge in cents
-    * product_identifier - Generic identifier for what is being purchased (plan name, course ID, etc.)
-    * user_id - The ID of the user making the payment
-    * email - The user's email address
-    * success_url - URL to redirect to after successful payment (required)
-    * cancel_url - URL to redirect to if payment is cancelled (required)
-    * metadata - Additional metadata for the transaction (app-specific data)
-
-  ## Returns
-    * `{:ok, session_url}` - URL for the Stripe checkout session
-    * `{:error, reason}` - If the transaction creation fails
-  """
-  @spec initiate_payment(
-          amount :: pos_integer(),
-          product_identifier :: String.t(),
-          user_id :: pos_integer(),
-          email :: String.t(),
-          success_url :: String.t(),
-          cancel_url :: String.t(),
-          metadata :: map()
-        ) :: {:ok, String.t()} | {:error, term()}
-  def initiate_payment(
-        amount,
-        product_identifier,
-        user_id,
-        email,
-        success_url,
-        cancel_url,
-        metadata \\ %{}
-      ) do
-    Initiation.initiate_payment(
-      amount,
-      product_identifier,
-      user_id,
-      email,
-      success_url,
-      cancel_url,
-      metadata
-    )
-  end
-
-  @doc """
-  Processes a successful payment.
-
-  This function only updates the transaction status and tax information.
-  The calling application should handle any business logic such as updating
-  user permissions, sending confirmation emails, etc.
-
-  ## Parameters
-    * stripe_id - The Stripe session ID
-    * tax_info - Tax information for the transaction
-    * discount_amount - Any discount applied to the transaction (in cents)
-
-  ## Returns
-    * `{:ok, :payment_processed}` - If the payment is processed successfully
-    * `{:error, reason}` - If the payment processing fails
-  """
-  @spec process_successful_payment(stripe_id(), map(), non_neg_integer()) ::
-          {:ok, :payment_processed} | {:error, term()}
-  def process_successful_payment(stripe_id, tax_info, discount_amount \\ 0) do
-    Logger.info("Processing successful payment", stripe_id: stripe_id)
-
-    case DatabaseOperations.get_transaction_by_stripe_id(stripe_id) do
-      {:ok, %{status: @completed_status}} ->
-        Logger.info("Payment already processed, skipping duplicate", stripe_id: stripe_id)
-        {:ok, :payment_processed}
-
-      {:ok, %{status: "pending"} = transaction} ->
-        do_process_successful_payment(transaction, tax_info, discount_amount)
-
-      {:ok, %{status: status}} ->
-        Logger.warning("Received successful webhook for non-pending transaction",
-          stripe_id: stripe_id,
-          status: status
-        )
-
-        {:error, :invalid_transaction_state}
-
-      {:error, :transaction_not_found} ->
-        Logger.error("Transaction not found for successful payment", stripe_id: stripe_id)
-        {:error, :transaction_not_found}
-    end
-  end
-
-  defp do_process_successful_payment(transaction, tax_info, discount_amount) do
-    with {:ok, _session} <- Config.stripe_provider().verify_session(transaction.stripe_id),
-         {:ok, :payment_processed} <-
-           DatabaseOperations.process_successful_payment(transaction, tax_info, discount_amount) do
-      {:ok, :payment_processed}
-    else
-      {:error, reason} ->
-        Logger.error("Failed to process payment", reason: inspect(reason))
-        {:error, reason}
-    end
-  end
 
   @doc """
   Processes a failed payment.
@@ -161,7 +49,31 @@ defmodule Tymeslot.Payments do
   """
   @spec get_transaction(stripe_id()) :: {:ok, transaction()} | {:error, :transaction_not_found}
   def get_transaction(stripe_id) do
-    DatabaseOperations.get_transaction_by_stripe_id(stripe_id)
+    PaymentQueries.get_transaction_by_stripe_id(stripe_id)
+  end
+
+  @doc """
+  Lists a user's platform subscription invoices, newest first.
+
+  Each entry carries the Stripe-hosted invoice page and PDF, so callers can
+  link a customer straight to their VAT document instead of routing them
+  through the billing portal. Covers subscription invoices only — Connect
+  direct-charge booking invoices are not captured; see
+  `SubscriptionInvoiceSchema`.
+
+  ## Parameters
+    * user_id - The ID of the user whose invoices to list
+    * limit - Maximum number of invoices to return (defaults to
+      `SubscriptionInvoiceQueries`'s default when omitted)
+  """
+  @spec list_subscription_invoices(pos_integer()) :: [SubscriptionInvoice.t()]
+  def list_subscription_invoices(user_id) do
+    SubscriptionInvoices.list(user_id)
+  end
+
+  @spec list_subscription_invoices(pos_integer(), pos_integer()) :: [SubscriptionInvoice.t()]
+  def list_subscription_invoices(user_id, limit) do
+    SubscriptionInvoices.list(user_id, limit)
   end
 
   @doc """

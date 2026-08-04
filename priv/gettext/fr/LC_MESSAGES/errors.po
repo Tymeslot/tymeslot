@@ -222,12 +222,12 @@ msgstr "Le lien est peut-être rompu ou la page a été déplacée."
 msgid "This page doesn't exist"
 msgstr "Cette page n’existe pas"
 
-#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:171
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:182
 #, elixir-autogen, elixir-format
 msgid "an integration for this account already exists"
 msgstr "une intégration pour ce compte existe déjà"
 
-#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:175
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex:186
 #, elixir-autogen, elixir-format
 msgid "an integration for this provider already exists"
 msgstr "une intégration pour ce fournisseur existe déjà"

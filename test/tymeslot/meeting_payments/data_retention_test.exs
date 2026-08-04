@@ -6,6 +6,8 @@ defmodule Tymeslot.MeetingPayments.DataRetentionTest do
 
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.DataRetention
+  alias Tymeslot.Payments.SubscriptionInvoiceQueries
+  alias Tymeslot.Payments.SubscriptionInvoiceSchema
 
   describe "anonymise_host/1" do
     test "scrubs attendee PII, retains host PII, soft-deletes connect, touches both tables" do
@@ -119,6 +121,32 @@ defmodule Tymeslot.MeetingPayments.DataRetentionTest do
     test "is a no-op when the user has no payment-related rows" do
       user = insert(:user)
       assert :ok = DataRetention.anonymise_host(user.id)
+    end
+
+    test "nilifies user_id, stamps host_deleted_at, and retains the VAT document surface on captured invoices" do
+      user = insert(:user)
+
+      {:ok, invoice} =
+        SubscriptionInvoiceQueries.upsert(%{
+          stripe_invoice_id: "in_anonymise",
+          user_id: user.id,
+          subscription_id: "sub_456",
+          hosted_invoice_url: "https://invoice.stripe.com/i/anonymise",
+          invoice_pdf_url: "https://pay.stripe.com/invoice/anonymise/pdf"
+        })
+
+      assert :ok = DataRetention.anonymise_host(user.id)
+
+      reloaded = Repo.get!(SubscriptionInvoiceSchema, invoice.id)
+
+      assert reloaded.user_id == nil
+      assert %DateTime{} = reloaded.host_deleted_at
+
+      # Retained deliberately: without these the row is no longer useful for
+      # the tax purpose it is kept for. See SubscriptionInvoiceQueries docs.
+      assert reloaded.subscription_id == "sub_456"
+      assert reloaded.hosted_invoice_url == "https://invoice.stripe.com/i/anonymise"
+      assert reloaded.invoice_pdf_url == "https://pay.stripe.com/invoice/anonymise/pdf"
     end
   end
 end

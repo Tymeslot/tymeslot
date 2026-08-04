@@ -1,14 +1,46 @@
+defmodule Tymeslot.Infrastructure.ResponseTooLargeError do
+  @moduledoc """
+  Returned by `Tymeslot.Infrastructure.HTTPClient` when a response body exceeds
+  the request's byte budget. The transfer is aborted at the chunk that crosses
+  the budget, so the oversized body is never fully held in memory.
+  """
+
+  defexception [:url, :max_bytes]
+
+  @impl Exception
+  def message(%__MODULE__{url: url, max_bytes: max_bytes}) do
+    %URI{scheme: scheme, host: host} = URI.parse(url)
+    "response from #{scheme}://#{host} exceeded the #{max_bytes} byte limit"
+  end
+end
+
 defmodule Tymeslot.Infrastructure.HTTPClient do
   @moduledoc """
   Standardized HTTP client for the application.
   Wraps Req and provides consistent interface for all HTTP requests.
+
+  Every response body is streamed through a byte budget (`:max_response_bytes`,
+  defaulting to `config :tymeslot, :http_max_response_bytes`) and the transfer is
+  aborted as soon as it is exceeded, so no single remote server can exhaust the
+  node's memory with an unbounded body. Requests supplying their own `:into`
+  option own their body handling and are left alone.
   """
 
   @behaviour Tymeslot.Infrastructure.HTTPClientBehaviour
 
   require Logger
-  alias Tymeslot.Infrastructure.{Metrics, ProxyConfig}
+  alias Req.{Request, Response}
+  alias Tymeslot.Infrastructure.{Metrics, ProxyConfig, ResponseTooLargeError}
   alias Tymeslot.Security.{SsrfBlockedError, SsrfGuard}
+
+  # Generous enough that no legitimate response comes close: the largest bodies
+  # the app handles are a full CalDAV REPORT and a 2,500-event Google page, both
+  # single-digit megabytes.
+  @max_response_bytes Application.compile_env(
+                        :tymeslot,
+                        :http_max_response_bytes,
+                        50 * 1024 * 1024
+                      )
 
   @operation_timeouts %{
     # Read operations get standard timeout
@@ -31,7 +63,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   Performs a GET request.
   """
   @spec get(String.t(), list(), keyword()) ::
-          {:ok, Req.Response.t()} | {:error, Exception.t()}
+          {:ok, Response.t()} | {:error, Exception.t()}
   def get(url, headers \\ [], options \\ []) do
     request(:get, url, "", headers, options)
   end
@@ -40,7 +72,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   Performs a POST request.
   """
   @spec post(String.t(), any(), list(), keyword()) ::
-          {:ok, Req.Response.t()} | {:error, Exception.t()}
+          {:ok, Response.t()} | {:error, Exception.t()}
   def post(url, body, headers \\ [], options \\ []) do
     request(:post, url, body, headers, options)
   end
@@ -49,7 +81,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   Performs a PUT request.
   """
   @spec put(String.t(), any(), list(), keyword()) ::
-          {:ok, Req.Response.t()} | {:error, Exception.t()}
+          {:ok, Response.t()} | {:error, Exception.t()}
   def put(url, body, headers \\ [], options \\ []) do
     request(:put, url, body, headers, options)
   end
@@ -58,7 +90,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   Performs a DELETE request.
   """
   @spec delete(String.t(), list(), keyword()) ::
-          {:ok, Req.Response.t()} | {:error, Exception.t()}
+          {:ok, Response.t()} | {:error, Exception.t()}
   def delete(url, headers \\ [], options \\ []) do
     request(:delete, url, "", headers, options)
   end
@@ -67,7 +99,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   Performs a HEAD request.
   """
   @spec head(String.t(), list(), keyword()) ::
-          {:ok, Req.Response.t()} | {:error, Exception.t()}
+          {:ok, Response.t()} | {:error, Exception.t()}
   def head(url, headers \\ [], options \\ []) do
     request(:head, url, "", headers, options)
   end
@@ -76,7 +108,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   Performs a REPORT request (CalDAV specific).
   """
   @spec report(String.t(), any(), list(), keyword()) ::
-          {:ok, Req.Response.t()} | {:error, Exception.t()}
+          {:ok, Response.t()} | {:error, Exception.t()}
   def report(url, body, headers \\ [], options \\ []) do
     request(:report, url, body, headers, options)
   end
@@ -98,7 +130,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   Supports both atom and string method names.
   """
   @spec request(atom() | String.t(), String.t(), any(), list(), keyword()) ::
-          {:ok, Req.Response.t()} | {:error, Exception.t()}
+          {:ok, Response.t()} | {:error, Exception.t()}
   def request(method, url, body \\ "", headers \\ [], options \\ [])
 
   def request(method, url, body, headers, options) when is_atom(method) do
@@ -128,13 +160,75 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   # Private functions
 
   @spec do_request(atom(), String.t(), any(), list(), keyword()) ::
-          {:ok, Req.Response.t()} | {:error, Exception.t()}
+          {:ok, Response.t()} | {:error, Exception.t()}
   defp do_request(method, url, body, headers, options) do
     req_options = build_req_options(method, url, body, headers, options)
 
-    track_request(method, url, fn ->
-      Req.request(req_options)
-    end)
+    result =
+      track_request(method, url, fn ->
+        Req.request(req_options)
+      end)
+
+    # Metrics are recorded first so an oversized response still reports the
+    # status and duration the server actually produced.
+    if Keyword.has_key?(options, :into) do
+      result
+    else
+      finish_capped_body(result, url, max_response_bytes(options))
+    end
+  end
+
+  @spec max_response_bytes(keyword()) :: pos_integer()
+  defp max_response_bytes(options) do
+    Keyword.get(options, :max_response_bytes, @max_response_bytes)
+  end
+
+  # `capped_collector/1` accumulates chunks as iodata and flags the response
+  # once the budget is crossed; this turns that back into the plain binary body
+  # every caller expects, or into an error when the transfer was aborted.
+  @spec finish_capped_body(
+          {:ok, Response.t()} | {:error, Exception.t()},
+          String.t(),
+          pos_integer()
+        ) ::
+          {:ok, Response.t()} | {:error, Exception.t()}
+  defp finish_capped_body({:ok, %Response{} = response}, url, max_bytes) do
+    if Response.get_private(response, :tymeslot_body_too_large, false) do
+      %URI{scheme: scheme, host: host} = URI.parse(url)
+
+      Logger.warning("Aborted an oversized HTTP response",
+        url: "#{scheme}://#{host}",
+        status_code: response.status,
+        max_response_bytes: max_bytes
+      )
+
+      {:error, %ResponseTooLargeError{url: url, max_bytes: max_bytes}}
+    else
+      {:ok, %{response | body: IO.iodata_to_binary(response.body)}}
+    end
+  end
+
+  defp finish_capped_body(result, _url, _max_bytes), do: result
+
+  @spec capped_collector(pos_integer()) ::
+          ({:data, binary()}, {Request.t(), Response.t()} ->
+             {:cont | :halt, {Request.t(), Response.t()}})
+  defp capped_collector(max_bytes) do
+    fn {:data, chunk}, {request, response} ->
+      received =
+        Response.get_private(response, :tymeslot_received_bytes, 0) + byte_size(chunk)
+
+      if received > max_bytes do
+        {:halt, {request, Response.put_private(response, :tymeslot_body_too_large, true)}}
+      else
+        response =
+          response
+          |> Map.update!(:body, &[&1, chunk])
+          |> Response.put_private(:tymeslot_received_bytes, received)
+
+        {:cont, {request, response}}
+      end
+    end
   end
 
   # Request-time SSRF protection for user-supplied hosts (CalDAV, self-hosted
@@ -143,7 +237,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   # disables Req's automatic redirect following so a 3xx from a public host
   # cannot silently bounce the request onto an internal address.
   @spec guarded_request(atom(), String.t(), any(), list(), keyword()) ::
-          {:ok, Req.Response.t()} | {:error, Exception.t()}
+          {:ok, Response.t()} | {:error, Exception.t()}
   defp guarded_request(method, url, body, headers, options) do
     guard_opts =
       case Keyword.fetch(options, :ssrf_allow_private) do
@@ -227,13 +321,26 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         base_options
       end
 
+    # Stream the response through the byte budget unless the caller is handling
+    # the body itself. Setting `:into` also disables Req's `compressed` and
+    # `decompress_body` steps, which is the point: both inflate the whole body
+    # into memory with no size limit, so a cap that ran after them would not be
+    # a cap at all.
+    options_with_cap =
+      if Keyword.has_key?(user_options, :into) do
+        options_with_body
+      else
+        Keyword.put(options_with_body, :into, capped_collector(max_response_bytes(user_options)))
+      end
+
     # Add proxy options if configured
-    options_with_proxy = Keyword.merge(options_with_body, proxy_options)
+    options_with_proxy = Keyword.merge(options_with_cap, proxy_options)
 
     # Merge with user options (user options take precedence)
     # Special handling for connect_options to deep merge with proxy config
-    # Strip HTTPoison-style timeout keys that were handled by get_timeout/2
-    user_opts_clean = user_options |> Keyword.delete(:timeout) |> Keyword.delete(:recv_timeout)
+    # Strip HTTPoison-style timeout keys that were handled by get_timeout/2,
+    # and :max_response_bytes, which Req does not recognise
+    user_opts_clean = Keyword.drop(user_options, [:timeout, :recv_timeout, :max_response_bytes])
 
     case Keyword.get(user_opts_clean, :connect_options) do
       nil ->
@@ -298,8 +405,8 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     end
   end
 
-  @spec track_request(atom(), String.t(), (-> {:ok, Req.Response.t()} | {:error, Exception.t()})) ::
-          {:ok, Req.Response.t()} | {:error, Exception.t()}
+  @spec track_request(atom(), String.t(), (-> {:ok, Response.t()} | {:error, Exception.t()})) ::
+          {:ok, Response.t()} | {:error, Exception.t()}
   defp track_request(method, url, request_fn) when is_atom(method) do
     start_time = System.monotonic_time()
 

@@ -8,7 +8,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
     * `build_report/1` produces an initial-sync body for `nil` and a
       delta body that embeds (and properly escapes) the stored token.
     * `parse_response/1` splits 207 Multi-Status responses into changed
-      events and deleted hrefs, and surfaces the new sync token.
+      events and the hrefs the server reported as removed, surfaces the new
+      sync token, and refuses a delta whose event data the server withheld
+      rather than mistaking it for a batch of deletions.
     * `parse_ctag_response/1` extracts the CTag or returns `nil` when
       the server omits it.
     * `xml_escape/1` escapes the five characters that would otherwise
@@ -16,6 +18,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
   """
 
   use ExUnit.Case, async: true
+
+  import ExUnit.CaptureLog
 
   @moduletag :calendar
 
@@ -102,6 +106,90 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
 
     test "returns {:error, :invalid_response} for malformed XML" do
       assert {:error, :invalid_response} = SyncCollectionReport.parse_response("not xml at all")
+    end
+
+    test "a changed resource returned without its calendar data is never read as deleted" do
+      body = """
+      <?xml version="1.0" encoding="utf-8"?>
+      <d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+        <d:response>
+          <d:href>/calendars/alice/cal/event-1.ics</d:href>
+          <d:propstat>
+            <d:prop>
+              <d:getetag>"etag-1"</d:getetag>
+            </d:prop>
+            <d:status>HTTP/1.1 200 OK</d:status>
+          </d:propstat>
+        </d:response>
+        <d:sync-token>https://example.com/sync/new-token</d:sync-token>
+      </d:multistatus>
+      """
+
+      assert capture_log(fn ->
+               assert {:error, :calendar_data_withheld} =
+                        SyncCollectionReport.parse_response(body)
+             end) =~ "withheld event data"
+    end
+
+    test "calendar data reported in its own 404 propstat is not a deletion" do
+      body = """
+      <?xml version="1.0" encoding="utf-8"?>
+      <d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+        <d:response>
+          <d:href>/calendars/alice/cal/event-1.ics</d:href>
+          <d:propstat>
+            <d:prop><c:calendar-data/></d:prop>
+            <d:status>HTTP/1.1 404 Not Found</d:status>
+          </d:propstat>
+          <d:propstat>
+            <d:prop><d:getetag>"etag-1"</d:getetag></d:prop>
+            <d:status>HTTP/1.1 200 OK</d:status>
+          </d:propstat>
+        </d:response>
+        <d:sync-token>https://example.com/sync/new-token</d:sync-token>
+      </d:multistatus>
+      """
+
+      capture_log(fn ->
+        assert {:error, :calendar_data_withheld} = SyncCollectionReport.parse_response(body)
+      end)
+    end
+
+    test "a resource the server removed with a 410 is treated as deleted" do
+      body = """
+      <?xml version="1.0" encoding="utf-8"?>
+      <d:multistatus xmlns:d="DAV:">
+        <d:response>
+          <d:href>/calendars/alice/cal/gone.ics</d:href>
+          <d:status>HTTP/1.1 410 Gone</d:status>
+        </d:response>
+        <d:sync-token>token-9</d:sync-token>
+      </d:multistatus>
+      """
+
+      assert {:ok, {[], ["/calendars/alice/cal/gone.ics"], "token-9"}} =
+               SyncCollectionReport.parse_response(body)
+    end
+
+    test "an unparsable event is dropped without failing the whole delta" do
+      body = """
+      <?xml version="1.0" encoding="utf-8"?>
+      <d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+        <d:response>
+          <d:href>/calendars/alice/cal/broken.ics</d:href>
+          <d:propstat>
+            <d:prop>
+              <d:getetag>"etag-broken"</d:getetag>
+              <c:calendar-data>not an icalendar document</c:calendar-data>
+            </d:prop>
+            <d:status>HTTP/1.1 200 OK</d:status>
+          </d:propstat>
+        </d:response>
+        <d:sync-token>token-10</d:sync-token>
+      </d:multistatus>
+      """
+
+      assert {:ok, {[], [], "token-10"}} = SyncCollectionReport.parse_response(body)
     end
   end
 

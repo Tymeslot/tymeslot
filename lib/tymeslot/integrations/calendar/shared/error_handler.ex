@@ -462,55 +462,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   defp get_other_suggestion(_category), do: nil
 
   @doc """
-  Creates a validation error in the format expected by the UI.
-
-  `message` is already localised presentation text, so it is never inspected
-  to work out which field is at fault. Callers derive `field` from the raw
-  error instead, typically via `error_field/1`.
-
-  ## Parameters
-  - `message` - The error message, ready to display
-  - `field` - The form field to attach it to (defaults to `:base`)
-
-  ## Returns
-  - Pseudo-changeset error structure
-  """
-  @spec create_validation_error(String.t(), atom()) :: Ecto.Changeset.t()
-  def create_validation_error(message, field \\ :base) do
-    %Ecto.Changeset{
-      errors: [{field, {message, []}}],
-      valid?: false
-    }
-  end
-
-  @doc """
-  Picks the CalDAV form field an error should be attached to, from the raw
-  error rather than from any message built out of it.
-
-  Categorisation does the work, so this stays correct in every locale.
-
-  ## Parameters
-  - `error` - The raw error (atom, status code, untranslated provider output)
-
-  ## Returns
-  - A field name for `create_validation_error/2`
-  """
-  @spec error_field(any()) :: atom()
-  def error_field(error) do
-    case categorize_error(error) do
-      # Both an auth rejection and a permission refusal are almost always
-      # answered by a different secret: an app-specific password rather than
-      # the account one.
-      :auth -> :password
-      :permission -> :password
-      :config -> :base_url
-      :network -> :base_url
-      :timeout -> :base_url
-      _other_category -> :base
-    end
-  end
-
-  @doc """
   Wraps an operation with error handling and formatting.
 
   ## Parameters

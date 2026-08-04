@@ -185,6 +185,83 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
     end
   end
 
+  describe "flush/2 — all-day rows" do
+    test "replays an all-day row using its dates, not its null timestamps",
+         %{integration: integration} do
+      row =
+        insert_pending_row(integration,
+          sync_state: "locally_created",
+          all_day: true,
+          start_at: nil,
+          end_at: nil,
+          start_date: ~D[2026-04-15],
+          end_date: ~D[2026-04-16]
+        )
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        {:ok, body, conn} = Conn.read_body(conn)
+
+        assert body =~ "DTSTART;VALUE=DATE:20260415"
+        assert body =~ "DTEND;VALUE=DATE:20260416"
+
+        Conn.send_resp(conn, 201, "")
+      end)
+
+      assert :ok = OfflineQueue.flush(integration, @client)
+
+      assert Repo.reload!(row).sync_state == "synced"
+    end
+  end
+
+  describe "flush/2 — rows that can never be sent" do
+    test "skips a row with no usable start or end time", %{integration: integration} do
+      row =
+        insert_pending_row(integration,
+          sync_state: "locally_created",
+          all_day: false,
+          start_at: nil,
+          end_at: nil
+        )
+
+      ReqTest.stub(:tymeslot_http, fn _conn ->
+        flunk("a row with no start time must never reach the calendar server")
+      end)
+
+      assert :ok = OfflineQueue.flush(integration, @client)
+
+      reloaded = Repo.reload!(row)
+
+      assert reloaded.sync_last_error ==
+               "This change is missing the event's start or end time, so it could not be sent to the calendar server."
+    end
+
+    # `flush/2` runs before the remote fetch, so a row that raises here used to
+    # take down the whole sync job — blocking every other queued change and the
+    # integration's own remote sync behind it, on every cycle.
+    test "does not stop the rest of the queue from replaying", %{integration: integration} do
+      insert_pending_row(integration,
+        uid: "unsendable-uid",
+        provider_event_id: "/cal/unsendable-uid.ics",
+        sync_state: "locally_created",
+        start_at: nil,
+        end_at: nil
+      )
+
+      sendable =
+        insert_pending_row(integration,
+          uid: "sendable-uid",
+          provider_event_id: "/cal/sendable-uid.ics",
+          sync_state: "locally_created"
+        )
+
+      ReqTest.stub(:tymeslot_http, fn conn -> Conn.send_resp(conn, 201, "") end)
+
+      assert :ok = OfflineQueue.flush(integration, @client)
+
+      assert Repo.reload!(sendable).sync_state == "synced"
+    end
+  end
+
   describe "flush/2 — empty queue" do
     test "is a no-op when no rows are pending", %{integration: integration} do
       # All rows are synced — no HTTP traffic should happen.

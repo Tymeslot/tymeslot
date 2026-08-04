@@ -168,7 +168,7 @@ msgstr "Cette fonctionnalité (%{feature_name}) n’est pas disponible avec votr
 msgid "User"
 msgstr "Utilisateur"
 
-#: lib/tymeslot_web/components/icons/provider_icon.ex:59
+#: lib/tymeslot_web/components/icons/provider_icon.ex:76
 #, elixir-autogen, elixir-format
 msgid "%{provider} icon"
 msgstr "Icône %{provider}"
@@ -183,12 +183,12 @@ msgstr "%{section} - Tableau de bord"
 msgid "Calendar Integration"
 msgstr "Intégration du calendrier"
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:78
+#: lib/tymeslot/scheduling/link_access_policy.ex:79
 #, elixir-autogen, elixir-format
 msgid "Complete setup to enable this feature"
 msgstr "Terminez la configuration pour activer cette fonctionnalité"
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:72
+#: lib/tymeslot/scheduling/link_access_policy.ex:73
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar in Calendar settings to enable this feature"
 msgstr "Connectez un calendrier dans les paramètres du calendrier pour activer cette fonctionnalité"
@@ -209,7 +209,7 @@ msgstr "Paramètres de réunion"
 msgid "Payments"
 msgstr "Paiements"
 
-#: lib/tymeslot/scheduling/link_access_policy.ex:69
+#: lib/tymeslot/scheduling/link_access_policy.ex:70
 #, elixir-autogen, elixir-format
 msgid "Set a username in Settings to enable this feature"
 msgstr "Définissez un nom d’utilisateur dans les paramètres pour activer cette fonctionnalité"
@@ -228,3 +228,8 @@ msgstr "Sélection du thème"
 #, elixir-autogen, elixir-format
 msgid "Video Integration"
 msgstr "Intégration vidéo"
+
+#: lib/tymeslot_web/components/icons/provider_icon.ex:73
+#, elixir-autogen, elixir-format
+msgid "Calendar subscription"
+msgstr "Abonnement à un calendrier"

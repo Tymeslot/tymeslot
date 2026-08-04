@@ -147,6 +147,42 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventTest do
       assert {:error, _reason} = CalendarEvent.new(attrs)
     end
 
+    # The all-day pair is stored in `:date` columns and the timed pair in
+    # `:utc_datetime_usec` columns, so a value of the wrong struct type is
+    # rejected here rather than raising inside the batch insert, which would
+    # take the whole calendar's sync down with it.
+    test "rejects an all-day event whose end_date is a DateTime" do
+      attrs = %{
+        uid: "mixed-end",
+        calendar_integration_id: 1,
+        provider: :caldav,
+        provider_calendar_id: "/cal/",
+        all_day: true,
+        start_date: ~D[2026-04-08],
+        end_date: ~U[2026-04-09 12:00:00Z],
+        synced_at: ~U[2026-04-08 09:00:00Z]
+      }
+
+      assert {:error, reason} = CalendarEvent.new(attrs)
+      assert reason =~ "Date"
+    end
+
+    test "rejects a timed event whose end_at is a Date" do
+      attrs = %{
+        uid: "mixed-start",
+        calendar_integration_id: 1,
+        provider: :caldav,
+        provider_calendar_id: "/cal/",
+        all_day: false,
+        start_at: ~U[2026-04-08 09:00:00Z],
+        end_at: ~D[2026-04-09],
+        synced_at: ~U[2026-04-08 09:00:00Z]
+      }
+
+      assert {:error, reason} = CalendarEvent.new(attrs)
+      assert reason =~ "DateTime"
+    end
+
     test "rejects google event without provider_event_id" do
       attrs = %{
         uid: "google-no-event-id",
