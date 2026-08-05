@@ -25,6 +25,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     priority: 2
 
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.IntegrationResolver
   alias Tymeslot.Meetings.MeetingQueries
 
   require Logger
@@ -82,14 +83,23 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     end
   end
 
-  defp dispatch(_action, %{video_integration_id: nil}), do: discard_no_room()
+  # Clause order matters: a meeting with no room at all is an ordinary no-op and
+  # stays silent, whereas a meeting that holds a room nothing can reach is a
+  # problem worth surfacing. Testing for the room first keeps the two apart.
   defp dispatch(_action, %{video_room_id: nil}), do: discard_no_room()
   defp dispatch(_action, %{organizer_user_id: nil}), do: discard_no_room()
 
-  defp dispatch("update", meeting) do
+  defp dispatch(action, meeting) do
+    case IntegrationResolver.resolve_for_meeting(meeting) do
+      {:ok, integration_id} -> perform_action(action, meeting, integration_id)
+      {:error, reason} -> discard_unreachable(meeting, action, reason)
+    end
+  end
+
+  defp perform_action("update", meeting, integration_id) do
     result =
       Video.update_meeting_room(meeting.organizer_user_id,
-        integration_id: meeting.video_integration_id,
+        integration_id: integration_id,
         room_id: meeting.video_room_id,
         topic: meeting.title,
         start_time: meeting.start_time,
@@ -99,10 +109,10 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     handle_result(result, "update", meeting)
   end
 
-  defp dispatch("delete", meeting) do
+  defp perform_action("delete", meeting, integration_id) do
     result =
       Video.delete_meeting_room(meeting.organizer_user_id,
-        integration_id: meeting.video_integration_id,
+        integration_id: integration_id,
         room_id: meeting.video_room_id
       )
 
@@ -111,9 +121,34 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
 
   defp discard_no_room, do: {:discard, "No provider video room to sync"}
 
+  # The meeting holds a live provider room but nothing can authenticate against
+  # it: the integration was disconnected and never replaced, or the row predates
+  # `meetings.video_provider`. Retrying cannot help — only the user reconnecting
+  # can — so the job is discarded, but loudly. A silent :ok here is exactly what
+  # let orphaned Zoom meetings accumulate unnoticed.
+  defp discard_unreachable(meeting, action, reason) do
+    Logger.warning(
+      "Meeting holds a provider video room but no video integration can reach it",
+      meeting_id: meeting.id,
+      action: action,
+      provider: meeting.video_provider,
+      video_room_id: meeting.video_room_id,
+      reason: reason
+    )
+
+    {:discard, "No video integration can reach the provider room"}
+  end
+
   # The provider treats a missing remote meeting as success, so :ok and the
   # idempotent not-found cases both arrive here as :ok. Anything else is a
   # genuine failure worth retrying via Oban's backoff.
+  #
+  # Clearing the room id after a delete is what makes "cancelled and still
+  # holding a room id" mean "cleanup has not happened yet", which
+  # `Tymeslot.Workers.OrphanedVideoRoomScanWorker` relies on to converge instead
+  # of re-deleting every cancelled meeting's room nightly.
+  defp handle_result(:ok, "delete", meeting), do: clear_video_room(meeting)
+
   defp handle_result(:ok, _action, _meeting), do: :ok
 
   defp handle_result({:error, :meeting_not_found}, action, meeting) do
@@ -122,7 +157,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
       action: action
     )
 
-    :ok
+    if action == "delete", do: clear_video_room(meeting), else: :ok
   end
 
   # The integration's OAuth grant lacks the scope this action needs. Only the
@@ -146,5 +181,26 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     )
 
     {:error, reason}
+  end
+
+  defp clear_video_room(meeting) do
+    case MeetingQueries.update_meeting(meeting, %{
+           video_room_id: nil,
+           video_room_enabled: false
+         }) do
+      {:ok, _updated} ->
+        :ok
+
+      {:error, changeset} ->
+        # The provider room is gone either way, so the job has done its work.
+        # Only the local marker is stale, and the orphan scan will retry it
+        # harmlessly.
+        Logger.warning("Failed to clear video room marker after provider delete",
+          meeting_id: meeting.id,
+          errors: inspect(changeset.errors)
+        )
+
+        :ok
+    end
   end
 end
