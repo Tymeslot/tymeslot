@@ -101,12 +101,20 @@ defmodule TymeslotWeb.ZoomDeauthController do
     send_json(conn, 200, %{status: "ignored"})
   end
 
+  # Zoom has already revoked the tokens by the time this arrives, so
+  # provider-side rooms cannot be deleted: there is nothing left to authenticate
+  # with, and the marketplace terms require the stored credentials to go
+  # promptly rather than be held open for cleanup. Their meetings keep a
+  # `video_provider`, so `OrphanedVideoRoomScanWorker` cleans them up if the
+  # user ever reconnects Zoom. Recorded here so the gap is visible rather than
+  # assumed.
   defp remove_integrations(zoom_user_id) do
     {:ok, count} = Video.disconnect_by_provider_account("zoom", zoom_user_id)
 
-    Logger.info("Zoom deauth processed",
+    Logger.info("Zoom deauth processed, provider rooms left in place",
       zoom_user_id: zoom_user_id,
-      integrations_removed: count
+      integrations_removed: count,
+      rooms_cleaned: 0
     )
   end
 
