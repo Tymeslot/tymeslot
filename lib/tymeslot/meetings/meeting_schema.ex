@@ -41,6 +41,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           cancel_url: String.t() | nil,
           meeting_url: String.t() | nil,
           video_room_id: String.t() | nil,
+          video_provider: String.t() | nil,
           organizer_video_url: String.t() | nil,
           attendee_video_url: String.t() | nil,
           video_room_enabled: boolean(),
@@ -138,6 +139,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
 
     # Video room integration
     field(:video_room_id, :string)
+    # Retained independently of `video_integration_id` so a meeting still knows
+    # where its room lives after the integration is deleted and the foreign key
+    # nulls the link.
+    field(:video_provider, :string)
     field(:organizer_video_url, :string)
     field(:attendee_video_url, :string)
     field(:video_room_enabled, :boolean, default: false)
@@ -238,6 +243,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :cancel_url,
     :meeting_url,
     :video_room_id,
+    :video_provider,
     :organizer_video_url,
     :attendee_video_url,
     :video_room_enabled,
