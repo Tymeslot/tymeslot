@@ -12,6 +12,13 @@ defmodule Tymeslot.Repo.Migrations.RelaxMeetingsAttendeeColumnsNullable do
   # DROP NOT NULL is a no-op on a column that is already nullable, so this is
   # safe on fresh installs and idempotent across any prior state.
 
+  # excellent_migrations:safety-assured-for-this-file raw_sql_executed
+  #
+  # The check flags every `execute/1` because it cannot parse the SQL. Both
+  # statements are `ALTER TABLE … DROP NOT NULL`, which only clears an
+  # attribute flag in the catalogue: no table scan, no rewrite, constant time
+  # regardless of row count.
+
   def up do
     execute("ALTER TABLE meetings ALTER COLUMN attendee_name DROP NOT NULL")
     execute("ALTER TABLE meetings ALTER COLUMN attendee_email DROP NOT NULL")
