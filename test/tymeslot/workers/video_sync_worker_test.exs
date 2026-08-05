@@ -9,11 +9,13 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :workers
 
+  import ExUnit.CaptureLog
   import Mox
   import Tymeslot.MeetingTestHelpers
 
   alias Ecto.UUID
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoSyncWorker
   alias Tymeslot.ZoomOAuthHelperMock
@@ -152,6 +154,135 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       # Re-consent is the only fix, so the job must not burn its retry budget.
       assert {:discard, _reason} =
                perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
+    end
+  end
+
+  describe "perform/1 — disconnected integration" do
+    test "deletes through a reconnected integration when the original link is gone" do
+      %{user: user} = create_user_with_profile()
+      # The user disconnected Zoom and reconnected it: a fresh integration row
+      # with valid credentials for the same provider.
+      insert_zoom_integration(user)
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_integration_id: nil,
+          video_provider: "zoom",
+          video_room_id: "86360699337"
+        })
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
+        assert url == "https://api.zoom.us/v2/meetings/86360699337"
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
+    end
+
+    test "updates through a reconnected integration on reschedule" do
+      %{user: user} = create_user_with_profile()
+      insert_zoom_integration(user)
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_integration_id: nil,
+          video_provider: "zoom",
+          video_room_id: "444"
+        })
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :patch, url, _body, _headers, _opts ->
+        assert url == "https://api.zoom.us/v2/meetings/444"
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"})
+    end
+
+    test "warns and discards when no integration can reach the room" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_integration_id: nil,
+          video_provider: "zoom",
+          video_room_id: "86360699337"
+        })
+
+      log =
+        capture_log(fn ->
+          assert {:discard, _reason} =
+                   perform_job(VideoSyncWorker, %{
+                     "meeting_id" => meeting.id,
+                     "action" => "delete"
+                   })
+        end)
+
+      # Silence here is the original defect: an unreachable room must be visible.
+      # The meeting id, provider and room id ride along as Logger metadata and
+      # reach production logs via the JSON formatter's :all_except setting; the
+      # test formatter whitelists only a few keys, so :reason is what is
+      # assertable here.
+      assert log =~ "no video integration can reach it"
+      assert log =~ "reason=no_active_integration"
+    end
+  end
+
+  describe "perform/1 — room bookkeeping" do
+    test "clears the room id once the provider delete succeeds" do
+      %{user: user} = create_user_with_profile()
+      integration = insert_zoom_integration(user)
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_integration_id: integration.id,
+          video_provider: "zoom",
+          video_room_id: "4242",
+          video_room_enabled: true
+        })
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
+
+      # "cancelled and still holding a room id" has to mean "not cleaned up yet"
+      # or the orphan scan can never converge.
+      reloaded = Repo.reload!(meeting)
+      assert reloaded.video_room_id == nil
+      refute reloaded.video_room_enabled
+    end
+
+    test "keeps the room id after an update so reschedules stay syncable" do
+      %{user: user} = create_user_with_profile()
+      integration = insert_zoom_integration(user)
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_integration_id: integration.id,
+          video_provider: "zoom",
+          video_room_id: "5150"
+        })
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"})
+
+      assert Repo.reload!(meeting).video_room_id == "5150"
     end
   end
 
