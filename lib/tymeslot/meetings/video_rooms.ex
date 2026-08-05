@@ -198,6 +198,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
         meeting_url: meeting_url,
         location: meeting_url,
         video_room_id: room_id,
+        video_provider: provider_string(meeting_context.provider_type),
         organizer_video_url: organizer_url,
         attendee_video_url: attendee_url,
         video_room_enabled: true,
@@ -217,6 +218,16 @@ defmodule Tymeslot.Meetings.VideoRooms do
       {:ok, attrs}
     end
   end
+
+  # The provider is stored as its string form so a meeting still knows where its
+  # room lives after `video_integration_id` is nulled by the integration's
+  # `nilify_all` foreign key. Without it a disconnected integration leaves the
+  # room unreachable and it lingers on the organiser's provider account.
+  defp provider_string(provider_type) when is_atom(provider_type) and not is_nil(provider_type),
+    do: Atom.to_string(provider_type)
+
+  defp provider_string(provider_type) when is_binary(provider_type), do: provider_type
+  defp provider_string(_unknown), do: nil
 
   @spec persist_video_room(MeetingSchema.t(), map()) ::
           {:ok, MeetingSchema.t()} | {:error, term()}
