@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
   alias TymeslotWeb.Dashboard.Automation.TelegramEmptyState
 
   attr :integrations, :list, required: true
+  attr :time_format, :string, required: true
   attr :telegram_testing, :any, required: true
   attr :myself, :any, required: true
 
@@ -34,6 +35,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramTab do
         <div class="grid grid-cols-1 gap-6">
           <%= for integration <- @integrations do %>
             <TelegramCard.telegram_card
+              time_format={@time_format}
               integration={integration}
               testing={@telegram_testing == integration.id}
               target={@myself}

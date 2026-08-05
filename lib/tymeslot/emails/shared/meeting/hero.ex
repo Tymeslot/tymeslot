@@ -19,6 +19,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
           optional(:location_type) => atom() | nil,
           optional(:meeting_type) => String.t() | nil,
           optional(:timezone) => String.t() | nil,
+          optional(:time_format) => String.t() | nil,
           optional(atom()) => term()
         }
 
@@ -59,16 +60,20 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
   @doc "Formats the meeting time line in a specific locale."
   @spec format_meeting_time(meeting_details(), String.t()) :: String.t()
   def format_meeting_time(details, locale) do
+    # Set only by organiser-addressed emails; nil everywhere else means the
+    # recipient's locale decides.
+    time_format = Map.get(details, :time_format)
+
     case details do
       %{start_time: %DateTime{} = start_time, timezone: timezone} when is_binary(timezone) ->
-        formatted = Formatting.format_time(start_time, locale)
+        formatted = Formatting.format_time(start_time, locale, time_format)
 
         if timezone != "UTC",
           do: "#{formatted} (#{timezone})",
           else: formatted
 
       %{start_time: %DateTime{} = start_time} ->
-        Formatting.format_time(start_time, locale)
+        Formatting.format_time(start_time, locale, time_format)
 
       _other ->
         dgettext("emails", "TBD")

@@ -10,6 +10,11 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
 
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
+  setup do
+    on_exit(fn -> Gettext.put_locale(TymeslotWeb.Gettext, "en") end)
+    :ok
+  end
+
   describe "format_meeting_datetime/2" do
     test "shifts a UTC datetime into the attendee's timezone" do
       # 14:00 UTC in June is 10:00 in New York (EDT, UTC-4).
@@ -38,16 +43,22 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
     end
 
     test "falls back to UTC when the timezone is missing" do
-      result = LocalizationHelpers.format_meeting_datetime(~U[2026-06-15 14:00:00Z], nil)
+      # This page is attendee-facing, so the clock follows the visitor's own
+      # language: 14:00 UTC reads as 2:00 PM in English, 14:00 in German.
+      Gettext.put_locale(TymeslotWeb.Gettext, "en")
 
-      assert result =~ "14:00"
+      assert LocalizationHelpers.format_meeting_datetime(~U[2026-06-15 14:00:00Z], nil) =~
+               "2:00 PM"
+
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      assert LocalizationHelpers.format_meeting_datetime(~U[2026-06-15 14:00:00Z], nil) =~ "14:00"
     end
 
     test "falls back to UTC when the timezone is unknown" do
-      result =
-        LocalizationHelpers.format_meeting_datetime(~U[2026-06-15 14:00:00Z], "Not/AZone")
+      Gettext.put_locale(TymeslotWeb.Gettext, "en")
 
-      assert result =~ "14:00"
+      assert LocalizationHelpers.format_meeting_datetime(~U[2026-06-15 14:00:00Z], "Not/AZone") =~
+               "2:00 PM"
     end
 
     test "returns an empty string for an unusable value" do

@@ -12,6 +12,7 @@ defmodule Tymeslot.Bookings.CancelTest do
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
@@ -338,6 +339,35 @@ defmodule Tymeslot.Bookings.CancelTest do
 
       assert :ok =
                perform_job(VideoSyncWorker, %{"meeting_id" => cancelled.id, "action" => "delete"})
+    end
+
+    test "still enqueues the delete job after the integration was disconnected" do
+      %{user: user} = create_user_with_profile()
+      integration = insert_zoom_integration(user)
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          start_offset: 3600,
+          duration: 3600,
+          video_integration_id: integration.id,
+          video_provider: "zoom",
+          video_room_id: "86360699337"
+        })
+
+      # Disconnecting nulls video_integration_id through the nilify_all foreign
+      # key while the Zoom meeting carries on existing.
+      assert {:ok, :deleted} = Video.delete_integration(user.id, integration.id)
+
+      assert {:ok, cancelled} = Cancel.execute(meeting.uid)
+      assert cancelled.status == "cancelled"
+      assert cancelled.video_integration_id == nil
+      assert cancelled.video_room_id == "86360699337"
+
+      # The link is gone but the room is not, so the provider must still be told.
+      assert_enqueued(
+        worker: VideoSyncWorker,
+        args: %{"meeting_id" => cancelled.id, "action" => "delete"}
+      )
     end
 
     test "does not enqueue a video-sync job when meeting has no video_room_id" do

@@ -229,6 +229,11 @@ msgstr "Design-Auswahl"
 msgid "Video Integration"
 msgstr "Video-Integration"
 
+#: lib/tymeslot_web/components/icons/provider_icon.ex:73
+#, elixir-autogen, elixir-format
+msgid "Calendar subscription"
+msgstr "Kalenderabonnement"
+
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex:157
 #, elixir-autogen, elixir-format
 msgid "%{count} of %{max} time"
@@ -563,8 +568,3 @@ msgstr "Ja"
 #, elixir-autogen, elixir-format
 msgid "e.g., Team sync"
 msgstr "z. B. Team-Sync"
-
-#: lib/tymeslot_web/components/icons/provider_icon.ex:73
-#, elixir-autogen, elixir-format
-msgid "Calendar subscription"
-msgstr "Kalenderabonnement"

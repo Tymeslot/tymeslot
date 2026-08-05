@@ -75,6 +75,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   attr :is_empty, :boolean, required: true
   attr :filter, :string, required: true
   attr :profile, :any, required: false
+  attr :time_format, :string, required: true
   attr :cancelling_meeting, :any, required: false
   attr :sending_reschedule, :any, required: false
   attr :target, :any, required: true
@@ -91,6 +92,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
           <.meeting_card
             meeting={meeting}
             profile={@profile}
+            time_format={@time_format}
             cancelling_meeting={@cancelling_meeting}
             sending_reschedule={@sending_reschedule}
             target={@target}
@@ -104,6 +106,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   # Meeting Card
   attr :meeting, :map, required: true
   attr :profile, :any, required: false
+  attr :time_format, :string, required: true
   attr :cancelling_meeting, :any, required: false
   attr :sending_reschedule, :any, required: false
   attr :target, :any, required: true
@@ -153,7 +156,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                   <span class="text-turquoise-600 ml-1">
                     {Helpers.format_meeting_time(
                       @meeting,
-                      Helpers.get_meeting_timezone(@meeting, @profile)
+                      Helpers.get_meeting_timezone(@meeting, @profile),
+                      @time_format
                     )}
                   </span>
                 </p>

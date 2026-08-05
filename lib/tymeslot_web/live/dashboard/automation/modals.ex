@@ -288,6 +288,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
   attr :webhook, :map, required: true
   attr :deliveries, :list, required: true
   attr :stats, :map, required: true
+  attr :time_format, :string, required: true
   attr :on_close, :any, required: true
 
   @spec deliveries_modal(map()) :: Phoenix.LiveView.Rendered.t()
@@ -320,7 +321,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
               {dgettext("dashboard_automation", "Test calls are not logged")}
             </div>
           </div>
-          <.delivery_list deliveries={@deliveries} />
+          <.delivery_list deliveries={@deliveries} time_format={@time_format} />
         </div>
       </div>
 
@@ -340,6 +341,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
   attr :integration, :map, required: true
   attr :deliveries, :list, required: true
   attr :stats, :map, default: nil
+  attr :time_format, :string, required: true
   attr :on_close, :any, required: true
 
   @spec telegram_deliveries_modal(map()) :: Phoenix.LiveView.Rendered.t()
@@ -352,7 +354,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
 
       <div class="space-y-8">
         <.delivery_stats_grid stats={@stats} />
-        <.delivery_list deliveries={@deliveries} />
+        <.delivery_list deliveries={@deliveries} time_format={@time_format} />
       </div>
 
       <:footer>
@@ -427,6 +429,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
   attr :integration, :map, required: true
   attr :deliveries, :list, required: true
   attr :stats, :map, default: nil
+  attr :time_format, :string, required: true
   attr :on_close, :any, required: true
 
   @spec slack_deliveries_modal(map()) :: Phoenix.LiveView.Rendered.t()
@@ -439,7 +442,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
 
       <div class="space-y-8">
         <.delivery_stats_grid stats={@stats} />
-        <.delivery_list deliveries={@deliveries} />
+        <.delivery_list deliveries={@deliveries} time_format={@time_format} />
       </div>
 
       <:footer>
@@ -501,6 +504,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
   end
 
   attr :deliveries, :list, required: true
+  attr :time_format, :string, required: true
 
   defp delivery_list(assigns) do
     ~H"""
@@ -535,7 +539,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
                 </div>
                 <div class="text-token-sm text-tymeslot-600 font-medium flex items-center gap-1.5">
                   <CoreComponents.icon name="hero-clock" class="w-4 h-4" />
-                  <%= AutomationHelpers.format_datetime(delivery.inserted_at) %>
+                  <%= AutomationHelpers.format_datetime(delivery.inserted_at, @time_format) %>
                 </div>
                 <%= if delivery.error_message do %>
                   <div class="text-token-sm text-red-600 font-medium mt-2 p-2 bg-red-50 rounded-token-lg border border-red-100">

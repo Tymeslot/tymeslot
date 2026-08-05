@@ -133,7 +133,7 @@ msgstr "Додавання..."
 msgid "All meetings will use the same room URL"
 msgstr "Для всіх зустрічей використовуватиметься те саме посилання на кімнату"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:150
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:165
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete this %{type} integration?"
 msgstr "Ви впевнені, що хочете видалити цю інтеграцію %{type}?"
@@ -174,7 +174,7 @@ msgstr "Назад до списку провайдерів"
 msgid "Base URL"
 msgstr "Базова URL-адреса"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:193
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:246
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Календар"
@@ -185,7 +185,7 @@ msgid "Calendars"
 msgstr "Календарі"
 
 #: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex:59
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:170
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:212
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex:92
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex:128
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex:293
@@ -250,12 +250,12 @@ msgstr "Не вдалося ідентифікувати ваш облікови
 msgid "Custom Video Link"
 msgstr "Власне посилання на відеодзвінок"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:143
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:158
 #, elixir-autogen, elixir-format
 msgid "Delete %{type} Integration"
 msgstr "Видалити інтеграцію %{type}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:176
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:218
 #, elixir-autogen, elixir-format
 msgid "Delete Integration"
 msgstr "Видалити інтеграцію"
@@ -324,7 +324,7 @@ msgstr "Не вдалося підключити календар Outlook. Сп�
 msgid "Failed to connect Zoom. Please try again."
 msgstr "Не вдалося підключити Zoom. Спробуйте ще раз."
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:109
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:124
 #, elixir-autogen, elixir-format
 msgid "Failed to delete integration"
 msgstr "Не вдалося видалити інтеграцію"
@@ -395,12 +395,12 @@ msgstr "Неактивні відеоінтеграції"
 msgid "Integration Name"
 msgstr "Назва інтеграції"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:88
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:103
 #, elixir-autogen, elixir-format
 msgid "Integration deleted successfully"
 msgstr "Інтеграцію успішно видалено"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:97
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:112
 #, elixir-autogen, elixir-format
 msgid "Integration not found. It may have already been deleted."
 msgstr "Інтеграцію не знайдено. Можливо, її вже видалено."
@@ -429,8 +429,8 @@ msgstr "Інтеграції"
 msgid "Invalid authentication response. Please try again."
 msgstr "Некоректна відповідь під час автентифікації. Спробуйте ще раз."
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:37
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:114
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:45
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:129
 #, elixir-autogen, elixir-format
 msgid "Invalid integration ID"
 msgstr "Некоректний ідентифікатор інтеграції"
@@ -528,7 +528,7 @@ msgstr "URL-адресу не налаштовано"
 msgid "No calendars selected"
 msgstr "Жодного календаря не вибрано"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:55
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:68
 #, elixir-autogen, elixir-format
 msgid "No integration selected for deletion"
 msgstr "Не вибрано інтеграцію для видалення"
@@ -655,7 +655,7 @@ msgstr "Перевірка…"
 msgid "The full URL where your MiroTalk P2P instance is hosted"
 msgstr "Повна URL-адреса, за якою розміщено ваш екземпляр MiroTalk P2P"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:157
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:172
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone and will remove all associated %{data}."
 msgstr "Цю дію неможливо скасувати, вона призведе до видалення всіх пов’язаних %{data}."
@@ -710,7 +710,7 @@ msgstr "Використовуйте нижнє підкреслення, а н�
 msgid "Variable name should be: {{meeting_id}}"
 msgstr "Назва змінної має бути: {{meeting_id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:194
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:247
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex:87
 #, elixir-autogen, elixir-format
 msgid "Video"
@@ -748,7 +748,7 @@ msgstr "Ваш обліковий запис Stripe обмежено."
 msgid "Zoom connected successfully!"
 msgstr "Zoom успішно підключено!"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:196
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:249
 #, elixir-autogen, elixir-format
 msgid "calendar data"
 msgstr "дані календаря"
@@ -764,7 +764,7 @@ msgstr "користувацький"
 msgid "self-hosted"
 msgstr "на власному сервері"
 
-#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:199
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:252
 #, elixir-autogen, elixir-format
 msgid "video conferencing configuration"
 msgstr "налаштування відеоконференцій"
@@ -1034,7 +1034,7 @@ msgstr "Час очікування вичерпано під час зверн�
 msgid "Connection validation failed"
 msgstr "Не вдалося перевірити підключення"
 
-#: lib/tymeslot/integrations/video.ex:488
+#: lib/tymeslot/integrations/video.ex:519
 #, elixir-autogen, elixir-format
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
 msgstr "Не вдалося визначити ваш обліковий запис. Спробуйте ще раз. Якщо проблема не зникне, видаліть інтеграцію та додайте її знову."
@@ -1302,3 +1302,16 @@ msgstr "✓ Підключення до MiroTalk перевірено - %{messag
 #, elixir-autogen, elixir-format
 msgid "The calendar feed rejected the stored link. It was probably revoked or reset — subscribe again with a fresh URL."
 msgstr "Фід календаря відхилив збережене посилання. Ймовірно, його було відкликано або скинуто — підпишіться знову з новою URL-адресою."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:182
+#, elixir-autogen, elixir-format
+msgid "%{count} upcoming booking still uses this integration. Its meeting room keeps working unless you delete it here."
+msgid_plural "%{count} upcoming bookings still use this integration. Their meeting rooms keep working unless you delete them here."
+msgstr[0] "%{count} майбутнє бронювання досі використовує цю інтеграцію. Його кімната для зустрічей залишиться робочою, якщо не видалити її тут."
+msgstr[1] "%{count} майбутніх бронювання досі використовують цю інтеграцію. Їхні кімнати для зустрічей залишаться робочими, якщо не видалити їх тут."
+msgstr[2] "%{count} майбутніх бронювань досі використовують цю інтеграцію. Їхні кімнати для зустрічей залишаться робочими, якщо не видалити їх тут."
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex:198
+#, elixir-autogen, elixir-format
+msgid "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
+msgstr "Також видалити їхні кімнати для зустрічей. Учасники, які вже мають посилання на приєднання, побачать, що воно більше не працює."

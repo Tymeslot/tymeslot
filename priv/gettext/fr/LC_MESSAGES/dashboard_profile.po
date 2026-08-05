@@ -31,7 +31,7 @@ msgstr "Avatar supprimé avec succès"
 msgid "Avatar updated successfully"
 msgstr "Avatar mis à jour avec succès"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex:65
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex:66
 #, elixir-autogen, elixir-format
 msgid "Basic Information"
 msgstr "Informations de base"
@@ -118,7 +118,7 @@ msgstr "Traitement en cours..."
 msgid "Profile Picture"
 msgstr "Photo de profil"
 
-#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex:37
+#: lib/tymeslot_web/live/dashboard/profile_settings_component.ex:38
 #, elixir-autogen, elixir-format
 msgid "Profile Settings"
 msgstr "Paramètres du profil"
@@ -204,3 +204,33 @@ msgstr "Fuseau horaire inconnu"
 #, elixir-autogen, elixir-format
 msgid "Too many username change attempts. Please try again later."
 msgstr "Trop de tentatives de changement de nom d’utilisateur. Veuillez réessayer plus tard."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:82
+#, elixir-autogen, elixir-format
+msgid "12h (AM/PM)"
+msgstr "12 h (AM/PM)"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:83
+#, elixir-autogen, elixir-format
+msgid "24h"
+msgstr "24 h"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:87
+#, elixir-autogen, elixir-format
+msgid "Controls how times are shown on your dashboard and in the emails you receive. Your booking page follows each visitor's own language."
+msgstr "Détermine l’affichage des heures dans votre tableau de bord et dans les e-mails que vous recevez. Votre page de réservation suit la langue de chaque visiteur."
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:56
+#, elixir-autogen, elixir-format
+msgid "Failed to update time format"
+msgstr "Échec de la mise à jour du format de l’heure"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:73
+#, elixir-autogen, elixir-format
+msgid "Time Format"
+msgstr "Format de l’heure"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/time_format_form_component.ex:52
+#, elixir-autogen, elixir-format
+msgid "Time format updated"
+msgstr "Format de l’heure mis à jour"

@@ -143,8 +143,10 @@ defmodule Tymeslot.Bookings.Reschedule do
   # (e.g. Zoom) is updated to match the new booking time. Routed through Oban —
   # not done inline — so a transient Zoom 5xx/429 retries instead of permanently
   # desyncing. Never blocks the reschedule: the booking is already updated
-  # locally and the join URL remains valid.
-  defp sync_provider_video_room(%{video_integration_id: nil}), do: :ok
+  # locally and the join URL remains valid. Whether an integration can still
+  # reach the room is decided inside the job by `IntegrationResolver`, so a
+  # meeting whose integration was disconnected is still synced rather than left
+  # advertising the old time.
   defp sync_provider_video_room(%{video_room_id: nil}), do: :ok
   defp sync_provider_video_room(%{organizer_user_id: nil}), do: :ok
 

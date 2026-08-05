@@ -13,6 +13,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
 
   @doc "Creates a meeting."
@@ -201,6 +202,24 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   @spec count_meetings_by_status(String.t()) :: non_neg_integer()
   def count_meetings_by_status(status) do
     Repo.aggregate(from(m in Meeting, where: m.status == ^status), :count, :id)
+  end
+
+  @doc """
+  Counts upcoming live bookings holding a provider room created by the given
+  integration.
+
+  Drives the "N upcoming bookings use this" line in the disconnect modal, so the
+  user knows what the optional room cleanup would affect before choosing it.
+  """
+  @spec count_upcoming_with_video_room_for_integration(pos_integer(), DateTime.t()) ::
+          non_neg_integer()
+  def count_upcoming_with_video_room_for_integration(integration_id, %DateTime{} = now) do
+    Meeting
+    |> MeetingState.where_live_booking()
+    |> where([m], m.end_time > ^now)
+    |> where([m], m.video_integration_id == ^integration_id)
+    |> where([m], not is_nil(m.video_room_id))
+    |> Repo.aggregate(:count, :id)
   end
 
   @doc """

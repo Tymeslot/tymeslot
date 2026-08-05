@@ -191,6 +191,8 @@ defmodule TymeslotWeb.GuestRsvpHTML do
     weekday = LocaleFormat.format_weekday_name(Date.day_of_week(dt), locale, :full)
     month = LocaleFormat.format_month_name(dt.month, locale, :full)
 
-    "#{weekday}, #{dt.day} #{month} #{dt.year} · #{Calendar.strftime(dt, "%H:%M")}"
+    # A guest is an attendee: the weekday and month already follow their
+    # language, so the clock beside them does too rather than staying 24-hour.
+    "#{weekday}, #{dt.day} #{month} #{dt.year} · #{LocaleFormat.format_time(dt, locale)}"
   end
 end
