@@ -1029,7 +1029,7 @@ msgstr "Connessione scaduta nel tentativo di raggiungere l'URL"
 msgid "Connection validation failed"
 msgstr "Convalida della connessione non riuscita"
 
-#: lib/tymeslot/integrations/video.ex:519
+#: lib/tymeslot/integrations/video.ex:482
 #, elixir-autogen, elixir-format
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
 msgstr "Impossibile identificare il tuo account. Riprova. Se il problema persiste, rimuovi e aggiungi di nuovo l'integrazione."

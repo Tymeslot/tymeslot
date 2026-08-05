@@ -1029,7 +1029,7 @@ msgstr "Délai de connexion dépassé lors de l’accès à l’URL"
 msgid "Connection validation failed"
 msgstr "Échec de la validation de la connexion"
 
-#: lib/tymeslot/integrations/video.ex:519
+#: lib/tymeslot/integrations/video.ex:482
 #, elixir-autogen, elixir-format
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
 msgstr "Impossible d’identifier votre compte. Veuillez réessayer. Si le problème persiste, supprimez puis rajoutez l’intégration."

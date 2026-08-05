@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.Connection
+  alias Tymeslot.Integrations.Video.Disconnect
   alias Tymeslot.Integrations.Video.Discovery
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Rooms
@@ -21,7 +22,6 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
-  alias Tymeslot.Workers.VideoIntegrationDisconnectWorker
   alias TymeslotWeb.Endpoint
 
   @behaviour Tymeslot.Security.EncryptedStorage
@@ -271,44 +271,7 @@ defmodule Tymeslot.Integrations.Video do
   """
   @spec delete_integration(pos_integer(), pos_integer(), keyword()) ::
           {:ok, :deleted | :cleanup_scheduled} | {:error, any()}
-  def delete_integration(user_id, id, opts \\ []) when is_integer(user_id) do
-    case VideoIntegrationQueries.get_for_user(id, user_id) do
-      {:ok, integration} ->
-        remove(integration, Keyword.get(opts, :delete_rooms, false))
-
-      {:error, :not_found} = err ->
-        err
-
-      {:error, :requires_reencryption, integration} ->
-        # The credentials cannot be decrypted, so no provider call could succeed.
-        # Drop the row regardless of what was asked for.
-        remove(integration, false)
-    end
-  end
-
-  defp remove(integration, false) do
-    case VideoIntegrationQueries.delete(integration) do
-      {:ok, _result} -> {:ok, :deleted}
-      {:error, _reason} = err -> err
-    end
-  end
-
-  defp remove(integration, true) do
-    with {:ok, soft} <- VideoIntegrationQueries.soft_delete(integration),
-         {:ok, _status} <- VideoIntegrationDisconnectWorker.enqueue(soft.id) do
-      {:ok, :cleanup_scheduled}
-    else
-      {:error, reason} ->
-        # Better to complete the disconnect the user asked for than to leave a
-        # hidden row behind with nothing scheduled to clean it up.
-        Logger.warning("Failed to schedule video room cleanup, removing integration directly",
-          integration_id: integration.id,
-          reason: inspect(reason)
-        )
-
-        remove(integration, false)
-    end
-  end
+  defdelegate delete_integration(user_id, id, opts \\ []), to: Disconnect, as: :run
 
   @doc """
   Removes every video integration matching `(provider, provider_account_id)`,

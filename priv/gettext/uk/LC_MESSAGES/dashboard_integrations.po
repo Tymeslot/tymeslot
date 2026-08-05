@@ -1034,7 +1034,7 @@ msgstr "Час очікування вичерпано під час зверн�
 msgid "Connection validation failed"
 msgstr "Не вдалося перевірити підключення"
 
-#: lib/tymeslot/integrations/video.ex:519
+#: lib/tymeslot/integrations/video.ex:482
 #, elixir-autogen, elixir-format
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
 msgstr "Не вдалося визначити ваш обліковий запис. Спробуйте ще раз. Якщо проблема не зникне, видаліть інтеграцію та додайте її знову."
